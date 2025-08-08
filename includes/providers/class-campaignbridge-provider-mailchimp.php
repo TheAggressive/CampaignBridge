@@ -3,16 +3,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Mailchimp provider.
+ *
+ * Creates a draft campaign and updates its template content via sections.
+ * Also exposes helper calls to list audiences, templates, and section keys.
+ */
 class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Interface {
+	/** @inheritDoc */
 	public function slug() {
 		return 'mailchimp'; }
+	/** @inheritDoc */
 	public function label() {
 		return __( 'Mailchimp', 'campaignbridge' ); }
 
+	/** @inheritDoc */
 	public function is_configured( $settings ) {
 		return ! empty( $settings['api_key'] ) && ! empty( $settings['audience_id'] ) && ! empty( $settings['template_id'] );
 	}
 
+	/** @inheritDoc */
 	public function render_settings_fields( $settings, $option_name ) {
 		?>
 		<tr>
@@ -58,6 +68,13 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		<?php
 	}
 
+	/**
+	 * Create a draft campaign and update its content using the given blocks.
+	 *
+	 * @param array $blocks   section_key => HTML string
+	 * @param array $settings provider settings (api_key, audience_id, template_id)
+	 * @return bool
+	 */
 	public function send_campaign( $blocks, $settings ) {
 		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		$audience_id = isset( $settings['audience_id'] ) ? $settings['audience_id'] : '';
@@ -151,6 +168,12 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		return true;
 	}
 
+	/**
+	 * Fetch Mailchimp audiences (lists).
+	 *
+	 * @param array $settings provider settings (api_key)
+	 * @return array|WP_Error
+	 */
 	public function get_audiences( $settings ) {
 		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		if ( empty( $api_key ) ) {
@@ -188,6 +211,12 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		return $items;
 	}
 
+	/**
+	 * Fetch user (saved) templates.
+	 *
+	 * @param array $settings provider settings (api_key)
+	 * @return array|WP_Error
+	 */
 	public function get_templates( $settings ) {
 		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		if ( empty( $api_key ) ) {
@@ -225,6 +254,7 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		return $items;
 	}
 
+	/** @inheritDoc */
 	public function get_section_keys( $settings ) {
 		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;

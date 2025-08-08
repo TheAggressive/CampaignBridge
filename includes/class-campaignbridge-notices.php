@@ -1,16 +1,33 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	return;
 }
 
+/**
+ * Simple admin notices queue for CampaignBridge.
+ *
+ * Collects messages during a request and renders them once in admin_notices.
+ */
 class CampaignBridge_Notices {
 	private static $notices = array();
 
+	/**
+	 * Hook renderers for standard and network admin.
+	 *
+	 * @return void
+	 */
 	public static function init() {
 		add_action( 'admin_notices', array( __CLASS__, 'render' ) );
 		add_action( 'network_admin_notices', array( __CLASS__, 'render' ) );
 	}
 
+	/**
+	 * Queue a notice.
+	 *
+	 * @param string $message HTML/text message (will be kses-escaped on render).
+	 * @param string $type    success|warning|error|info
+	 * @return void
+	 */
 	public static function add( $message, $type = 'info' ) {
 		self::$notices[] = array(
 			'message' => $message,
@@ -18,15 +35,24 @@ class CampaignBridge_Notices {
 		);
 	}
 
+	/** @param string $message */
 	public static function success( $message ) {
 		self::add( $message, 'success' ); }
+	/** @param string $message */
 	public static function warning( $message ) {
 		self::add( $message, 'warning' ); }
+	/** @param string $message */
 	public static function error( $message ) {
 		self::add( $message, 'error' ); }
+	/** @param string $message */
 	public static function info( $message ) {
 		self::add( $message, 'info' ); }
 
+	/**
+	 * Render all queued notices and clear the queue.
+	 *
+	 * @return void
+	 */
 	public static function render() {
 		if ( empty( self::$notices ) ) {
 			return;
