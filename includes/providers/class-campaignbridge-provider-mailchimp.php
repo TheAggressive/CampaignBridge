@@ -1,0 +1,265 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Interface {
+	public function slug() {
+		return 'mailchimp'; }
+	public function label() {
+		return __( 'Mailchimp', 'campaignbridge' ); }
+
+	public function is_configured( $settings ) {
+		return ! empty( $settings['api_key'] ) && ! empty( $settings['audience_id'] ) && ! empty( $settings['template_id'] );
+	}
+
+	public function render_settings_fields( $settings, $option_name ) {
+		?>
+		<tr>
+			<th scope="row"><?php echo esc_html__( 'API Key', 'campaignbridge' ); ?></th>
+			<td>
+				<input id="campaignbridge-mailchimp-api-key" type="password" autocomplete="new-password" name="<?php echo esc_attr( $option_name ); ?>[api_key]" value="<?php echo esc_attr( isset( $settings['api_key'] ) ? $settings['api_key'] : '' ); ?>" size="50" />
+				<button type="button" class="button" id="campaignbridge-verify-mailchimp"><?php echo esc_html__( 'Verify Connection', 'campaignbridge' ); ?></button>
+				<span id="campaignbridge-verify-status" style="margin-left:8px;"></span>
+				<?php if ( empty( $settings['api_key'] ) ) : ?>
+					<p class="description"><?php echo esc_html__( 'Enter and save your API key to select an audience and template.', 'campaignbridge' ); ?></p>
+				<?php endif; ?>
+			</td>
+		</tr>
+		<?php if ( ! empty( $settings['api_key'] ) ) : ?>
+		<tr>
+			<th scope="row"><?php echo esc_html__( 'Audience', 'campaignbridge' ); ?></th>
+			<td>
+				<select id="campaignbridge-mailchimp-audience" name="<?php echo esc_attr( $option_name ); ?>[audience_id]" style="min-width:320px;">
+					<?php if ( ! empty( $settings['audience_id'] ) ) : ?>
+						<option value="<?php echo esc_attr( $settings['audience_id'] ); ?>" selected><?php echo esc_html( $settings['audience_id'] ); ?></option>
+					<?php else : ?>
+						<option value="">—</option>
+					<?php endif; ?>
+				</select>
+				<button type="button" class="button" id="campaignbridge-fetch-audiences"><?php echo esc_html__( 'Reset Audiences', 'campaignbridge' ); ?></button>
+				<p class="description"><?php echo esc_html__( 'Pick your Mailchimp Audience (list). Requires API key.', 'campaignbridge' ); ?></p>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row"><?php echo esc_html__( 'Template', 'campaignbridge' ); ?></th>
+			<td>
+				<select id="campaignbridge-mailchimp-templates" name="<?php echo esc_attr( $option_name ); ?>[template_id]" style="min-width:320px;">
+					<?php if ( ! empty( $settings['template_id'] ) ) : ?>
+						<option value="<?php echo esc_attr( $settings['template_id'] ); ?>" selected><?php echo esc_html( $settings['template_id'] ); ?></option>
+					<?php else : ?>
+						<option value="">—</option>
+					<?php endif; ?>
+				</select>
+				<button type="button" class="button" id="campaignbridge-fetch-templates"><?php echo esc_html__( 'Reset Templates', 'campaignbridge' ); ?></button>
+				<p class="description"><?php echo esc_html__( 'Pick your Saved Template. Requires API key.', 'campaignbridge' ); ?></p>
+			</td>
+		</tr>
+		<?php endif; ?>
+		<?php
+	}
+
+	public function send_campaign( $blocks, $settings ) {
+		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+		$audience_id = isset( $settings['audience_id'] ) ? $settings['audience_id'] : '';
+		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;
+
+		if ( empty( $api_key ) || empty( $audience_id ) || empty( $template_id ) ) {
+			CampaignBridge_Notices::error( esc_html__( 'Please complete Mailchimp settings.', 'campaignbridge' ) );
+			return false;
+		}
+
+		$api_key_parts = explode( '-', $api_key );
+		if ( count( $api_key_parts ) < 2 ) {
+			CampaignBridge_Notices::error( esc_html__( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+			return false;
+		}
+
+		$dc       = end( $api_key_parts );
+		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
+
+		$campaign = wp_remote_post(
+			$endpoint . '/campaigns',
+			array(
+				'headers' => array(
+					'Authorization' => 'apikey ' . $api_key,
+					'Content-Type'  => 'application/json',
+				),
+				'body'    => wp_json_encode(
+					array(
+						'type'       => 'regular',
+						'recipients' => array( 'list_id' => $audience_id ),
+						'settings'   => array(
+							'subject_line' => 'Your Weekly Update',
+							'title'        => 'WP Mailchimp Campaign',
+							'from_name'    => 'Your Name',
+							'reply_to'     => 'you@example.com',
+							'template_id'  => $template_id,
+						),
+					)
+				),
+			)
+		);
+
+		if ( is_wp_error( $campaign ) ) {
+			CampaignBridge_Notices::error( esc_html( $campaign->get_error_message() ) );
+			return false;
+		}
+
+		$campaign_code = (int) wp_remote_retrieve_response_code( $campaign );
+		if ( $campaign_code < 200 || $campaign_code >= 300 ) {
+			CampaignBridge_Notices::error( esc_html__( 'Failed to create campaign.', 'campaignbridge' ) );
+			return false;
+		}
+
+		$campaign_body = json_decode( wp_remote_retrieve_body( $campaign ) );
+		if ( empty( $campaign_body->id ) ) {
+			CampaignBridge_Notices::error( esc_html__( 'Failed to create campaign.', 'campaignbridge' ) );
+			return false;
+		}
+
+		$content = array(
+			'template' => array(
+				'id'       => (int) $template_id,
+				'sections' => $blocks,
+			),
+		);
+
+		$content_resp = wp_remote_request(
+			$endpoint . '/campaigns/' . rawurlencode( $campaign_body->id ) . '/content',
+			array(
+				'method'  => 'PUT',
+				'headers' => array(
+					'Authorization' => 'apikey ' . $api_key,
+					'Content-Type'  => 'application/json',
+				),
+				'body'    => wp_json_encode( $content ),
+			)
+		);
+
+		if ( is_wp_error( $content_resp ) ) {
+			CampaignBridge_Notices::error( esc_html( $content_resp->get_error_message() ) );
+			return false;
+		}
+
+		$content_code = (int) wp_remote_retrieve_response_code( $content_resp );
+		if ( $content_code < 200 || $content_code >= 300 ) {
+			CampaignBridge_Notices::error( esc_html__( 'Failed to update campaign content.', 'campaignbridge' ) );
+			return false;
+		}
+
+		CampaignBridge_Notices::success( esc_html__( 'Campaign created. Please review and send it in Mailchimp.', 'campaignbridge' ) );
+		return true;
+	}
+
+	public function get_audiences( $settings ) {
+		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+		if ( empty( $api_key ) ) {
+			return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
+		}
+		$parts = explode( '-', $api_key );
+		if ( count( $parts ) < 2 ) {
+			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+		}
+		$dc       = end( $parts );
+		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
+		$resp     = wp_remote_get(
+			$endpoint . '/lists?count=1000',
+			array(
+				'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
+			)
+		);
+		if ( is_wp_error( $resp ) ) {
+			return $resp;
+		}
+		$code = (int) wp_remote_retrieve_response_code( $resp );
+		if ( $code < 200 || $code >= 300 ) {
+			return new WP_Error( 'http_error', __( 'Failed to fetch audiences.', 'campaignbridge' ) );
+		}
+		$data  = json_decode( wp_remote_retrieve_body( $resp ), true );
+		$items = array();
+		if ( ! empty( $data['lists'] ) && is_array( $data['lists'] ) ) {
+			foreach ( $data['lists'] as $list ) {
+				$items[] = array(
+					'id'   => (string) $list['id'],
+					'name' => (string) $list['name'],
+				);
+			}
+		}
+		return $items;
+	}
+
+	public function get_templates( $settings ) {
+		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+		if ( empty( $api_key ) ) {
+			return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
+		}
+		$parts = explode( '-', $api_key );
+		if ( count( $parts ) < 2 ) {
+			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+		}
+		$dc       = end( $parts );
+		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
+		$resp     = wp_remote_get(
+			$endpoint . '/templates?type=user&count=1000',
+			array(
+				'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
+			)
+		);
+		if ( is_wp_error( $resp ) ) {
+			return $resp;
+		}
+		$code = (int) wp_remote_retrieve_response_code( $resp );
+		if ( $code < 200 || $code >= 300 ) {
+			return new WP_Error( 'http_error', __( 'Failed to fetch templates.', 'campaignbridge' ) );
+		}
+		$data  = json_decode( wp_remote_retrieve_body( $resp ), true );
+		$items = array();
+		if ( ! empty( $data['templates'] ) && is_array( $data['templates'] ) ) {
+			foreach ( $data['templates'] as $tpl ) {
+				$items[] = array(
+					'id'   => (int) $tpl['id'],
+					'name' => (string) $tpl['name'],
+				);
+			}
+		}
+		return $items;
+	}
+
+	public function get_section_keys( $settings ) {
+		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;
+		if ( empty( $api_key ) || empty( $template_id ) ) {
+			return new WP_Error( 'missing_settings', __( 'API key and Template ID are required.', 'campaignbridge' ) );
+		}
+		$parts = explode( '-', $api_key );
+		if ( count( $parts ) < 2 ) {
+			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+		}
+		$dc       = end( $parts );
+		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
+
+		// Fetch template default content to discover editable sections keys.
+		$resp = wp_remote_get(
+			$endpoint . '/templates/' . rawurlencode( (string) $template_id ),
+			array(
+				'headers' => array(
+					'Authorization' => 'apikey ' . $api_key,
+				),
+			)
+		);
+		if ( is_wp_error( $resp ) ) {
+			return $resp;
+		}
+		$code = (int) wp_remote_retrieve_response_code( $resp );
+		if ( $code < 200 || $code >= 300 ) {
+			return new WP_Error( 'http_error', __( 'Failed to fetch template.', 'campaignbridge' ) );
+		}
+		$data     = json_decode( wp_remote_retrieve_body( $resp ), true );
+		$sections = array();
+		if ( isset( $data['sections'] ) && is_array( $data['sections'] ) ) {
+			$sections = array_keys( $data['sections'] );
+		}
+		return $sections;
+	}
+}
