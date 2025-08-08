@@ -53,13 +53,21 @@ class CampaignBridge {
 		} else {
 			$clean['api_key'] = sanitize_text_field( $posted_api_key );
 		}
-		$clean['audience_id']        = isset( $input['audience_id'] ) ? sanitize_text_field( $input['audience_id'] ) : '';
-		$clean['template_id']        = isset( $input['template_id'] ) ? absint( $input['template_id'] ) : 0;
+		$clean['audience_id'] = isset( $input['audience_id'] ) ? sanitize_text_field( $input['audience_id'] ) : '';
+		$clean['template_id'] = isset( $input['template_id'] ) ? absint( $input['template_id'] ) : 0;
+		// Convert included_post_types to exclude_post_types for storage.
 		$clean['exclude_post_types'] = array();
-		if ( isset( $input['exclude_post_types'] ) && is_array( $input['exclude_post_types'] ) ) {
-			foreach ( $input['exclude_post_types'] as $pt ) {
+		if ( isset( $input['included_post_types'] ) && is_array( $input['included_post_types'] ) ) {
+			$included = array();
+			foreach ( $input['included_post_types'] as $pt ) {
 				$pt = sanitize_key( $pt );
 				if ( post_type_exists( $pt ) ) {
+					$included[] = $pt;
+				}
+			}
+			$public_types = get_post_types( array( 'public' => true ), 'names' );
+			foreach ( $public_types as $pt ) {
+				if ( ! in_array( $pt, $included, true ) ) {
 					$clean['exclude_post_types'][] = $pt;
 				}
 			}
@@ -108,23 +116,65 @@ class CampaignBridge {
 					// Provider-specific fields (e.g., Mailchimp API Key, Audience ID, Template ID) are rendered below.
 					?>
 						<tr>
-							<th scope="row">Exclude post types</th>
+							<th scope="row">Enabled post types</th>
 							<td>
 								<?php
-								$public_types   = get_post_types( array( 'public' => true ), 'objects' );
-								$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
-								foreach ( $public_types as $type ) {
-									$checked = in_array( $type->name, $excluded_types, true ) ? 'checked' : '';
-									printf(
-										'<label style="display:inline-block;margin:0 12px 8px 0;"><input type="checkbox" name="%1$s[exclude_post_types][]" value="%2$s" %4$s /> %3$s</label>',
-										esc_attr( $this->option_name ),
-										esc_attr( $type->name ),
-										esc_html( $type->labels->singular_name ),
-										$checked
-									);
+								$public_types = get_post_types( array( 'public' => true ), 'objects' );
+								// Split into core vs custom and sort by label in each group
+								$core_slugs   = array( 'post', 'page' );
+								$core_types   = array();
+								$custom_types = array();
+								foreach ( $public_types as $obj ) {
+									if ( in_array( $obj->name, $core_slugs, true ) ) {
+										$core_types[] = $obj;
+									} else {
+										$custom_types[] = $obj;
+									}
 								}
-								?>
-								<p class="description">Checked types will be hidden from the post selector.</p>
+								$sort_by_label = function ( $a, $b ) {
+									return strcasecmp( (string) $a->labels->singular_name, (string) $b->labels->singular_name );
+								};
+								usort( $core_types, $sort_by_label );
+								usort( $custom_types, $sort_by_label );
+								$excluded_types      = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
+								$included_type_names = array();
+	foreach ( $public_types as $t ) {
+		if ( ! in_array( $t->name, $excluded_types, true ) ) {
+			$included_type_names[] = $t->name;
+		}
+	}
+								echo '<div class="cb-switches-box">';
+	if ( ! empty( $core_types ) ) {
+		echo '<div class="cb-switches-group"><div class="cb-switches-group-title">Core types</div><div class="cb-switches-grid">';
+		foreach ( $core_types as $type ) {
+			$checked = in_array( $type->name, $included_type_names, true ) ? 'checked' : '';
+			printf(
+				'<label class="cb-switch"><input type="checkbox" name="%1$s[included_post_types][]" value="%2$s" %4$s /><span class="cb-slider"></span><span class="cb-switch-label">%3$s</span></label>',
+				esc_attr( $this->option_name ),
+				esc_attr( $type->name ),
+				esc_html( $type->labels->singular_name ),
+				$checked
+			);
+		}
+		echo '</div></div>';
+	}
+	if ( ! empty( $custom_types ) ) {
+		echo '<div class="cb-switches-group"><div class="cb-switches-group-title">Custom types</div><div class="cb-switches-grid">';
+		foreach ( $custom_types as $type ) {
+			$checked = in_array( $type->name, $included_type_names, true ) ? 'checked' : '';
+			printf(
+				'<label class="cb-switch"><input type="checkbox" name="%1$s[included_post_types][]" value="%2$s" %4$s /><span class="cb-slider"></span><span class="cb-switch-label">%3$s</span></label>',
+				esc_attr( $this->option_name ),
+				esc_attr( $type->name ),
+				esc_html( $type->labels->singular_name ),
+				$checked
+			);
+		}
+		echo '</div></div>';
+	}
+								echo '</div>';
+	?>
+								<p class="description">Toggle on to include the post type in the selector.</p>
 							</td>
 						</tr>
 						<?php
@@ -164,15 +214,48 @@ class CampaignBridge {
 							} elseif ( ! in_array( $default_pt, $allowed_names, true ) ) {
 								$default_pt = $allowed_types[0]->name;
 							}
-							foreach ( $allowed_types as $type ) {
-								printf(
-									'<option value="%1$s" %3$s>%2$s</option>',
-									esc_attr( $type->name ),
-									esc_html( $type->labels->singular_name ),
-									selected( $type->name, $default_pt, false )
-								);
+							// Group allowed types into core vs custom and sort each group alphabetically
+							$core_slugs     = array( 'post', 'page' );
+							$core_allowed   = array();
+							$custom_allowed = array();
+							foreach ( $allowed_types as $obj ) {
+								if ( in_array( $obj->name, $core_slugs, true ) ) {
+									$core_allowed[] = $obj;
+								} else {
+									$custom_allowed[] = $obj;
+								}
 							}
-							?>
+							$sort_by_label = function ( $a, $b ) {
+								return strcasecmp( (string) $a->labels->singular_name, (string) $b->labels->singular_name );
+							};
+							usort( $core_allowed, $sort_by_label );
+							usort( $custom_allowed, $sort_by_label );
+
+	if ( ! empty( $core_allowed ) ) {
+		echo '<optgroup label="Core types">';
+		foreach ( $core_allowed as $type ) {
+			printf(
+				'<option value="%1$s" %3$s>%2$s</option>',
+				esc_attr( $type->name ),
+				esc_html( $type->labels->singular_name ),
+				selected( $type->name, $default_pt, false )
+			);
+		}
+		echo '</optgroup>';
+	}
+	if ( ! empty( $custom_allowed ) ) {
+		echo '<optgroup label="Custom types">';
+		foreach ( $custom_allowed as $type ) {
+			printf(
+				'<option value="%1$s" %3$s>%2$s</option>',
+				esc_attr( $type->name ),
+				esc_html( $type->labels->singular_name ),
+				selected( $type->name, $default_pt, false )
+			);
+		}
+		echo '</optgroup>';
+	}
+	?>
 						</select>
 					</div>
 
@@ -291,6 +374,13 @@ class CampaignBridge {
 		$prov     = isset( $settings['provider'] ) ? $settings['provider'] : 'mailchimp';
 		if ( 'mailchimp' !== $prov ) {
 			wp_send_json_error( array( 'message' => 'Provider is not Mailchimp.' ), 400 );
+		}
+		// If an API key is provided in the request, prefer it for verification (unsaved form input)
+		if ( isset( $_POST['api_key'] ) ) {
+			$settings['api_key'] = sanitize_text_field( wp_unslash( $_POST['api_key'] ) );
+		}
+		if ( empty( $settings['api_key'] ) ) {
+			wp_send_json_error( array( 'message' => 'Missing API key.' ), 400 );
 		}
 		$items = $this->providers['mailchimp']->get_audiences( $settings );
 		if ( is_wp_error( $items ) ) {

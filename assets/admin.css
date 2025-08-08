@@ -10,41 +10,52 @@
   margin-bottom: 12px;
   max-width: var(--cb-maxw);
 }
+
 .cb-input-wide {
   width: 100%;
   max-width: var(--cb-maxw);
 }
+
 .cb-mapping-title {
   margin: 0 0 8px;
 }
+
 .cb-mapping-table {
   max-width: var(--cb-maxw);
 }
+
 #campaignbridge-sections {
   margin: 8px 0 16px;
   max-width: var(--cb-maxw);
 }
+
 #campaignbridge-verify-status {
   font-weight: 600;
 }
+
 .cb-inline-spinner {
   float: none;
   margin: 0 6px 0 0;
   vertical-align: middle;
 }
+
 .cb-status-ok {
   color: var(--cb-status-ok);
 }
+
 .cb-status-err {
   color: var(--cb-status-err);
 }
+
 .cb-label {
   display: block;
   margin-bottom: 6px;
 }
+
 .cb-hidden {
   display: none;
 }
+
 .cb-pill {
   display: inline-block;
   padding: 2px 8px;
@@ -52,9 +63,72 @@
   background: var(--cb-accent);
   color: #fff;
   margin-right: 6px;
+}
 
-  img.emoji {
-    fill: #fff;
-    color: #fff;
+.cb-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 8px 0;
+}
+.cb-switch input {
+  display: none;
+}
+.cb-switch .cb-slider {
+  position: relative;
+  width: 36px;
+  height: 18px;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.cb-switch .cb-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+.cb-switch input:checked + .cb-slider {
+  background: var(--cb-accent);
+}
+.cb-switch input:checked + .cb-slider::after {
+  transform: translateX(18px);
+}
+.cb-switch .cb-switch-label {
+  font-weight: 500;
+}
+
+/* Switch list container */
+.cb-switches-box {
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid #dcdcde;
+  border-radius: 4px;
+  background: #fff;
+  padding: 24px;
+  max-width: var(--cb-maxw);
+
+  .cb-switches-group {
+    margin-bottom: 24px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
+
+  .cb-switches-group-title {
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+}
+.cb-switches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 12px;
 }

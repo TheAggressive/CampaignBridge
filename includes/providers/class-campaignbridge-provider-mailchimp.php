@@ -19,8 +19,7 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 			<th scope="row"><?php echo esc_html__( 'API Key', 'campaignbridge' ); ?></th>
 			<td>
 				<input id="campaignbridge-mailchimp-api-key" type="password" autocomplete="new-password" name="<?php echo esc_attr( $option_name ); ?>[api_key]" value="<?php echo esc_attr( isset( $settings['api_key'] ) ? $settings['api_key'] : '' ); ?>" size="50" />
-				<button type="button" class="button" id="campaignbridge-verify-mailchimp"><?php echo esc_html__( 'Verify Connection', 'campaignbridge' ); ?></button>
-				<span id="campaignbridge-verify-status" style="margin-left:8px;"></span>
+				<span id="campaignbridge-verify-status" class="cb-verify-status"></span>
 				<?php if ( empty( $settings['api_key'] ) ) : ?>
 					<p class="description"><?php echo esc_html__( 'Enter and save your API key to select an audience and template.', 'campaignbridge' ); ?></p>
 				<?php endif; ?>

@@ -266,6 +266,7 @@
       $.post(CampaignBridge.ajaxUrl, {
         action: 'campaignbridge_verify_mailchimp',
         nonce: CampaignBridge.nonce,
+        api_key: $('#campaignbridge-mailchimp-api-key').val() || '',
       })
         .done(function (resp) {
           if (resp && resp.success) {
