@@ -15,7 +15,7 @@
     "lint:js": "wp-scripts lint-js ./src/**/*.js",
     "packages-update": "wp-scripts packages-update",
     "plugin-zip": "wp-scripts plugin-zip",
-    "start:blocks": "wp-scripts start --config laao-webpack.config.js --webpack-src-dir=./src/blocks --output-path=./dist/blocks",
+    "start:blocks": "wp-scripts start --config webpack.config.js --webpack-src-dir=./src/blocks --output-path=./dist/blocks",
     "start:interactivity": "wp-scripts start --webpack-src-dir=./src/blocks-interactivity --output-path=./dist/blocks-interactivity --experimental-modules",
     "start": "concurrently 'pnpm start:blocks' 'pnpm start:interactivity'",
     "start:hot": "wp-scripts start --output-path=./dist --hot",
@@ -28,7 +28,9 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
     "@wordpress/scripts": "^30.21.0",
+    "concurrently": "^9.2.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^4.1.11",
+    "webpack-remove-empty-scripts": "^1.1.1"
   }
 }

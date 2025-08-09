@@ -2,9 +2,7 @@
 const defaultConfig = require('@wordpress/scripts/config/webpack.config');
 
 // Plugins.
-const BrowserSyncPlugin = require('browser-sync-webpack-plugin');
 const RemoveEmptyScriptsPlugin = require('webpack-remove-empty-scripts');
-const CopyPlugin = require('copy-webpack-plugin');
 
 // Utilities.
 const path = require('path');
@@ -14,53 +12,16 @@ module.exports = {
   ...defaultConfig,
   ...{
     entry: {
-      ...defaultConfig.entry(),
-      '../scripts/app': path.resolve(process.cwd(), 'src/scripts', 'app.js'),
-      '../scripts/smoothscroll': path.resolve(
+      ...defaultConfig.entry,
+      '../scripts/campaignbridge': path.resolve(
         process.cwd(),
         'src/scripts',
-        'smoothscroll.js'
+        'campaignbridge.js'
       ),
-      '../scripts/editorial-block-plugin': path.resolve(
-        process.cwd(),
-        'src/scripts',
-        'editorial-block-plugin.js'
-      ),
-      '../scripts/image-credits-block-plugin': path.resolve(
-        process.cwd(),
-        'src/scripts',
-        'image-credits-block-plugin.js'
-      ),
-      '../scripts/cover-block-plugin': path.resolve(
-        process.cwd(),
-        'src/scripts',
-        'cover-block-plugin.js'
-      ),
-      '../scripts/wh-image-credit-block-plugin': path.resolve(
-        process.cwd(),
-        'src/scripts',
-        'wh-image-credit-block-plugin.js'
-      ),
-      '../scripts/wh-link-to-block-plugin': path.resolve(
-        process.cwd(),
-        'src/scripts',
-        'wh-link-to-block-plugin.js'
-      ),
-      '../scripts/location-block-plugin': path.resolve(
-        process.cwd(),
-        'src/scripts',
-        'location-block-plugin.js'
-      ),
-      '../scripts/hair-makeup-credits-block-plugin': path.resolve(
-        process.cwd(),
-        'src/scripts',
-        'hair-makeup-credits-block-plugin.js'
-      ),
-      '../styles/app': path.resolve(process.cwd(), 'src/styles', 'app.css'),
-      '../styles/editor': path.resolve(
+      '../styles/styles': path.resolve(
         process.cwd(),
         'src/styles',
-        'editor.css'
+        'styles.css'
       ),
     },
     plugins: [
@@ -73,35 +34,6 @@ module.exports = {
       new RemoveEmptyScriptsPlugin({
         stage: RemoveEmptyScriptsPlugin.STAGE_AFTER_PROCESS_PLUGINS,
       }),
-
-      // Copies any assets that don't need to be processed to
-      // the output folder.
-      new CopyPlugin({
-        patterns: [
-          {
-            from: './src/assets',
-            to: '../assets',
-          },
-          {
-            from: './src/block-variations',
-            to: '../block-variations',
-          },
-        ],
-      }),
-      new BrowserSyncPlugin(
-        // BrowserSync options
-        {
-          // browse to http://localhost:3000/ during development
-          host: 'localhost',
-
-          port: 3000,
-          // proxy the Webpack Dev Server endpoint
-          // (which should be serving on http://localhost:3100/)
-          // through BrowserSync
-          proxy: 'http://laartsonline.local',
-          files: ['**/*.css', '**/*.php', '**/*.js'],
-        }
-      ),
     ],
   },
   cache: false,
