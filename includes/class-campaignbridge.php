@@ -398,7 +398,7 @@ class CampaignBridge {
 		wp_enqueue_script(
 			'campaignbridge-admin',
 			plugins_url( 'assets/admin.js', __DIR__ ),
-			array( 'jquery' ),
+			array(),
 			'1.0.0',
 			true
 		);
