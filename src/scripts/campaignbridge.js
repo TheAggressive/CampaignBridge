@@ -27,6 +27,11 @@
   const qsa = (selector, root) =>
     Array.from((root || document).querySelectorAll(selector));
 
+  const getQueryParam = (name) => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+  };
+
   /**
    * Delegate events from document to elements matching a selector.
    * @param {string} eventName Event type (e.g., 'click')
@@ -189,6 +194,10 @@
     const select = qs('#campaignbridge-posts');
     if (!typeEl || !select) return;
     const postType = typeEl.value;
+    if (!postType) {
+      select.innerHTML = '';
+      return;
+    }
     select.disabled = true;
     select.innerHTML = '<option>Loading…</option>';
     try {
@@ -268,6 +277,87 @@
     }
 
     toggleResetVisibility();
+
+    // Template slots mapping and preview (slot-based templates)
+    (function setupTemplateSlots() {
+      const tplId = getQueryParam('tpl');
+      if (!tplId) return;
+
+      let mappingWrap = document.getElementById('campaignbridge-mapping');
+      let mappingBody = document.getElementById('campaignbridge-mapping-body');
+      if (!mappingWrap) {
+        const container = document.createElement('div');
+        container.id = 'campaignbridge-mapping';
+        container.innerHTML =
+          '<h3 class="cb-mapping-title">Slot Mapping</h3><table class="widefat striped cb-mapping-table"><thead><tr><th style="width:50%;">Slot key</th><th>Post</th></tr></thead><tbody id="campaignbridge-mapping-body"></tbody></table>';
+        const anchor =
+          document.querySelector('.cb-field:last-of-type') ||
+          document.querySelector('.wrap');
+        (anchor || document.body).appendChild(container);
+        mappingWrap = container;
+        mappingBody = document.getElementById('campaignbridge-mapping-body');
+      }
+
+      post({
+        action: 'campaignbridge_fetch_template_slots',
+        nonce: CampaignBridge.nonce,
+        template_id: tplId,
+      }).then((resp) => {
+        if (!resp?.success || !resp.data?.slots) return;
+        const slots = resp.data.slots;
+        const items = [];
+        const postSelect = qs('#campaignbridge-posts');
+        if (postSelect) {
+          qsa('option', postSelect).forEach((opt) => {
+            items.push({ id: opt.value, label: opt.textContent });
+          });
+        }
+        const keys = slots.map((s) => s.key);
+        renderMapping(keys, items);
+      });
+
+      let previewBox = document.getElementById('campaignbridge-preview');
+      if (!previewBox) {
+        previewBox = document.createElement('div');
+        previewBox.id = 'campaignbridge-preview';
+        previewBox.className = 'cb-preview-box';
+        previewBox.style.marginTop = '16px';
+        previewBox.innerHTML =
+          '<p><button type="button" class="button" id="campaignbridge-preview-btn">Preview Email</button></p><div id="campaignbridge-preview-html" style="border:1px solid #dcdcde;background:#fff;padding:16px;max-height:480px;overflow:auto;"></div>';
+        mappingWrap.parentNode.insertBefore(
+          previewBox,
+          mappingWrap.nextSibling
+        );
+      }
+
+      on('click', '#campaignbridge-preview-btn', async () => {
+        const map = {};
+        qsa('#campaignbridge-mapping-body select').forEach((sel) => {
+          const name = sel.getAttribute('name') || '';
+          const match = name.match(/sections_map\[(.+)\]/);
+          if (match) {
+            map[match[1]] = sel.value ? Number(sel.value) : 0;
+          }
+        });
+        const previewArea = qs('#campaignbridge-preview-html');
+        previewArea.innerHTML = '<p>Generating preview…</p>';
+        try {
+          const resp = await post({
+            action: 'campaignbridge_render_preview',
+            nonce: CampaignBridge.nonce,
+            template_id: tplId,
+            slots_map: JSON.stringify(map),
+          });
+          if (resp?.success && resp.data?.html) {
+            previewArea.innerHTML = resp.data.html;
+          } else {
+            previewArea.innerHTML = '<p>Failed to render preview.</p>';
+          }
+        } catch (e) {
+          previewArea.innerHTML = '<p>Failed to render preview.</p>';
+        }
+      });
+    })();
 
     on('click', '#campaignbridge-show-sections', (e, btn) => {
       const box = qs('#campaignbridge-sections');

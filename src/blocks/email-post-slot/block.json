@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "campaignbridge/email-post-slot",
+  "title": "Email Post Slot",
+  "category": "widgets",
+  "icon": "media-document",
+  "description": "Placeholder for a post in email template; will be populated when sending.",
+  "supports": { "html": false },
+  "attributes": {
+    "slotId": { "type": "string" },
+    "showImage": { "type": "boolean", "default": true },
+    "showExcerpt": { "type": "boolean", "default": true },
+    "ctaLabel": { "type": "string", "default": "Read more" }
+  },
+  "editorScript": "file:./index.js",
+  "render": "file:./render.php"
+}
