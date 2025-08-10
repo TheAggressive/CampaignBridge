@@ -8,16 +8,18 @@
     "create-block-dynamic": "npx @wordpress/create-block@latest --no-plugin --namespace campaignbridge --variant dynamic",
     "create-block-interactive": "npx @wordpress/create-block@latest --no-plugin --namespace campaignbridge --template @wordpress/create-block-interactive-template",
     "build:blocks": "wp-scripts build --config webpack.config.js --webpack-src-dir=./src/blocks --output-path=./dist/blocks",
-    "build:interactivity": "wp-scripts build --webpack-src-dir=./src/blocks-interactivity --output-path=./dist/blocks-interactivity --experimental-modules",
-    "build": "pnpm build:blocks & pnpm build:interactivity",
+    "build:interactivity": "wp-scripts build --config webpack.config.js --webpack-src-dir=./src/blocks-interactivity --output-path=./dist/blocks-interactivity --experimental-modules",
+    "build:assets": "wp-scripts build --config webpack.assets.config.js",
+    "build": "concurrently 'pnpm build:blocks' 'pnpm build:interactivity' 'pnpm build:assets'",
     "format": "wp-scripts format",
     "lint:css": "wp-scripts lint-style 'src/**/*.css'",
     "lint:js": "wp-scripts lint-js ./src/**/*.js",
     "packages-update": "wp-scripts packages-update",
     "plugin-zip": "wp-scripts plugin-zip",
     "start:blocks": "wp-scripts start --config webpack.config.js --webpack-src-dir=./src/blocks --output-path=./dist/blocks",
-    "start:interactivity": "wp-scripts start --webpack-src-dir=./src/blocks-interactivity --output-path=./dist/blocks-interactivity --experimental-modules",
-    "start": "concurrently 'pnpm start:blocks' 'pnpm start:interactivity'",
+    "start:interactivity": "wp-scripts start --config webpack.config.js --webpack-src-dir=./src/blocks-interactivity --output-path=./dist/blocks-interactivity --experimental-modules",
+    "start:assets": "wp-scripts start --config webpack.assets.config.js",
+    "start": "concurrently 'pnpm start:blocks' 'pnpm start:interactivity' 'pnpm start:assets'",
     "start:hot": "wp-scripts start --output-path=./dist --hot",
     "start:copy-php": "wp-scripts start --output-path=./dist --webpack-copy-php",
     "js:watch": "wp-scripts start ./src/scripts/app.js --output-path=dist/scripts"
@@ -31,6 +33,10 @@
     "concurrently": "^9.2.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
-    "webpack-remove-empty-scripts": "^1.1.1"
+    "webpack-remove-empty-scripts": "^1.1.1",
+    "mini-css-extract-plugin": "^2.9.2",
+    "webpack-merge": "^6.0.1",
+    "fast-glob": "^3.3.2",
+    "sass": "^1.79.5"
   }
 }

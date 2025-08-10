@@ -397,7 +397,7 @@ class CampaignBridge {
 
 		wp_enqueue_script(
 			'campaignbridge-admin',
-			plugins_url( 'assets/admin.js', __DIR__ ),
+			plugins_url( 'dist/scripts/campaignbridge.js', __DIR__ ),
 			array(),
 			'1.0.0',
 			true
@@ -405,7 +405,7 @@ class CampaignBridge {
 
 		wp_enqueue_style(
 			'campaignbridge-admin',
-			plugins_url( 'assets/admin.css', __DIR__ ),
+			plugins_url( 'dist/styles/styles.css', __DIR__ ),
 			array(),
 			'1.0.0'
 		);
