@@ -39,9 +39,23 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		<tr>
 			<th scope="row"><?php echo esc_html__( 'Audience', 'campaignbridge' ); ?></th>
 			<td>
+				<?php
+				$current_audience_label = '';
+				if ( ! empty( $settings['audience_id'] ) ) {
+					$aud_items = $this->get_audiences( $settings );
+					if ( is_array( $aud_items ) ) {
+						foreach ( $aud_items as $it ) {
+							if ( isset( $it['id'] ) && (string) $it['id'] === (string) $settings['audience_id'] ) {
+								$current_audience_label = isset( $it['name'] ) ? (string) $it['name'] : '';
+								break;
+							}
+						}
+					}
+				}
+				?>
 				<select id="campaignbridge-mailchimp-audience" name="<?php echo esc_attr( $option_name ); ?>[audience_id]" style="min-width:320px;">
 					<?php if ( ! empty( $settings['audience_id'] ) ) : ?>
-						<option value="<?php echo esc_attr( $settings['audience_id'] ); ?>" selected><?php echo esc_html( $settings['audience_id'] ); ?></option>
+						<option value="<?php echo esc_attr( $settings['audience_id'] ); ?>" selected><?php echo esc_html( $current_audience_label ? $current_audience_label : (string) $settings['audience_id'] ); ?></option>
 					<?php else : ?>
 						<option value="">—</option>
 					<?php endif; ?>
@@ -53,9 +67,23 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		<tr>
 			<th scope="row"><?php echo esc_html__( 'Template', 'campaignbridge' ); ?></th>
 			<td>
+				<?php
+				$current_template_label = '';
+				if ( ! empty( $settings['template_id'] ) ) {
+					$tpl_items = $this->get_templates( $settings );
+					if ( is_array( $tpl_items ) ) {
+						foreach ( $tpl_items as $it ) {
+							if ( isset( $it['id'] ) && (int) $it['id'] === (int) $settings['template_id'] ) {
+								$current_template_label = isset( $it['name'] ) ? (string) $it['name'] : '';
+								break;
+							}
+						}
+					}
+				}
+				?>
 				<select id="campaignbridge-mailchimp-templates" name="<?php echo esc_attr( $option_name ); ?>[template_id]" style="min-width:320px;">
 					<?php if ( ! empty( $settings['template_id'] ) ) : ?>
-						<option value="<?php echo esc_attr( $settings['template_id'] ); ?>" selected><?php echo esc_html( $settings['template_id'] ); ?></option>
+						<option value="<?php echo esc_attr( $settings['template_id'] ); ?>" selected><?php echo esc_html( $current_template_label ? $current_template_label : (string) $settings['template_id'] ); ?></option>
 					<?php else : ?>
 						<option value="">—</option>
 					<?php endif; ?>
