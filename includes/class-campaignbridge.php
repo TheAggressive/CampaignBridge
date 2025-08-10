@@ -19,8 +19,8 @@ class CampaignBridge {
 		add_action( 'wp_ajax_campaignbridge_fetch_mailchimp_audiences', array( $this, 'ajax_fetch_mailchimp_audiences' ) );
 		add_action( 'wp_ajax_campaignbridge_fetch_mailchimp_templates', array( $this, 'ajax_fetch_mailchimp_templates' ) );
 		add_action( 'wp_ajax_campaignbridge_verify_mailchimp', array( $this, 'ajax_verify_mailchimp' ) );
-		add_action( 'wp_ajax_campaignbridge_fetch_template_slots', array( $this, 'ajax_fetch_template_slots' ) );
-		add_action( 'wp_ajax_campaignbridge_render_preview', array( $this, 'ajax_render_preview' ) );
+		add_action( 'wp_ajax_campaignbridge_fetch_template_slots', array( 'CB_Ajax', 'fetch_template_slots' ) );
+		add_action( 'wp_ajax_campaignbridge_render_preview', array( 'CB_Ajax', 'render_preview' ) );
 
 		// Register providers.
 		require_once __DIR__ . '/providers/interface-campaignbridge-provider.php';
@@ -43,23 +43,7 @@ class CampaignBridge {
 		add_menu_page( 'CampaignBridge', 'CampaignBridge', 'manage_options', 'mailchimp-post-blast', array( 'CB_Admin_UI', 'render_page' ) );
 	}
 
-	public function register_template_cpt() {
-		register_post_type(
-			'cb_template',
-			array(
-				'labels'            => array(
-					'name'          => __( 'Email Templates', 'campaignbridge' ),
-					'singular_name' => __( 'Email Template', 'campaignbridge' ),
-				),
-				'public'            => false,
-				'show_ui'           => true,
-				'show_in_menu'      => false,
-				'show_in_admin_bar' => false,
-				'supports'          => array( 'title', 'editor' ),
-				'show_in_rest'      => true,
-			)
-		);
-	}
+	// Legacy: handled by CB_Template_CPT
 
 	public function register_shortcodes() {
 		add_shortcode(
@@ -435,7 +419,4 @@ class CampaignBridge {
 	private function generate_and_send_campaign( $post_ids, $settings, $sections_map = array() ) {
 		return CB_Dispatcher::generate_and_send_campaign( $post_ids, $settings, $sections_map, $this->providers );
 	}
-
-	private function send_to_mailchimp( $blocks, $settings ) {
-		/* legacy stub, unused after provider refactor */ }
 }
