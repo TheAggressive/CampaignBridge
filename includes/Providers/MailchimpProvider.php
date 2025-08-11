@@ -1,4 +1,15 @@
 <?php
+/**
+ * CampaignBridge Mailchimp provider.
+ *
+ * Creates campaigns, updates content sections, and fetches
+ * audiences/templates via the Mailchimp API.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
 namespace CampaignBridge\Providers;
 
 use CampaignBridge\Notices;
@@ -19,19 +30,41 @@ if ( ! defined( 'ABSPATH' ) ) {
  * fetches audiences, templates and section keys via Mailchimp API.
  */
 class MailchimpProvider implements ProviderInterface {
-	/** @inheritDoc */
+	/**
+	 * Provider slug.
+	 *
+	 * @return string
+	 */
 	public function slug() {
-		return 'mailchimp'; }
-	/** @inheritDoc */
-	public function label() {
-		return __( 'Mailchimp', 'campaignbridge' ); }
+		return 'mailchimp';
+	}
 
-	/** @inheritDoc */
+	/**
+	 * Human-readable label.
+	 *
+	 * @return string
+	 */
+	public function label() {
+		return __( 'Mailchimp', 'campaignbridge' );
+	}
+
+	/**
+	 * Whether required settings exist.
+	 *
+	 * @param array $settings Plugin settings.
+	 * @return bool
+	 */
 	public function is_configured( $settings ) {
 		return ! empty( $settings['api_key'] ) && ! empty( $settings['audience_id'] ) && ! empty( $settings['template_id'] );
 	}
 
-	/** @inheritDoc */
+	/**
+	 * Render provider settings fields.
+	 *
+	 * @param array  $settings    Plugin settings.
+	 * @param string $option_name Root option name.
+	 * @return void
+	 */
 	public function render_settings_fields( $settings, $option_name ) {
 		?>
 		<tr>
@@ -108,8 +141,8 @@ class MailchimpProvider implements ProviderInterface {
 	/**
 	 * Create a draft campaign and update its content using the given blocks.
 	 *
-	 * @param array $blocks   section_key => HTML string
-	 * @param array $settings provider settings (api_key, audience_id, template_id)
+	 * @param array $blocks   section_key => HTML string.
+	 * @param array $settings Provider settings (api_key, audience_id, template_id).
 	 * @return bool
 	 */
 	public function send_campaign( $blocks, $settings ) {
@@ -208,31 +241,32 @@ class MailchimpProvider implements ProviderInterface {
 	/**
 	 * Fetch Mailchimp audiences (lists).
 	 *
-	 * @param array $settings provider settings (api_key)
+	 * @param array $settings Provider settings (api_key).
+	 * @param bool  $refresh  Force refresh.
 	 * @return array|WP_Error
 	 */
-    public function get_audiences( $settings, $refresh = false ) {
-        $api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
-        if ( empty( $api_key ) ) {
-            return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
-        }
-        $parts = explode( '-', $api_key );
-        if ( count( $parts ) < 2 ) {
-            return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
-        }
-        $cache_key = 'cb_mc_audiences_' . md5( $api_key );
-        if ( ! $refresh ) {
-            $cached = get_transient( $cache_key );
-            if ( false !== $cached ) {
-                return $cached; }
-        }
+	public function get_audiences( $settings, $refresh = false ) {
+		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+		if ( empty( $api_key ) ) {
+			return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
+		}
+		$parts = explode( '-', $api_key );
+		if ( count( $parts ) < 2 ) {
+			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+		}
+		$cache_key = 'cb_mc_audiences_' . md5( $api_key );
+		if ( ! $refresh ) {
+			$cached = get_transient( $cache_key );
+			if ( false !== $cached ) {
+				return $cached; }
+		}
 		$dc       = end( $parts );
 		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
-        $resp     = wp_remote_get(
+		$resp     = wp_remote_get(
 			$endpoint . '/lists?count=1000',
 			array(
-                'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
-                'timeout' => 20,
+				'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
+				'timeout' => 20,
 			)
 		);
 		if ( is_wp_error( $resp ) ) {
@@ -252,38 +286,39 @@ class MailchimpProvider implements ProviderInterface {
 				);
 			}
 		}
-        set_transient( $cache_key, $items, 15 * MINUTE_IN_SECONDS );
-        return $items;
+		set_transient( $cache_key, $items, 15 * MINUTE_IN_SECONDS );
+		return $items;
 	}
 
 	/**
 	 * Fetch user (saved) templates.
 	 *
-	 * @param array $settings provider settings (api_key)
+	 * @param array $settings Provider settings (api_key).
+	 * @param bool  $refresh  Force refresh.
 	 * @return array|WP_Error
 	 */
-    public function get_templates( $settings, $refresh = false ) {
-        $api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
-        if ( empty( $api_key ) ) {
-            return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
-        }
-        $parts = explode( '-', $api_key );
-        if ( count( $parts ) < 2 ) {
-            return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
-        }
-        $cache_key = 'cb_mc_templates_' . md5( $api_key );
-        if ( ! $refresh ) {
-            $cached = get_transient( $cache_key );
-            if ( false !== $cached ) {
-                return $cached; }
-        }
+	public function get_templates( $settings, $refresh = false ) {
+		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+		if ( empty( $api_key ) ) {
+			return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
+		}
+		$parts = explode( '-', $api_key );
+		if ( count( $parts ) < 2 ) {
+			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+		}
+		$cache_key = 'cb_mc_templates_' . md5( $api_key );
+		if ( ! $refresh ) {
+			$cached = get_transient( $cache_key );
+			if ( false !== $cached ) {
+				return $cached; }
+		}
 		$dc       = end( $parts );
 		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
-        $resp     = wp_remote_get(
+		$resp     = wp_remote_get(
 			$endpoint . '/templates?type=user&count=1000',
 			array(
-                'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
-                'timeout' => 20,
+				'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
+				'timeout' => 20,
 			)
 		);
 		if ( is_wp_error( $resp ) ) {
@@ -303,12 +338,18 @@ class MailchimpProvider implements ProviderInterface {
 				);
 			}
 		}
-        set_transient( $cache_key, $items, 15 * MINUTE_IN_SECONDS );
-        return $items;
+		set_transient( $cache_key, $items, 15 * MINUTE_IN_SECONDS );
+		return $items;
 	}
 
-	/** @inheritDoc */
-    public function get_section_keys( $settings, $refresh = false ) {
+	/**
+	 * Fetch template section keys.
+	 *
+	 * @param array $settings Plugin settings.
+	 * @param bool  $refresh  Force refresh.
+	 * @return array|WP_Error
+	 */
+	public function get_section_keys( $settings, $refresh = false ) {
 		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;
 		if ( empty( $api_key ) || empty( $template_id ) ) {
@@ -318,12 +359,12 @@ class MailchimpProvider implements ProviderInterface {
 		if ( count( $parts ) < 2 ) {
 			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
 		}
-        $cache_key = 'cb_mc_sections_' . md5( $api_key . '|' . $template_id );
-        if ( ! $refresh ) {
-            $cached = get_transient( $cache_key );
-            if ( false !== $cached ) {
-                return $cached; }
-        }
+		$cache_key = 'cb_mc_sections_' . md5( $api_key . '|' . $template_id );
+		if ( ! $refresh ) {
+			$cached = get_transient( $cache_key );
+			if ( false !== $cached ) {
+				return $cached; }
+		}
 		$dc       = end( $parts );
 		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
 
@@ -348,7 +389,7 @@ class MailchimpProvider implements ProviderInterface {
 		if ( isset( $data['sections'] ) && is_array( $data['sections'] ) ) {
 			$sections = array_keys( $data['sections'] );
 		}
-        set_transient( $cache_key, $sections, 15 * MINUTE_IN_SECONDS );
-        return $sections;
+		set_transient( $cache_key, $sections, 15 * MINUTE_IN_SECONDS );
+		return $sections;
 	}
 }

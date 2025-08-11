@@ -88,7 +88,7 @@ class Plugin {
 	 */
 	public function add_admin_menu(): void {
 		AdminUI::init( $this->option_name, $this->providers );
-		add_menu_page( 'CampaignBridge', 'CampaignBridge', 'manage_options', 'mailchimp-post-blast', array( AdminUI::class, 'render_page' ) );
+		add_menu_page( 'CampaignBridge', 'CampaignBridge', 'manage_options', 'campaignbridge', array( AdminUI::class, 'render_page' ) );
 	}
 
 	/**

@@ -1,4 +1,16 @@
 <?php
+/**
+ * CampaignBridge Email Template custom post type.
+ *
+ * Registers the `cb_template` custom post type used for email templates.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
+// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
+
 namespace CampaignBridge\CPT;
 
 if ( ! defined( 'ABSPATH' ) ) {

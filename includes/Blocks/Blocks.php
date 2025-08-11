@@ -4,6 +4,7 @@
  *
  * @package CampaignBridge
  */
+
 // phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
 
 namespace CampaignBridge\Blocks;

@@ -1,7 +1,16 @@
 <?php
+/**
+ * CampaignBridge REST routes.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
 namespace CampaignBridge\REST;
 
 use CampaignBridge\Render\Render as CB_Render;
+use WP_REST_Request;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; }
@@ -11,9 +20,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * REST API routes for CampaignBridge admin operations.
  */
 class Routes {
-	/** @var string */
+	/**
+	 * Option key used to store plugin settings.
+	 *
+	 * @var string
+	 */
 	private static $option_name = 'campaignbridge_settings';
-	/** @var array */
+
+	/**
+	 * Registered providers map indexed by slug.
+	 *
+	 * @var array<string,object>
+	 */
 	private static $providers = array();
 
 	/**
@@ -36,7 +54,7 @@ class Routes {
 	public static function register() {
 		$ns = 'campaignbridge/v1';
 
-		\register_rest_route(
+		register_rest_route(
 			$ns,
 			'/posts',
 			array(
@@ -52,7 +70,7 @@ class Routes {
 			)
 		);
 
-		\register_rest_route(
+		register_rest_route(
 			$ns,
 			'/templates/(?P<id>\\d+)/slots',
 			array(
@@ -62,7 +80,7 @@ class Routes {
 			)
 		);
 
-		\register_rest_route(
+		register_rest_route(
 			$ns,
 			'/templates/(?P<id>\\d+)/preview',
 			array(
@@ -78,7 +96,7 @@ class Routes {
 			)
 		);
 
-		\register_rest_route(
+		register_rest_route(
 			$ns,
 			'/mailchimp/sections',
 			array(
@@ -94,7 +112,7 @@ class Routes {
 			)
 		);
 
-		\register_rest_route(
+		register_rest_route(
 			$ns,
 			'/mailchimp/audiences',
 			array(
@@ -110,7 +128,7 @@ class Routes {
 			)
 		);
 
-		\register_rest_route(
+		register_rest_route(
 			$ns,
 			'/mailchimp/templates',
 			array(
@@ -143,15 +161,22 @@ class Routes {
 		);
 	}
 
-	/** @return bool */
+	/**
+	 * Whether current user can manage plugin settings.
+	 *
+	 * @return bool
+	 */
 	public static function can_manage() {
 		return current_user_can( 'manage_options' );
 	}
 
 	/**
-	 * GET /posts
+	 * GET /posts endpoint.
+	 *
+	 * @param \WP_REST_Request $req Request object.
+	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function r_posts( \WP_REST_Request $req ) {
+	public static function r_posts( WP_REST_Request $req ) {
 		$post_type = $req->get_param( 'post_type' ) ? sanitize_key( $req->get_param( 'post_type' ) ) : 'post';
 		if ( ! post_type_exists( $post_type ) ) {
 			return new \WP_Error( 'bad_post_type', 'Invalid post type', array( 'status' => 400 ) );
@@ -189,9 +214,12 @@ class Routes {
 	}
 
 	/**
-	 * GET /templates/{id}/slots
+	 * GET /templates/{id}/slots endpoint.
+	 *
+	 * @param WP_REST_Request $req Request object.
+	 * @return WP_REST_Response|WP_Error
 	 */
-	public static function r_template_slots( \WP_REST_Request $req ) {
+	public static function r_template_slots( WP_REST_Request $req ) {
 		$template_id = absint( $req->get_param( 'id' ) );
 		if ( $template_id <= 0 ) {
 			return new \WP_Error( 'missing_template', 'Missing template', array( 'status' => 400 ) );
@@ -201,13 +229,16 @@ class Routes {
 			return new \WP_Error( 'bad_template', 'Invalid template', array( 'status' => 400 ) );
 		}
 		$slots = CB_Render::discover_slots_from_content( (string) $post->post_content );
-		return \rest_ensure_response( array( 'slots' => $slots ) );
+		return rest_ensure_response( array( 'slots' => $slots ) );
 	}
 
 	/**
-	 * POST /templates/{id}/preview
+	 * POST /templates/{id}/preview endpoint.
+	 *
+	 * @param WP_REST_Request $req Request object.
+	 * @return WP_REST_Response|WP_Error
 	 */
-	public static function r_template_preview( \WP_REST_Request $req ) {
+	public static function r_template_preview( WP_REST_Request $req ) {
 		$template_id = absint( $req->get_param( 'id' ) );
 		$map         = array();
 		$raw         = $req->get_param( 'slots_map' );
@@ -225,9 +256,12 @@ class Routes {
 	}
 
 	/**
-	 * GET /mailchimp/sections
+	 * GET /mailchimp/sections endpoint.
+	 *
+	 * @param WP_REST_Request $req Request object.
+	 * @return WP_REST_Response|WP_Error
 	 */
-	public static function r_mc_sections( \WP_REST_Request $req ) {
+	public static function r_mc_sections( WP_REST_Request $req ) {
 		$settings = get_option( self::$option_name );
 		$provider = isset( $settings['provider'] ) && isset( self::$providers[ $settings['provider'] ] ) ? $settings['provider'] : 'mailchimp';
 		if ( 'mailchimp' !== $provider || ! isset( self::$providers['mailchimp'] ) ) {
@@ -242,9 +276,12 @@ class Routes {
 	}
 
 	/**
-	 * GET /mailchimp/audiences
+	 * GET /mailchimp/audiences endpoint.
+	 *
+	 * @param WP_REST_Request $req Request object.
+	 * @return WP_REST_Response|WP_Error
 	 */
-	public static function r_mc_audiences( \WP_REST_Request $req ) {
+	public static function r_mc_audiences( WP_REST_Request $req ) {
 		$settings = get_option( self::$option_name );
 		if ( empty( $settings['api_key'] ) ) {
 			return new \WP_Error( 'missing_key', 'Missing API key', array( 'status' => 400 ) );
@@ -258,9 +295,12 @@ class Routes {
 	}
 
 	/**
-	 * GET /mailchimpemplates
+	 * GET /mailchimp/templates endpoint.
+	 *
+	 * @param \WP_REST_Request $req Request object.
+	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function r_mc_templates( \WP_REST_Request $req ) {
+	public static function r_mc_templates( WP_REST_Request $req ) {
 		$settings = get_option( self::$option_name );
 		if ( empty( $settings['api_key'] ) ) {
 			return new \WP_Error( 'missing_key', 'Missing API key', array( 'status' => 400 ) );
@@ -274,9 +314,12 @@ class Routes {
 	}
 
 	/**
-	 * POST /mailchimp/verify
+	 * POST /mailchimp/verify endpoint.
+	 *
+	 * @param \WP_REST_Request $req Request object.
+	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function r_mc_verify( \WP_REST_Request $req ) {
+	public static function r_mc_verify( WP_REST_Request $req ) {
 		$settings = get_option( self::$option_name );
 		$prov     = isset( $settings['provider'] ) ? $settings['provider'] : 'mailchimp';
 		if ( 'mailchimp' !== $prov ) {

@@ -1,4 +1,12 @@
 <?php
+/**
+ * CampaignBridge provider interface.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
 namespace CampaignBridge\Providers;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -58,5 +66,3 @@ interface ProviderInterface {
 	 */
 	public function get_section_keys( $settings );
 }
-
-

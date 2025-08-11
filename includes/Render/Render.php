@@ -1,4 +1,12 @@
 <?php
+/**
+ * CampaignBridge render helpers.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
 // phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
 namespace CampaignBridge\Render;
 
@@ -63,18 +71,14 @@ class Render {
 		foreach ( $blocks as $b ) {
 			$html .= self::render_node( $b, $slots_map );
 		}
-        $final = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body>" . $html . '</body></html>';
-        // Optionally inline CSS if Emogrifier is available
-        if ( class_exists( '\\Pelago\\Emogrifier\\CssInliner' ) ) {
-            try {
-                $css = (string) apply_filters( 'campaignbridge_email_inline_css', '' );
-                $final = \Pelago\Emogrifier\CssInliner::fromHtml( $final )->inlineCss( $css )->render();
-            } catch ( \Throwable $e ) {
-                // Swallow but allow a hook for debugging
-                do_action( 'campaignbridge_emogrifier_error', $e );
-            }
-        }
-        return $final;
+		$final = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body>" . $html . '</body></html>';
+		// Optionally inline CSS if Emogrifier is available.
+		if ( class_exists( '\Pelago\Emogrifier\CssInliner' ) ) {
+			$css   = (string) apply_filters( 'campaignbridge_email_inline_css', '' );
+			$cls   = '\Pelago\Emogrifier\CssInliner';
+			$final = $cls::fromHtml( $final )->inlineCss( $css )->render();
+		}
+		return $final;
 	}
 
 	/**

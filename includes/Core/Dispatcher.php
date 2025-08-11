@@ -1,10 +1,23 @@
 <?php
+/**
+ * CampaignBridge email campaign dispatcher.
+ *
+ * Builds email content blocks from posts/sections and dispatches them
+ * to the active provider (e.g., Mailchimp or HTML download).
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
+// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
+
 namespace CampaignBridge\Core;
 
 use CampaignBridge\Notices;
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; }
+	exit; }
 
 /**
  * Builds email content blocks from posts/sections and dispatches them
@@ -66,15 +79,15 @@ class Dispatcher {
 		return self::dispatch_to_provider( $blocks, $settings, $providers );
 	}
 
-    /**
-     * Dispatch the prepared blocks to the selected provider.
-     *
-     * @param array $blocks    section_key => HTML string.
-     * @param array $settings  Plugin settings.
-     * @param array $providers Providers map.
-     * @return bool
-     */
-    public static function dispatch_to_provider( $blocks, $settings, $providers ) {
+	/**
+	 * Dispatch the prepared blocks to the selected provider.
+	 *
+	 * @param array $blocks    section_key => HTML string.
+	 * @param array $settings  Plugin settings.
+	 * @param array $providers Providers map.
+	 * @return bool
+	 */
+	public static function dispatch_to_provider( $blocks, $settings, $providers ) {
 		$provider_slug = isset( $settings['provider'] ) && isset( $providers[ $settings['provider'] ] ) ? $settings['provider'] : 'mailchimp';
 		$provider      = isset( $providers[ $provider_slug ] ) ? $providers[ $provider_slug ] : null;
 		if ( ! $provider ) {

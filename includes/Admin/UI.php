@@ -1,4 +1,14 @@
 <?php
+/**
+ * CampaignBridge Admin UI.
+ *
+ * Renders the plugin admin tabs and enqueues assets for the admin page.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
 namespace CampaignBridge\Admin;
 
 use CampaignBridge\Core\Dispatcher;
@@ -14,10 +24,20 @@ if ( ! defined( 'ABSPATH' ) ) {
  * the post selection and mapping UI, and enqueues built assets with
  * dependencies and versioning via generated asset files.
  */
-
 class UI {
+	/**
+	 * Option key used to store plugin settings.
+	 *
+	 * @var string
+	 */
 	private static $option_name = 'campaignbridge_settings';
-	private static $providers   = array();
+
+	/**
+	 * Registered providers map indexed by slug.
+	 *
+	 * @var array<string,object>
+	 */
+	private static $providers = array();
 
 	/**
 	 * Initialize shared state.
@@ -38,11 +58,11 @@ class UI {
 	 */
 	public static function enqueue_admin_assets() {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( $screen && 'toplevel_page_mailchimp-post-blast' !== $screen->id ) {
+		if ( $screen && 'toplevel_page_campaignbridge' !== $screen->id ) {
 			return;
 		}
 
-		// Load asset metadata for proper dependencies and versioning
+		// Load asset metadata for proper dependencies and versioning.
 		$script_asset      = array(
 			'dependencies' => array(),
 			'version'      => '1.0.0',
@@ -56,7 +76,7 @@ class UI {
 		}
 
 		$base_file = dirname( __DIR__, 2 ) . '/campaignbridge.php';
-		// Ensure REST globals (wpApiSettings) are present for our REST calls
+		// Ensure REST globals (wpApiSettings) are present for our REST calls.
 		$deps = array_unique( array_merge( (array) $script_asset['dependencies'], array( 'wp-api' ) ) );
 		wp_enqueue_script(
 			'campaignbridge-admin',
@@ -80,8 +100,6 @@ class UI {
 			array(),
 			$style_version
 		);
-
-		// No longer localizing admin-ajax data; REST is used going forward
 	}
 
 	/**
@@ -105,10 +123,10 @@ class UI {
 	<div class="wrap">
 		<h1>CampaignBridge</h1>
 		<h2 class="nav-tab-wrapper" style="margin-bottom: 1rem;">
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=mailchimp-post-blast&tab=posts&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'posts' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Posts</a>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=mailchimp-post-blast&tab=templates&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'templates' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Templates</a>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=mailchimp-post-blast&tab=types&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'types' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Post Types</a>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=mailchimp-post-blast&tab=settings&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'settings' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Settings</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=posts&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'posts' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Posts</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=templates&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'templates' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Templates</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=types&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'types' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Post Types</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=settings&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'settings' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Settings</a>
 		</h2>
 
 		<?php
@@ -136,7 +154,7 @@ class UI {
 				</td>
 			</tr>
 			<?php
-			// Provider-specific fields
+			// Provider-specific fields.
 			if ( isset( self::$providers[ $provider ] ) ) {
 				self::$providers[ $provider ]->render_settings_fields( $settings, self::$option_name );
 			}
@@ -161,7 +179,7 @@ class UI {
 				echo '<table class="widefat striped"><thead><tr><th>Title</th><th style="width:220px;">Actions</th></tr></thead><tbody>';
 				foreach ( $templates as $tpl ) {
 					$edit = get_edit_post_link( $tpl->ID );
-					$use  = admin_url( 'admin.php?page=mailchimp-post-blast&tab=posts&cbnav=' . $nav_nonce . '&tpl=' . (int) $tpl->ID );
+					$use  = admin_url( 'admin.php?page=campaignbridge&tab=posts&cbnav=' . $nav_nonce . '&tpl=' . (int) $tpl->ID );
 					echo '<tr><td>' . esc_html( get_the_title( $tpl ) ) . '</td><td><a class="button" href="' . esc_url( $edit ) . '">Edit</a> <a class="button" href="' . esc_url( $use ) . '">Use</a></td></tr>';
 				}
 				echo '</tbody></table>';
@@ -318,15 +336,18 @@ class UI {
 			<?php submit_button( 'Generate and Send Email' ); ?>
 		</form>
 		<?php
-		// Handle submission
-		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['campaignbridge_nonce'] ) && wp_verify_nonce( $_POST['campaignbridge_nonce'], 'campaignbridge_send' ) ) {
+		// Handle submission.
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+		$nonce_value    = isset( $_POST['campaignbridge_nonce'] ) ? sanitize_text_field( (string) wp_unslash( $_POST['campaignbridge_nonce'] ) ) : '';
+		if ( 'POST' === $request_method && '' !== $nonce_value && wp_verify_nonce( $nonce_value, 'campaignbridge_send' ) ) {
 			if ( ! current_user_can( 'manage_options' ) ) {
 				wp_die( esc_html__( 'Unauthorized.', 'campaignbridge' ) );
 			}
-			$selected_posts = ! empty( $_POST['selected_posts'] ) ? array_map( 'absint', (array) $_POST['selected_posts'] ) : array();
-			$sections_map   = array();
-			if ( isset( $_POST['sections_map'] ) && is_array( $_POST['sections_map'] ) ) {
-				foreach ( $_POST['sections_map'] as $sec_key => $pid ) {
+			$selected_posts   = ! empty( $_POST['selected_posts'] ) ? array_map( 'absint', (array) $_POST['selected_posts'] ) : array();
+			$sections_map     = array();
+			$raw_sections_map = filter_input( INPUT_POST, 'sections_map', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
+			if ( is_array( $raw_sections_map ) ) {
+				foreach ( $raw_sections_map as $sec_key => $pid ) {
 					$sec_key = sanitize_text_field( wp_unslash( $sec_key ) );
 					$pid     = absint( $pid );
 					if ( '' !== $sec_key && $pid > 0 ) {
