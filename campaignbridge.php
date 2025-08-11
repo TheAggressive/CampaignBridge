@@ -1,16 +1,18 @@
 <?php
-/*
-Plugin Name: CampaignBridge
-Description: Select posts from multiple post types and send them via Mailchimp using a saved template.
-Version: 0.1.0
-Author: Your Name
-*/
+/**
+ * Plugin Name: CampaignBridge
+ * Description: Select posts from multiple post types and send them via Mailchimp using a saved template.
+ * Version: 0.1.0
+ * Author: Your Name
+ *
+ * @package CampaignBridge
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// i18n
+// i18n.
 add_action(
 	'plugins_loaded',
 	function () {
