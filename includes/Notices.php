@@ -1,4 +1,14 @@
 <?php
+/**
+ * CampaignBridge admin notices helper.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
+// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
+
 namespace CampaignBridge;
 
 if ( ! defined( 'ABSPATH' ) ) {

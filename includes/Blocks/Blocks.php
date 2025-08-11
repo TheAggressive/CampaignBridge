@@ -22,7 +22,8 @@ class Blocks {
 	 * @return void
 	 */
 	public static function register(): void {
-		$build_dir = plugin_dir_path( __FILE__ ) . '/dist/blocks';
+		$plugin_root_dir = dirname( dirname( plugin_dir_path( __FILE__ ) ) );
+		$build_dir       = trailingslashit( $plugin_root_dir ) . 'dist/blocks/';
 
 		if ( ! is_dir( $build_dir ) ) {
 			return;
