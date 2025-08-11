@@ -121,3 +121,4 @@ alwaysApply: true
   8. Use WordPress's hook system for modular and extensible code.
   9. Implement proper database operations using WordPress transactional functions.
   10. Use WordPress's WP_Cron API for scheduling tasks.
+  11. Always add documentation to each class, method and function describing what the class/method/function does and use standard best practices for documenting

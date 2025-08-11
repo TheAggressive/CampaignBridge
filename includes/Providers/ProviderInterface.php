@@ -1,19 +1,15 @@
 <?php
+namespace CampaignBridge\Providers;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName, Generic.WhiteSpace.DisallowSpaceIndent
 /**
- * Contract for CampaignBridge providers (Mailchimp, HTML, etc.).
- *
- * Implementations are responsible for:
- * - Reporting identity/label
- * - Rendering provider-specific settings fields in the Settings tab
- * - Validating if required settings are present
- * - Sending a campaign given the prepared template blocks
- * - Optionally exposing template section keys for mapping
+ * Provider interface for CampaignBridge providers.
  */
-interface CampaignBridge_Provider_Interface {
+interface ProviderInterface {
 	/**
 	 * Unique slug for the provider (e.g., 'mailchimp', 'html').
 	 *
@@ -58,7 +54,9 @@ interface CampaignBridge_Provider_Interface {
 	 * Return a list of template section keys (if supported by provider), used for mapping.
 	 *
 	 * @param array $settings Plugin settings array.
-	 * @return array|WP_Error Array of strings (keys) or WP_Error on failure/unsupported.
+	 * @return array|\WP_Error Array of strings (keys) or WP_Error on failure/unsupported.
 	 */
 	public function get_section_keys( $settings );
 }
+
+

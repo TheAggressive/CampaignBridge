@@ -1,13 +1,13 @@
 <?php
-/**
- * Email Template custom post type registration.
- *
- * @package CampaignBridge
- */
+namespace CampaignBridge\CPT;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; }
 
-class CB_Template_CPT {
+/**
+ * Registers the `cb_template` custom post type used for email templates.
+ */
+class TemplateCPT {
 	/**
 	 * Register the `cb_template` post type used for email templates.
 	 *

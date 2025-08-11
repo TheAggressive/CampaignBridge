@@ -61,15 +61,32 @@
    * @param {Record<string, string>} data Key-value payload
    * @returns {Promise<any>} Parsed JSON response
    */
-  const post = (data) =>
-    fetch(CampaignBridge.ajaxUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      },
+  const api = async (path, { method = 'GET', body } = {}) => {
+    const url = `${
+      window.wpApiSettings?.root || '/wp-json/'
+    }campaignbridge/v1${path}`;
+    const headers = { 'Content-Type': 'application/json' };
+    if (window.wpApiSettings?.nonce)
+      headers['X-WP-Nonce'] = window.wpApiSettings.nonce;
+    const res = await fetch(url, {
+      method,
+      headers,
       credentials: 'same-origin',
-      body: new URLSearchParams(data).toString(),
-    }).then((res) => res.json());
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const json = await res.json();
+    return json;
+  };
+
+  // Normalize REST response shapes
+  const itemsFrom = (resp) =>
+    (resp && resp.items) || (resp && resp.data && resp.data.items) || [];
+  const sectionsFrom = (resp) =>
+    (resp && resp.sections) || (resp && resp.data && resp.data.sections) || [];
+  const slotsFrom = (resp) =>
+    (resp && resp.slots) || (resp && resp.data && resp.data.slots) || [];
+  const htmlFrom = (resp) =>
+    (resp && resp.html) || (resp && resp.data && resp.data.html) || '';
 
   /**
    * Build <option> HTML for a list of items.
@@ -94,11 +111,7 @@
    * @returns {Promise<any>}
    */
   const fetchPosts = (postType) =>
-    post({
-      action: 'campaignbridge_fetch_posts',
-      nonce: CampaignBridge.nonce,
-      post_type: postType,
-    });
+    api(`/posts?post_type=${encodeURIComponent(postType || '')}`);
 
   /**
    * Render the section-to-post mapping UI.
@@ -202,10 +215,9 @@
     select.innerHTML = '<option>Loading…</option>';
     try {
       const resp = await fetchPosts(postType);
-      select.innerHTML =
-        resp && resp.success && resp.data && resp.data.items
-          ? renderOptions(resp.data.items)
-          : '';
+      select.innerHTML = Array.isArray(resp?.items)
+        ? renderOptions(resp.items)
+        : '';
     } catch (e) {
       select.innerHTML = '';
     } finally {
@@ -298,13 +310,9 @@
         mappingBody = document.getElementById('campaignbridge-mapping-body');
       }
 
-      post({
-        action: 'campaignbridge_fetch_template_slots',
-        nonce: CampaignBridge.nonce,
-        template_id: tplId,
-      }).then((resp) => {
-        if (!resp?.success || !resp.data?.slots) return;
-        const slots = resp.data.slots;
+      api(`/templates/${encodeURIComponent(tplId)}/slots`).then((resp) => {
+        const slots = slotsFrom(resp);
+        if (!slots || !slots.length) return;
         const items = [];
         const postSelect = qs('#campaignbridge-posts');
         if (postSelect) {
@@ -342,17 +350,12 @@
         const previewArea = qs('#campaignbridge-preview-html');
         previewArea.innerHTML = '<p>Generating preview…</p>';
         try {
-          const resp = await post({
-            action: 'campaignbridge_render_preview',
-            nonce: CampaignBridge.nonce,
-            template_id: tplId,
-            slots_map: JSON.stringify(map),
-          });
-          if (resp?.success && resp.data?.html) {
-            previewArea.innerHTML = resp.data.html;
-          } else {
-            previewArea.innerHTML = '<p>Failed to render preview.</p>';
-          }
+          const resp = await api(
+            `/templates/${encodeURIComponent(tplId)}/preview`,
+            { method: 'POST', body: { slots_map: map } }
+          );
+          const html = htmlFrom(resp);
+          previewArea.innerHTML = html || '<p>Failed to render preview.</p>';
         } catch (e) {
           previewArea.innerHTML = '<p>Failed to render preview.</p>';
         }
@@ -364,14 +367,12 @@
       if (!box) return;
       btn.disabled = true;
       btn.textContent = 'Loading…';
-      post({
-        action: 'campaignbridge_fetch_sections',
-        nonce: CampaignBridge.nonce,
-      })
+      api('/mailchimp/sections')
         .then((resp) => {
-          if (resp && resp.success && resp.data && resp.data.sections) {
+          const sections = sectionsFrom(resp);
+          if (sections && sections.length) {
             let html = '<ul style="margin:0;">';
-            resp.data.sections.forEach((k) => {
+            sections.forEach((k) => {
               html += '<li><code>' + escapeHTML(k) + '</code></li>';
             });
             html += '</ul>';
@@ -385,9 +386,13 @@
                 items.push({ id: opt.value, label: opt.textContent });
               });
             }
-            renderMapping(resp.data.sections, items);
-          } else if (resp && resp.data && resp.data.message) {
-            box.innerHTML = '<p>' + escapeHTML(resp.data.message) + '</p>';
+            renderMapping(sections, items);
+          } else if (
+            resp &&
+            (resp.message || (resp.data && resp.data.message))
+          ) {
+            const msg = resp.message || resp.data.message;
+            box.innerHTML = '<p>' + escapeHTML(msg) + '</p>';
             box.style.display = 'block';
           } else {
             box.innerHTML = '<p>No sections found.</p>';
@@ -410,14 +415,10 @@
       btn.disabled = true;
       btn.textContent = 'Resetting…';
       sel.value = '';
-      post({
-        action: 'campaignbridge_fetch_mailchimp_audiences',
-        nonce: CampaignBridge.nonce,
-      })
+      api('/mailchimp/audiences?refresh=1')
         .then((resp) => {
-          if (resp && resp.success && resp.data && resp.data.items) {
-            populateSelect(sel, resp.data.items);
-          }
+          const items = itemsFrom(resp);
+          if (items.length) populateSelect(sel, items);
         })
         .finally(() => {
           btn.disabled = false;
@@ -432,14 +433,10 @@
       btn.disabled = true;
       btn.textContent = 'Resetting…';
       sel.value = '';
-      post({
-        action: 'campaignbridge_fetch_mailchimp_templates',
-        nonce: CampaignBridge.nonce,
-      })
+      api('/mailchimp/templates?refresh=1')
         .then((resp) => {
-          if (resp && resp.success && resp.data && resp.data.items) {
-            populateSelect(sel, resp.data.items);
-          }
+          const items = itemsFrom(resp);
+          if (items.length) populateSelect(sel, items);
         })
         .finally(() => {
           btn.disabled = false;
@@ -451,26 +448,18 @@
     (function autoPopulateMailchimp() {
       const audSel = qs('#campaignbridge-mailchimp-audience');
       if (audSel && (!audSel.value || audSel.value === '')) {
-        post({
-          action: 'campaignbridge_fetch_mailchimp_audiences',
-          nonce: CampaignBridge.nonce,
-        }).then((resp) => {
-          if (resp && resp.success && resp.data && resp.data.items) {
-            populateSelect(audSel, resp.data.items);
-          }
+        api('/mailchimp/audiences').then((resp) => {
+          const items = itemsFrom(resp);
+          if (items.length) populateSelect(audSel, items);
           toggleResetVisibility();
         });
       }
 
       const tplSel = qs('#campaignbridge-mailchimp-templates');
       if (tplSel && (!tplSel.value || tplSel.value === '')) {
-        post({
-          action: 'campaignbridge_fetch_mailchimp_templates',
-          nonce: CampaignBridge.nonce,
-        }).then((resp) => {
-          if (resp && resp.success && resp.data && resp.data.items) {
-            populateSelect(tplSel, resp.data.items);
-          }
+        api('/mailchimp/templates').then((resp) => {
+          const items = itemsFrom(resp);
+          if (items.length) populateSelect(tplSel, items);
           toggleResetVisibility();
         });
       }
@@ -484,7 +473,10 @@
     (function autoVerifyMailchimp() {
       const apiInput = qs('#campaignbridge-mailchimp-api-key');
       if (apiInput && apiInput.value) {
-        verifyMailchimp();
+        (async () => {
+          const resp = await api('/mailchimp/verify', { method: 'POST' });
+          if (resp?.ok) setVerifyStatus('ok', 'Connected');
+        })();
       }
       if (apiInput) {
         ['input', 'change'].forEach((ev) => {

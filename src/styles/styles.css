@@ -50,31 +50,21 @@
   }
 
   .cb-pill {
-    @apply inline-block px-2 py-0.5 text-white mr-1.5;
-    border-radius: 10px;
-    background: var(--cb-accent);
+    @apply inline-block px-2 py-0.5 text-white mr-1.5 rounded-full bg-[var(--cb-accent)];
   }
 
   .cb-switch {
-    @apply inline-flex items-center gap-2 mr-3 mb-2;
-    position: relative;
+    @apply inline-flex items-center gap-2 mr-3 mb-2 relative;
   }
+
   .cb-switch input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
+    @apply absolute opacity-0 w-0 h-0;
     pointer-events: none;
     appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
   }
+
   .cb-switch .cb-slider {
-    position: relative;
-    width: 36px;
-    height: 18px;
-    background: #cbd5e1;
-    border-radius: 999px;
+    @apply relative w-9 h-4 bg-[#cbd5e1] rounded-full;
     transition: background 0.2s ease;
   }
   .cb-switch .cb-slider::after {

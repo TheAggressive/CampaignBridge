@@ -1,19 +1,21 @@
 <?php
-/**
- * CampaignBridge Admin UI.
- *
- * Renders the plugin admin screens (tabs: Posts, Templates, Settings)
- * and enqueues required admin assets.
- *
- * @package CampaignBridge
- */
+namespace CampaignBridge\Admin;
+
+use CampaignBridge\Core\Dispatcher;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; }
 
+// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
 /**
- * Admin UI renderer and asset loader.
+ * Admin UI: menu page rendering and asset enqueues.
+ *
+ * Renders the plugin admin tabs (Posts/Templates/Settings), provides
+ * the post selection and mapping UI, and enqueues built assets with
+ * dependencies and versioning via generated asset files.
  */
-class CB_Admin_UI {
+
+class UI {
 	private static $option_name = 'campaignbridge_settings';
 	private static $providers   = array();
 
@@ -45,23 +47,27 @@ class CB_Admin_UI {
 			'dependencies' => array(),
 			'version'      => '1.0.0',
 		);
-		$script_asset_path = dirname( __DIR__ ) . '/dist/scripts/campaignbridge.asset.php';
+		$script_asset_path = dirname( __DIR__, 2 ) . '/dist/scripts/campaignbridge.asset.php';
 		if ( file_exists( $script_asset_path ) ) {
 			$maybe = include $script_asset_path; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 			if ( is_array( $maybe ) ) {
 				$script_asset = $maybe;
 			}
 		}
+
+		$base_file = dirname( __DIR__, 2 ) . '/campaignbridge.php';
+		// Ensure REST globals (wpApiSettings) are present for our REST calls
+		$deps = array_unique( array_merge( (array) $script_asset['dependencies'], array( 'wp-api' ) ) );
 		wp_enqueue_script(
 			'campaignbridge-admin',
-			plugins_url( 'dist/scripts/campaignbridge.js', __DIR__ ),
-			$script_asset['dependencies'],
+			plugins_url( 'dist/scripts/campaignbridge.js', $base_file ),
+			$deps,
 			$script_asset['version'],
 			true
 		);
 
 		$style_version    = '1.0.0';
-		$style_asset_path = dirname( __DIR__ ) . '/dist/styles/styles.asset.php';
+		$style_asset_path = dirname( __DIR__, 2 ) . '/dist/styles/styles.asset.php';
 		if ( file_exists( $style_asset_path ) ) {
 			$maybe = include $style_asset_path; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 			if ( is_array( $maybe ) && isset( $maybe['version'] ) ) {
@@ -70,19 +76,12 @@ class CB_Admin_UI {
 		}
 		wp_enqueue_style(
 			'campaignbridge-admin',
-			plugins_url( 'dist/styles/styles.css', __DIR__ ),
+			plugins_url( 'dist/styles/styles.css', $base_file ),
 			array(),
 			$style_version
 		);
 
-		wp_localize_script(
-			'campaignbridge-admin',
-			'CampaignBridge',
-			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'campaignbridge_ajax' ),
-			)
-		);
+		// No longer localizing admin-ajax data; REST is used going forward
 	}
 
 	/**
@@ -108,11 +107,12 @@ class CB_Admin_UI {
 		<h2 class="nav-tab-wrapper" style="margin-bottom: 1rem;">
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=mailchimp-post-blast&tab=posts&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'posts' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Posts</a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=mailchimp-post-blast&tab=templates&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'templates' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Templates</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=mailchimp-post-blast&tab=types&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'types' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Post Types</a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=mailchimp-post-blast&tab=settings&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'settings' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Settings</a>
 		</h2>
 
 		<?php
-		if ( 'settings' === $active_tab ) {
+		if ( in_array( $active_tab, array( 'settings', 'types' ), true ) ) {
 			if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				add_settings_error( 'campaignbridge_messages', 'campaignbridge_message', __( 'Settings saved.', 'campaignbridge' ), 'updated' );
 			}
@@ -167,6 +167,44 @@ class CB_Admin_UI {
 				echo '</tbody></table>';
 			}
 			?>
+		<?php elseif ( 'types' === $active_tab ) : ?>
+		<form method="post" action="options.php">
+			<?php settings_fields( 'campaignbridge' ); ?>
+			<table class="form-table">
+			<tr>
+				<th scope="row"><?php echo esc_html__( 'Included post types', 'campaignbridge' ); ?></th>
+				<td>
+					<p class="description"><?php echo esc_html__( 'Select which public post types can be used in CampaignBridge.', 'campaignbridge' ); ?></p>
+					<div class="cb-switches-box">
+						<div class="cb-switches-group">
+							<div class="cb-switches-grid">
+								<?php
+								$public_types   = get_post_types( array( 'public' => true ), 'objects' );
+								$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
+								$included_names = array();
+								foreach ( $public_types as $obj ) {
+									$included_names[] = $obj->name;
+								}
+								$included_names = array_values( array_diff( $included_names, $excluded_types ) );
+
+								foreach ( $public_types as $obj ) :
+									$checked = in_array( $obj->name, $included_names, true );
+									?>
+								<label class="cb-switch">
+									<input type="checkbox" name="<?php echo esc_attr( self::$option_name ); ?>[included_post_types][]" value="<?php echo esc_attr( $obj->name ); ?>" <?php checked( $checked ); ?> />
+									<span class="cb-slider" aria-hidden="true"></span>
+									<span class="cb-switch-label"><?php echo esc_html( $obj->labels->singular_name ); ?></span>
+								</label>
+								<?php endforeach; ?>
+							</div>
+						</div>
+					</div>
+					<p class="description"><?php echo esc_html__( 'Unchecked types will be unavailable when selecting posts.', 'campaignbridge' ); ?></p>
+				</td>
+			</tr>
+			</table>
+			<?php submit_button( 'Save Post Types' ); ?>
+		</form>
 		<?php else : ?>
 			<?php self::render_posts_tab( $settings, $provider ); ?>
 		<?php endif; ?>
@@ -282,6 +320,9 @@ class CB_Admin_UI {
 		<?php
 		// Handle submission
 		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['campaignbridge_nonce'] ) && wp_verify_nonce( $_POST['campaignbridge_nonce'], 'campaignbridge_send' ) ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'Unauthorized.', 'campaignbridge' ) );
+			}
 			$selected_posts = ! empty( $_POST['selected_posts'] ) ? array_map( 'absint', (array) $_POST['selected_posts'] ) : array();
 			$sections_map   = array();
 			if ( isset( $_POST['sections_map'] ) && is_array( $_POST['sections_map'] ) ) {
@@ -294,7 +335,7 @@ class CB_Admin_UI {
 				}
 			}
 			$settings_current = get_option( self::$option_name );
-			CB_Dispatcher::generate_and_send_campaign( $selected_posts, $settings_current, $sections_map, self::$providers );
+			Dispatcher::generate_and_send_campaign( $selected_posts, $settings_current, $sections_map, self::$providers );
 		}
 	}
 }

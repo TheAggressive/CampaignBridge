@@ -1,15 +1,24 @@
 <?php
+namespace CampaignBridge\Providers;
+
+use CampaignBridge\Notices;
+use WP_Error;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
  * Mailchimp provider.
- *
- * Creates a draft campaign and updates its template content via sections.
- * Also exposes helper calls to list audiences, templates, and section keys.
  */
-class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Interface {
+// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
+/**
+ * Mailchimp provider implementation.
+ *
+ * Creates campaigns, updates content with template sections, and
+ * fetches audiences, templates and section keys via Mailchimp API.
+ */
+class MailchimpProvider implements ProviderInterface {
 	/** @inheritDoc */
 	public function slug() {
 		return 'mailchimp'; }
@@ -109,13 +118,13 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;
 
 		if ( empty( $api_key ) || empty( $audience_id ) || empty( $template_id ) ) {
-			CampaignBridge_Notices::error( esc_html__( 'Please complete Mailchimp settings.', 'campaignbridge' ) );
+			Notices::error( esc_html__( 'Please complete Mailchimp settings.', 'campaignbridge' ) );
 			return false;
 		}
 
 		$api_key_parts = explode( '-', $api_key );
 		if ( count( $api_key_parts ) < 2 ) {
-			CampaignBridge_Notices::error( esc_html__( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+			Notices::error( esc_html__( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
 			return false;
 		}
 
@@ -146,19 +155,19 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		);
 
 		if ( is_wp_error( $campaign ) ) {
-			CampaignBridge_Notices::error( esc_html( $campaign->get_error_message() ) );
+			Notices::error( esc_html( $campaign->get_error_message() ) );
 			return false;
 		}
 
 		$campaign_code = (int) wp_remote_retrieve_response_code( $campaign );
 		if ( $campaign_code < 200 || $campaign_code >= 300 ) {
-			CampaignBridge_Notices::error( esc_html__( 'Failed to create campaign.', 'campaignbridge' ) );
+			Notices::error( esc_html__( 'Failed to create campaign.', 'campaignbridge' ) );
 			return false;
 		}
 
 		$campaign_body = json_decode( wp_remote_retrieve_body( $campaign ) );
 		if ( empty( $campaign_body->id ) ) {
-			CampaignBridge_Notices::error( esc_html__( 'Failed to create campaign.', 'campaignbridge' ) );
+			Notices::error( esc_html__( 'Failed to create campaign.', 'campaignbridge' ) );
 			return false;
 		}
 
@@ -182,17 +191,17 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		);
 
 		if ( is_wp_error( $content_resp ) ) {
-			CampaignBridge_Notices::error( esc_html( $content_resp->get_error_message() ) );
+			Notices::error( esc_html( $content_resp->get_error_message() ) );
 			return false;
 		}
 
 		$content_code = (int) wp_remote_retrieve_response_code( $content_resp );
 		if ( $content_code < 200 || $content_code >= 300 ) {
-			CampaignBridge_Notices::error( esc_html__( 'Failed to update campaign content.', 'campaignbridge' ) );
+			Notices::error( esc_html__( 'Failed to update campaign content.', 'campaignbridge' ) );
 			return false;
 		}
 
-		CampaignBridge_Notices::success( esc_html__( 'Campaign created. Please review and send it in Mailchimp.', 'campaignbridge' ) );
+		Notices::success( esc_html__( 'Campaign created. Please review and send it in Mailchimp.', 'campaignbridge' ) );
 		return true;
 	}
 
@@ -202,21 +211,28 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 	 * @param array $settings provider settings (api_key)
 	 * @return array|WP_Error
 	 */
-	public function get_audiences( $settings ) {
-		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
-		if ( empty( $api_key ) ) {
-			return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
-		}
-		$parts = explode( '-', $api_key );
-		if ( count( $parts ) < 2 ) {
-			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
-		}
+    public function get_audiences( $settings, $refresh = false ) {
+        $api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+        if ( empty( $api_key ) ) {
+            return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
+        }
+        $parts = explode( '-', $api_key );
+        if ( count( $parts ) < 2 ) {
+            return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+        }
+        $cache_key = 'cb_mc_audiences_' . md5( $api_key );
+        if ( ! $refresh ) {
+            $cached = get_transient( $cache_key );
+            if ( false !== $cached ) {
+                return $cached; }
+        }
 		$dc       = end( $parts );
 		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
-		$resp     = wp_remote_get(
+        $resp     = wp_remote_get(
 			$endpoint . '/lists?count=1000',
 			array(
-				'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
+                'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
+                'timeout' => 20,
 			)
 		);
 		if ( is_wp_error( $resp ) ) {
@@ -236,7 +252,8 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 				);
 			}
 		}
-		return $items;
+        set_transient( $cache_key, $items, 15 * MINUTE_IN_SECONDS );
+        return $items;
 	}
 
 	/**
@@ -245,21 +262,28 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 	 * @param array $settings provider settings (api_key)
 	 * @return array|WP_Error
 	 */
-	public function get_templates( $settings ) {
-		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
-		if ( empty( $api_key ) ) {
-			return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
-		}
-		$parts = explode( '-', $api_key );
-		if ( count( $parts ) < 2 ) {
-			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
-		}
+    public function get_templates( $settings, $refresh = false ) {
+        $api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+        if ( empty( $api_key ) ) {
+            return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
+        }
+        $parts = explode( '-', $api_key );
+        if ( count( $parts ) < 2 ) {
+            return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
+        }
+        $cache_key = 'cb_mc_templates_' . md5( $api_key );
+        if ( ! $refresh ) {
+            $cached = get_transient( $cache_key );
+            if ( false !== $cached ) {
+                return $cached; }
+        }
 		$dc       = end( $parts );
 		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
-		$resp     = wp_remote_get(
+        $resp     = wp_remote_get(
 			$endpoint . '/templates?type=user&count=1000',
 			array(
-				'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
+                'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
+                'timeout' => 20,
 			)
 		);
 		if ( is_wp_error( $resp ) ) {
@@ -279,11 +303,12 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 				);
 			}
 		}
-		return $items;
+        set_transient( $cache_key, $items, 15 * MINUTE_IN_SECONDS );
+        return $items;
 	}
 
 	/** @inheritDoc */
-	public function get_section_keys( $settings ) {
+    public function get_section_keys( $settings, $refresh = false ) {
 		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;
 		if ( empty( $api_key ) || empty( $template_id ) ) {
@@ -293,6 +318,12 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		if ( count( $parts ) < 2 ) {
 			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
 		}
+        $cache_key = 'cb_mc_sections_' . md5( $api_key . '|' . $template_id );
+        if ( ! $refresh ) {
+            $cached = get_transient( $cache_key );
+            if ( false !== $cached ) {
+                return $cached; }
+        }
 		$dc       = end( $parts );
 		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
 
@@ -317,6 +348,7 @@ class CampaignBridge_Provider_Mailchimp implements CampaignBridge_Provider_Inter
 		if ( isset( $data['sections'] ) && is_array( $data['sections'] ) ) {
 			$sections = array_keys( $data['sections'] );
 		}
-		return $sections;
+        set_transient( $cache_key, $sections, 15 * MINUTE_IN_SECONDS );
+        return $sections;
 	}
 }

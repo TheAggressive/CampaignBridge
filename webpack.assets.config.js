@@ -42,7 +42,7 @@ module.exports = (env = {}, argv = {}) => {
 
   return merge(template, {
     name: 'assets',
-    entry: buildEntries(),
+    entry: { ...wpConfig.entry(), ...buildEntries() },
     output: {
       path: path.resolve(process.cwd(), 'dist'),
       filename: '[name].js',

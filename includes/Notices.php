@@ -1,14 +1,21 @@
 <?php
+namespace CampaignBridge;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	return;
 }
 
 /**
- * Simple admin notices queue for CampaignBridge.
+ * Admin notices helper.
  *
- * Collects messages during a request and renders them once in admin_notices.
+ * Queues notices and renders them on admin screens.
  */
-class CampaignBridge_Notices {
+class Notices {
+	/**
+	 * Notice queue.
+	 *
+	 * @var array<int,array{message:string,type:string}>
+	 */
 	private static $notices = array();
 
 	/**
@@ -25,7 +32,7 @@ class CampaignBridge_Notices {
 	 * Queue a notice.
 	 *
 	 * @param string $message HTML/text message (will be kses-escaped on render).
-	 * @param string $type    success|warning|error|info
+	 * @param string $type    success|warning|error|info.
 	 * @return void
 	 */
 	public static function add( $message, $type = 'info' ) {
@@ -35,16 +42,39 @@ class CampaignBridge_Notices {
 		);
 	}
 
-	/** @param string $message */
+	/**
+	 * Queue a success notice.
+	 *
+	 * @param string $message Message text or HTML.
+	 * @return void
+	 */
 	public static function success( $message ) {
 		self::add( $message, 'success' ); }
-	/** @param string $message */
+
+	/**
+	 * Queue a warning notice.
+	 *
+	 * @param string $message Message text or HTML.
+	 * @return void
+	 */
 	public static function warning( $message ) {
 		self::add( $message, 'warning' ); }
-	/** @param string $message */
+
+	/**
+	 * Queue an error notice.
+	 *
+	 * @param string $message Message text or HTML.
+	 * @return void
+	 */
 	public static function error( $message ) {
 		self::add( $message, 'error' ); }
-	/** @param string $message */
+
+	/**
+	 * Queue an informational notice.
+	 *
+	 * @param string $message Message text or HTML.
+	 * @return void
+	 */
 	public static function info( $message ) {
 		self::add( $message, 'info' ); }
 
@@ -81,5 +111,3 @@ class CampaignBridge_Notices {
 		self::$notices = array();
 	}
 }
-
-CampaignBridge_Notices::init();

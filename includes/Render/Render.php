@@ -1,13 +1,14 @@
 <?php
-/**
- * Email template render helpers.
- *
- * @package CampaignBridge
- */
+// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
+namespace CampaignBridge\Render;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; }
 
-class CB_Render {
+/**
+ * Rendering helpers for block templates and email-safe HTML.
+ */
+class Render {
 	/**
 	 * Parse blocks to discover post slots in the template content.
 	 *
@@ -42,21 +43,6 @@ class CB_Render {
 			}
 		};
 		$walk( $blocks );
-		if ( empty( $slots ) ) {
-			$matches = array();
-			preg_match_all( '/<!--CB_SLOT:([a-z0-9_\-]+)-->/i', (string) $content, $matches );
-			if ( ! empty( $matches[1] ) ) {
-				$keys = array_values( array_unique( array_map( 'sanitize_key', $matches[1] ) ) );
-				foreach ( $keys as $k ) {
-					$slots[] = array(
-						'key'         => $k,
-						'showImage'   => true,
-						'showExcerpt' => true,
-						'ctaLabel'    => 'Read more',
-					);
-				}
-			}
-		}
 		return $slots;
 	}
 
@@ -77,9 +63,18 @@ class CB_Render {
 		foreach ( $blocks as $b ) {
 			$html .= self::render_node( $b, $slots_map );
 		}
-		$final = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body>" . $html . '</body></html>';
-		// TODO: Optionally inline CSS here using Emogrifier or similar
-		return $final;
+        $final = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body>" . $html . '</body></html>';
+        // Optionally inline CSS if Emogrifier is available
+        if ( class_exists( '\\Pelago\\Emogrifier\\CssInliner' ) ) {
+            try {
+                $css = (string) apply_filters( 'campaignbridge_email_inline_css', '' );
+                $final = \Pelago\Emogrifier\CssInliner::fromHtml( $final )->inlineCss( $css )->render();
+            } catch ( \Throwable $e ) {
+                // Swallow but allow a hook for debugging
+                do_action( 'campaignbridge_emogrifier_error', $e );
+            }
+        }
+        return $final;
 	}
 
 	/**

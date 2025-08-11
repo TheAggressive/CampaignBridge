@@ -1,6 +1,5 @@
 const wpConfig = require('@wordpress/scripts/config/webpack.config');
 
-// Thin wrapper: defer entirely to WordPress Scripts defaults.
-// Assets (scripts/styles) are handled in a separate config: webpack.assets.config.js
+// Use WordPress Scripts defaults for blocks so it emits index.js and index.asset.php per block.json
 module.exports = (env = {}, argv = {}) =>
   typeof wpConfig === 'function' ? wpConfig(env, argv) : wpConfig;

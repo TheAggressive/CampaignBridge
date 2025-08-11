@@ -1,9 +1,15 @@
 <?php
+namespace CampaignBridge\Providers;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class CampaignBridge_Provider_HTML implements CampaignBridge_Provider_Interface {
+// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
+/**
+ * HTML provider: outputs the generated email as a downloadable HTML file.
+ */
+class HtmlProvider implements ProviderInterface {
 	public function slug() {
 		return 'html'; }
 	public function label() {
