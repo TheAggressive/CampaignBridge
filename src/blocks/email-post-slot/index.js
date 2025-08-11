@@ -1,6 +1,17 @@
-import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import {
+  InnerBlocks,
+  InspectorControls,
+  useBlockProps,
+} from '@wordpress/block-editor';
 import { registerBlockType } from '@wordpress/blocks';
 import { PanelBody, TextControl, ToggleControl } from '@wordpress/components';
+
+const TEMPLATE = [
+  ['core/paragraph', { content: '{{image}}' }],
+  ['core/heading', { level: 3, content: '{{title}}' }],
+  ['core/paragraph', { content: '{{excerpt}}' }],
+  ['core/paragraph', { content: '{{button}}' }],
+];
 
 registerBlockType('campaignbridge/email-post-slot', {
   edit({ attributes, setAttributes }) {
@@ -42,15 +53,16 @@ registerBlockType('campaignbridge/email-post-slot', {
             />
           </PanelBody>
         </InspectorControls>
-        <div>
-          <strong>Email Post Slot</strong>
-          <div>Slot ID: {slotId || '— required —'}</div>
-          <div>
-            Image: {showImage ? 'On' : 'Off'} · Excerpt:{' '}
-            {showExcerpt ? 'On' : 'Off'}
+        <div className="cb-slot-meta" style={{ marginBottom: '8px' }}>
+          <strong>Email Post Slot</strong> · Slot ID:{' '}
+          <code>{slotId || 'required'}</code>
+          <div style={{ color: '#555', marginTop: '4px' }}>
+            Tokens: <code>{'{{title}}'}</code> <code>{'{{image}}'}</code>{' '}
+            <code>{'{{excerpt}}'}</code> <code>{'{{link}}'}</code>{' '}
+            <code>{'{{cta_label}}'}</code> <code>{'{{button}}'}</code>
           </div>
-          <div>Button: {ctaLabel || 'Read more'}</div>
         </div>
+        <InnerBlocks template={TEMPLATE} templateLock={false} />
       </div>
     );
   },

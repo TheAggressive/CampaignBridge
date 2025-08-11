@@ -6,7 +6,7 @@
   "category": "widgets",
   "icon": "media-document",
   "description": "Placeholder for a post in email template; will be populated when sending.",
-  "supports": { "html": false },
+  "supports": { "html": false, "innerBlocks": true },
   "attributes": {
     "slotId": { "type": "string" },
     "showImage": { "type": "boolean", "default": true },

@@ -100,9 +100,62 @@ class Render {
 			$show_image   = isset( $attrs['showImage'] ) ? (bool) $attrs['showImage'] : true;
 			$show_excerpt = isset( $attrs['showExcerpt'] ) ? (bool) $attrs['showExcerpt'] : true;
 			$cta_label    = isset( $attrs['ctaLabel'] ) ? (string) $attrs['ctaLabel'] : 'Read more';
+			// If the slot contains a custom layout (InnerBlocks), render and token-replace.
+			if ( ! empty( $node['innerBlocks'] ) && is_array( $node['innerBlocks'] ) ) {
+				$layout = '';
+				if ( function_exists( 'render_block' ) ) {
+					foreach ( $node['innerBlocks'] as $child ) {
+						$layout .= render_block( $child );
+					}
+				}
+				$tokens = self::build_slot_tokens( $post_id, $show_image, $show_excerpt, $cta_label );
+				if ( ! empty( $tokens ) && is_string( $layout ) && '' !== $layout ) {
+					return strtr( $layout, $tokens );
+				}
+			}
+			// Fallback to default card layout.
 			return self::render_post_card( $post_id, $show_image, $show_excerpt, $cta_label );
 		}
 		return function_exists( 'render_block' ) ? render_block( $node ) : '';
+	}
+
+	/**
+	 * Build token replacements for a slot based on a post and attributes.
+	 *
+	 * @param int     $post_id      Post ID.
+	 * @param boolean $show_image   Whether to output featured image.
+	 * @param boolean $show_excerpt Whether to output excerpt.
+	 * @param string  $cta_label    Button label.
+	 * @return array<string,string> Token => HTML/text value.
+	 */
+	private static function build_slot_tokens( $post_id, $show_image, $show_excerpt, $cta_label ) {
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return array();
+		}
+		$title   = esc_html( get_the_title( $post ) );
+		$link    = esc_url( get_permalink( $post ) );
+		$image   = $show_image ? get_the_post_thumbnail_url( $post, 'medium' ) : '';
+		$excerpt = '';
+		if ( $show_excerpt ) {
+			$raw     = (string) get_post_field( 'post_content', $post );
+			$excerpt = wp_kses_post( wpautop( wp_trim_words( wp_strip_all_tags( $raw ), 40 ) ) );
+		}
+		$cta      = esc_html( $cta_label ? $cta_label : 'Read more' );
+		$img_html = $image ? sprintf( '<img src="%s" alt="" style="display:block;width:100%%;height:auto;border:0;" />', esc_url( $image ) ) : '';
+		$btn_html = sprintf(
+			'<a href="%s" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 16px;border-radius:4px;">%s</a>',
+			$link,
+			$cta
+		);
+		return array(
+			'{{title}}'     => $title,
+			'{{image}}'     => $img_html,
+			'{{excerpt}}'   => $excerpt,
+			'{{link}}'      => $link,
+			'{{cta_label}}' => $cta,
+			'{{button}}'    => $btn_html,
+		);
 	}
 
 	/**
