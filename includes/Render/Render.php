@@ -18,6 +18,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Render {
 	/**
+	 * Running index for implicit slot keys so mapping remains stable across requests.
+	 *
+	 * @var int
+	 */
+	private static $slot_index = 0;
+	/**
 	 * Parse blocks to discover post slots in the template content.
 	 *
 	 * @param string $content Raw post_content of the template.
@@ -33,8 +39,11 @@ class Render {
 				$name  = isset( $b['blockName'] ) ? (string) $b['blockName'] : '';
 				$attrs = isset( $b['attrs'] ) && is_array( $b['attrs'] ) ? $b['attrs'] : array();
 				if ( 'campaignbridge/email-post-slot' === $name ) {
-					$slot_id      = isset( $attrs['slotId'] ) ? sanitize_key( (string) $attrs['slotId'] ) : '';
-					$slot_id      = '' === $slot_id ? 'slot_' . wp_generate_password( 6, false, false ) : $slot_id;
+					$slot_id = isset( $attrs['slotId'] ) ? sanitize_key( (string) $attrs['slotId'] ) : '';
+					if ( '' === $slot_id ) {
+						++self::$slot_index;
+						$slot_id = 'slot_' . self::$slot_index;
+					}
 					$show_image   = isset( $attrs['showImage'] ) ? (bool) $attrs['showImage'] : true;
 					$show_excerpt = isset( $attrs['showExcerpt'] ) ? (bool) $attrs['showExcerpt'] : true;
 					$cta_label    = isset( $attrs['ctaLabel'] ) ? (string) $attrs['ctaLabel'] : 'Read more';
@@ -65,9 +74,10 @@ class Render {
 		$post = get_post( $template_id );
 		if ( ! $post || 'cb_template' !== $post->post_type ) {
 			return ''; }
-		$content = (string) $post->post_content;
-		$blocks  = function_exists( 'parse_blocks' ) ? parse_blocks( $content ) : array();
-		$html    = '';
+		$content          = (string) $post->post_content;
+		$blocks           = function_exists( 'parse_blocks' ) ? parse_blocks( $content ) : array();
+		$html             = '';
+		self::$slot_index = 0;
 		foreach ( $blocks as $b ) {
 			$html .= self::render_node( $b, $slots_map );
 		}
@@ -94,13 +104,17 @@ class Render {
 		$name  = isset( $node['blockName'] ) ? (string) $node['blockName'] : '';
 		$attrs = isset( $node['attrs'] ) && is_array( $node['attrs'] ) ? $node['attrs'] : array();
 		if ( 'campaignbridge/email-post-slot' === $name ) {
-			$slot_id      = isset( $attrs['slotId'] ) ? sanitize_key( (string) $attrs['slotId'] ) : '';
-			$slot_id      = '' === $slot_id ? 'slot_' . wp_generate_password( 6, false, false ) : $slot_id;
-			$post_id      = isset( $slots_map[ $slot_id ] ) ? absint( $slots_map[ $slot_id ] ) : 0;
+			$slot_id = isset( $attrs['slotId'] ) ? sanitize_key( (string) $attrs['slotId'] ) : '';
+			if ( '' === $slot_id ) {
+				++self::$slot_index;
+				$slot_id = 'slot_' . self::$slot_index;
+			}
+			$post_id_attr = isset( $attrs['postId'] ) ? absint( $attrs['postId'] ) : 0;
+			$post_id      = isset( $slots_map[ $slot_id ] ) ? absint( $slots_map[ $slot_id ] ) : $post_id_attr;
 			$show_image   = isset( $attrs['showImage'] ) ? (bool) $attrs['showImage'] : true;
 			$show_excerpt = isset( $attrs['showExcerpt'] ) ? (bool) $attrs['showExcerpt'] : true;
 			$cta_label    = isset( $attrs['ctaLabel'] ) ? (string) $attrs['ctaLabel'] : 'Read more';
-			// If the slot contains a custom layout (InnerBlocks), render and token-replace.
+			// If the slot contains a custom layout (InnerBlocks), render it directly (block-based only).
 			if ( ! empty( $node['innerBlocks'] ) && is_array( $node['innerBlocks'] ) ) {
 				$layout = '';
 				if ( function_exists( 'render_block' ) ) {
@@ -108,55 +122,18 @@ class Render {
 						$layout .= render_block( $child );
 					}
 				}
-				$tokens = self::build_slot_tokens( $post_id, $show_image, $show_excerpt, $cta_label );
-				if ( ! empty( $tokens ) && is_string( $layout ) && '' !== $layout ) {
-					return strtr( $layout, $tokens );
+				if ( is_string( $layout ) && '' !== $layout ) {
+					return sprintf( '<div data-cb-slot="%s">%s</div>', esc_attr( $slot_id ), $layout );
 				}
 			}
 			// Fallback to default card layout.
-			return self::render_post_card( $post_id, $show_image, $show_excerpt, $cta_label );
+			$fallback = self::render_post_card( $post_id, $show_image, $show_excerpt, $cta_label );
+			return sprintf( '<div data-cb-slot="%s">%s</div>', esc_attr( $slot_id ), $fallback );
 		}
 		return function_exists( 'render_block' ) ? render_block( $node ) : '';
 	}
 
-	/**
-	 * Build token replacements for a slot based on a post and attributes.
-	 *
-	 * @param int     $post_id      Post ID.
-	 * @param boolean $show_image   Whether to output featured image.
-	 * @param boolean $show_excerpt Whether to output excerpt.
-	 * @param string  $cta_label    Button label.
-	 * @return array<string,string> Token => HTML/text value.
-	 */
-	private static function build_slot_tokens( $post_id, $show_image, $show_excerpt, $cta_label ) {
-		$post = get_post( $post_id );
-		if ( ! $post ) {
-			return array();
-		}
-		$title   = esc_html( get_the_title( $post ) );
-		$link    = esc_url( get_permalink( $post ) );
-		$image   = $show_image ? get_the_post_thumbnail_url( $post, 'medium' ) : '';
-		$excerpt = '';
-		if ( $show_excerpt ) {
-			$raw     = (string) get_post_field( 'post_content', $post );
-			$excerpt = wp_kses_post( wpautop( wp_trim_words( wp_strip_all_tags( $raw ), 40 ) ) );
-		}
-		$cta      = esc_html( $cta_label ? $cta_label : 'Read more' );
-		$img_html = $image ? sprintf( '<img src="%s" alt="" style="display:block;width:100%%;height:auto;border:0;" />', esc_url( $image ) ) : '';
-		$btn_html = sprintf(
-			'<a href="%s" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 16px;border-radius:4px;">%s</a>',
-			$link,
-			$cta
-		);
-		return array(
-			'{{title}}'     => $title,
-			'{{image}}'     => $img_html,
-			'{{excerpt}}'   => $excerpt,
-			'{{link}}'      => $link,
-			'{{cta_label}}' => $cta,
-			'{{button}}'    => $btn_html,
-		);
-	}
+	// Deprecated token builder removed (block-only rendering).
 
 	/**
 	 * Render a single post card suitable for email.

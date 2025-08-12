@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "campaignbridge/email-post-title",
+  "title": "Email Post Title",
+  "category": "widgets",
+  "icon": "heading",
+  "description": "Renders the selected post's title.",
+  "supports": { "html": false },
+  "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
+  "editorScript": "file:./index.js",
+  "render": "file:./render.php"
+}

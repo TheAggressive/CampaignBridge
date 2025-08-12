@@ -32,6 +32,13 @@
     return params.get(name);
   };
 
+  const setQueryParam = (name, value) => {
+    const url = new URL(window.location.href);
+    if (value == null || value === '') url.searchParams.delete(name);
+    else url.searchParams.set(name, value);
+    history.replaceState({}, '', url.toString());
+  };
+
   /**
    * Delegate events from document to elements matching a selector.
    * @param {string} eventName Event type (e.g., 'click')
@@ -88,6 +95,44 @@
   const htmlFrom = (resp) =>
     (resp && resp.html) || (resp && resp.data && resp.data.html) || '';
 
+  const collectSlotsMap = () => {
+    const map = {};
+    qsa('#campaignbridge-mapping-body select').forEach((sel) => {
+      const name = sel.getAttribute('name') || '';
+      const match = name.match(/sections_map\[(.+)\]/);
+      if (match) {
+        map[match[1]] = sel.value ? Number(sel.value) : 0;
+      }
+    });
+    return map;
+  };
+
+  const ensurePreviewBox = () => {
+    let previewBox = qs('#campaignbridge-preview');
+    let previewArea = qs('#campaignbridge-preview-html');
+    const mappingWrap = qs('#campaignbridge-mapping');
+    if (!previewBox && mappingWrap) {
+      previewBox = document.createElement('div');
+      previewBox.id = 'campaignbridge-preview';
+      previewBox.className = 'cb-preview-box';
+      previewBox.style.marginTop = '16px';
+      previewBox.innerHTML =
+        '<p><button type="button" class="button" id="campaignbridge-preview-btn">Preview Email</button></p><div id="campaignbridge-preview-html" style="border:1px solid #dcdcde;background:#fff;padding:16px;max-height:480px;overflow:auto;"></div>';
+      mappingWrap.parentNode.insertBefore(previewBox, mappingWrap.nextSibling);
+      previewArea = qs('#campaignbridge-preview-html');
+    }
+    return previewArea;
+  };
+
+  const findMappingSelectByKey = (key) => {
+    const selects = qsa('#campaignbridge-mapping-body select');
+    for (const sel of selects) {
+      const name = sel.getAttribute('name') || '';
+      if (name === `sections_map[${key}]`) return sel;
+    }
+    return null;
+  };
+
   /**
    * Build <option> HTML for a list of items.
    * @param {{id: string|number, label: string}[]} items Items to render
@@ -104,6 +149,30 @@
           '</option>'
       )
       .join('');
+
+  const selectedItemsFromSelect = (selectEl) => {
+    if (!selectEl) return [];
+    return Array.from(selectEl.selectedOptions || []).map((o) => ({
+      id: o.value,
+      label: o.textContent || '',
+    }));
+  };
+
+  const renderSelectedChips = (selectEl) => {
+    const chipsWrap = qs('#cb-selected-posts-chips');
+    if (!chipsWrap) return;
+    const items = selectedItemsFromSelect(selectEl);
+    chipsWrap.innerHTML = items
+      .map(
+        (it) =>
+          '<span class="cb-chip" draggable="true" data-id="' +
+          escapeHTML(String(it.id)) +
+          '">' +
+          escapeHTML(it.label) +
+          '<span class="cb-chip-remove" title="Remove" aria-label="Remove">×</span></span>'
+      )
+      .join('');
+  };
 
   /**
    * Fetch posts for a given post type.
@@ -139,9 +208,15 @@
     sections.forEach((s) => {
       const safe = escapeHTML(s);
       rows +=
-        '<tr><td><code>' +
+        '<tr data-key="' +
         safe +
-        '</code></td><td><select name="sections_map[' +
+        '"><td><label class="screen-reader-text" for="map-' +
+        safe +
+        '">Slot key</label><code>' +
+        safe +
+        '</code></td><td><select id="map-' +
+        safe +
+        '" name="sections_map[' +
         safe +
         ']" style="width:100%">' +
         optHtml +
@@ -149,6 +224,21 @@
     });
     body.innerHTML = rows;
     wrap.style.display = 'block';
+
+    // Populate slot dropdown (left column) for Assign-to-slot control
+    const slotSelect = qs('#campaignbridge-slot-select');
+    if (slotSelect) {
+      slotSelect.innerHTML = sections
+        .map(
+          (k) =>
+            '<option value="' +
+            escapeHTML(k) +
+            '">' +
+            escapeHTML(k) +
+            '</option>'
+        )
+        .join('');
+    }
   };
 
   /**
@@ -223,6 +313,7 @@
     } finally {
       select.disabled = false;
     }
+    renderSelectedChips(select);
   };
 
   /**
@@ -290,9 +381,110 @@
 
     toggleResetVisibility();
 
+    on('change', '#campaignbridge-posts', () => {
+      const sel = qs('#campaignbridge-posts');
+      renderSelectedChips(sel);
+    });
+
+    on('click', '#cb-selected-posts-chips .cb-chip-remove', (e, el) => {
+      const chip = el.closest('.cb-chip');
+      if (!chip) return;
+      const id = chip.getAttribute('data-id');
+      const sel = qs('#campaignbridge-posts');
+      if (sel && id) {
+        Array.from(sel.options).forEach((opt) => {
+          if (opt.value === id) opt.selected = false;
+        });
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
     // Template slots mapping and preview (slot-based templates)
     (function setupTemplateSlots() {
-      const tplId = getQueryParam('tpl');
+      let tplId = getQueryParam('tpl');
+
+      // Inline template select and iframe wiring (right column)
+      const tplSelect = qs('#campaignbridge-template-select');
+      const tplIframe = qs('#campaignbridge-template-iframe');
+      const refreshBtn = qs('#campaignbridge-refresh-slots');
+      const newBtn = qs('#campaignbridge-new-template');
+
+      const setIframeSrc = (id) => {
+        if (tplIframe)
+          tplIframe.src = id
+            ? `${
+                window.ajaxurl?.replace('admin-ajax.php', '') || '/wp-admin/'
+              }post.php?post=${encodeURIComponent(id)}&action=edit`
+            : '';
+      };
+
+      if (tplSelect) {
+        if (tplId) tplSelect.value = String(tplId);
+        tplSelect.addEventListener('change', () => {
+          tplId = tplSelect.value || '';
+          setQueryParam('tpl', tplId);
+          setIframeSrc(tplId);
+          // When template changes, refresh slots list
+          if (tplId) {
+            api(`/templates/${encodeURIComponent(tplId)}/slots`).then(
+              (resp) => {
+                const slots = slotsFrom(resp) || [];
+                const items = [];
+                const postSelect = qs('#campaignbridge-posts');
+                if (postSelect) {
+                  qsa('option', postSelect).forEach((opt) => {
+                    items.push({ id: opt.value, label: opt.textContent });
+                  });
+                }
+                const keys = slots.map((s) => s.key);
+                renderMapping(keys, items);
+                // Refresh preview after template change
+                const previewArea = qs('#campaignbridge-preview-html');
+                if (previewArea) {
+                  previewArea.innerHTML = '<p>Loading preview…</p>';
+                  api(`/templates/${encodeURIComponent(tplId)}/preview`, {
+                    method: 'POST',
+                    body: { slots_map: collectSlotsMap() },
+                  }).then((r) => {
+                    previewArea.innerHTML = htmlFrom(r) || '';
+                  });
+                }
+              }
+            );
+          }
+        });
+      }
+
+      if (newBtn) {
+        newBtn.addEventListener('click', async () => {
+          // Create new template via window.open in the iframe
+          const url = `${
+            window.ajaxurl?.replace('admin-ajax.php', '') || '/wp-admin/'
+          }post-new.php?post_type=cb_template`;
+          if (tplIframe) tplIframe.src = url;
+          setQueryParam('tpl', '');
+          if (tplSelect) tplSelect.value = '';
+        });
+      }
+
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+          if (!tplId) return;
+          api(`/templates/${encodeURIComponent(tplId)}/slots`).then((resp) => {
+            const slots = slotsFrom(resp) || [];
+            const items = [];
+            const postSelect = qs('#campaignbridge-posts');
+            if (postSelect) {
+              qsa('option', postSelect).forEach((opt) => {
+                items.push({ id: opt.value, label: opt.textContent });
+              });
+            }
+            const keys = slots.map((s) => s.key);
+            renderMapping(keys, items);
+          });
+        });
+      }
+
       if (!tplId) return;
 
       let mappingWrap = document.getElementById('campaignbridge-mapping');
@@ -322,6 +514,49 @@
         }
         const keys = slots.map((s) => s.key);
         renderMapping(keys, items);
+
+        // Enable DnD: from post select and chips to mapping selects
+        const chipsWrap = qs('#cb-selected-posts-chips');
+        const mappingBody = qs('#campaignbridge-mapping-body');
+        if (chipsWrap && mappingBody) {
+          chipsWrap.addEventListener('dragstart', (ev) => {
+            const chip = ev.target && ev.target.closest('.cb-chip');
+            if (!chip) return;
+            ev.dataTransfer.setData(
+              'text/plain',
+              chip.getAttribute('data-id') || ''
+            );
+            ev.dataTransfer.effectAllowed = 'copyMove';
+          });
+          const postSelectEl = qs('#campaignbridge-posts');
+          if (postSelectEl) {
+            postSelectEl.addEventListener('dragstart', (ev) => {
+              const opt = ev.target && ev.target.closest('option');
+              if (!opt) return;
+              ev.dataTransfer.setData('text/plain', opt.value || '');
+              ev.dataTransfer.effectAllowed = 'copyMove';
+            });
+          }
+          mappingBody.addEventListener('dragover', (ev) => {
+            const sel = ev.target && ev.target.closest('select');
+            if (!sel) return;
+            ev.preventDefault();
+            ev.dataTransfer.dropEffect = 'copy';
+            sel.classList.add('is-drag-over');
+          });
+          mappingBody.addEventListener('dragleave', (ev) => {
+            const sel = ev.target && ev.target.closest('select');
+            if (sel) sel.classList.remove('is-drag-over');
+          });
+          mappingBody.addEventListener('drop', (ev) => {
+            const sel = ev.target && ev.target.closest('select');
+            if (!sel) return;
+            ev.preventDefault();
+            sel.classList.remove('is-drag-over');
+            const id = ev.dataTransfer.getData('text/plain');
+            if (id) sel.value = String(id);
+          });
+        }
       });
 
       let previewBox = document.getElementById('campaignbridge-preview');
@@ -338,15 +573,25 @@
         );
       }
 
+      // Initial preview load
+      (async () => {
+        const previewArea = ensurePreviewBox();
+        if (!previewArea) return;
+        previewArea.innerHTML = '<p>Loading preview…</p>';
+        try {
+          const resp = await api(
+            `/templates/${encodeURIComponent(tplId)}/preview`,
+            { method: 'POST', body: { slots_map: collectSlotsMap() } }
+          );
+          const html = htmlFrom(resp);
+          previewArea.innerHTML = html || '';
+        } catch (e) {
+          previewArea.innerHTML = '';
+        }
+      })();
+
       on('click', '#campaignbridge-preview-btn', async () => {
-        const map = {};
-        qsa('#campaignbridge-mapping-body select').forEach((sel) => {
-          const name = sel.getAttribute('name') || '';
-          const match = name.match(/sections_map\[(.+)\]/);
-          if (match) {
-            map[match[1]] = sel.value ? Number(sel.value) : 0;
-          }
-        });
+        const map = collectSlotsMap();
         const previewArea = qs('#campaignbridge-preview-html');
         previewArea.innerHTML = '<p>Generating preview…</p>';
         try {
@@ -358,6 +603,84 @@
           previewArea.innerHTML = html || '<p>Failed to render preview.</p>';
         } catch (e) {
           previewArea.innerHTML = '<p>Failed to render preview.</p>';
+        }
+      });
+
+      // Autofill mapping from selected posts in order
+      const rerenderPreviewDebounced = (() => {
+        let t = null;
+        return () => {
+          clearTimeout(t);
+          t = setTimeout(async () => {
+            const tplIdLocal = getQueryParam('tpl');
+            if (!tplIdLocal) return;
+            const previewArea = qs('#campaignbridge-preview-html');
+            if (!previewArea) return;
+            const map = collectSlotsMap();
+            previewArea.innerHTML = '<p>Updating…</p>';
+            try {
+              const resp = await api(
+                `/templates/${encodeURIComponent(tplIdLocal)}/preview`,
+                { method: 'POST', body: { slots_map: map } }
+              );
+              const html = htmlFrom(resp);
+              previewArea.innerHTML = html || '';
+            } catch (e) {
+              previewArea.innerHTML = '';
+            }
+          }, 250);
+        };
+      })();
+
+      on('click', '#campaignbridge-autofill', () => {
+        const selects = qsa('#campaignbridge-mapping-body select');
+        if (!selects.length) return;
+        const postSel = qs('#campaignbridge-posts');
+        const selected = Array.from(postSel?.selectedOptions || []).map(
+          (o) => ({ id: o.value })
+        );
+        selects.forEach((sel, idx) => {
+          sel.value = selected[idx] ? String(selected[idx].id) : '';
+        });
+        rerenderPreviewDebounced();
+      });
+
+      // Live update preview on mapping changes and drops
+      on('change', '#campaignbridge-mapping-body select', () => {
+        rerenderPreviewDebounced();
+      });
+      const mappingBodyEl = qs('#campaignbridge-mapping-body');
+      if (mappingBodyEl) {
+        mappingBodyEl.addEventListener('drop', () =>
+          rerenderPreviewDebounced()
+        );
+        mappingBodyEl.addEventListener('click', (ev) => {
+          const row = ev.target && ev.target.closest('tr');
+          if (!row) return;
+          qsa('#campaignbridge-mapping-body tr').forEach((r) =>
+            r.classList.remove('is-active')
+          );
+          row.classList.add('is-active');
+        });
+      }
+
+      // Assign-to-slot control (left panel)
+      on('click', '#campaignbridge-assign-to-slot', () => {
+        const postSel = qs('#campaignbridge-posts');
+        const slotSel = qs('#campaignbridge-slot-select');
+        if (!postSel || !slotSel || !slotSel.value) return;
+        const selectedOpt =
+          postSel.selectedOptions && postSel.selectedOptions[0];
+        if (!selectedOpt) return;
+        const key = slotSel.value;
+        const target = qs(
+          `#campaignbridge-mapping-body select[name="sections_map[${CSS.escape(
+            key
+          )}]"]`
+        );
+        if (target) {
+          target.value = selectedOpt.value;
+          target.dispatchEvent(new Event('change', { bubbles: true }));
         }
       });
     })();

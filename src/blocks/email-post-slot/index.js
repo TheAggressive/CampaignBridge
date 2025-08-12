@@ -4,66 +4,145 @@ import {
   useBlockProps,
 } from '@wordpress/block-editor';
 import { registerBlockType } from '@wordpress/blocks';
-import { PanelBody, TextControl, ToggleControl } from '@wordpress/components';
+import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
+import { useEffect, useState } from '@wordpress/element';
 
-const TEMPLATE = [
-  ['core/paragraph', { content: '{{image}}' }],
-  ['core/heading', { level: 3, content: '{{title}}' }],
-  ['core/paragraph', { content: '{{excerpt}}' }],
-  ['core/paragraph', { content: '{{button}}' }],
+const ALLOWED_BLOCKS = [
+  'campaignbridge/email-post-image',
+  'campaignbridge/email-post-title',
+  'campaignbridge/email-post-excerpt',
+  'campaignbridge/email-post-button',
+  'core/paragraph',
+  'core/heading',
+  'core/group',
+  'core/columns',
+  'core/column',
+  'core/spacer',
+  'core/separator',
 ];
 
 registerBlockType('campaignbridge/email-post-slot', {
-  edit({ attributes, setAttributes }) {
+  edit({ attributes, setAttributes, clientId }) {
     const {
-      slotId,
-      showImage = true,
-      showExcerpt = true,
-      ctaLabel = 'Read more',
+      postType = 'post',
+      postId = 0,
+      slotLinkEnabled = false,
+      slotLinkTo = 'post',
     } = attributes;
     const props = useBlockProps({ className: 'cb-email-post-slot' });
+    // Ensure a stable slotId is generated and persisted
+    useEffect(() => {
+      if (!attributes.slotId) {
+        const generated = `slot_${clientId.slice(0, 8)}`;
+        setAttributes({ slotId: generated });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [attributes.slotId, clientId]);
+    const [postItems, setPostItems] = useState([]);
+    const [typeItems, setTypeItems] = useState([
+      { label: 'Posts', value: 'post' },
+      { label: 'Pages', value: 'page' },
+    ]);
+
+    useEffect(() => {
+      // Fetch allowed post types from plugin settings
+      (async () => {
+        try {
+          const root = window.wpApiSettings?.root || '/wp-json/';
+          const url = `${root}campaignbridge/v1/post-types`;
+          const res = await fetch(url, {
+            headers: window.wpApiSettings?.nonce
+              ? { 'X-WP-Nonce': window.wpApiSettings.nonce }
+              : {},
+            credentials: 'same-origin',
+          });
+          const json = await res.json();
+          if (Array.isArray(json?.items) && json.items.length) {
+            setTypeItems(
+              json.items.map((it) => ({ label: it.label, value: it.id }))
+            );
+            // Normalize current postType if excluded
+            const allowed = new Set(json.items.map((i) => i.id));
+            if (!allowed.has(postType))
+              setAttributes({ postType: json.items[0].id, postId: 0 });
+          }
+        } catch (e) {}
+      })();
+
+      const fetchPosts = async () => {
+        try {
+          const root = window.wpApiSettings?.root || '/wp-json/';
+          const url = `${root}campaignbridge/v1/posts?post_type=${encodeURIComponent(
+            postType || 'post'
+          )}`;
+          const res = await fetch(url, {
+            headers: window.wpApiSettings?.nonce
+              ? { 'X-WP-Nonce': window.wpApiSettings.nonce }
+              : {},
+            credentials: 'same-origin',
+          });
+          const json = await res.json();
+          setPostItems(Array.isArray(json?.items) ? json.items : []);
+        } catch (e) {
+          setPostItems([]);
+        }
+      };
+      fetchPosts();
+    }, [postType]);
+    // Note: default layout insertion has been removed.
+
     return (
       <div {...props}>
         <InspectorControls>
           <PanelBody title="Slot Settings" initialOpen>
-            <TextControl
-              label="Slot ID"
-              help="Unique key used to map a post to this slot. Required."
-              value={slotId || ''}
-              onChange={(v) =>
-                setAttributes({
-                  slotId: (v || '').replace(/[^a-z0-9_-]/gi, '').toLowerCase(),
-                })
-              }
+            <SelectControl
+              __next40pxDefaultSize
+              __nextHasNoMarginBottom
+              label="Post type"
+              value={postType}
+              options={typeItems}
+              onChange={(v) => setAttributes({ postType: v, postId: 0 })}
+            />
+            <SelectControl
+              __next40pxDefaultSize
+              __nextHasNoMarginBottom
+              label="Post"
+              value={String(postId || '')}
+              options={[
+                { label: '— Select —', value: '' },
+                ...postItems.map((it) => ({
+                  label: it.label,
+                  value: String(it.id),
+                })),
+              ]}
+              onChange={(v) => setAttributes({ postId: v ? Number(v) : 0 })}
             />
             <ToggleControl
-              label="Show featured image"
-              checked={!!showImage}
-              onChange={(v) => setAttributes({ showImage: !!v })}
+              __nextHasNoMarginBottom
+              label="Make entire slot clickable"
+              checked={!!slotLinkEnabled}
+              onChange={(v) => setAttributes({ slotLinkEnabled: !!v })}
             />
-            <ToggleControl
-              label="Show excerpt"
-              checked={!!showExcerpt}
-              onChange={(v) => setAttributes({ showExcerpt: !!v })}
-            />
-            <TextControl
-              label="Button label"
-              value={ctaLabel || ''}
-              onChange={(v) => setAttributes({ ctaLabel: v })}
-            />
+            {slotLinkEnabled ? (
+              <SelectControl
+                __next40pxDefaultSize
+                __nextHasNoMarginBottom
+                label="Link to"
+                value={slotLinkTo}
+                options={[
+                  { label: 'Post', value: 'post' },
+                  { label: 'Post Type', value: 'postType' },
+                ]}
+                onChange={(v) => setAttributes({ slotLinkTo: v })}
+              />
+            ) : null}
           </PanelBody>
         </InspectorControls>
-        <div className="cb-slot-meta" style={{ marginBottom: '8px' }}>
-          <strong>Email Post Slot</strong> · Slot ID:{' '}
-          <code>{slotId || 'required'}</code>
-          <div style={{ color: '#555', marginTop: '4px' }}>
-            Tokens: <code>{'{{title}}'}</code> <code>{'{{image}}'}</code>{' '}
-            <code>{'{{excerpt}}'}</code> <code>{'{{link}}'}</code>{' '}
-            <code>{'{{cta_label}}'}</code> <code>{'{{button}}'}</code>
-          </div>
-        </div>
-        <InnerBlocks template={TEMPLATE} templateLock={false} />
+        <InnerBlocks allowedBlocks={ALLOWED_BLOCKS} templateLock={false} />
       </div>
     );
+  },
+  save() {
+    return <InnerBlocks.Content />;
   },
 });

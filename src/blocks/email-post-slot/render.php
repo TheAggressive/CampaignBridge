@@ -10,14 +10,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 return function ( $attributes, $content ) {
-	$slot_id = isset( $attributes['slotId'] ) ? sanitize_key( (string) $attributes['slotId'] ) : '';
-	if ( '' === $slot_id ) {
-		$slot_id = 'slot_' . wp_generate_password( 6, false, false );
+	// Optionally wrap entire slot in a link to the post or post type archive.
+	$slot_link_enabled = ! empty( $attributes['slotLinkEnabled'] );
+	$slot_link_to      = isset( $attributes['slotLinkTo'] ) ? (string) $attributes['slotLinkTo'] : 'post';
+	$post_id           = isset( $attributes['postId'] ) ? absint( $attributes['postId'] ) : 0;
+	$url               = '';
+	if ( $slot_link_enabled && $post_id > 0 ) {
+		if ( 'postType' === $slot_link_to ) {
+			$pt = get_post_type( $post_id );
+			if ( $pt ) {
+				$archive = get_post_type_archive_link( $pt );
+				if ( $archive ) {
+					$url = $archive;
+				}
+			}
+		}
+		if ( '' === $url ) {
+			$url = get_permalink( $post_id );
+		}
 	}
-	// Persist the designed inner layout as part of the placeholder so we can token-replace later.
-	$wrapped = '<!--CB_SLOT:' . esc_html( $slot_id ) . '-->';
-	if ( is_string( $content ) && '' !== trim( $content ) ) {
-		$wrapped .= '<div class="cb-slot-layout">' . $content . '</div>';
+
+	$html = (string) $content;
+	if ( $url ) {
+		// Table-based link wrapper for email safety.
+		$html = sprintf(
+			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0"><tr><td><a href="%s" style="text-decoration:none;color:inherit;display:block;">%s</a></td></tr></table>',
+			esc_url( $url ),
+			$html
+		);
 	}
-	return $wrapped;
+	return $html;
 };

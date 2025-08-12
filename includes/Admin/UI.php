@@ -120,7 +120,7 @@ class UI {
 			}
 		}
 		?>
-	<div class="wrap">
+	<div class="wrap" data-cbnav="<?php echo esc_attr( $nav_nonce ); ?>">
 		<h1>CampaignBridge</h1>
 		<h2 class="nav-tab-wrapper" style="margin-bottom: 1rem;">
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=posts&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'posts' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Posts</a>
@@ -241,6 +241,8 @@ class UI {
 		?>
 		<form method="post">
 			<?php wp_nonce_field( 'campaignbridge_send', 'campaignbridge_nonce' ); ?>
+			<div class="cb-two-col">
+			<div class="cb-col-left">
 			<div class="cb-field">
 				<label for="campaignbridge-post-type" class="cb-label">Post type</label>
 				<select id="campaignbridge-post-type" class="cb-input-wide">
@@ -314,26 +316,80 @@ class UI {
 				<label for="campaignbridge-posts" class="cb-label">Posts</label>
 				<select id="campaignbridge-posts" class="cb-input-wide" name="selected_posts[]" multiple size="12"></select>
 				<p class="description">Select up to 8 posts.</p>
+				<div id="cb-selected-posts-chips" class="cb-chips" aria-live="polite"></div>
+				<p>
+					<button type="button" class="button" id="campaignbridge-autofill">Auto-fill slots from selected posts</button>
+				</p>
 			</div>
 
-			<?php if ( 'mailchimp' === $provider ) : ?>
-				<p>
+			<div class="cb-field">
+				<label for="campaignbridge-slot-select" class="cb-label">Assign to slot</label>
+				<div class="cb-assign-row">
+					<select id="campaignbridge-slot-select" class="cb-input-wide"></select>
+					<button type="button" class="button" id="campaignbridge-assign-to-slot">Assign Selected Post</button>
+				</div>
+				<p class="description">Pick a slot and click Assign to map the currently selected post. You can also drag a post chip onto a slot.</p>
+			</div>
+
+			<?php submit_button( 'Generate and Send Email' ); ?>
+			</div>
+
+			<div class="cb-col-right">
+				<div class="cb-field">
+					<label for="campaignbridge-template-select" class="cb-label">Template</label>
+					<select id="campaignbridge-template-select" class="cb-input-wide">
+						<option value="">— Select a template —</option>
+						<?php
+						$templates = get_posts(
+							array(
+								'post_type'   => 'cb_template',
+								'numberposts' => -1,
+								'orderby'     => 'date',
+								'order'       => 'DESC',
+							)
+						);
+						foreach ( (array) $templates as $tpl ) {
+							printf(
+								'<option value="%1$d" %3$s>%2$s</option>',
+								(int) $tpl->ID,
+								esc_html( get_the_title( $tpl ) ),
+								selected( isset( $_GET['tpl'] ) ? (int) $_GET['tpl'] : 0, (int) $tpl->ID, false ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+							);
+						}
+						?>
+					</select>
+					<p class="description">Design the email template here. Use Email Post Slot blocks.</p>
+					<p>
+						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>" target="_blank" class="button">Open New in Tab</a>
+						<button type="button" class="button" id="campaignbridge-new-template">Create New (inline)</button>
+						<button type="button" class="button" id="campaignbridge-refresh-slots">Refresh Slots</button>
+					</p>
+				</div>
+
+				<div class="cb-field">
+					<iframe id="campaignbridge-template-iframe" class="cb-template-iframe" style="width:100%;height:70vh;border:1px solid #dcdcde;background:#fff;" src="<?php echo isset( $_GET['tpl'] ) ? esc_url( admin_url( 'post.php?post=' . (int) $_GET['tpl'] . '&action=edit' ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>"></iframe>
+				</div>
+
+				<?php if ( 'mailchimp' === $provider ) : ?>
+				<div class="cb-field">
 					<button type="button" class="button" id="campaignbridge-show-sections">Show Mailchimp Template Sections</button>
-				</p>
-				<div id="campaignbridge-sections" class="cb-hidden"></div>
+					<div id="campaignbridge-sections" class="cb-hidden" style="margin-top:8px;"></div>
+				</div>
+				<?php endif; ?>
+
 				<div id="campaignbridge-mapping" class="cb-hidden">
-					<h3 class="cb-mapping-title">Section Mapping</h3>
-					<p class="description">Assign a post to each Mailchimp section. If left empty, that section will not be filled.</p>
+					<h3 class="cb-mapping-title">Mapping</h3>
+					<p class="description">Assign a post to each slot/section. If left empty, that area will not be filled.</p>
 					<table class="widefat striped cb-mapping-table">
 						<thead>
-							<tr><th style="width:50%;">Section key</th><th>Post</th></tr>
+							<tr><th style="width:50%;">Key</th><th>Post</th></tr>
 						</thead>
 						<tbody id="campaignbridge-mapping-body"></tbody>
 					</table>
 				</div>
-			<?php endif; ?>
-
-			<?php submit_button( 'Generate and Send Email' ); ?>
+				<div id="campaignbridge-preview" class="cb-hidden"></div>
+			</div>
+			</div>
 		</form>
 		<?php
 		// Handle submission.

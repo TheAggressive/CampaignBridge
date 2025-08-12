@@ -72,6 +72,16 @@ class Routes {
 
 		register_rest_route(
 			$ns,
+			'/post-types',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'r_post_types' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+			)
+		);
+
+		register_rest_route(
+			$ns,
 			'/templates/(?P<id>\\d+)/slots',
 			array(
 				'methods'             => 'GET',
@@ -181,6 +191,7 @@ class Routes {
 		if ( ! post_type_exists( $post_type ) ) {
 			return new \WP_Error( 'bad_post_type', 'Invalid post type', array( 'status' => 400 ) );
 		}
+
 		$settings       = get_option( self::$option_name );
 		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
 		if ( in_array( $post_type, $excluded_types, true ) ) {
@@ -214,6 +225,35 @@ class Routes {
 	}
 
 	/**
+	 * GET /post-types endpoint.
+	 * Returns allowed public post types based on settings (excludes unchecked types).
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function r_post_types() {
+		$settings       = get_option( self::$option_name );
+		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
+		$objs           = get_post_types( array( 'public' => true ), 'objects' );
+		$items          = array();
+		foreach ( $objs as $obj ) {
+			if ( in_array( $obj->name, $excluded_types, true ) ) {
+				continue;
+			}
+			$items[] = array(
+				'id'    => (string) $obj->name,
+				'label' => (string) $obj->labels->singular_name,
+			);
+		}
+		usort(
+			$items,
+			function ( $a, $b ) {
+				return strcasecmp( (string) $a['label'], (string) $b['label'] );
+			}
+		);
+		return \rest_ensure_response( array( 'items' => $items ) );
+	}
+
+	/**
 	 * GET /templates/{id}/slots endpoint.
 	 *
 	 * @param WP_REST_Request $req Request object.
@@ -229,7 +269,7 @@ class Routes {
 			return new \WP_Error( 'bad_template', 'Invalid template', array( 'status' => 400 ) );
 		}
 		$slots = CB_Render::discover_slots_from_content( (string) $post->post_content );
-		return rest_ensure_response( array( 'slots' => $slots ) );
+		return \rest_ensure_response( array( 'slots' => $slots ) );
 	}
 
 	/**
