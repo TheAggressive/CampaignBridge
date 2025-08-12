@@ -111,7 +111,7 @@ class UI {
 		$settings   = get_option( self::$option_name );
 		$provider   = ( isset( $settings['provider'] ) && isset( self::$providers[ $settings['provider'] ] ) ) ? $settings['provider'] : 'mailchimp';
 		$nav_nonce  = wp_create_nonce( 'campaignbridge_nav' );
-		$active_tab = 'posts';
+		$active_tab = 'templates';
 		if ( isset( $_GET['tab'], $_GET['cbnav'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$tab_raw = sanitize_key( wp_unslash( $_GET['tab'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$cbnav   = sanitize_text_field( wp_unslash( $_GET['cbnav'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -123,7 +123,6 @@ class UI {
 	<div class="wrap" data-cbnav="<?php echo esc_attr( $nav_nonce ); ?>">
 		<h1>CampaignBridge</h1>
 		<h2 class="nav-tab-wrapper" style="margin-bottom: 1rem;">
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=posts&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'posts' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Posts</a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=templates&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'templates' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Templates</a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=types&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'types' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Post Types</a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=settings&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'settings' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Settings</a>
@@ -166,25 +165,50 @@ class UI {
 		<div class="cb-field">
 			<a class="button button-primary" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>">Add New Template</a>
 		</div>
-			<?php
-			$templates = get_posts(
-				array(
-					'post_type'   => 'cb_template',
-					'numberposts' => -1,
-				)
-			);
-			if ( empty( $templates ) ) {
-				echo '<p>No templates yet.</p>';
-			} else {
-				echo '<table class="widefat striped"><thead><tr><th>Title</th><th style="width:220px;">Actions</th></tr></thead><tbody>';
-				foreach ( $templates as $tpl ) {
-					$edit = get_edit_post_link( $tpl->ID );
-					$use  = admin_url( 'admin.php?page=campaignbridge&tab=posts&cbnav=' . $nav_nonce . '&tpl=' . (int) $tpl->ID );
-					echo '<tr><td>' . esc_html( get_the_title( $tpl ) ) . '</td><td><a class="button" href="' . esc_url( $edit ) . '">Edit</a> <a class="button" href="' . esc_url( $use ) . '">Use</a></td></tr>';
+
+		<div class="cb-field">
+			<label for="campaignbridge-template-select" class="cb-label">Template</label>
+			<select id="campaignbridge-template-select" class="cb-input-wide">
+				<option value="">— Select a template —</option>
+				<?php
+				$templates = get_posts(
+					array(
+						'post_type'   => 'cb_template',
+						'numberposts' => -1,
+						'orderby'     => 'date',
+						'order'       => 'DESC',
+					)
+				);
+				foreach ( (array) $templates as $tpl ) {
+					printf(
+						'<option value="%1$d" %3$s>%2$s</option>',
+						(int) $tpl->ID,
+						esc_html( get_the_title( $tpl ) ),
+						selected( isset( $_GET['tpl'] ) ? (int) $_GET['tpl'] : 0, (int) $tpl->ID, false ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+					);
 				}
-				echo '</tbody></table>';
-			}
-			?>
+				?>
+			</select>
+			<p class="description">Design the email template here. Use Email Post Slot blocks.</p>
+			<p>
+				<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>" target="_blank" class="button">Open New in Tab</a>
+				<button type="button" class="button" id="campaignbridge-new-template">Create New (inline)</button>
+				<button type="button" class="button" id="campaignbridge-refresh-slots">Refresh Slots</button>
+			</p>
+		</div>
+
+		<div class="cb-field">
+			<iframe id="campaignbridge-template-iframe" class="cb-template-iframe" style="width:600px;height:70vh;border:1px solid #dcdcde;background:#fff;display:block;margin:0 auto;" src="<?php echo isset( $_GET['tpl'] ) ? esc_url( admin_url( 'post.php?post=' . (int) $_GET['tpl'] . '&action=edit' ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>"></iframe>
+		</div>
+
+			<?php if ( 'mailchimp' === $provider ) : ?>
+		<div class="cb-field">
+			<button type="button" class="button" id="campaignbridge-show-sections">Show Mailchimp Template Sections</button>
+			<div id="campaignbridge-sections" class="cb-hidden" style="margin-top:8px;"></div>
+		</div>
+		<?php endif; ?>
+
+			<?php /* Mapping section removed: block templates handle content inline. */ ?>
 		<?php elseif ( 'types' === $active_tab ) : ?>
 		<form method="post" action="options.php">
 			<?php settings_fields( 'campaignbridge' ); ?>
@@ -224,195 +248,11 @@ class UI {
 			<?php submit_button( 'Save Post Types' ); ?>
 		</form>
 		<?php else : ?>
-			<?php self::render_posts_tab( $settings, $provider ); ?>
+			<?php /* Posts tab removed in favor of block-based templates. */ ?>
 		<?php endif; ?>
 	</div>
 		<?php
 	}
 
-	/**
-	 * Render the Posts tab (post type picker, posts multi-select, mapping UI, submit).
-	 *
-	 * @param array  $settings Current plugin settings.
-	 * @param string $provider Active provider slug.
-	 * @return void
-	 */
-	private static function render_posts_tab( $settings, $provider ) {
-		?>
-		<form method="post">
-			<?php wp_nonce_field( 'campaignbridge_send', 'campaignbridge_nonce' ); ?>
-			<div class="cb-two-col">
-			<div class="cb-col-left">
-			<div class="cb-field">
-				<label for="campaignbridge-post-type" class="cb-label">Post type</label>
-				<select id="campaignbridge-post-type" class="cb-input-wide">
-					<?php
-					$post_types_all = get_post_types( array( 'public' => true ), 'objects' );
-					$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
-					$allowed_types  = array();
-					foreach ( $post_types_all as $type ) {
-						if ( in_array( $type->name, $excluded_types, true ) ) {
-							continue;
-						}
-						$allowed_types[] = $type;
-					}
-					$default_pt    = 'post';
-					$allowed_names = array_map(
-						function ( $t ) {
-							return $t->name;
-						},
-						$allowed_types
-					);
-					if ( empty( $allowed_types ) ) {
-						$default_pt = '';
-					} elseif ( ! in_array( $default_pt, $allowed_names, true ) ) {
-						$default_pt = $allowed_types[0]->name;
-					}
-					$core_slugs     = array( 'post', 'page' );
-					$core_allowed   = array();
-					$custom_allowed = array();
-					foreach ( $allowed_types as $obj ) {
-						if ( in_array( $obj->name, $core_slugs, true ) ) {
-							$core_allowed[] = $obj;
-						} else {
-							$custom_allowed[] = $obj;
-						}
-					}
-					$sort_by_label = function ( $a, $b ) {
-						return strcasecmp( (string) $a->labels->singular_name, (string) $b->labels->singular_name );
-					};
-					usort( $core_allowed, $sort_by_label );
-					usort( $custom_allowed, $sort_by_label );
-
-		if ( ! empty( $core_allowed ) ) {
-			echo '<optgroup label="Core types">';
-			foreach ( $core_allowed as $type ) {
-				printf(
-					'<option value="%1$s" %3$s>%2$s</option>',
-					esc_attr( $type->name ),
-					esc_html( $type->labels->singular_name ),
-					selected( $type->name, $default_pt, false )
-				);
-			}
-			echo '</optgroup>';
-		}
-		if ( ! empty( $custom_allowed ) ) {
-			echo '<optgroup label="Custom types">';
-			foreach ( $custom_allowed as $type ) {
-				printf(
-					'<option value="%1$s" %3$s>%2$s</option>',
-					esc_attr( $type->name ),
-					esc_html( $type->labels->singular_name ),
-					selected( $type->name, $default_pt, false )
-				);
-			}
-			echo '</optgroup>';
-		}
-		?>
-				</select>
-			</div>
-
-			<div class="cb-field">
-				<label for="campaignbridge-posts" class="cb-label">Posts</label>
-				<select id="campaignbridge-posts" class="cb-input-wide" name="selected_posts[]" multiple size="12"></select>
-				<p class="description">Select up to 8 posts.</p>
-				<div id="cb-selected-posts-chips" class="cb-chips" aria-live="polite"></div>
-				<p>
-					<button type="button" class="button" id="campaignbridge-autofill">Auto-fill slots from selected posts</button>
-				</p>
-			</div>
-
-			<div class="cb-field">
-				<label for="campaignbridge-slot-select" class="cb-label">Assign to slot</label>
-				<div class="cb-assign-row">
-					<select id="campaignbridge-slot-select" class="cb-input-wide"></select>
-					<button type="button" class="button" id="campaignbridge-assign-to-slot">Assign Selected Post</button>
-				</div>
-				<p class="description">Pick a slot and click Assign to map the currently selected post. You can also drag a post chip onto a slot.</p>
-			</div>
-
-			<?php submit_button( 'Generate and Send Email' ); ?>
-			</div>
-
-			<div class="cb-col-right">
-				<div class="cb-field">
-					<label for="campaignbridge-template-select" class="cb-label">Template</label>
-					<select id="campaignbridge-template-select" class="cb-input-wide">
-						<option value="">— Select a template —</option>
-						<?php
-						$templates = get_posts(
-							array(
-								'post_type'   => 'cb_template',
-								'numberposts' => -1,
-								'orderby'     => 'date',
-								'order'       => 'DESC',
-							)
-						);
-						foreach ( (array) $templates as $tpl ) {
-							printf(
-								'<option value="%1$d" %3$s>%2$s</option>',
-								(int) $tpl->ID,
-								esc_html( get_the_title( $tpl ) ),
-								selected( isset( $_GET['tpl'] ) ? (int) $_GET['tpl'] : 0, (int) $tpl->ID, false ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-							);
-						}
-						?>
-					</select>
-					<p class="description">Design the email template here. Use Email Post Slot blocks.</p>
-					<p>
-						<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>" target="_blank" class="button">Open New in Tab</a>
-						<button type="button" class="button" id="campaignbridge-new-template">Create New (inline)</button>
-						<button type="button" class="button" id="campaignbridge-refresh-slots">Refresh Slots</button>
-					</p>
-				</div>
-
-				<div class="cb-field">
-					<iframe id="campaignbridge-template-iframe" class="cb-template-iframe" style="width:100%;height:70vh;border:1px solid #dcdcde;background:#fff;" src="<?php echo isset( $_GET['tpl'] ) ? esc_url( admin_url( 'post.php?post=' . (int) $_GET['tpl'] . '&action=edit' ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>"></iframe>
-				</div>
-
-				<?php if ( 'mailchimp' === $provider ) : ?>
-				<div class="cb-field">
-					<button type="button" class="button" id="campaignbridge-show-sections">Show Mailchimp Template Sections</button>
-					<div id="campaignbridge-sections" class="cb-hidden" style="margin-top:8px;"></div>
-				</div>
-				<?php endif; ?>
-
-				<div id="campaignbridge-mapping" class="cb-hidden">
-					<h3 class="cb-mapping-title">Mapping</h3>
-					<p class="description">Assign a post to each slot/section. If left empty, that area will not be filled.</p>
-					<table class="widefat striped cb-mapping-table">
-						<thead>
-							<tr><th style="width:50%;">Key</th><th>Post</th></tr>
-						</thead>
-						<tbody id="campaignbridge-mapping-body"></tbody>
-					</table>
-				</div>
-				<div id="campaignbridge-preview" class="cb-hidden"></div>
-			</div>
-			</div>
-		</form>
-		<?php
-		// Handle submission.
-		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
-		$nonce_value    = isset( $_POST['campaignbridge_nonce'] ) ? sanitize_text_field( (string) wp_unslash( $_POST['campaignbridge_nonce'] ) ) : '';
-		if ( 'POST' === $request_method && '' !== $nonce_value && wp_verify_nonce( $nonce_value, 'campaignbridge_send' ) ) {
-			if ( ! current_user_can( 'manage_options' ) ) {
-				wp_die( esc_html__( 'Unauthorized.', 'campaignbridge' ) );
-			}
-			$selected_posts   = ! empty( $_POST['selected_posts'] ) ? array_map( 'absint', (array) $_POST['selected_posts'] ) : array();
-			$sections_map     = array();
-			$raw_sections_map = filter_input( INPUT_POST, 'sections_map', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
-			if ( is_array( $raw_sections_map ) ) {
-				foreach ( $raw_sections_map as $sec_key => $pid ) {
-					$sec_key = sanitize_text_field( wp_unslash( $sec_key ) );
-					$pid     = absint( $pid );
-					if ( '' !== $sec_key && $pid > 0 ) {
-						$sections_map[ $sec_key ] = $pid;
-					}
-				}
-			}
-			$settings_current = get_option( self::$option_name );
-			Dispatcher::generate_and_send_campaign( $selected_posts, $settings_current, $sections_map, self::$providers );
-		}
-	}
+	// Posts tab removed: legacy method deleted.
 }

@@ -399,7 +399,7 @@
       }
     });
 
-    // Template slots mapping and preview (slot-based templates)
+    // Template slots mapping and preview (disabled: block-based workflow)
     (function setupTemplateSlots() {
       let tplId = getQueryParam('tpl');
 
@@ -424,34 +424,8 @@
           tplId = tplSelect.value || '';
           setQueryParam('tpl', tplId);
           setIframeSrc(tplId);
-          // When template changes, refresh slots list
-          if (tplId) {
-            api(`/templates/${encodeURIComponent(tplId)}/slots`).then(
-              (resp) => {
-                const slots = slotsFrom(resp) || [];
-                const items = [];
-                const postSelect = qs('#campaignbridge-posts');
-                if (postSelect) {
-                  qsa('option', postSelect).forEach((opt) => {
-                    items.push({ id: opt.value, label: opt.textContent });
-                  });
-                }
-                const keys = slots.map((s) => s.key);
-                renderMapping(keys, items);
-                // Refresh preview after template change
-                const previewArea = qs('#campaignbridge-preview-html');
-                if (previewArea) {
-                  previewArea.innerHTML = '<p>Loading preview…</p>';
-                  api(`/templates/${encodeURIComponent(tplId)}/preview`, {
-                    method: 'POST',
-                    body: { slots_map: collectSlotsMap() },
-                  }).then((r) => {
-                    previewArea.innerHTML = htmlFrom(r) || '';
-                  });
-                }
-              }
-            );
-          }
+          // Mapping/preview disabled.
+          return;
         });
       }
 
@@ -486,125 +460,7 @@
       }
 
       if (!tplId) return;
-
-      let mappingWrap = document.getElementById('campaignbridge-mapping');
-      let mappingBody = document.getElementById('campaignbridge-mapping-body');
-      if (!mappingWrap) {
-        const container = document.createElement('div');
-        container.id = 'campaignbridge-mapping';
-        container.innerHTML =
-          '<h3 class="cb-mapping-title">Slot Mapping</h3><table class="widefat striped cb-mapping-table"><thead><tr><th style="width:50%;">Slot key</th><th>Post</th></tr></thead><tbody id="campaignbridge-mapping-body"></tbody></table>';
-        const anchor =
-          document.querySelector('.cb-field:last-of-type') ||
-          document.querySelector('.wrap');
-        (anchor || document.body).appendChild(container);
-        mappingWrap = container;
-        mappingBody = document.getElementById('campaignbridge-mapping-body');
-      }
-
-      api(`/templates/${encodeURIComponent(tplId)}/slots`).then((resp) => {
-        const slots = slotsFrom(resp);
-        if (!slots || !slots.length) return;
-        const items = [];
-        const postSelect = qs('#campaignbridge-posts');
-        if (postSelect) {
-          qsa('option', postSelect).forEach((opt) => {
-            items.push({ id: opt.value, label: opt.textContent });
-          });
-        }
-        const keys = slots.map((s) => s.key);
-        renderMapping(keys, items);
-
-        // Enable DnD: from post select and chips to mapping selects
-        const chipsWrap = qs('#cb-selected-posts-chips');
-        const mappingBody = qs('#campaignbridge-mapping-body');
-        if (chipsWrap && mappingBody) {
-          chipsWrap.addEventListener('dragstart', (ev) => {
-            const chip = ev.target && ev.target.closest('.cb-chip');
-            if (!chip) return;
-            ev.dataTransfer.setData(
-              'text/plain',
-              chip.getAttribute('data-id') || ''
-            );
-            ev.dataTransfer.effectAllowed = 'copyMove';
-          });
-          const postSelectEl = qs('#campaignbridge-posts');
-          if (postSelectEl) {
-            postSelectEl.addEventListener('dragstart', (ev) => {
-              const opt = ev.target && ev.target.closest('option');
-              if (!opt) return;
-              ev.dataTransfer.setData('text/plain', opt.value || '');
-              ev.dataTransfer.effectAllowed = 'copyMove';
-            });
-          }
-          mappingBody.addEventListener('dragover', (ev) => {
-            const sel = ev.target && ev.target.closest('select');
-            if (!sel) return;
-            ev.preventDefault();
-            ev.dataTransfer.dropEffect = 'copy';
-            sel.classList.add('is-drag-over');
-          });
-          mappingBody.addEventListener('dragleave', (ev) => {
-            const sel = ev.target && ev.target.closest('select');
-            if (sel) sel.classList.remove('is-drag-over');
-          });
-          mappingBody.addEventListener('drop', (ev) => {
-            const sel = ev.target && ev.target.closest('select');
-            if (!sel) return;
-            ev.preventDefault();
-            sel.classList.remove('is-drag-over');
-            const id = ev.dataTransfer.getData('text/plain');
-            if (id) sel.value = String(id);
-          });
-        }
-      });
-
-      let previewBox = document.getElementById('campaignbridge-preview');
-      if (!previewBox) {
-        previewBox = document.createElement('div');
-        previewBox.id = 'campaignbridge-preview';
-        previewBox.className = 'cb-preview-box';
-        previewBox.style.marginTop = '16px';
-        previewBox.innerHTML =
-          '<p><button type="button" class="button" id="campaignbridge-preview-btn">Preview Email</button></p><div id="campaignbridge-preview-html" style="border:1px solid #dcdcde;background:#fff;padding:16px;max-height:480px;overflow:auto;"></div>';
-        mappingWrap.parentNode.insertBefore(
-          previewBox,
-          mappingWrap.nextSibling
-        );
-      }
-
-      // Initial preview load
-      (async () => {
-        const previewArea = ensurePreviewBox();
-        if (!previewArea) return;
-        previewArea.innerHTML = '<p>Loading preview…</p>';
-        try {
-          const resp = await api(
-            `/templates/${encodeURIComponent(tplId)}/preview`,
-            { method: 'POST', body: { slots_map: collectSlotsMap() } }
-          );
-          const html = htmlFrom(resp);
-          previewArea.innerHTML = html || '';
-        } catch (e) {
-          previewArea.innerHTML = '';
-        }
-      })();
-
-      on('click', '#campaignbridge-preview-btn', async () => {
-        const map = collectSlotsMap();
-        const previewArea = qs('#campaignbridge-preview-html');
-        previewArea.innerHTML = '<p>Generating preview…</p>';
-        try {
-          const resp = await api(
-            `/templates/${encodeURIComponent(tplId)}/preview`,
-            { method: 'POST', body: { slots_map: map } }
-          );
-          const html = htmlFrom(resp);
-          previewArea.innerHTML = html || '<p>Failed to render preview.</p>';
-        } catch (e) {
-          previewArea.innerHTML = '<p>Failed to render preview.</p>';
-        }
-      });
+      // Mapping/preview disabled: nothing else to do.
 
       // Autofill mapping from selected posts in order
       const rerenderPreviewDebounced = (() => {
