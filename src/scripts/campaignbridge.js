@@ -406,7 +406,7 @@
       // Inline template select and iframe wiring (right column)
       const tplSelect = qs('#campaignbridge-template-select');
       const tplIframe = qs('#campaignbridge-template-iframe');
-      const refreshBtn = qs('#campaignbridge-refresh-slots');
+      const refreshBtn = null;
       const newBtn = qs('#campaignbridge-new-template');
 
       const setIframeSrc = (id) => {
@@ -424,8 +424,7 @@
           tplId = tplSelect.value || '';
           setQueryParam('tpl', tplId);
           setIframeSrc(tplId);
-          // Mapping/preview disabled.
-          return;
+          if (tplId) updateLivePreview(tplId);
         });
       }
 
@@ -441,26 +440,10 @@
         });
       }
 
-      if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-          if (!tplId) return;
-          api(`/templates/${encodeURIComponent(tplId)}/slots`).then((resp) => {
-            const slots = slotsFrom(resp) || [];
-            const items = [];
-            const postSelect = qs('#campaignbridge-posts');
-            if (postSelect) {
-              qsa('option', postSelect).forEach((opt) => {
-                items.push({ id: opt.value, label: opt.textContent });
-              });
-            }
-            const keys = slots.map((s) => s.key);
-            renderMapping(keys, items);
-          });
-        });
-      }
+      // refresh slots removed
 
       if (!tplId) return;
-      // Mapping/preview disabled: nothing else to do.
+      updateLivePreview(tplId);
 
       // Autofill mapping from selected posts in order
       const rerenderPreviewDebounced = (() => {
@@ -666,5 +649,72 @@
         });
       }
     })();
+  });
+
+  // --- Live Preview ---
+  async function fetchRenderedHtml(templateId) {
+    try {
+      const resp = await api(
+        `/templates/${encodeURIComponent(templateId)}/preview`,
+        {
+          method: 'POST',
+          body: { slots_map: {} },
+        }
+      );
+      return htmlFrom(resp) || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  async function updateLivePreview(templateId) {
+    const frame = qs('#cb-preview-frame');
+    const htmlBox = qs('#cb-preview-html');
+    const copyBtn = qs('#cb-copy-html');
+    const refreshBtn = qs('#cb-refresh-preview');
+    if (!frame || !htmlBox) return;
+    const html = await fetchRenderedHtml(templateId);
+    try {
+      const doc = frame.contentDocument || frame.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+      }
+    } catch (e) {}
+    htmlBox.value = html;
+    applyPreviewMode(getPreviewMode());
+    if (copyBtn) {
+      copyBtn.onclick = () => {
+        htmlBox.select();
+        document.execCommand('copy');
+      };
+    }
+    if (refreshBtn) {
+      refreshBtn.onclick = () => updateLivePreview(templateId);
+    }
+  }
+
+  function getPreviewMode() {
+    const checked = qs('input[name="cbPreviewMode"]:checked');
+    return checked ? checked.value : 'rendered';
+  }
+
+  function applyPreviewMode(mode) {
+    const frameWrap = qs('#cb-preview-rendered-wrap');
+    const htmlBox = qs('#cb-preview-html');
+    const copyBtn = qs('#cb-copy-html');
+    if (!frameWrap || !htmlBox || !copyBtn) return;
+    const isHtml = mode === 'html';
+    frameWrap.style.display = isHtml ? 'none' : '';
+    htmlBox.style.display = isHtml ? '' : 'none';
+    copyBtn.style.display = isHtml ? '' : 'none';
+  }
+
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t && t.name === 'cbPreviewMode') {
+      applyPreviewMode(getPreviewMode());
+    }
   });
 })();

@@ -80,15 +80,7 @@ class Routes {
 			)
 		);
 
-		register_rest_route(
-			$ns,
-			'/templates/(?P<id>\\d+)/slots',
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( __CLASS__, 'r_template_slots' ),
-				'permission_callback' => array( __CLASS__, 'can_manage' ),
-			)
-		);
+		// Mapping slots endpoint removed (block-based workflow).
 
 		register_rest_route(
 			$ns,
@@ -253,24 +245,7 @@ class Routes {
 		return \rest_ensure_response( array( 'items' => $items ) );
 	}
 
-	/**
-	 * GET /templates/{id}/slots endpoint.
-	 *
-	 * @param WP_REST_Request $req Request object.
-	 * @return WP_REST_Response|WP_Error
-	 */
-	public static function r_template_slots( WP_REST_Request $req ) {
-		$template_id = absint( $req->get_param( 'id' ) );
-		if ( $template_id <= 0 ) {
-			return new \WP_Error( 'missing_template', 'Missing template', array( 'status' => 400 ) );
-		}
-		$post = get_post( $template_id );
-		if ( ! $post || 'cb_template' !== $post->post_type ) {
-			return new \WP_Error( 'bad_template', 'Invalid template', array( 'status' => 400 ) );
-		}
-		$slots = CB_Render::discover_slots_from_content( (string) $post->post_content );
-		return \rest_ensure_response( array( 'slots' => $slots ) );
-	}
+	// r_template_slots removed.
 
 	/**
 	 * POST /templates/{id}/preview endpoint.

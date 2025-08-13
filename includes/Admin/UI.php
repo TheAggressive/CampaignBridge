@@ -122,7 +122,7 @@ class UI {
 		?>
 	<div class="wrap" data-cbnav="<?php echo esc_attr( $nav_nonce ); ?>">
 		<h1>CampaignBridge</h1>
-		<h2 class="nav-tab-wrapper" style="margin-bottom: 1rem;">
+		<h2 class="nav-tab-wrapper cb-nav-tabs">
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=templates&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'templates' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Templates</a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=types&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'types' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Post Types</a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=settings&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'settings' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Settings</a>
@@ -190,21 +190,35 @@ class UI {
 				?>
 			</select>
 			<p class="description">Design the email template here. Use Email Post Slot blocks.</p>
-			<p>
-				<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>" target="_blank" class="button">Open New in Tab</a>
-				<button type="button" class="button" id="campaignbridge-new-template">Create New (inline)</button>
-				<button type="button" class="button" id="campaignbridge-refresh-slots">Refresh Slots</button>
-			</p>
+				<p>
+					<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>" target="_blank" class="button">Open New in Tab</a>
+					<button type="button" class="button" id="campaignbridge-new-template">Create New (inline)</button>
+				</p>
 		</div>
 
-		<div class="cb-field">
-			<iframe id="campaignbridge-template-iframe" class="cb-template-iframe" style="width:600px;height:70vh;border:1px solid #dcdcde;background:#fff;display:block;margin:0 auto;" src="<?php echo isset( $_GET['tpl'] ) ? esc_url( admin_url( 'post.php?post=' . (int) $_GET['tpl'] . '&action=edit' ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>"></iframe>
+		<div class="cb-field cb-two-pane">
+			<div class="cb-template-pane">
+				<iframe id="campaignbridge-template-iframe" class="cb-iframe" src="<?php echo isset( $_GET['tpl'] ) ? esc_url( admin_url( 'post.php?post=' . (int) $_GET['tpl'] . '&action=edit&cb_iframe=1' ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>"></iframe>
+			</div>
+			<div id="campaignbridge-live-preview" class="cb-preview-pane">
+				<div class="cb-preview-toolbar">
+					<strong class="cb-grow">Live Preview</strong>
+					<label><input type="radio" name="cbPreviewMode" value="rendered" checked> Rendered</label>
+					<label><input type="radio" name="cbPreviewMode" value="html"> HTML</label>
+					<button type="button" class="button" id="cb-refresh-preview">Refresh</button>
+					<button type="button" class="button cb-hidden" id="cb-copy-html">Copy HTML</button>
+				</div>
+				<div id="cb-preview-rendered-wrap" class="cb-embed-frame">
+					<iframe id="cb-preview-frame" class="cb-iframe"></iframe>
+				</div>
+				<textarea id="cb-preview-html" class="cb-codebox" style="display:none;"></textarea>
+			</div>
 		</div>
 
 			<?php if ( 'mailchimp' === $provider ) : ?>
 		<div class="cb-field">
 			<button type="button" class="button" id="campaignbridge-show-sections">Show Mailchimp Template Sections</button>
-			<div id="campaignbridge-sections" class="cb-hidden" style="margin-top:8px;"></div>
+			<div id="campaignbridge-sections" class="cb-hidden cb-sections-box"></div>
 		</div>
 		<?php endif; ?>
 
@@ -253,6 +267,4 @@ class UI {
 	</div>
 		<?php
 	}
-
-	// Posts tab removed: legacy method deleted.
 }

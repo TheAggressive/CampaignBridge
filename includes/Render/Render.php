@@ -150,7 +150,7 @@ class Render {
 			return ''; }
 		$title   = esc_html( get_the_title( $post ) );
 		$link    = esc_url( get_permalink( $post ) );
-		$image   = $show_image ? get_the_post_thumbnail_url( $post, 'medium' ) : '';
+		$image   = $show_image ? get_the_post_thumbnail_url( $post, 'full' ) : '';
 		$excerpt = '';
 		if ( $show_excerpt ) {
 			$raw     = (string) get_post_field( 'post_content', $post );
