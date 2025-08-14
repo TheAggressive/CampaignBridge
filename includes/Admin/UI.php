@@ -191,8 +191,8 @@ class UI {
 			</select>
 			<p class="description">Design the email template here. Use Email Post Slot blocks.</p>
 				<p>
-					<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>" target="_blank" class="button">Open New in Tab</a>
-					<button type="button" class="button" id="campaignbridge-new-template">Create New (inline)</button>
+					<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>" target="_blank" class="button"><?php echo esc_html__( 'Open New in Tab', 'campaignbridge' ); ?></a>
+					<button type="button" class="button" id="campaignbridge-new-template"><?php echo esc_html__( 'Create New (inline)', 'campaignbridge' ); ?></button>
 				</p>
 		</div>
 
@@ -202,11 +202,11 @@ class UI {
 			</div>
 			<div id="campaignbridge-live-preview" class="cb-preview-pane">
 				<div class="cb-preview-toolbar">
-					<strong class="cb-grow">Live Preview</strong>
-					<label><input type="radio" name="cbPreviewMode" value="rendered" checked> Rendered</label>
-					<label><input type="radio" name="cbPreviewMode" value="html"> HTML</label>
-					<button type="button" class="button" id="cb-refresh-preview">Refresh</button>
-					<button type="button" class="button cb-hidden" id="cb-copy-html">Copy HTML</button>
+					<strong class="cb-grow"><?php echo esc_html__( 'Live Preview', 'campaignbridge' ); ?></strong>
+					<label><input type="radio" name="cbPreviewMode" value="rendered" checked> <?php echo esc_html__( 'Rendered', 'campaignbridge' ); ?></label>
+					<label><input type="radio" name="cbPreviewMode" value="html"> <?php echo esc_html__( 'HTML', 'campaignbridge' ); ?></label>
+					<button type="button" class="button" id="cb-refresh-preview"><?php echo esc_html__( 'Refresh', 'campaignbridge' ); ?></button>
+					<button type="button" class="button cb-hidden" id="cb-copy-html"><?php echo esc_html__( 'Copy HTML', 'campaignbridge' ); ?></button>
 				</div>
 				<div id="cb-preview-rendered-wrap" class="cb-embed-frame">
 					<iframe id="cb-preview-frame" class="cb-iframe"></iframe>
@@ -217,7 +217,7 @@ class UI {
 
 			<?php if ( 'mailchimp' === $provider ) : ?>
 		<div class="cb-field">
-			<button type="button" class="button" id="campaignbridge-show-sections">Show Mailchimp Template Sections</button>
+			<button type="button" class="button" id="campaignbridge-show-sections"><?php echo esc_html__( 'Show Mailchimp Template Sections', 'campaignbridge' ); ?></button>
 			<div id="campaignbridge-sections" class="cb-hidden cb-sections-box"></div>
 		</div>
 		<?php endif; ?>

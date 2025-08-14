@@ -5,6 +5,8 @@
  * @package CampaignBridge
  */
 
+declare(strict_types=1);
+
 namespace CampaignBridge;
 
 use CampaignBridge\Admin\UI as AdminUI;
