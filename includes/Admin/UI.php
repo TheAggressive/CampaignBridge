@@ -58,7 +58,7 @@ class UI {
 	 */
 	public static function enqueue_admin_assets() {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( $screen && 'toplevel_page_campaignbridge' !== $screen->id ) {
+		if ( $screen && ! in_array( $screen->id, array( 'toplevel_page_campaignbridge', 'campaignbridge_page_campaignbridge-post-types', 'campaignbridge_page_campaignbridge-settings' ), true ) ) {
 			return;
 		}
 
@@ -103,65 +103,17 @@ class UI {
 	}
 
 	/**
-	 * Render the main plugin page with tab navigation.
+	 * Render the Templates page.
 	 *
 	 * @return void
 	 */
-	public static function render_page() {
-		$settings   = get_option( self::$option_name );
-		$provider   = ( isset( $settings['provider'] ) && isset( self::$providers[ $settings['provider'] ] ) ) ? $settings['provider'] : 'mailchimp';
-		$nav_nonce  = wp_create_nonce( 'campaignbridge_nav' );
-		$active_tab = 'templates';
-		if ( isset( $_GET['tab'], $_GET['cbnav'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$tab_raw = sanitize_key( wp_unslash( $_GET['tab'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$cbnav   = sanitize_text_field( wp_unslash( $_GET['cbnav'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			if ( wp_verify_nonce( $cbnav, 'campaignbridge_nav' ) ) {
-				$active_tab = $tab_raw;
-			}
-		}
+	public static function render_templates_page() {
+		$settings = get_option( self::$option_name );
+		$provider = ( isset( $settings['provider'] ) && isset( self::$providers[ $settings['provider'] ] ) ) ? $settings['provider'] : 'mailchimp';
 		?>
-	<div class="wrap" data-cbnav="<?php echo esc_attr( $nav_nonce ); ?>">
-		<h1>CampaignBridge</h1>
-		<h2 class="nav-tab-wrapper cb-nav-tabs">
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=templates&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'templates' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Templates</a>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=types&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'types' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Post Types</a>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge&tab=settings&cbnav=' . $nav_nonce ) ); ?>" class="nav-tab <?php echo ( 'settings' === $active_tab ) ? 'nav-tab-active' : ''; ?>">Settings</a>
-		</h2>
+	<div class="wrap">
+		<h1><?php echo esc_html__( 'Email Templates', 'campaignbridge' ); ?></h1>
 
-		<?php
-		if ( in_array( $active_tab, array( 'settings', 'types' ), true ) ) {
-			if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				add_settings_error( 'campaignbridge_messages', 'campaignbridge_message', __( 'Settings saved.', 'campaignbridge' ), 'updated' );
-			}
-			settings_errors( 'campaignbridge_messages' );
-		}
-		?>
-
-		<?php if ( 'settings' === $active_tab ) : ?>
-		<form method="post" action="options.php">
-			<?php settings_fields( 'campaignbridge' ); ?>
-			<table class="form-table">
-			<tr>
-				<th scope="row"><?php echo esc_html__( 'Provider', 'campaignbridge' ); ?></th>
-				<td>
-				<select name="<?php echo esc_attr( self::$option_name ); ?>[provider]">
-					<?php foreach ( self::$providers as $slug => $obj ) : ?>
-					<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $slug, $provider ); ?>><?php echo esc_html( $obj->label() ); ?></option>
-					<?php endforeach; ?>
-				</select>
-				<p class="description"><?php echo esc_html__( 'Choose which email client or export method to use.', 'campaignbridge' ); ?></p>
-				</td>
-			</tr>
-			<?php
-			// Provider-specific fields.
-			if ( isset( self::$providers[ $provider ] ) ) {
-				self::$providers[ $provider ]->render_settings_fields( $settings, self::$option_name );
-			}
-			?>
-			</table>
-			<?php submit_button( 'Save Settings' ); ?>
-		</form>
-		<?php elseif ( 'templates' === $active_tab ) : ?>
 		<div class="cb-field">
 			<a class="button button-primary" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>">Add New Template</a>
 		</div>
@@ -215,15 +167,32 @@ class UI {
 			</div>
 		</div>
 
-			<?php if ( 'mailchimp' === $provider ) : ?>
+		<?php if ( 'mailchimp' === $provider ) : ?>
 		<div class="cb-field">
 			<button type="button" class="button" id="campaignbridge-show-sections"><?php echo esc_html__( 'Show Mailchimp Template Sections', 'campaignbridge' ); ?></button>
 			<div id="campaignbridge-sections" class="cb-hidden cb-sections-box"></div>
 		</div>
 		<?php endif; ?>
+	</div>
+		<?php
+	}
 
-			<?php /* Mapping section removed: block templates handle content inline. */ ?>
-		<?php elseif ( 'types' === $active_tab ) : ?>
+	/**
+	 * Render the Post Types page.
+	 *
+	 * @return void
+	 */
+	public static function render_post_types_page() {
+		$settings = get_option( self::$option_name );
+
+		if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			add_settings_error( 'campaignbridge_messages', 'campaignbridge_message', __( 'Settings saved.', 'campaignbridge' ), 'updated' );
+		}
+		settings_errors( 'campaignbridge_messages' );
+		?>
+	<div class="wrap">
+		<h1><?php echo esc_html__( 'Post Types', 'campaignbridge' ); ?></h1>
+
 		<form method="post" action="options.php">
 			<?php settings_fields( 'campaignbridge' ); ?>
 			<table class="form-table">
@@ -261,9 +230,50 @@ class UI {
 			</table>
 			<?php submit_button( 'Save Post Types' ); ?>
 		</form>
-		<?php else : ?>
-			<?php /* Posts tab removed in favor of block-based templates. */ ?>
-		<?php endif; ?>
+	</div>
+		<?php
+	}
+
+	/**
+	 * Render the Settings page.
+	 *
+	 * @return void
+	 */
+	public static function render_settings_page() {
+		$settings = get_option( self::$option_name );
+		$provider = ( isset( $settings['provider'] ) && isset( self::$providers[ $settings['provider'] ] ) ) ? $settings['provider'] : 'mailchimp';
+
+		if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			add_settings_error( 'campaignbridge_messages', 'campaignbridge_message', __( 'Settings saved.', 'campaignbridge' ), 'updated' );
+		}
+		settings_errors( 'campaignbridge_messages' );
+		?>
+	<div class="wrap">
+		<h1><?php echo esc_html__( 'CampaignBridge Settings', 'campaignbridge' ); ?></h1>
+
+		<form method="post" action="options.php">
+			<?php settings_fields( 'campaignbridge' ); ?>
+			<table class="form-table">
+			<tr>
+				<th scope="row"><?php echo esc_html__( 'Provider', 'campaignbridge' ); ?></th>
+				<td>
+				<select name="<?php echo esc_attr( self::$option_name ); ?>[provider]">
+					<?php foreach ( self::$providers as $slug => $obj ) : ?>
+					<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $slug, $provider ); ?>><?php echo esc_html( $obj->label() ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<p class="description"><?php echo esc_html__( 'Choose which email client or export method to use.', 'campaignbridge' ); ?></p>
+				</td>
+			</tr>
+			<?php
+			// Provider-specific fields.
+			if ( isset( self::$providers[ $provider ] ) ) {
+				self::$providers[ $provider ]->render_settings_fields( $settings, self::$option_name );
+			}
+			?>
+			</table>
+			<?php submit_button( 'Save Settings' ); ?>
+		</form>
 	</div>
 		<?php
 	}

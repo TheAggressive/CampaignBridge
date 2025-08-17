@@ -84,13 +84,51 @@ class Plugin {
 	}
 
 	/**
-	 * Register top-level admin menu and page renderer.
+	 * Register top-level admin menu and submenu pages.
 	 *
 	 * @return void
 	 */
 	public function add_admin_menu(): void {
 		AdminUI::init( $this->option_name, $this->providers );
-		add_menu_page( 'CampaignBridge', 'CampaignBridge', 'manage_options', 'campaignbridge', array( AdminUI::class, 'render_page' ) );
+
+		// Add main menu page.
+		add_menu_page(
+			'CampaignBridge',
+			'CampaignBridge',
+			'manage_options',
+			'campaignbridge',
+			array( AdminUI::class, 'render_templates_page' ),
+			'dashicons-email-alt',
+			30
+		);
+
+		// Add submenu pages.
+		add_submenu_page(
+			'campaignbridge',
+			'Email Templates',
+			'Templates',
+			'manage_options',
+			'campaignbridge',
+			array( AdminUI::class, 'render_templates_page' )
+		);
+
+		add_submenu_page(
+			'campaignbridge',
+			'Post Types',
+			'Post Types',
+			'manage_options',
+			'campaignbridge-post-types',
+			array( AdminUI::class, 'render_post_types_page' )
+		);
+
+		add_submenu_page(
+			'campaignbridge',
+			'Settings',
+			'Settings',
+			'manage_options',
+			'campaignbridge-settings',
+			array( AdminUI::class, 'render_settings_page' )
+		);
 	}
 
 	/**

@@ -1,0 +1,113 @@
+/* Based on official WordPress custom block editor documentation */
+
+.cb-editor-wrap {
+  margin: 0;
+}
+
+.cb-editor-root {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  height: calc(100vh - 220px);
+  padding: 0;
+}
+
+.cb-editor-actions {
+  margin-top: 12px;
+}
+
+/* Main editor layout following WordPress docs pattern */
+.getdave-sbe-block-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.getdave-sbe-block-editor__toolbar {
+  flex-shrink: 0;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fff;
+}
+
+.getdave-sbe-block-editor__main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.getdave-sbe-block-editor__content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.getdave-sbe-block-editor__sidebar {
+  width: 280px;
+  background: #f0f0f1;
+  border-left: 1px solid #e0e0e0;
+  overflow-y: auto;
+}
+
+.getdave-sbe-block-editor__block-list {
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+/* Block editor specific styles */
+.block-editor-block-list__layout {
+  padding: 0;
+}
+
+.wp-block {
+  max-width: 100%;
+}
+
+/* Ensure toolbar buttons look correct */
+.components-toolbar-group .components-toolbar-button {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  min-width: 36px;
+  height: 36px;
+}
+
+.components-toolbar-group .components-toolbar-button:hover {
+  background: #f0f0f0;
+}
+
+/* Block Inspector styles */
+.block-editor-block-inspector {
+  padding: 16px;
+}
+
+/* Popover styles */
+.components-popover__content {
+  z-index: 1000000;
+}
+
+/* Block selection styles */
+.wp-block.is-selected {
+  outline: 1px solid #007cba;
+  outline-offset: -1px;
+}
+
+.wp-block.is-hovered {
+  outline: 1px solid rgba(0, 124, 186, 0.5);
+  outline-offset: -1px;
+}
+
+/* Writing flow styles */
+.block-editor-writing-flow {
+  height: 100%;
+}
+
+/* Block list insertion point */
+.block-editor-block-list__insertion-point {
+  position: relative;
+}
+
+.block-editor-block-list__insertion-point-inserter {
+  position: absolute;
+  left: 8px;
+  top: -14px;
+}

@@ -12,9 +12,6 @@
 
 @layer components {
   /* ================= Admin: Common (shared layout/utilities for UI) ================= */
-  .cb-nav-tabs {
-    margin-bottom: 1rem;
-  }
   .cb-field {
     @apply mb-3 max-w-[var(--cb-maxw)];
   }
@@ -43,10 +40,7 @@
     color: var(--cb-status-err);
   }
 
-  /* ================= Templates tab (Builder + Live Preview) ======================= */
-  .cb-nav-tabs {
-    margin-bottom: 1rem;
-  }
+  /* ================= Templates page (Builder + Live Preview) ======================= */
   /* Two-pane layout for template + preview */
   .cb-two-pane {
     @apply flex items-start gap-4;
@@ -81,7 +75,7 @@
     height: 70vh;
     font-family: monospace;
   }
-  /* ================= Post Types tab (Switches UI) ================================ */
+  /* ================= Post Types page (Switches UI) ================================ */
   .cb-switch {
     @apply inline-flex items-center gap-2 mr-3 mb-2 relative;
 
