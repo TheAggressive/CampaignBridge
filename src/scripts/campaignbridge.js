@@ -1,720 +1,780 @@
-/* global CampaignBridge */
 /**
  * Admin UI interactions for CampaignBridge.
  *
- * Replaces jQuery usage with small vanilla helpers for:
+ * Modern ES6 implementation with:
  * - DOM querying and event delegation
- * - POST requests to WordPress ajax
+ * - REST API integration
  * - Safe HTML escaping when rendering dynamic content
+ * - Template management and preview
  */
-(function () {
-  'use strict';
 
-  /**
-   * Query a single element.
-   * @param {string} selector CSS selector
-   * @param {ParentNode} [root=document] Search root
-   * @returns {Element|null}
-   */
-  const qs = (selector, root) => (root || document).querySelector(selector);
+// Utility functions
+const qs = (selector, root = document) => root.querySelector(selector);
+const qsa = (selector, root = document) =>
+  Array.from(root.querySelectorAll(selector));
 
-  /**
-   * Query all matching elements as an Array.
-   * @param {string} selector CSS selector
-   * @param {ParentNode} [root=document] Search root
-   * @returns {Element[]}
-   */
-  const qsa = (selector, root) =>
-    Array.from((root || document).querySelectorAll(selector));
+// URL parameter utilities
+const getQueryParam = (name) => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(name);
+};
 
-  const getQueryParam = (name) => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(name);
-  };
+const setQueryParam = (name, value) => {
+  const url = new URL(window.location.href);
+  if (value == null || value === '') {
+    url.searchParams.delete(name);
+  } else {
+    url.searchParams.set(name, value);
+  }
+  history.replaceState({}, '', url.toString());
+};
 
-  const setQueryParam = (name, value) => {
-    const url = new URL(window.location.href);
-    if (value == null || value === '') url.searchParams.delete(name);
-    else url.searchParams.set(name, value);
-    history.replaceState({}, '', url.toString());
-  };
+// Event delegation utility
+const on = (eventName, selector, handler) => {
+  document.addEventListener(eventName, (event) => {
+    const target = event.target?.closest(selector);
+    if (target) handler(event, target);
+  });
+};
 
-  /**
-   * Delegate events from document to elements matching a selector.
-   * @param {string} eventName Event type (e.g., 'click')
-   * @param {string} selector CSS selector to match targets
-   * @param {(event: Event, target: Element) => void} handler Handler invoked with the original event and the matched target
-   */
-  const on = (eventName, selector, handler) => {
-    document.addEventListener(eventName, (event) => {
-      const target = event.target && event.target.closest(selector);
-      if (target) handler(event, target);
-    });
-  };
+// HTML escaping utility
+const escapeHTML = (value) => {
+  const div = document.createElement('div');
+  div.textContent = value ?? '';
+  return div.innerHTML;
+};
 
-  /**
-   * Escape a string for safe HTML insertion.
-   * @param {string|number|null|undefined} value Value to escape
-   * @returns {string} Escaped HTML string
-   */
-  const escapeHTML = (value) => {
-    const div = document.createElement('div');
-    div.textContent = value == null ? '' : String(value);
-    return div.innerHTML;
-  };
+// REST API client
+class ApiClient {
+  constructor() {
+    this.baseUrl = window.wpApiSettings?.root || '/wp-json/';
+    this.nonce = window.wpApiSettings?.nonce;
+  }
 
-  /**
-   * POST to WordPress admin-ajax with URL-encoded body.
-   * @param {Record<string, string>} data Key-value payload
-   * @returns {Promise<any>} Parsed JSON response
-   */
-  const api = async (path, { method = 'GET', body } = {}) => {
-    const url = `${
-      window.wpApiSettings?.root || '/wp-json/'
-    }campaignbridge/v1${path}`;
+  async request(path, { method = 'GET', body } = {}) {
+    const url = `${this.baseUrl}campaignbridge/v1${path}`;
     const headers = { 'Content-Type': 'application/json' };
-    if (window.wpApiSettings?.nonce)
-      headers['X-WP-Nonce'] = window.wpApiSettings.nonce;
-    const res = await fetch(url, {
+
+    if (this.nonce) {
+      headers['X-WP-Nonce'] = this.nonce;
+    }
+
+    const response = await fetch(url, {
       method,
       headers,
       credentials: 'same-origin',
       body: body ? JSON.stringify(body) : undefined,
     });
-    const json = await res.json();
-    return json;
-  };
 
-  // Normalize REST response shapes
-  const itemsFrom = (resp) =>
-    (resp && resp.items) || (resp && resp.data && resp.data.items) || [];
-  const sectionsFrom = (resp) =>
-    (resp && resp.sections) || (resp && resp.data && resp.data.sections) || [];
-  const slotsFrom = (resp) =>
-    (resp && resp.slots) || (resp && resp.data && resp.data.slots) || [];
-  const htmlFrom = (resp) =>
-    (resp && resp.html) || (resp && resp.data && resp.data.html) || '';
+    return response.json();
+  }
 
-  const collectSlotsMap = () => {
-    const map = {};
-    qsa('#campaignbridge-mapping-body select').forEach((sel) => {
-      const name = sel.getAttribute('name') || '';
-      const match = name.match(/sections_map\[(.+)\]/);
-      if (match) {
-        map[match[1]] = sel.value ? Number(sel.value) : 0;
+  async get(path) {
+    return this.request(path, { method: 'GET' });
+  }
+
+  async post(path, body) {
+    return this.request(path, { method: 'POST', body });
+  }
+}
+
+// Response data extractors
+const extractData = {
+  items: (resp) => resp?.items ?? resp?.data?.items ?? [],
+  sections: (resp) => resp?.sections ?? resp?.data?.sections ?? [],
+  slots: (resp) => resp?.slots ?? resp?.data?.slots ?? [],
+  html: (resp) => resp?.html ?? resp?.data?.html ?? '',
+};
+
+// Template management class
+class TemplateManager {
+  constructor() {
+    this.api = new ApiClient();
+    this.currentTemplateId = null;
+    this.initialize();
+  }
+
+  initialize() {
+    this.setupTemplateSelection();
+    this.setupNewTemplateButton();
+    this.loadInitialTemplate();
+  }
+
+  setupTemplateSelection() {
+    const templateSelect = qs('#campaignbridge-template-select');
+    if (!templateSelect) return;
+
+    const initialTemplateId = getQueryParam('tpl');
+    if (initialTemplateId) {
+      templateSelect.value = String(initialTemplateId);
+    }
+
+    templateSelect.addEventListener('change', (event) => {
+      this.currentTemplateId = event.target.value || '';
+      setQueryParam('tpl', this.currentTemplateId);
+      this.loadTemplate(this.currentTemplateId);
+
+      if (this.currentTemplateId) {
+        this.updateLivePreview(this.currentTemplateId);
       }
     });
-    return map;
-  };
+  }
 
-  const ensurePreviewBox = () => {
-    let previewBox = qs('#campaignbridge-preview');
-    let previewArea = qs('#campaignbridge-preview-html');
-    const mappingWrap = qs('#campaignbridge-mapping');
-    if (!previewBox && mappingWrap) {
-      previewBox = document.createElement('div');
-      previewBox.id = 'campaignbridge-preview';
-      previewBox.className = 'cb-preview-box';
-      previewBox.style.marginTop = '16px';
-      previewBox.innerHTML =
-        '<p><button type="button" class="button" id="campaignbridge-preview-btn">Preview Email</button></p><div id="campaignbridge-preview-html" style="border:1px solid #dcdcde;background:#fff;padding:16px;max-height:480px;overflow:auto;"></div>';
-      mappingWrap.parentNode.insertBefore(previewBox, mappingWrap.nextSibling);
-      previewArea = qs('#campaignbridge-preview-html');
-    }
-    return previewArea;
-  };
+  setupNewTemplateButton() {
+    const newButton = qs('#campaignbridge-new-template');
+    if (!newButton) return;
 
-  const findMappingSelectByKey = (key) => {
-    const selects = qsa('#campaignbridge-mapping-body select');
-    for (const sel of selects) {
-      const name = sel.getAttribute('name') || '';
-      if (name === `sections_map[${key}]`) return sel;
-    }
-    return null;
-  };
+    newButton.addEventListener('click', async () => {
+      try {
+        const response = await this.api.post('/templates', {
+          title: 'New Email Template',
+          content: '',
+          status: 'draft',
+        });
 
-  /**
-   * Build <option> HTML for a list of items.
-   * @param {{id: string|number, label: string}[]} items Items to render
-   * @returns {string}
-   */
-  const renderOptions = (items) =>
-    items
-      .map(
-        (item) =>
-          '<option value="' +
-          escapeHTML(String(item.id)) +
-          '">' +
-          escapeHTML(item.label) +
-          '</option>'
-      )
-      .join('');
+        if (response?.id) {
+          this.addTemplateToSelect(response);
+          this.selectTemplate(response.id);
+        }
+      } catch (error) {
+        console.error('Error creating new template:', error);
+      }
+    });
+  }
 
-  const selectedItemsFromSelect = (selectEl) => {
-    if (!selectEl) return [];
-    return Array.from(selectEl.selectedOptions || []).map((o) => ({
-      id: o.value,
-      label: o.textContent || '',
-    }));
-  };
+  addTemplateToSelect(template) {
+    const templateSelect = qs('#campaignbridge-template-select');
+    if (!templateSelect) return;
 
-  const renderSelectedChips = (selectEl) => {
-    const chipsWrap = qs('#cb-selected-posts-chips');
-    if (!chipsWrap) return;
-    const items = selectedItemsFromSelect(selectEl);
-    chipsWrap.innerHTML = items
-      .map(
-        (it) =>
-          '<span class="cb-chip" draggable="true" data-id="' +
-          escapeHTML(String(it.id)) +
-          '">' +
-          escapeHTML(it.label) +
-          '<span class="cb-chip-remove" title="Remove" aria-label="Remove">×</span></span>'
-      )
-      .join('');
-  };
+    const option = document.createElement('option');
+    option.value = template.id;
+    option.textContent = template.title?.rendered || 'New Email Template';
+    templateSelect.appendChild(option);
+  }
 
-  /**
-   * Fetch posts for a given post type.
-   * @param {string} postType WP post type slug
-   * @returns {Promise<any>}
-   */
-  const fetchPosts = (postType) =>
-    api(`/posts?post_type=${encodeURIComponent(postType || '')}`);
+  selectTemplate(templateId) {
+    const templateSelect = qs('#campaignbridge-template-select');
+    if (!templateSelect) return;
 
-  /**
-   * Render the section-to-post mapping UI.
-   * @param {string[]} sections Section keys from Mailchimp template
-   * @param {{id: string|number, label: string}[]} items Post items to choose from
-   */
-  const renderMapping = (sections, items) => {
-    const wrap = document.getElementById('campaignbridge-mapping');
-    const body = document.getElementById('campaignbridge-mapping-body');
-    if (!wrap || !body) return;
-    if (!sections || !sections.length) {
-      wrap.style.display = 'none';
+    templateSelect.value = templateId;
+    this.currentTemplateId = templateId;
+    setQueryParam('tpl', templateId);
+    this.loadTemplate(templateId);
+  }
+
+  async loadTemplate(templateId) {
+    if (!templateId) {
+      this.showEmptyState();
       return;
     }
-    let optHtml = '<option value="">— Select a post —</option>';
-    items.forEach((it) => {
-      optHtml +=
-        '<option value="' +
-        escapeHTML(String(it.id)) +
-        '">' +
-        escapeHTML(it.label) +
-        '</option>';
-    });
-    let rows = '';
-    sections.forEach((s) => {
-      const safe = escapeHTML(s);
-      rows +=
-        '<tr data-key="' +
-        safe +
-        '"><td><label class="screen-reader-text" for="map-' +
-        safe +
-        '">Slot key</label><code>' +
-        safe +
-        '</code></td><td><select id="map-' +
-        safe +
-        '" name="sections_map[' +
-        safe +
-        ']" style="width:100%">' +
-        optHtml +
-        '</select></td></tr>';
-    });
-    body.innerHTML = rows;
-    wrap.style.display = 'block';
 
-    // Populate slot dropdown (left column) for Assign-to-slot control
-    const slotSelect = qs('#campaignbridge-slot-select');
-    if (slotSelect) {
-      slotSelect.innerHTML = sections
-        .map(
-          (k) =>
-            '<option value="' +
-            escapeHTML(k) +
-            '">' +
-            escapeHTML(k) +
-            '</option>'
-        )
-        .join('');
+    try {
+      // Load template content and initialize editor
+      await this.updateLivePreview(templateId);
+    } catch (error) {
+      console.error('Error loading template:', error);
+      this.showErrorState('Failed to load template');
     }
-  };
+  }
 
-  /**
-   * Replace options of a <select> with provided items while preserving existing selection if possible.
-   * @param {HTMLSelectElement} selectEl Select element to populate
-   * @param {{id: string|number, label?: string, name?: string}[]} items Items to render
-   */
-  const populateSelect = (selectEl, items) => {
-    if (!selectEl) return;
-    const current = selectEl.value;
-    let html = '<option value="">—</option>';
-    items.forEach((it) => {
-      html +=
-        '<option value="' +
-        escapeHTML(String(it.id)) +
-        '">' +
-        escapeHTML(it.name || it.label) +
-        '</option>';
-    });
-    selectEl.innerHTML = html;
-    if (current) {
-      selectEl.value = current;
+  loadInitialTemplate() {
+    const templateId = getQueryParam('tpl');
+    if (templateId) {
+      this.currentTemplateId = templateId;
+      this.loadTemplate(templateId);
     }
-    toggleResetVisibility();
-  };
+  }
 
-  /**
-   * Show or hide Mailchimp reset buttons based on selection state.
-   */
-  const toggleResetVisibility = () => {
-    const audSel = qs('#campaignbridge-mailchimp-audience');
-    const audBtn = qs('#campaignbridge-fetch-audiences');
-    if (audSel && audBtn) {
-      if (audSel.value) {
-        audBtn.style.display = '';
-      } else {
-        audBtn.style.display = 'none';
+  showEmptyState() {
+    const container = qs('#campaignbridge-template-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="cb-editor-empty">
+          <p>Select a template to edit or create a new one.</p>
+        </div>
+      `;
+    }
+  }
+
+  showErrorState(message) {
+    const container = qs('#campaignbridge-template-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="cb-editor-error">
+          <p>${escapeHTML(message)}</p>
+        </div>
+      `;
+    }
+  }
+
+  async updateLivePreview(templateId) {
+    const previewFrame = qs('#cb-preview-frame');
+    const htmlBox = qs('#cb-preview-html');
+
+    if (!previewFrame || !htmlBox) return;
+
+    try {
+      const response = await this.api.post(`/templates/${templateId}/preview`, {
+        slots_map: {},
+      });
+
+      const html = extractData.html(response);
+
+      // Update preview frame
+      try {
+        const doc =
+          previewFrame.contentDocument || previewFrame.contentWindow?.document;
+        if (doc) {
+          doc.open();
+          doc.write(html);
+          doc.close();
+        }
+      } catch (error) {
+        console.warn('Could not update preview frame:', error);
       }
-    }
-    const tplSel = qs('#campaignbridge-mailchimp-templates');
-    const tplBtn = qs('#campaignbridge-fetch-templates');
-    if (tplSel && tplBtn) {
-      if (tplSel.value) {
-        tplBtn.style.display = '';
-      } else {
-        tplBtn.style.display = 'none';
-      }
-    }
-  };
 
-  /**
-   * Load posts into the posts <select> based on current post type.
-   */
-  const loadPosts = async () => {
+      // Update HTML box
+      htmlBox.value = html;
+      this.applyPreviewMode(this.getPreviewMode());
+    } catch (error) {
+      console.error('Error updating preview:', error);
+    }
+  }
+
+  getPreviewMode() {
+    const checked = qs('input[name="cbPreviewMode"]:checked');
+    return checked?.value || 'rendered';
+  }
+
+  applyPreviewMode(mode) {
+    const frameWrap = qs('#cb-preview-rendered-wrap');
+    const htmlBox = qs('#cb-preview-html');
+    const copyBtn = qs('#cb-copy-html');
+
+    if (!frameWrap || !htmlBox || !copyBtn) return;
+
+    const isHtml = mode === 'html';
+    frameWrap.style.display = isHtml ? 'none' : '';
+    htmlBox.style.display = isHtml ? '' : 'none';
+    copyBtn.style.display = isHtml ? '' : 'none';
+  }
+}
+
+// Post management class
+class PostManager {
+  constructor() {
+    this.api = new ApiClient();
+    this.initialize();
+  }
+
+  initialize() {
+    this.setupPostTypeSelection();
+    this.loadInitialPosts();
+    this.setupPostSelection();
+  }
+
+  setupPostTypeSelection() {
+    const postTypeEl = qs('#campaignbridge-post-type');
+    if (!postTypeEl) return;
+
+    postTypeEl.addEventListener('change', () => this.loadPosts());
+  }
+
+  async loadPosts() {
     const typeEl = qs('#campaignbridge-post-type');
     const select = qs('#campaignbridge-posts');
+
     if (!typeEl || !select) return;
+
     const postType = typeEl.value;
     if (!postType) {
       select.innerHTML = '';
       return;
     }
+
     select.disabled = true;
     select.innerHTML = '<option>Loading…</option>';
+
     try {
-      const resp = await fetchPosts(postType);
-      select.innerHTML = Array.isArray(resp?.items)
-        ? renderOptions(resp.items)
-        : '';
-    } catch (e) {
+      const response = await this.api.get(
+        `/posts?post_type=${encodeURIComponent(postType)}`
+      );
+      const items = extractData.items(response);
+
+      select.innerHTML = this.renderOptions(items);
+    } catch (error) {
+      console.error('Error loading posts:', error);
       select.innerHTML = '';
     } finally {
       select.disabled = false;
     }
-    renderSelectedChips(select);
-  };
 
-  /**
-   * Update the inline Mailchimp verification status UI.
-   * @param {'loading'|'ok'|'err'} state Status code
-   * @param {string} [message] Optional message to display
-   */
-  const setVerifyStatus = (state, message) => {
-    const status = qs('#campaignbridge-verify-status');
-    if (!status) return;
-    if (state === 'loading') {
-      status.classList.remove('cb-status-ok');
-      status.classList.remove('cb-status-err');
-      status.innerHTML =
-        '<span class="spinner is-active cb-inline-spinner"></span> Verifying…';
-      return;
+    this.renderSelectedChips(select);
+  }
+
+  renderOptions(items) {
+    if (!Array.isArray(items)) return '';
+
+    return items
+      .map(
+        (item) => `
+        <option value="${escapeHTML(String(item.id))}">
+          ${escapeHTML(item.label)}
+        </option>
+      `
+      )
+      .join('');
+  }
+
+  renderSelectedChips(select) {
+    const chipsWrap = qs('#cb-selected-posts-chips');
+    if (!chipsWrap) return;
+
+    const items = this.getSelectedItems(select);
+    chipsWrap.innerHTML = items
+      .map(
+        (item) => `
+        <span class="cb-chip" draggable="true" data-id="${escapeHTML(
+          String(item.id)
+        )}">
+          ${escapeHTML(item.label)}
+          <span class="cb-chip-remove" title="Remove" aria-label="Remove">×</span>
+        </span>
+      `
+      )
+      .join('');
+  }
+
+  getSelectedItems(select) {
+    if (!select) return [];
+    return Array.from(select.selectedOptions || []).map((option) => ({
+      id: option.value,
+      label: option.textContent || '',
+    }));
+  }
+
+  loadInitialPosts() {
+    const postsSelect = qs('#campaignbridge-posts');
+    if (postsSelect) {
+      this.loadPosts();
     }
-    const isOk = state === 'ok';
-    const text = message || (isOk ? 'Connected' : 'No connection');
-    status.classList.toggle('cb-status-ok', isOk);
-    status.classList.toggle('cb-status-err', !isOk);
-    status.innerHTML =
-      '<span class="cb-pill">' +
-      (isOk ? '✔' : '✖') +
-      '</span>' +
-      escapeHTML(text);
-  };
+  }
 
-  let verifyTimer = null;
-  /**
-   * Verify Mailchimp credentials via ajax and reflect the result in UI.
-   */
-  const verifyMailchimp = async () => {
-    setVerifyStatus('loading');
-    const apiInput = qs('#campaignbridge-mailchimp-api-key');
-    const apiKey = apiInput ? apiInput.value || '' : '';
-    try {
-      const resp = await post({
-        action: 'campaignbridge_verify_mailchimp',
-        nonce: CampaignBridge.nonce,
-        api_key: apiKey,
-      });
-      if (resp && resp.success) {
-        setVerifyStatus('ok', 'Connected');
-      } else {
-        const msg =
-          resp && resp.data && resp.data.message
-            ? resp.data.message
-            : 'Not connected';
-        setVerifyStatus('err', msg);
-      }
-    } catch (e) {
-      setVerifyStatus('err', 'Not connected');
-    }
-  };
-
-  document.addEventListener('DOMContentLoaded', function () {
-    const postTypeEl = qs('#campaignbridge-post-type');
-    if (postTypeEl) {
-      postTypeEl.addEventListener('change', loadPosts);
-    }
-    if (qs('#campaignbridge-posts')) {
-      loadPosts();
-    }
-
-    toggleResetVisibility();
-
+  setupPostSelection() {
     on('change', '#campaignbridge-posts', () => {
-      const sel = qs('#campaignbridge-posts');
-      renderSelectedChips(sel);
+      const select = qs('#campaignbridge-posts');
+      this.renderSelectedChips(select);
     });
 
-    on('click', '#cb-selected-posts-chips .cb-chip-remove', (e, el) => {
-      const chip = el.closest('.cb-chip');
-      if (!chip) return;
-      const id = chip.getAttribute('data-id');
-      const sel = qs('#campaignbridge-posts');
-      if (sel && id) {
-        Array.from(sel.options).forEach((opt) => {
-          if (opt.value === id) opt.selected = false;
-        });
-        sel.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
+    on(
+      'click',
+      '#cb-selected-posts-chips .cb-chip-remove',
+      (event, element) => {
+        const chip = element.closest('.cb-chip');
+        if (!chip) return;
 
-    // Template slots mapping and preview (disabled: block-based workflow)
-    (function setupTemplateSlots() {
-      let tplId = getQueryParam('tpl');
+        const id = chip.getAttribute('data-id');
+        const select = qs('#campaignbridge-posts');
 
-      // Inline template select and iframe wiring (right column)
-      const tplSelect = qs('#campaignbridge-template-select');
-      const tplIframe = qs('#campaignbridge-template-iframe');
-      const refreshBtn = null;
-      const newBtn = qs('#campaignbridge-new-template');
-
-      const setIframeSrc = (id) => {
-        if (tplIframe)
-          tplIframe.src = id
-            ? `${
-                window.ajaxurl?.replace('admin-ajax.php', '') || '/wp-admin/'
-              }post.php?post=${encodeURIComponent(id)}&action=edit`
-            : '';
-      };
-
-      if (tplSelect) {
-        if (tplId) tplSelect.value = String(tplId);
-        tplSelect.addEventListener('change', () => {
-          tplId = tplSelect.value || '';
-          setQueryParam('tpl', tplId);
-          setIframeSrc(tplId);
-          if (tplId) updateLivePreview(tplId);
-        });
-      }
-
-      if (newBtn) {
-        newBtn.addEventListener('click', async () => {
-          // Create new template via window.open in the iframe
-          const url = `${
-            window.ajaxurl?.replace('admin-ajax.php', '') || '/wp-admin/'
-          }post-new.php?post_type=cb_template`;
-          if (tplIframe) tplIframe.src = url;
-          setQueryParam('tpl', '');
-          if (tplSelect) tplSelect.value = '';
-        });
-      }
-
-      // refresh slots removed
-
-      if (!tplId) return;
-      updateLivePreview(tplId);
-
-      // Autofill mapping from selected posts in order
-      const rerenderPreviewDebounced = (() => {
-        let t = null;
-        return () => {
-          clearTimeout(t);
-          t = setTimeout(async () => {
-            const tplIdLocal = getQueryParam('tpl');
-            if (!tplIdLocal) return;
-            const previewArea = qs('#campaignbridge-preview-html');
-            if (!previewArea) return;
-            const map = collectSlotsMap();
-            previewArea.innerHTML = '<p>Updating…</p>';
-            try {
-              const resp = await api(
-                `/templates/${encodeURIComponent(tplIdLocal)}/preview`,
-                { method: 'POST', body: { slots_map: map } }
-              );
-              const html = htmlFrom(resp);
-              previewArea.innerHTML = html || '';
-            } catch (e) {
-              previewArea.innerHTML = '';
-            }
-          }, 250);
-        };
-      })();
-
-      on('click', '#campaignbridge-autofill', () => {
-        const selects = qsa('#campaignbridge-mapping-body select');
-        if (!selects.length) return;
-        const postSel = qs('#campaignbridge-posts');
-        const selected = Array.from(postSel?.selectedOptions || []).map(
-          (o) => ({ id: o.value })
-        );
-        selects.forEach((sel, idx) => {
-          sel.value = selected[idx] ? String(selected[idx].id) : '';
-        });
-        rerenderPreviewDebounced();
-      });
-
-      // Live update preview on mapping changes and drops
-      on('change', '#campaignbridge-mapping-body select', () => {
-        rerenderPreviewDebounced();
-      });
-      const mappingBodyEl = qs('#campaignbridge-mapping-body');
-      if (mappingBodyEl) {
-        mappingBodyEl.addEventListener('drop', () =>
-          rerenderPreviewDebounced()
-        );
-        mappingBodyEl.addEventListener('click', (ev) => {
-          const row = ev.target && ev.target.closest('tr');
-          if (!row) return;
-          qsa('#campaignbridge-mapping-body tr').forEach((r) =>
-            r.classList.remove('is-active')
-          );
-          row.classList.add('is-active');
-        });
-      }
-
-      // Assign-to-slot control (left panel)
-      on('click', '#campaignbridge-assign-to-slot', () => {
-        const postSel = qs('#campaignbridge-posts');
-        const slotSel = qs('#campaignbridge-slot-select');
-        if (!postSel || !slotSel || !slotSel.value) return;
-        const selectedOpt =
-          postSel.selectedOptions && postSel.selectedOptions[0];
-        if (!selectedOpt) return;
-        const key = slotSel.value;
-        const target = qs(
-          `#campaignbridge-mapping-body select[name="sections_map[${CSS.escape(
-            key
-          )}]"]`
-        );
-        if (target) {
-          target.value = selectedOpt.value;
-          target.dispatchEvent(new Event('change', { bubbles: true }));
+        if (select && id) {
+          Array.from(select.options).forEach((option) => {
+            if (option.value === id) option.selected = false;
+          });
+          select.dispatchEvent(new Event('change', { bubbles: true }));
         }
-      });
-    })();
+      }
+    );
+  }
+}
 
-    on('click', '#campaignbridge-show-sections', (e, btn) => {
+// Mailchimp integration class
+class MailchimpIntegration {
+  constructor() {
+    this.api = new ApiClient();
+    this.initialize();
+  }
+
+  initialize() {
+    this.setupSectionsButton();
+    this.setupAudienceReset();
+    this.setupTemplateReset();
+    this.autoPopulateData();
+    this.setupVerification();
+  }
+
+  setupSectionsButton() {
+    on('click', '#campaignbridge-show-sections', async (event, button) => {
       const box = qs('#campaignbridge-sections');
       if (!box) return;
-      btn.disabled = true;
-      btn.textContent = 'Loading…';
-      api('/mailchimp/sections')
-        .then((resp) => {
-          const sections = sectionsFrom(resp);
-          if (sections && sections.length) {
-            let html = '<ul style="margin:0;">';
-            sections.forEach((k) => {
-              html += '<li><code>' + escapeHTML(k) + '</code></li>';
-            });
-            html += '</ul>';
-            box.innerHTML = html;
-            box.style.display = 'block';
 
-            const items = [];
-            const postSelect = qs('#campaignbridge-posts');
-            if (postSelect) {
-              qsa('option', postSelect).forEach((opt) => {
-                items.push({ id: opt.value, label: opt.textContent });
-              });
-            }
-            renderMapping(sections, items);
-          } else if (
-            resp &&
-            (resp.message || (resp.data && resp.data.message))
-          ) {
-            const msg = resp.message || resp.data.message;
-            box.innerHTML = '<p>' + escapeHTML(msg) + '</p>';
-            box.style.display = 'block';
-          } else {
-            box.innerHTML = '<p>No sections found.</p>';
-            box.style.display = 'block';
-          }
-        })
-        .catch(() => {
-          box.innerHTML = '<p>Failed to load sections.</p>';
-          box.style.display = 'block';
-        })
-        .finally(() => {
-          btn.disabled = false;
-          btn.textContent = 'Show Mailchimp Template Sections';
-        });
-    });
+      button.disabled = true;
+      button.textContent = 'Loading…';
 
-    on('click', '#campaignbridge-fetch-audiences', (e, btn) => {
-      const sel = qs('#campaignbridge-mailchimp-audience');
-      if (!sel) return;
-      btn.disabled = true;
-      btn.textContent = 'Resetting…';
-      sel.value = '';
-      api('/mailchimp/audiences?refresh=1')
-        .then((resp) => {
-          const items = itemsFrom(resp);
-          if (items.length) populateSelect(sel, items);
-        })
-        .finally(() => {
-          btn.disabled = false;
-          btn.textContent = 'Reset Audiences';
-          toggleResetVisibility();
-        });
-    });
+      try {
+        const response = await this.api.get('/mailchimp/sections');
+        const sections = extractData.sections(response);
 
-    on('click', '#campaignbridge-fetch-templates', (e, btn) => {
-      const sel = qs('#campaignbridge-mailchimp-templates');
-      if (!sel) return;
-      btn.disabled = true;
-      btn.textContent = 'Resetting…';
-      sel.value = '';
-      api('/mailchimp/templates?refresh=1')
-        .then((resp) => {
-          const items = itemsFrom(resp);
-          if (items.length) populateSelect(sel, items);
-        })
-        .finally(() => {
-          btn.disabled = false;
-          btn.textContent = 'Reset Templates';
-          toggleResetVisibility();
-        });
-    });
-
-    (function autoPopulateMailchimp() {
-      const audSel = qs('#campaignbridge-mailchimp-audience');
-      if (audSel && (!audSel.value || audSel.value === '')) {
-        api('/mailchimp/audiences').then((resp) => {
-          const items = itemsFrom(resp);
-          if (items.length) populateSelect(audSel, items);
-          toggleResetVisibility();
-        });
-      }
-
-      const tplSel = qs('#campaignbridge-mailchimp-templates');
-      if (tplSel && (!tplSel.value || tplSel.value === '')) {
-        api('/mailchimp/templates').then((resp) => {
-          const items = itemsFrom(resp);
-          if (items.length) populateSelect(tplSel, items);
-          toggleResetVisibility();
-        });
-      }
-    })();
-
-    const audSelect = qs('#campaignbridge-mailchimp-audience');
-    if (audSelect) audSelect.addEventListener('change', toggleResetVisibility);
-    const tplSelect = qs('#campaignbridge-mailchimp-templates');
-    if (tplSelect) tplSelect.addEventListener('change', toggleResetVisibility);
-
-    (function autoVerifyMailchimp() {
-      const apiInput = qs('#campaignbridge-mailchimp-api-key');
-      if (apiInput && apiInput.value) {
-        (async () => {
-          const resp = await api('/mailchimp/verify', { method: 'POST' });
-          if (resp?.ok) setVerifyStatus('ok', 'Connected');
-        })();
-      }
-      if (apiInput) {
-        ['input', 'change'].forEach((ev) => {
-          apiInput.addEventListener(ev, () => {
-            if (verifyTimer) clearTimeout(verifyTimer);
-            verifyTimer = setTimeout(verifyMailchimp, 600);
-          });
-        });
-      }
-    })();
-  });
-
-  // --- Live Preview ---
-  async function fetchRenderedHtml(templateId) {
-    try {
-      const resp = await api(
-        `/templates/${encodeURIComponent(templateId)}/preview`,
-        {
-          method: 'POST',
-          body: { slots_map: {} },
+        if (sections?.length) {
+          this.renderSections(sections);
+          this.renderMapping(sections);
+        } else {
+          const message =
+            response?.message ||
+            response?.data?.message ||
+            'No sections found.';
+          box.innerHTML = `<p>${escapeHTML(message)}</p>`;
         }
-      );
-      return htmlFrom(resp) || '';
-    } catch (e) {
-      return '';
-    }
-  }
-
-  async function updateLivePreview(templateId) {
-    const frame = qs('#cb-preview-frame');
-    const htmlBox = qs('#cb-preview-html');
-    const copyBtn = qs('#cb-copy-html');
-    const refreshBtn = qs('#cb-refresh-preview');
-    if (!frame || !htmlBox) return;
-    const html = await fetchRenderedHtml(templateId);
-    try {
-      const doc = frame.contentDocument || frame.contentWindow?.document;
-      if (doc) {
-        doc.open();
-        doc.write(html);
-        doc.close();
+      } catch (error) {
+        box.innerHTML = '<p>Failed to load sections.</p>';
+      } finally {
+        box.innerHTML = '<p>No sections found.</p>';
+        button.disabled = false;
+        button.textContent = 'Show Mailchimp Template Sections';
       }
-    } catch (e) {}
-    htmlBox.value = html;
-    applyPreviewMode(getPreviewMode());
-    if (copyBtn) {
-      copyBtn.onclick = () => {
-        htmlBox.select();
-        document.execCommand('copy');
-      };
+    });
+  }
+
+  renderSections(sections) {
+    const box = qs('#campaignbridge-sections');
+    if (!box) return;
+
+    const html = `
+      <ul style="margin:0;">
+        ${sections
+          .map((section) => `<li><code>${escapeHTML(section)}</code></li>`)
+          .join('')}
+      </ul>
+    `;
+
+    box.innerHTML = html;
+    box.style.display = 'block';
+  }
+
+  renderMapping(sections) {
+    const wrap = qs('#campaignbridge-mapping');
+    const body = qs('#campaignbridge-mapping-body');
+
+    if (!wrap || !body) return;
+
+    const items = this.getPostItems();
+    if (!items.length) return;
+
+    const options = this.renderOptions(items);
+    const rows = sections
+      .map(
+        (section) => `
+        <tr data-key="${escapeHTML(section)}">
+          <td>
+            <label class="screen-reader-text" for="map-${escapeHTML(
+              section
+            )}">Slot key</label>
+            <code>${escapeHTML(section)}</code>
+          </td>
+          <td>
+            <select id="map-${escapeHTML(
+              section
+            )}" name="sections_map[${escapeHTML(section)}]" style="width:100%">
+              ${options}
+            </select>
+          </td>
+        </tr>
+      `
+      )
+      .join('');
+
+    body.innerHTML = rows;
+    wrap.style.display = 'block';
+  }
+
+  renderOptions(items) {
+    return `
+      <option value="">— Select a post —</option>
+      ${items
+        .map(
+          (item) => `
+        <option value="${escapeHTML(String(item.id))}">
+          ${escapeHTML(item.label)}
+        </option>
+      `
+        )
+        .join('')}
+    `;
+  }
+
+  getPostItems() {
+    const postSelect = qs('#campaignbridge-posts');
+    if (!postSelect) return [];
+
+    return Array.from(postSelect.options).map((option) => ({
+      id: option.value,
+      label: option.textContent,
+    }));
+  }
+
+  setupAudienceReset() {
+    on('click', '#campaignbridge-fetch-audiences', async (event, button) => {
+      const select = qs('#campaignbridge-mailchimp-audience');
+      if (!select) return;
+
+      button.disabled = true;
+      button.textContent = 'Resetting…';
+      select.value = '';
+
+      try {
+        const response = await this.api.get('/mailchimp/audiences?refresh=1');
+        const items = extractData.items(response);
+
+        if (items.length) {
+          this.populateSelect(select, items);
+        }
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Reset Audiences';
+        this.toggleResetVisibility();
+      }
+    });
+  }
+
+  setupTemplateReset() {
+    on('click', '#campaignbridge-fetch-templates', async (event, button) => {
+      const select = qs('#campaignbridge-mailchimp-templates');
+      if (!select) return;
+
+      button.disabled = true;
+      button.textContent = 'Resetting…';
+      select.value = '';
+
+      try {
+        const response = await this.api.get('/mailchimp/templates?refresh=1');
+        const items = extractData.items(response);
+
+        if (items.length) {
+          this.populateSelect(select, items);
+        }
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Reset Templates';
+        this.toggleResetVisibility();
+      }
+    });
+  }
+
+  populateSelect(select, items) {
+    if (!select) return;
+
+    const current = select.value;
+    let html = '<option value="">—</option>';
+
+    items.forEach((item) => {
+      html += `
+        <option value="${escapeHTML(String(item.id))}">
+          ${escapeHTML(item.name || item.label)}
+        </option>
+      `;
+    });
+
+    select.innerHTML = html;
+
+    if (current) {
+      select.value = current;
     }
-    if (refreshBtn) {
-      refreshBtn.onclick = () => updateLivePreview(templateId);
+
+    this.toggleResetVisibility();
+  }
+
+  toggleResetVisibility() {
+    const audSel = qs('#campaignbridge-mailchimp-audience');
+    const audBtn = qs('#campaignbridge-fetch-audiences');
+
+    if (audSel && audBtn) {
+      audBtn.style.display = audSel.value ? '' : 'none';
+    }
+
+    const tplSel = qs('#campaignbridge-mailchimp-templates');
+    const tplBtn = qs('#campaignbridge-fetch-templates');
+
+    if (tplSel && tplBtn) {
+      tplBtn.style.display = tplSel.value ? '' : 'none';
     }
   }
 
-  function getPreviewMode() {
+  async autoPopulateData() {
+    // Auto-populate audiences
+    const audSel = qs('#campaignbridge-mailchimp-audience');
+    if (audSel && !audSel.value) {
+      try {
+        const response = await this.api.get('/mailchimp/audiences');
+        const items = extractData.items(response);
+        if (items.length) {
+          this.populateSelect(audSel, items);
+          this.toggleResetVisibility();
+        }
+      } catch (error) {
+        console.warn('Could not auto-populate audiences:', error);
+      }
+    }
+
+    // Auto-populate templates
+    const tplSel = qs('#campaignbridge-mailchimp-templates');
+    if (tplSel && !tplSel.value) {
+      try {
+        const response = await this.api.get('/mailchimp/templates');
+        const items = extractData.items(response);
+        if (items.length) {
+          this.populateSelect(tplSel, items);
+          this.toggleResetVisibility();
+        }
+      } catch (error) {
+        console.warn('Could not auto-populate templates:', error);
+      }
+    }
+  }
+
+  setupVerification() {
+    const apiInput = qs('#campaignbridge-mailchimp-api-key');
+    if (!apiInput) return;
+
+    // Auto-verify if key exists
+    if (apiInput.value) {
+      this.verifyMailchimp();
+    }
+
+    // Setup verification on input change
+    ['input', 'change'].forEach((eventType) => {
+      apiInput.addEventListener(eventType, () => {
+        if (this.verifyTimer) clearTimeout(this.verifyTimer);
+        this.verifyTimer = setTimeout(() => this.verifyMailchimp(), 600);
+      });
+    });
+  }
+
+  async verifyMailchimp() {
+    const status = qs('#campaignbridge-verify-status');
+    if (!status) return;
+
+    this.setVerifyStatus('loading');
+
+    try {
+      const response = await this.api.post('/mailchimp/verify');
+
+      if (response?.ok) {
+        this.setVerifyStatus('ok', 'Connected');
+      } else {
+        const message = response?.data?.message || 'Not connected';
+        this.setVerifyStatus('err', message);
+      }
+    } catch (error) {
+      this.setVerifyStatus('err', 'Not connected');
+    }
+  }
+
+  setVerifyStatus(state, message) {
+    const status = qs('#campaignbridge-verify-status');
+    if (!status) return;
+
+    status.classList.remove('cb-status-ok', 'cb-status-err');
+
+    if (state === 'loading') {
+      status.innerHTML = `
+        <span class="spinner is-active cb-inline-spinner"></span> Verifying…
+      `;
+      return;
+    }
+
+    const isOk = state === 'ok';
+    const text = message || (isOk ? 'Connected' : 'No connection');
+
+    status.classList.toggle('cb-status-ok', isOk);
+    status.classList.toggle('cb-status-err', !isOk);
+
+    status.innerHTML = `
+      <span class="cb-pill">${isOk ? '✔' : '✖'}</span>
+      ${escapeHTML(text)}
+    `;
+  }
+}
+
+// Preview management class
+class PreviewManager {
+  constructor() {
+    this.setupPreviewModeHandling();
+    this.setupCopyButton();
+    this.setupRefreshButton();
+  }
+
+  setupPreviewModeHandling() {
+    document.addEventListener('change', (event) => {
+      if (event.target?.name === 'cbPreviewMode') {
+        this.applyPreviewMode(this.getPreviewMode());
+      }
+    });
+  }
+
+  getPreviewMode() {
     const checked = qs('input[name="cbPreviewMode"]:checked');
-    return checked ? checked.value : 'rendered';
+    return checked?.value || 'rendered';
   }
 
-  function applyPreviewMode(mode) {
+  applyPreviewMode(mode) {
     const frameWrap = qs('#cb-preview-rendered-wrap');
     const htmlBox = qs('#cb-preview-html');
     const copyBtn = qs('#cb-copy-html');
+
     if (!frameWrap || !htmlBox || !copyBtn) return;
+
     const isHtml = mode === 'html';
     frameWrap.style.display = isHtml ? 'none' : '';
     htmlBox.style.display = isHtml ? '' : 'none';
     copyBtn.style.display = isHtml ? '' : 'none';
   }
 
-  document.addEventListener('change', (e) => {
-    const t = e.target;
-    if (t && t.name === 'cbPreviewMode') {
-      applyPreviewMode(getPreviewMode());
+  setupCopyButton() {
+    const copyBtn = qs('#cb-copy-html');
+    if (copyBtn) {
+      copyBtn.onclick = () => {
+        const htmlBox = qs('#cb-preview-html');
+        if (htmlBox) {
+          htmlBox.select();
+          document.execCommand('copy');
+        }
+      };
     }
+  }
+
+  setupRefreshButton() {
+    const refreshBtn = qs('#cb-refresh-preview');
+    if (refreshBtn) {
+      refreshBtn.onclick = () => {
+        const templateId = getQueryParam('tpl');
+        if (templateId) {
+          // Trigger preview update
+          const event = new CustomEvent('refreshPreview', {
+            detail: { templateId },
+          });
+          document.dispatchEvent(event);
+        }
+      };
+    }
+  }
+}
+
+// Main application class
+class CampaignBridgeApp {
+  constructor() {
+    this.templateManager = new TemplateManager();
+    this.postManager = new PostManager();
+    this.mailchimpIntegration = new MailchimpIntegration();
+    this.previewManager = new PreviewManager();
+
+    console.log('🚀 CampaignBridge initialized successfully!');
+  }
+}
+
+// Initialize the application when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    new CampaignBridgeApp();
   });
-})();
+} else {
+  new CampaignBridgeApp();
+}

@@ -109,6 +109,7 @@ alwaysApply: true
   - Always use the most current WordPress Interactivity API format and best practices when building a Interactivity API Blocks.
   - Use WordPress current documentation and best practices when building custom blocks.
   - Use WordPress current Block Theme best practices and documentation when developing the theme.
+  - Use WordPress current, most up-to-date documentation: https://wordpress.org/documentation/
 
   Key Conventions
   1. Follow WordPress's plugin API for extending functionality.
@@ -123,3 +124,4 @@ alwaysApply: true
   10. Use WordPress's WP_Cron API for scheduling tasks.
   11. Always add documentation to each class, method and function describing what the class/method/function does and use standard best practices for documenting
   12. Keep classes, methods and functions responsible for one thing, do not over pollute. Seperate out into new classes/methods/functions for best practice.
+  13. use ES6 when coding javascript and use supporting WordPress Packages

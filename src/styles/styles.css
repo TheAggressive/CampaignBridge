@@ -124,7 +124,7 @@
   }
 
   .cb-switches-box {
-    @apply max-h-72 max-w-2xl overflow-auto border border-gray-300 bg-white rounded-md p-8;
+    @apply max-h-fit max-w-3xl overflow-auto border border-gray-300 bg-white rounded-md p-6;
   }
 
   .cb-switches-group {
