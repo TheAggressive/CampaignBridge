@@ -167,12 +167,7 @@ class UI {
 			</div>
 		</div>
 
-		<?php if ( 'mailchimp' === $provider ) : ?>
-		<div class="cb-field">
-			<button type="button" class="button" id="campaignbridge-show-sections"><?php echo esc_html__( 'Show Mailchimp Template Sections', 'campaignbridge' ); ?></button>
-			<div id="campaignbridge-sections" class="cb-hidden cb-sections-box"></div>
-		</div>
-		<?php endif; ?>
+
 	</div>
 		<?php
 	}

@@ -81,10 +81,6 @@
     @apply bg-white block border border-gray-300;
   }
 
-  .cb-sections-box {
-    @apply mt-3;
-  }
-
   .cb-codebox-600 {
     @apply font-mono;
     width: 600px; /* Custom width to match iframe */

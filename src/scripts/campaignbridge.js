@@ -6,12 +6,47 @@
  * - REST API integration
  * - Safe HTML escaping when rendering dynamic content
  * - Template management and preview
+ * - Page-specific initialization to prevent console warnings
+ *
+ * Page Detection:
+ * - Templates page: Main email template builder with preview
+ * - Post Types page: Post type inclusion/exclusion settings
+ * - Settings page: Mailchimp and provider configuration
+ *
+ * Each manager only initializes on pages where its functionality is needed,
+ * preventing DOM element not found warnings on irrelevant pages.
  */
 
 // Utility functions
 const qs = (selector, root = document) => root.querySelector(selector);
 const qsa = (selector, root = document) =>
   Array.from(root.querySelectorAll(selector));
+
+// Page detection utility
+const isCampaignBridgePage = () => {
+  const screen = document.body.className;
+  return (
+    screen.includes('campaignbridge') ||
+    screen.includes('toplevel_page_campaignbridge') ||
+    screen.includes('campaignbridge_page_')
+  );
+};
+
+// More specific page detection
+const getCampaignBridgePage = () => {
+  const screen = document.body.className;
+  if (screen.includes('toplevel_page_campaignbridge')) return 'templates';
+  if (screen.includes('campaignbridge_page_campaignbridge-post-types'))
+    return 'post-types';
+  if (screen.includes('campaignbridge_page_campaignbridge-settings'))
+    return 'settings';
+  return null;
+};
+
+// Check if current page has specific functionality
+const hasTemplateFunctionality = () => getCampaignBridgePage() === 'templates';
+const hasPostTypeFunctionality = () => getCampaignBridgePage() === 'post-types';
+const hasSettingsFunctionality = () => getCampaignBridgePage() === 'settings';
 
 // URL parameter utilities
 const getQueryParam = (name) => {
@@ -43,6 +78,566 @@ const escapeHTML = (value) => {
   div.textContent = value ?? '';
   return div.innerHTML;
 };
+
+// Centralized DOM element manager
+class DOMManager {
+  static elements = {
+    // Template elements
+    templateSelect: () => qs('#campaignbridge-template-select'),
+    templateContainer: () => qs('#campaignbridge-template-container'),
+    newTemplateButton: () => qs('#campaignbridge-new-template'),
+
+    // Preview elements
+    previewFrame: () => qs('#cb-preview-frame'),
+    previewHtml: () => qs('#cb-preview-html'),
+    previewRenderedWrap: () => qs('#cb-preview-rendered-wrap'),
+    previewModeInputs: () => qsa('input[name="cbPreviewMode"]'),
+    copyHtmlButton: () => qs('#cb-copy-html'),
+    refreshPreviewButton: () => qs('#cb-refresh-preview'),
+
+    // Post elements
+    postTypeSelect: () => qs('#campaignbridge-post-type'),
+    postsSelect: () => qs('#campaignbridge-posts'),
+    selectedPostsChips: () => qs('#cb-selected-posts-chips'),
+
+    // Mailchimp elements
+    mailchimpAudienceSelect: () => qs('#campaignbridge-mailchimp-audience'),
+    mailchimpTemplatesSelect: () => qs('#campaignbridge-mailchimp-templates'),
+    mailchimpApiKey: () => qs('#campaignbridge-mailchimp-api-key'),
+    verifyStatus: () => qs('#campaignbridge-verify-status'),
+    fetchAudiencesButton: () => qs('#campaignbridge-fetch-audiences'),
+    fetchTemplatesButton: () => qs('#campaignbridge-fetch-templates'),
+  };
+
+  static getElement(key) {
+    const element = this.elements[key]();
+    if (!element) {
+      // Only log warning if we're on a page where this element should exist
+      const currentPage = getCampaignBridgePage();
+      if (
+        currentPage === 'templates' &&
+        [
+          'templateSelect',
+          'templateContainer',
+          'newTemplateButton',
+          'previewFrame',
+          'previewHtml',
+          'previewRenderedWrap',
+          'previewModeInputs',
+          'copyHtmlButton',
+          'refreshPreviewButton',
+          'postTypeSelect',
+          'postsSelect',
+          'selectedPostsChips',
+        ].includes(key)
+      ) {
+        console.warn(`DOM element not found: ${key}`);
+      } else if (
+        currentPage === 'settings' &&
+        [
+          'mailchimpAudienceSelect',
+          'mailchimpTemplatesSelect',
+          'mailchimpApiKey',
+          'verifyStatus',
+          'fetchAudiencesButton',
+          'fetchTemplatesButton',
+        ].includes(key)
+      ) {
+        console.warn(`DOM element not found: ${key}`);
+      }
+    }
+    return element;
+  }
+
+  static getElements(key) {
+    const elements = this.elements[key]();
+    if (!elements || elements.length === 0) {
+      // Only log warning if we're on a page where these elements should exist
+      const currentPage = getCampaignBridgePage();
+      if (currentPage === 'templates' && ['previewModeInputs'].includes(key)) {
+        console.warn(`DOM elements not found: ${key}`);
+      }
+    }
+    return elements;
+  }
+}
+
+// Email export and preview service
+class EmailExportService {
+  constructor() {
+    // Only initialize if we're on the templates page (where email export exists)
+    if (hasTemplateFunctionality()) {
+      this.initialize();
+    }
+  }
+
+  initialize() {
+    this.setupExportButton();
+    this.setupPreviewButton();
+  }
+
+  setupExportButton() {
+    // Listen for export button clicks from email template blocks
+    // Only set up if we're on a page with template blocks
+    if (!hasTemplateFunctionality()) return;
+
+    document.addEventListener('click', (event) => {
+      if (event.target?.classList?.contains('cb-export-html')) {
+        this.exportEmailHTML(event.target);
+      }
+    });
+  }
+
+  setupPreviewButton() {
+    // Listen for preview button clicks from email template blocks
+    // Only set up if we're on a page with template blocks
+    if (!hasTemplateFunctionality()) return;
+
+    document.addEventListener('click', (event) => {
+      if (event.target?.classList?.contains('cb-preview-email')) {
+        this.previewEmail(event.target);
+      }
+    });
+  }
+
+  async exportEmailHTML(button) {
+    try {
+      button.disabled = true;
+      button.textContent = 'Generating...';
+
+      // Find the email template block
+      const templateBlock = button.closest('.cb-email-template');
+      if (!templateBlock) {
+        throw new Error('Email template block not found');
+      }
+
+      // Get the block content
+      const blockContent = this.extractBlockContent(templateBlock);
+
+      // Generate email HTML
+      const emailHTML = await this.generateEmailHTML(blockContent);
+
+      // Copy to clipboard
+      await this.copyToClipboard(emailHTML);
+
+      // Show success message
+      this.showNotification('Email HTML copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Export failed:', error);
+      this.showNotification('Failed to export email HTML', 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Export HTML';
+    }
+  }
+
+  async previewEmail(button) {
+    try {
+      button.disabled = true;
+      button.textContent = 'Generating...';
+
+      // Find the email template block
+      const templateBlock = button.closest('.cb-email-template');
+      if (!templateBlock) {
+        throw new Error('Email template block not found');
+      }
+
+      // Get the block content
+      const blockContent = this.extractBlockContent(templateBlock);
+
+      // Generate email HTML
+      const emailHTML = await this.generateEmailHTML(blockContent);
+
+      // Open preview in new window
+      this.openPreviewWindow(emailHTML);
+    } catch (error) {
+      console.error('Preview failed:', error);
+      this.showNotification('Failed to generate preview', 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Preview Email';
+    }
+  }
+
+  extractBlockContent(templateBlock) {
+    // Extract block attributes and content
+    const contentWrapper = templateBlock.querySelector('.cb-email-content');
+    if (!contentWrapper) {
+      throw new Error('Email content not found');
+    }
+
+    // Get template attributes
+    const templateName =
+      templateBlock.querySelector('.cb-email-template-name')?.textContent ||
+      'Email Template';
+    const emailWidth =
+      templateBlock
+        .querySelector('.cb-email-template-dimensions')
+        ?.textContent?.match(/(\d+)px/)?.[1] || '600';
+
+    // Convert blocks to structured data
+    const blocks = this.convertDOMToBlocks(contentWrapper);
+
+    return {
+      templateName,
+      emailWidth: parseInt(emailWidth),
+      blocks,
+      attributes: {
+        backgroundColor: '#ffffff',
+        textColor: '#333333',
+        fontFamily: 'Arial, sans-serif',
+        maxWidth: 600,
+        padding: { top: 20, right: 20, bottom: 20, left: 20 },
+      },
+    };
+  }
+
+  convertDOMToBlocks(contentWrapper) {
+    const blocks = [];
+
+    // Convert WordPress blocks to structured data
+    contentWrapper.querySelectorAll('[data-block]').forEach((blockElement) => {
+      const blockName = blockElement.getAttribute('data-block');
+      const blockAttributes = this.extractBlockAttributes(blockElement);
+      const blockContent = this.extractBlockContent(blockElement);
+
+      blocks.push({
+        blockName,
+        attrs: blockAttributes,
+        innerContent: [blockContent],
+        innerBlocks: [],
+      });
+    });
+
+    return blocks;
+  }
+
+  extractBlockAttributes(blockElement) {
+    const attributes = {};
+
+    // Extract common attributes
+    if (blockElement.style.backgroundColor) {
+      attributes.backgroundColor = blockElement.style.backgroundColor;
+    }
+    if (blockElement.style.color) {
+      attributes.textColor = blockElement.style.color;
+    }
+    if (blockElement.style.textAlign) {
+      attributes.align = blockElement.style.textAlign;
+    }
+    if (blockElement.style.fontSize) {
+      attributes.fontSize = blockElement.style.fontSize;
+    }
+
+    // Extract block-specific attributes
+    if (blockElement.classList.contains('cb-email-post-slot')) {
+      const slotKey =
+        blockElement.querySelector('.cb-post-slot-key')?.textContent;
+      if (slotKey) {
+        attributes.slotKey = slotKey;
+      }
+    }
+
+    return attributes;
+  }
+
+  extractBlockContent(blockElement) {
+    // Extract text content while preserving HTML structure
+    return blockElement.innerHTML;
+  }
+
+  async generateEmailHTML(blockData) {
+    try {
+      // Call the EmailGenerator service via REST API
+      const response = await fetch(
+        '/wp-json/campaignbridge/v1/email/generate',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WP-Nonce': window.wpApiSettings?.nonce || '',
+          },
+          body: JSON.stringify(blockData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.html || this.generateFallbackHTML(blockData);
+    } catch (error) {
+      console.warn('REST API failed, using fallback:', error);
+      return this.generateFallbackHTML(blockData);
+    }
+  }
+
+  generateFallbackHTML(blockData) {
+    // Fallback HTML generation if REST API fails
+    const { templateName, emailWidth, blocks, attributes } = blockData;
+
+    let html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${templateName}</title>
+        <style>
+          body { margin: 0; padding: 0; font-family: ${attributes.fontFamily}; }
+          .email-container { width: ${emailWidth}px; max-width: 100%; margin: 0 auto; background: ${attributes.backgroundColor}; }
+          .email-content { padding: 20px; color: ${attributes.textColor}; }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          <div class="email-content">
+    `;
+
+    // Convert blocks to HTML
+    blocks.forEach((block) => {
+      html += this.convertBlockToHTML(block);
+    });
+
+    html += `
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return html;
+  }
+
+  convertBlockToHTML(block) {
+    switch (block.blockName) {
+      case 'core/paragraph':
+        return `<p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">${block.innerContent[0]}</p>`;
+
+      case 'core/heading':
+        const level = block.attrs.level || 2;
+        return `<h${level} style="margin: 0 0 16px 0; font-size: ${
+          level === 1 ? '24px' : '20px'
+        }; font-weight: 600;">${block.innerContent[0]}</h${level}>`;
+
+      case 'campaignbridge/email-post-slot':
+        return `<div style="margin: 20px 0; padding: 20px; border: 1px solid #e5e7eb; border-radius: 4px; background: #f8f9fa;">
+          <p style="margin: 0; color: #6b7280; font-style: italic;">Dynamic content slot: ${
+            block.attrs.slotKey || 'unnamed'
+          }</p>
+        </div>`;
+
+      default:
+        return `<div style="margin: 16px 0;">${block.innerContent[0]}</div>`;
+    }
+  }
+
+  async copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+  }
+
+  openPreviewWindow(html) {
+    const previewWindow = window.open(
+      '',
+      '_blank',
+      'width=800,height=600,scrollbars=yes,resizable=yes'
+    );
+    previewWindow.document.write(html);
+    previewWindow.document.close();
+    previewWindow.focus();
+  }
+
+  showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `cb-notification cb-notification-${type}`;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 4px;
+      color: white;
+      font-weight: 500;
+      z-index: 9999;
+      background: ${
+        type === 'success'
+          ? '#10b981'
+          : type === 'error'
+          ? '#ef4444'
+          : '#3b82f6'
+      };
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    `;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 3000);
+  }
+}
+
+// Centralized error handling service
+class ErrorHandler {
+  static errorTypes = {
+    NETWORK: 'network',
+    VALIDATION: 'validation',
+    PERMISSION: 'permission',
+    NOT_FOUND: 'not_found',
+    UNKNOWN: 'unknown',
+  };
+
+  static handleError(
+    error,
+    context = '',
+    fallbackMessage = 'An error occurred'
+  ) {
+    const errorInfo = this.analyzeError(error);
+
+    // Log error for debugging
+    console.error(`[${context}] Error:`, errorInfo);
+
+    // Show user-friendly message
+    this.showErrorMessage(
+      errorInfo.userMessage || fallbackMessage,
+      errorInfo.type
+    );
+
+    // Track error if analytics are available
+    this.trackError(errorInfo, context);
+
+    return errorInfo;
+  }
+
+  static analyzeError(error) {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      return {
+        type: this.errorTypes.NETWORK,
+        userMessage:
+          'Network connection failed. Please check your internet connection.',
+        technicalMessage: error.message,
+        recoverable: true,
+      };
+    }
+
+    if (error.status === 403 || error.status === 401) {
+      return {
+        type: this.errorTypes.PERMISSION,
+        userMessage: "You don't have permission to perform this action.",
+        technicalMessage: `HTTP ${error.status}: ${error.statusText}`,
+        recoverable: false,
+      };
+    }
+
+    if (error.status === 404) {
+      return {
+        type: this.errorTypes.NOT_FOUND,
+        userMessage: 'The requested resource was not found.',
+        technicalMessage: `HTTP ${error.status}: ${error.statusText}`,
+        recoverable: true,
+      };
+    }
+
+    if (error.name === 'ValidationError') {
+      return {
+        type: this.errorTypes.VALIDATION,
+        userMessage: 'Please check your input and try again.',
+        technicalMessage: error.message,
+        recoverable: true,
+      };
+    }
+
+    return {
+      type: this.errorTypes.UNKNOWN,
+      userMessage: 'An unexpected error occurred. Please try again.',
+      technicalMessage: error.message || error.toString(),
+      recoverable: true,
+    };
+  }
+
+  static showErrorMessage(message, type = 'error') {
+    // Create error notification
+    const notification = document.createElement('div');
+    notification.className = `cb-notification cb-notification-${type}`;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 4px;
+      color: white;
+      font-weight: 500;
+      z-index: 9999;
+      background: ${type === 'error' ? '#ef4444' : '#f59e0b'};
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      word-wrap: break-word;
+    `;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    // Auto-remove after 5 seconds for errors
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 5000);
+  }
+
+  static trackError(errorInfo, context) {
+    // Send error to analytics if available
+    if (window.gtag) {
+      window.gtag('event', 'exception', {
+        description: `${context}: ${errorInfo.technicalMessage}`,
+        fatal: !errorInfo.recoverable,
+      });
+    }
+
+    // Send to WordPress error log if available
+    if (window.console && window.console.error) {
+      window.console.error(`CampaignBridge Error [${context}]:`, errorInfo);
+    }
+  }
+
+  static async withErrorHandling(
+    operation,
+    context = '',
+    fallbackMessage = ''
+  ) {
+    try {
+      return await operation();
+    } catch (error) {
+      this.handleError(error, context, fallbackMessage);
+      throw error; // Re-throw for caller to handle if needed
+    }
+  }
+
+  static withErrorHandlingSync(operation, context = '', fallbackMessage = '') {
+    try {
+      return operation();
+    } catch (error) {
+      this.handleError(error, context, fallbackMessage);
+      throw error;
+    }
+  }
+}
 
 // REST API client
 class ApiClient {
@@ -81,8 +676,6 @@ class ApiClient {
 // Response data extractors
 const extractData = {
   items: (resp) => resp?.items ?? resp?.data?.items ?? [],
-  sections: (resp) => resp?.sections ?? resp?.data?.sections ?? [],
-  slots: (resp) => resp?.slots ?? resp?.data?.slots ?? [],
   html: (resp) => resp?.html ?? resp?.data?.html ?? '',
 };
 
@@ -91,7 +684,11 @@ class TemplateManager {
   constructor() {
     this.api = new ApiClient();
     this.currentTemplateId = null;
-    this.initialize();
+
+    // Only initialize if we're on the templates page
+    if (hasTemplateFunctionality()) {
+      this.initialize();
+    }
   }
 
   initialize() {
@@ -101,7 +698,7 @@ class TemplateManager {
   }
 
   setupTemplateSelection() {
-    const templateSelect = qs('#campaignbridge-template-select');
+    const templateSelect = DOMManager.getElement('templateSelect');
     if (!templateSelect) return;
 
     const initialTemplateId = getQueryParam('tpl');
@@ -121,7 +718,7 @@ class TemplateManager {
   }
 
   setupNewTemplateButton() {
-    const newButton = qs('#campaignbridge-new-template');
+    const newButton = DOMManager.getElement('newTemplateButton');
     if (!newButton) return;
 
     newButton.addEventListener('click', async () => {
@@ -143,7 +740,7 @@ class TemplateManager {
   }
 
   addTemplateToSelect(template) {
-    const templateSelect = qs('#campaignbridge-template-select');
+    const templateSelect = DOMManager.getElement('templateSelect');
     if (!templateSelect) return;
 
     const option = document.createElement('option');
@@ -153,7 +750,7 @@ class TemplateManager {
   }
 
   selectTemplate(templateId) {
-    const templateSelect = qs('#campaignbridge-template-select');
+    const templateSelect = DOMManager.getElement('templateSelect');
     if (!templateSelect) return;
 
     templateSelect.value = templateId;
@@ -186,7 +783,7 @@ class TemplateManager {
   }
 
   showEmptyState() {
-    const container = qs('#campaignbridge-template-container');
+    const container = DOMManager.getElement('templateContainer');
     if (container) {
       container.innerHTML = `
         <div class="cb-editor-empty">
@@ -197,7 +794,7 @@ class TemplateManager {
   }
 
   showErrorState(message) {
-    const container = qs('#campaignbridge-template-container');
+    const container = DOMManager.getElement('templateContainer');
     if (container) {
       container.innerHTML = `
         <div class="cb-editor-error">
@@ -208,15 +805,16 @@ class TemplateManager {
   }
 
   async updateLivePreview(templateId) {
-    const previewFrame = qs('#cb-preview-frame');
-    const htmlBox = qs('#cb-preview-html');
+    const previewFrame = DOMManager.getElement('previewFrame');
+    const htmlBox = DOMManager.getElement('previewHtml');
 
     if (!previewFrame || !htmlBox) return;
 
     try {
-      const response = await this.api.post(`/templates/${templateId}/preview`, {
-        slots_map: {},
-      });
+      const response = await this.api.post(
+        `/templates/${templateId}/preview`,
+        {}
+      );
 
       const html = extractData.html(response);
 
@@ -242,14 +840,16 @@ class TemplateManager {
   }
 
   getPreviewMode() {
-    const checked = qs('input[name="cbPreviewMode"]:checked');
+    const checked = DOMManager.getElements('previewModeInputs').find(
+      (input) => input.checked
+    );
     return checked?.value || 'rendered';
   }
 
   applyPreviewMode(mode) {
-    const frameWrap = qs('#cb-preview-rendered-wrap');
-    const htmlBox = qs('#cb-preview-html');
-    const copyBtn = qs('#cb-copy-html');
+    const frameWrap = DOMManager.getElement('previewRenderedWrap');
+    const htmlBox = DOMManager.getElement('previewHtml');
+    const copyBtn = DOMManager.getElement('copyHtmlButton');
 
     if (!frameWrap || !htmlBox || !copyBtn) return;
 
@@ -264,7 +864,11 @@ class TemplateManager {
 class PostManager {
   constructor() {
     this.api = new ApiClient();
-    this.initialize();
+
+    // Only initialize if we're on the templates page (where post selection exists)
+    if (hasTemplateFunctionality()) {
+      this.initialize();
+    }
   }
 
   initialize() {
@@ -274,15 +878,15 @@ class PostManager {
   }
 
   setupPostTypeSelection() {
-    const postTypeEl = qs('#campaignbridge-post-type');
+    const postTypeEl = DOMManager.getElement('postTypeSelect');
     if (!postTypeEl) return;
 
     postTypeEl.addEventListener('change', () => this.loadPosts());
   }
 
   async loadPosts() {
-    const typeEl = qs('#campaignbridge-post-type');
-    const select = qs('#campaignbridge-posts');
+    const typeEl = DOMManager.getElement('postTypeSelect');
+    const select = DOMManager.getElement('postsSelect');
 
     if (!typeEl || !select) return;
 
@@ -327,7 +931,7 @@ class PostManager {
   }
 
   renderSelectedChips(select) {
-    const chipsWrap = qs('#cb-selected-posts-chips');
+    const chipsWrap = DOMManager.getElement('selectedPostsChips');
     if (!chipsWrap) return;
 
     const items = this.getSelectedItems(select);
@@ -354,7 +958,7 @@ class PostManager {
   }
 
   loadInitialPosts() {
-    const postsSelect = qs('#campaignbridge-posts');
+    const postsSelect = DOMManager.getElement('postsSelect');
     if (postsSelect) {
       this.loadPosts();
     }
@@ -362,7 +966,7 @@ class PostManager {
 
   setupPostSelection() {
     on('change', '#campaignbridge-posts', () => {
-      const select = qs('#campaignbridge-posts');
+      const select = DOMManager.getElement('postsSelect');
       this.renderSelectedChips(select);
     });
 
@@ -374,7 +978,7 @@ class PostManager {
         if (!chip) return;
 
         const id = chip.getAttribute('data-id');
-        const select = qs('#campaignbridge-posts');
+        const select = DOMManager.getElement('postsSelect');
 
         if (select && id) {
           Array.from(select.options).forEach((option) => {
@@ -391,129 +995,23 @@ class PostManager {
 class MailchimpIntegration {
   constructor() {
     this.api = new ApiClient();
-    this.initialize();
+
+    // Only initialize if we're on the settings page (where Mailchimp config exists)
+    if (hasSettingsFunctionality()) {
+      this.initialize();
+    }
   }
 
   initialize() {
-    this.setupSectionsButton();
     this.setupAudienceReset();
     this.setupTemplateReset();
     this.autoPopulateData();
     this.setupVerification();
   }
 
-  setupSectionsButton() {
-    on('click', '#campaignbridge-show-sections', async (event, button) => {
-      const box = qs('#campaignbridge-sections');
-      if (!box) return;
-
-      button.disabled = true;
-      button.textContent = 'Loading…';
-
-      try {
-        const response = await this.api.get('/mailchimp/sections');
-        const sections = extractData.sections(response);
-
-        if (sections?.length) {
-          this.renderSections(sections);
-          this.renderMapping(sections);
-        } else {
-          const message =
-            response?.message ||
-            response?.data?.message ||
-            'No sections found.';
-          box.innerHTML = `<p>${escapeHTML(message)}</p>`;
-        }
-      } catch (error) {
-        box.innerHTML = '<p>Failed to load sections.</p>';
-      } finally {
-        box.innerHTML = '<p>No sections found.</p>';
-        button.disabled = false;
-        button.textContent = 'Show Mailchimp Template Sections';
-      }
-    });
-  }
-
-  renderSections(sections) {
-    const box = qs('#campaignbridge-sections');
-    if (!box) return;
-
-    const html = `
-      <ul style="margin:0;">
-        ${sections
-          .map((section) => `<li><code>${escapeHTML(section)}</code></li>`)
-          .join('')}
-      </ul>
-    `;
-
-    box.innerHTML = html;
-    box.style.display = 'block';
-  }
-
-  renderMapping(sections) {
-    const wrap = qs('#campaignbridge-mapping');
-    const body = qs('#campaignbridge-mapping-body');
-
-    if (!wrap || !body) return;
-
-    const items = this.getPostItems();
-    if (!items.length) return;
-
-    const options = this.renderOptions(items);
-    const rows = sections
-      .map(
-        (section) => `
-        <tr data-key="${escapeHTML(section)}">
-          <td>
-            <label class="screen-reader-text" for="map-${escapeHTML(
-              section
-            )}">Slot key</label>
-            <code>${escapeHTML(section)}</code>
-          </td>
-          <td>
-            <select id="map-${escapeHTML(
-              section
-            )}" name="sections_map[${escapeHTML(section)}]" style="width:100%">
-              ${options}
-            </select>
-          </td>
-        </tr>
-      `
-      )
-      .join('');
-
-    body.innerHTML = rows;
-    wrap.style.display = 'block';
-  }
-
-  renderOptions(items) {
-    return `
-      <option value="">— Select a post —</option>
-      ${items
-        .map(
-          (item) => `
-        <option value="${escapeHTML(String(item.id))}">
-          ${escapeHTML(item.label)}
-        </option>
-      `
-        )
-        .join('')}
-    `;
-  }
-
-  getPostItems() {
-    const postSelect = qs('#campaignbridge-posts');
-    if (!postSelect) return [];
-
-    return Array.from(postSelect.options).map((option) => ({
-      id: option.value,
-      label: option.textContent,
-    }));
-  }
-
   setupAudienceReset() {
     on('click', '#campaignbridge-fetch-audiences', async (event, button) => {
-      const select = qs('#campaignbridge-mailchimp-audience');
+      const select = DOMManager.getElement('mailchimpAudienceSelect');
       if (!select) return;
 
       button.disabled = true;
@@ -537,7 +1035,7 @@ class MailchimpIntegration {
 
   setupTemplateReset() {
     on('click', '#campaignbridge-fetch-templates', async (event, button) => {
-      const select = qs('#campaignbridge-mailchimp-templates');
+      const select = DOMManager.getElement('mailchimpTemplatesSelect');
       if (!select) return;
 
       button.disabled = true;
@@ -583,15 +1081,15 @@ class MailchimpIntegration {
   }
 
   toggleResetVisibility() {
-    const audSel = qs('#campaignbridge-mailchimp-audience');
-    const audBtn = qs('#campaignbridge-fetch-audiences');
+    const audSel = DOMManager.getElement('mailchimpAudienceSelect');
+    const audBtn = DOMManager.getElement('fetchAudiencesButton');
 
     if (audSel && audBtn) {
       audBtn.style.display = audSel.value ? '' : 'none';
     }
 
-    const tplSel = qs('#campaignbridge-mailchimp-templates');
-    const tplBtn = qs('#campaignbridge-fetch-templates');
+    const tplSel = DOMManager.getElement('mailchimpTemplatesSelect');
+    const tplBtn = DOMManager.getElement('fetchTemplatesButton');
 
     if (tplSel && tplBtn) {
       tplBtn.style.display = tplSel.value ? '' : 'none';
@@ -600,7 +1098,7 @@ class MailchimpIntegration {
 
   async autoPopulateData() {
     // Auto-populate audiences
-    const audSel = qs('#campaignbridge-mailchimp-audience');
+    const audSel = DOMManager.getElement('mailchimpAudienceSelect');
     if (audSel && !audSel.value) {
       try {
         const response = await this.api.get('/mailchimp/audiences');
@@ -615,7 +1113,7 @@ class MailchimpIntegration {
     }
 
     // Auto-populate templates
-    const tplSel = qs('#campaignbridge-mailchimp-templates');
+    const tplSel = DOMManager.getElement('mailchimpTemplatesSelect');
     if (tplSel && !tplSel.value) {
       try {
         const response = await this.api.get('/mailchimp/templates');
@@ -631,7 +1129,7 @@ class MailchimpIntegration {
   }
 
   setupVerification() {
-    const apiInput = qs('#campaignbridge-mailchimp-api-key');
+    const apiInput = DOMManager.getElement('mailchimpApiKey');
     if (!apiInput) return;
 
     // Auto-verify if key exists
@@ -649,7 +1147,7 @@ class MailchimpIntegration {
   }
 
   async verifyMailchimp() {
-    const status = qs('#campaignbridge-verify-status');
+    const status = DOMManager.getElement('verifyStatus');
     if (!status) return;
 
     this.setVerifyStatus('loading');
@@ -669,7 +1167,7 @@ class MailchimpIntegration {
   }
 
   setVerifyStatus(state, message) {
-    const status = qs('#campaignbridge-verify-status');
+    const status = DOMManager.getElement('verifyStatus');
     if (!status) return;
 
     status.classList.remove('cb-status-ok', 'cb-status-err');
@@ -697,9 +1195,12 @@ class MailchimpIntegration {
 // Preview management class
 class PreviewManager {
   constructor() {
-    this.setupPreviewModeHandling();
-    this.setupCopyButton();
-    this.setupRefreshButton();
+    // Only initialize if we're on the templates page (where preview functionality exists)
+    if (hasTemplateFunctionality()) {
+      this.setupPreviewModeHandling();
+      this.setupCopyButton();
+      this.setupRefreshButton();
+    }
   }
 
   setupPreviewModeHandling() {
@@ -711,14 +1212,16 @@ class PreviewManager {
   }
 
   getPreviewMode() {
-    const checked = qs('input[name="cbPreviewMode"]:checked');
+    const checked = DOMManager.getElements('previewModeInputs').find(
+      (input) => input.checked
+    );
     return checked?.value || 'rendered';
   }
 
   applyPreviewMode(mode) {
-    const frameWrap = qs('#cb-preview-rendered-wrap');
-    const htmlBox = qs('#cb-preview-html');
-    const copyBtn = qs('#cb-copy-html');
+    const frameWrap = DOMManager.getElement('previewRenderedWrap');
+    const htmlBox = DOMManager.getElement('previewHtml');
+    const copyBtn = DOMManager.getElement('copyHtmlButton');
 
     if (!frameWrap || !htmlBox || !copyBtn) return;
 
@@ -729,10 +1232,10 @@ class PreviewManager {
   }
 
   setupCopyButton() {
-    const copyBtn = qs('#cb-copy-html');
+    const copyBtn = DOMManager.getElement('copyHtmlButton');
     if (copyBtn) {
       copyBtn.onclick = () => {
-        const htmlBox = qs('#cb-preview-html');
+        const htmlBox = DOMManager.getElement('previewHtml');
         if (htmlBox) {
           htmlBox.select();
           document.execCommand('copy');
@@ -742,7 +1245,7 @@ class PreviewManager {
   }
 
   setupRefreshButton() {
-    const refreshBtn = qs('#cb-refresh-preview');
+    const refreshBtn = DOMManager.getElement('refreshPreviewButton');
     if (refreshBtn) {
       refreshBtn.onclick = () => {
         const templateId = getQueryParam('tpl');
@@ -761,20 +1264,53 @@ class PreviewManager {
 // Main application class
 class CampaignBridgeApp {
   constructor() {
-    this.templateManager = new TemplateManager();
-    this.postManager = new PostManager();
-    this.mailchimpIntegration = new MailchimpIntegration();
-    this.previewManager = new PreviewManager();
+    try {
+      const currentPage = getCampaignBridgePage();
 
-    console.log('🚀 CampaignBridge initialized successfully!');
+      if (currentPage) {
+        console.log(`CampaignBridge: Initializing on ${currentPage} page`);
+
+        // Initialize managers based on current page
+        if (hasTemplateFunctionality()) {
+          this.templateManager = new TemplateManager();
+          this.postManager = new PostManager();
+          this.previewManager = new PreviewManager();
+          this.emailExportService = new EmailExportService();
+        }
+
+        if (hasSettingsFunctionality()) {
+          this.mailchimpIntegration = new MailchimpIntegration();
+        }
+
+        console.log('🚀 CampaignBridge initialized successfully!');
+      } else {
+        console.log(
+          'CampaignBridge: Not on a relevant page, skipping initialization'
+        );
+      }
+    } catch (error) {
+      ErrorHandler.handleError(
+        error,
+        'App Initialization',
+        'Failed to initialize CampaignBridge'
+      );
+    }
   }
 }
 
 // Initialize the application when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    new CampaignBridgeApp();
+    try {
+      new CampaignBridgeApp();
+    } catch (error) {
+      console.error('CampaignBridge: Failed to initialize application:', error);
+    }
   });
 } else {
-  new CampaignBridgeApp();
+  try {
+    new CampaignBridgeApp();
+  } catch (error) {
+    console.error('CampaignBridge: Failed to initialize application:', error);
+  }
 }

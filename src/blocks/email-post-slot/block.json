@@ -3,21 +3,100 @@
   "apiVersion": 3,
   "name": "campaignbridge/email-post-slot",
   "title": "Email Post Slot",
-  "category": "widgets",
-  "icon": "media-document",
-  "description": "Placeholder for a post in email template; will be populated when sending.",
-  "supports": { "html": false, "innerBlocks": true },
+  "category": "campaignbridge",
+  "icon": "admin-post",
+  "description": "Dynamic slot for inserting post content into email templates.",
+  "keywords": ["email", "post", "slot", "dynamic", "content"],
+  "version": "1.0.0",
+  "textdomain": "campaignbridge",
   "attributes": {
-    "slotId": { "type": "string", "default": "" },
-    "postType": { "type": "string", "default": "post" },
-    "postId": { "type": "number", "default": 0 },
-    "slotLinkEnabled": { "type": "boolean", "default": false },
-    "slotLinkTo": { "type": "string", "default": "post" }
+    "slotKey": {
+      "type": "string",
+      "default": "main_content"
+    },
+    "postType": {
+      "type": "string",
+      "default": "post"
+    },
+    "postId": {
+      "type": "number",
+      "default": 0
+    },
+    "displayMode": {
+      "type": "string",
+      "default": "title_excerpt"
+    },
+    "showImage": {
+      "type": "boolean",
+      "default": true
+    },
+    "showTitle": {
+      "type": "boolean",
+      "default": true
+    },
+    "showExcerpt": {
+      "type": "boolean",
+      "default": true
+    },
+    "showReadMore": {
+      "type": "boolean",
+      "default": true
+    },
+    "imageSize": {
+      "type": "string",
+      "default": "medium"
+    },
+    "excerptLength": {
+      "type": "number",
+      "default": 150
+    },
+    "textAlign": {
+      "type": "string",
+      "default": "left"
+    },
+    "backgroundColor": {
+      "type": "string"
+    },
+    "textColor": {
+      "type": "string"
+    },
+    "padding": {
+      "type": "object",
+      "default": {
+        "top": 16,
+        "right": 16,
+        "bottom": 16,
+        "left": 16
+      }
+    }
   },
-  "providesContext": {
-    "campaignbridge:postId": "postId",
-    "campaignbridge:postType": "postType"
+  "supports": {
+    "html": false,
+    "anchor": true,
+    "align": ["left", "center", "right", "wide", "full"],
+    "spacing": {
+      "margin": true,
+      "padding": true
+    },
+    "color": {
+      "background": true,
+      "text": true
+    },
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true,
+      "fontFamily": true
+    }
+  },
+  "example": {
+    "attributes": {
+      "slotKey": "featured_post",
+      "postType": "post",
+      "displayMode": "title_excerpt"
+    }
   },
   "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css",
   "render": "file:./render.php"
 }
