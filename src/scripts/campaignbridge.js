@@ -21,16 +21,18 @@ import { CampaignBridgeApp } from './CampaignBridgeApp.js';
 
 // Initialize the application when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     try {
-      new CampaignBridgeApp();
+      const app = new CampaignBridgeApp();
+      await app.initialize();
     } catch (error) {
       console.error('CampaignBridge: Failed to initialize application:', error);
     }
   });
 } else {
   try {
-    new CampaignBridgeApp();
+    const app = new CampaignBridgeApp();
+    await app.initialize();
   } catch (error) {
     console.error('CampaignBridge: Failed to initialize application:', error);
   }

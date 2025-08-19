@@ -12,8 +12,7 @@ namespace CampaignBridge;
 use CampaignBridge\Admin\UI as AdminUI;
 use CampaignBridge\Blocks\Blocks;
 use CampaignBridge\CPT\TemplateCPT;
-use CampaignBridge\Providers\MailchimpProvider;
-use CampaignBridge\Providers\HtmlProvider;
+use CampaignBridge\Core\Service_Container;
 use CampaignBridge\REST\Routes as RestRoutes;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -43,13 +42,24 @@ class Plugin {
 	private $providers = array();
 
 	/**
+	 * Service container instance.
+	 *
+	 * @var Service_Container
+	 */
+	private Service_Container $service_container;
+
+	/**
 	 * Construct and wire plugin hooks.
 	 */
 	public function __construct() {
-		// Build providers map.
+		// Initialize service container.
+		$this->service_container = new Service_Container();
+		$this->service_container->initialize();
+
+		// Get providers from service container.
 		$this->providers = array(
-			'mailchimp' => new MailchimpProvider(),
-			'html'      => new HtmlProvider(),
+			'mailchimp' => $this->service_container->get( 'mailchimp_provider' ),
+			'html'      => $this->service_container->get( 'html_provider' ),
 		);
 
 		// Wire hooks.

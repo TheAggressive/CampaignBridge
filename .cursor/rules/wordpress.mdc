@@ -11,7 +11,7 @@ Key Principles
 - Always use SOLID principles and keep things dry
 
 PHP/WordPress
-- Use PHP 7.4+ features when appropriate (e.g., typed properties, arrow functions).
+- Use PHP 8.3+ features when appropriate (e.g., typed properties, arrow functions, match expressions, named arguments).
 - Follow WordPress PHP Coding Standards.
 - Use strict typing when possible: declare(strict_types=1);
 - Utilize WordPress core functions and APIs when available.
@@ -26,6 +26,7 @@ PHP/WordPress
 - Use prepare() statements for secure database queries.
 - Implement proper database schema changes using dbDelta() function.
 - Always use the most current block theme development API's and conventions
+
 
 Dependencies
 - WordPress (latest stable version)
@@ -49,6 +50,7 @@ WordPress Best Practices
 - Use WordPress current documentation and best practices when building custom blocks.
 - Use WordPress current Block Theme best practices and documentation when developing the theme.
 - Use WordPress current, most up-to-date documentation: https://wordpress.org/documentation/
+- Utilize WordPress REST API endpoints for asynchronous operations instead of admin-ajax.php
 
 Key Conventions
 1. Follow WordPress's plugin API for extending functionality.
@@ -64,4 +66,3 @@ Key Conventions
 11. Always add documentation to each class, method and function describing what the class/method/function does and use standard best practices for documenting.
 12. Keep classes, methods and functions responsible for one thing, do not over pollute. Separate out into new classes/methods/functions for best practice.
 13. Use ES6 when coding javascript and use supporting WordPress Packages.
-  13. use ES6 when coding javascript and use supporting WordPress Packages

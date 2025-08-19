@@ -230,7 +230,7 @@ function EmailTemplateBlock({
               <button
                 className="button button-primary cb-export-html"
                 onClick={() => {
-                  // Export functionality is handled by EmailExportService
+                  // Export functionality is handled by ExportManager
                   // This button will trigger the export via event delegation
                 }}
               >
@@ -239,7 +239,7 @@ function EmailTemplateBlock({
               <button
                 className="button button-secondary cb-preview-email"
                 onClick={() => {
-                  // Preview functionality is handled by EmailExportService
+                  // Preview functionality is handled by PreviewManager
                   // This button will trigger the preview via event delegation
                 }}
               >

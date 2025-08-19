@@ -1,99 +1,86 @@
-// Email export and preview service
-export class EmailExportService {
-  constructor() {
-    // Only initialize if we're on the templates page (where email export exists)
-    if (this.hasTemplateFunctionality()) {
-      this.initialize();
+/**
+ * Export Manager - Handles email export functionality
+ * Follows Single Responsibility Principle - only handles exports
+ *
+ * @package CampaignBridge
+ */
+
+import { BaseManager } from '../core/BaseManager.js';
+
+export class ExportManager extends BaseManager {
+  constructor(serviceContainer) {
+    super(serviceContainer);
+    this.exportQueue = [];
+    this.isExporting = false;
+  }
+
+  async doInitialize() {
+    if (!this.isPageSupported('templates')) {
+      return;
     }
+
+    this.setupExportHandlers();
   }
 
-  hasTemplateFunctionality() {
-    const screen = document.body.className;
-    return screen.includes('toplevel_page_campaignbridge');
-  }
-
-  initialize() {
-    this.setupExportButton();
-    this.setupPreviewButton();
-  }
-
-  setupExportButton() {
+  setupExportHandlers() {
     // Listen for export button clicks from email template blocks
-    // Only set up if we're on a page with template blocks
-    if (!this.hasTemplateFunctionality()) return;
+    this.addEventListener('click', '.cb-export-html', (event, button) => {
+      this.handleExportClick(event, button);
+    });
 
-    document.addEventListener('click', (event) => {
-      if (event.target?.classList?.contains('cb-export-html')) {
-        this.exportEmailHTML(event.target);
-      }
+    // Listen for preview button clicks
+    this.addEventListener('click', '.cb-preview-email', (event, button) => {
+      this.handlePreviewClick(event, button);
     });
   }
 
-  setupPreviewButton() {
-    // Listen for preview button clicks from email template blocks
-    // Only set up if we're on a page with template blocks
-    if (!this.hasTemplateFunctionality()) return;
-
-    document.addEventListener('click', (event) => {
-      if (event.target?.classList?.contains('cb-preview-email')) {
-        this.previewEmail(event.target);
-      }
-    });
-  }
-
-  async exportEmailHTML(button) {
+  async handleExportClick(event, button) {
     try {
       button.disabled = true;
       button.textContent = 'Generating...';
 
-      // Find the email template block
       const templateBlock = button.closest('.cb-email-template');
       if (!templateBlock) {
         throw new Error('Email template block not found');
       }
 
-      // Get the block content
       const blockContent = this.extractBlockContent(templateBlock);
-
-      // Generate email HTML
       const emailHTML = await this.generateEmailHTML(blockContent);
 
-      // Copy to clipboard
       await this.copyToClipboard(emailHTML);
-
-      // Show success message
       this.showNotification('Email HTML copied to clipboard!', 'success');
     } catch (error) {
-      console.error('Export failed:', error);
-      this.showNotification('Failed to export email HTML', 'error');
+      this.getService('errorHandler').handleError(
+        error,
+        'ExportManager.handleExportClick',
+        'Export failed'
+      );
     } finally {
       button.disabled = false;
       button.textContent = 'Export HTML';
     }
   }
 
-  async previewEmail(button) {
+  async handlePreviewClick(event, button) {
     try {
       button.disabled = true;
       button.textContent = 'Generating...';
 
-      // Find the email template block
       const templateBlock = button.closest('.cb-email-template');
       if (!templateBlock) {
         throw new Error('Email template block not found');
       }
 
-      // Get the block content
       const blockContent = this.extractBlockContent(templateBlock);
-
-      // Generate email HTML
       const emailHTML = await this.generateEmailHTML(blockContent);
 
-      // Open preview in new window
       this.openPreviewWindow(emailHTML);
     } catch (error) {
-      console.error('Preview failed:', error);
-      this.showNotification('Failed to generate preview', 'error');
+      this.getService('errorHandler').handleError(
+        error,
+        'ExportManager.handlePreviewClick',
+        'Preview failed'
+      );
     } finally {
       button.disabled = false;
       button.textContent = 'Preview Email';
@@ -101,7 +88,6 @@ export class EmailExportService {
   }
 
   extractBlockContent(templateBlock) {
-    // Extract block attributes and content
     const contentWrapper = templateBlock.querySelector('.cb-email-content');
     if (!contentWrapper) {
       throw new Error('Email content not found');
@@ -136,7 +122,6 @@ export class EmailExportService {
   convertDOMToBlocks(contentWrapper) {
     const blocks = [];
 
-    // Convert WordPress blocks to structured data
     contentWrapper.querySelectorAll('[data-block]').forEach((blockElement) => {
       const blockName = blockElement.getAttribute('data-block');
       const blockAttributes = this.extractBlockAttributes(blockElement);
@@ -183,39 +168,50 @@ export class EmailExportService {
   }
 
   extractBlockContent(blockElement) {
-    // Extract text content while preserving HTML structure
     return blockElement.innerHTML;
   }
 
   async generateEmailHTML(blockData) {
     try {
-      // Call the EmailGenerator service via REST API
-      const response = await fetch(
-        '/wp-json/campaignbridge/v1/email/generate',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-WP-Nonce': window.wpApiSettings?.nonce || '',
-          },
-          body: JSON.stringify(blockData),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // Try to use the EmailGenerator service first
+      const emailGenerator = this.getService('emailGenerator');
+      if (
+        emailGenerator &&
+        typeof emailGenerator.generateEmailHTML === 'function'
+      ) {
+        return await emailGenerator.generateEmailHTML(
+          blockData.blocks,
+          blockData.attributes
+        );
       }
 
-      const result = await response.json();
-      return result.html || this.generateFallbackHTML(blockData);
+      // Fallback to REST API
+      return await this.generateEmailViaAPI(blockData);
     } catch (error) {
-      console.warn('REST API failed, using fallback:', error);
+      // Final fallback to local generation
       return this.generateFallbackHTML(blockData);
     }
   }
 
+  async generateEmailViaAPI(blockData) {
+    const response = await fetch('/wp-json/campaignbridge/v1/email/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WP-Nonce': window.wpApiSettings?.nonce || '',
+      },
+      body: JSON.stringify(blockData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.html;
+  }
+
   generateFallbackHTML(blockData) {
-    // Fallback HTML generation if REST API fails
     const { templateName, emailWidth, blocks, attributes } = blockData;
 
     let html = `
@@ -236,7 +232,6 @@ export class EmailExportService {
           <div class="email-content">
     `;
 
-    // Convert blocks to HTML
     blocks.forEach((block) => {
       html += this.convertBlockToHTML(block);
     });
@@ -300,7 +295,6 @@ export class EmailExportService {
   }
 
   showNotification(message, type = 'info') {
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = `cb-notification cb-notification-${type}`;
     notification.style.cssText = `
@@ -325,7 +319,6 @@ export class EmailExportService {
 
     document.body.appendChild(notification);
 
-    // Auto-remove after 3 seconds
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);

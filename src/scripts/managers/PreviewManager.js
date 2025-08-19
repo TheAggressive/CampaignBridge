@@ -1,19 +1,19 @@
-import { DOMManager } from '../utils/DOMManager.js';
+import { BaseManager } from '../core/BaseManager.js';
 
-// Preview management class
-export class PreviewManager {
-  constructor() {
-    // Only initialize if we're on the templates page (where preview functionality exists)
-    if (this.hasTemplateFunctionality()) {
-      this.setupPreviewModeHandling();
-      this.setupCopyButton();
-      this.setupRefreshButton();
-    }
+// Preview management class - handles only preview functionality
+export class PreviewManager extends BaseManager {
+  constructor(serviceContainer) {
+    super(serviceContainer);
   }
 
-  hasTemplateFunctionality() {
-    const screen = document.body.className;
-    return screen.includes('toplevel_page_campaignbridge');
+  async doInitialize() {
+    if (!this.isPageSupported('templates')) {
+      return;
+    }
+
+    this.setupPreviewModeHandling();
+    this.setupCopyButton();
+    this.setupRefreshButton();
   }
 
   setupPreviewModeHandling() {
@@ -25,16 +25,16 @@ export class PreviewManager {
   }
 
   getPreviewMode() {
-    const checked = DOMManager.getElements('previewModeInputs').find(
+    const checked = this.getElements('previewModeInputs').find(
       (input) => input.checked
     );
     return checked?.value || 'rendered';
   }
 
   applyPreviewMode(mode) {
-    const frameWrap = DOMManager.getElement('previewRenderedWrap');
-    const htmlBox = DOMManager.getElement('previewHtml');
-    const copyBtn = DOMManager.getElement('copyHtmlButton');
+    const frameWrap = this.getElement('previewRenderedWrap');
+    const htmlBox = this.getElement('previewHtml');
+    const copyBtn = this.getElement('copyHtmlButton');
 
     if (!frameWrap || !htmlBox || !copyBtn) return;
 
@@ -45,10 +45,10 @@ export class PreviewManager {
   }
 
   setupCopyButton() {
-    const copyBtn = DOMManager.getElement('copyHtmlButton');
+    const copyBtn = this.getElement('copyHtmlButton');
     if (copyBtn) {
       copyBtn.onclick = () => {
-        const htmlBox = DOMManager.getElement('previewHtml');
+        const htmlBox = this.getElement('previewHtml');
         if (htmlBox) {
           htmlBox.select();
           document.execCommand('copy');
@@ -58,7 +58,7 @@ export class PreviewManager {
   }
 
   setupRefreshButton() {
-    const refreshBtn = DOMManager.getElement('refreshPreviewButton');
+    const refreshBtn = this.getElement('refreshPreviewButton');
     if (refreshBtn) {
       refreshBtn.onclick = () => {
         const templateId = this.getQueryParam('tpl');

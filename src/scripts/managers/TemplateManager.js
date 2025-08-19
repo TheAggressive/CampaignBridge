@@ -1,5 +1,4 @@
-import { ApiClient } from '../services/ApiClient.js';
-import { DOMManager } from '../utils/DOMManager.js';
+import { BaseManager } from '../core/BaseManager.js';
 import { escapeHTML, getQueryParam, setQueryParam } from '../utils/helpers.js';
 
 // Response data extractors
@@ -7,31 +6,25 @@ const extractData = {
   html: (resp) => resp?.html ?? resp?.data?.html ?? '',
 };
 
-// Template management class
-export class TemplateManager {
-  constructor() {
-    this.api = new ApiClient();
+// Template management class - handles only template operations
+export class TemplateManager extends BaseManager {
+  constructor(serviceContainer) {
+    super(serviceContainer);
     this.currentTemplateId = null;
+  }
 
-    // Only initialize if we're on the templates page
-    if (this.hasTemplateFunctionality()) {
-      this.initialize();
+  async doInitialize() {
+    if (!this.isPageSupported('templates')) {
+      return;
     }
-  }
 
-  hasTemplateFunctionality() {
-    const screen = document.body.className;
-    return screen.includes('toplevel_page_campaignbridge');
-  }
-
-  initialize() {
     this.setupTemplateSelection();
     this.setupNewTemplateButton();
     this.loadInitialTemplate();
   }
 
   setupTemplateSelection() {
-    const templateSelect = DOMManager.getElement('templateSelect');
+    const templateSelect = this.getElement('templateSelect');
     if (!templateSelect) return;
 
     const initialTemplateId = getQueryParam('tpl');
@@ -51,12 +44,13 @@ export class TemplateManager {
   }
 
   setupNewTemplateButton() {
-    const newButton = DOMManager.getElement('newTemplateButton');
+    const newButton = this.getElement('newTemplateButton');
     if (!newButton) return;
 
     newButton.addEventListener('click', async () => {
       try {
-        const response = await this.api.post('/templates', {
+        const apiClient = this.getService('apiClient');
+        const response = await apiClient.post('/templates', {
           title: 'New Email Template',
           content: '',
           status: 'draft',
@@ -67,13 +61,17 @@ export class TemplateManager {
           this.selectTemplate(response.id);
         }
       } catch (error) {
-        console.error('Error creating new template:', error);
+        this.getService('errorHandler').handleError(
+          error,
+          'TemplateManager.setupNewTemplateButton',
+          'Failed to create new template'
+        );
       }
     });
   }
 
   addTemplateToSelect(template) {
-    const templateSelect = DOMManager.getElement('templateSelect');
+    const templateSelect = this.getElement('templateSelect');
     if (!templateSelect) return;
 
     const option = document.createElement('option');
@@ -83,7 +81,7 @@ export class TemplateManager {
   }
 
   selectTemplate(templateId) {
-    const templateSelect = DOMManager.getElement('templateSelect');
+    const templateSelect = this.getElement('templateSelect');
     if (!templateSelect) return;
 
     templateSelect.value = templateId;
@@ -102,7 +100,11 @@ export class TemplateManager {
       // Load template content and initialize editor
       await this.updateLivePreview(templateId);
     } catch (error) {
-      console.error('Error loading template:', error);
+      this.getService('errorHandler').handleError(
+        error,
+        'TemplateManager.loadTemplate',
+        'Failed to load template'
+      );
       this.showErrorState('Failed to load template');
     }
   }
@@ -116,7 +118,7 @@ export class TemplateManager {
   }
 
   showEmptyState() {
-    const container = DOMManager.getElement('templateContainer');
+    const container = this.getElement('templateContainer');
     if (container) {
       container.innerHTML = `
         <div class="cb-editor-empty">
@@ -127,7 +129,7 @@ export class TemplateManager {
   }
 
   showErrorState(message) {
-    const container = DOMManager.getElement('templateContainer');
+    const container = this.getElement('templateContainer');
     if (container) {
       container.innerHTML = `
         <div class="cb-editor-error">
@@ -138,13 +140,14 @@ export class TemplateManager {
   }
 
   async updateLivePreview(templateId) {
-    const previewFrame = DOMManager.getElement('previewFrame');
-    const htmlBox = DOMManager.getElement('previewHtml');
+    const previewFrame = this.getElement('previewFrame');
+    const htmlBox = this.getElement('previewHtml');
 
     if (!previewFrame || !htmlBox) return;
 
     try {
-      const response = await this.api.post(
+      const apiClient = this.getService('apiClient');
+      const response = await apiClient.post(
         `/templates/${templateId}/preview`,
         {}
       );
@@ -168,21 +171,25 @@ export class TemplateManager {
       htmlBox.value = html;
       this.applyPreviewMode(this.getPreviewMode());
     } catch (error) {
-      console.error('Error updating preview:', error);
+      this.getService('errorHandler').handleError(
+        error,
+        'TemplateManager.updateLivePreview',
+        'Failed to update preview'
+      );
     }
   }
 
   getPreviewMode() {
-    const checked = DOMManager.getElements('previewModeInputs').find(
+    const checked = this.getElements('previewModeInputs').find(
       (input) => input.checked
     );
     return checked?.value || 'rendered';
   }
 
   applyPreviewMode(mode) {
-    const frameWrap = DOMManager.getElement('previewRenderedWrap');
-    const htmlBox = DOMManager.getElement('previewHtml');
-    const copyBtn = DOMManager.getElement('copyHtmlButton');
+    const frameWrap = this.getElement('previewRenderedWrap');
+    const htmlBox = this.getElement('previewHtml');
+    const copyBtn = this.getElement('copyHtmlButton');
 
     if (!frameWrap || !htmlBox || !copyBtn) return;
 

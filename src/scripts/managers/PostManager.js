@@ -1,5 +1,4 @@
-import { ApiClient } from '../services/ApiClient.js';
-import { DOMManager } from '../utils/DOMManager.js';
+import { BaseManager } from '../core/BaseManager.js';
 import { escapeHTML } from '../utils/helpers.js';
 
 // Response data extractors
@@ -7,20 +6,20 @@ const extractData = {
   items: (resp) => resp?.items ?? resp?.data?.items ?? [],
 };
 
-// Post management class
-export class PostManager {
-  constructor() {
-    this.api = new ApiClient();
-
-    // Only initialize if we're on the templates page (where post selection exists)
-    if (this.hasTemplateFunctionality()) {
-      this.initialize();
-    }
+// Post management class - handles only post operations
+export class PostManager extends BaseManager {
+  constructor(serviceContainer) {
+    super(serviceContainer);
   }
 
-  hasTemplateFunctionality() {
-    const screen = document.body.className;
-    return screen.includes('toplevel_page_campaignbridge');
+  async doInitialize() {
+    if (!this.isPageSupported('templates')) {
+      return;
+    }
+
+    this.setupPostTypeSelection();
+    this.loadInitialPosts();
+    this.setupPostSelection();
   }
 
   initialize() {
@@ -30,15 +29,15 @@ export class PostManager {
   }
 
   setupPostTypeSelection() {
-    const postTypeEl = DOMManager.getElement('postTypeSelect');
+    const postTypeEl = this.getElement('postTypeSelect');
     if (!postTypeEl) return;
 
     postTypeEl.addEventListener('change', () => this.loadPosts());
   }
 
   async loadPosts() {
-    const typeEl = DOMManager.getElement('postTypeSelect');
-    const select = DOMManager.getElement('postsSelect');
+    const typeEl = this.getElement('postTypeSelect');
+    const select = this.getElement('postsSelect');
 
     if (!typeEl || !select) return;
 
@@ -52,14 +51,19 @@ export class PostManager {
     select.innerHTML = '<option>Loading…</option>';
 
     try {
-      const response = await this.api.get(
+      const apiClient = this.getService('apiClient');
+      const response = await apiClient.get(
         `/posts?post_type=${encodeURIComponent(postType)}`
       );
       const items = extractData.items(response);
 
       select.innerHTML = this.renderOptions(items);
     } catch (error) {
-      console.error('Error loading posts:', error);
+      this.getService('errorHandler').handleError(
+        error,
+        'PostManager.loadPosts',
+        'Failed to load posts'
+      );
       select.innerHTML = '';
     } finally {
       select.disabled = false;
@@ -83,7 +87,7 @@ export class PostManager {
   }
 
   renderSelectedChips(select) {
-    const chipsWrap = DOMManager.getElement('selectedPostsChips');
+    const chipsWrap = this.getElement('selectedPostsChips');
     if (!chipsWrap) return;
 
     const items = this.getSelectedItems(select);
@@ -110,19 +114,19 @@ export class PostManager {
   }
 
   loadInitialPosts() {
-    const postsSelect = DOMManager.getElement('postsSelect');
+    const postsSelect = this.getElement('postsSelect');
     if (postsSelect) {
       this.loadPosts();
     }
   }
 
   setupPostSelection() {
-    this.on('change', '#campaignbridge-posts', () => {
-      const select = DOMManager.getElement('postsSelect');
+    this.addEventListener('change', '#campaignbridge-posts', () => {
+      const select = this.getElement('postsSelect');
       this.renderSelectedChips(select);
     });
 
-    this.on(
+    this.addEventListener(
       'click',
       '#cb-selected-posts-chips .cb-chip-remove',
       (event, element) => {
@@ -130,7 +134,7 @@ export class PostManager {
         if (!chip) return;
 
         const id = chip.getAttribute('data-id');
-        const select = DOMManager.getElement('postsSelect');
+        const select = this.getElement('postsSelect');
 
         if (select && id) {
           Array.from(select.options).forEach((option) => {
@@ -142,11 +146,5 @@ export class PostManager {
     );
   }
 
-  // Event delegation utility
-  on(eventName, selector, handler) {
-    document.addEventListener(eventName, (event) => {
-      const target = event.target?.closest(selector);
-      if (target) handler(event, target);
-    });
-  }
+  // Event delegation utility - now inherited from BaseManager
 }

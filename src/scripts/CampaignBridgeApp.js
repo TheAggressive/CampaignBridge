@@ -1,8 +1,4 @@
-import { PostManager } from './managers/PostManager.js';
-import { PreviewManager } from './managers/PreviewManager.js';
-import { TemplateManager } from './managers/TemplateManager.js';
-import { EmailExportService } from './services/EmailExportService.js';
-import { MailchimpIntegration } from './services/MailchimpIntegration.js';
+import { serviceContainer } from './core/ServiceContainer.js';
 import { ErrorHandler } from './utils/ErrorHandler.js';
 import {
   getCampaignBridgePage,
@@ -10,25 +6,30 @@ import {
   hasTemplateFunctionality,
 } from './utils/helpers.js';
 
-// Main application class
+// Main application class - follows SOLID principles with dependency injection
 export class CampaignBridgeApp {
   constructor() {
+    this.managers = new Map();
+    this.services = new Map();
+  }
+
+  async initialize() {
     try {
       const currentPage = getCampaignBridgePage();
 
       if (currentPage) {
         console.log(`CampaignBridge: Initializing on ${currentPage} page`);
 
+        // Initialize service container first
+        await serviceContainer.initialize();
+
         // Initialize managers based on current page
         if (hasTemplateFunctionality()) {
-          this.templateManager = new TemplateManager();
-          this.postManager = new PostManager();
-          this.previewManager = new PreviewManager();
-          this.emailExportService = new EmailExportService();
+          await this.initializeTemplateManagers();
         }
 
         if (hasSettingsFunctionality()) {
-          this.mailchimpIntegration = new MailchimpIntegration();
+          await this.initializeSettingsManagers();
         }
 
         console.log('🚀 CampaignBridge initialized successfully!');
@@ -44,5 +45,39 @@ export class CampaignBridgeApp {
         'Failed to initialize CampaignBridge'
       );
     }
+  }
+
+  async initializeTemplateManagers() {
+    const managers = [
+      'templateManager',
+      'postManager',
+      'previewManager',
+      'exportManager',
+    ];
+
+    for (const managerName of managers) {
+      if (serviceContainer.has(managerName)) {
+        const manager = serviceContainer.get(managerName);
+        this.managers.set(managerName, manager);
+      }
+    }
+  }
+
+  async initializeSettingsManagers() {
+    if (serviceContainer.has('mailchimpService')) {
+      const mailchimpService = serviceContainer.get('mailchimpService');
+      this.services.set('mailchimp', mailchimpService);
+    }
+  }
+
+  // Cleanup method for proper resource management
+  cleanup() {
+    this.managers.forEach((manager) => {
+      if (typeof manager.cleanup === 'function') {
+        manager.cleanup();
+      }
+    });
+    this.managers.clear();
+    this.services.clear();
   }
 }
