@@ -20,14 +20,14 @@ add_action(
 	}
 );
 
-// Composer autoload only.
-if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
-	require_once __DIR__ . '/vendor/autoload.php';
+// Custom autoloader for CampaignBridge.
+if ( file_exists( __DIR__ . '/includes/autoload.php' ) ) {
+	require_once __DIR__ . '/includes/autoload.php';
 } else {
 	add_action(
 		'admin_notices',
 		function () {
-			echo '<div class="notice notice-error"><p>' . esc_html__( 'CampaignBridge: Composer autoloader not found. Please run "composer install".', 'campaignbridge' ) . '</p></div>';
+			echo '<div class="notice notice-error"><p>' . esc_html__( 'CampaignBridge: Autoloader not found.', 'campaignbridge' ) . '</p></div>';
 		}
 	);
 	return;

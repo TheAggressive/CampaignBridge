@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Service Container for dependency injection and service management
  */
-class Service_Container {
+class ServiceContainer {
 	/**
 	 * Registered services
 	 *

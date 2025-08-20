@@ -33,14 +33,15 @@ class Dispatcher {
 	 * @param array $providers   Provider instances map.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function generate_and_send_campaign( $post_ids, $settings, $sections_map, $providers ) {
+	public static function generate_and_send_campaign( array $post_ids, array $settings, array $sections_map, array $providers ): bool {
 		$blocks = array();
 
 		if ( ! empty( $sections_map ) ) {
 			foreach ( $sections_map as $section_key => $post_id ) {
 				$post = get_post( $post_id );
 				if ( ! $post ) {
-					continue; }
+					continue;
+				}
 				$img                    = get_the_post_thumbnail_url( $post_id, 'medium' );
 				$content_html           = apply_filters( 'the_content', $post->post_content );
 				$link                   = get_permalink( $post_id );
@@ -58,10 +59,11 @@ class Dispatcher {
 			return self::dispatch_to_provider( $blocks, $settings, $providers );
 		}
 
-		foreach ( array_slice( (array) $post_ids, 0, 8 ) as $index => $post_id ) {
+		foreach ( array_slice( $post_ids, 0, 8 ) as $index => $post_id ) {
 			$post = get_post( $post_id );
 			if ( ! $post ) {
-				continue; }
+				continue;
+			}
 			$img           = get_the_post_thumbnail_url( $post_id, 'medium' );
 			$content_html  = apply_filters( 'the_content', $post->post_content );
 			$link          = get_permalink( $post_id );
@@ -87,9 +89,10 @@ class Dispatcher {
 	 * @param array $providers Providers map.
 	 * @return bool
 	 */
-	public static function dispatch_to_provider( $blocks, $settings, $providers ) {
-		$provider_slug = isset( $settings['provider'] ) && isset( $providers[ $settings['provider'] ] ) ? $settings['provider'] : 'mailchimp';
-		$provider      = isset( $providers[ $provider_slug ] ) ? $providers[ $provider_slug ] : null;
+	public static function dispatch_to_provider( array $blocks, array $settings, array $providers ): bool {
+		$provider_slug = $settings['provider'] ?? 'mailchimp';
+		$provider      = $providers[ $provider_slug ] ?? null;
+
 		if ( ! $provider ) {
 			if ( class_exists( '\\CampaignBridge\\Notices' ) ) {
 				Notices::error( esc_html__( 'No valid provider selected.', 'campaignbridge' ) );

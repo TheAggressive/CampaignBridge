@@ -33,13 +33,14 @@ class Plugin {
 	 *
 	 * @var string
 	 */
-	private $option_name = 'campaignbridge_settings';
+	private string $option_name = 'campaignbridge_settings';
+
 	/**
 	 * Map of provider slug => provider instance.
 	 *
 	 * @var array<string,object>
 	 */
-	private $providers = array();
+	private array $providers = array();
 
 	/**
 	 * Service container instance.
@@ -52,15 +53,34 @@ class Plugin {
 	 * Construct and wire plugin hooks.
 	 */
 	public function __construct() {
-		// Initialize service container.
-		$this->service_container = new Service_Container();
-		$this->service_container->initialize();
+		try {
+			// Initialize service container.
+			$this->service_container = new Service_Container();
+			$this->service_container->initialize();
 
-		// Get providers from service container.
-		$this->providers = array(
-			'mailchimp' => $this->service_container->get( 'mailchimp_provider' ),
-			'html'      => $this->service_container->get( 'html_provider' ),
-		);
+			// Get providers from service container.
+			$this->providers = array(
+				'mailchimp' => $this->service_container->get( 'mailchimp_provider' ),
+				'html'      => $this->service_container->get( 'html_provider' ),
+			);
+		} catch ( \Exception $e ) {
+			// Log the error and show admin notice.
+			error_log( 'CampaignBridge Plugin Error: ' . $e->getMessage() );
+
+			// Add admin notice about the error.
+			add_action(
+				'admin_notices',
+				function () use ( $e ) {
+					echo '<div class="notice notice-error"><p>';
+					echo '<strong>CampaignBridge Error:</strong> ' . esc_html( $e->getMessage() );
+					echo '<br><small>Check the error logs for more details.</small>';
+					echo '</p></div>';
+				}
+			);
+
+			// Don't continue with plugin initialization if there's a critical error.
+			return;
+		}
 
 		// Wire hooks.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
@@ -164,19 +184,21 @@ class Plugin {
 	 * @param array $input Raw submitted values.
 	 * @return array Cleaned settings array.
 	 */
-	public function sanitize_settings( $input ): array {
+	public function sanitize_settings( array $input ): array {
 		$clean             = array();
 		$previous          = get_option( $this->option_name, array() );
-		$clean['provider'] = isset( $input['provider'] ) ? sanitize_key( $input['provider'] ) : 'mailchimp';
-		$posted_api_key    = isset( $input['api_key'] ) ? (string) $input['api_key'] : '';
-		if ( '' === $posted_api_key && isset( $previous['api_key'] ) ) {
-			$clean['api_key'] = $previous['api_key'];
-		} else {
-			$clean['api_key'] = sanitize_text_field( $posted_api_key );
-		}
-		$clean['audience_id']        = isset( $input['audience_id'] ) ? sanitize_text_field( $input['audience_id'] ) : '';
-		$clean['template_id']        = isset( $input['template_id'] ) ? absint( $input['template_id'] ) : 0;
+		$clean['provider'] = $input['provider'] ?? 'mailchimp';
+		$clean['provider'] = sanitize_key( $clean['provider'] );
+
+		$posted_api_key   = $input['api_key'] ?? '';
+		$clean['api_key'] = '' === $posted_api_key && isset( $previous['api_key'] )
+			? $previous['api_key']
+			: sanitize_text_field( $posted_api_key );
+
+		$clean['audience_id']        = sanitize_text_field( $input['audience_id'] ?? '' );
+		$clean['template_id']        = absint( $input['template_id'] ?? 0 );
 		$clean['exclude_post_types'] = array();
+
 		if ( isset( $input['included_post_types'] ) && is_array( $input['included_post_types'] ) ) {
 			$included = array();
 			foreach ( $input['included_post_types'] as $pt ) {

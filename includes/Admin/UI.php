@@ -30,14 +30,14 @@ class UI {
 	 *
 	 * @var string
 	 */
-	private static $option_name = 'campaignbridge_settings';
+	private static string $option_name = 'campaignbridge_settings';
 
 	/**
 	 * Registered providers map indexed by slug.
 	 *
 	 * @var array<string,object>
 	 */
-	private static $providers = array();
+	private static array $providers = array();
 
 	/**
 	 * Initialize shared state.
@@ -46,9 +46,9 @@ class UI {
 	 * @param array  $providers   Registered providers map.
 	 * @return void
 	 */
-	public static function init( $option_name, $providers ) {
-		self::$option_name = (string) $option_name;
-		self::$providers   = is_array( $providers ) ? $providers : array();
+	public static function init( string $option_name, array $providers ): void {
+		self::$option_name = $option_name;
+		self::$providers   = $providers;
 	}
 
 	/**
