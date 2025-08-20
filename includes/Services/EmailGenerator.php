@@ -204,10 +204,10 @@ class EmailGenerator {
 				return self::convert_email_template_block( $attributes, $inner_blocks, $options );
 
 			case 'campaignbridge/email-post-slot':
-				return self::convert_post_slot_block( $attributes, $options );
+				return self::convert_post_slot_block( $attributes );
 
 			case 'campaignbridge/email-post-title':
-				return self::convert_post_title_block( $attributes, $options );
+				return self::convert_post_title_block( $attributes );
 
 			case 'campaignbridge/email-post-excerpt':
 				return self::convert_post_excerpt_block( $attributes, $options );
@@ -257,7 +257,7 @@ class EmailGenerator {
 		$content   = implode( '', $inner_content );
 		$level     = $attributes['level'] ?? 2;
 		$align     = $attributes['align'] ?? 'left';
-		$font_size = $attributes['fontSize'] ?? ( $level === 1 ? '24px' : '20px' );
+		$font_size = $attributes['fontSize'] ?? ( 1 === $level ? '24px' : '20px' );
 
 		$style = sprintf(
 			'margin: 0 0 16px 0; font-size: %s; font-weight: 600; line-height: 1.3; text-align: %s;',
@@ -321,7 +321,7 @@ class EmailGenerator {
 		$html = sprintf( '<div style="%s">', $style );
 
 		foreach ( $inner_blocks as $button_block ) {
-			if ( $button_block['blockName'] === 'core/button' ) {
+			if ( 'core/button' === $button_block['blockName'] ) {
 				$html .= self::convert_button_block( $button_block['attrs'] );
 			}
 		}
@@ -337,19 +337,19 @@ class EmailGenerator {
 	 * @return string Converted HTML.
 	 */
 	private static function convert_button_block( array $attributes ): string {
-		$text            = $attributes['text'] ?? '';
-		$url             = $attributes['url'] ?? '#';
-		$backgroundColor = $attributes['backgroundColor'] ?? '#3b82f6';
-		$textColor       = $attributes['textColor'] ?? '#ffffff';
-		$width           = $attributes['width'] ?? 'auto';
+		$text             = $attributes['text'] ?? '';
+		$url              = $attributes['url'] ?? '#';
+		$background_color = $attributes['backgroundColor'] ?? '#3b82f6';
+		$text_color       = $attributes['textColor'] ?? '#ffffff';
+		$width            = $attributes['width'] ?? 'auto';
 
 		$style = sprintf(
 			'display: inline-block; padding: 12px 24px; background-color: %s; color: %s !important; text-decoration: none; border-radius: 4px; font-weight: 500; font-size: 14px; line-height: 1.4; text-align: center; min-width: 120px;',
-			esc_attr( $backgroundColor ),
-			esc_attr( $textColor )
+			esc_attr( $background_color ),
+			esc_attr( $text_color )
 		);
 
-		if ( $width !== 'auto' ) {
+		if ( 'auto' !== $width ) {
 			$style .= sprintf( ' width: %s;', esc_attr( $width ) );
 		}
 
@@ -364,12 +364,11 @@ class EmailGenerator {
 	/**
 	 * Convert columns block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
 	 * @param array $inner_blocks Inner blocks.
 	 * @param array $options Generation options.
 	 * @return string Converted HTML.
 	 */
-	private static function convert_columns_block( array $attributes, array $inner_blocks, array $options ): string {
+	private static function convert_columns_block( array $inner_blocks, array $options ): string {
 		$columns = count( $inner_blocks );
 		if ( 0 === $columns ) {
 			return '';
@@ -382,7 +381,7 @@ class EmailGenerator {
 		$column_width = 100 / $columns;
 
 		foreach ( $inner_blocks as $column_block ) {
-			if ( $column_block['blockName'] === 'core/column' ) {
+			if ( 'core/column' === $column_block['blockName'] ) {
 				$html .= sprintf(
 					'<td class="mobile-stack" style="width: %1$s%%; vertical-align: top; padding: 0 10px;">',
 					$column_width
@@ -475,10 +474,9 @@ class EmailGenerator {
 	 * Convert post slot block to HTML.
 	 *
 	 * @param array $attributes Block attributes.
-	 * @param array $options Generation options.
 	 * @return string Converted HTML.
 	 */
-	private static function convert_post_slot_block( array $attributes, array $options ): string {
+	private static function convert_post_slot_block( array $attributes ): string {
 		$post_id      = $attributes['postId'] ?? 0;
 		$display_mode = $attributes['displayMode'] ?? 'title_excerpt';
 
@@ -508,7 +506,7 @@ class EmailGenerator {
 				);
 				$html .= sprintf(
 					'<p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">%s</p>',
-					esc_html( wp_trim_words( $post->post_excerpt ?: $post->post_content, 30 ) )
+					esc_html( wp_trim_words( $post->post_excerpt ? $post->post_excerpt : $post->post_content, 30 ) )
 				);
 				break;
 
@@ -530,7 +528,7 @@ class EmailGenerator {
 				);
 				$html .= sprintf(
 					'<p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">%s</p>',
-					esc_html( wp_trim_words( $post->post_excerpt ?: $post->post_content, 30 ) )
+					esc_html( wp_trim_words( $post->post_excerpt ? $post->post_excerpt : $post->post_content, 30 ) )
 				);
 				break;
 
@@ -556,6 +554,168 @@ class EmailGenerator {
 
 		$html .= '</div>';
 		return $html;
+	}
+
+	/**
+	 * Convert post title block to HTML.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Converted HTML.
+	 */
+	private static function convert_post_title_block( array $attributes ): string {
+		$post_id   = $attributes['postId'] ?? 0;
+		$level     = $attributes['level'] ?? 2;
+		$align     = $attributes['align'] ?? 'left';
+		$font_size = $attributes['fontSize'] ?? ( 2 === $level ? '24px' : '20px' );
+
+		if ( ! $post_id ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'No post selected', 'campaignbridge' ) . '</p>';
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'Post not found', 'campaignbridge' ) . '</p>';
+		}
+
+		$style = sprintf(
+			'margin: 0 0 16px 0; font-size: %s; font-weight: 600; line-height: 1.3; text-align: %s;',
+			esc_attr( $font_size ),
+			esc_attr( $align )
+		);
+
+		$tag = 'h' . $level;
+		return sprintf( '<%1$s style="%2$s">%3$s</%1$s>', $tag, $style, esc_html( $post->post_title ) );
+	}
+
+	/**
+	 * Convert post excerpt block to HTML.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Converted HTML.
+	 */
+	private static function convert_post_excerpt_block( array $attributes ): string {
+		$post_id     = $attributes['postId'] ?? 0;
+		$align       = $attributes['align'] ?? 'left';
+		$font_size   = $attributes['fontSize'] ?? '14px';
+		$line_height = $attributes['lineHeight'] ?? '1.6';
+		$word_count  = $attributes['wordCount'] ?? 30;
+
+		if ( ! $post_id ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'No post selected', 'campaignbridge' ) . '</p>';
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'Post not found', 'campaignbridge' ) . '</p>';
+		}
+
+		$excerpt = $post->post_excerpt ? $post->post_excerpt : $post->post_content;
+		$excerpt = wp_trim_words( $excerpt, $word_count );
+
+		$style = sprintf(
+			'margin: 0 0 16px 0; font-size: %s; line-height: %s; text-align: %s;',
+			esc_attr( $font_size ),
+			esc_attr( $line_height ),
+			esc_attr( $align )
+		);
+
+		return sprintf( '<p style="%s">%s</p>', $style, esc_html( $excerpt ) );
+	}
+
+	/**
+	 * Convert post image block to HTML.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Converted HTML.
+	 */
+	private static function convert_post_image_block( array $attributes ): string {
+		$post_id = $attributes['postId'] ?? 0;
+		$size    = $attributes['size'] ?? 'medium';
+		$align   = $attributes['align'] ?? 'center';
+		$width   = $attributes['width'] ?? '';
+		$height  = $attributes['height'] ?? '';
+
+		if ( ! $post_id ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'No post selected', 'campaignbridge' ) . '</p>';
+		}
+
+		if ( ! has_post_thumbnail( $post_id ) ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'No featured image', 'campaignbridge' ) . '</p>';
+		}
+
+		$thumbnail_id  = get_post_thumbnail_id( $post_id );
+		$thumbnail_url = wp_get_attachment_image_url( $thumbnail_id, $size );
+
+		if ( ! $thumbnail_url ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'Image not found', 'campaignbridge' ) . '</p>';
+		}
+
+		$post = get_post( $post_id );
+		$alt  = $post ? $post->post_title : '';
+
+		$style = sprintf(
+			'display: block; max-width: 100%%; height: auto; margin: 16px auto; text-align: %s;',
+			esc_attr( $align )
+		);
+
+		if ( $width ) {
+			$style .= sprintf( ' width: %spx;', esc_attr( $width ) );
+		}
+
+		if ( $height ) {
+			$style .= sprintf( ' height: %spx;', esc_attr( $height ) );
+		}
+
+		return sprintf(
+			'<img src="%s" alt="%s" style="%s" />',
+			esc_url( $thumbnail_url ),
+			esc_attr( $alt ),
+			$style
+		);
+	}
+
+	/**
+	 * Convert post button block to HTML.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Converted HTML.
+	 */
+	private static function convert_post_button_block( array $attributes ): string {
+		$post_id          = $attributes['postId'] ?? 0;
+		$text             = $attributes['text'] ?? __( 'Read More', 'campaignbridge' );
+		$align            = $attributes['align'] ?? 'left';
+		$background_color = $attributes['backgroundColor'] ?? '#3b82f6';
+		$text_color       = $attributes['textColor'] ?? '#ffffff';
+		$width            = $attributes['width'] ?? 'auto';
+
+		if ( ! $post_id ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'No post selected', 'campaignbridge' ) . '</p>';
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return '<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">' . esc_html__( 'Post not found', 'campaignbridge' ) . '</p>';
+		}
+
+		$style = sprintf(
+			'display: inline-block; padding: 12px 24px; background-color: %s; color: %s !important; text-decoration: none; border-radius: 4px; font-weight: 500; font-size: 14px; line-height: 1.4; text-align: center; min-width: 120px;',
+			esc_attr( $background_color ),
+			esc_attr( $text_color )
+		);
+
+		if ( 'auto' !== $width ) {
+			$style .= sprintf( ' width: %s;', esc_attr( $width ) );
+		}
+
+		$container_style = sprintf( 'margin: 20px 0; text-align: %s;', esc_attr( $align ) );
+
+		return sprintf(
+			'<div style="%s"><a href="%s" style="%s">%s</a></div>',
+			$container_style,
+			esc_url( get_permalink( $post_id ) ),
+			$style,
+			esc_html( $text )
+		);
 	}
 
 	/**
@@ -587,10 +747,9 @@ class EmailGenerator {
 	/**
 	 * Build email footer.
 	 *
-	 * @param array $options Generation options.
 	 * @return string Email footer HTML.
 	 */
-	private static function build_email_footer( array $options ): string {
+	private static function build_email_footer(): string {
 		return '
 						</td>
 					</tr>
@@ -619,10 +778,9 @@ class EmailGenerator {
 	 * Make HTML responsive for mobile devices.
 	 *
 	 * @param string $html HTML content.
-	 * @param array  $options Generation options.
 	 * @return string Responsive HTML.
 	 */
-	private static function make_responsive( string $html, array $options ): string {
+	private static function make_responsive( string $html ): string {
 		// Add responsive meta tag and CSS if not already present.
 		if ( strpos( $html, 'width=device-width' ) === false ) {
 			$html = str_replace(
