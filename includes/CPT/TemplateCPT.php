@@ -65,5 +65,75 @@ class TemplateCPT {
 				}
 			}
 		);
+
+		// Expose raw content in REST API for template loading.
+		add_filter(
+			'rest_prepare_cb_template',
+			function ( $response, $post, $request ) {
+				if ( $request->get_param( 'context' ) === 'edit' ) {
+					$response->data['content']['raw'] = $post->post_content;
+				}
+				return $response;
+			},
+			10,
+			3
+		);
+
+		// Force REST API to include raw content.
+		add_filter(
+			'rest_cb_template_collection_params',
+			function ( $params, $post_type ) {
+				$params['context']['default'] = 'edit';
+				return $params;
+			},
+			10,
+			2
+		);
+
+		// Alternative method: Add raw content to all responses.
+		add_filter(
+			'rest_prepare_cb_template',
+			function ( $response, $post, $request ) {
+				$response->data['content']['raw'] = $post->post_content;
+				return $response;
+			},
+			10,
+			2
+		);
+
+		// Register custom REST endpoint for template content.
+		add_action(
+			'rest_api_init',
+			function () {
+				register_rest_route(
+					'campaignbridge/v1',
+					'/template/(?P<id>\d+)',
+					array(
+						'methods'             => 'GET',
+						'callback'            => function ( $request ) {
+							$template_id = $request->get_param( 'id' );
+							$template    = get_post( $template_id );
+
+							if ( ! $template || 'cb_template' !== $template->post_type ) {
+								return new \WP_Error( 'template_not_found', 'Template not found', array( 'status' => 404 ) );
+							}
+
+							return array(
+								'id'      => $template->ID,
+								'title'   => $template->post_title,
+								'content' => array(
+									'raw'      => $template->post_content,
+									'rendered' => apply_filters( 'the_content', $template->post_content ),
+								),
+								'status'  => $template->post_status,
+							);
+						},
+						'permission_callback' => function () {
+							return current_user_can( 'edit_posts' );
+						},
+					)
+				);
+			}
+		);
 	}
 }

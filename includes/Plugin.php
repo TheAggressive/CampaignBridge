@@ -90,7 +90,7 @@ class Plugin {
 		add_action( 'admin_enqueue_scripts', array( AdminUI::class, 'enqueue_admin_assets' ) );
 
 		// Initialize Admin UI and AJAX.
-		AdminUI::init( $this->option_name, $this->providers );
+		// AdminUI::init() is called in add_admin_menu() method
 		// Deprecated: admin-ajax actions replaced by REST API routes.
 
 		// REST API.
@@ -127,7 +127,7 @@ class Plugin {
 			'CampaignBridge',
 			'manage_options',
 			'campaignbridge',
-			array( AdminUI::class, 'render_templates_page' ),
+			array( AdminUI::class, 'render_template_manager_page' ),
 			'dashicons-email-alt',
 			30
 		);
@@ -139,7 +139,7 @@ class Plugin {
 			'Templates',
 			'manage_options',
 			'campaignbridge',
-			array( AdminUI::class, 'render_templates_page' )
+			array( AdminUI::class, 'render_template_manager_page' )
 		);
 
 		add_submenu_page(

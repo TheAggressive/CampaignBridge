@@ -160,17 +160,7 @@ class Service_Container {
 			}
 		);
 
-		// Admin services.
-		$this->register(
-			'admin_ui',
-			function ( $container ) {
-				$providers = array(
-					'mailchimp' => $container->get( 'mailchimp_provider' ),
-					'html'      => $container->get( 'html_provider' ),
-				);
-				return new \CampaignBridge\Admin\UI( $providers );
-			}
-		);
+		// Admin services - UI class uses static methods, no instantiation needed.
 
 		// REST API.
 		$this->register(

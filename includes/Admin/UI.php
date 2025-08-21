@@ -62,12 +62,19 @@ class UI {
 			return;
 		}
 
+		// Special handling for Template Manager page to load block editor.
+		if ( $screen && 'toplevel_page_campaignbridge' === $screen->id ) {
+			self::enqueue_block_editor_assets();
+			// Don't load the old campaignbridge.js on the Template Manager page.
+			return;
+		}
+
 		// Load asset metadata for proper dependencies and versioning.
 		$script_asset      = array(
 			'dependencies' => array(),
 			'version'      => '1.0.0',
 		);
-		$script_asset_path = dirname( __DIR__, 2 ) . '/dist/scripts/campaignbridge.asset.php';
+		$script_asset_path = CB_PATH . 'dist/scripts/campaignbridge.asset.php';
 		if ( file_exists( $script_asset_path ) ) {
 			$maybe = include $script_asset_path; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 			if ( is_array( $maybe ) ) {
@@ -75,19 +82,18 @@ class UI {
 			}
 		}
 
-		$base_file = dirname( __DIR__, 2 ) . '/campaignbridge.php';
 		// Ensure REST globals (wpApiSettings) are present for our REST calls.
 		$deps = array_unique( array_merge( (array) $script_asset['dependencies'], array( 'wp-api' ) ) );
 		wp_enqueue_script(
 			'campaignbridge-admin',
-			plugins_url( 'dist/scripts/campaignbridge.js', $base_file ),
+			CB_URL . 'dist/scripts/campaignbridge.js',
 			$deps,
 			$script_asset['version'],
 			true
 		);
 
 		$style_version    = '1.0.0';
-		$style_asset_path = dirname( __DIR__, 2 ) . '/dist/styles/styles.asset.php';
+		$style_asset_path = CB_PATH . 'dist/styles/styles.asset.php';
 		if ( file_exists( $style_asset_path ) ) {
 			$maybe = include $style_asset_path; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
 			if ( is_array( $maybe ) && isset( $maybe['version'] ) ) {
@@ -96,79 +102,224 @@ class UI {
 		}
 		wp_enqueue_style(
 			'campaignbridge-admin',
-			plugins_url( 'dist/styles/styles.css', $base_file ),
+			CB_URL . 'dist/styles/styles.css',
 			array(),
 			$style_version
 		);
 	}
 
 	/**
-	 * Render the Templates page.
+	 * Enqueue WordPress block editor assets for the Template Manager.
 	 *
 	 * @return void
 	 */
-	public static function render_templates_page() {
-		$settings = get_option( self::$option_name );
-		$provider = ( isset( $settings['provider'] ) && isset( self::$providers[ $settings['provider'] ] ) ) ? $settings['provider'] : 'mailchimp';
-		?>
-	<div class="wrap">
-		<h1><?php echo esc_html__( 'Email Templates', 'campaignbridge' ); ?></h1>
+	private static function enqueue_block_editor_assets() {
+		// Ensure editor environment is available.
+		wp_enqueue_editor();
 
-		<div class="cb-field">
-			<a class="button button-primary" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>">Add New Template</a>
-		</div>
+		// Core scripts for native block editor.
+		wp_enqueue_script( 'wp-edit-post' );
+		wp_enqueue_script( 'wp-editor' );
+		wp_enqueue_script( 'wp-blocks' );
+		wp_enqueue_script( 'wp-components' );
+		wp_enqueue_script( 'wp-element' );
+		wp_enqueue_script( 'wp-data' );
+		wp_enqueue_script( 'wp-core-data' );
+		wp_enqueue_script( 'wp-api-fetch' );
+		wp_enqueue_script( 'wp-block-editor' );
+		wp_enqueue_script( 'wp-format-library' );
+		wp_enqueue_script( 'wp-block-library' );
 
-		<div class="cb-field">
-			<label for="campaignbridge-template-select" class="cb-label">Template</label>
-			<select id="campaignbridge-template-select" class="cb-input-wide">
-				<option value="">— Select a template —</option>
-				<?php
-				$templates = get_posts(
-					array(
-						'post_type'   => 'cb_template',
-						'numberposts' => -1,
-						'orderby'     => 'date',
-						'order'       => 'DESC',
-					)
-				);
-				foreach ( (array) $templates as $tpl ) {
-					printf(
-						'<option value="%1$d" %3$s>%2$s</option>',
-						(int) $tpl->ID,
-						esc_html( get_the_title( $tpl ) ),
-						selected( isset( $_GET['tpl'] ) ? (int) $_GET['tpl'] : 0, (int) $tpl->ID, false ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-					);
+		// Core styles for native block editor.
+		wp_enqueue_style( 'wp-edit-blocks' );
+		wp_enqueue_style( 'wp-format-library' );
+		wp_enqueue_style( 'wp-block-editor' );
+		wp_enqueue_style( 'wp-block-library' );
+
+		// Unregister the Classic (freeform) block to avoid TinyMCE dependency errors in embedded context.
+		wp_add_inline_script(
+			'wp-edit-post',
+			"wp.domReady(function(){try{if(window.wp&&wp.blocks&&wp.blocks.unregisterBlockType){wp.blocks.unregisterBlockType('core/freeform');}}catch(e){console.warn('CampaignBridge: could not unregister core/freeform',e);}});"
+		);
+
+				// Enqueue our template manager script using constants.
+		$script_path = CB_PATH . 'dist/scripts/template-manager.js';
+
+		// Debug: Log the paths to see what constants resolve to.
+		error_log( 'CampaignBridge: CB_PATH = ' . CB_PATH );
+		error_log( 'CampaignBridge: CB_URL = ' . CB_URL );
+		error_log( 'CampaignBridge: Script path = ' . $script_path );
+		error_log( 'CampaignBridge: Script exists = ' . ( file_exists( $script_path ) ? 'YES' : 'NO' ) );
+
+		if ( file_exists( $script_path ) ) {
+			wp_enqueue_script(
+				'cb-template-manager',
+				CB_URL . 'dist/scripts/template-manager.js',
+				array( 'wp-edit-post', 'wp-core-data', 'wp-data', 'wp-api-fetch', 'wp-components', 'wp-element', 'wp-block-editor' ),
+				filemtime( $script_path ),
+				true
+			);
+		}
+
+		// Add inline script directly to wp-admin to test JavaScript execution.
+		wp_add_inline_script(
+			'wp-admin',
+			'
+			console.log("=== CampaignBridge: INLINE SCRIPT TEST ===");
+			console.log("Timestamp:", new Date().toISOString());
+			console.log("Location:", window.location.href);
+			console.log("jQuery available:", typeof jQuery !== "undefined");
+			console.log("wp available:", typeof wp !== "undefined");
+			console.log("wp.editPost available:", !!(window.wp && window.wp.editPost));
+
+			// Set up settings
+			window.CB_TMPL_SETTINGS=' . wp_json_encode(
+				array(
+					'cpt'      => 'cb_template',
+					'restBase' => 'cb_template',
+					'nonce'    => wp_create_nonce( 'wp_rest' ),
+					'siteUrl'  => site_url(),
+				)
+			) . ';
+
+			console.log("CB_TMPL_SETTINGS set:", window.CB_TMPL_SETTINGS);
+			console.log("=== END INLINE SCRIPT TEST ===");
+			'
+		);
+
+		// Also add to cb-template-manager if it exists.
+		wp_add_inline_script(
+			'cb-template-manager',
+			'
+			console.log("CampaignBridge: Template manager inline script executed");
+			'
+		);
+
+		// Add inline styles for template manager UI.
+		wp_add_inline_style(
+			'wp-admin',
+			'
+			.cb-template-manager { margin: 20px 0; }
+			.cb-toolbar {
+				margin-bottom: 20px;
+				padding: 15px;
+				background: #fff;
+				border: 1px solid #ccd0d4;
+				border-radius: 4px;
+				box-shadow: 0 1px 1px rgba(0,0,0,.04);
+			}
+			.cb-toolbar .button {
+				margin-right: 10px;
+				margin-bottom: 5px;
+			}
+			.cb-template-controls {
+				margin-bottom: 20px;
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 20px;
+				background: #fff;
+				padding: 20px;
+				border: 1px solid #ccd0d4;
+				border-radius: 4px;
+				box-shadow: 0 1px 1px rgba(0,0,0,.04);
+			}
+			.cb-template-selector, .cb-template-name {
+				display: flex;
+				flex-direction: column;
+			}
+			.cb-label {
+				font-weight: 600;
+				margin-bottom: 8px;
+				color: #1d2327;
+			}
+			.cb-input-wide {
+				width: 100%;
+				max-width: 400px;
+				padding: 8px 12px;
+				border: 1px solid #8c8f94;
+				border-radius: 4px;
+				font-size: 14px;
+				transition: border-color 0.15s ease-in-out;
+			}
+			.cb-input-wide:focus {
+				border-color: #007cba;
+				box-shadow: 0 0 0 1px #007cba;
+				outline: 2px solid transparent;
+			}
+			.cb-editor-container {
+				border: 1px solid #ccd0d4;
+				border-radius: 4px;
+				background: #fff;
+				min-height: 600px;
+				box-shadow: 0 1px 1px rgba(0,0,0,.04);
+			}
+			.cb-editor-container .block-editor {
+				min-height: 600px;
+			}
+			@media (max-width: 782px) {
+				.cb-template-controls {
+					grid-template-columns: 1fr;
+					gap: 15px;
 				}
-				?>
-			</select>
-			<p class="description">Design the email template here. Use Email Post Slot blocks.</p>
-				<p>
-					<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=cb_template' ) ); ?>" target="_blank" class="button"><?php echo esc_html__( 'Open New in Tab', 'campaignbridge' ); ?></a>
-					<button type="button" class="button" id="campaignbridge-new-template"><?php echo esc_html__( 'Create New (inline)', 'campaignbridge' ); ?></button>
-				</p>
-		</div>
+			}
+			'
+		);
+	}
 
-		<div class="cb-field cb-two-pane">
-			<div class="cb-template-pane">
-				<iframe id="campaignbridge-template-iframe" class="cb-iframe" src="<?php echo isset( $_GET['tpl'] ) ? esc_url( admin_url( 'post.php?post=' . (int) $_GET['tpl'] . '&action=edit&cb_iframe=1' ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>"></iframe>
-			</div>
-			<div id="campaignbridge-live-preview" class="cb-preview-pane">
-				<div class="cb-preview-toolbar">
-					<strong class="cb-grow"><?php echo esc_html__( 'Live Preview', 'campaignbridge' ); ?></strong>
-					<label><input type="radio" name="cbPreviewMode" value="rendered" checked> <?php echo esc_html__( 'Rendered', 'campaignbridge' ); ?></label>
-					<label><input type="radio" name="cbPreviewMode" value="html"> <?php echo esc_html__( 'HTML', 'campaignbridge' ); ?></label>
-					<button type="button" class="button" id="cb-refresh-preview"><?php echo esc_html__( 'Refresh', 'campaignbridge' ); ?></button>
-					<button type="button" class="button cb-hidden" id="cb-copy-html"><?php echo esc_html__( 'Copy HTML', 'campaignbridge' ); ?></button>
+	/**
+	 * Render the Template Manager page.
+	 *
+	 * @return void
+	 */
+	public static function render_template_manager_page() {
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html__( 'Template Manager', 'campaignbridge' ); ?></h1>
+
+
+
+			<div id="cb-template-manager-app" class="cb-template-manager">
+				<div class="cb-toolbar">
+					<button type="button" class="button button-primary" id="cb-new-template"><?php echo esc_html__( 'New Template', 'campaignbridge' ); ?></button>
+					<button type="button" class="button" id="cb-save-template"><?php echo esc_html__( 'Save Template', 'campaignbridge' ); ?></button>
+					<button type="button" class="button" id="cb-delete-template"><?php echo esc_html__( 'Delete Template', 'campaignbridge' ); ?></button>
+					<button type="button" class="button" id="cb-refresh-templates"><?php echo esc_html__( 'Refresh List', 'campaignbridge' ); ?></button>
 				</div>
-				<div id="cb-preview-rendered-wrap" class="cb-embed-frame">
-					<iframe id="cb-preview-frame" class="cb-iframe"></iframe>
+
+				<div class="cb-template-controls">
+					<div class="cb-template-selector">
+						<label for="cb-template-select" class="cb-label"><?php echo esc_html__( 'Select Template:', 'campaignbridge' ); ?></label>
+						<select id="cb-template-select" class="cb-input-wide">
+							<option value=""><?php echo esc_html__( '— Select a template —', 'campaignbridge' ); ?></option>
+							<?php
+							$templates = get_posts(
+								array(
+									'post_type'   => 'cb_template',
+									'numberposts' => -1,
+									'orderby'     => 'date',
+									'order'       => 'DESC',
+								)
+							);
+							foreach ( (array) $templates as $template ) {
+								printf(
+									'<option value="%d">%s</option>',
+									(int) $template->ID,
+									esc_html( $template->post_title )
+								);
+							}
+							?>
+						</select>
+					</div>
+
+					<div class="cb-template-name">
+						<label for="cb-template-name" class="cb-label"><?php echo esc_html__( 'Template Name:', 'campaignbridge' ); ?></label>
+						<input type="text" id="cb-template-name" class="cb-input-wide" placeholder="<?php echo esc_attr__( 'Enter template name...', 'campaignbridge' ); ?>" />
+					</div>
 				</div>
-				<textarea id="cb-preview-html" class="cb-codebox" style="display:none;"></textarea>
+
+				<div id="cb-editor-root" class="cb-editor-container"></div>
 			</div>
 		</div>
-
-
-	</div>
 		<?php
 	}
 
