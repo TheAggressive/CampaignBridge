@@ -13,10 +13,6 @@ export class PostManager extends BaseManager {
   }
 
   async doInitialize() {
-    if (!this.isPageSupported('templates')) {
-      return;
-    }
-
     this.setupPostTypeSelection();
     this.loadInitialPosts();
     this.setupPostSelection();

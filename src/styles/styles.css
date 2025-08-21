@@ -54,39 +54,6 @@
     @apply text-red-600;
   }
 
-  /* ================= Templates page (Builder + Live Preview) ======================= */
-  .cb-two-pane {
-    @apply flex items-start gap-8;
-  }
-
-  .cb-template-pane,
-  .cb-preview-pane {
-    @apply flex-none;
-  }
-
-  .cb-preview-toolbar {
-    @apply flex items-center font-semibold gap-4 mb-4;
-  }
-
-  .cb-grow {
-    @apply flex-1;
-  }
-
-  .cb-iframe {
-    @apply w-96 h-screen;
-    width: 600px; /* Custom width for iframe */
-  }
-
-  .cb-embed-frame {
-    @apply bg-white block border border-gray-300;
-  }
-
-  .cb-codebox-600 {
-    @apply font-mono;
-    width: 600px; /* Custom width to match iframe */
-    height: var(--cb-codebox-height);
-  }
-
   /* ================= Post Types page (Switches UI) ================================ */
   .cb-switch {
     @apply inline-flex items-center relative font-medium gap-4 mr-4 mb-4;

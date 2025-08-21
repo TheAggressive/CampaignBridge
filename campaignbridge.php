@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: CampaignBridge
- * Description: Select posts from multiple post types and send them via Mailchimp using a saved template.
+ * Description: Select posts from multiple post types and send them via Mailchimp.
  * Version: 0.1.0
  * Author: Your Name
  *

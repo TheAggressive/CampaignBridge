@@ -111,30 +111,9 @@ export class ServiceContainer {
 
     // Managers
     this.register(
-      'templateManager',
-      async (container) =>
-        new (await import('../managers/TemplateManager.js')).TemplateManager(
-          container
-        )
-    );
-    this.register(
       'postManager',
       async (container) =>
         new (await import('../managers/PostManager.js')).PostManager(container)
-    );
-    this.register(
-      'previewManager',
-      async (container) =>
-        new (await import('../managers/PreviewManager.js')).PreviewManager(
-          container
-        )
-    );
-    this.register(
-      'exportManager',
-      async (container) =>
-        new (await import('../managers/ExportManager.js')).ExportManager(
-          container
-        )
     );
   }
 
@@ -143,12 +122,7 @@ export class ServiceContainer {
    */
   async initializeServices() {
     // Initialize services that need async operations
-    const services = [
-      'templateManager',
-      'postManager',
-      'previewManager',
-      'exportManager',
-    ];
+    const services = ['postManager'];
 
     for (const serviceName of services) {
       if (this.has(serviceName)) {

@@ -11,7 +11,7 @@ export const isCampaignBridgePage = () => {
 // More specific page detection
 export const getCampaignBridgePage = () => {
   const screen = document.body.className;
-  if (screen.includes('toplevel_page_campaignbridge')) return 'templates';
+  if (screen.includes('toplevel_page_campaignbridge')) return 'post-types';
   if (screen.includes('campaignbridge_page_campaignbridge-post-types'))
     return 'post-types';
   if (screen.includes('campaignbridge_page_campaignbridge-settings'))
@@ -20,8 +20,6 @@ export const getCampaignBridgePage = () => {
 };
 
 // Check if current page has specific functionality
-export const hasTemplateFunctionality = () =>
-  getCampaignBridgePage() === 'templates';
 export const hasPostTypeFunctionality = () =>
   getCampaignBridgePage() === 'post-types';
 export const hasSettingsFunctionality = () =>

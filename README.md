@@ -1,51 +1,39 @@
 # CampaignBridge
 
-A WordPress plugin for creating and managing email templates using the native WordPress block editor (Gutenberg).
+A WordPress plugin for managing email campaigns and post type configurations.
 
 ## Features
 
-### Template Manager
-- **Native Block Editor Integration**: Full WordPress block editor embedded directly in the admin interface
-- **Template Management**: Create, edit, save, and delete email templates
-- **Custom Post Type**: Uses `cb_template` post type for storing templates
+### Post Type Management
+- **Post Type Configuration**: Configure which post types are available for campaigns
+- **Settings Management**: Manage plugin settings and provider configurations
 - **REST API Integration**: Modern WordPress REST API for all operations
-- **Responsive Design**: Clean, modern UI with TailwindCSS-inspired styling
-
-### Email Blocks
-- **Email Post Slot**: Dynamic content insertion for posts
-- **Email Post Title**: Post title display
-- **Email Post Excerpt**: Post excerpt display
-- **Email Post Image**: Post featured image
-- **Email Post Button**: Call-to-action buttons
 
 ## Installation
 
 1. Upload the plugin to your `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Navigate to CampaignBridge > Template Manager in your admin menu
+3. Navigate to CampaignBridge > Post Types in your admin menu
 
 ## Usage
 
-### Creating Templates
-1. Go to CampaignBridge > Template Manager
-2. Click "New Template"
-3. Enter a template name
-4. Use the block editor to design your email template
-5. Click "Save Template" to store your work
+### Managing Post Types
+1. Go to CampaignBridge > Post Types
+2. Select which post types should be available for campaigns
+3. Save your configuration
 
-### Managing Templates
-- **Load Template**: Select an existing template from the dropdown
-- **Save Template**: Save changes to the current template
-- **Delete Template**: Remove unwanted templates
-- **Refresh List**: Update the template list from the database
+### Plugin Settings
+1. Go to CampaignBridge > Settings
+2. Configure your email provider settings
+3. Save your configuration
 
 ## Technical Details
 
-- **WordPress Version**: Requires WordPress 5.0+ (Gutenberg)
+- **WordPress Version**: Requires WordPress 5.0+
 - **PHP Version**: PHP 7.4+
-- **JavaScript**: Modern ES6+ with WordPress block editor integration
+- **JavaScript**: Modern ES6+ with WordPress admin integration
 - **Styling**: Custom CSS with WordPress admin theme compatibility
-- **REST API**: Full REST API support for template operations
+- **REST API**: Full REST API support for post type operations
 
 ## Development
 
@@ -70,11 +58,9 @@ pnpm start
 ```
 src/
 ├── scripts/
-│   ├── template-manager.js    # Main template manager functionality
 │   ├── core/                  # Core services and utilities
 │   ├── managers/              # Feature managers
 │   └── services/              # Business logic services
-├── blocks/                    # Custom Gutenberg blocks
 └── styles/                    # CSS and styling
 ```
 

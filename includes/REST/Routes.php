@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace CampaignBridge\REST;
 
-use CampaignBridge\Render\Render as CB_Render;
 use WP_REST_Request;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -81,22 +80,6 @@ class Routes {
 		);
 
 		// Mapping slots endpoint removed (block-based workflow).
-
-		register_rest_route(
-			$ns,
-			'/templates/(?P<id>\\d+)/preview',
-			array(
-				'methods'             => 'POST',
-				'callback'            => array( __CLASS__, 'r_template_preview' ),
-				'permission_callback' => array( __CLASS__, 'can_manage' ),
-				'args'                => array(
-					'slots_map' => array(
-						'type'     => 'object',
-						'required' => false,
-					),
-				),
-			)
-		);
 
 		register_rest_route(
 			$ns,
@@ -243,31 +226,6 @@ class Routes {
 			}
 		);
 		return \rest_ensure_response( array( 'items' => $items ) );
-	}
-
-	// r_template_slots removed.
-
-	/**
-	 * POST /templates/{id}/preview endpoint.
-	 *
-	 * @param WP_REST_Request $req Request object.
-	 * @return WP_REST_Response|WP_Error
-	 */
-	public static function r_template_preview( WP_REST_Request $req ) {
-		$template_id = absint( $req->get_param( 'id' ) );
-		$map         = array();
-		$raw         = $req->get_param( 'slots_map' );
-		if ( is_array( $raw ) ) {
-			$map = array_map( 'absint', $raw );
-		}
-		if ( $template_id <= 0 ) {
-			return new \WP_Error( 'missing_template', 'Missing template', array( 'status' => 400 ) );
-		}
-		$html = CB_Render::render_template_html( $template_id, $map );
-		if ( '' === $html ) {
-			return new \WP_Error( 'render_failed', 'Failed to render preview', array( 'status' => 400 ) );
-		}
-		return \rest_ensure_response( array( 'html' => $html ) );
 	}
 
 	/**

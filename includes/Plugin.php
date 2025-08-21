@@ -9,9 +9,9 @@ declare(strict_types=1);
 
 namespace CampaignBridge;
 
-use CampaignBridge\Admin\UI as AdminUI;
-use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\CPT\TemplateCPT;
+use CampaignBridge\Admin\AssetManager;
+use CampaignBridge\Admin\PostTypesPage;
+use CampaignBridge\Admin\SettingsPage;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\REST\Routes as RestRoutes;
 
@@ -85,9 +85,7 @@ class Plugin {
 		// Wire hooks.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
-		add_action( 'init', array( TemplateCPT::class, 'register' ) );
-		add_action( 'init', array( Blocks::class, 'register' ) );
-		add_action( 'admin_enqueue_scripts', array( AdminUI::class, 'enqueue_admin_assets' ) );
+		add_action( 'admin_enqueue_scripts', array( AssetManager::class, 'enqueue_admin_assets' ) );
 
 		// Initialize Admin UI and AJAX.
 		// AdminUI::init() is called in add_admin_menu() method
@@ -119,7 +117,9 @@ class Plugin {
 	 * @return void
 	 */
 	public function add_admin_menu(): void {
-		AdminUI::init( $this->option_name, $this->providers );
+		// Initialize shared state for all admin pages.
+		PostTypesPage::init_shared_state( $this->option_name, $this->providers );
+		SettingsPage::init_shared_state( $this->option_name, $this->providers );
 
 		// Add main menu page.
 		add_menu_page(
@@ -127,7 +127,7 @@ class Plugin {
 			'CampaignBridge',
 			'manage_options',
 			'campaignbridge',
-			array( AdminUI::class, 'render_template_manager_page' ),
+			array( PostTypesPage::class, 'render' ),
 			'dashicons-email-alt',
 			30
 		);
@@ -135,20 +135,11 @@ class Plugin {
 		// Add submenu pages.
 		add_submenu_page(
 			'campaignbridge',
-			'Email Templates',
-			'Templates',
-			'manage_options',
-			'campaignbridge',
-			array( AdminUI::class, 'render_template_manager_page' )
-		);
-
-		add_submenu_page(
-			'campaignbridge',
 			'Post Types',
 			'Post Types',
 			'manage_options',
-			'campaignbridge-post-types',
-			array( AdminUI::class, 'render_post_types_page' )
+			'campaignbridge',
+			array( PostTypesPage::class, 'render' )
 		);
 
 		add_submenu_page(
@@ -157,7 +148,7 @@ class Plugin {
 			'Settings',
 			'manage_options',
 			'campaignbridge-settings',
-			array( AdminUI::class, 'render_settings_page' )
+			array( SettingsPage::class, 'render' )
 		);
 	}
 
@@ -196,7 +187,6 @@ class Plugin {
 			: sanitize_text_field( $posted_api_key );
 
 		$clean['audience_id']        = sanitize_text_field( $input['audience_id'] ?? '' );
-		$clean['template_id']        = absint( $input['template_id'] ?? 0 );
 		$clean['exclude_post_types'] = array();
 
 		if ( isset( $input['included_post_types'] ) && is_array( $input['included_post_types'] ) ) {
