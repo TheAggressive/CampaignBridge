@@ -54,6 +54,26 @@ module.exports = (env = {}, argv = {}) => {
       publicPath: '',
       clean: false,
     },
+    optimization: {
+      // Completely disable code splitting
+      splitChunks: {
+        cacheGroups: {
+          default: false,
+          vendors: false,
+          // Force everything into the main bundle
+          main: {
+            name: 'main',
+            chunks: 'all',
+            enforce: true,
+            priority: 1,
+          },
+        },
+      },
+      // No runtime chunk
+      runtimeChunk: false,
+      // Force single bundle
+      concatenateModules: true,
+    },
     plugins: [
       new DependencyExtractionWebpackPlugin(),
       new MiniCssExtractPlugin({
