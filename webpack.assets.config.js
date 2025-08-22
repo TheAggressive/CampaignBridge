@@ -14,23 +14,26 @@ function buildEntries() {
   const cwd = process.cwd();
   const entries = {};
 
-  // Scripts: src/scripts/**/*.js -> dist/scripts/**/*.js
+  // Scripts: src/scripts/**/*.js -> dist/scripts/**/*.js (preserve structure)
   const jsFiles = fg.sync('src/scripts/**/*.js', { cwd });
   jsFiles.forEach((file) => {
+    // Keep the full relative path from src/scripts
     const rel = toPosix(
       path.relative(path.join(cwd, 'src/scripts'), path.join(cwd, file))
     );
     const name = rel.replace(/\.js$/i, '');
+    // This creates entries like: 'scripts/services/EmailGenerator'
     entries[`scripts/${name}`] = path.resolve(cwd, file);
   });
 
-  // Styles: src/styles/**/*.{css,scss} -> dist/styles/**/*.css
+  // Styles: src/styles/**/*.{css,scss} -> dist/styles/**/*.css (preserve structure)
   const styleFiles = fg.sync('src/styles/**/*.{css,scss}', { cwd });
   styleFiles.forEach((file) => {
     const rel = toPosix(
       path.relative(path.join(cwd, 'src/styles'), path.join(cwd, file))
     );
     const name = rel.replace(/\.(css|scss)$/i, '');
+    // This creates entries like: 'styles/styles'
     entries[`styles/${name}`] = path.resolve(cwd, file);
   });
 
@@ -47,6 +50,7 @@ module.exports = (env = {}, argv = {}) => {
     output: {
       path: path.resolve(process.cwd(), 'dist'),
       filename: '[name].js',
+      chunkFilename: '[name].js',
       publicPath: '',
       clean: false,
     },
