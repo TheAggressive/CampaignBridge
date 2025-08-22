@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "campaignbridge/email-post-image",
+  "title": "Email Post Image",
+  "category": "widgets",
+  "icon": "format-image",
+  "description": "Renders the selected post's featured image.",
+  "supports": { "html": false },
+  "usesContext": [
+    "campaignbridge:postId",
+    "campaignbridge:postType",
+    "campaignbridge:showImage"
+  ],
+  "editorScript": "file:./index.js",
+  "render": "file:./render.php"
+}

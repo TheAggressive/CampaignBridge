@@ -26,7 +26,7 @@ class AssetManager {
 	 */
 	public static function enqueue_admin_assets(): void {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( $screen && ! in_array( $screen->id, array( 'toplevel_page_campaignbridge', 'campaignbridge_page_campaignbridge-settings' ), true ) ) {
+		if ( ! $screen || ! self::is_campaignbridge_page( $screen->id ) ) {
 			return;
 		}
 
@@ -35,26 +35,39 @@ class AssetManager {
 	}
 
 	/**
+	 * Check if current screen is a CampaignBridge page.
+	 *
+	 * @param string $screen_id Current screen ID.
+	 * @return bool True if CampaignBridge page.
+	 */
+	private static function is_campaignbridge_page( string $screen_id ): bool {
+		// Main menu page.
+		if ( 'toplevel_page_campaignbridge' === $screen_id ) {
+			return true;
+		}
+
+		// Any submenu page starting with 'campaignbridge_page_'
+		if ( strpos( $screen_id, 'campaignbridge_page_' ) === 0 ) {
+			return true;
+		}
+
+		// Future: Add any other page patterns your plugin might use.
+		// For example: custom post types, custom taxonomies, etc.
+
+		return false;
+	}
+
+	/**
 	 * Enqueue admin styles.
 	 *
 	 * @return void
 	 */
 	private static function enqueue_admin_styles(): void {
-		$style_version    = '1.0.0';
-		$style_asset_path = CB_PATH . 'dist/styles/styles.asset.php';
-
-		if ( file_exists( $style_asset_path ) ) {
-			$maybe = include $style_asset_path; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
-			if ( is_array( $maybe ) && isset( $maybe['version'] ) ) {
-				$style_version = (string) $maybe['version'];
-			}
-		}
-
 		wp_enqueue_style(
 			'campaignbridge-admin',
 			CB_URL . 'dist/styles/styles.css',
 			array(),
-			$style_version
+			CB_VERSION
 		);
 	}
 
@@ -64,27 +77,12 @@ class AssetManager {
 	 * @return void
 	 */
 	private static function enqueue_admin_scripts(): void {
-		// Currently no scripts are enqueued, but this method is ready for future use.
-
-		// Example of how to enqueue scripts:
-		/*
-		$script_version    = '1.0.0';
-		$script_asset_path = CB_PATH . 'dist/scripts/admin.asset.php';
-
-		if ( file_exists( $script_asset_path ) ) {
-			$maybe = include $script_asset_path;
-			if ( is_array( $maybe ) && isset( $maybe['version'] ) ) {
-				$script_version = (string) $maybe['version'];
-			}
-		}
-
 		wp_enqueue_script(
 			'campaignbridge-admin',
-			CB_URL . 'dist/scripts/admin.js',
+			CB_URL . 'dist/scripts/templates.js',
 			array( 'jquery' ),
-			$script_version,
+			CB_VERSION,
 			true
 		);
-		*/
 	}
 }

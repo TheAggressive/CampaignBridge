@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "campaignbridge/email-post-button",
+  "title": "Email Post Button",
+  "category": "widgets",
+  "icon": "button",
+  "description": "Renders a CTA button linking to the selected post.",
+  "supports": { "html": false },
+  "usesContext": [
+    "campaignbridge:postId",
+    "campaignbridge:postType",
+    "campaignbridge:ctaLabel"
+  ],
+  "editorScript": "file:./index.js",
+  "render": "file:./render.php"
+}
