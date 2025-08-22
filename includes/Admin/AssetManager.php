@@ -46,7 +46,7 @@ class AssetManager {
 			return true;
 		}
 
-		// Any submenu page starting with 'campaignbridge_page_'
+		// Any submenu page starting with 'campaignbridge_page_'.
 		if ( strpos( $screen_id, 'campaignbridge_page_' ) === 0 ) {
 			return true;
 		}
@@ -77,12 +77,12 @@ class AssetManager {
 	 * @return void
 	 */
 	private static function enqueue_admin_scripts(): void {
-		wp_enqueue_script(
-			'campaignbridge-admin',
-			CB_URL . 'dist/scripts/templates.js',
-			array( 'jquery' ),
-			CB_VERSION,
-			true
-		);
+		// wp_enqueue_script(
+		// 'campaignbridge-admin',
+		// CB_URL . 'dist/scripts/templates.js',
+		// array( 'jquery' ),
+		// CB_VERSION,
+		// true
+		// );
 	}
 }

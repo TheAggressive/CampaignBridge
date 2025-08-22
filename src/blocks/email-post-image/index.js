@@ -16,7 +16,10 @@ registerBlockType('campaignbridge/email-post-image', {
     );
     const mediaId = post?.featured_media || 0;
     const media = useSelect(
-      (select) => (mediaId ? select('core').getMedia(mediaId) : null),
+      (select) =>
+        mediaId
+          ? select('core').getEntityRecord('postType', 'attachment', mediaId)
+          : null,
       [mediaId]
     );
     const url =

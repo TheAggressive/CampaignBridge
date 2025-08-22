@@ -10,9 +10,12 @@ declare(strict_types=1);
 namespace CampaignBridge;
 
 use CampaignBridge\Admin\AssetManager;
+use CampaignBridge\Blocks\Blocks;
 use CampaignBridge\Admin\PostTypesPage;
 use CampaignBridge\Admin\SettingsPage;
+use CampaignBridge\Admin\StatusPage;
 use CampaignBridge\Core\Service_Container;
+use CampaignBridge\PostTypes\EmailTemplate;
 use CampaignBridge\REST\Routes as RestRoutes;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -87,6 +90,15 @@ class Plugin {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( AssetManager::class, 'enqueue_admin_assets' ) );
 
+		// Initialize Blocks system.
+		Blocks::init();
+
+		// Initialize Email Template CPT.
+		EmailTemplate::init();
+
+		// Initialize Status Page.
+		StatusPage::init();
+
 		// Initialize Admin UI and AJAX.
 		// AdminUI::init() is called in add_admin_menu() method
 		// Deprecated: admin-ajax actions replaced by REST API routes.
@@ -120,6 +132,7 @@ class Plugin {
 		// Initialize shared state for all admin pages.
 		PostTypesPage::init_shared_state( $this->option_name, $this->providers );
 		SettingsPage::init_shared_state( $this->option_name, $this->providers );
+		StatusPage::init_shared_state( $this->option_name, $this->providers );
 
 		// Add main menu page.
 		add_menu_page(
@@ -149,6 +162,16 @@ class Plugin {
 			'manage_options',
 			'campaignbridge-settings',
 			array( SettingsPage::class, 'render' )
+		);
+
+		// Add Status submenu page.
+		add_submenu_page(
+			'campaignbridge',
+			'Status',
+			'Status',
+			'manage_options',
+			'campaignbridge-status',
+			array( StatusPage::class, 'render' )
 		);
 	}
 

@@ -46,13 +46,7 @@
     @apply float-none align-middle mr-6;
   }
 
-  .cb-status-ok {
-    @apply text-emerald-600;
-  }
-
-  .cb-status-err {
-    @apply text-red-600;
-  }
+  /* Status colors moved to src/styles/status.css */
 
   /* ================= Post Types page (Switches UI) ================================ */
   .cb-switch {
@@ -103,3 +97,7 @@
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
 }
+
+/* Templates Overview page removed - functionality consolidated into main Email Templates page */
+
+/* Status styles moved to src/styles/status.css */

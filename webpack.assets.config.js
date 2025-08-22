@@ -54,30 +54,20 @@ module.exports = (env = {}, argv = {}) => {
       publicPath: '',
       clean: false,
     },
+    // Completely override optimization settings
     optimization: {
-      // Completely disable code splitting
-      splitChunks: {
-        cacheGroups: {
-          default: false,
-          vendors: false,
-          // Force everything into the main bundle
-          main: {
-            name: 'main',
-            chunks: 'all',
-            enforce: true,
-            priority: 1,
-          },
-        },
-      },
-      // No runtime chunk
+      splitChunks: false,
       runtimeChunk: false,
-      // Force single bundle
       concatenateModules: true,
+      // Use named chunks instead of numbered ones
+      chunkIds: 'named',
+      moduleIds: 'named',
     },
+    // Override CSS output filename to preserve directory structure
     plugins: [
       new DependencyExtractionWebpackPlugin(),
       new MiniCssExtractPlugin({
-        filename: '[name].css',
+        filename: '[name].css', // This will output styles/styles.css
         chunkFilename: '[name].css',
       }),
       new RemoveEmptyScriptsPlugin({
