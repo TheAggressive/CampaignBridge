@@ -2,11 +2,16 @@ import apiFetch from "@wordpress/api-fetch";
 import { Button, Notice, SelectControl, Spinner } from "@wordpress/components";
 import { dispatch, select } from "@wordpress/data";
 import domReady from "@wordpress/dom-ready";
-import { createElement, render, useEffect, useState } from "@wordpress/element";
+import {
+  createElement,
+  createRoot,
+  useEffect,
+  useState,
+} from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 
 const CFG = window.CB_TM || {};
-const CPT = CFG.postType || "cb_template";
+const CPT = CFG.postType || "cb_email_template";
 
 const getParam = (k) => new URLSearchParams(window.location.search).get(k);
 const setParamAndReload = (k, v) => {
@@ -138,5 +143,9 @@ function App() {
 
 domReady(() => {
   const root = document.getElementById("cb-template-manager-root");
-  if (root) render(createElement(App), root);
+  if (root) {
+    // Use React 18 createRoot API instead of deprecated render
+    const reactRoot = createRoot(root);
+    reactRoot.render(createElement(App));
+  }
 });

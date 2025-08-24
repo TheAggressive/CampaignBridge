@@ -135,6 +135,7 @@ class AssetManager {
 				'wp-edit-post',
 				'wp-block-editor',
 				'wp-blocks',
+				'wp-block-library',
 				'wp-components',
 				'wp-element',
 				'wp-data',

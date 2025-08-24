@@ -70,6 +70,7 @@ class TemplateManagerPage extends AdminPage {
 	 * - Only loads template-manager-specific assets on the Template Manager page
 	 * - Prevents unnecessary asset loading on other admin pages
 	 * - Maintains optimal WordPress admin performance
+	 * - Ensures WordPress version compatibility
 	 *
 	 * @since 0.1.0
 	 * @return void
@@ -78,6 +79,23 @@ class TemplateManagerPage extends AdminPage {
 		// Only load assets on the specific Template Manager page.
 		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
 			return;
+		}
+
+		// Check WordPress version compatibility for block editor features.
+		$wp_version  = get_bloginfo( 'version' );
+		$min_version = '5.8.0'; // Minimum version for full block editor support.
+
+		if ( version_compare( $wp_version, $min_version, '<' ) ) {
+			// For older WordPress versions, load basic block editor support.
+			wp_enqueue_script( 'wp-blocks' );
+			wp_enqueue_script( 'wp-element' );
+		} else {
+			// For newer WordPress versions, load full block editor support.
+			wp_enqueue_script( 'wp-block-editor' );
+			wp_enqueue_script( 'wp-edit-post' );
+			wp_enqueue_script( 'wp-format-library' );
+			wp_enqueue_style( 'wp-block-editor' );
+			wp_enqueue_style( 'wp-edit-post' );
 		}
 
 		// Enqueue template-manager-specific assets only.
@@ -101,6 +119,19 @@ class TemplateManagerPage extends AdminPage {
 						'locale'        => get_user_locale(),
 						'defaultTitle'  => __( 'Untitled template', 'campaignbridge' ),
 						'currentPostId' => $current_id ? $current_id : null,
+						'debug'         => array(
+							'wpVersion'       => get_bloginfo( 'version' ),
+							'minVersion'      => '5.8.0',
+							'hasBlockEditor'  => wp_script_is( 'wp-block-editor', 'enqueued' ),
+							'hasBlocks'       => wp_script_is( 'wp-blocks', 'enqueued' ),
+							'hasBlockLibrary' => wp_script_is( 'wp-block-library', 'enqueued' ),
+							'hasEditPost'     => wp_script_is( 'wp-edit-post', 'enqueued' ),
+							'hasElement'      => wp_script_is( 'wp-element', 'enqueued' ),
+							'hasComponents'   => wp_script_is( 'wp-components', 'enqueued' ),
+							'hasData'         => wp_script_is( 'wp-data', 'enqueued' ),
+							'hasApiFetch'     => wp_script_is( 'wp-api-fetch', 'enqueued' ),
+							'hasI18n'         => wp_script_is( 'wp-i18n', 'enqueued' ),
+						),
 					)
 				)
 			),
