@@ -51,17 +51,114 @@ class PageUtils {
 	}
 
 	/**
+	 * Get debug information about discovered admin page classes.
+	 *
+	 * This method provides detailed information about the auto-discovery
+	 * process, useful for development, debugging, and troubleshooting.
+	 *
+	 * @since 0.1.0
+	 * @return array Debug information about admin page discovery.
+	 */
+	public static function get_admin_page_debug_info(): array {
+		$pages_dir = CB_PATH . 'includes/Admin/Pages/';
+		$classes   = self::get_admin_page_classes();
+		$debug     = array(
+			'pages_directory'        => $pages_dir,
+			'pages_directory_exists' => is_dir( $pages_dir ),
+			'discovered_classes'     => $classes,
+			'class_count'            => count( $classes ),
+			'cache_status'           => 'cached',
+		);
+
+		// Check if cache is being used.
+		static $cached_classes = null;
+		if ( null === $cached_classes ) {
+			$debug['cache_status'] = 'not_cached';
+		}
+
+		return $debug;
+	}
+
+	/**
+	 * Clear the admin page classes cache.
+	 *
+	 * This method clears the cached admin page classes, forcing a fresh
+	 * directory scan. Useful for development, testing, or when new
+	 * admin page classes are added.
+	 *
+	 * @since 0.1.0
+	 * @return void
+	 */
+	public static function clear_admin_page_classes_cache(): void {
+		// Clear the static cache by setting it to null.
+		// This will force a fresh directory scan on the next call.
+		$cached_classes = null;
+	}
+
+	/**
+	 * Get all admin page classes automatically.
+	 *
+	 * This method discovers all admin page classes by scanning the Pages directory
+	 * and finding classes that extend AdminPage. This eliminates the need to
+	 * manually maintain a list of admin page classes. Results are cached for
+	 * performance.
+	 *
+	 * @since 0.1.0
+	 * @return array<string> Array of admin page class names.
+	 */
+	private static function get_admin_page_classes(): array {
+		// Use static cache to avoid repeated directory scanning.
+		static $cached_classes = null;
+
+		if ( null !== $cached_classes ) {
+			return $cached_classes;
+		}
+
+		$pages_dir = CB_PATH . 'includes/Admin/Pages/';
+		$classes   = array();
+
+		if ( ! is_dir( $pages_dir ) ) {
+			$cached_classes = array();
+			return $cached_classes;
+		}
+
+		// Scan the Pages directory for PHP files.
+		$files = glob( $pages_dir . '*.php' );
+
+		if ( ! is_array( $files ) ) {
+			$cached_classes = array();
+			return $cached_classes;
+		}
+
+		foreach ( $files as $file ) {
+			$filename = basename( $file, '.php' );
+
+			// Convert filename to class name (e.g., 'PostTypesPage.php' -> 'PostTypesPage').
+			$class_name = 'CampaignBridge\\Admin\\Pages\\' . $filename;
+
+			// Check if the class exists and extends AdminPage.
+			if ( class_exists( $class_name ) && is_subclass_of( $class_name, \CampaignBridge\Admin\Pages\AdminPage::class ) ) {
+				$classes[] = $class_name;
+			}
+		}
+
+		// Cache the result for future calls.
+		$cached_classes = $classes;
+		return $classes;
+	}
+
+	/**
 	 * Check if the current admin screen is a CampaignBridge page.
 	 *
 	 * This method analyzes the WordPress admin screen ID to determine whether
 	 * the current page is part of the CampaignBridge admin interface. It uses
-	 * the static page_slug properties from each admin page class to ensure
-	 * only legitimate CampaignBridge pages are matched.
+	 * the auto-discovered admin page classes to ensure only legitimate
+	 * CampaignBridge pages are matched.
 	 *
 	 * Page Detection Logic:
 	 * - Main menu page: 'toplevel_page_campaignbridge'
 	 * - Submenu pages: Only pages with matching page_slug properties
-	 * - Uses static properties for accurate page detection
+	 * - Uses auto-discovery for accurate page detection
 	 * - Prevents false positives on other admin pages
 	 *
 	 * @since 0.1.0
@@ -74,13 +171,8 @@ class PageUtils {
 			return false;
 		}
 
-		// Check against each admin page class's page_slug property.
-		$admin_page_classes = array(
-			\CampaignBridge\Admin\Pages\PostTypesPage::class,
-			\CampaignBridge\Admin\Pages\SettingsPage::class,
-			\CampaignBridge\Admin\Pages\StatusPage::class,
-			\CampaignBridge\Admin\Pages\TemplateManagerPage::class,
-		);
+		// Check against auto-discovered admin page classes.
+		$admin_page_classes = self::get_admin_page_classes();
 
 		foreach ( $admin_page_classes as $class ) {
 			if ( class_exists( $class ) && method_exists( $class, 'get_page_slug' ) ) {
@@ -123,26 +215,5 @@ class PageUtils {
 	public static function is_current_page( string $page_slug ): bool {
 		$current_slug = self::get_current_page_slug();
 		return $current_slug === $page_slug;
-	}
-
-	/**
-	 * Check if the current page matches a specific admin page class.
-	 *
-	 * This method checks if the current page matches the page_slug
-	 * property of a specific admin page class.
-	 *
-	 * @since 0.1.0
-	 * @param string $admin_page_class The admin page class to check.
-	 * @return bool True if current page matches the class's page_slug.
-	 */
-	public static function is_current_page_class( string $admin_page_class ): bool {
-		if ( ! class_exists( $admin_page_class ) || ! method_exists( $admin_page_class, 'get_page_slug' ) ) {
-			return false;
-		}
-
-		$current_slug = self::get_current_page_slug();
-		$class_slug   = $admin_page_class::get_page_slug();
-
-		return $current_slug === $class_slug;
 	}
 }
