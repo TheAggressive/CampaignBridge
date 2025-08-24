@@ -9,7 +9,9 @@
 
 declare(strict_types=1);
 
-namespace CampaignBridge\Admin;
+namespace CampaignBridge\Admin\Pages;
+
+use CampaignBridge\Admin\Pages\AdminPage;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -19,6 +21,31 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Settings Page: handles the plugin settings configuration interface.
  */
 class SettingsPage extends AdminPage {
+	/**
+	 * Initialize the Settings page.
+	 *
+	 * @return void
+	 */
+	public static function init(): void {
+		// Hook into admin_enqueue_scripts to conditionally load assets.
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_settings_assets' ) );
+	}
+
+	/**
+	 * Enqueue settings page assets.
+	 *
+	 * @return void
+	 */
+	public static function enqueue_settings_assets(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( $screen->id ) ) {
+			return;
+		}
+
+		// Enqueue settings-specific assets only.
+		wp_enqueue_style( 'campaignbridge-settings' );
+		wp_enqueue_script( 'campaignbridge-settings' );
+	}
 	/**
 	 * Render the Settings page.
 	 *

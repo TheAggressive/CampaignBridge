@@ -9,7 +9,9 @@
 
 declare(strict_types=1);
 
-namespace CampaignBridge\Admin;
+namespace CampaignBridge\Admin\Pages;
+
+use CampaignBridge\Admin\Pages\AdminPage;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -19,6 +21,31 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Post Types Page: handles the post type configuration interface.
  */
 class PostTypesPage extends AdminPage {
+	/**
+	 * Initialize the Post Types page.
+	 *
+	 * @return void
+	 */
+	public static function init(): void {
+		// Hook into admin_enqueue_scripts to conditionally load assets.
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_post_types_assets' ) );
+	}
+
+	/**
+	 * Enqueue post types page assets.
+	 *
+	 * @return void
+	 */
+	public static function enqueue_post_types_assets(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( $screen->id ) ) {
+			return;
+		}
+
+		// Enqueue post-types-specific assets only.
+		wp_enqueue_style( 'campaignbridge-post-types' );
+		wp_enqueue_script( 'campaignbridge-post-types' );
+	}
 	/**
 	 * Render the Post Types page.
 	 *

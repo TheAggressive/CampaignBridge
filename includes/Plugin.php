@@ -11,9 +11,9 @@ namespace CampaignBridge;
 
 use CampaignBridge\Admin\AssetManager;
 use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\Admin\PostTypesPage;
-use CampaignBridge\Admin\SettingsPage;
-use CampaignBridge\Admin\StatusPage;
+use CampaignBridge\Admin\Pages\PostTypesPage;
+use CampaignBridge\Admin\Pages\SettingsPage;
+use CampaignBridge\Admin\Pages\StatusPage;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\PostTypes\EmailTemplate;
 use CampaignBridge\REST\Routes as RestRoutes;
@@ -88,7 +88,9 @@ class Plugin {
 		// Wire hooks.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
-		add_action( 'admin_enqueue_scripts', array( AssetManager::class, 'enqueue_admin_assets' ) );
+
+		// Initialize Asset Manager.
+		AssetManager::init();
 
 		// Initialize Blocks system.
 		Blocks::init();
@@ -96,8 +98,10 @@ class Plugin {
 		// Initialize Email Template CPT.
 		EmailTemplate::init();
 
-		// Initialize Status Page.
+		// Initialize Admin Pages.
 		StatusPage::init();
+		PostTypesPage::init();
+		SettingsPage::init();
 
 		// Initialize Admin UI and AJAX.
 		// AdminUI::init() is called in add_admin_menu() method

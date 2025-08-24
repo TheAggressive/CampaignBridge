@@ -2,7 +2,8 @@
 /**
  * Asset Manager for CampaignBridge Admin
  *
- * Handles enqueuing of scripts and styles for admin pages.
+ * Provides methods to register global and page-specific scripts and styles.
+ * Pages enqueue what they need from these registered assets.
  *
  * @package CampaignBridge
  */
@@ -16,73 +17,164 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Asset Manager: handles script and style enqueuing for admin pages.
+ * Asset Manager: provides methods to register scripts and styles.
  */
 class AssetManager {
 	/**
-	 * Enqueue admin scripts and styles on the plugin page.
+	 * Initialize the asset manager.
 	 *
 	 * @return void
 	 */
-	public static function enqueue_admin_assets(): void {
-		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( ! $screen || ! self::is_campaignbridge_page( $screen->id ) ) {
-			return;
-		}
-
-		self::enqueue_admin_styles();
-		self::enqueue_admin_scripts();
+	public static function init(): void {
+		add_action( 'admin_init', array( __CLASS__, 'register_global_assets' ) );
+		add_action( 'admin_init', array( __CLASS__, 'register_page_assets' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_global_assets' ) );
 	}
 
 	/**
-	 * Check if current screen is a CampaignBridge page.
-	 *
-	 * @param string $screen_id Current screen ID.
-	 * @return bool True if CampaignBridge page.
-	 */
-	private static function is_campaignbridge_page( string $screen_id ): bool {
-		// Main menu page.
-		if ( 'toplevel_page_campaignbridge' === $screen_id ) {
-			return true;
-		}
-
-		// Any submenu page starting with 'campaignbridge_page_'.
-		if ( strpos( $screen_id, 'campaignbridge_page_' ) === 0 ) {
-			return true;
-		}
-
-		// Future: Add any other page patterns your plugin might use.
-		// For example: custom post types, custom taxonomies, etc.
-
-		return false;
-	}
-
-	/**
-	 * Enqueue admin styles.
+	 * Register global scripts used across many pages.
 	 *
 	 * @return void
 	 */
-	private static function enqueue_admin_styles(): void {
-		wp_enqueue_style(
-			'campaignbridge-admin',
-			CB_URL . 'dist/styles/styles.css',
+	public static function register_global_scripts(): void {
+		wp_register_script(
+			'campaignbridge-admin-base',
+			CB_URL . 'dist/scripts/admin-base.js',
+			array( 'jquery' ),
+			CB_VERSION,
+			true
+		);
+	}
+
+	/**
+	 * Register global styles used across many pages.
+	 *
+	 * @return void
+	 */
+	public static function register_global_styles(): void {
+		wp_register_style(
+			'campaignbridge-admin-base',
+			CB_URL . 'dist/styles/admin-base.css',
 			array(),
 			CB_VERSION
 		);
 	}
 
 	/**
-	 * Enqueue admin scripts.
+	 * Register page-specific scripts.
 	 *
 	 * @return void
 	 */
-	private static function enqueue_admin_scripts(): void {
-		// wp_enqueue_script(
-		// 'campaignbridge-admin',
-		// CB_URL . 'dist/scripts/templates.js',
-		// array( 'jquery' ),
-		// CB_VERSION,
-		// true
-		// );
+	public static function register_scripts(): void {
+		// Register dashboard page script.
+		wp_register_script(
+			'campaignbridge-dashboard',
+			CB_URL . 'dist/scripts/dashboard.js',
+			array( 'campaignbridge-admin-base' ),
+			CB_VERSION,
+			true
+		);
+
+		// Register post types page script.
+		wp_register_script(
+			'campaignbridge-post-types',
+			CB_URL . 'dist/scripts/post-types.js',
+			array( 'campaignbridge-admin-base' ),
+			CB_VERSION,
+			true
+		);
+
+		// Register settings page script.
+		wp_register_script(
+			'campaignbridge-settings',
+			CB_URL . 'dist/scripts/settings.js',
+			array( 'campaignbridge-admin-base' ),
+			CB_VERSION,
+			true
+		);
+
+		// Register status page script.
+		wp_register_script(
+			'campaignbridge-status',
+			CB_URL . 'dist/scripts/status.js',
+			array( 'campaignbridge-admin-base' ),
+			CB_VERSION,
+			true
+		);
+	}
+
+	/**
+	 * Register page-specific styles.
+	 *
+	 * @return void
+	 */
+	public static function register_styles(): void {
+		// Register dashboard page style.
+		wp_register_style(
+			'campaignbridge-dashboard',
+			CB_URL . 'dist/styles/dashboard.css',
+			array( 'campaignbridge-admin-base' ),
+			CB_VERSION
+		);
+
+		// Register post types page style.
+		wp_register_style(
+			'campaignbridge-post-types',
+			CB_URL . 'dist/styles/post-types.css',
+			array( 'campaignbridge-admin-base' ),
+			CB_VERSION
+		);
+
+		// Register settings page style.
+		wp_register_style(
+			'campaignbridge-settings',
+			CB_URL . 'dist/styles/settings.css',
+			array( 'campaignbridge-admin-base' ),
+			CB_VERSION
+		);
+
+		// Register status page style.
+		wp_register_style(
+			'campaignbridge-status',
+			CB_URL . 'dist/styles/status.css',
+			array( 'campaignbridge-admin-base' ),
+			CB_VERSION
+		);
+	}
+
+	/**
+	 * Register global assets (scripts and styles).
+	 *
+	 * @return void
+	 */
+	public static function register_global_assets(): void {
+		self::register_global_scripts();
+		self::register_global_styles();
+	}
+
+	/**
+	 * Register page-specific assets (scripts and styles).
+	 *
+	 * @return void
+	 */
+	public static function register_page_assets(): void {
+		self::register_scripts();
+		self::register_styles();
+	}
+
+	/**
+	 * Enqueue global assets on CampaignBridge pages.
+	 *
+	 * @return void
+	 */
+	public static function enqueue_global_assets(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( $screen->id ) ) {
+			return;
+		}
+
+		// Always enqueue global assets on CampaignBridge pages.
+		wp_enqueue_style( 'campaignbridge-admin-base' );
+		wp_enqueue_script( 'campaignbridge-admin-base' );
 	}
 }

@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace CampaignBridge\Admin;
+namespace CampaignBridge\Admin\Pages;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

@@ -9,8 +9,10 @@
 
 declare(strict_types=1);
 
-namespace CampaignBridge\Admin;
+namespace CampaignBridge\Admin\Pages;
 
+use CampaignBridge\Admin\Pages\AdminPage;
+use CampaignBridge\Admin\PageUtils;
 use CampaignBridge\Blocks\Blocks;
 use CampaignBridge\PostTypes\EmailTemplate;
 
@@ -28,26 +30,24 @@ class StatusPage extends AdminPage {
 	 * @return void
 	 */
 	public static function init(): void {
-		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_status_styles' ) );
+		// Hook into admin_enqueue_scripts to conditionally load assets.
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_status_assets' ) );
 	}
 
 	/**
-	 * Enqueue status-specific styles.
+	 * Enqueue status page assets.
 	 *
 	 * @return void
 	 */
-	public static function enqueue_status_styles(): void {
-		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( ! $screen || 'campaignbridge_page_campaignbridge-status' !== $screen->id ) {
+	public static function enqueue_status_assets(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || ! PageUtils::is_campaignbridge_page( $screen->id ) ) {
 			return;
 		}
 
-		wp_enqueue_style(
-			'campaignbridge-status',
-			CB_URL . 'dist/styles/status.css',
-			array(),
-			CB_VERSION
-		);
+		// Enqueue status-specific assets only.
+		wp_enqueue_style( 'campaignbridge-status' );
+		wp_enqueue_script( 'campaignbridge-status' );
 	}
 
 	/**
