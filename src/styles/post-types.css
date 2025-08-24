@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+
+@layer components {
+  .cb-switch {
+    @apply inline-flex items-center relative font-medium gap-4 mr-4 mb-4;
+
+    & input {
+      @apply absolute opacity-0 w-0 h-0;
+      pointer-events: none;
+      appearance: none;
+    }
+
+    & .cb-slider {
+      @apply relative w-9 h-4 bg-slate-300 rounded-full transition-colors duration-200;
+    }
+
+    & .cb-slider::after {
+      content: '';
+      @apply absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-transform duration-200;
+    }
+
+    & input:checked + .cb-slider {
+      @apply bg-emerald-500;
+    }
+
+    & input:checked + .cb-slider::after {
+      @apply translate-x-5;
+    }
+
+    & input:focus-visible + .cb-slider {
+      @apply outline-2 outline-emerald-500 outline-offset-2;
+    }
+  }
+
+  .cb-switches-box {
+    @apply max-h-fit max-w-3xl overflow-auto border border-gray-300 bg-white rounded-md p-6;
+  }
+
+  .cb-switches-group {
+    @apply mb-8 last:mb-0;
+  }
+
+  .cb-switches-group-title {
+    @apply font-semibold mb-6;
+  }
+
+  .cb-switches-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
