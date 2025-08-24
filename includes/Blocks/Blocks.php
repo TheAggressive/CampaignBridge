@@ -36,31 +36,6 @@ class Blocks {
 	 * asset management. It ensures that all blocks are properly discovered,
 	 * registered, and available for use in the block editor.
 	 *
-	 * Hook Registration:
-	 * - init: Registers all discovered blocks from the build directory
-	 * - enqueue_block_editor_assets: Loads editor-specific scripts and styles
-	 * - wp_enqueue_scripts: Loads frontend assets for block rendering
-	 *
-	 * Block System Features:
-	 * - Automatic block discovery from dist/blocks directory
-	 * - Dynamic block registration using WordPress block system
-	 * - Editor and frontend asset management
-	 * - Block availability and health monitoring
-	 * - Development workflow integration
-	 *
-	 * Performance Considerations:
-	 * - Blocks are registered during WordPress initialization
-	 * - Asset loading is optimized for editor and frontend contexts
-	 * - Conditional asset loading prevents unnecessary resource usage
-	 * - Block discovery is efficient and non-blocking
-	 *
-	 * Integration Benefits:
-	 * - Seamless WordPress block editor integration
-	 * - Automatic block availability in editor
-	 * - Consistent block behavior and styling
-	 * - Professional block editing experience
-	 * - Future-proof block system architecture
-	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
@@ -79,38 +54,6 @@ class Blocks {
 	 * blocks and automatically registers them with WordPress using the block
 	 * registration system. It provides a dynamic and maintainable approach to
 	 * block management without manual registration requirements.
-	 *
-	 * Block Discovery Process:
-	 * - Scans dist/blocks directory for block directories
-	 * - Identifies valid block structures and configurations
-	 * - Validates block.json files and block metadata
-	 * - Registers blocks using WordPress block system
-	 * - Handles both static and dynamic blocks
-	 *
-	 * Block Registration Features:
-	 * - Automatic block type registration
-	 * - Block metadata and configuration loading
-	 * - Asset path resolution and management
-	 * - Block variation and customization support
-	 * - Error handling for invalid blocks
-	 *
-	 * Directory Structure Expected:
-	 * - dist/blocks/{block-name}/block.json
-	 * - dist/blocks/{block-name}/index.js
-	 * - dist/blocks/{block-name}/style.css
-	 * - dist/blocks/{block-name}/editor.css
-	 *
-	 * Performance Features:
-	 * - Efficient directory scanning and discovery
-	 * - Non-blocking block registration process
-	 * - Memory-efficient block management
-	 * - Optimized asset loading and registration
-	 *
-	 * Error Handling:
-	 * - Graceful handling of missing build directory
-	 * - Validation of block structure and metadata
-	 * - Fallback for incomplete block configurations
-	 * - Debug information for development workflows
 	 *
 	 * @since 0.1.0
 	 * @return void

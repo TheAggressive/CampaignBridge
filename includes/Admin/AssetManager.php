@@ -327,30 +327,6 @@ class AssetManager {
 	 * is identified as a CampaignBridge admin page. It ensures that the
 	 * foundational styling and functionality are always available.
 	 *
-	 * Automatic Detection:
-	 * - Uses PageUtils::is_campaignbridge_page() for page identification
-	 * - Automatically detects main menu and submenu pages
-	 * - Handles both direct page access and page transitions
-	 * - Future-proof for additional page types
-	 *
-	 * Assets Enqueued:
-	 * - campaignbridge-admin-base.css: Global styling and layout
-	 * - campaignbridge-admin-base.js: Core functionality and utilities
-	 * - Ensures consistent appearance across all pages
-	 * - Provides foundation for page-specific functionality
-	 *
-	 * Performance Benefits:
-	 * - Assets are only loaded when needed
-	 * - Prevents unnecessary asset loading on other admin pages
-	 * - Optimizes WordPress admin performance
-	 * - Reduces memory usage and page load times
-	 *
-	 * Integration:
-	 * - Seamlessly integrates with WordPress admin system
-	 * - Works with all WordPress admin themes
-	 * - Compatible with admin plugins and customizations
-	 * - Maintains WordPress admin performance standards
-	 *
 	 * @since 0.1.0
 	 * @return void
 	 */

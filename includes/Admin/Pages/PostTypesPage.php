@@ -7,29 +7,6 @@
  * email campaigns. It provides an intuitive interface for managing post type
  * inclusion/exclusion with real-time updates and validation.
  *
- * Key Features:
- * - Dynamic post type discovery and management
- * - Visual toggle switches for easy configuration
- * - Real-time post type filtering and validation
- * - Integration with WordPress post type system
- * - Persistent settings storage and retrieval
- * - Asset management for page-specific scripts and styles
- *
- * Functionality:
- * - Displays all public post types available in WordPress
- * - Allows administrators to include/exclude specific post types
- * - Provides visual feedback for current configuration
- * - Integrates with plugin settings system
- * - Supports custom post types and core post types
- * - Maintains settings across plugin updates
- *
- * User Experience:
- * - Clean, intuitive interface with toggle switches
- * - Clear descriptions and help text
- * - Immediate visual feedback for changes
- * - Consistent with WordPress admin design patterns
- * - Responsive design for various screen sizes
- *
  * This page serves as the main configuration interface for determining
  * which content types can be included in email campaigns, making it
  * a critical component for content management workflows.

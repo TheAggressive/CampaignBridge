@@ -139,26 +139,6 @@ class StatusPage extends AdminPage {
 	 * system status, email template system, and plugin configuration. It provides
 	 * administrators with a complete overview of system health and functionality.
 	 *
-	 * Page Content Sections:
-	 * - System Status: WordPress version, PHP version, plugin version, debug mode
-	 * - Block System Status: Block availability, registration status, required blocks
-	 * - Template System Status: Email template count, active templates, categories
-	 * - Plugin Configuration: Provider settings, API key status, post type configuration
-	 *
-	 * Display Features:
-	 * - Clean, organized status overview with visual indicators
-	 * - Status cards for easy information scanning
-	 * - Color-coded status indicators (✅ success, ⚠️ warning, ❌ error)
-	 * - Detailed information for debugging and troubleshooting
-	 * - Professional admin interface consistent with WordPress standards
-	 *
-	 * User Experience:
-	 * - Comprehensive system health overview
-	 * - Clear status indicators for quick assessment
-	 * - Detailed information for technical users
-	 * - Professional appearance and organization
-	 * - Responsive design for various screen sizes
-	 *
 	 * @since 0.1.0
 	 * @return void
 	 */

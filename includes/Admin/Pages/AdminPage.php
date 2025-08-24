@@ -6,26 +6,6 @@
  * providing shared functionality, state management, and common patterns that
  * eliminate code duplication across different page implementations.
  *
- * Key Features:
- * - Shared state management for plugin settings and providers
- * - Common settings retrieval and validation methods
- * - Standardized message display and error handling
- * - Abstract methods for page-specific rendering and titles
- * - Consistent option name and provider access patterns
- *
- * Design Principles:
- * - Follows the Template Method pattern for consistent page structure
- * - Provides default implementations for common functionality
- * - Requires subclasses to implement page-specific logic
- * - Maintains clean separation between shared and page-specific code
- * - Ensures consistent user experience across all admin pages
- *
- * Usage:
- * - Extend this class for all new admin pages
- * - Implement required abstract methods (render, get_page_title)
- * - Use shared state methods for consistent data access
- * - Leverage common utility methods for standard functionality
- *
  * The class is designed to be stateless at the instance level, with all
  * methods being static to maintain consistency with the existing codebase.
  *

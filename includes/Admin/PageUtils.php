@@ -7,25 +7,6 @@
  * as a central location for page-related logic, making it easy to determine
  * which page is currently being viewed and perform page-specific operations.
  *
- * Key Features:
- * - Page detection and identification for CampaignBridge admin pages
- * - Current page slug extraction and validation
- * - Page-specific conditional logic support
- * - Future-proof design for additional page types
- * - Consistent page detection across the entire plugin
- *
- * Page Detection Logic:
- * - Main menu page: 'toplevel_page_campaignbridge'
- * - Submenu pages: 'campaignbridge_page_{slug}' pattern
- * - Extensible for custom post types and taxonomies
- * - Handles both current and specific page queries
- *
- * Usage Examples:
- * - Check if current page is any CampaignBridge page
- * - Get current page slug for conditional logic
- * - Determine if specific functionality should be enabled
- * - Route users to appropriate sections
- *
  * This class is designed to be stateless and thread-safe, making it suitable
  * for use throughout the plugin without initialization concerns.
  *
