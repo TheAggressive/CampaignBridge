@@ -6,7 +6,7 @@
  * @package CampaignBridge
  */
 
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @layer components {
   /* Status Overview Container */
@@ -30,7 +30,7 @@
   }
 
   .cb-status-section h2 {
-    @apply mb-6 mt-0 border-b border-gray-200 pb-2 text-xl font-semibold text-gray-900;
+    @apply mt-0 mb-6 border-b border-gray-200 pb-2 text-xl font-semibold text-gray-900;
   }
 
   /* Status Grid */
@@ -151,7 +151,7 @@
   }
 
   .cb-template-meta {
-    @apply bg-gray-100 p-2 text-sm text-gray-600 rounded-md;
+    @apply rounded-md bg-gray-100 p-2 text-sm text-gray-600;
   }
 
   /* Global Status Colors (used across UI) */
