@@ -48,31 +48,6 @@ abstract class AdminPage {
 	 * the plugin option name for settings storage and the registered providers map.
 	 * It ensures consistent data access and configuration across all admin pages.
 	 *
-	 * Shared State Components:
-	 * - Option name for plugin settings storage and retrieval
-	 * - Registered providers map for email service integration
-	 * - Consistent data access patterns across all pages
-	 * - Centralized configuration management
-	 *
-	 * State Management:
-	 * - Static properties for shared data access
-	 * - Consistent option name across all admin pages
-	 * - Provider instances available to all pages
-	 * - Centralized state initialization and management
-	 *
-	 * Usage Benefits:
-	 * - Eliminates duplicate configuration code
-	 * - Ensures consistent data access patterns
-	 * - Centralizes state management and updates
-	 * - Simplifies admin page implementation
-	 * - Maintains data consistency across pages
-	 *
-	 * Integration Features:
-	 * - Works with WordPress options API
-	 * - Supports provider system integration
-	 * - Maintains plugin configuration state
-	 * - Enables cross-page data sharing
-	 *
 	 * @since 0.1.0
 	 * @param string $option_name The WordPress option key used to store plugin settings.
 	 * @param array  $providers   Map of registered provider instances indexed by slug.
@@ -90,24 +65,6 @@ abstract class AdminPage {
 	 * pages use for storing and retrieving plugin settings. It ensures consistent
 	 * data access patterns across the entire admin interface.
 	 *
-	 * Option Name Usage:
-	 * - WordPress options API integration for settings storage
-	 * - Consistent option key across all admin pages
-	 * - Centralized settings management and retrieval
-	 * - Plugin configuration persistence and updates
-	 *
-	 * Data Access Benefits:
-	 * - Eliminates hardcoded option names throughout the codebase
-	 * - Ensures consistent option key usage across all pages
-	 * - Centralizes option name management and updates
-	 * - Simplifies settings access and modification
-	 *
-	 * Integration Features:
-	 * - Works with WordPress get_option() and update_option() functions
-	 * - Supports plugin settings API integration
-	 * - Maintains settings consistency across sessions
-	 * - Enables centralized settings management
-	 *
 	 * @since 0.1.0
 	 * @return string The WordPress option name used for plugin settings storage.
 	 */
@@ -122,30 +79,6 @@ abstract class AdminPage {
 	 * pages use for email service integration. It ensures consistent provider
 	 * access patterns across the entire admin interface.
 	 *
-	 * Provider Map Structure:
-	 * - Indexed by provider slug (e.g., 'mailchimp', 'html')
-	 * - Contains provider instance objects implementing ProviderInterface
-	 * - Provides access to provider-specific functionality and settings
-	 * - Enables dynamic provider selection and configuration
-	 *
-	 * Provider Access Benefits:
-	 * - Eliminates hardcoded provider references throughout the codebase
-	 * - Ensures consistent provider access patterns across all pages
-	 * - Centralizes provider management and configuration
-	 * - Simplifies provider integration and customization
-	 *
-	 * Integration Features:
-	 * - Works with CampaignBridge provider system
-	 * - Supports provider-specific settings and configuration
-	 * - Maintains provider consistency across sessions
-	 * - Enables dynamic provider switching and management
-	 *
-	 * Usage Examples:
-	 * - Provider selection in settings pages
-	 * - Provider-specific configuration fields
-	 * - Email campaign creation and management
-	 * - Provider validation and testing
-	 *
 	 * @since 0.1.0
 	 * @return array<string,object> Map of provider slugs to provider instances.
 	 */
@@ -159,31 +92,6 @@ abstract class AdminPage {
 	 * This method provides access to the centralized plugin settings that all admin
 	 * pages use for configuration and functionality. It ensures consistent settings
 	 * access patterns across the entire admin interface.
-	 *
-	 * Settings Structure:
-	 * - Provider selection and configuration
-	 * - API keys and authentication credentials
-	 * - Email campaign configuration options
-	 * - Post type inclusion/exclusion settings
-	 * - Provider-specific configuration data
-	 *
-	 * Data Access Benefits:
-	 * - Eliminates duplicate settings retrieval code throughout the codebase
-	 * - Ensures consistent settings access patterns across all pages
-	 * - Centralizes settings management and updates
-	 * - Simplifies configuration access and modification
-	 *
-	 * WordPress Integration:
-	 * - Uses WordPress get_option() function for data retrieval
-	 * - Supports default value fallbacks for missing settings
-	 * - Maintains settings consistency across sessions
-	 * - Enables centralized settings management
-	 *
-	 * Usage Examples:
-	 * - Display current configuration in admin pages
-	 * - Validate user input against existing settings
-	 * - Provide default values for form fields
-	 * - Check feature availability based on configuration
 	 *
 	 * @since 0.1.0
 	 * @return array The current plugin settings array, or empty array if no settings exist.
@@ -208,35 +116,6 @@ abstract class AdminPage {
 
 	/**
 	 * Display WordPress admin notices for settings updates and validation errors.
-	 *
-	 * This method handles the display of user feedback messages after form
-	 * submissions, including success messages for saved settings and error
-	 * messages for validation failures. It integrates with WordPress's
-	 * built-in admin notice system for consistent user experience.
-	 *
-	 * Message Types:
-	 * - Success messages for successful settings updates
-	 * - Error messages for validation failures and processing errors
-	 * - Warning messages for potential issues and recommendations
-	 * - Info messages for general information and guidance
-	 *
-	 * WordPress Integration:
-	 * - Uses WordPress settings_errors() function for message display
-	 * - Integrates with WordPress admin notice system
-	 * - Supports custom message styling and positioning
-	 * - Maintains consistent admin interface appearance
-	 *
-	 * User Experience Benefits:
-	 * - Clear feedback on form submission results
-	 * - Professional appearance consistent with WordPress admin
-	 * - Accessible message display and formatting
-	 * - Consistent messaging across all admin pages
-	 *
-	 * Message Sources:
-	 * - Settings API validation errors
-	 * - Custom validation and processing errors
-	 * - Success confirmations for user actions
-	 * - System status and information messages
 	 *
 	 * @since 0.1.0
 	 * @return void

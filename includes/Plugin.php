@@ -24,6 +24,7 @@ use CampaignBridge\Blocks\Blocks;
 use CampaignBridge\Admin\Pages\PostTypesPage;
 use CampaignBridge\Admin\Pages\SettingsPage;
 use CampaignBridge\Admin\Pages\StatusPage;
+use CampaignBridge\Admin\Pages\TemplateManagerPage;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\PostTypes\EmailTemplate;
 use CampaignBridge\REST\Routes as RestRoutes;
@@ -151,7 +152,7 @@ class Plugin {
 			'Post Types',
 			'Post Types',
 			'manage_options',
-			'campaignbridge',
+			'campaignbridge-post-types',
 			array( PostTypesPage::class, 'render' )
 		);
 
@@ -172,6 +173,15 @@ class Plugin {
 			'manage_options',
 			'campaignbridge-status',
 			array( StatusPage::class, 'render' )
+		);
+
+		add_submenu_page(
+			'campaignbridge',
+			'Template Manager',
+			'Template Manager',
+			'manage_options',
+			'campaignbridge-template-manager',
+			array( TemplateManagerPage::class, 'render' )
 		);
 	}
 
@@ -274,6 +284,7 @@ class Plugin {
 		StatusPage::init();
 		PostTypesPage::init();
 		SettingsPage::init();
+		TemplateManagerPage::init();
 	}
 
 	/**

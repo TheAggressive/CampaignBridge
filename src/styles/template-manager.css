@@ -1,0 +1,15 @@
+.cb-tm-shell {
+  margin-top: 12px;
+}
+.cb-tm-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.cb-tm-loading {
+  margin: 12px 0;
+}
+.cb-editor-root {
+  min-height: 70vh;
+}

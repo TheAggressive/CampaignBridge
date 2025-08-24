@@ -43,36 +43,6 @@ class EmailTemplate {
 	 * columns for the admin list view, and registering all necessary WordPress
 	 * hooks for template management and customization.
 	 *
-	 * Hook Registration:
-	 * - init: Registers the custom post type with WordPress
-	 * - post_updated_messages: Customizes post update messages
-	 * - add_meta_boxes: Adds template configuration meta boxes
-	 * - save_post: Handles template metadata saving and validation
-	 * - manage_posts_columns: Customizes admin list view columns
-	 * - manage_posts_custom_column: Populates custom column data
-	 *
-	 * Post Type Features:
-	 * - Custom post type registration with full editor support
-	 * - Block editor integration for visual template design
-	 * - Meta box system for template configuration
-	 * - Custom admin columns for template management
-	 * - Template categorization and organization
-	 * - Template status and activation management
-	 *
-	 * Integration Benefits:
-	 * - Seamless WordPress admin integration
-	 * - Full block editor support and functionality
-	 * - Consistent with WordPress post management patterns
-	 * - Professional template management interface
-	 * - Extensible architecture for future enhancements
-	 *
-	 * User Experience:
-	 * - Intuitive template creation and editing
-	 * - Visual template design with block editor
-	 * - Template configuration and customization
-	 * - Template organization and management
-	 * - Professional template editing workflow
-	 *
 	 * @since 0.1.0
 	 * @return void
 	 */

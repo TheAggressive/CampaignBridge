@@ -7,50 +7,6 @@
  * CampaignBridge plugin. It serves as a diagnostic tool for administrators
  * and developers to troubleshoot issues and monitor plugin performance.
  *
- * Key Features:
- * - Comprehensive system status overview and health checks
- * - Block system status and registration verification
- * - Email template system status and validation
- * - Plugin configuration status and provider verification
- * - WordPress environment compatibility checks
- * - Development debugging information and insights
- * - Asset management for page-specific scripts and styles
- *
- * System Monitoring:
- * - WordPress version compatibility verification
- * - PHP version and configuration status
- * - Plugin version and build information
- * - Debug mode status and recommendations
- * - Server environment compatibility checks
- *
- * Block System Status:
- * - Block availability and build status verification
- * - Registered block count and validation
- * - Required block dependency checking
- * - Block system health and performance metrics
- * - Development workflow status indicators
- *
- * Template System Status:
- * - Email template count and availability
- * - Active template status and validation
- * - Template category organization
- * - Template system performance metrics
- * - Template creation and management status
- *
- * Plugin Configuration:
- * - Provider configuration status
- * - API key validation and connectivity
- * - Post type configuration verification
- * - Settings persistence and validation
- * - Integration status and health
- *
- * This page is essential for:
- * - Troubleshooting plugin issues
- * - Monitoring system health
- * - Development and debugging
- * - Performance optimization
- * - User support and diagnostics
- *
  * @package CampaignBridge
  * @since 0.1.0
  */
@@ -99,23 +55,6 @@ class StatusPage extends AdminPage {
 	 * This method ensures that Status page assets are only loaded when viewing
 	 * the Status page. It uses WordPress's admin_enqueue_scripts hook to detect
 	 * the current admin screen and conditionally load the appropriate assets.
-	 *
-	 * Asset Loading Logic:
-	 * - Detects current admin screen using get_current_screen()
-	 * - Verifies if current page is a CampaignBridge page
-	 * - Only enqueues status-specific CSS and JavaScript
-	 * - Prevents asset loading on unrelated admin pages
-	 *
-	 * Assets Loaded:
-	 * - campaignbridge-status.css: Status page styling and layout
-	 * - campaignbridge-status.js: Status page functionality and interactions
-	 * - Ensures consistent styling and behavior on Status page
-	 *
-	 * Performance Benefits:
-	 * - Conditional asset loading prevents unnecessary resource usage
-	 * - Optimizes WordPress admin performance
-	 * - Reduces memory usage and page load times
-	 * - Maintains clean separation of concerns
 	 *
 	 * @since 0.1.0
 	 * @return void
@@ -166,18 +105,6 @@ class StatusPage extends AdminPage {
 	 * at the top of the Status page. The title is localized for internationalization
 	 * support and provides clear identification of the page's purpose.
 	 *
-	 * Title Features:
-	 * - Localized text for internationalization support
-	 * - Clear identification of page purpose
-	 * - Consistent with WordPress admin naming conventions
-	 * - Professional appearance in admin interface
-	 *
-	 * Usage:
-	 * - Displayed as the main page heading
-	 * - Used in browser tab titles
-	 * - Referenced in navigation and breadcrumbs
-	 * - Consistent with WordPress admin standards
-	 *
 	 * @since 0.1.0
 	 * @return string The localized page title "System Status".
 	 */
@@ -192,31 +119,6 @@ class StatusPage extends AdminPage {
 	 * information about the WordPress environment, PHP configuration, and plugin
 	 * version details. It provides administrators with essential system information
 	 * for troubleshooting and environment assessment.
-	 *
-	 * Status Information Displayed:
-	 * - WordPress Version: Current WordPress installation version
-	 * - PHP Version: Server PHP version and compatibility
-	 * - Plugin Version: CampaignBridge plugin version information
-	 * - Debug Mode: WordPress debug configuration status
-	 *
-	 * Display Features:
-	 * - Clean status cards for easy information scanning
-	 * - Visual status indicators for quick assessment
-	 * - Professional layout consistent with WordPress admin
-	 * - Responsive design for various screen sizes
-	 * - Clear value display with appropriate formatting
-	 *
-	 * Technical Details:
-	 * - Uses WordPress core functions for accurate information
-	 * - Displays PHP version for compatibility checking
-	 * - Shows plugin version for update verification
-	 * - Indicates debug mode for development environments
-	 *
-	 * User Experience:
-	 * - Quick system health assessment
-	 * - Clear version information display
-	 * - Professional appearance and organization
-	 * - Easy troubleshooting information access
 	 *
 	 * @since 0.1.0
 	 * @return void
@@ -299,7 +201,7 @@ class StatusPage extends AdminPage {
 			<?php endif; ?>
 
 			<?php
-			// Check specific blocks
+			// Check specific blocks.
 			$specific_blocks = array(
 				'campaignbridge/email-template',
 				'campaignbridge/email-post-slot',

@@ -39,25 +39,6 @@ class PageUtils {
 	 * - Extensible for future page types and custom post types
 	 * - Handles both direct access and page transitions
 	 *
-	 * Screen ID Patterns:
-	 * - toplevel_page_campaignbridge: Main dashboard page
-	 * - campaignbridge_page_post-types: Post types configuration
-	 * - campaignbridge_page_settings: Plugin settings page
-	 * - campaignbridge_page_status: System status page
-	 * - Future: Custom post types, taxonomies, etc.
-	 *
-	 * Usage Examples:
-	 * - Conditional asset loading on specific pages
-	 * - Page-specific functionality activation
-	 * - Context-aware admin interface customization
-	 * - Performance optimization for page-specific features
-	 *
-	 * Performance Notes:
-	 * - Lightweight string comparison operations
-	 * - No database queries or external API calls
-	 * - Fast execution for real-time page detection
-	 * - Memory-efficient for frequent calls
-	 *
 	 * @since 0.1.0
 	 * @param string $screen_id The WordPress admin screen ID to check.
 	 * @return bool True if the current screen is a CampaignBridge page, false otherwise.
@@ -86,33 +67,6 @@ class PageUtils {
 	 * which specific CampaignBridge page is being viewed. It extracts the
 	 * page identifier from the screen ID and returns a human-readable slug
 	 * for use in conditional logic and page-specific functionality.
-	 *
-	 * Page Slug Mapping:
-	 * - 'toplevel_page_campaignbridge' → 'dashboard'
-	 * - 'campaignbridge_page_post-types' → 'post-types'
-	 * - 'campaignbridge_page_settings' → 'settings'
-	 * - 'campaignbridge_page_status' → 'status'
-	 * - Future patterns will be automatically detected
-	 *
-	 * Return Values:
-	 * - 'dashboard': Main CampaignBridge dashboard page
-	 * - 'post-types': Post type configuration page
-	 * - 'settings': Plugin settings and provider configuration
-	 * - 'status': System status and debugging page
-	 * - null: Not on a CampaignBridge page
-	 *
-	 * Usage Examples:
-	 * - Conditional asset loading based on current page
-	 * - Page-specific functionality activation
-	 * - Context-aware admin interface customization
-	 * - Navigation and breadcrumb generation
-	 * - Performance optimization for page-specific features
-	 *
-	 * Error Handling:
-	 * - Returns null if not on a CampaignBridge page
-	 * - Handles missing or invalid screen objects gracefully
-	 * - Provides safe fallback for edge cases
-	 * - Maintains consistent return type expectations
 	 *
 	 * @since 0.1.0
 	 * @return string|null The current page slug (e.g., 'dashboard', 'settings') or null if not a CampaignBridge page.
