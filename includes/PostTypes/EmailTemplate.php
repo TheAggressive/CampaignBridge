@@ -1,10 +1,17 @@
 <?php
 /**
- * Email Template Custom Post Type
+ * Email Template Custom Post Type Manager for CampaignBridge.
  *
- * Registers and manages the email template custom post type for CampaignBridge.
+ * This class manages the Email Template custom post type, which serves as the
+ * foundation for creating, editing, and managing email campaign templates.
+ * It provides a comprehensive system for template creation, customization,
+ * and organization using WordPress's block editor and custom fields.
+ *
+ * This class is essential for the email template system and provides
+ * the foundation for visual email campaign creation and management.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);
@@ -29,8 +36,44 @@ class EmailTemplate {
 	public const POST_TYPE = 'cb_email_template';
 
 	/**
-	 * Initialize the custom post type.
+	 * Initialize the Email Template custom post type and all associated functionality.
 	 *
+	 * This method sets up the complete Email Template system by registering the
+	 * custom post type, adding meta boxes for configuration, setting up custom
+	 * columns for the admin list view, and registering all necessary WordPress
+	 * hooks for template management and customization.
+	 *
+	 * Hook Registration:
+	 * - init: Registers the custom post type with WordPress
+	 * - post_updated_messages: Customizes post update messages
+	 * - add_meta_boxes: Adds template configuration meta boxes
+	 * - save_post: Handles template metadata saving and validation
+	 * - manage_posts_columns: Customizes admin list view columns
+	 * - manage_posts_custom_column: Populates custom column data
+	 *
+	 * Post Type Features:
+	 * - Custom post type registration with full editor support
+	 * - Block editor integration for visual template design
+	 * - Meta box system for template configuration
+	 * - Custom admin columns for template management
+	 * - Template categorization and organization
+	 * - Template status and activation management
+	 *
+	 * Integration Benefits:
+	 * - Seamless WordPress admin integration
+	 * - Full block editor support and functionality
+	 * - Consistent with WordPress post management patterns
+	 * - Professional template management interface
+	 * - Extensible architecture for future enhancements
+	 *
+	 * User Experience:
+	 * - Intuitive template creation and editing
+	 * - Visual template design with block editor
+	 * - Template configuration and customization
+	 * - Template organization and management
+	 * - Professional template editing workflow
+	 *
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function init(): void {

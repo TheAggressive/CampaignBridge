@@ -1,11 +1,17 @@
 <?php
 /**
- * CampaignBridge Mailchimp provider.
+ * Mailchimp Email Service Provider for CampaignBridge.
  *
- * Creates campaigns, updates content sections, and fetches
- * audiences/templates via the Mailchimp API.
+ * This class implements the CampaignBridge provider interface to integrate
+ * with Mailchimp's email marketing platform. It provides comprehensive
+ * functionality for creating campaigns, managing audiences, selecting
+ * templates, and handling all Mailchimp-specific operations.
+ *
+ * This provider enables seamless integration with Mailchimp's powerful
+ * email marketing platform for professional email campaigns.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);

@@ -1,10 +1,41 @@
 <?php
 /**
- * Post Types Admin Page for CampaignBridge
+ * Post Types Admin Page for CampaignBridge Admin Interface.
  *
- * Handles the Post Types configuration page.
+ * This class handles the Post Types configuration page, which allows administrators
+ * to control which WordPress post types are available for use in CampaignBridge
+ * email campaigns. It provides an intuitive interface for managing post type
+ * inclusion/exclusion with real-time updates and validation.
+ *
+ * Key Features:
+ * - Dynamic post type discovery and management
+ * - Visual toggle switches for easy configuration
+ * - Real-time post type filtering and validation
+ * - Integration with WordPress post type system
+ * - Persistent settings storage and retrieval
+ * - Asset management for page-specific scripts and styles
+ *
+ * Functionality:
+ * - Displays all public post types available in WordPress
+ * - Allows administrators to include/exclude specific post types
+ * - Provides visual feedback for current configuration
+ * - Integrates with plugin settings system
+ * - Supports custom post types and core post types
+ * - Maintains settings across plugin updates
+ *
+ * User Experience:
+ * - Clean, intuitive interface with toggle switches
+ * - Clear descriptions and help text
+ * - Immediate visual feedback for changes
+ * - Consistent with WordPress admin design patterns
+ * - Responsive design for various screen sizes
+ *
+ * This page serves as the main configuration interface for determining
+ * which content types can be included in email campaigns, making it
+ * a critical component for content management workflows.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);
@@ -22,8 +53,26 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PostTypesPage extends AdminPage {
 	/**
-	 * Initialize the Post Types page.
+	 * Initialize the Post Types page and set up asset management.
 	 *
+	 * This method sets up the Post Types page by registering the necessary WordPress
+	 * hooks for conditional asset loading. It ensures that page-specific CSS and
+	 * JavaScript files are only loaded when viewing the Post Types page, optimizing
+	 * performance across the admin interface.
+	 *
+	 * Asset Management:
+	 * - Hooks into admin_enqueue_scripts for conditional asset loading
+	 * - Only loads post-types-specific assets on the Post Types page
+	 * - Prevents unnecessary asset loading on other admin pages
+	 * - Maintains optimal WordPress admin performance
+	 *
+	 * Page Functionality:
+	 * - Post type configuration and management interface
+	 * - Dynamic form handling and validation
+	 * - Real-time post type filtering and selection
+	 * - Professional admin interface for content management
+	 *
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function init(): void {
@@ -32,8 +81,30 @@ class PostTypesPage extends AdminPage {
 	}
 
 	/**
-	 * Enqueue post types page assets.
+	 * Conditionally enqueue Post Types page-specific CSS and JavaScript assets.
 	 *
+	 * This method ensures that Post Types page assets are only loaded when viewing
+	 * the Post Types page. It uses WordPress's admin_enqueue_scripts hook to detect
+	 * the current admin screen and conditionally load the appropriate assets.
+	 *
+	 * Asset Loading Logic:
+	 * - Detects current admin screen using get_current_screen()
+	 * - Verifies if current page is a CampaignBridge page
+	 * - Only enqueues post-types-specific CSS and JavaScript
+	 * - Prevents asset loading on unrelated admin pages
+	 *
+	 * Assets Loaded:
+	 * - campaignbridge-post-types.css: Post Types page styling and layout
+	 * - campaignbridge-post-types.js: Post Types page functionality and interactions
+	 * - Ensures consistent styling and behavior on Post Types page
+	 *
+	 * Performance Benefits:
+	 * - Conditional asset loading prevents unnecessary resource usage
+	 * - Optimizes WordPress admin performance
+	 * - Reduces memory usage and page load times
+	 * - Maintains clean separation of concerns
+	 *
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function enqueue_post_types_assets(): void {
@@ -47,8 +118,42 @@ class PostTypesPage extends AdminPage {
 		wp_enqueue_script( 'campaignbridge-post-types' );
 	}
 	/**
-	 * Render the Post Types page.
+	 * Render the complete Post Types configuration page with dynamic form interface.
 	 *
+	 * This method generates the full Post Types page HTML, providing administrators
+	 * with an intuitive interface for configuring which WordPress post types are
+	 * available for use in CampaignBridge email campaigns. It displays all public
+	 * post types with toggle switches for easy configuration.
+	 *
+	 * Page Content Features:
+	 * - Dynamic post type discovery and listing
+	 * - Visual toggle switches for easy configuration
+	 * - Real-time post type filtering and validation
+	 * - Professional form interface with WordPress standards
+	 * - Clear descriptions and help text for user guidance
+	 *
+	 * Form Functionality:
+	 * - WordPress settings API integration
+	 * - Nonce verification for security
+	 * - Form validation and error handling
+	 * - Settings persistence and retrieval
+	 * - Real-time configuration updates
+	 *
+	 * User Experience:
+	 * - Intuitive toggle switch interface
+	 * - Clear visual feedback for current configuration
+	 * - Professional appearance consistent with WordPress admin
+	 * - Responsive design for various screen sizes
+	 * - Immediate visual feedback for changes
+	 *
+	 * Technical Features:
+	 * - Integrates with WordPress post type system
+	 * - Uses plugin settings for configuration storage
+	 * - Maintains settings across plugin updates
+	 * - Supports custom post types and core post types
+	 * - Efficient post type discovery and management
+	 *
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function render(): void {
@@ -100,9 +205,26 @@ class PostTypesPage extends AdminPage {
 	}
 
 	/**
-	 * Get the page title.
+	 * Get the localized page title for the Post Types configuration page.
 	 *
-	 * @return string
+	 * This method returns the human-readable title that will be displayed
+	 * at the top of the Post Types page. The title is localized for internationalization
+	 * support and provides clear identification of the page's purpose.
+	 *
+	 * Title Features:
+	 * - Localized text for internationalization support
+	 * - Clear identification of page purpose (Post Types configuration)
+	 * - Consistent with WordPress admin naming conventions
+	 * - Professional appearance in admin interface
+	 *
+	 * Usage:
+	 * - Displayed as the main page heading
+	 * - Used in browser tab titles
+	 * - Referenced in navigation and breadcrumbs
+	 * - Consistent with WordPress admin standards
+	 *
+	 * @since 0.1.0
+	 * @return string The localized page title "Post Types".
 	 */
 	public static function get_page_title(): string {
 		return __( 'Post Types', 'campaignbridge' );

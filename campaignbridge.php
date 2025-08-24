@@ -1,11 +1,20 @@
 <?php
 /**
  * Plugin Name: CampaignBridge
- * Description: Select posts from multiple post types and send them via Mailchimp.
- * Version: 0.1.0
+ * Description: A comprehensive WordPress plugin for creating and managing email campaigns with dynamic content from multiple post types. Features include Mailchimp integration, custom email templates, block-based email design, and automated campaign generation. Perfect for newsletters, promotional emails, and content marketing automation.
+ * Version: 0.2.0
+ * Requires at least: 5.0
+ * Tested up to: 6.4
+ * Requires PHP: 7.4
  * Author: Your Name
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: campaignbridge
+ * Domain Path: /languages
+ * Network: false
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

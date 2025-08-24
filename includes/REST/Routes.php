@@ -1,8 +1,17 @@
 <?php
 /**
- * CampaignBridge REST routes.
+ * REST API Routes for CampaignBridge Admin Operations.
+ *
+ * This class provides a comprehensive REST API for CampaignBridge admin
+ * functionality, enabling modern JavaScript-based interactions, AJAX
+ * operations, and external system integration. It follows WordPress
+ * REST API standards and provides secure, authenticated endpoints.
+ *
+ * This API enables modern, responsive admin interfaces and provides
+ * the foundation for external integrations and automation.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);

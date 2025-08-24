@@ -1,11 +1,17 @@
 <?php
 /**
- * CampaignBridge email campaign dispatcher.
+ * Email Campaign Dispatcher for CampaignBridge.
  *
- * Builds email content blocks from posts/sections and dispatches them
- * to the active provider (e.g., Mailchimp or HTML download).
+ * This class serves as the core engine for email campaign generation and
+ * dispatch. It processes selected posts, converts them into email-ready
+ * content blocks, and dispatches the campaigns to the configured email
+ * provider (Mailchimp, HTML export, etc.).
+ *
+ * This class is the heart of the email campaign system and handles
+ * the complex process of converting WordPress content into email campaigns.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);

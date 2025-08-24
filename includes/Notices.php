@@ -1,8 +1,17 @@
 <?php
 /**
- * CampaignBridge admin notices helper.
+ * Admin Notices Management System for CampaignBridge.
+ *
+ * This class provides a comprehensive system for managing and displaying
+ * admin notices throughout the CampaignBridge plugin. It handles notice
+ * queuing, rendering, and lifecycle management with support for multiple
+ * notice types and automatic cleanup.
+ *
+ * This class ensures consistent and professional user feedback
+ * throughout the CampaignBridge admin interface.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);

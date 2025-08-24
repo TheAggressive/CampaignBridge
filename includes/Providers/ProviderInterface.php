@@ -1,8 +1,17 @@
 <?php
 /**
- * CampaignBridge provider interface.
+ * Provider Interface for CampaignBridge Email Service Providers.
+ *
+ * This interface defines the contract that all email service providers must
+ * implement to integrate with CampaignBridge. It ensures consistent provider
+ * behavior, configuration management, and campaign delivery across different
+ * email services and export formats.
+ *
+ * This interface ensures that all providers follow consistent patterns
+ * and provide reliable email campaign functionality.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);

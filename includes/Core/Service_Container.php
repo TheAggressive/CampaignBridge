@@ -1,9 +1,17 @@
 <?php
 /**
- * Service Container for PHP dependency injection
- * Follows SOLID principles and provides centralized service access
+ * Service Container for CampaignBridge Dependency Injection System.
+ *
+ * This class implements a comprehensive dependency injection container that
+ * follows SOLID principles and provides centralized service management for
+ * the entire CampaignBridge plugin. It serves as the backbone for service
+ * registration, instantiation, and lifecycle management.
+ *
+ * This class is essential for the plugin's architecture and provides
+ * the foundation for all service-based functionality.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);

@@ -1,8 +1,30 @@
 <?php
 /**
- * Plugin bootstrap and orchestrator.
+ * Plugin bootstrap and orchestrator for CampaignBridge.
+ *
+ * This class serves as the main entry point and central coordinator for the entire
+ * CampaignBridge plugin. It handles plugin initialization, service container setup,
+ * provider management, admin menu creation, REST API registration, and hooks all
+ * the various components together.
+ *
+ * Key responsibilities:
+ * - Initialize the service container and dependency injection system
+ * - Set up WordPress hooks and filters for admin functionality
+ * - Register admin menu pages and submenu items
+ * - Initialize the asset management system for scripts and styles
+ * - Set up the block system for email template creation
+ * - Register REST API endpoints for AJAX operations
+ * - Handle provider initialization (Mailchimp, HTML export)
+ * - Manage plugin settings and configuration
+ * - Set up email template custom post type
+ * - Handle cache invalidation when settings change
+ *
+ * The class follows the singleton pattern and is instantiated once when the plugin
+ * is loaded. It acts as a facade that provides access to all plugin functionality
+ * while maintaining clean separation of concerns.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);
@@ -54,6 +76,28 @@ class Plugin {
 
 	/**
 	 * Construct and wire plugin hooks.
+	 *
+	 * This constructor initializes the CampaignBridge plugin by setting up the service
+	 * container, registering all necessary WordPress hooks, and initializing all
+	 * plugin components. It follows a fail-fast approach where critical errors
+	 * prevent plugin initialization to avoid partial functionality.
+	 *
+	 * The initialization process includes:
+	 * 1. Service container setup with dependency injection
+	 * 2. Provider initialization (Mailchimp, HTML export)
+	 * 3. WordPress hook registration for admin functionality
+	 * 4. Asset management system initialization
+	 * 5. Block system and custom post type setup
+	 * 6. REST API endpoint registration
+	 * 7. Cache management and invalidation hooks
+	 *
+	 * If any critical component fails to initialize, the constructor will:
+	 * - Log the error for debugging purposes
+	 * - Display an admin notice to inform the user
+	 * - Return early to prevent partial plugin functionality
+	 *
+	 * @since 0.1.0
+	 * @throws \Exception When critical services fail to initialize.
 	 */
 	public function __construct() {
 		try {
@@ -128,8 +172,44 @@ class Plugin {
 	}
 
 	/**
-	 * Register top-level admin menu and submenu pages.
+	 * Register the complete admin menu structure for CampaignBridge.
 	 *
+	 * This method creates the main admin menu and all submenu pages that
+	 * provide access to CampaignBridge functionality. It sets up the menu
+	 * hierarchy, page callbacks, and user capability requirements while
+	 * initializing shared state for all admin pages.
+	 *
+	 * Menu Structure:
+	 * - Main Menu: CampaignBridge (dashicons-email-alt)
+	 * - Submenu: Post Types (default landing page)
+	 * - Submenu: Settings (plugin configuration)
+	 * - Submenu: Status (system health and debugging)
+	 *
+	 * Page Initialization:
+	 * - Sets up shared state for all admin pages
+	 * - Initializes option names and provider instances
+	 * - Ensures consistent data access across pages
+	 * - Maintains plugin configuration state
+	 *
+	 * User Capabilities:
+	 * - Requires 'manage_options' capability
+	 * - Ensures only administrators can access
+	 * - Maintains WordPress security standards
+	 * - Supports role-based access control
+	 *
+	 * Menu Configuration:
+	 * - Position 30 in admin menu (after Posts)
+	 * - Email icon for visual identification
+	 * - Consistent with WordPress admin patterns
+	 * - Professional appearance and organization
+	 *
+	 * Integration Features:
+	 * - Seamless WordPress admin integration
+	 * - Consistent with admin theme styling
+	 * - Supports admin menu customizations
+	 * - Maintains admin performance standards
+	 *
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public function add_admin_menu(): void {
@@ -180,8 +260,49 @@ class Plugin {
 	}
 
 	/**
-	 * Register settings and sanitization callback for plugin options.
+	 * Register plugin settings with WordPress options API and sanitization.
 	 *
+	 * This method registers the CampaignBridge settings with WordPress's
+	 * options system, providing a secure and standardized way to store
+	 * plugin configuration. It includes comprehensive sanitization and
+	 * validation to ensure data integrity and security.
+	 *
+	 * Settings Registration:
+	 * - Option name: 'campaignbridge_settings'
+	 * - Data type: Array for complex configuration
+	 * - Default value: Empty array for clean initialization
+	 * - Sanitization: Custom callback for data validation
+	 *
+	 * Data Structure:
+	 * - provider: Email service provider selection
+	 * - api_key: Provider API credentials
+	 * - audience_id: Mailchimp audience/list ID
+	 * - template_id: Mailchimp template ID
+	 * - exclude_post_types: Post types to exclude from campaigns
+	 * - included_post_types: Post types to include in campaigns
+	 *
+	 * Sanitization Features:
+	 * - Input validation and type checking
+	 * - Data sanitization and escaping
+	 * - Security validation and verification
+	 * - Default value fallbacks
+	 * - Data consistency enforcement
+	 *
+	 * Security Measures:
+	 * - WordPress nonce verification
+	 * - User capability checking
+	 * - Input sanitization and validation
+	 * - SQL injection prevention
+	 * - XSS protection through escaping
+	 *
+	 * Integration Benefits:
+	 * - WordPress admin settings integration
+	 * - Automatic form handling and validation
+	 * - Settings API compatibility
+	 * - Admin notice integration
+	 * - Settings persistence across sessions
+	 *
+	 * @since 0.1.0
 	 * @return void
 	 */
 	public function register_settings(): void {
@@ -197,10 +318,51 @@ class Plugin {
 	}
 
 	/**
-	 * Sanitize submitted settings before persistence.
+	 * Sanitize and validate submitted plugin settings before persistence.
 	 *
-	 * @param array $input Raw submitted values.
-	 * @return array Cleaned settings array.
+	 * This method processes all submitted form data to ensure data integrity,
+	 * security, and consistency. It applies WordPress sanitization functions,
+	 * validates data types, and provides intelligent fallbacks for missing
+	 * or invalid data.
+	 *
+	 * Sanitization Process:
+	 * - Provider selection validation and sanitization
+	 * - API key sanitization and security validation
+	 * - Audience and template ID validation
+	 * - Post type inclusion/exclusion processing
+	 * - Data type enforcement and conversion
+	 *
+	 * Input Validation:
+	 * - Provider: Must be valid provider slug
+	 * - API Key: Text sanitization and length validation
+	 * - Audience ID: Text sanitization and format validation
+	 * - Template ID: Numeric validation and range checking
+	 * - Post Types: Array validation and sanitization
+	 *
+	 * Data Processing:
+	 * - Post type exclusion logic based on inclusions
+	 * - API key preservation for existing configurations
+	 * - Provider-specific validation and requirements
+	 * - Data consistency enforcement across settings
+	 * - Default value application for missing data
+	 *
+	 * Security Features:
+	 * - SQL injection prevention through sanitization
+	 * - XSS protection through output escaping
+	 * - Data type validation and enforcement
+	 * - Malicious input filtering and removal
+	 * - WordPress security best practices compliance
+	 *
+	 * Error Handling:
+	 * - Graceful fallbacks for invalid data
+	 * - Default value application for missing data
+	 * - Data consistency maintenance
+	 * - User-friendly error reporting
+	 * - Settings persistence protection
+	 *
+	 * @since 0.1.0
+	 * @param array $input Raw submitted form values from the settings form.
+	 * @return array Cleaned, validated, and sanitized settings array ready for storage.
 	 */
 	public function sanitize_settings( array $input ): array {
 		$clean             = array();

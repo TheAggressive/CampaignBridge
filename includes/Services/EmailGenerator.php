@@ -1,10 +1,13 @@
 <?php
 /**
- * Email Generation Service
+ * Email Generation Service for CampaignBridge.
  *
- * Converts WordPress blocks to email-safe HTML while maintaining design fidelity.
+ * This class converts WordPress blocks to email-safe HTML while maintaining
+ * design fidelity. It provides comprehensive email generation capabilities
+ * for creating professional email campaigns from block-based content.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);

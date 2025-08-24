@@ -1,10 +1,17 @@
 <?php
 /**
- * CampaignBridge HTML provider.
+ * HTML Export Provider for CampaignBridge.
  *
- * Outputs the generated email as a downloadable HTML file.
+ * This class implements the CampaignBridge provider interface to provide
+ * HTML export functionality for email campaigns. It generates downloadable
+ * HTML files that can be used for manual email sending, testing, or
+ * integration with other email systems.
+ *
+ * This provider is ideal for users who prefer manual control over
+ * email delivery or need to integrate with custom email systems.
  *
  * @package CampaignBridge
+ * @since 0.1.0
  */
 
 declare(strict_types=1);
