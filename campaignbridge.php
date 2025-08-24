@@ -2,10 +2,10 @@
 /**
  * Plugin Name: CampaignBridge
  * Description: A comprehensive WordPress plugin for creating and managing email campaigns with dynamic content from multiple post types. Features include Mailchimp integration, custom email templates, block-based email design, and automated campaign generation. Perfect for newsletters, promotional emails, and content marketing automation.
- * Requires at least: 5.0
- * Tested up to: 6.4
- * Requires PHP: 7.4
- * Author: Aggressive Network
+ * Requires at least: 6.5.0
+ * Tested up to: 6.8.2
+ * Requires PHP: 8.2
+ * Author: Aggressive Network, LLC
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: campaignbridge

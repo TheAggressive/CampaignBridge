@@ -25,7 +25,7 @@
     "js:watch": "wp-scripts start ./src/scripts/app.js --output-path=dist/scripts"
   },
   "keywords": [],
-  "author": "",
+  "author": "Aggressive Network, LLC",
   "license": "ISC",
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
