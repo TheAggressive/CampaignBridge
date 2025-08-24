@@ -239,8 +239,8 @@ class AssetManager {
 	 * @return void
 	 */
 	public static function enqueue_global_assets(): void {
-		$screen = get_current_screen();
-		if ( ! $screen || ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( $screen->id ) ) {
+		// Only enqueue global assets on CampaignBridge pages.
+		if ( ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( get_current_screen()?->id ?? '' ) ) {
 			return;
 		}
 

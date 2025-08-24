@@ -35,6 +35,13 @@ abstract class AdminPage {
 	protected static string $option_name = 'campaignbridge_settings';
 
 	/**
+	 * Page slug for this admin page.
+	 *
+	 * @var string
+	 */
+	protected static string $page_slug = '';
+
+	/**
 	 * Registered providers map indexed by slug.
 	 *
 	 * @var array<string,object>
@@ -56,6 +63,16 @@ abstract class AdminPage {
 	public static function init_shared_state( string $option_name, array $providers ): void {
 		self::$option_name = $option_name;
 		self::$providers   = $providers;
+	}
+
+	/**
+	 * Get the page slug for this admin page.
+	 *
+	 * @since 0.1.0
+	 * @return string The page slug.
+	 */
+	public static function get_page_slug(): string {
+		return static::$page_slug;
 	}
 
 	/**

@@ -28,6 +28,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class StatusPage extends AdminPage {
 	/**
+	 * Page slug for this admin page.
+	 *
+	 * @var string
+	 */
+	protected static string $page_slug = 'campaignbridge-status';
+
+	/**
 	 * Initialize the Status page and set up asset management.
 	 *
 	 * This method sets up the Status page by registering the necessary WordPress
@@ -53,15 +60,21 @@ class StatusPage extends AdminPage {
 	 * Conditionally enqueue Status page-specific CSS and JavaScript assets.
 	 *
 	 * This method ensures that Status page assets are only loaded when viewing
-	 * the Status page. It uses WordPress's admin_enqueue_scripts hook to detect
-	 * the current admin screen and conditionally load the appropriate assets.
+	 * the Status page. It uses the PageUtils helper to check if the current
+	 * page matches this class's page_slug property.
+	 *
+	 * Asset Management:
+	 * - Hooks into admin_enqueue_scripts for conditional asset loading
+	 * - Only loads status-specific assets on the Status page
+	 * - Prevents unnecessary asset loading on other admin pages
+	 * - Maintains optimal WordPress admin performance
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function enqueue_status_assets(): void {
-		$screen = get_current_screen();
-		if ( ! $screen || ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( $screen->id ) ) {
+		// Only load assets on the specific Status page.
+		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
 			return;
 		}
 

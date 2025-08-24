@@ -29,6 +29,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SettingsPage extends AdminPage {
 	/**
+	 * Page slug for this admin page.
+	 *
+	 * @var string
+	 */
+	protected static string $page_slug = 'campaignbridge-settings';
+
+	/**
 	 * Initialize the Settings page and set up asset management.
 	 *
 	 * This method sets up the Settings page by registering the necessary WordPress
@@ -48,15 +55,15 @@ class SettingsPage extends AdminPage {
 	 * Conditionally enqueue Settings page-specific CSS and JavaScript assets.
 	 *
 	 * This method ensures that Settings page assets are only loaded when viewing
-	 * the Settings page. It uses WordPress's admin_enqueue_scripts hook to detect
-	 * the current admin screen and conditionally load the appropriate assets.
+	 * the Settings page. It uses the PageUtils helper to check if the current
+	 * page matches this class's page_slug property.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function enqueue_settings_assets(): void {
-		$screen = get_current_screen();
-		if ( ! $screen || ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( $screen->id ) ) {
+		// Only load assets on the specific Settings page.
+		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
 			return;
 		}
 

@@ -30,6 +30,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class TemplateManagerPage extends AdminPage {
 	/**
+	 * Page slug for this admin page.
+	 *
+	 * @var string
+	 */
+	protected static string $page_slug = 'campaignbridge-template-manager';
+
+	/**
 	 * Initialize the Template Manager page and set up asset management.
 	 *
 	 * This method sets up the Template Manager page by registering the necessary WordPress
@@ -55,16 +62,21 @@ class TemplateManagerPage extends AdminPage {
 	 * Conditionally enqueue Template Manager page-specific CSS and JavaScript assets.
 	 *
 	 * This method ensures that Template Manager page assets are only loaded when viewing
-	 * the Template Manager page. It uses WordPress's admin_enqueue_scripts hook to detect
-	 * the current admin screen and conditionally load the appropriate assets.
+	 * the Template Manager page. It uses the PageUtils helper to check if the current
+	 * page matches this class's page_slug property.
+	 *
+	 * Asset Management:
+	 * - Hooks into admin_enqueue_scripts for conditional asset loading
+	 * - Only loads template-manager-specific assets on the Template Manager page
+	 * - Prevents unnecessary asset loading on other admin pages
+	 * - Maintains optimal WordPress admin performance
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function enqueue_template_manager_assets(): void {
-		$screen = get_current_screen();
 		// Only load assets on the specific Template Manager page.
-		if ( ! $screen || 'campaignbridge_page_campaignbridge-template-manager' !== $screen->id ) {
+		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
 			return;
 		}
 

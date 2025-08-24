@@ -152,7 +152,7 @@ class Plugin {
 			'Post Types',
 			'Post Types',
 			'manage_options',
-			'campaignbridge-post-types',
+			PostTypesPage::get_page_slug(),
 			array( PostTypesPage::class, 'render' )
 		);
 
@@ -161,7 +161,7 @@ class Plugin {
 			'Settings',
 			'Settings',
 			'manage_options',
-			'campaignbridge-settings',
+			SettingsPage::get_page_slug(),
 			array( SettingsPage::class, 'render' )
 		);
 
@@ -171,7 +171,7 @@ class Plugin {
 			'Status',
 			'Status',
 			'manage_options',
-			'campaignbridge-status',
+			StatusPage::get_page_slug(),
 			array( StatusPage::class, 'render' )
 		);
 
@@ -180,7 +180,7 @@ class Plugin {
 			'Template Manager',
 			'Template Manager',
 			'manage_options',
-			'campaignbridge-template-manager',
+			TemplateManagerPage::get_page_slug(),
 			array( TemplateManagerPage::class, 'render' )
 		);
 	}

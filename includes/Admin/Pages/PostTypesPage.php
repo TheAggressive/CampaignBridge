@@ -30,6 +30,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PostTypesPage extends AdminPage {
 	/**
+	 * Page slug for this admin page.
+	 *
+	 * @var string
+	 */
+	protected static string $page_slug = 'campaignbridge-post-types';
+
+	/**
 	 * Initialize the Post Types page and set up asset management.
 	 *
 	 * This method sets up the Post Types page by registering the necessary WordPress
@@ -49,16 +56,15 @@ class PostTypesPage extends AdminPage {
 	 * Conditionally enqueue Post Types page-specific CSS and JavaScript assets.
 	 *
 	 * This method ensures that Post Types page assets are only loaded when viewing
-	 * the Post Types page. It uses WordPress's admin_enqueue_scripts hook to detect
-	 * the current admin screen and conditionally load the appropriate assets.
+	 * the Post Types page. It uses the PageUtils helper to check if the current
+	 * page matches this class's page_slug property.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function enqueue_post_types_assets(): void {
-		$screen = get_current_screen();
-		print_r( $screen->id );
-		if ( ! $screen || 'campaignbridge_page_campaignbridge-post-types' !== $screen->id ) {
+		// Only load assets on the specific Post Types page.
+		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
 			return;
 		}
 
