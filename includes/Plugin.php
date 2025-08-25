@@ -28,6 +28,7 @@ use CampaignBridge\Admin\Pages\TemplateManagerPage;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\PostTypes\EmailTemplate;
 use CampaignBridge\REST\Routes as RestRoutes;
+use CampaignBridge\REST\MailchimpRoutes;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -87,6 +88,7 @@ class Plugin {
 		} catch ( \Exception $e ) {
 			// Log the error and show admin notice.
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log( 'CampaignBridge Plugin Error: ' . $e->getMessage() );
 			}
 
@@ -296,6 +298,13 @@ class Plugin {
 	private function init_rest_api(): void {
 		RestRoutes::init( $this->option_name, $this->providers );
 		add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
+
+		// Only register Mailchimp routes if Mailchimp is the selected provider.
+		$settings = get_option( $this->option_name );
+		if ( isset( $settings['provider'] ) && 'mailchimp' === $settings['provider'] ) {
+			MailchimpRoutes::init( $this->option_name, $this->providers );
+			add_action( 'rest_api_init', array( MailchimpRoutes::class, 'register' ) );
+		}
 	}
 
 	/**
