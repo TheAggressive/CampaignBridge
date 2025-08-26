@@ -179,8 +179,8 @@ class Plugin {
 
 		add_submenu_page(
 			'campaignbridge',
-			'Template Manager',
-			'Template Manager',
+			'Template Editor',
+			'Template Editor',
 			'manage_options',
 			TemplateEditorPage::get_page_slug(),
 			array( TemplateEditorPage::class, 'render' )

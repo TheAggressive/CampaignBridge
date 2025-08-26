@@ -115,8 +115,9 @@ class TemplateEditorPage extends AdminPage {
 
 		$current_id = isset( $_GET['post_id'] ) ? absint( $_GET['post_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
+		// Add configuration to the block editor script since that's what we're actually using.
 		wp_add_inline_script(
-			'campaignbridge-template-manager',
+			'campaignbridge-block-editor',
 			sprintf(
 				'window.CB_TM = %s;',
 				wp_json_encode(
@@ -127,7 +128,7 @@ class TemplateEditorPage extends AdminPage {
 						'locale'        => get_user_locale(),
 						'defaultTitle'  => __( 'Untitled template', 'campaignbridge' ),
 						'currentPostId' => $current_id ? $current_id : null,
-						'settings'      => get_block_editor_settings( array(), $post ),
+						'settings'      => get_block_editor_settings( array(), null ),
 						'debug'         => array(
 							'wpVersion'       => get_bloginfo( 'version' ),
 							'minVersion'      => '5.8.0',
@@ -184,6 +185,6 @@ class TemplateEditorPage extends AdminPage {
 	 * @return string The localized page title "Template Manager".
 	 */
 	public static function get_page_title(): string {
-		return __( 'Template Manager', 'campaignbridge' );
+		return __( 'Template Editor', 'campaignbridge' );
 	}
 }

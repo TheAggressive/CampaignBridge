@@ -38,6 +38,11 @@ import { __ } from "@wordpress/i18n";
 const CFG = window.CB_TM || {};
 const CPT = CFG.postType || "cb_email_template";
 
+// Debug configuration (uncomment if needed for troubleshooting)
+// console.log('CFG object:', CFG);
+// console.log('API Root:', CFG.apiRoot);
+// console.log('Nonce:', CFG.nonce);
+
 /**
  * Utility functions
  */
@@ -53,8 +58,12 @@ const setParamAndReload = (k, v) => {
 /**
  * API setup
  */
-apiFetch.use(apiFetch.createNonceMiddleware(CFG.nonce));
-apiFetch.use(apiFetch.createRootURLMiddleware(CFG.apiRoot));
+if (CFG.nonce) {
+  apiFetch.use(apiFetch.createNonceMiddleware(CFG.nonce));
+}
+if (CFG.apiRoot) {
+  apiFetch.use(apiFetch.createRootURLMiddleware(CFG.apiRoot));
+}
 
 async function createDraft() {
   const rec = await dispatch("core").saveEntityRecord("postType", CPT, {
@@ -237,9 +246,15 @@ function App() {
       try {
         const posts = await fetchTemplates();
         if (!alive) return;
-        setList(Array.isArray(posts) ? posts : []);
+        // Ensure we have an array and filter out any invalid entries
+        const validPosts = Array.isArray(posts)
+          ? posts.filter((p) => p && typeof p === "object" && p.id)
+          : [];
+        setList(validPosts);
       } catch (e) {
+        console.error("Template loading error:", e);
         setError(e?.message || "Failed to load templates.");
+        setList([]); // Ensure list is always an array
       } finally {
         if (alive) setLoading(false);
       }
@@ -293,10 +308,13 @@ function App() {
               ? [{ label: __("Loading…", "campaignbridge"), value: "" }]
               : []),
             // Template options
-            ...list.map((p) => ({
-              label: p?.title?.rendered || `#${p.id}`,
-              value: String(p.id),
-            })),
+            ...list
+              .filter((p) => p && typeof p === "object" && p.id)
+              .map((p) => ({
+                label: p?.title?.rendered || `#${p.id}`,
+                value: String(p.id),
+              }))
+              .filter((option) => option.label && option.value !== undefined),
           ]}
         />
         <Button variant="primary" onClick={onNew}>
