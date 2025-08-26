@@ -80,7 +80,6 @@ class StatusPage extends AdminPage {
 
 		// Enqueue status-specific assets only.
 		wp_enqueue_style( 'campaignbridge-status' );
-		wp_enqueue_script( 'campaignbridge-status' );
 	}
 
 	/**

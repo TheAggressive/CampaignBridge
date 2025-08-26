@@ -52,13 +52,13 @@ class AssetManager {
 	 * @return void
 	 */
 	public static function register_global_scripts(): void {
-		wp_register_script(
-			'campaignbridge-admin-base',
-			CB_URL . 'dist/scripts/admin-base.js',
-			array( 'jquery' ),
-			CB_VERSION,
-			true
-		);
+		// wp_register_script(
+		// 'campaignbridge-admin-base',
+		// CB_URL . 'dist/scripts/admin-base.js',
+		// array(),
+		// CB_VERSION,
+		// true
+		// );
 	}
 
 	/**
@@ -73,8 +73,8 @@ class AssetManager {
 	 */
 	public static function register_global_styles(): void {
 		wp_register_style(
-			'campaignbridge-admin-base',
-			CB_URL . 'dist/styles/admin-base.css',
+			'campaignbridge-styles',
+			CB_URL . 'dist/styles/styles.css',
 			array(),
 			CB_VERSION
 		);
@@ -91,46 +91,20 @@ class AssetManager {
 	 * @return void
 	 */
 	public static function register_scripts(): void {
-		// Register dashboard page script.
-		wp_register_script(
-			'campaignbridge-dashboard',
-			CB_URL . 'dist/scripts/dashboard.js',
-			array( 'campaignbridge-admin-base' ),
-			CB_VERSION,
-			true
-		);
 
 		// Register post types page script.
-		wp_register_script(
-			'campaignbridge-post-types',
-			CB_URL . 'dist/scripts/post-types.js',
-			array( 'campaignbridge-admin-base' ),
-			CB_VERSION,
-			true
-		);
-
-		// Register settings page script.
-		wp_register_script(
-			'campaignbridge-settings',
-			CB_URL . 'dist/scripts/settings.js',
-			array( 'campaignbridge-admin-base' ),
-			CB_VERSION,
-			true
-		);
-
-		// Register status page script.
-		wp_register_script(
-			'campaignbridge-status',
-			CB_URL . 'dist/scripts/status.js',
-			array( 'campaignbridge-admin-base' ),
-			CB_VERSION,
-			true
-		);
+		// wp_register_script(
+		// 'campaignbridge-post-types',
+		// CB_URL . 'dist/scripts/template-editor/editor.js',
+		// array( 'campaignbridge-editor' ),
+		// CB_VERSION,
+		// true
+		// );
 
 		// Register template manager page script.
 		wp_register_script(
-			'campaignbridge-template-manager',
-			CB_URL . 'dist/scripts/admin/template-manager.js',
+			'campaignbridge-block-editor',
+			CB_URL . 'dist/scripts/template-editor/editor.js',
 			array(
 				'wp-edit-post',
 				'wp-block-editor',
@@ -167,51 +141,47 @@ class AssetManager {
 	 * @return void
 	 */
 	public static function register_styles(): void {
-		// Register dashboard page style.
+
+		// Register global style.
 		wp_register_style(
-			'campaignbridge-dashboard',
-			CB_URL . 'dist/styles/dashboard.css',
-			array( 'campaignbridge-admin-base' ),
+			'campaignbridge-styles',
+			CB_URL . 'dist/styles/styles.css',
+			array(),
 			CB_VERSION
 		);
 
 		// Register post types page style.
 		wp_register_style(
 			'campaignbridge-post-types',
-			CB_URL . 'dist/styles/post-types.css',
-			array( 'campaignbridge-admin-base' ),
-			CB_VERSION
-		);
-
-		// Register settings page style.
-		wp_register_style(
-			'campaignbridge-settings',
-			CB_URL . 'dist/styles/settings.css',
-			array( 'campaignbridge-admin-base' ),
+			CB_URL . 'dist/styles/pages/post-types.css',
+			array(),
 			CB_VERSION
 		);
 
 		// Register status page style.
 		wp_register_style(
 			'campaignbridge-status',
-			CB_URL . 'dist/styles/status.css',
-			array( 'campaignbridge-admin-base' ),
-			CB_VERSION
-		);
-
-		// Register template manager page style.
-		wp_register_style(
-			'campaignbridge-template-manager',
-			CB_URL . 'dist/styles/template-manager.css',
-			array( 'campaignbridge-admin-base' ),
+			CB_URL . 'dist/styles/pages/status.css',
+			array(),
 			CB_VERSION
 		);
 
 		// Register block editor style for standalone editor.
 		wp_register_style(
 			'campaignbridge-block-editor',
-			CB_URL . 'dist/styles/admin/block-editor.css',
-			array( 'campaignbridge-admin-base', 'wp-block-editor' ),
+			CB_URL . 'dist/styles/pages/editor.css',
+			array(
+				'campaignbridge-editor',
+				'wp-block-editor',
+				'wp-components',
+				'wp-element',
+				'wp-data',
+				'wp-core-data',
+				'wp-blocks',
+				'wp-block-library',
+				'wp-block-library-theme',
+				'wp-format-library',
+			),
 			CB_VERSION
 		);
 	}
@@ -254,7 +224,6 @@ class AssetManager {
 		}
 
 		// Always enqueue global assets on CampaignBridge pages.
-		wp_enqueue_style( 'campaignbridge-admin-base' );
-		wp_enqueue_script( 'campaignbridge-admin-base' );
+		wp_enqueue_style( 'campaignbridge-styles' );
 	}
 }

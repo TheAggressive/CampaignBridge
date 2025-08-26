@@ -70,7 +70,6 @@ class PostTypesPage extends AdminPage {
 
 		// Enqueue post-types-specific assets only.
 		wp_enqueue_style( 'campaignbridge-post-types' );
-		wp_enqueue_script( 'campaignbridge-post-types' );
 	}
 	/**
 	 * Render the complete Post Types configuration page with dynamic form interface.

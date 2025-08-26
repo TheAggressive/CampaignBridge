@@ -28,13 +28,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Template Manager Page: handles the email template management interface.
  */
-class TemplateManagerPage extends AdminPage {
+class TemplateEditorPage extends AdminPage {
 	/**
 	 * Page slug for this admin page.
 	 *
 	 * @var string
 	 */
-	protected static string $page_slug = 'campaignbridge-template-manager';
+	protected static string $page_slug = 'campaignbridge-template-editor';
 
 	/**
 	 * Initialize the Template Manager page and set up asset management.
@@ -110,9 +110,8 @@ class TemplateManagerPage extends AdminPage {
 		}
 
 		// Enqueue template-manager-specific assets only.
-		wp_enqueue_style( 'campaignbridge-template-manager' );
 		wp_enqueue_style( 'campaignbridge-block-editor' );
-		wp_enqueue_script( 'campaignbridge-template-manager' );
+		wp_enqueue_script( 'campaignbridge-block-editor' );
 
 		$current_id = isset( $_GET['post_id'] ) ? absint( $_GET['post_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 

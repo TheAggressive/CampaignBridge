@@ -69,7 +69,6 @@ class SettingsPage extends AdminPage {
 
 		// Enqueue settings-specific assets only.
 		wp_enqueue_style( 'campaignbridge-settings' );
-		wp_enqueue_script( 'campaignbridge-settings' );
 	}
 	/**
 	 * Render the complete Settings configuration page with provider management interface.
