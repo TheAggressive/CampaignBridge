@@ -3,6 +3,7 @@
  */
 import apiFetch from "@wordpress/api-fetch";
 import {
+  BlockEditorKeyboardShortcuts,
   BlockEditorProvider,
   BlockInspector,
   BlockList,
@@ -10,14 +11,13 @@ import {
   ObserveTyping,
   WritingFlow,
 } from "@wordpress/block-editor";
-import { registerCoreBlocks } from "@wordpress/block-library";
 import { parse, serialize } from "@wordpress/blocks";
 import {
   Button,
   Notice,
-  Panel,
-  PanelBody,
+  Popover,
   SelectControl,
+  SlotFillProvider,
   Spinner,
 } from "@wordpress/components";
 import { dispatch, select, useDispatch, useSelect } from "@wordpress/data";
@@ -31,17 +31,13 @@ import {
 } from "@wordpress/element";
 import "@wordpress/format-library";
 import { __ } from "@wordpress/i18n";
+import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
 
 /**
  * Configuration and constants
  */
 const CFG = window.CB_TM || {};
 const CPT = CFG.postType || "cb_email_template";
-
-// Debug configuration (uncomment if needed for troubleshooting)
-// console.log('CFG object:', CFG);
-// console.log('API Root:', CFG.apiRoot);
-// console.log('Nonce:', CFG.nonce);
 
 /**
  * Utility functions
@@ -93,19 +89,46 @@ async function fetchTemplates() {
   }
 }
 
-// Initialize core blocks
-registerCoreBlocks();
-
 function BlockEditor({ postId, onBlocksChange }) {
   const [blocks, setBlocks] = useState([]);
 
+  const [isReady, setIsReady] = useState(false);
+
   const { settings } = useSelect((select) => {
-    return {
-      settings: select("core/block-editor").getSettings(),
-    };
+    try {
+      return {
+        settings: select("core/block-editor").getSettings(),
+      };
+    } catch (error) {
+      console.warn("Block editor store not available:", error);
+      return {
+        settings: {},
+      };
+    }
   }, []);
 
   const { updateSettings } = useDispatch("core/block-editor");
+
+  // Safety check for dispatch availability
+  const safeUpdateSettings = useCallback(
+    (newSettings) => {
+      try {
+        if (updateSettings) {
+          updateSettings(newSettings);
+        }
+      } catch (error) {
+        console.warn("Failed to update block editor settings:", error);
+      }
+    },
+    [updateSettings],
+  );
+
+  // Initialize when settings are available
+  useEffect(() => {
+    if (settings && Object.keys(settings).length > 0) {
+      setIsReady(true);
+    }
+  }, [settings]);
 
   // Load blocks for the current post
   useEffect(() => {
@@ -114,18 +137,20 @@ function BlockEditor({ postId, onBlocksChange }) {
     }
 
     const loadBlocks = async () => {
-      try {
-        const post = await apiFetch({
-          path: `/wp/v2/${CPT}/${postId}?_embed`,
-        });
+      const post = await apiFetch({
+        path: `/wp/v2/${CPT}/${postId}?context=edit&_embed`,
+      });
+      if (post.content && post.content.raw) {
+        // Parse blocks from post content with a delay to ensure blocks are registered
+        const parsedBlocks = parse(post.content.raw);
 
-        if (post.content && post.content.raw) {
-          // Parse blocks from post content
-          const parsedBlocks = parse(post.content.raw);
+        console.log(post.content.raw);
+
+        console.log(parsedBlocks);
+
+        if (parsedBlocks && parsedBlocks.length > 0) {
           setBlocks(parsedBlocks);
         }
-      } catch (e) {
-        console.error("Failed to load post content:", e);
       }
     };
 
@@ -199,33 +224,47 @@ function BlockEditor({ postId, onBlocksChange }) {
     [settings],
   );
 
+  // Show loading state while editor is initializing
+  if (!isReady || !settings || Object.keys(settings).length === 0) {
+    return (
+      <div className="cb-block-editor">
+        <div className="cb-editor-loading">
+          <Spinner />
+          <p>{__("Initializing editor...", "campaignbridge")}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="cb-block-editor">
-      <BlockEditorProvider
-        value={blocks}
-        onInput={saveBlocks}
-        onChange={saveBlocks}
-        settings={editorSettings}
-      >
-        <div className="cb-editor-layout">
-          <div className="cb-editor-content">
-            <BlockTools>
-              <WritingFlow>
-                <ObserveTyping>
-                  <BlockList />
-                </ObserveTyping>
-              </WritingFlow>
-            </BlockTools>
+      <ShortcutProvider>
+        <SlotFillProvider>
+          <div className="cb-tm-layout">
+            <div className="cb-tm-main">
+              <BlockEditorProvider
+                value={blocks}
+                onChange={saveBlocks}
+                settings={editorSettings}
+              >
+                <BlockEditorKeyboardShortcuts.Register />
+                <BlockTools>
+                  <WritingFlow>
+                    <ObserveTyping>
+                      <BlockList />
+                    </ObserveTyping>
+                  </WritingFlow>
+                </BlockTools>
+
+                <aside className="cb-tm-sidebar">
+                  <BlockInspector />
+                </aside>
+                <Popover.Slot />
+              </BlockEditorProvider>
+            </div>
           </div>
-          <div className="cb-editor-sidebar">
-            <Panel>
-              <PanelBody title={__("Block Settings", "campaignbridge")}>
-                <BlockInspector />
-              </PanelBody>
-            </Panel>
-          </div>
-        </div>
-      </BlockEditorProvider>
+        </SlotFillProvider>
+      </ShortcutProvider>
     </div>
   );
 }

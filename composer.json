@@ -1,9 +1,0 @@
-{
-  "name": "laao/campaignbridge",
-  "type": "wordpress-plugin",
-  "autoload": {
-    "psr-4": {
-      "CampaignBridge\\": "includes/"
-    }
-  }
-}

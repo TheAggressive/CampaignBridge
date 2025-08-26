@@ -81,30 +81,54 @@ class TemplateEditorPage extends AdminPage {
 			return;
 		}
 
-		// Editor foundations.
-		wp_enqueue_script( 'wp-block-editor' );
-		wp_enqueue_script( 'wp-components' );
-		wp_enqueue_script( 'wp-element' );
-		wp_enqueue_script( 'wp-data' );
-		wp_enqueue_script( 'wp-core-data' );
-		wp_enqueue_script( 'wp-blocks' );
-		wp_enqueue_script( 'wp-keycodes' );
-		wp_enqueue_script( 'wp-i18n' );
-		wp_enqueue_script( 'wp-compose' );
-		wp_enqueue_script( 'wp-primitives' ); // icons, etc.
+		// =================================================================
+		// CRITICAL DEPENDENCY ORDER FOR BLOCK PARSING
+		// =================================================================
 
-		// Default formatting tools & common editor UX bits.
-		wp_enqueue_script( 'wp-format-library' );
-		wp_enqueue_style( 'wp-format-library' );
+		// 1. FOUNDATION SCRIPTS (no dependencies)
+		// =================================================================
+		wp_enqueue_script( 'wp-i18n' );           // Internationalization.
+		wp_enqueue_script( 'wp-element' );        // React elements.
+		wp_enqueue_script( 'wp-primitives' );     // Icons and primitives.
 
-		// Canvas styles (how blocks look in the editor).
-		wp_enqueue_style( 'wp-block-library' );
-		wp_enqueue_style( 'wp-block-library-theme' );
+		// 2. CORE UTILITIES
+		// =================================================================
+		wp_enqueue_script( 'wp-compose' );        // Higher-order components.
+		wp_enqueue_script( 'wp-keycodes' );       // Keyboard utilities.
+		wp_enqueue_script( 'wp-data' );           // Data store management.
 
-		// Media modal for image blocks.
-		wp_enqueue_media();
+		// 3. UI COMPONENTS
+		// =================================================================
+		wp_enqueue_script( 'wp-components' );     // UI components.
 
-		// CRUCIAL: actually load scripts/styles for all registered blocks in editor context.
+		// 4. CORE WordPress DATA & BLOCKS (MOST IMPORTANT!)
+		// =================================================================
+		wp_enqueue_script( 'wp-core-data' );      // WordPress data stores.
+		wp_enqueue_script( 'wp-blocks' );         // BLOCK SYSTEM FOUNDATION.
+		wp_enqueue_script( 'wp-block-library' );  // CORE BLOCK LIBRARY - CRUCIAL!
+
+		// Additional scripts needed for block inserter
+		wp_enqueue_script( 'wp-edit-post' );      // Post editor (includes block inserter)
+		wp_enqueue_script( 'wp-block-directory' ); // Block directory for discovering blocks
+
+		// 5. EDITOR COMPONENTS
+		// =================================================================
+		wp_enqueue_script( 'wp-format-library' ); // Text formatting.
+		wp_enqueue_script( 'wp-editor' );          // Main editor functionality.
+		wp_enqueue_script( 'wp-block-editor' );    // Block editor interface.
+
+		// 6. STYLES
+		// =================================================================
+		wp_enqueue_style( 'wp-block-library' );       // Core block styles.
+		wp_enqueue_style( 'wp-block-library-theme' ); // Theme-specific block styles.
+		wp_enqueue_style( 'wp-format-library' );      // Format styles.
+		wp_enqueue_style( 'wp-edit-post' );
+
+		// 7. MEDIA & ADDITIONAL BLOCKS
+		// =================================================================
+		wp_enqueue_media(); // Media modal.
+
+		// CRUCIAL: Load all registered block scripts and styles.
 		if ( function_exists( 'wp_enqueue_registered_block_scripts_and_styles' ) ) {
 			wp_enqueue_registered_block_scripts_and_styles( true );
 		}
