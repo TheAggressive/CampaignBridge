@@ -1,0 +1,123 @@
+/* Standalone Block Editor Styles */
+
+.cb-tm-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.cb-tm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #ddd;
+  background: #f8f9fa;
+}
+
+.cb-tm-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+.cb-block-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px); /* Adjust for toolbar height */
+}
+
+.cb-editor-layout {
+  display: flex;
+  flex: 1;
+  height: 100%;
+}
+
+.cb-editor-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background: #fff;
+  border-right: 1px solid #ddd;
+}
+
+.cb-editor-sidebar {
+  width: 300px;
+  background: #f8f9fa;
+  border-left: 1px solid #ddd;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* Block Editor Overrides */
+.cb-editor-content .block-editor-writing-flow {
+  max-width: none;
+}
+
+.cb-editor-content .block-editor-block-list__layout {
+  padding: 0;
+}
+
+.cb-editor-content .block-editor-block-list__block {
+  margin-bottom: 1rem;
+  margin-top: 1rem;
+}
+
+/* Toolbar styling */
+.cb-editor-content .block-editor-block-toolbar {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Block Inspector styling */
+.cb-editor-sidebar .components-panel {
+  border: none;
+  box-shadow: none;
+}
+
+.cb-editor-sidebar .components-panel__body {
+  border: none;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .cb-editor-layout {
+    flex-direction: column;
+  }
+
+  .cb-editor-sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #ddd;
+  }
+
+  .cb-editor-content {
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+}
+
+/* Loading and error states */
+.cb-tm-shell .components-notice {
+  margin: 1rem;
+}
+
+.cb-tm-loading .components-spinner {
+  margin: 0;
+}
+
+/* Template selector styling */
+.cb-tm-toolbar .components-select-control {
+  min-width: 200px;
+}
+
+.cb-tm-toolbar .components-button {
+  white-space: nowrap;
+}

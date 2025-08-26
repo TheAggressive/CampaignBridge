@@ -1,19 +1,48 @@
+/**
+ * WordPress dependencies
+ */
 import apiFetch from "@wordpress/api-fetch";
-import { Button, Notice, SelectControl, Spinner } from "@wordpress/components";
-import { dispatch, select } from "@wordpress/data";
+import {
+  BlockEditorProvider,
+  BlockInspector,
+  BlockList,
+  BlockTools,
+  ObserveTyping,
+  WritingFlow,
+} from "@wordpress/block-editor";
+import { registerCoreBlocks } from "@wordpress/block-library";
+import { parse, serialize } from "@wordpress/blocks";
+import {
+  Button,
+  Notice,
+  Panel,
+  PanelBody,
+  SelectControl,
+  Spinner,
+} from "@wordpress/components";
+import { dispatch, select, useDispatch, useSelect } from "@wordpress/data";
 import domReady from "@wordpress/dom-ready";
 import {
-  createElement,
   createRoot,
+  useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "@wordpress/element";
+import "@wordpress/format-library";
 import { __ } from "@wordpress/i18n";
 
+/**
+ * Configuration and constants
+ */
 const CFG = window.CB_TM || {};
 const CPT = CFG.postType || "cb_email_template";
 
+/**
+ * Utility functions
+ */
 const getParam = (k) => new URLSearchParams(window.location.search).get(k);
+
 const setParamAndReload = (k, v) => {
   const url = new URL(window.location.href);
   if (v == null) url.searchParams.delete(k);
@@ -21,6 +50,9 @@ const setParamAndReload = (k, v) => {
   window.location.replace(url.toString());
 };
 
+/**
+ * API setup
+ */
 apiFetch.use(apiFetch.createNonceMiddleware(CFG.nonce));
 apiFetch.use(apiFetch.createRootURLMiddleware(CFG.apiRoot));
 
@@ -37,25 +69,167 @@ async function fetchTemplates() {
     per_page: 100,
     _fields: ["id", "title", "status", "date"],
   });
-  if (Array.isArray(cached)) return cached;
-  return apiFetch({
-    path: `/wp/v2/${CPT}?per_page=100&_fields=id,title,status,date`,
-  });
+
+  if (Array.isArray(cached) && cached.length > 0) {
+    return cached;
+  }
+
+  try {
+    const result = await apiFetch({
+      path: `/wp/v2/${CPT}?per_page=100&_fields=id,title,status,date`,
+    });
+    return result;
+  } catch (error) {
+    throw error;
+  }
 }
 
-function bootCoreEditor(targetId, postId) {
-  // This is the same initializer core uses on post.php.
-  // Requires wp-edit-post and friends to be enqueued as deps.
-  window.wp.editPost.initializeEditor(targetId, CPT, postId);
+// Initialize core blocks
+registerCoreBlocks();
+
+function BlockEditor({ postId, onBlocksChange }) {
+  const [blocks, setBlocks] = useState([]);
+
+  const { settings } = useSelect((select) => {
+    return {
+      settings: select("core/block-editor").getSettings(),
+    };
+  }, []);
+
+  const { updateSettings } = useDispatch("core/block-editor");
+
+  // Load blocks for the current post
+  useEffect(() => {
+    if (!postId) {
+      return;
+    }
+
+    const loadBlocks = async () => {
+      try {
+        const post = await apiFetch({
+          path: `/wp/v2/${CPT}/${postId}?_embed`,
+        });
+
+        if (post.content && post.content.raw) {
+          // Parse blocks from post content
+          const parsedBlocks = parse(post.content.raw);
+          setBlocks(parsedBlocks);
+        }
+      } catch (e) {
+        console.error("Failed to load post content:", e);
+      }
+    };
+
+    loadBlocks();
+  }, [postId]);
+
+  // Save blocks when they change
+  const saveBlocks = useCallback(
+    async (newBlocks) => {
+      if (!postId) return;
+
+      try {
+        const content = serialize(newBlocks);
+        await apiFetch({
+          path: `/wp/v2/${CPT}/${postId}`,
+          method: "POST",
+          data: {
+            content: content,
+            status: "draft",
+          },
+        });
+        setBlocks(newBlocks);
+        onBlocksChange && onBlocksChange(newBlocks);
+      } catch (e) {
+        console.error("Failed to save blocks:", e);
+      }
+    },
+    [postId, onBlocksChange],
+  );
+
+  const editorSettings = useMemo(
+    () => ({
+      ...settings,
+      hasInlineToolbar: true,
+      focusMode: false,
+      hasFixedToolbar: true,
+      // Block settings
+      allowedBlockTypes: true, // Allow all block types
+      // Rich text settings
+      richEditingEnabled: true,
+      // Media settings
+      mediaUpload: CFG.mediaUpload || null,
+      // Enable native block inserter
+      inserter: true,
+      __experimentalBlockPatterns: [],
+      __experimentalBlockPatternCategories: [],
+      // Disable certain features that require WordPress admin context
+      __experimentalDisableCustomColors: false,
+      __experimentalDisableCustomGradients: false,
+      __experimentalDisableCustomSpacing: false,
+      __experimentalFeatures: {
+        color: {
+          custom: true,
+          theme: true,
+        },
+        spacing: {
+          custom: true,
+          theme: true,
+        },
+        typography: {
+          customFontSize: true,
+          customLineHeight: true,
+          fontStyle: true,
+          fontWeight: true,
+          letterSpacing: true,
+          textDecoration: true,
+          textTransform: true,
+        },
+      },
+    }),
+    [settings],
+  );
+
+  return (
+    <div className="cb-block-editor">
+      <BlockEditorProvider
+        value={blocks}
+        onInput={saveBlocks}
+        onChange={saveBlocks}
+        settings={editorSettings}
+      >
+        <div className="cb-editor-layout">
+          <div className="cb-editor-content">
+            <BlockTools>
+              <WritingFlow>
+                <ObserveTyping>
+                  <BlockList />
+                </ObserveTyping>
+              </WritingFlow>
+            </BlockTools>
+          </div>
+          <div className="cb-editor-sidebar">
+            <Panel>
+              <PanelBody title={__("Block Settings", "campaignbridge")}>
+                <BlockInspector />
+              </PanelBody>
+            </Panel>
+          </div>
+        </div>
+      </BlockEditorProvider>
+    </div>
+  );
 }
 
 function App() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentId] = useState(
-    Number(CFG.currentPostId || getParam("post_id")) || null,
-  );
+  // Debug current ID resolution - calculate on every render
+  const cfgPostId = CFG.currentPostId;
+  const urlPostId = getParam("post_id");
+
+  const currentId = Number(urlPostId || cfgPostId) || null;
 
   useEffect(() => {
     let alive = true;
@@ -73,71 +247,88 @@ function App() {
     return () => (alive = false);
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      let id = currentId;
-      try {
-        if (!id) {
-          id = await createDraft();
-          setParamAndReload("post_id", id);
-          return;
-        }
-        if (!alive) return;
-        bootCoreEditor("cb-editor-root", id);
-      } catch (e) {
-        setError(e?.message || "Failed to initialize editor.");
-      }
-    })();
-    return () => (alive = false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // No automatic draft creation on page load
+  // User must explicitly select a template or click "New Template"
 
   const onSelect = (val) => {
     const id = Number(val);
-    if (id) setParamAndReload("post_id", id);
+
+    // Ignore empty selections (like "Please select a template")
+    if (val === "" || !id) return;
+
+    setParamAndReload("post_id", id);
   };
   const onNew = async () => {
     const id = await createDraft();
     setParamAndReload("post_id", id);
   };
 
-  return createElement(
-    "div",
-    { className: "cb-tm-shell" },
-    error &&
-      createElement(Notice, { status: "error", isDismissible: false }, error),
-    createElement(
-      "div",
-      { className: "cb-tm-toolbar" },
-      createElement(SelectControl, {
-        label: __("Templates", "campaignbridge"),
-        value: currentId || "",
-        onChange: onSelect,
-        disabled: loading || list.length === 0,
-        options: [
-          ...(currentId
-            ? []
-            : [{ label: __("Loading…", "campaignbridge"), value: "" }]),
-          ...list.map((p) => ({
-            label: p?.title?.rendered || `#${p.id}`,
-            value: String(p.id),
-          })),
-        ],
-      }),
-      createElement(
-        Button,
-        { variant: "primary", onClick: onNew },
-        __("New Template", "campaignbridge"),
-      ),
-    ),
-    loading &&
-      createElement(
-        "div",
-        { className: "cb-tm-loading" },
-        createElement(Spinner, null),
-      ),
-    createElement("div", { id: "cb-editor-root", className: "cb-editor-root" }),
+  return (
+    <div className="cb-tm-shell">
+      {error && (
+        <Notice status="error" isDismissible={false}>
+          {error}
+        </Notice>
+      )}
+      <div className="cb-tm-toolbar">
+        <SelectControl
+          label={__("Templates", "campaignbridge")}
+          value={currentId ? String(currentId) : ""}
+          onChange={onSelect}
+          disabled={loading && list.length === 0}
+          __next40pxDefaultSize={true}
+          __nextHasNoMarginBottom={true}
+          options={[
+            // Default option when no template is selected
+            ...(currentId === null && !loading
+              ? [
+                  {
+                    label: __("Please select a template", "campaignbridge"),
+                    value: "",
+                  },
+                ]
+              : []),
+            // Loading option
+            ...(loading
+              ? [{ label: __("Loading…", "campaignbridge"), value: "" }]
+              : []),
+            // Template options
+            ...list.map((p) => ({
+              label: p?.title?.rendered || `#${p.id}`,
+              value: String(p.id),
+            })),
+          ]}
+        />
+        <Button variant="primary" onClick={onNew}>
+          {__("New Template", "campaignbridge")}
+        </Button>
+      </div>
+      {loading && (
+        <div className="cb-tm-loading">
+          <Spinner />
+        </div>
+      )}
+      {currentId ? (
+        <BlockEditor
+          postId={currentId}
+          onBlocksChange={(blocks) => {
+            // Handle block changes if needed
+          }}
+        />
+      ) : (
+        <div className="cb-editor-placeholder">
+          <div className="cb-editor-placeholder-content">
+            <h3>{__("Select a Template", "campaignbridge")}</h3>
+            <p>
+              {__(
+                "Choose a template from the dropdown above to start editing, or create a new one.",
+                "campaignbridge",
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -146,6 +337,6 @@ domReady(() => {
   if (root) {
     // Use React 18 createRoot API instead of deprecated render
     const reactRoot = createRoot(root);
-    reactRoot.render(createElement(App));
+    reactRoot.render(<App />);
   }
 });

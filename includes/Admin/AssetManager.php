@@ -206,6 +206,14 @@ class AssetManager {
 			array( 'campaignbridge-admin-base' ),
 			CB_VERSION
 		);
+
+		// Register block editor style for standalone editor.
+		wp_register_style(
+			'campaignbridge-block-editor',
+			CB_URL . 'dist/styles/admin/block-editor.css',
+			array( 'campaignbridge-admin-base', 'wp-block-editor' ),
+			CB_VERSION
+		);
 	}
 
 	/**

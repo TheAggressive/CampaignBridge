@@ -81,29 +81,38 @@ class TemplateManagerPage extends AdminPage {
 			return;
 		}
 
-		// Check WordPress version compatibility for block editor features.
-		$wp_version  = get_bloginfo( 'version' );
-		$min_version = '5.8.0'; // Minimum version for full block editor support.
+		// Editor foundations.
+		wp_enqueue_script( 'wp-block-editor' );
+		wp_enqueue_script( 'wp-components' );
+		wp_enqueue_script( 'wp-element' );
+		wp_enqueue_script( 'wp-data' );
+		wp_enqueue_script( 'wp-core-data' );
+		wp_enqueue_script( 'wp-blocks' );
+		wp_enqueue_script( 'wp-keycodes' );
+		wp_enqueue_script( 'wp-i18n' );
+		wp_enqueue_script( 'wp-compose' );
+		wp_enqueue_script( 'wp-primitives' ); // icons, etc.
 
-		if ( version_compare( $wp_version, $min_version, '<' ) ) {
-			// For older WordPress versions, load basic block editor support.
-			wp_enqueue_script( 'wp-blocks' );
-			wp_enqueue_script( 'wp-element' );
-		} else {
-			// For newer WordPress versions, load full block editor support.
-			wp_enqueue_script( 'wp-block-editor' );
-			wp_enqueue_script( 'wp-edit-post' );
-			wp_enqueue_script( 'wp-format-library' );
-			wp_enqueue_style( 'wp-block-editor' );
-			wp_enqueue_style( 'wp-edit-post' );
+		// Default formatting tools & common editor UX bits.
+		wp_enqueue_script( 'wp-format-library' );
+		wp_enqueue_style( 'wp-format-library' );
+
+		// Canvas styles (how blocks look in the editor).
+		wp_enqueue_style( 'wp-block-library' );
+		wp_enqueue_style( 'wp-block-library-theme' );
+
+		// Media modal for image blocks.
+		wp_enqueue_media();
+
+		// CRUCIAL: actually load scripts/styles for all registered blocks in editor context.
+		if ( function_exists( 'wp_enqueue_registered_block_scripts_and_styles' ) ) {
+			wp_enqueue_registered_block_scripts_and_styles( true );
 		}
 
 		// Enqueue template-manager-specific assets only.
 		wp_enqueue_style( 'campaignbridge-template-manager' );
+		wp_enqueue_style( 'campaignbridge-block-editor' );
 		wp_enqueue_script( 'campaignbridge-template-manager' );
-
-		// Media modal and core editor stack.
-		wp_enqueue_media();
 
 		$current_id = isset( $_GET['post_id'] ) ? absint( $_GET['post_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
@@ -119,6 +128,7 @@ class TemplateManagerPage extends AdminPage {
 						'locale'        => get_user_locale(),
 						'defaultTitle'  => __( 'Untitled template', 'campaignbridge' ),
 						'currentPostId' => $current_id ? $current_id : null,
+						'settings'      => get_block_editor_settings( array(), $post ),
 						'debug'         => array(
 							'wpVersion'       => get_bloginfo( 'version' ),
 							'minVersion'      => '5.8.0',
