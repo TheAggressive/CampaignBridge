@@ -1,47 +1,69 @@
-/* rough sketch; adapt to Tailwind if you prefer */
-.cb-tm-layout {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  height: calc(100vh - 80px);
-  background-color: aliceblue;
-}
-.cb-tm-toolbar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 12px;
-  border-bottom: 1px solid #ddd;
-}
-.cb-tm-main {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  height: 100%;
-}
-.cb-tm-sidebar {
-  border-left: 1px solid #eee;
-  overflow: auto;
-  padding: 12px;
-}
-.cb-tm-notices {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  max-width: 420px;
-}
-
-/* Loading state for editor initialization */
-.cb-editor-loading {
+/* Shell layout */
+.cb-tm-shell {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  text-align: center;
-  min-height: 300px;
+  height: 100vh; /* fill available viewport */
+  overflow: hidden;
 }
 
-.cb-editor-loading p {
-  margin: 16px 0 0 0;
-  color: #666;
-  font-size: 14px;
+/* Toolbar at the top */
+.cb-tm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #ddd;
+  background: #f9f9f9;
+  gap: 0.75rem;
+}
+
+/* Loading and placeholder states */
+.cb-tm-loading,
+.cb-editor-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+}
+
+.cb-editor-placeholder-content {
+  max-width: 420px;
+  text-align: center;
+}
+
+/* Editor container */
+.cb-block-editor {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* required so BlockList scrolls properly */
+}
+
+/* Two–column layout: main + sidebar */
+.cb-tm-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.cb-tm-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar */
+.cb-tm-sidebar {
+  width: 280px;
+  border-left: 1px solid #e2e2e2;
+  background: #fff;
+  overflow-y: auto;
+}
+
+/* Inserter row above content */
+.cb-tm-inserter {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
 }

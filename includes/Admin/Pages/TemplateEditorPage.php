@@ -152,7 +152,7 @@ class TemplateEditorPage extends AdminPage {
 						'locale'        => get_user_locale(),
 						'defaultTitle'  => __( 'Untitled template', 'campaignbridge' ),
 						'currentPostId' => $current_id ? $current_id : null,
-						'settings'      => get_block_editor_settings( array(), null ),
+						'settings'      => get_block_editor_settings(),
 						'debug'         => array(
 							'wpVersion'       => get_bloginfo( 'version' ),
 							'minVersion'      => '5.8.0',

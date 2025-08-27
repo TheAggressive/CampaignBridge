@@ -107,6 +107,7 @@ class AssetManager {
 			CB_URL . 'dist/scripts/template-editor/editor.js',
 			array(
 				'wp-block-editor',
+				'wp-edit-post',
 				'wp-components',
 				'wp-element',
 				'wp-data',
@@ -167,6 +168,7 @@ class AssetManager {
 			CB_URL . 'dist/styles/pages/editor.css',
 			array(
 				'wp-block-editor',
+				'wp-edit-post',
 			),
 			CB_VERSION
 		);
