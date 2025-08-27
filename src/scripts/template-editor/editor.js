@@ -9,8 +9,6 @@ import TemplateToolbar from "./components/TemplateToolbar";
 import { createDraft, listTemplates } from "./services/api";
 import { getParam, setParamAndReload } from "./utils/url";
 
-const CFG = window.CB_TM || {};
-
 /**
  * Main application component for the CampaignBridge Template Editor.
  *
@@ -26,7 +24,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const currentId = Number(getParam("post_id") || CFG.currentPostId) || null;
+  const currentId = getParam("post_id") ? Number(getParam("post_id")) : null;
 
   /**
    * Loads the list of available templates on component mount.

@@ -12,9 +12,8 @@ import { useEffect, useMemo, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 import { getPostRaw, savePostContent } from "../services/api";
 import { parseOrConvert, serializeSafe } from "../utils/blocks";
-import { waitForBlocksRegistered } from "../utils/waitForBlocks";
 
-const CFG = window.CB_TM || {};
+import { waitForBlocksRegistered } from "../utils/waitForBlocks";
 
 /**
  * Block canvas component that provides the WordPress block editor interface.
@@ -80,7 +79,7 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
       hasFixedToolbar: true,
       inserter: true,
       richEditingEnabled: true,
-      mediaUpload: CFG.mediaUpload || null,
+      mediaUpload: window.wp.media || null,
       __experimentalBlockPatterns: [],
       __experimentalBlockPatternCategories: [],
     }),

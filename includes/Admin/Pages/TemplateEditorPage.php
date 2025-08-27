@@ -107,9 +107,9 @@ class TemplateEditorPage extends AdminPage {
 		wp_enqueue_script( 'wp-blocks' );         // BLOCK SYSTEM FOUNDATION.
 		wp_enqueue_script( 'wp-block-library' );  // CORE BLOCK LIBRARY - CRUCIAL!
 
-		// Additional scripts needed for block inserter
+		// Additional scripts needed for block inserter.
 		wp_enqueue_script( 'wp-edit-post' );      // Post editor (includes block inserter)
-		wp_enqueue_script( 'wp-block-directory' ); // Block directory for discovering blocks
+		wp_enqueue_script( 'wp-block-directory' ); // Block directory for discovering blocks.
 
 		// 5. EDITOR COMPONENTS
 		// =================================================================
@@ -128,49 +128,9 @@ class TemplateEditorPage extends AdminPage {
 		// =================================================================
 		wp_enqueue_media(); // Media modal.
 
-		// CRUCIAL: Load all registered block scripts and styles.
-		if ( function_exists( 'wp_enqueue_registered_block_scripts_and_styles' ) ) {
-			wp_enqueue_registered_block_scripts_and_styles( true );
-		}
-
 		// Enqueue template-manager-specific assets only.
 		wp_enqueue_style( 'campaignbridge-block-editor' );
 		wp_enqueue_script( 'campaignbridge-block-editor' );
-
-		$current_id = isset( $_GET['post_id'] ) ? absint( $_GET['post_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-
-		// Add configuration to the block editor script since that's what we're actually using.
-		wp_add_inline_script(
-			'campaignbridge-block-editor',
-			sprintf(
-				'window.CB_TM = %s;',
-				wp_json_encode(
-					array(
-						'postType'      => EmailTemplate::POST_TYPE,
-						'nonce'         => wp_create_nonce( 'wp_rest' ),
-						'apiRoot'       => esc_url_raw( rest_url() ),
-						'locale'        => get_user_locale(),
-						'defaultTitle'  => __( 'Untitled template', 'campaignbridge' ),
-						'currentPostId' => $current_id ? $current_id : null,
-						'settings'      => get_block_editor_settings(),
-						'debug'         => array(
-							'wpVersion'       => get_bloginfo( 'version' ),
-							'minVersion'      => '5.8.0',
-							'hasBlockEditor'  => wp_script_is( 'wp-block-editor', 'enqueued' ),
-							'hasBlocks'       => wp_script_is( 'wp-blocks', 'enqueued' ),
-							'hasBlockLibrary' => wp_script_is( 'wp-block-library', 'enqueued' ),
-							'hasEditPost'     => wp_script_is( 'wp-edit-post', 'enqueued' ),
-							'hasElement'      => wp_script_is( 'wp-element', 'enqueued' ),
-							'hasComponents'   => wp_script_is( 'wp-components', 'enqueued' ),
-							'hasData'         => wp_script_is( 'wp-data', 'enqueued' ),
-							'hasApiFetch'     => wp_script_is( 'wp-api-fetch', 'enqueued' ),
-							'hasI18n'         => wp_script_is( 'wp-i18n', 'enqueued' ),
-						),
-					)
-				)
-			),
-			'before'
-		);
 	}
 
 	/**

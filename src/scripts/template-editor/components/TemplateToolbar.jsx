@@ -45,6 +45,8 @@ export default function TemplateToolbar({
           (val) => onSelect(Number(val) || null)
         }
         disabled={loading}
+        __next40pxDefaultSize={true}
+        __nextHasNoMarginBottom={true}
         options={[
           ...(currentId
             ? []

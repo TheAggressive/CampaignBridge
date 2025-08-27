@@ -36,8 +36,6 @@ import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
 /**
  * Configuration and constants
  */
-const CFG = window.CB_TM || {};
-const CPT = CFG.postType || "cb_email_template";
 
 /**
  * Utility functions
@@ -53,27 +51,30 @@ const setParamAndReload = (k, v) => {
 
 /**
  * API setup
+ * WordPress automatically handles both nonce authentication and API root detection
  */
-if (CFG.nonce) {
-  apiFetch.use(apiFetch.createNonceMiddleware(CFG.nonce));
-}
-if (CFG.apiRoot) {
-  apiFetch.use(apiFetch.createRootURLMiddleware(CFG.apiRoot));
-}
 
 async function createDraft() {
-  const rec = await dispatch("core").saveEntityRecord("postType", CPT, {
-    status: "draft",
-    title: CFG.defaultTitle || "Untitled",
-  });
+  const rec = await dispatch("core").saveEntityRecord(
+    "postType",
+    "cb_email_template",
+    {
+      status: "draft",
+      title: "Untitled template",
+    },
+  );
   return rec?.id;
 }
 
 async function fetchTemplates() {
-  const cached = select("core").getEntityRecords("postType", CPT, {
-    per_page: 100,
-    _fields: ["id", "title", "status", "date"],
-  });
+  const cached = select("core").getEntityRecords(
+    "postType",
+    "cb_email_template",
+    {
+      per_page: 100,
+      _fields: ["id", "title", "status", "date"],
+    },
+  );
 
   if (Array.isArray(cached) && cached.length > 0) {
     return cached;
@@ -81,7 +82,7 @@ async function fetchTemplates() {
 
   try {
     const result = await apiFetch({
-      path: `/wp/v2/${CPT}?per_page=100&_fields=id,title,status,date`,
+      path: `/wp/v2/cb_email_template?per_page=100&_fields=id,title,status,date`,
     });
     return result;
   } catch (error) {
@@ -138,7 +139,7 @@ function BlockEditor({ postId, onBlocksChange }) {
 
     const loadBlocks = async () => {
       const post = await apiFetch({
-        path: `/wp/v2/${CPT}/${postId}?context=edit&_embed`,
+        path: `/wp/v2/cb_email_template/${postId}?context=edit&_embed`,
       });
       if (post.content && post.content.raw) {
         // Parse blocks from post content with a delay to ensure blocks are registered
@@ -165,7 +166,7 @@ function BlockEditor({ postId, onBlocksChange }) {
       try {
         const content = serialize(newBlocks);
         await apiFetch({
-          path: `/wp/v2/${CPT}/${postId}`,
+          path: `/wp/v2/cb_email_template/${postId}`,
           method: "POST",
           data: {
             content: content,
@@ -192,7 +193,7 @@ function BlockEditor({ postId, onBlocksChange }) {
       // Rich text settings
       richEditingEnabled: true,
       // Media settings
-      mediaUpload: CFG.mediaUpload || null,
+      mediaUpload: window.wp.media || null,
       // Enable native block inserter
       inserter: true,
       __experimentalBlockPatterns: [],
@@ -273,11 +274,7 @@ function App() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  // Debug current ID resolution - calculate on every render
-  const cfgPostId = CFG.currentPostId;
-  const urlPostId = getParam("post_id");
-
-  const currentId = Number(urlPostId || cfgPostId) || null;
+  const currentId = getParam("post_id") ? Number(getParam("post_id")) : null;
 
   useEffect(() => {
     let alive = true;

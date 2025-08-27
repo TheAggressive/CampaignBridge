@@ -1,11 +1,5 @@
 import apiFetch from "@wordpress/api-fetch";
 
-const CFG = window.CB_TM || {};
-const CPT = CFG.postType || "cb_email_template";
-
-if (CFG.nonce) apiFetch.use(apiFetch.createNonceMiddleware(CFG.nonce));
-if (CFG.apiRoot) apiFetch.use(apiFetch.createRootURLMiddleware(CFG.apiRoot));
-
 /**
  * Fetches a list of available email templates from the WordPress REST API.
  *
@@ -13,7 +7,7 @@ if (CFG.apiRoot) apiFetch.use(apiFetch.createRootURLMiddleware(CFG.apiRoot));
  */
 export async function listTemplates() {
   return apiFetch({
-    path: `/wp/v2/${CPT}?per_page=100&_fields=id,title,status,date`,
+    path: `/wp/v2/cb_email_template?per_page=100&_fields=id,title,status,date`,
   });
 }
 
@@ -24,9 +18,9 @@ export async function listTemplates() {
  */
 export async function createDraft() {
   return apiFetch({
-    path: `/wp/v2/${CPT}`,
+    path: `/wp/v2/cb_email_template`,
     method: "POST",
-    data: { status: "draft", title: CFG.defaultTitle || "Untitled" },
+    data: { status: "draft", title: "Untitled template" },
   });
 }
 
@@ -37,7 +31,9 @@ export async function createDraft() {
  * @returns {Promise<Object>} The template object with full edit context and embedded data
  */
 export async function getPostRaw(id) {
-  return apiFetch({ path: `/wp/v2/${CPT}/${id}?context=edit&_embed` });
+  return apiFetch({
+    path: `/wp/v2/cb_email_template/${id}?context=edit&_embed`,
+  });
 }
 
 /**
@@ -55,7 +51,7 @@ export async function savePostContent(
   { content, status = "draft", title },
 ) {
   return apiFetch({
-    path: `/wp/v2/${CPT}/${id}`,
+    path: `/wp/v2/cb_email_template/${id}`,
     method: "POST",
     data: { content, status, ...(title != null ? { title } : {}) },
   });
