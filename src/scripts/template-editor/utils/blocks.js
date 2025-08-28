@@ -10,6 +10,8 @@ import { parse, rawHandler, serialize } from "@wordpress/blocks";
  * @returns {Array} Array of parsed block objects
  */
 export function parseOrConvert(html = "") {
+  // console.log("raw", console.log(html));
+  // console.log("html", parse(html), rawHandler({ HTML: html }));
   return html.includes("<!-- wp:") ? parse(html) : rawHandler({ HTML: html });
 }
 

@@ -7,13 +7,12 @@ import {
   ObserveTyping,
   WritingFlow,
 } from "@wordpress/block-editor";
+import { parse } from "@wordpress/blocks";
 import { Spinner } from "@wordpress/components";
 import { useEffect, useMemo, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 import { getPostRaw, savePostContent } from "../services/api";
-import { parseOrConvert, serializeSafe } from "../utils/blocks";
-
-import { waitForBlocksRegistered } from "../utils/waitForBlocks";
+import { serializeSafe } from "../utils/blocks";
 
 /**
  * Block canvas component that provides the WordPress block editor interface.
@@ -40,11 +39,13 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
     let alive = true;
     (async () => {
       if (!postId) return;
-      await waitForBlocksRegistered();
+      // await waitForBlocksRegistered();
       const post = await getPostRaw(postId);
-      console.log(post);
+      console.log("post", post?.content?.raw);
       if (!alive) return;
-      setBlocks(parseOrConvert(post?.content?.raw || ""));
+      const blocks = parse(post?.content?.raw || "");
+      console.log("blocks", blocks);
+      setBlocks(blocks);
       setReady(true);
     })();
     return () => {
@@ -96,6 +97,8 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
       </div>
     );
   }
+
+  // console.log("blocks", blocks);
 
   return (
     <div className="cb-block-editor">

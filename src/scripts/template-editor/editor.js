@@ -1,3 +1,4 @@
+import { registerCoreBlocks } from "@wordpress/block-library";
 import { Notice, Spinner } from "@wordpress/components";
 import domReady from "@wordpress/dom-ready";
 import { createRoot, useEffect, useState } from "@wordpress/element";
@@ -124,6 +125,7 @@ domReady(() => {
   if (root) {
     // Use React 18 createRoot API instead of deprecated render
     const reactRoot = createRoot(root);
+    // registerCoreBlocks();
     reactRoot.render(<App />);
   }
 });
