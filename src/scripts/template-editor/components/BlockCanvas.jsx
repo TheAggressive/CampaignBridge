@@ -75,6 +75,7 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
    */
   const editorSettings = useMemo(
     () => ({
+      ...window.CB_TEMPLATE_SETTINGS,
       hasInlineToolbar: true,
       focusMode: false,
       hasFixedToolbar: true,
@@ -97,8 +98,6 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
       </div>
     );
   }
-
-  // console.log("blocks", blocks);
 
   return (
     <div className="cb-block-editor">

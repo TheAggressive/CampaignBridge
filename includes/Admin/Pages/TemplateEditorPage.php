@@ -83,21 +83,29 @@ class TemplateEditorPage extends AdminPage {
 			return;
 		}
 
-		Blocks::init();
-
-		wp_enqueue_editor();
-		wp_enqueue_media();
-		wp_enqueue_style( 'wp-block-library' );
+		// Core editor CSS.
 		wp_enqueue_style( 'wp-edit-blocks' );
-		wp_enqueue_style( 'wp-format-library' );
-		wp_enqueue_script( 'wp-format-library' );
-		wp_enqueue_script( 'wp-edit-post' );
+		wp_enqueue_style( 'wp-block-editor' );
+		wp_enqueue_style( 'wp-components' );
 
-		wp_enqueue_registered_block_scripts_and_styles();
+		// Core editor JS and registries.
+		wp_enqueue_script( 'wp-element' );
+		wp_enqueue_script( 'wp-components' );
+		wp_enqueue_script( 'wp-data' );
+		wp_enqueue_script( 'wp-i18n' );
+		wp_enqueue_script( 'wp-blocks' );        // block registry.
+		wp_enqueue_script( 'wp-block-editor' );  // <BlockEditorProvider>, BlockList, etc.
+		wp_enqueue_script( 'wp-edit-post' );     // brings inspector/sidebar chrome.
+		wp_enqueue_script( 'wp-format-library' );
+
+		// Enqueue all assets declared by register_block_type() / block.json.
+		if ( function_exists( 'wp_enqueue_registered_block_scripts_and_styles' ) ) {
+			wp_enqueue_registered_block_scripts_and_styles( true );
+		}
 
 		// Enqueue template-manager-specific assets only.
-		wp_enqueue_style( 'campaignbridge-block-editor' );
-		wp_enqueue_script( 'campaignbridge-block-editor' );
+		wp_enqueue_style( 'campaignbridge-block-editor-style' );
+		wp_enqueue_script( 'campaignbridge-block-editor-script' );
 	}
 
 	/**
@@ -112,7 +120,7 @@ class TemplateEditorPage extends AdminPage {
 	 */
 	public static function render(): void {
 		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'campaignbridge' ) );
+			wp_die( esc_html__( 'Sorry, you are not allowed to access this page . ', 'campaignbridge' ) );
 		}
 
 		self::display_messages();
@@ -130,10 +138,10 @@ class TemplateEditorPage extends AdminPage {
 	 *
 	 * This method returns the human-readable title that will be displayed
 	 * at the top of the Template Manager page. The title is localized for internationalization
-	 * support and provides clear identification of the page's purpose.
+	 * support and provides clear identification of the page's purpose .
 	 *
 	 * @since 0.1.0
-	 * @return string The localized page title "Template Manager".
+	 * @return string The localized page title 'Template Manager' .
 	 */
 	public static function get_page_title(): string {
 		return __( 'Template Editor', 'campaignbridge' );

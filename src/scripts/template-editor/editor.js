@@ -125,7 +125,7 @@ domReady(() => {
   if (root) {
     // Use React 18 createRoot API instead of deprecated render
     const reactRoot = createRoot(root);
-    // registerCoreBlocks();
+    registerCoreBlocks();
     reactRoot.render(<App />);
   }
 });

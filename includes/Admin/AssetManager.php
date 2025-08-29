@@ -103,7 +103,7 @@ class AssetManager {
 
 		// Register template manager page script.
 		wp_register_script(
-			'campaignbridge-block-editor',
+			'campaignbridge-block-editor-script',
 			CB_URL . 'dist/scripts/template-editor/editor.js',
 			array(
 				'wp-block-editor',
@@ -164,7 +164,7 @@ class AssetManager {
 
 		// Register block editor style for standalone editor.
 		wp_register_style(
-			'campaignbridge-block-editor',
+			'campaignbridge-block-editor-style',
 			CB_URL . 'dist/styles/pages/editor.css',
 			array(
 				'wp-block-editor',

@@ -45,8 +45,6 @@ class Blocks {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend_assets' ) );
 	}
 
-
-
 	/**
 	 * Automatically discover and register all CampaignBridge blocks from the build directory.
 	 *
@@ -119,7 +117,7 @@ class Blocks {
 		$registry = \WP_Block_Type_Registry::get_instance();
 
 		foreach ( $registry->get_all_registered() as $block_name => $block_type ) {
-			if ( strpos( $block_name, 'campaignbridge/' ) === 0 ) {
+			if ( strpos( $block_type->name, 'campaignbridge/' ) === 0 ) {
 				$blocks[] = $block_name;
 			}
 		}
