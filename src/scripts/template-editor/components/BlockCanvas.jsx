@@ -1,11 +1,9 @@
 import {
   BlockEditorProvider,
   BlockInspector,
-  BlockList,
   BlockTools,
   Inserter,
-  ObserveTyping,
-  WritingFlow,
+  BlockCanvas as WordPressBlockCanvas,
 } from "@wordpress/block-editor";
 import { parse } from "@wordpress/blocks";
 import { Spinner } from "@wordpress/components";
@@ -75,7 +73,6 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
    */
   const editorSettings = useMemo(
     () => ({
-      ...window.CB_TEMPLATE_SETTINGS,
       hasInlineToolbar: true,
       focusMode: false,
       hasFixedToolbar: true,
@@ -116,16 +113,12 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
         settings={editorSettings}
       >
         <BlockTools>
-          <div className="cb-tm-inserter">
+          <div className="cb-template-editor-inserter">
             <Inserter rootClientId={null} />
           </div>
-          <WritingFlow>
-            <ObserveTyping>
-              <BlockList />
-            </ObserveTyping>
-          </WritingFlow>
+          <WordPressBlockCanvas height="400px" />
         </BlockTools>
-        <aside className="cb-tm-sidebar">
+        <aside className="cb-template-editor-sidebar">
           <BlockInspector />
         </aside>
       </BlockEditorProvider>

@@ -97,6 +97,7 @@ class TemplateEditorPage extends AdminPage {
 		wp_enqueue_script( 'wp-block-editor' );  // <BlockEditorProvider>, BlockList, etc.
 		wp_enqueue_script( 'wp-edit-post' );     // brings inspector/sidebar chrome.
 		wp_enqueue_script( 'wp-format-library' );
+		wp_enqueue_script( 'wp-block-library' ); // registers all core blocks.
 
 		// Enqueue all assets declared by register_block_type() / block.json.
 		if ( function_exists( 'wp_enqueue_registered_block_scripts_and_styles' ) ) {
@@ -128,7 +129,7 @@ class TemplateEditorPage extends AdminPage {
 		<div class="wrap">
 			<h1><?php echo esc_html( self::get_page_title() ); ?></h1>
 			<hr class="wp-header-end">
-			<div id="cb-template-manager-root" class="cb-tm-root"></div>
+			<div id="cb-template-editor-root" class="cb-template-editor-root"></div>
 		</div>
 		<?php
 	}

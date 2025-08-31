@@ -1,4 +1,8 @@
-import { BlockEditorKeyboardShortcuts } from "@wordpress/block-editor";
+import {
+  BlockEditorKeyboardShortcuts,
+  ListView,
+  PanelBody,
+} from "@wordpress/block-editor";
 import { Popover, SlotFillProvider } from "@wordpress/components";
 import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
 
