@@ -19,9 +19,6 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin\Pages;
 
-use CampaignBridge\PostTypes\EmailTemplate;
-use CampaignBridge\Blocks\Blocks;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -107,6 +104,19 @@ class TemplateEditorPage extends AdminPage {
 		// Enqueue template-manager-specific assets only.
 		wp_enqueue_style( 'campaignbridge-block-editor-style' );
 		wp_enqueue_script( 'campaignbridge-block-editor-script' );
+
+		wp_localize_script(
+			'campaignbridge-block-editor-script',
+			'CB_TM_BOOT',
+			array(
+				'containerId' => 'cb-template-editor-root',
+				'postType'    => 'cb_email_template',
+				'restBase'    => 'cb_email_template',
+				'initialId'   => 0,
+				'adminUrl'    => admin_url( 'admin.php?page=campaignbridge-template-editor' ),
+				'nonce'       => wp_create_nonce( 'wp_rest' ),
+			)
+		);
 	}
 
 	/**

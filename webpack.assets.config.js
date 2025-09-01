@@ -4,7 +4,6 @@ const wpConfig = require("@wordpress/scripts/config/webpack.config");
 const RemoveEmptyScriptsPlugin = require("webpack-remove-empty-scripts");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const fg = require("fast-glob");
-const DependencyExtractionWebpackPlugin = require("@wordpress/dependency-extraction-webpack-plugin");
 
 function toPosix(p) {
   return p.split("\\").join("/");
@@ -65,7 +64,6 @@ module.exports = (env = {}, argv = {}) => {
     },
     // Override CSS output filename to preserve directory structure
     plugins: [
-      new DependencyExtractionWebpackPlugin(),
       new MiniCssExtractPlugin({
         filename: "[name].css", // This will output styles/styles.css
         chunkFilename: "[name].css",
