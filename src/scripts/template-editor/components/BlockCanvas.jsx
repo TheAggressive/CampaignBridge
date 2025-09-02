@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 import { getPostRaw, savePostContent } from "../services/api";
 import { serializeSafe } from "../utils/blocks";
+import HistoryControls from "./HistoryControls";
 
 /**
  * Block canvas component that provides the WordPress block editor interface.
@@ -38,10 +39,8 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
     (async () => {
       if (!postId) return;
       const post = await getPostRaw(postId);
-      console.log("post", post?.content?.raw);
       if (!alive) return;
       const blocks = parse(post?.content?.raw || "");
-      console.log("blocks", blocks);
       setBlocks(blocks);
       setReady(true);
     })();
@@ -102,6 +101,7 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
         onChange={
           /**
            * Handles block content changes by updating local state and triggering save.
+           * Changes are tracked by our custom history system for undo/redo functionality.
            * @param {Array} n - The new array of block objects
            */
           (n) => {
@@ -114,6 +114,7 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
         <BlockTools>
           <div className="cb-template-editor-inserter">
             <Inserter rootClientId={null} />
+            <HistoryControls />
           </div>
           <WordPressBlockCanvas height="400px" />
         </BlockTools>

@@ -69,6 +69,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
       <InspectorControls>
         <PanelBody title="Excerpt Settings" initialOpen>
           <RangeControl
+            __next40pxDefaultSize
             __nextHasNoMarginBottom
             label="Max characters"
             value={Number(maxChars) || 0}
@@ -149,6 +150,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                     onChange={(v) => setAttributes({ buttonColor: v })}
                   />
                   <RangeControl
+                    __next40pxDefaultSize
                     __nextHasNoMarginBottom
                     label="Border radius"
                     value={Number(buttonRadius) || 0}
@@ -159,6 +161,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                     }
                   />
                   <RangeControl
+                    __next40pxDefaultSize
                     __nextHasNoMarginBottom
                     label="Padding X"
                     value={Number(buttonPaddingX) || 0}
@@ -170,6 +173,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                     }
                   />
                   <RangeControl
+                    __next40pxDefaultSize
                     __nextHasNoMarginBottom
                     label="Padding Y"
                     value={Number(buttonPaddingY) || 0}
