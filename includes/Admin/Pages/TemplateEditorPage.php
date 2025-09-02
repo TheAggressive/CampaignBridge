@@ -74,7 +74,6 @@ class TemplateEditorPage extends AdminPage {
 	 * @return void
 	 */
 	public static function enqueue_template_editor_assets(): void {
-
 		// Only load assets on the specific Template Manager page.
 		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
 			return;
@@ -104,19 +103,6 @@ class TemplateEditorPage extends AdminPage {
 		// Enqueue template-manager-specific assets only.
 		wp_enqueue_style( 'campaignbridge-block-editor-style' );
 		wp_enqueue_script( 'campaignbridge-block-editor-script' );
-
-		wp_localize_script(
-			'campaignbridge-block-editor-script',
-			'CB_TM_BOOT',
-			array(
-				'containerId' => 'cb-template-editor-root',
-				'postType'    => 'cb_email_template',
-				'restBase'    => 'cb_email_template',
-				'initialId'   => 0,
-				'adminUrl'    => admin_url( 'admin.php?page=campaignbridge-template-editor' ),
-				'nonce'       => wp_create_nonce( 'wp_rest' ),
-			)
-		);
 	}
 
 	/**

@@ -72,7 +72,8 @@ class Blocks {
 			$block_location = $build_dir . $result;
 
 			if ( is_dir( $block_location ) ) {
-				register_block_type( $block_location );
+				// Use register_block_type_from_metadata for better performance and metadata handling.
+				register_block_type_from_metadata( $block_location );
 			}
 		}
 	}
