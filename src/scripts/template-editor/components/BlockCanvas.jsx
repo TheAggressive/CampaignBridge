@@ -37,7 +37,6 @@ export default function BlockCanvas({ postId, onBlocksChange }) {
     let alive = true;
     (async () => {
       if (!postId) return;
-      // await waitForBlocksRegistered();
       const post = await getPostRaw(postId);
       console.log("post", post?.content?.raw);
       if (!alive) return;
