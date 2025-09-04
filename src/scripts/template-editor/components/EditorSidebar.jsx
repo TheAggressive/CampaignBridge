@@ -11,7 +11,7 @@ import {
 import { __ } from "@wordpress/i18n";
 
 // Constants for better maintainability
-const INTERACTION_TIMEOUT_MS = 500;
+const INTERACTION_TIMEOUT_MS = 100;
 
 /**
  * Simple Tab Component - avoids WordPress TabPanel state issues
