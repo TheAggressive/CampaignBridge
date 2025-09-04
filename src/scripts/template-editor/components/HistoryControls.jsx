@@ -1,5 +1,5 @@
 // HistoryControls.jsx
-import { Button, Tooltip } from "@wordpress/components";
+import { Button, Icon, Tooltip } from "@wordpress/components";
 import { useDispatch, useSelect } from "@wordpress/data";
 import { useCallback, useEffect, useState } from "@wordpress/element";
 import { redo as redoIcon, undo as undoIcon } from "@wordpress/icons";
@@ -139,7 +139,6 @@ export default function HistoryControls() {
     >
       <Tooltip text="Undo last action (Ctrl+Z / Cmd+Z)">
         <Button
-          icon={undoIcon}
           onClick={performUndo}
           disabled={!hasUndo}
           aria-label={
@@ -147,12 +146,13 @@ export default function HistoryControls() {
               ? "Undo last action (Ctrl+Z or Cmd+Z)"
               : "No actions available to undo"
           }
-        />
+        >
+          <Icon icon={undoIcon} size={20} />
+        </Button>
       </Tooltip>
 
       <Tooltip text="Redo last undone action (Ctrl+Shift+Z / Cmd+Shift+Z)">
         <Button
-          icon={redoIcon}
           onClick={performRedo}
           disabled={!hasRedo}
           aria-label={
@@ -160,7 +160,9 @@ export default function HistoryControls() {
               ? "Redo last undone action (Ctrl+Shift+Z or Cmd+Shift+Z)"
               : "No actions available to redo"
           }
-        />
+        >
+          <Icon icon={redoIcon} size={20} />
+        </Button>
       </Tooltip>
     </div>
   );

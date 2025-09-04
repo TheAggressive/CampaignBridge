@@ -4,7 +4,6 @@ import domReady from "@wordpress/dom-ready";
 import { createRoot, useEffect, useState } from "@wordpress/element";
 import "@wordpress/format-library";
 import { __ } from "@wordpress/i18n";
-import BlockCanvas from "./components/BlockCanvas";
 import EditorChrome from "./components/EditorChrome";
 import TemplateToolbar from "./components/TemplateToolbar";
 import { createDraft, listTemplates } from "./services/api";
@@ -21,7 +20,7 @@ import { getParam, setParamAndReload } from "./utils/url";
  *
  * @returns {JSX.Element} The main editor application
  */
-export default function App() {
+export default function CampaignBridgeBlockEditor() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -65,7 +64,7 @@ export default function App() {
   };
 
   return (
-    <div className="cb-tm-shell">
+    <div className="cb-block-editor-shell">
       {error && (
         <Notice status="error" isDismissible={false}>
           {error}
@@ -79,13 +78,18 @@ export default function App() {
         onNew={onNew}
       />
       {loading ? (
-        <div className="cb-tm-loading">
+        <div className="cb-block-editor-loading">
           <Spinner />
         </div>
       ) : currentId ? (
-        <EditorChrome>
-          <BlockCanvas postId={currentId} />
-        </EditorChrome>
+        <EditorChrome
+          list={list}
+          currentId={currentId}
+          loading={loading}
+          onSelect={onSelect}
+          onNew={onNew}
+          postId={currentId}
+        />
       ) : (
         <EmptyState />
       )}
@@ -103,8 +107,8 @@ export default function App() {
  */
 function EmptyState() {
   return (
-    <div className="cb-editor-placeholder">
-      <div className="cb-editor-placeholder-content">
+    <div className="cb-block-editor-placeholder">
+      <div className="cb-block-editor-placeholder-content">
         <h3>{__("Select a Template", "campaignbridge")}</h3>
         <p>
           {__(
@@ -122,12 +126,12 @@ function EmptyState() {
  * Finds the root element and renders the App component using React 18's createRoot API.
  */
 domReady(() => {
-  const root = document.getElementById("cb-template-editor-root");
+  const root = document.getElementById("cb-block-editor-root");
   if (root) {
     // Use React 18 createRoot API instead of deprecated render
     const reactRoot = createRoot(root);
     registerCoreBlocks();
     registerCustomBlocks();
-    reactRoot.render(<App />);
+    reactRoot.render(<CampaignBridgeBlockEditor />);
   }
 });

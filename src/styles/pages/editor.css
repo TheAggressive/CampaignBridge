@@ -1,25 +1,29 @@
-/* Shell layout */
-.cb-tm-shell {
-  display: flex;
-  flex-direction: column;
+@import "tailwindcss";
+
+/* Shell layout - now works with InterfaceSkeleton */
+.cb-block-editor-shell {
   height: 100vh; /* fill available viewport */
   overflow: hidden;
 }
 
-/* Toolbar at the top */
-.cb-tm-toolbar {
+/* Editor header - for InterfaceSkeleton header area */
+.cb-editor-header {
+  padding: 1rem;
+  border-bottom: 1px solid #ddd;
+  background: #f9f9f9;
+}
+
+/* Toolbar within the header */
+.cb-block-editor-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #ddd;
-  background: #f9f9f9;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 /* Loading and placeholder states */
-.cb-tm-loading,
-.cb-editor-placeholder {
+.cb-block-editor-loading,
+.cb-block-editor-placeholder {
   flex: 1;
   display: flex;
   align-items: center;
@@ -27,43 +31,112 @@
   color: #555;
 }
 
-.cb-editor-placeholder-content {
-  max-width: 420px;
+.cb-block-editor-placeholder-content {
+  /* max-width: 420px; */
   text-align: center;
 }
 
-/* Editor container */
-.cb-block-editor {
-  display: flex;
-  flex: 1;
-  min-height: 0; /* required so BlockList scrolls properly */
-}
-
-/* Two–column layout: main + sidebar */
-.cb-tm-layout {
-  display: flex;
-  flex: 1;
+/* Editor content - for InterfaceSkeleton content area */
+.cb-editor-content {
+  height: 100%;
   overflow: hidden;
 }
 
-.cb-tm-main {
-  flex: 1;
-  min-width: 0;
+/* Editor container - now simpler since InterfaceSkeleton handles layout */
+.cb-block-editor {
+  height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* required so BlockList scrolls properly */
 }
 
-/* Sidebar */
-.cb-tm-sidebar {
-  width: 280px;
-  border-left: 1px solid #e2e2e2;
+/* Editor sidebar - for InterfaceSkeleton sidebar area */
+.cb-editor-sidebar {
+  height: 100%;
   background: #fff;
+  border-left: 1px solid #e2e2e2;
   overflow-y: auto;
 }
 
 /* Inserter row above content */
-.cb-tm-inserter {
-  padding: 0.25rem 0.5rem;
-  border-bottom: 1px solid #eee;
-  background: #fafafa;
+.cb-block-editor-tools {
+  @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
+}
+
+/* Block Toolbar - Floating positioning for hover effect */
+.cb-block-editor .block-editor-block-toolbar {
+  position: absolute !important;
+  top: -50px !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1000 !important;
+  background: #fff !important;
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease !important;
+}
+
+.cb-block-editor .block-editor-block-toolbar.is-shown {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ensure proper stacking context */
+.cb-block-editor {
+  position: relative;
+}
+
+/* Custom Tab System */
+.cb-sidebar-tabs {
+  border-bottom: 1px solid #e2e2e2;
+  background: #f9f9f9;
+}
+
+.cb-tab-buttons {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cb-tab-button {
+  flex: 1;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #555;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.cb-tab-button:hover {
+  background: #f0f0f0;
+  color: #007cba;
+}
+
+.cb-tab-button.is-active {
+  background: #fff;
+  border-bottom-color: #007cba;
+  color: #007cba;
+  font-weight: 600;
+}
+
+.cb-tab-button:focus {
+  outline: 2px solid #007cba;
+  outline-offset: -2px;
+}
+
+/* Sidebar Content */
+.cb-sidebar-content {
+  height: calc(100% - 57px); /* Account for tab height */
+  overflow-y: auto;
 }

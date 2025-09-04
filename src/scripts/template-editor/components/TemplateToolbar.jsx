@@ -2,7 +2,7 @@ import { Button, SelectControl } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
 
 /**
- * Template toolbar component that provides template selection and creation controls.
+ * Toolbar component that provides template selection and creation controls.
  *
  * Displays a dropdown for selecting existing templates and a button for creating
  * new templates. Handles loading states and provides appropriate options based
@@ -32,7 +32,7 @@ export default function TemplateToolbar({
     value: String(p.id),
   }));
   return (
-    <div className="cb-tm-toolbar">
+    <div className="cb-block-editor-toolbar">
       <SelectControl
         label={__("Templates", "campaignbridge")}
         value={currentId ? String(currentId) : ""}
@@ -52,7 +52,7 @@ export default function TemplateToolbar({
             ? []
             : [
                 {
-                  label: __("Please select a template", "campaignbridge"),
+                  label: __("Please Select a Template", "campaignbridge"),
                   value: "",
                 },
               ]),

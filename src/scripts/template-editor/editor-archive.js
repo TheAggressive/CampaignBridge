@@ -229,7 +229,7 @@ function BlockEditor({ postId, onBlocksChange }) {
   if (!isReady || !settings || Object.keys(settings).length === 0) {
     return (
       <div className="cb-block-editor">
-        <div className="cb-editor-loading">
+        <div className="cb-block-editor-loading">
           <Spinner />
           <p>{__("Initializing editor...", "campaignbridge")}</p>
         </div>
@@ -241,8 +241,8 @@ function BlockEditor({ postId, onBlocksChange }) {
     <div className="cb-block-editor">
       <ShortcutProvider>
         <SlotFillProvider>
-          <div className="cb-tm-layout">
-            <div className="cb-tm-main">
+          <div className="cb-block-editor-layout">
+            <div className="cb-block-editor-main">
               <BlockEditorProvider
                 value={blocks}
                 onChange={saveBlocks}
@@ -257,7 +257,7 @@ function BlockEditor({ postId, onBlocksChange }) {
                   </WritingFlow>
                 </BlockTools>
 
-                <aside className="cb-tm-sidebar">
+                <aside className="cb-block-editor-sidebar">
                   <BlockInspector />
                 </aside>
                 <Popover.Slot />
@@ -315,13 +315,13 @@ function App() {
   };
 
   return (
-    <div className="cb-tm-shell">
+    <div className="cb-block-editor-shell">
       {error && (
         <Notice status="error" isDismissible={false}>
           {error}
         </Notice>
       )}
-      <div className="cb-tm-toolbar">
+      <div className="cb-block-editor-inserter">
         <SelectControl
           label={__("Templates", "campaignbridge")}
           value={currentId ? String(currentId) : ""}
@@ -358,7 +358,7 @@ function App() {
         </Button>
       </div>
       {loading && (
-        <div className="cb-tm-loading">
+        <div className="cb-block-editor-loading">
           <Spinner />
         </div>
       )}
@@ -370,8 +370,8 @@ function App() {
           }}
         />
       ) : (
-        <div className="cb-editor-placeholder">
-          <div className="cb-editor-placeholder-content">
+        <div className="cb-block-editor-placeholder">
+          <div className="cb-block-editor-placeholder-content">
             <h3>{__("Select a Template", "campaignbridge")}</h3>
             <p>
               {__(
