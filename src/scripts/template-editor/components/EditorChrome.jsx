@@ -135,6 +135,7 @@ export default function EditorChrome({
       hasFixedToolbar: true,
       inserter: true,
       richEditingEnabled: true,
+      allowedBlockTypes: true,
       mediaUpload: window.wp.media || null,
       __experimentalBlockPatterns: blockPatterns,
       __experimentalBlockPatternCategories: blockPatternCategories,
@@ -196,6 +197,7 @@ export default function EditorChrome({
             }
           }
           settings={editorSettings}
+          useSubRegistry={false}
         >
           <InterfaceSkeleton
             header={
@@ -214,8 +216,8 @@ export default function EditorChrome({
             }
           />
           <BlockEditorKeyboardShortcuts />
-          <Popover.Slot />
         </BlockEditorProvider>
+        <Popover.Slot />
       </SlotFillProvider>
     </ShortcutProvider>
   );

@@ -96,12 +96,15 @@ class TemplateEditorPage extends AdminPage {
 		wp_enqueue_script( 'wp-format-library' );
 		wp_enqueue_script( 'wp-block-library' ); // registers all core blocks.
 
-		\do_action( 'enqueue_block_assets' );
-
 		// Enqueue all assets declared by register_block_type() / block.json.
 		if ( function_exists( 'wp_enqueue_registered_block_scripts_and_styles' ) ) {
 			wp_enqueue_registered_block_scripts_and_styles( true );
 		}
+
+		// 🔑 IMPORTANT for 3rd-party blocks:
+		// Many plugins enqueue their editor bundles on the 'enqueue_block_editor_assets' action.
+		// That hook only runs on post.php/post-new.php, so trigger it for your page too:
+		do_action( 'enqueue_block_editor_assets' );
 
 		// Enqueue template-manager-specific assets only.
 		wp_enqueue_style( 'campaignbridge-block-editor-style' );
