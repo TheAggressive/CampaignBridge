@@ -62,6 +62,12 @@ const BLOCK_NAMESPACE =
   "campaignbridge";
 
 /**
+ * Regular expression pattern for matching block file paths
+ * Matches paths like "./hero/index.js", "./testimonial/index.js", etc.
+ */
+const BLOCK_PATTERN = /^\.\/.*\/index\.js$/;
+
+/**
  * Creates a block registry for tracking registered blocks
  *
  * Provides a functional interface for managing the lifecycle of block registrations,

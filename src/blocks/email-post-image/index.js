@@ -1,15 +1,15 @@
-import { registerBlockType } from "@wordpress/blocks";
+import { registerBlockType } from '@wordpress/blocks';
 
-import metadata from "./block.json";
-import Edit from "./edit";
+import metadata from './block.json';
+import Edit from './edit';
 
 const { name } = metadata;
 export { metadata, name };
 
 export const settings = {
-  edit: Edit,
+	edit: Edit,
 };
 
-export const init = () => registerBlockType({ name, ...metadata }, settings);
+export const init = () => registerBlockType( { name, ...metadata }, settings );
 
 init();

@@ -1,4 +1,4 @@
-import { parse, rawHandler, serialize } from "@wordpress/blocks";
+import { parse, rawHandler, serialize } from '@wordpress/blocks';
 
 /**
  * Parses HTML content into WordPress blocks, handling both block markup and raw HTML.
@@ -7,12 +7,14 @@ import { parse, rawHandler, serialize } from "@wordpress/blocks";
  * as blocks. Otherwise, it converts raw HTML using the raw handler.
  *
  * @param {string} [html=""] - The HTML content to parse
- * @returns {Array} Array of parsed block objects
+ * @return {Array} Array of parsed block objects
  */
-export function parseOrConvert(html = "") {
-  // console.log("raw", console.log(html));
-  // console.log("html", parse(html), rawHandler({ HTML: html }));
-  return html.includes("<!-- wp:") ? parse(html) : rawHandler({ HTML: html });
+export function parseOrConvert( html = '' ) {
+	// console.log("raw", console.log(html));
+	// console.log("html", parse(html), rawHandler({ HTML: html }));
+	return html.includes( '<!-- wp:' )
+		? parse( html )
+		: rawHandler( { HTML: html } );
 }
 
 /**
@@ -22,12 +24,12 @@ export function parseOrConvert(html = "") {
  * returns an empty string instead of throwing an error.
  *
  * @param {Array} [blocks=[]] - Array of block objects to serialize
- * @returns {string} The serialized HTML content, or empty string on error
+ * @return {string} The serialized HTML content, or empty string on error
  */
-export function serializeSafe(blocks = []) {
-  try {
-    return serialize(blocks);
-  } catch {
-    return "";
-  }
+export function serializeSafe( blocks = [] ) {
+	try {
+		return serialize( blocks );
+	} catch {
+		return '';
+	}
 }
