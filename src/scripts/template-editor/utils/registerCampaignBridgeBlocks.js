@@ -30,8 +30,8 @@
  *
  * ## Usage
  * ```javascript
- * import { registerCustomBlocks } from './registerCustomBlocks';
- * const results = registerCustomBlocks(); // Returns { discovered, registered, skipped, failed }
+ * import { registerCampaignBridgeBlocks } from './registerCustomBlocks';
+ * const results = registerCampaignBridgeBlocks(); // Returns { discovered, registered, skipped, failed }
  * ```
  *
  * ## Error Handling
@@ -44,8 +44,8 @@
  *
  * @example
  * ```javascript
- * import { registerCustomBlocks } from './utils/registerCustomBlocks';
- * const results = registerCustomBlocks();
+ * import { registerCampaignBridgeBlocks } from './utils/registerCustomBlocks';
+ * const results = registerCampaignBridgeBlocks();
  * console.log(`Registered ${results.registered} of ${results.discovered} blocks`);
  * ```
  */
@@ -412,10 +412,10 @@ const blockRegistration = createBlockRegistration();
  *
  * @example
  * ```javascript
- * import { registerCustomBlocks } from './registerCustomBlocks';
+ * import { registerCampaignBridgeBlocks } from './registerCustomBlocks';
  *
  * // Register all blocks
- * const results = registerCustomBlocks();
+ * const results = registerCampaignBridgeBlocks();
  * console.log(`Registered ${results.registered} blocks, ${results.failed} failed`);
  *
  * // Results object structure:
@@ -427,7 +427,7 @@ const blockRegistration = createBlockRegistration();
  * // }
  * ```
  */
-export const registerCustomBlocks = () => {
+export const registerCampaignBridgeBlocks = () => {
   const discoveredBlocks = blockDiscovery.discoverAllBlocks();
 
   const results = {
