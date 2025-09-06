@@ -55,11 +55,8 @@ const blockContext = require.context("../../../blocks", true, /index\.js$/);
 
 /**
  * Configuration constants
- * Derived from require.context path for maintainability
  */
-const BLOCK_NAMESPACE =
-  blockContext.id.split("/").find((part) => part.includes("campaignbridge")) ||
-  "campaignbridge";
+const BLOCK_NAMESPACE = "campaignbridge";
 
 /**
  * Regular expression pattern for matching block file paths
@@ -76,11 +73,7 @@ const BLOCK_PATTERN = /^\.\/.*\/index\.js$/;
  * @returns {Object} Block registry interface with methods for block management
  * @returns {Function} returns.isRegistered - Checks if a block is already registered
  * @returns {Function} returns.markRegistered - Marks a block as registered
- * @returns {Function} returns.getRegisteredCount - Gets the count of registered blocks
- * @returns {Function} returns.getRegisteredBlocks - Gets array of all registered block names
  * @returns {Function} returns.cacheDiscoveredBlock - Caches a discovered block module
- * @returns {Function} returns.getDiscoveredBlock - Retrieves a cached block module
- * @returns {Function} returns.clear - Clears all registered and discovered blocks
  *
  * @example
  * ```javascript
@@ -96,15 +89,8 @@ const createBlockRegistry = () => {
   return {
     isRegistered: (blockName) => registeredBlocks.has(blockName),
     markRegistered: (blockName) => registeredBlocks.add(blockName),
-    getRegisteredCount: () => registeredBlocks.size,
-    getRegisteredBlocks: () => Array.from(registeredBlocks),
     cacheDiscoveredBlock: (blockName, module) =>
       discoveredBlocks.set(blockName, module),
-    getDiscoveredBlock: (blockName) => discoveredBlocks.get(blockName),
-    clear: () => {
-      registeredBlocks.clear();
-      discoveredBlocks.clear();
-    },
   };
 };
 
@@ -146,19 +132,14 @@ const createBlockLogger = () => {
     const prefix = "CampaignBridge";
     const formattedMessage = `[${prefix}] ${message}`;
 
-    switch (level) {
-      case "info":
-        console.log(formattedMessage, data || "");
-        break;
-      case "warn":
-        console.warn(formattedMessage, data || "");
-        break;
-      case "error":
-        console.error(formattedMessage, data || "");
-        break;
-      default:
-        console.log(formattedMessage, data || "");
-    }
+    const loggers = {
+      info: console.log,
+      warn: console.warn,
+      error: console.error,
+    };
+
+    const logger = loggers[level] || console.log;
+    logger(formattedMessage, data);
   };
 
   return {

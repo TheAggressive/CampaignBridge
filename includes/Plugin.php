@@ -223,15 +223,40 @@ class Plugin {
 	 * @return array Cleaned, validated, and sanitized settings array ready for storage.
 	 */
 	public function sanitize_settings( array $input ): array {
+		// Verify nonce for CSRF protection.
+		check_admin_referer( 'campaignbridge-options' );
+
 		$clean             = array();
 		$previous          = get_option( $this->option_name, array() );
 		$clean['provider'] = $input['provider'] ?? 'mailchimp';
 		$clean['provider'] = sanitize_key( $clean['provider'] );
 
-		$posted_api_key   = $input['api_key'] ?? '';
-		$clean['api_key'] = '' === $posted_api_key && isset( $previous['api_key'] )
-			? $previous['api_key']
-			: sanitize_text_field( $posted_api_key );
+		$posted_api_key = $input['api_key'] ?? '';
+
+		// Handle API key with additional security measures.
+		if ( '' === $posted_api_key && isset( $previous['api_key'] ) ) {
+			$clean['api_key'] = $previous['api_key'];
+		} else {
+			$sanitized_key = sanitize_text_field( $posted_api_key );
+
+			// Validate API key format and length.
+			if ( ! empty( $sanitized_key ) ) {
+				// Basic length check to prevent abuse.
+				if ( strlen( $sanitized_key ) < 10 || strlen( $sanitized_key ) > 100 ) {
+					add_settings_error(
+						'campaignbridge_messages',
+						'campaignbridge_api_key_length',
+						__( 'API key must be between 10 and 100 characters.', 'campaignbridge' ),
+						'error'
+					);
+					$clean['api_key'] = isset( $previous['api_key'] ) ? $previous['api_key'] : '';
+				} else {
+					$clean['api_key'] = $sanitized_key;
+				}
+			} else {
+				$clean['api_key'] = '';
+			}
+		}
 
 		$clean['audience_id']        = sanitize_text_field( $input['audience_id'] ?? '' );
 		$clean['exclude_post_types'] = array();

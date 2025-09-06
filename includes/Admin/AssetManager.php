@@ -38,6 +38,7 @@ class AssetManager {
 		add_action( 'admin_init', array( __CLASS__, 'register_global_assets' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register_page_assets' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_global_assets' ) );
+		add_action( 'admin_init', array( __CLASS__, 'add_security_headers' ) );
 	}
 
 	/**
@@ -213,5 +214,57 @@ class AssetManager {
 
 		// Always enqueue global assets on CampaignBridge pages.
 		wp_enqueue_style( 'campaignbridge-styles' );
+	}
+
+	/**
+	 * Add security headers for CampaignBridge admin pages.
+	 *
+	 * This method adds Content Security Policy headers to CampaignBridge admin pages
+	 * to provide additional security against XSS and other client-side attacks.
+	 *
+	 * @since 0.1.0
+	 * @return void
+	 */
+	public static function add_security_headers(): void {
+		// Only add headers on CampaignBridge pages to avoid interfering with other plugins.
+		if ( ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( get_current_screen()?->id ?? '' ) ) {
+			return;
+		}
+
+		// Content Security Policy for admin pages.
+		$csp = array(
+			"default-src 'self'",
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.wordpress.org https://*.wp.com",
+			"style-src 'self' 'unsafe-inline' https://*.wordpress.org https://*.wp.com https://fonts.googleapis.com",
+			"font-src 'self' https://fonts.gstatic.com https://*.wordpress.org",
+			"img-src 'self' data: https: blob:",
+			"connect-src 'self' https://*.wordpress.org https://*.wp.com",
+			"frame-src 'self'",
+			"object-src 'none'",
+			"base-uri 'self'",
+			"form-action 'self'",
+		);
+
+		$csp_header = 'Content-Security-Policy: ' . implode( '; ', $csp );
+
+		// Add CSP header if not already set.
+		if ( ! headers_sent() && ! self::has_csp_header() ) {
+			header( $csp_header );
+		}
+	}
+
+	/**
+	 * Check if CSP header is already set.
+	 *
+	 * @return bool True if CSP header exists.
+	 */
+	private static function has_csp_header(): bool {
+		$headers = headers_list();
+		foreach ( $headers as $header ) {
+			if ( stripos( $header, 'Content-Security-Policy:' ) === 0 ) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

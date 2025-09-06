@@ -134,12 +134,55 @@ class MailchimpRoutes {
 	}
 
 	/**
+	 * Simple rate limiting for Mailchimp REST API endpoints.
+	 *
+	 * @param string $endpoint_name Unique identifier for the endpoint.
+	 * @param int    $max_requests Maximum requests allowed per time window.
+	 * @param int    $time_window Time window in seconds.
+	 * @return bool|\WP_Error True if allowed, WP_Error if rate limited.
+	 */
+	public static function check_rate_limit( string $endpoint_name, int $max_requests = 20, int $time_window = 60 ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'rate_limit_no_user', 'User not authenticated', array( 'status' => 401 ) );
+		}
+
+		$cache_key = 'cb_mc_rate_limit_' . $endpoint_name . '_' . $user_id;
+		$requests  = get_transient( $cache_key );
+
+		if ( false === $requests ) {
+			$requests = 0;
+		}
+
+		if ( $requests >= $max_requests ) {
+			return new \WP_Error(
+				'rate_limit_exceeded',
+				sprintf(
+					/* translators: %d: number of seconds until reset */
+					__( 'Rate limit exceeded. Try again in %d seconds.', 'campaignbridge' ),
+					$time_window
+				),
+				array( 'status' => 429 )
+			);
+		}
+
+		set_transient( $cache_key, $requests + 1, $time_window );
+		return true;
+	}
+
+	/**
 	 * GET /mailchimp/sections endpoint.
 	 *
 	 * @param WP_REST_Request $req Request object.
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function r_mc_sections( WP_REST_Request $req ) {
+		// Rate limiting check.
+		$rate_limit = self::check_rate_limit( 'mc_sections' );
+		if ( is_wp_error( $rate_limit ) ) {
+			return $rate_limit;
+		}
+
 		$settings = get_option( self::$option_name );
 		$provider = isset( $settings['provider'] ) && isset( self::$providers[ $settings['provider'] ] ) ? $settings['provider'] : 'mailchimp';
 		if ( 'mailchimp' !== $provider || ! isset( self::$providers['mailchimp'] ) ) {
@@ -160,6 +203,12 @@ class MailchimpRoutes {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function r_mc_audiences( WP_REST_Request $req ) {
+		// Rate limiting check.
+		$rate_limit = self::check_rate_limit( 'mc_audiences' );
+		if ( is_wp_error( $rate_limit ) ) {
+			return $rate_limit;
+		}
+
 		$settings = get_option( self::$option_name );
 		if ( empty( $settings['api_key'] ) ) {
 			return new \WP_Error( 'missing_key', 'Missing API key', array( 'status' => 400 ) );
@@ -179,6 +228,12 @@ class MailchimpRoutes {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public static function r_mc_templates( WP_REST_Request $req ) {
+		// Rate limiting check.
+		$rate_limit = self::check_rate_limit( 'mc_templates' );
+		if ( is_wp_error( $rate_limit ) ) {
+			return $rate_limit;
+		}
+
 		$settings = get_option( self::$option_name );
 		if ( empty( $settings['api_key'] ) ) {
 			return new \WP_Error( 'missing_key', 'Missing API key', array( 'status' => 400 ) );

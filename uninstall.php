@@ -14,4 +14,10 @@ delete_option( 'campaignbridge_settings' );
 
 // Delete Mailchimp-related transients for any lingering keys (best-effort patterns).
 global $wpdb;
-$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_cb_mc_%' OR option_name LIKE '_transient_timeout_cb_mc_%'" );
+$wpdb->query(
+	$wpdb->prepare(
+		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+		'_transient_cb_mc_%',
+		'_transient_timeout_cb_mc_%'
+	)
+);

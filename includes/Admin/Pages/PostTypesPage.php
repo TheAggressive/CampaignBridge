@@ -90,7 +90,10 @@ class PostTypesPage extends AdminPage {
 			<h1><?php echo esc_html( self::get_page_title() ); ?></h1>
 
 			<form method="post" action="options.php">
-				<?php settings_fields( 'campaignbridge' ); ?>
+				<?php
+				settings_fields( 'campaignbridge' );
+				wp_nonce_field( 'campaignbridge-options' );
+				?>
 				<table class="form-table">
 					<tr>
 						<th scope="row"><?php echo esc_html__( 'Included post types', 'campaignbridge' ); ?></th>

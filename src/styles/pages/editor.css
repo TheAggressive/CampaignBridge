@@ -4,6 +4,7 @@
 .cb-block-editor-shell {
   height: 100vh; /* fill available viewport */
   overflow: hidden;
+  z-index: 1000;
 }
 
 /* Editor header - for InterfaceSkeleton header area */

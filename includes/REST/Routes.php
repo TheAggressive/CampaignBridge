@@ -104,12 +104,55 @@ class Routes {
 	}
 
 	/**
+	 * Simple rate limiting for REST API endpoints.
+	 *
+	 * @param string $endpoint_name Unique identifier for the endpoint.
+	 * @param int    $max_requests Maximum requests allowed per time window.
+	 * @param int    $time_window Time window in seconds.
+	 * @return bool|\WP_Error True if allowed, WP_Error if rate limited.
+	 */
+	public static function check_rate_limit( string $endpoint_name, int $max_requests = 30, int $time_window = 60 ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'rate_limit_no_user', 'User not authenticated', array( 'status' => 401 ) );
+		}
+
+		$cache_key = 'cb_rate_limit_' . $endpoint_name . '_' . $user_id;
+		$requests  = get_transient( $cache_key );
+
+		if ( false === $requests ) {
+			$requests = 0;
+		}
+
+		if ( $requests >= $max_requests ) {
+			return new \WP_Error(
+				'rate_limit_exceeded',
+				sprintf(
+					/* translators: %d: number of seconds until reset */
+					__( 'Rate limit exceeded. Try again in %d seconds.', 'campaignbridge' ),
+					$time_window
+				),
+				array( 'status' => 429 )
+			);
+		}
+
+		set_transient( $cache_key, $requests + 1, $time_window );
+		return true;
+	}
+
+	/**
 	 * GET /posts endpoint.
 	 *
 	 * @param \WP_REST_Request $req Request object.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public static function r_posts( WP_REST_Request $req ) {
+		// Rate limiting check.
+		$rate_limit = self::check_rate_limit( 'posts' );
+		if ( is_wp_error( $rate_limit ) ) {
+			return $rate_limit;
+		}
+
 		$post_type = $req->get_param( 'post_type' ) ? sanitize_key( $req->get_param( 'post_type' ) ) : 'post';
 		if ( ! post_type_exists( $post_type ) ) {
 			return new \WP_Error( 'bad_post_type', 'Invalid post type', array( 'status' => 400 ) );
@@ -154,6 +197,12 @@ class Routes {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public static function r_post_types() {
+		// Rate limiting check.
+		$rate_limit = self::check_rate_limit( 'post_types' );
+		if ( is_wp_error( $rate_limit ) ) {
+			return $rate_limit;
+		}
+
 		$settings       = get_option( self::$option_name );
 		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
 		$objs           = get_post_types( array( 'public' => true ), 'objects' );
