@@ -1,10 +1,7 @@
 import { Button, Icon } from "@wordpress/components";
 import { useDispatch, useSelect } from "@wordpress/data";
 import { __ } from "@wordpress/i18n";
-import {
-  fullscreenExit as fullscreenExitIcon,
-  fullscreen as fullscreenIcon,
-} from "@wordpress/icons";
+import { fullscreen as fullscreenIcon } from "@wordpress/icons";
 import SaveIndicator from "./SaveIndicator";
 import TemplateToolbar from "./TemplateToolbar";
 
@@ -65,10 +62,7 @@ export default function EditorHeader({
           }
           showTooltip={true}
         >
-          <Icon
-            icon={isFullscreen ? fullscreenExitIcon : fullscreenIcon}
-            size={20}
-          />
+          <Icon icon={fullscreenIcon} size={20} />
         </Button>
       </div>
     </div>

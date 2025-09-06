@@ -64,6 +64,16 @@
   @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
 }
 
+/* Editor Loading State */
+.cb-editor-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  font-size: 16px;
+  color: #666;
+}
+
 /* Block Toolbar - Floating positioning for hover effect */
 .cb-block-editor .block-editor-block-toolbar {
   position: absolute !important;

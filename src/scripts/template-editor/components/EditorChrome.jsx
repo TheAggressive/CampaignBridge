@@ -152,35 +152,9 @@ export default function EditorChrome({
 
   if (!ready) {
     return (
-      <StrictMode>
-        <ShortcutProvider>
-          <SlotFillProvider>
-            <FullscreenMode isActive={isFullscreen} />
-            <InterfaceSkeleton
-              header={
-                <EditorHeader
-                  list={list}
-                  currentId={currentId}
-                  loading={loading}
-                  onSelect={onSelect}
-                  onNew={onNew}
-                  saveStatus={saveStatus}
-                />
-              }
-              sidebar={<div className="cb-editor-sidebar" />}
-              content={
-                <div className="cb-editor-content">
-                  <div className="cb-block-editor-loading">
-                    <p>{__("Initializing editor…", "campaignbridge")}</p>
-                  </div>
-                </div>
-              }
-              footer={<div className="cb-editor-footer" />}
-            />
-            <Popover.Slot />
-          </SlotFillProvider>
-        </ShortcutProvider>
-      </StrictMode>
+      <div className="cb-editor-loading">
+        <p>{__("Initializing editor…", "campaignbridge")}</p>
+      </div>
     );
   }
 
@@ -203,7 +177,6 @@ export default function EditorChrome({
               }
             }
             settings={editorSettings}
-            useSubRegistry={false}
           >
             <BlockBreadcrumb />
             <BlockEditorKeyboardShortcuts />
@@ -219,12 +192,7 @@ export default function EditorChrome({
                 />
               }
               sidebar={<EditorSidebar />}
-              content={
-                <EditorContent
-                  postId={postId}
-                  onBlocksChange={onBlocksChange}
-                />
-              }
+              content={<EditorContent />}
             />
             <Popover.Slot />
           </BlockEditorProvider>
