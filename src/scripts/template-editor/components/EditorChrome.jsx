@@ -226,8 +226,8 @@ export default function EditorChrome({
                 />
               }
             />
+            <Popover.Slot />
           </BlockEditorProvider>
-          <Popover.Slot />
         </SlotFillProvider>
       </ShortcutProvider>
     </StrictMode>
