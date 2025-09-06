@@ -1,11 +1,12 @@
 import {
+  BlockBreadcrumb,
   BlockEditorKeyboardShortcuts,
   BlockEditorProvider,
 } from "@wordpress/block-editor";
 import { parse } from "@wordpress/blocks";
 import { Popover, SlotFillProvider } from "@wordpress/components";
 import { useSelect } from "@wordpress/data";
-import { useEffect, useMemo, useState } from "@wordpress/element";
+import { StrictMode, useEffect, useMemo, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 import { FullscreenMode, InterfaceSkeleton } from "@wordpress/interface";
 import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
@@ -151,74 +152,84 @@ export default function EditorChrome({
 
   if (!ready) {
     return (
-      <ShortcutProvider>
-        <FullscreenMode isActive={isFullscreen} />
-        <SlotFillProvider>
-          <InterfaceSkeleton
-            header={
-              <EditorHeader
-                list={list}
-                currentId={currentId}
-                loading={loading}
-                onSelect={onSelect}
-                onNew={onNew}
-                saveStatus={saveStatus}
-              />
-            }
-            sidebar={<div className="cb-editor-sidebar" />}
-            content={
-              <div className="cb-editor-content">
-                <div className="cb-block-editor-loading">
-                  <p>{__("Initializing editor…", "campaignbridge")}</p>
+      <StrictMode>
+        <ShortcutProvider>
+          <SlotFillProvider>
+            <FullscreenMode isActive={isFullscreen} />
+            <InterfaceSkeleton
+              header={
+                <EditorHeader
+                  list={list}
+                  currentId={currentId}
+                  loading={loading}
+                  onSelect={onSelect}
+                  onNew={onNew}
+                  saveStatus={saveStatus}
+                />
+              }
+              sidebar={<div className="cb-editor-sidebar" />}
+              content={
+                <div className="cb-editor-content">
+                  <div className="cb-block-editor-loading">
+                    <p>{__("Initializing editor…", "campaignbridge")}</p>
+                  </div>
                 </div>
-              </div>
-            }
-          />
-        </SlotFillProvider>
-      </ShortcutProvider>
+              }
+              footer={<div className="cb-editor-footer" />}
+            />
+            <Popover.Slot />
+          </SlotFillProvider>
+        </ShortcutProvider>
+      </StrictMode>
     );
   }
 
   return (
-    <ShortcutProvider>
-      <FullscreenMode isActive={isFullscreen} />
-      <SlotFillProvider>
-        <BlockEditorProvider
-          value={blocks}
-          onChange={
-            /**
-             * Handles block content changes by updating local state and triggering save.
-             * Changes are tracked by our custom history system for undo/redo functionality.
-             * @param {Array} n - The new array of block objects
-             */
-            (n) => {
-              setBlocks(n);
-              save(n);
+    <StrictMode>
+      <ShortcutProvider>
+        <SlotFillProvider>
+          <FullscreenMode isActive={isFullscreen} />
+          <BlockEditorProvider
+            value={blocks}
+            onChange={
+              /**
+               * Handles block content changes by updating local state and triggering save.
+               * Changes are tracked by our custom history system for undo/redo functionality.
+               * @param {Array} n - The new array of block objects
+               */
+              (n) => {
+                setBlocks(n);
+                save(n);
+              }
             }
-          }
-          settings={editorSettings}
-          useSubRegistry={false}
-        >
-          <InterfaceSkeleton
-            header={
-              <EditorHeader
-                list={list}
-                currentId={currentId}
-                loading={loading}
-                onSelect={onSelect}
-                onNew={onNew}
-                saveStatus={saveStatus}
-              />
-            }
-            sidebar={<EditorSidebar />}
-            content={
-              <EditorContent postId={postId} onBlocksChange={onBlocksChange} />
-            }
-          />
-          <BlockEditorKeyboardShortcuts />
-        </BlockEditorProvider>
-        <Popover.Slot />
-      </SlotFillProvider>
-    </ShortcutProvider>
+            settings={editorSettings}
+            useSubRegistry={false}
+          >
+            <BlockBreadcrumb />
+            <BlockEditorKeyboardShortcuts />
+            <InterfaceSkeleton
+              header={
+                <EditorHeader
+                  list={list}
+                  currentId={currentId}
+                  loading={loading}
+                  onSelect={onSelect}
+                  onNew={onNew}
+                  saveStatus={saveStatus}
+                />
+              }
+              sidebar={<EditorSidebar />}
+              content={
+                <EditorContent
+                  postId={postId}
+                  onBlocksChange={onBlocksChange}
+                />
+              }
+            />
+          </BlockEditorProvider>
+          <Popover.Slot />
+        </SlotFillProvider>
+      </ShortcutProvider>
+    </StrictMode>
   );
 }
