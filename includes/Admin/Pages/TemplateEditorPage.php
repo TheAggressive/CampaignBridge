@@ -85,16 +85,21 @@ class TemplateEditorPage extends AdminPage {
 		wp_enqueue_style( 'wp-components' );
 		wp_enqueue_style( 'wp-format-library' );
 		wp_enqueue_style( 'wp-edit-post' );
+		wp_enqueue_style( 'wp-icons' ); // for @wordpress/icons
 
 		// Core editor JS and registries.
 		wp_enqueue_script( 'wp-element' );
 		wp_enqueue_script( 'wp-components' );
 		wp_enqueue_script( 'wp-data' );
 		wp_enqueue_script( 'wp-i18n' );
+		wp_enqueue_script( 'wp-api-fetch' );    // for @wordpress/api-fetch
+		wp_enqueue_script( 'wp-dom-ready' );    // for @wordpress/dom-ready
+		wp_enqueue_script( 'wp-icons' );        // for @wordpress/icons
 		wp_enqueue_script( 'wp-blocks' );        // block registry.
 		wp_enqueue_script( 'wp-editor' );        // core editor functionality.
 		wp_enqueue_script( 'wp-block-editor' );  // <BlockEditorProvider>, BlockList, etc.
 		wp_enqueue_script( 'wp-edit-post' );     // brings inspector/sidebar chrome.
+		wp_enqueue_script( 'wp-keyboard-shortcuts' ); // for @wordpress/keyboard-shortcuts
 		wp_enqueue_script( 'wp-format-library' );
 		wp_enqueue_script( 'wp-block-library' ); // registers all core blocks.
 
