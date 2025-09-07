@@ -4,6 +4,27 @@ import { useDispatch, useSelect } from "@wordpress/data";
 import { useCallback, useEffect, useState } from "@wordpress/element";
 import { redo as redoIcon, undo as undoIcon } from "@wordpress/icons";
 
+/**
+ * History Controls Component
+ *
+ * Provides custom undo/redo functionality for the block editor with full history management.
+ * Tracks block state changes, manages history stack (limited to 50 entries), and provides
+ * keyboard shortcuts for undo (Ctrl+Z/Cmd+Z) and redo (Ctrl+Shift+Z/Cmd+Shift+Z or Ctrl+Y/Cmd+Y).
+ *
+ * Features:
+ * - Real-time block state tracking and history management
+ * - Keyboard shortcuts for undo/redo operations
+ * - Visual buttons with tooltips and accessibility labels
+ * - Automatic history pruning to prevent memory issues
+ * - Smart history branching (removes future history when new changes are made)
+ *
+ * @returns {JSX.Element} The history controls toolbar with undo/redo buttons
+ *
+ * @example
+ * ```jsx
+ * <HistoryControls />
+ * ```
+ */
 export default function HistoryControls() {
   // Custom history management for reliable undo/redo in custom block editors
   const [history, setHistory] = useState([]);

@@ -2,7 +2,7 @@ import { BlockEditorProvider } from "@wordpress/block-editor";
 import { parse } from "@wordpress/blocks";
 import { Popover, SlotFillProvider } from "@wordpress/components";
 import { useSelect } from "@wordpress/data";
-import { StrictMode, useEffect, useMemo, useState } from "@wordpress/element";
+import { useEffect, useMemo, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 import { FullscreenMode, InterfaceSkeleton } from "@wordpress/interface";
 import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
@@ -15,21 +15,34 @@ import Header from "./Header";
 import Sidebar from "./Sidebar";
 
 /**
- * Editor chrome component that provides necessary context providers for the block editor.
+ * Editor Chrome Component
  *
- * Sets up the required providers for keyboard shortcuts, slot/fill system,
- * and block editor keyboard shortcuts to ensure the editor functions properly.
- * Uses WordPress InterfaceSkeleton for proper layout management.
+ * Main editor component that orchestrates the WordPress block editor experience.
+ * Sets up essential providers including ShortcutProvider, SlotFillProvider, and
+ * BlockEditorProvider to ensure proper editor functionality. Manages post loading,
+ * block state, and save operations while providing the InterfaceSkeleton layout.
  *
  * @param {Object} props - Component props
- * @param {Array} props.list - Array of available templates (for header)
+ * @param {Array} props.list - Array of available templates for the header dropdown
  * @param {number|null} props.currentId - ID of the currently selected template
  * @param {boolean} props.loading - Whether templates are currently loading
  * @param {function} props.onSelect - Callback fired when a template is selected
  * @param {function} props.onNew - Callback fired when creating a new template
  * @param {number} props.postId - The ID of the post/template to load and edit
- * @param {function} [props.onBlocksChange] - Callback fired when blocks change
- * @returns {JSX.Element} The editor chrome with context providers
+ * @param {function} [props.onBlocksChange] - Optional callback fired when blocks change
+ * @returns {JSX.Element} The complete editor interface with all necessary providers
+ *
+ * @example
+ * ```jsx
+ * <EditorChrome
+ *   list={templates}
+ *   currentId={1}
+ *   loading={false}
+ *   onSelect={handleSelect}
+ *   onNew={handleNew}
+ *   postId={1}
+ * />
+ * ```
  */
 export default function EditorChrome({
   list,
@@ -44,11 +57,9 @@ export default function EditorChrome({
   const [blocks, setBlocks] = useState([]);
   const [saveStatus, setSaveStatus] = useState("saved"); // 'saved', 'saving', 'error'
 
-  /**
-   * Loads the post content and initializes the block editor.
-   * Waits for block types to be registered, fetches the post data,
-   * parses the content, and sets the component as ready.
-   */
+  // Load the post content and initialize the block editor
+  // Waits for block types to be registered, fetches the post data,
+  // parses the content, and sets the component as ready
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -156,45 +167,43 @@ export default function EditorChrome({
   }
 
   return (
-    <StrictMode>
-      <ShortcutProvider>
-        <SlotFillProvider>
-          <FullscreenMode isActive={isFullscreen} />
-          <BlockEditorProvider
-            value={blocks}
-            onChange={
-              /**
-               * Handles block content changes by updating local state and triggering save.
-               * Changes are tracked by our custom history system for undo/redo functionality.
-               * @param {Array} n - The new array of block objects
-               */
-              (n) => {
-                setBlocks(n);
-                save(n);
-              }
+    <ShortcutProvider>
+      <SlotFillProvider>
+        <FullscreenMode isActive={isFullscreen} />
+        <BlockEditorProvider
+          value={blocks}
+          onChange={
+            /**
+             * Handles block content changes by updating local state and triggering save.
+             * Changes are tracked by our custom history system for undo/redo functionality.
+             * @param {Array} n - The new array of block objects
+             */
+            (n) => {
+              setBlocks(n);
+              save(n);
             }
-            settings={editorSettings}
-          >
-            <InterfaceSkeleton
-              header={
-                <Header
-                  list={list}
-                  currentId={currentId}
-                  loading={loading}
-                  onSelect={onSelect}
-                  onNew={onNew}
-                  saveStatus={saveStatus}
-                />
-              }
-              sidebar={<Sidebar />}
-              content={<Content />}
-              footer={<Footer />}
-            />
-          </BlockEditorProvider>
+          }
+          settings={editorSettings}
+        >
+          <InterfaceSkeleton
+            header={
+              <Header
+                list={list}
+                currentId={currentId}
+                loading={loading}
+                onSelect={onSelect}
+                onNew={onNew}
+                saveStatus={saveStatus}
+              />
+            }
+            sidebar={<Sidebar />}
+            content={<Content />}
+            footer={<Footer />}
+          />
+        </BlockEditorProvider>
 
-          <Popover.Slot />
-        </SlotFillProvider>
-      </ShortcutProvider>
-    </StrictMode>
+        <Popover.Slot />
+      </SlotFillProvider>
+    </ShortcutProvider>
   );
 }

@@ -6,9 +6,8 @@
  * `../../../blocks` directory using webpack's `require.context`.
  *
  * ## Architecture
- * Modular functional design with four core components:
+ * Modular functional design with three core components:
  * - **Registry**: Tracks registration status and caches discovered blocks
- * - **Logger**: Provides consistent logging with CampaignBridge prefix
  * - **Discovery**: Dynamically discovers and loads block modules
  * - **Registration**: Validates and registers blocks with WordPress
  *
@@ -16,7 +15,7 @@
  * - Zero-configuration automatic block discovery
  * - Duplicate prevention (blocks registered only once)
  * - Error resilience (individual failures don't stop registration)
- * - Comprehensive logging and error reporting
+ * - Graceful error handling with detailed error information
  * - Functional programming patterns with immutable state
  * - Production-ready with validation and performance optimizations
  *
@@ -177,7 +176,7 @@ const createBlockDiscovery = () => {
    *
    * Scans the blocks directory for all index.js files, loads each module,
    * validates them, and caches successful discoveries. Failed loads are
-   * logged but don't stop the discovery process.
+   * handled gracefully and don't stop the discovery process.
    *
    * @returns {Array<Object>} Array of discovered block objects
    * @returns {string} returns[].name - Full block name with namespace
@@ -275,7 +274,7 @@ const createBlockRegistration = () => {
    * Registers a single block with WordPress
    *
    * Validates the block module, calls its init function to register with WordPress,
-   * marks it as registered, and logs the result.
+   * and marks it as registered in the registry.
    *
    * @param {string} blockName - The full block name with namespace
    * @param {Object} blockModule - The block module containing init function
@@ -334,7 +333,7 @@ const blockRegistration = createBlockRegistration();
  * This is the main entry point for the block registration system. It automatically
  * discovers all block modules in the blocks directory using webpack's require.context,
  * validates each module, and registers any blocks that haven't been registered yet.
- * The process is resilient to individual block failures and provides detailed logging.
+ * The process is resilient to individual block failures and provides detailed results.
  *
  * @returns {Object} Registration statistics and results
  * @returns {number} returns.discovered - Total number of block modules discovered

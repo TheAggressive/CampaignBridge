@@ -8,13 +8,21 @@ import {
 import HistoryControls from "./HistoryControls";
 
 /**
- * Block canvas component that provides the WordPress block editor interface.
+ * Block Canvas Component
  *
- * Renders the block editor canvas and tools. The BlockEditorProvider is now
- * managed at a higher level in EditorChrome to ensure the BlockInspector
- * in the sidebar can access the same block context.
+ * Provides the main editing canvas for the WordPress block editor interface.
+ * Includes the block inserter, history controls, and the nested block list
+ * with writing flow and typing observation capabilities.
  *
- * @returns {JSX.Element} The block editor canvas
+ * The BlockEditorProvider is managed at a higher level in EditorChrome to ensure
+ * the BlockInspector in the sidebar can access the same block context.
+ *
+ * @returns {JSX.Element} The block editor canvas with tools and block list
+ *
+ * @example
+ * ```jsx
+ * <BlockCanvas />
+ * ```
  */
 export default function BlockCanvas() {
   return (

@@ -28,10 +28,8 @@ export default function CampaignBridgeBlockEditor() {
 
   const currentId = getParam("post_id") ? Number(getParam("post_id")) : null;
 
-  /**
-   * Loads the list of available templates on component mount.
-   * Uses cleanup flag to prevent state updates if component unmounts during async operation.
-   */
+  // Load the list of available templates on component mount
+  // Uses cleanup flag to prevent state updates if component unmounts during async operation
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -144,10 +142,8 @@ function EmptyState({ list, loading, onSelect, onNew }) {
   );
 }
 
-/**
- * Initializes the template editor application when the DOM is ready.
- * Finds the root element and renders the App component using React 18's createRoot API.
- */
+// Initialize the template editor application when the DOM is ready
+// Find the root element and render the App component using React 18's createRoot API
 domReady(() => {
   const root = document.getElementById("cb-block-editor-root");
   if (root) {

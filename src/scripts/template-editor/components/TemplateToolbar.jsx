@@ -2,19 +2,41 @@ import { Button, SelectControl } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
 
 /**
- * Toolbar component that provides template selection and creation controls.
+ * Template Toolbar Component
  *
+ * Provides template selection and creation controls for the CampaignBridge editor.
  * Displays a dropdown for selecting existing templates and a button for creating
- * new templates. Handles loading states and provides appropriate options based
- * on the current state.
+ * new templates. Handles loading states and provides contextual options based
+ * on the current template selection state.
+ *
+ * Features:
+ * - Template selection dropdown with proper labeling
+ * - New template creation button
+ * - Loading state handling
+ * - Contextual placeholder text
+ * - Keyboard navigation support
  *
  * @param {Object} props - Component props
- * @param {Array} props.list - Array of available templates
+ * @param {Array} props.list - Array of available templates with id and title properties
  * @param {number|null} props.currentId - ID of the currently selected template
  * @param {boolean} props.loading - Whether templates are currently loading
- * @param {function} props.onSelect - Callback fired when a template is selected
+ * @param {function} props.onSelect - Callback fired when a template is selected (receives template ID or null)
  * @param {function} props.onNew - Callback fired when creating a new template
- * @returns {JSX.Element} The template toolbar UI
+ * @returns {JSX.Element} The template toolbar with selection dropdown and creation button
+ *
+ * @example
+ * ```jsx
+ * <TemplateToolbar
+ *   list={[
+ *     { id: 1, title: { rendered: "Welcome Email" } },
+ *     { id: 2, title: { rendered: "Newsletter" } }
+ *   ]}
+ *   currentId={1}
+ *   loading={false}
+ *   onSelect={(id) => console.log('Selected:', id)}
+ *   onNew={() => console.log('Creating new template')}
+ * />
+ * ```
  */
 export default function TemplateToolbar({
   list,
@@ -23,10 +45,8 @@ export default function TemplateToolbar({
   onSelect,
   onNew,
 }) {
-  /**
-   * Transforms the template list into select control options.
-   * Uses the rendered title if available, otherwise falls back to the template ID.
-   */
+  // Transform the template list into select control options
+  // Uses the rendered title if available, otherwise falls back to the template ID
   const options = (list || []).map((p) => ({
     label: p?.title?.rendered || `#${p.id}`,
     value: String(p.id),
@@ -37,11 +57,7 @@ export default function TemplateToolbar({
         label={__("Templates", "campaignbridge")}
         value={currentId ? String(currentId) : ""}
         onChange={
-          /**
-           * Handles template selection from the dropdown.
-           * Converts the string value back to a number and passes it to onSelect.
-           * @param {string} val - The selected template ID as a string
-           */
+          // Handle template selection from dropdown - convert string to number
           (val) => onSelect(Number(val) || null)
         }
         disabled={loading}

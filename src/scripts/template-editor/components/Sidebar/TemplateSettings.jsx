@@ -1,6 +1,20 @@
 import { Panel, PanelBody, TextControl } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
 
+/**
+ * Template Settings Panel Component
+ *
+ * Provides configuration options for email template settings including
+ * default subject line, sender name, and reply-to email address.
+ * This component is displayed in the sidebar of the template editor.
+ *
+ * @returns {JSX.Element} The template settings panel with form controls
+ *
+ * @example
+ * ```jsx
+ * <TemplateSettings />
+ * ```
+ */
 export default function TemplateSettings() {
   return (
     <Panel>

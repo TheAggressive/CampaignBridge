@@ -2,13 +2,27 @@ import { useEffect, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 
 /**
- * Simple save notification component.
+ * Save Indicator Component
  *
- * Shows temporary save status messages without relying on complex notices system.
+ * Displays temporary save status notifications with automatic hide functionality.
+ * Shows different colored notifications for saving states, success, and errors.
+ * Success messages auto-hide after 3 seconds, error messages after 5 seconds.
+ * Renders as a fixed-position overlay without relying on WordPress notices system.
  *
  * @param {Object} props - Component props
- * @param {string} props.status - Current save status ('saved', 'saving', 'autosaving', 'error')
- * @returns {JSX.Element|null} The notification element or null
+ * @param {('saved'|'saving'|'autosaving'|'error')} props.status - Save status values:
+ *   - 'saved': Changes have been saved successfully (green, auto-hide after 3s)
+ *   - 'saving': Currently saving changes (blue, persistent)
+ *   - 'autosaving': Auto-saving in progress (blue, persistent)
+ *   - 'error': Save operation failed (red, auto-hide after 5s)
+ * @returns {JSX.Element|null} The notification element with appropriate styling, or null if no notification to show
+ *
+ * @example
+ * ```jsx
+ * <SaveIndicator status="saving" />
+ * <SaveIndicator status="saved" />
+ * <SaveIndicator status="error" />
+ * ```
  */
 export default function SaveIndicator({ status }) {
   const [showNotification, setShowNotification] = useState(false);

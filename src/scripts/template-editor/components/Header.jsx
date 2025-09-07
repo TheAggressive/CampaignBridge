@@ -6,19 +6,33 @@ import SaveIndicator from "./SaveIndicator";
 import TemplateToolbar from "./TemplateToolbar";
 
 /**
- * Header component for the CampaignBridge template editor.
+ * Header Component
  *
- * Contains the template selection toolbar and other header-level controls.
+ * Main header component for the CampaignBridge template editor providing
+ * template selection, save status indication, and fullscreen toggle functionality.
+ * Contains the template selection toolbar, save indicator, and fullscreen button.
  * This component is designed to work with WordPress InterfaceSkeleton.
  *
  * @param {Object} props - Component props
- * @param {Array} props.list - Array of available templates
+ * @param {Array} props.list - Array of available templates for the dropdown
  * @param {number|null} props.currentId - ID of the currently selected template
  * @param {boolean} props.loading - Whether templates are currently loading
  * @param {function} props.onSelect - Callback fired when a template is selected
  * @param {function} props.onNew - Callback fired when creating a new template
  * @param {string} props.saveStatus - Current save status ('saved', 'saving', 'autosaving', 'error')
- * @returns {JSX.Element} The editor header
+ * @returns {JSX.Element} The editor header with toolbar and controls
+ *
+ * @example
+ * ```jsx
+ * <Header
+ *   list={templates}
+ *   currentId={1}
+ *   loading={false}
+ *   onSelect={handleSelect}
+ *   onNew={handleNew}
+ *   saveStatus="saved"
+ * />
+ * ```
  */
 export default function Header({
   list,

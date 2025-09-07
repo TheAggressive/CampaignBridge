@@ -20,6 +20,27 @@ const TABS = {
   INSPECTOR: "block-inspector",
 };
 
+/**
+ * Sidebar Component
+ *
+ * Main sidebar component for the CampaignBridge template editor with tabbed interface.
+ * Provides access to template settings and block inspector functionality.
+ * Automatically switches to block inspector when a block is selected.
+ *
+ * Features:
+ * - Tabbed interface with Template Settings and Block Inspector tabs
+ * - Auto-switching to Block Inspector when blocks are selected
+ * - Plugin extensibility through Slot/Fill system
+ * - Keyboard navigation support
+ * - Accessibility features with proper ARIA labels
+ *
+ * @returns {JSX.Element} The sidebar with tabbed content and extensibility slots
+ *
+ * @example
+ * ```jsx
+ * <Sidebar />
+ * ```
+ */
 export default function Sidebar() {
   const [activeTab, setActiveTab] = useState(TABS.TEMPLATE);
 
@@ -68,7 +89,6 @@ export default function Sidebar() {
         tabs={tabs}
         initialTabName={activeTab}
         onSelect={handleTabChange}
-        
       >
         {(tab) =>
           tab.name === TABS.TEMPLATE ? (
@@ -87,6 +107,50 @@ export default function Sidebar() {
     </div>
   );
 }
+
+/**
+ * Inspector Fill Component
+ *
+ * Allows plugins to extend the Block Inspector tab content.
+ * Use this to add custom controls or information to the block inspector section.
+ *
+ * @component
+ * @example
+ * ```jsx
+ * import { Fill } from '@wordpress/components';
+ * import { Sidebar } from './components/Sidebar';
+ *
+ * function MyPluginExtension() {
+ *   return (
+ *     <Sidebar.InspectorFill>
+ *       <div>My custom inspector content</div>
+ *     </Sidebar.InspectorFill>
+ *   );
+ * }
+ * ```
+ */
+
+/**
+ * Template Fill Component
+ *
+ * Allows plugins to extend the Template Settings tab content.
+ * Use this to add custom template configuration options or information.
+ *
+ * @component
+ * @example
+ * ```jsx
+ * import { Fill } from '@wordpress/components';
+ * import { Sidebar } from './components/Sidebar';
+ *
+ * function MyTemplateExtension() {
+ *   return (
+ *     <Sidebar.TemplateFill>
+ *       <div>My custom template settings</div>
+ *     </Sidebar.TemplateFill>
+ *   );
+ * }
+ * ```
+ */
 
 // Export fills for plugin extensibility
 Sidebar.InspectorFill = InspectorFill;

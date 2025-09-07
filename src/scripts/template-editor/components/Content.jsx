@@ -4,15 +4,16 @@ import BlockCanvas from "./BlockCanvas";
 /**
  * Main content component for the CampaignBridge template editor.
  *
- * Contains the block canvas and other content-level components.
- * This component is designed to work with WordPress InterfaceSkeleton.
+ * Provides the main content area containing the block canvas and keyboard shortcuts.
+ * This component is designed to work with WordPress InterfaceSkeleton and serves
+ * as the primary editing surface for template blocks.
  *
- * @param {Object} props - Component props
- * @param {Array} props.blocks - Current blocks array
- * @param {Function} props.setBlocks - Function to update blocks
- * @param {Function} props.save - Save function
- * @param {Object} props.editorSettings - Block editor settings
- * @returns {JSX.Element} The editor content area
+ * @returns {JSX.Element} The editor content area with block canvas and keyboard shortcuts
+ *
+ * @example
+ * ```jsx
+ * <Content />
+ * ```
  */
 export default function Content() {
   return (
