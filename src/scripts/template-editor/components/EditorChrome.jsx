@@ -1,8 +1,4 @@
-import {
-  BlockBreadcrumb,
-  BlockEditorKeyboardShortcuts,
-  BlockEditorProvider,
-} from "@wordpress/block-editor";
+import { BlockEditorProvider } from "@wordpress/block-editor";
 import { parse } from "@wordpress/blocks";
 import { Popover, SlotFillProvider } from "@wordpress/components";
 import { useSelect } from "@wordpress/data";
@@ -13,9 +9,10 @@ import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
 import { getPostRaw, savePostContent } from "../services/api";
 import { blockPatternCategories, blockPatterns } from "../utils/blockPatterns";
 import { serializeSafe } from "../utils/blocks";
-import EditorContent from "./EditorContent";
-import EditorHeader from "./EditorHeader";
-import EditorSidebar from "./EditorSidebar";
+import Content from "./Content";
+import Header from "./Header";
+import Sidebar from "./Sidebar";
+import Footer from "./Footer";
 
 /**
  * Editor chrome component that provides necessary context providers for the block editor.
@@ -178,11 +175,9 @@ export default function EditorChrome({
             }
             settings={editorSettings}
           >
-            <BlockBreadcrumb />
-            <BlockEditorKeyboardShortcuts />
             <InterfaceSkeleton
               header={
-                <EditorHeader
+                <Header
                   list={list}
                   currentId={currentId}
                   loading={loading}
@@ -191,11 +186,13 @@ export default function EditorChrome({
                   saveStatus={saveStatus}
                 />
               }
-              sidebar={<EditorSidebar />}
-              content={<EditorContent />}
+              sidebar={<Sidebar />}
+              content={<Content />}
+              footer={<Footer />}
             />
-            <Popover.Slot />
           </BlockEditorProvider>
+
+          <Popover.Slot />
         </SlotFillProvider>
       </ShortcutProvider>
     </StrictMode>

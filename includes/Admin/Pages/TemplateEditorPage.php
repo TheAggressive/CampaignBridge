@@ -84,6 +84,7 @@ class TemplateEditorPage extends AdminPage {
 		wp_enqueue_style( 'wp-block-editor' );
 		wp_enqueue_style( 'wp-components' );
 		wp_enqueue_style( 'wp-format-library' );
+		wp_enqueue_style( 'wp-edit-post' );
 
 		// Core editor JS and registries.
 		wp_enqueue_script( 'wp-element' );

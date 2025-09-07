@@ -20,7 +20,7 @@ import TemplateToolbar from "./TemplateToolbar";
  * @param {string} props.saveStatus - Current save status ('saved', 'saving', 'autosaving', 'error')
  * @returns {JSX.Element} The editor header
  */
-export default function EditorHeader({
+export default function Header({
   list,
   currentId,
   loading,

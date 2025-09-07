@@ -10,8 +10,6 @@
 /* Editor header - for InterfaceSkeleton header area */
 .cb-editor-header {
   padding: 1rem;
-  border-bottom: 1px solid #ddd;
-  background: #f9f9f9;
 }
 
 /* Toolbar within the header */
@@ -33,7 +31,6 @@
 }
 
 .cb-block-editor-placeholder-content {
-  /* max-width: 420px; */
   text-align: center;
 }
 
@@ -53,10 +50,7 @@
 
 /* Editor sidebar - for InterfaceSkeleton sidebar area */
 .cb-editor-sidebar {
-  height: 100%;
-  background: #fff;
-  border-left: 1px solid #e2e2e2;
-  overflow-y: auto;
+  width: 300px;
 }
 
 /* Inserter row above content */
@@ -74,80 +68,7 @@
   color: #666;
 }
 
-/* Block Toolbar - Floating positioning for hover effect */
-.cb-block-editor .block-editor-block-toolbar {
-  position: absolute !important;
-  top: -50px !important;
-  left: 0 !important;
-  right: 0 !important;
-  z-index: 1000 !important;
-  background: #fff !important;
-  border: 1px solid #ddd !important;
-  border-radius: 4px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  transition:
-    opacity 0.2s ease,
-    visibility 0.2s ease !important;
-}
-
-.cb-block-editor .block-editor-block-toolbar.is-shown {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
 /* Ensure proper stacking context */
 .cb-block-editor {
   position: relative;
-}
-
-/* Custom Tab System */
-.cb-sidebar-tabs {
-  border-bottom: 1px solid #e2e2e2;
-  background: #f9f9f9;
-}
-
-.cb-tab-buttons {
-  display: flex;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.cb-tab-button {
-  flex: 1;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: #555;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-}
-
-.cb-tab-button:hover {
-  background: #f0f0f0;
-  color: #007cba;
-}
-
-.cb-tab-button.is-active {
-  background: #fff;
-  border-bottom-color: #007cba;
-  color: #007cba;
-  font-weight: 600;
-}
-
-.cb-tab-button:focus {
-  outline: 2px solid #007cba;
-  outline-offset: -2px;
-}
-
-/* Sidebar Content */
-.cb-sidebar-content {
-  height: calc(100% - 57px); /* Account for tab height */
-  overflow-y: auto;
 }
