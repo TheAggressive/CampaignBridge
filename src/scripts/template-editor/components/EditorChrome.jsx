@@ -10,9 +10,9 @@ import { getPostRaw, savePostContent } from "../services/api";
 import { blockPatternCategories, blockPatterns } from "../utils/blockPatterns";
 import { serializeSafe } from "../utils/blocks";
 import Content from "./Content";
+import Footer from "./Footer";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
-import Footer from "./Footer";
 
 /**
  * Editor chrome component that provides necessary context providers for the block editor.
@@ -130,7 +130,7 @@ export default function EditorChrome({
     () => ({
       hasInlineToolbar: true,
       focusMode: false,
-      hasFixedToolbar: true,
+      hasFixedToolbar: false,
       inserter: true,
       richEditingEnabled: true,
       allowedBlockTypes: true,
