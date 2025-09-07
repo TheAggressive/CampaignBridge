@@ -1,9 +1,5 @@
-import {
-  BlockEditorKeyboardShortcuts,
-  BlockInspector,
-} from "@wordpress/block-editor";
+import { BlockEditorKeyboardShortcuts } from "@wordpress/block-editor";
 import BlockCanvas from "./BlockCanvas";
-import Sidebar from "./Sidebar";
 
 /**
  * Main content component for the CampaignBridge template editor.
@@ -21,9 +17,6 @@ import Sidebar from "./Sidebar";
 export default function Content() {
   return (
     <div className="cb-editor-content">
-      <Sidebar.InspectorFill>
-        <BlockInspector />
-      </Sidebar.InspectorFill>
       <BlockEditorKeyboardShortcuts />
       <BlockCanvas />
     </div>
