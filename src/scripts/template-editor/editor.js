@@ -4,8 +4,9 @@ import domReady from "@wordpress/dom-ready";
 import { createRoot, useEffect, useState } from "@wordpress/element";
 import "@wordpress/format-library";
 import { __ } from "@wordpress/i18n";
+import { InterfaceSkeleton } from "@wordpress/interface";
 import EditorChrome from "./components/EditorChrome";
-import TemplateToolbar from "./components/TemplateToolbar";
+import Header from "./components/Header";
 import { createDraft, listTemplates } from "./services/api";
 import { registerCampaignBridgeBlocks } from "./utils/registerCampaignBridgeBlocks";
 import { getParam, setParamAndReload } from "./utils/url";
@@ -116,24 +117,30 @@ export default function CampaignBridgeBlockEditor() {
  */
 function EmptyState({ list, loading, onSelect, onNew }) {
   return (
-    <div className="cb-block-editor-placeholder">
-      <TemplateToolbar
-        list={list}
-        currentId={null}
-        loading={loading}
-        onSelect={onSelect}
-        onNew={onNew}
-      />
-      <div className="cb-block-editor-placeholder-content">
-        <h3>{__("Select a Template", "campaignbridge")}</h3>
-        <p>
-          {__(
-            "Choose a template from the dropdown above, or create a new one.",
-            "campaignbridge",
-          )}
-        </p>
-      </div>
-    </div>
+    <InterfaceSkeleton
+      header={
+        <>
+          <Header
+            list={list}
+            currentId={null}
+            loading={loading}
+            onSelect={onSelect}
+            onNew={onNew}
+          />
+        </>
+      }
+      content={
+        <div className="cb-block-editor-placeholder-content">
+          <h3>{__("Select a Template", "campaignbridge")}</h3>
+          <p>
+            {__(
+              "Choose a template from the dropdown above, or create a new one.",
+              "campaignbridge",
+            )}
+          </p>
+        </div>
+      }
+    />
   );
 }
 

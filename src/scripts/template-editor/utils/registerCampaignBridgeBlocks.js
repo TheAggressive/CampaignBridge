@@ -97,70 +97,6 @@ const createBlockRegistry = () => {
 const blockRegistry = createBlockRegistry();
 
 /**
- * Creates a logging system for block operations
- *
- * Provides a functional logging interface with consistent formatting and
- * specialized methods for different types of block registration events.
- *
- * @returns {Object} Logger interface with methods for different log levels and events
- * @returns {Function} returns.log - Generic logging function with level support
- * @returns {Function} returns.registrationSuccess - Logs successful block registration
- * @returns {Function} returns.registrationSkipped - Logs when block registration is skipped
- * @returns {Function} returns.registrationFailed - Logs failed block registration with error details
- * @returns {Function} returns.discoveryComplete - Logs completion of block discovery process
- *
- * @example
- * ```javascript
- * const logger = createBlockLogger();
- * logger.registrationSuccess('campaignbridge/hero');
- * logger.registrationFailed('campaignbridge/invalid', new Error('Invalid block'));
- * ```
- */
-const createBlockLogger = () => {
-  /**
-   * Internal logging function with consistent formatting
-   *
-   * Formats and outputs log messages with CampaignBridge prefix.
-   * Supports different log levels and optional data attachment.
-   *
-   * @param {string} level - Log level ('info', 'warn', 'error')
-   * @param {string} message - The log message
-   * @param {*} [data] - Optional data to log alongside the message
-   * @private
-   */
-  const log = (level, message, data = null) => {
-    const prefix = "CampaignBridge";
-    const formattedMessage = `[${prefix}] ${message}`;
-
-    const loggers = {
-      info: console.log,
-      warn: console.warn,
-      error: console.error,
-    };
-
-    const logger = loggers[level] || console.log;
-    logger(formattedMessage, data);
-  };
-
-  return {
-    log,
-    registrationSuccess: (blockName) =>
-      log("info", `Registered block "${blockName}"`),
-    registrationSkipped: (blockName) =>
-      log("info", `Block "${blockName}" already registered`),
-    registrationFailed: (blockName, error) =>
-      log("error", `Failed to register block "${blockName}"`, error),
-    discoveryComplete: (results) =>
-      log(
-        "info",
-        `Discovery complete - ${results.registered} registered, ${results.skipped} skipped, ${results.failed} failed`,
-      ),
-  };
-};
-
-const logger = createBlockLogger();
-
-/**
  * Creates a block discovery system for finding and loading block modules
  *
  * Provides functionality to automatically discover all block modules in the
@@ -205,7 +141,6 @@ const createBlockDiscovery = () => {
     try {
       return blockContext(blockPath);
     } catch (error) {
-      logger.registrationFailed(blockPath, error);
       return null;
     }
   };
@@ -353,10 +288,8 @@ const createBlockRegistration = () => {
       validateBlockModule(blockModule, blockName);
       blockModule.init();
       blockRegistry.markRegistered(blockName);
-      logger.registrationSuccess(blockName);
       return { success: true };
     } catch (error) {
-      logger.registrationFailed(blockName, error);
       return { success: false, error };
     }
   };
@@ -376,7 +309,6 @@ const createBlockRegistration = () => {
    */
   const registerBlockIfNeeded = (blockName, blockModule) => {
     if (blockRegistry.isRegistered(blockName)) {
-      logger.registrationSkipped(blockName);
       return { success: true, skipped: true };
     }
 
@@ -454,6 +386,5 @@ export const registerCampaignBridgeBlocks = () => {
     }
   });
 
-  logger.discoveryComplete(results);
   return results;
 };
