@@ -92,6 +92,7 @@ class TemplateEditorPage extends AdminPage {
 		wp_enqueue_script( 'wp-data' );
 		wp_enqueue_script( 'wp-i18n' );
 		wp_enqueue_script( 'wp-blocks' );        // block registry.
+		wp_enqueue_script( 'wp-editor' );        // core editor functionality.
 		wp_enqueue_script( 'wp-block-editor' );  // <BlockEditorProvider>, BlockList, etc.
 		wp_enqueue_script( 'wp-edit-post' );     // brings inspector/sidebar chrome.
 		wp_enqueue_script( 'wp-format-library' );

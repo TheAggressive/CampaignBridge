@@ -1,6 +1,9 @@
 import {
+  BlockList,
+  BlockTools,
   Inserter,
-  BlockCanvas as WordPressBlockCanvas,
+  ObserveTyping,
+  WritingFlow,
 } from "@wordpress/block-editor";
 import HistoryControls from "./HistoryControls";
 
@@ -20,7 +23,13 @@ export default function BlockCanvas() {
         <Inserter rootClientId={null} />
         <HistoryControls />
       </div>
-      <WordPressBlockCanvas height="100%" />
+      <BlockTools>
+        <WritingFlow>
+          <ObserveTyping>
+            <BlockList />
+          </ObserveTyping>
+        </WritingFlow>
+      </BlockTools>
     </div>
   );
 }
