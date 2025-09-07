@@ -131,8 +131,6 @@ class TemplateEditorPage extends AdminPage {
 		self::display_messages();
 		?>
 		<div class="wrap">
-			<h1><?php echo esc_html( self::get_page_title() ); ?></h1>
-			<hr class="wp-header-end">
 			<div id="cb-block-editor-root" class="cb-block-editor-root"></div>
 		</div>
 		<?php

@@ -76,13 +76,6 @@ export default function CampaignBridgeBlockEditor() {
           {error}
         </Notice>
       )}
-      <TemplateToolbar
-        list={list}
-        currentId={currentId}
-        loading={loading}
-        onSelect={onSelect}
-        onNew={onNew}
-      />
       {loading ? (
         <div className="cb-block-editor-loading">
           <Spinner />
@@ -97,7 +90,12 @@ export default function CampaignBridgeBlockEditor() {
           postId={currentId}
         />
       ) : (
-        <EmptyState />
+        <EmptyState
+          list={list}
+          loading={loading}
+          onSelect={onSelect}
+          onNew={onNew}
+        />
       )}
     </div>
   );
@@ -109,16 +107,28 @@ export default function CampaignBridgeBlockEditor() {
  * Shows instructions to the user to either select an existing template
  * or create a new one.
  *
+ * @param {Object} props - Component props
+ * @param {Array} props.list - Array of available templates
+ * @param {boolean} props.loading - Whether templates are currently loading
+ * @param {function} props.onSelect - Callback fired when a template is selected
+ * @param {function} props.onNew - Callback fired when creating a new template
  * @return {JSX.Element} The empty state UI
  */
-function EmptyState() {
+function EmptyState({ list, loading, onSelect, onNew }) {
   return (
     <div className="cb-block-editor-placeholder">
+      <TemplateToolbar
+        list={list}
+        currentId={null}
+        loading={loading}
+        onSelect={onSelect}
+        onNew={onNew}
+      />
       <div className="cb-block-editor-placeholder-content">
         <h3>{__("Select a Template", "campaignbridge")}</h3>
         <p>
           {__(
-            "Choose a template above, or create a new one.",
+            "Choose a template from the dropdown above, or create a new one.",
             "campaignbridge",
           )}
         </p>
