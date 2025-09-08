@@ -9,6 +9,7 @@ import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
 import { getPostRaw, savePostContent } from "../services/api";
 import { blockPatternCategories, blockPatterns } from "../utils/blockPatterns";
 import { serializeSafe } from "../utils/blocks";
+import { useEditorSettings } from "../utils/useEditorSettings";
 import Content from "./Content";
 import Footer from "./Footer";
 import Header from "./Header";
@@ -28,6 +29,7 @@ import Sidebar from "./Sidebar";
  * @param {boolean} props.loading - Whether templates are currently loading
  * @param {function} props.onSelect - Callback fired when a template is selected
  * @param {function} props.onNew - Callback fired when creating a new template
+ * @param {string} props.postType - Post type for editor settings (default: 'post')
  * @param {number} props.postId - The ID of the post/template to load and edit
  * @param {function} [props.onBlocksChange] - Optional callback fired when blocks change
  * @returns {JSX.Element} The complete editor interface with all necessary providers
@@ -41,6 +43,7 @@ import Sidebar from "./Sidebar";
  *   onSelect={handleSelect}
  *   onNew={handleNew}
  *   postId={1}
+ *   postType="post"
  * />
  * ```
  */
@@ -52,10 +55,16 @@ export default function EditorChrome({
   onNew,
   postId,
   onBlocksChange,
+  postType = "post",
 }) {
   const [ready, setReady] = useState(false);
   const [blocks, setBlocks] = useState([]);
   const [saveStatus, setSaveStatus] = useState("saved"); // 'saved', 'saving', 'error'
+  const {
+    settings: editorSettings,
+    error: editorSettingsError,
+    loading: editorSettingsLoading,
+  } = useEditorSettings(postType);
 
   // Load the post content and initialize the block editor
   // Waits for block types to be registered, fetches the post data,
@@ -133,25 +142,6 @@ export default function EditorChrome({
     };
   }, [postId, onBlocksChange]);
 
-  /**
-   * Block editor configuration settings.
-   * Defines the editor behavior including toolbar settings, focus mode, and media upload handling.
-   */
-  const editorSettings = useMemo(
-    () => ({
-      hasInlineToolbar: true,
-      focusMode: false,
-      hasFixedToolbar: false,
-      inserter: true,
-      richEditingEnabled: true,
-      allowedBlockTypes: true,
-      mediaUpload: window.wp.media || null,
-      __experimentalBlockPatterns: blockPatterns,
-      __experimentalBlockPatternCategories: blockPatternCategories,
-    }),
-    [],
-  );
-
   const isFullscreen = useSelect(
     (select) =>
       select("core/preferences").get("core/edit-post", "fullscreenMode"),
@@ -165,6 +155,30 @@ export default function EditorChrome({
       </div>
     );
   }
+
+  console.log(editorSettings);
+
+  if (editorSettingsLoading) {
+    return (
+      <div className="cb-editor-loading">
+        <p>{__("Loading editor settings…", "campaignbridge")}</p>
+      </div>
+    );
+  }
+
+  if (editorSettingsError) {
+    return (
+      <div className="cb-editor-error">
+        <p>{__("Error loading editor settings…", "campaignbridge")}</p>
+      </div>
+    );
+  }
+
+  const mergedEditorSettings = {
+    ...editorSettings,
+    ...blockPatterns,
+    ...blockPatternCategories,
+  };
 
   return (
     <ShortcutProvider>
@@ -183,7 +197,7 @@ export default function EditorChrome({
               save(n);
             }
           }
-          settings={editorSettings}
+          settings={mergedEditorSettings}
         >
           <InterfaceSkeleton
             header={
