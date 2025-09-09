@@ -129,6 +129,7 @@ export default function Sidebar() {
  * }
  * ```
  */
+Sidebar.InspectorFill = InspectorFill;
 
 /**
  * Template Fill Component
@@ -153,5 +154,4 @@ export default function Sidebar() {
  */
 
 // Export fills for plugin extensibility
-Sidebar.InspectorFill = InspectorFill;
 Sidebar.TemplateFill = TemplateFill;

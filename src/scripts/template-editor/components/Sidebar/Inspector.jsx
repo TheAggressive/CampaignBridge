@@ -1,4 +1,5 @@
 import { BlockInspector } from "@wordpress/block-editor";
+import { Panel } from "@wordpress/components";
 
 /**
  * Block Inspector Panel Component
@@ -15,5 +16,9 @@ import { BlockInspector } from "@wordpress/block-editor";
  * ```
  */
 export default function Inspector() {
-  return <BlockInspector />;
+  return (
+    <Panel>
+      <BlockInspector />
+    </Panel>
+  );
 }
