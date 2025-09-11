@@ -13,6 +13,7 @@ import { useEditorSettings } from "../utils/useEditorSettings";
 import Content from "./Content";
 import Footer from "./Footer";
 import Header from "./Header";
+import SecondarySidebar from "./SecondarySidebar/SecondarySidebar";
 import Sidebar from "./Sidebar";
 
 /**
@@ -156,8 +157,6 @@ export default function EditorChrome({
     );
   }
 
-  console.log(editorSettings);
-
   if (editorSettingsLoading) {
     return (
       <div className="cb-editor-loading">
@@ -210,8 +209,9 @@ export default function EditorChrome({
                 saveStatus={saveStatus}
               />
             }
-            sidebar={<Sidebar />}
             content={<Content />}
+            sidebar={<Sidebar />}
+            secondarySidebar={<SecondarySidebar />}
             footer={<Footer />}
           />
         </BlockEditorProvider>

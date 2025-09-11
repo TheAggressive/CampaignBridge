@@ -5,7 +5,7 @@ import {
   ObserveTyping,
   WritingFlow,
 } from "@wordpress/block-editor";
-import HistoryControls from "./HistoryControls";
+import HistoryControls from "./Toolbar/HistoryControls";
 
 /**
  * Block Canvas Component

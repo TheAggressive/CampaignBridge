@@ -29,7 +29,6 @@
   "license": "ISC",
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
-    "@types/wordpress__block-editor": "^11.5.17",
     "@types/wordpress__blocks": "^12.5.18",
     "@types/wordpress__components": "^23.8.0",
     "@types/wordpress__compose": "^6.1.0",
