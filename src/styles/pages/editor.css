@@ -251,6 +251,7 @@
   &__header .components-base-control {
     margin-bottom: 0;
   }
+
   &__header .components-button {
     height: 32px;
     padding: 0 10px;
@@ -268,7 +269,7 @@
       color 0.15s ease;
     &:hover {
       background: transparent;
-      color: #111;
+      color: #2271b1;
     }
     &.is-active {
       background: #111;
@@ -291,7 +292,7 @@
     color: #111;
     &:hover {
       background: transparent;
-      color: #111;
+      color: #2271b1;
     }
     &.is-active {
       background: #111;
