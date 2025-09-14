@@ -60,7 +60,8 @@ export default function TemplateToolbar({
         value={currentId ? String(currentId) : ""}
         onChange={(val) => onSelect(Number(val) || null)}
         disabled={loading}
-        __nextHasNoMarginBottom={true}
+        __nextHasNoMarginBottom
+        __next40pxDefaultSize
         options={[
           ...(currentId
             ? []

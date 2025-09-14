@@ -1,4 +1,4 @@
-import apiFetch from '@wordpress/api-fetch';
+import apiFetch from "@wordpress/api-fetch";
 
 /**
  * Fetches a list of available email templates from the WordPress REST API.
@@ -6,9 +6,9 @@ import apiFetch from '@wordpress/api-fetch';
  * @return {Promise<Array>} Array of template objects with id, title, status, and date
  */
 export async function listTemplates() {
-	return apiFetch( {
-		path: `/wp/v2/cb_email_template?per_page=100&_fields=id,title,status,date`,
-	} );
+  return apiFetch({
+    path: `/wp/v2/cb_email_template?per_page=100&status=publish,draft&context=edit&_fields=id,title,status,date`,
+  });
 }
 
 /**
@@ -16,12 +16,18 @@ export async function listTemplates() {
  *
  * @return {Promise<Object>} The created template object with id and other properties
  */
-export async function createDraft() {
-	return apiFetch( {
-		path: `/wp/v2/cb_email_template`,
-		method: 'POST',
-		data: { status: 'draft', title: 'Untitled template' },
-	} );
+export async function createDraft(title) {
+  return apiFetch({
+    path: `/wp/v2/cb_email_template`,
+    method: "POST",
+    data: {
+      status: "draft",
+      title:
+        title && String(title).trim()
+          ? String(title).trim()
+          : "Untitled template",
+    },
+  });
 }
 
 /**
@@ -30,10 +36,10 @@ export async function createDraft() {
  * @param {number} id - The ID of the template to fetch
  * @return {Promise<Object>} The template object with full edit context and embedded data
  */
-export async function getPostRaw( id ) {
-	return apiFetch( {
-		path: `/wp/v2/cb_email_template/${ id }?context=edit&_embed`,
-	} );
+export async function getPostRaw(id) {
+  return apiFetch({
+    path: `/wp/v2/cb_email_template/${id}?context=edit&_embed`,
+  });
 }
 
 /**
@@ -47,12 +53,12 @@ export async function getPostRaw( id ) {
  * @return {Promise<Object>} The updated template object
  */
 export async function savePostContent(
-	id,
-	{ content, status = 'draft', title }
+  id,
+  { content, status = "draft", title },
 ) {
-	return apiFetch( {
-		path: `/wp/v2/cb_email_template/${ id }`,
-		method: 'POST',
-		data: { content, status, ...( title != null ? { title } : {} ) },
-	} );
+  return apiFetch({
+    path: `/wp/v2/cb_email_template/${id}`,
+    method: "POST",
+    data: { content, status, ...(title != null ? { title } : {}) },
+  });
 }

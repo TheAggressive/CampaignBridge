@@ -8,9 +8,11 @@ import { layout, plus } from "@wordpress/icons";
 import { InterfaceSkeleton } from "@wordpress/interface";
 import EditorChrome from "./components/EditorChrome";
 import Header from "./components/Header";
-import { createDraft, listTemplates } from "./services/api";
+import NewTemplateModal from "./components/NewTemplateModal";
+import { listTemplates } from "./services/api";
 import { registerCampaignBridgeBlocks } from "./utils/registerCampaignBridgeBlocks";
 import { getParam, setParamAndReload } from "./utils/url";
+import { useNewTemplate } from "./utils/useNewTemplate";
 
 /**
  * Main application component for the CampaignBridge Template Editor.
@@ -26,6 +28,15 @@ export default function CampaignBridgeBlockEditor() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const {
+    open: newModalOpen,
+    title: newTitle,
+    busy: creating,
+    openModal,
+    closeModal,
+    setTitle: setNewTitle,
+    confirmCreate,
+  } = useNewTemplate({ onError: setError });
 
   const currentId = getParam("post_id") ? Number(getParam("post_id")) : null;
 
@@ -61,13 +72,9 @@ export default function CampaignBridgeBlockEditor() {
   const onSelect = (id) => (id ? setParamAndReload("post_id", id) : null);
 
   /**
-   * Creates a new draft template and navigates to it.
-   * Updates the URL parameter with the new template ID and reloads the page.
+   * Opens the naming modal for creating a new template.
    */
-  const onNew = async () => {
-    const p = await createDraft();
-    setParamAndReload("post_id", p.id || p);
-  };
+  const onNew = openModal;
 
   return (
     <div className="cb-editor-shell">
@@ -76,6 +83,14 @@ export default function CampaignBridgeBlockEditor() {
           {error}
         </Notice>
       )}
+      <NewTemplateModal
+        open={newModalOpen}
+        title={newTitle}
+        onChangeTitle={setNewTitle}
+        onCancel={closeModal}
+        onConfirm={confirmCreate}
+        busy={creating}
+      />
       {loading ? (
         <div className="cb-block-editor-loading">
           <Spinner />
@@ -141,7 +156,7 @@ function EmptyState({ list, loading, onSelect, onNew }) {
             </h3>
             <p className="cb-editor__empty-desc">
               {__(
-                "Use the template dropdown in the header to select an existing template, or create a new one to start designing.",
+                "Choose an existing template above, or create a new one to start designing.",
                 "campaignbridge",
               )}
             </p>

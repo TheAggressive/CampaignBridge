@@ -1,0 +1,57 @@
+import { useCallback, useState } from "@wordpress/element";
+import { createDraft } from "../services/api";
+import { setParamAndReload } from "./url";
+
+/**
+ * useNewTemplate
+ *
+ * Encapsulates the state and actions for creating a new template with a name.
+ * UI (modal) stays presentational; this hook handles open/close, title, busy,
+ * and the create + navigate flow.
+ *
+ * @param {Object}   [options]
+ * @param {Function} [options.onError] Optional error handler (receives message)
+ * @return {Object} API { open, title, busy, openModal, closeModal, setTitle, confirmCreate }
+ */
+export function useNewTemplate(options = {}) {
+  const { onError } = options;
+
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const openModal = useCallback(() => {
+    setTitle("");
+    setOpen(true);
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  const confirmCreate = useCallback(async () => {
+    try {
+      setBusy(true);
+      const created = await createDraft(title);
+      setBusy(false);
+      setOpen(false);
+      setParamAndReload("post_id", created?.id || created);
+    } catch (e) {
+      setBusy(false);
+      setOpen(false);
+      if (typeof onError === "function") {
+        onError(e?.message || "Failed to create template.");
+      }
+    }
+  }, [title, onError]);
+
+  return {
+    open,
+    title,
+    busy,
+    openModal,
+    closeModal,
+    setTitle,
+    confirmCreate,
+  };
+}

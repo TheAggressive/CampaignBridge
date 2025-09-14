@@ -110,7 +110,6 @@ export default function Header({
     <div className="cb-editor__header">
       <div className="cb-editor__header-left">
         <h1 className="cb-editor__title">Template Editor</h1>
-        <span className="cb-editor__divider" aria-hidden="true" />
         <TemplateToolbar
           list={list}
           currentId={currentId}
