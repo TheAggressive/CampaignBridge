@@ -6,7 +6,6 @@ import {
   fullscreen as fullscreenIcon,
   listView,
 } from "@wordpress/icons";
-import SaveIndicator from "./SaveIndicator";
 import TemplateToolbar from "./TemplateToolbar";
 
 /* NEW: use Preferences store for persistent UI state */
@@ -32,7 +31,6 @@ const K_SECONDARY = "secondaryOpen";
  * @param {boolean} props.loading - Whether templates are currently loading
  * @param {function} props.onSelect - Callback fired when a template is selected
  * @param {function} props.onNew - Callback fired when creating a new template
- * @param {string} props.saveStatus - Current save status ('saved', 'saving', 'autosaving', 'error')
  * @param {object} [props.primaryToggleRef] - Ref to primary sidebar toggle button
  * @param {object} [props.secondaryToggleRef] - Ref to secondary sidebar toggle button
  * @returns {JSX.Element} The editor header with toolbar and controls
@@ -55,7 +53,6 @@ export default function Header({
   loading,
   onSelect,
   onNew,
-  saveStatus,
   /* NOTE: these three props are no longer required because we read/write from Preferences directly.
 	   Keeping them in the signature comment to preserve your original docs. */
   // enableComplementaryArea,
@@ -120,8 +117,6 @@ export default function Header({
       </div>
 
       <div className="cb-editor__header-actions">
-        <SaveIndicator status={saveStatus} />
-
         <Button
           ref={secondaryToggleRef}
           className={`cb-editor__toggle cb-editor__toggle--secondary ${

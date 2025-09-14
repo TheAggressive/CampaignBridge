@@ -1,6 +1,11 @@
 import { BlockEditorProvider } from "@wordpress/block-editor";
 import { parse } from "@wordpress/blocks";
-import { Button, Popover, SlotFillProvider } from "@wordpress/components";
+import {
+  Button,
+  Popover,
+  SlotFillProvider,
+  SnackbarList,
+} from "@wordpress/components";
 import { useDispatch, useSelect } from "@wordpress/data";
 import { useCallback, useEffect, useRef, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
@@ -19,6 +24,7 @@ import SecondarySidebar from "./SecondarySidebar/SecondarySidebar";
 import Sidebar from "./Sidebar";
 
 /* NEW: Preferences store for UI state */
+import { store as noticesStore } from "@wordpress/notices";
 import { store as preferencesStore } from "@wordpress/preferences";
 import { useAutoSave } from "../utils/useAutoSave";
 import { useNotices } from "../utils/useNotices";
@@ -175,6 +181,16 @@ export default function EditorChrome({
     [],
   );
 
+  // Hoist snackbar hooks (avoid calling hooks inside JSX props)
+  const snackbarNotices = useSelect(
+    (select) =>
+      select(noticesStore)
+        .getNotices()
+        .filter((n) => n.type === "snackbar"),
+    [],
+  );
+  const { removeNotice } = useDispatch(noticesStore);
+
   /* NEW: read open states from Preferences */
   const primaryOpen = useSelect((select) => {
     const v = select(preferencesStore).get(NS, K_PRIMARY);
@@ -324,7 +340,6 @@ export default function EditorChrome({
                 loading={loading}
                 onSelect={onSelect}
                 onNew={onNew}
-                saveStatus={saveStatus}
                 primaryToggleRef={primaryToggleRef}
                 secondaryToggleRef={secondaryToggleRef}
               />
@@ -394,6 +409,7 @@ export default function EditorChrome({
         </BlockEditorProvider>
 
         <Popover.Slot />
+        <SnackbarList notices={snackbarNotices} onRemove={removeNotice} />
       </SlotFillProvider>
     </ShortcutProvider>
   );
