@@ -10,6 +10,7 @@ import SaveIndicator from "./SaveIndicator";
 import TemplateToolbar from "./TemplateToolbar";
 
 /* NEW: use Preferences store for persistent UI state */
+import { useEffect } from "@wordpress/element";
 import { store as preferencesStore } from "@wordpress/preferences";
 
 /* Shared namespace & keys for this screen */
@@ -88,6 +89,19 @@ export default function Header({
     toggle("core/edit-post", "fullscreenMode");
   };
 
+  // Keyboard shortcut: Ctrl+Shift+Alt+F toggles fullscreen (match WP)
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const key = (event.key || "").toLowerCase();
+      if (event.ctrlKey && event.shiftKey && event.altKey && key === "f") {
+        event.preventDefault();
+        toggleFullscreen();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   /* UPDATED: toggle via Preferences store */
   const toggleSidebar = () => set(NS, K_PRIMARY, !primaryOpen);
   const toggleSecondarySidebar = () => set(NS, K_SECONDARY, !secondaryOpen);
@@ -115,7 +129,16 @@ export default function Header({
             secondaryOpen ? "is-active" : ""
           }`}
           onClick={toggleSecondarySidebar}
-          aria-label={__("Toggle List View", "campaignbridge")}
+          aria-label={
+            secondaryOpen
+              ? __("Close List View Shift+Alt+O", "campaignbridge")
+              : __("Open List View Shift+Alt+O", "campaignbridge")
+          }
+          label={
+            secondaryOpen
+              ? __("Close List View Shift+Alt+O", "campaignbridge")
+              : __("Open List View Shift+Alt+O", "campaignbridge")
+          }
           aria-controls="cb-secondary-sidebar"
           aria-pressed={secondaryOpen}
           aria-keyshortcuts="Esc, Shift+Alt+O"
@@ -131,7 +154,16 @@ export default function Header({
             primaryOpen ? "is-active" : ""
           }`}
           onClick={toggleSidebar}
-          aria-label={__("Toggle Sidebar", "campaignbridge")}
+          aria-label={
+            primaryOpen
+              ? __("Close Sidebar Ctrl+Shift+,", "campaignbridge")
+              : __("Open Sidebar Ctrl+Shift+,", "campaignbridge")
+          }
+          label={
+            primaryOpen
+              ? __("Close Sidebar Ctrl+Shift+,", "campaignbridge")
+              : __("Open Sidebar Ctrl+Shift+,", "campaignbridge")
+          }
           aria-controls="cb-primary-sidebar"
           aria-pressed={primaryOpen}
           aria-keyshortcuts="Esc, Ctrl+Shift+Comma, Meta+Shift+Comma"
@@ -144,10 +176,11 @@ export default function Header({
         <Button
           className="cb-fullscreen-toggle"
           onClick={toggleFullscreen}
+          aria-keyshortcuts="Control+Shift+Alt+F"
           label={
             isFullscreen
-              ? __("Exit Fullscreen", "campaignbridge")
-              : __("Enter Fullscreen", "campaignbridge")
+              ? __("Exit Fullscreen Ctrl+Shift+Alt+F", "campaignbridge")
+              : __("Enter Fullscreen Ctrl+Shift+Alt+F", "campaignbridge")
           }
           showTooltip={true}
         >
