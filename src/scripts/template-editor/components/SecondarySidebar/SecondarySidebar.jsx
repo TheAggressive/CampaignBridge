@@ -1,10 +1,9 @@
 import { __experimentalListView as ListView } from "@wordpress/block-editor";
-import { Panel } from "@wordpress/components";
 
 export default function SecondarySidebar() {
   return (
-    <Panel header="List View" className="cb-editor-sidebar">
+    <div className="cb-editor__sidebar-content-inner">
       <ListView />
-    </Panel>
+    </div>
   );
 }

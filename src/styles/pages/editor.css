@@ -1,20 +1,23 @@
 @import "tailwindcss";
 
-/* Shell layout - now works with InterfaceSkeleton */
-.cb-block-editor-shell {
-  height: 100vh; /* fill available viewport */
+/* Editor Shell wrapper (outside InterfaceSkeleton) */
+.cb-editor-shell {
+  height: 100vh;
   overflow: hidden;
   z-index: 1000;
   position: relative;
 }
 
-/* Editor header - for InterfaceSkeleton header area */
-.cb-editor-header {
+:root {
+  --cb-sidebar-width: 320px;
+}
+
+.cb-editor__header {
   padding: 1rem;
 }
 
-/* Toolbar within the header */
-.cb-block-editor-toolbar {
+.cb-editor__toolbar,
+.cb-editor__header-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -35,34 +38,107 @@
   text-align: center;
 }
 
-/* Editor content - for InterfaceSkeleton content area */
-.cb-editor-content {
+.cb-editor__content {
   height: 100%;
   overflow: auto;
 }
 
-/* Editor container - now simpler since InterfaceSkeleton handles layout */
-.cb-block-editor {
+.cb-editor__canvas {
   height: 100%;
   display: flex;
   flex-direction: column;
   min-height: 0; /* required so BlockList scrolls properly */
 }
 
-.cb-block-editor-canvas {
+.cb-editor__canvas {
   flex: 1;
+}
+
+/* Sidebar base */
+.cb-editor__sidebar {
+  width: var(--cb-sidebar-width);
+  height: 100%;
+}
+.cb-editor__sidebar-panel {
+  width: 100%;
+  height: 100%;
+}
+.cb-editor__sidebar-content-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.cb-editor__sidebar {
+  width: var(--cb-sidebar-width);
+  height: 100%;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  will-change: transform, opacity;
+}
+
+.cb-editor__sidebar-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cb-editor__sidebar-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.cb-editor__sidebar-content {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
-/* Editor sidebar - for InterfaceSkeleton sidebar area */
-.cb-editor-sidebar {
-  width: 300px;
-  height: 100%;
-  overflow: auto;
+/* Primary (left) sidebar */
+.cb-editor__sidebar--primary {
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+.cb-editor__sidebar--primary.cb-editor__sidebar--open {
+  transform: translateX(0);
+  opacity: 1;
+}
+.cb-editor__sidebar--primary.cb-editor__sidebar--closed {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Secondary (right) sidebar */
+.cb-editor__sidebar--secondary {
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+}
+.cb-editor__sidebar--secondary.cb-editor__sidebar--open {
+  transform: translateX(0);
+  opacity: 1;
+}
+.cb-editor__sidebar--secondary.cb-editor__sidebar--closed {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Close button tweaks */
+.cb-editor__close-btn.components-button {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
 }
 
 /* Inserter row above content */
-.cb-block-editor-tools {
+.cb-editor__canvas-tools {
   @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
 }
 
@@ -77,454 +153,58 @@
 }
 
 /* Ensure proper stacking context */
-.cb-block-editor {
+.cb-editor__canvas {
   position: relative;
 }
 
-/* -------------------------------------------------------------------------------------- */
-
-/* Root scope & theme */
-.dndlv {
-  --dndlv-accent: var(--wp-admin-theme-color, #2271b1);
-}
-
-/* Layout & loading */
-.dndlv__container {
-  height: 100%;
-  overflow: auto;
-}
-
-.dndlv__loading {
-  padding: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Icon button cell */
-.dndlv__iconBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
-/* Label / row */
-.dndlv__rowLabel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: var(--indent, 0px);
-}
-.dndlv.is-rtl .dndlv__rowLabel {
-  margin-left: 0;
-  margin-right: var(--indent, 0px);
-}
-
-.dndlv__labelText {
-  white-space: nowrap;
+/* Animate InterfaceSkeleton column widths when toggling sidebars */
+.cb-editor .components-interface-skeleton__sidebar,
+.cb-editor .components-interface-skeleton__secondary-sidebar,
+/* Legacy classnames in some WP versions */
+.cb-editor .interface-interface-skeleton__sidebar,
+.cb-editor .interface-interface-skeleton__secondary-sidebar {
+  transition:
+    width 0.2s ease,
+    flex-basis 0.2s ease;
   overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  will-change: width, flex-basis;
 }
 
-.dndlv__dragHandle {
-  opacity: 0.6;
-  font-size: 16px;
-  line-height: 1;
+.cb-editor.cb-editor--has-primary .components-interface-skeleton__sidebar,
+.cb-editor.cb-editor--has-primary .interface-interface-skeleton__sidebar {
+  width: var(--cb-sidebar-width);
+  flex: 0 0 var(--cb-sidebar-width);
+}
+.cb-editor.cb-editor--no-primary .components-interface-skeleton__sidebar,
+.cb-editor.cb-editor--no-primary .interface-interface-skeleton__sidebar {
+  width: 0;
+  flex: 0 0 0;
 }
 
-.dndlv__cellInner {
-  position: relative;
+.cb-editor.cb-editor--has-secondary
+  .components-interface-skeleton__secondary-sidebar,
+.cb-editor.cb-editor--has-secondary
+  .interface-interface-skeleton__secondary-sidebar {
+  width: var(--cb-sidebar-width);
+  flex: 0 0 var(--cb-sidebar-width);
+}
+.cb-editor.cb-editor--no-secondary
+  .components-interface-skeleton__secondary-sidebar,
+.cb-editor.cb-editor--no-secondary
+  .interface-interface-skeleton__secondary-sidebar {
+  width: 0;
+  flex: 0 0 0;
 }
 
-/* WP draggable handle shell */
-.dndlv__wpHandle {
-  cursor: grab;
-}
-.dndlv__wpHandle.is-dragging {
-  cursor: grabbing;
-}
-
-/* Drag ghost (WP-provided) */
-.dndlv__dragGhost,
-.dndlv__ghost {
-  /* also used by native ghost */
-  padding: 4px 8px;
-  background: white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  font:
-    12px/1.4 system-ui,
-    sans-serif;
-}
-
-/* Fallback droppable wrapper */
-.dndlv__fallbackDroppable {
-  position: relative;
-}
-
-/* Drop overlays (click-through when not dragging) */
-.dndlv__dropBefore,
-.dndlv__dropAfter,
-.dndlv__dropInto {
-  position: absolute;
-  pointer-events: none; /* idle: click-through */
-}
-
-/* Enable pointer events during a drag */
-.dndlv.is-dragging .dndlv__dropBefore,
-.dndlv.is-dragging .dndlv__dropAfter,
-.dndlv.is-dragging .dndlv__dropInto {
-  pointer-events: auto;
-}
-
-/* BEFORE line */
-.dndlv__dropBefore {
-  z-index: 2;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 8px;
-  border-top: 3px solid transparent;
-}
-.dndlv__dropBefore.is-over {
-  border-top-color: var(--dndlv-accent);
-}
-
-/* AFTER line */
-.dndlv__dropAfter {
-  z-index: 2;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 8px;
-  border-bottom: 3px solid transparent;
-}
-.dndlv__dropAfter.is-over {
-  border-bottom-color: var(--dndlv-accent);
-}
-
-/* INTO area */
-.dndlv__dropInto {
-  z-index: 1;
-  left: 0;
-  right: 0;
-  bottom: 8px;
-  height: 20px;
-  border-inline-start: 2px dashed rgba(0, 0, 0, 0.2);
-  background: transparent;
-}
-.dndlv__dropInto.is-over {
-  background: rgba(34, 113, 177, 0.1);
-}
-
-/* Native drag handle cursor */
-.dndlv__nativeHandle {
-  cursor: grab;
-  user-select: none;
-}
-
-/* Enhanced Components */
-.dndlv__enhancedHandle {
-  cursor: grab;
-  user-select: none;
-  transition: all 0.15s ease;
-}
-
-.dndlv__enhancedHandle:active,
-.dndlv__enhancedHandle:focus {
-  cursor: grabbing;
-}
-
-.dndlv__enhancedGhost {
-  pointer-events: none;
-  z-index: 9999;
-}
-
-/* Enhanced Droppable */
-.dndlv__enhancedDroppable {
-  position: relative;
-}
-
-.dndlv__enhancedDroppable.is-over {
-  background: rgba(34, 113, 177, 0.05);
-}
-
-.dndlv__enhancedDroppable.drop-before {
-  border-top: 2px solid var(--wp-admin-theme-color, #2271b1);
-}
-
-.dndlv__enhancedDroppable.drop-after {
-  border-bottom: 2px solid var(--wp-admin-theme-color, #2271b1);
-}
-
-.dndlv__enhancedDroppable.drop-into {
-  background: rgba(34, 113, 177, 0.1);
-  border: 1px dashed var(--wp-admin-theme-color, #2271b1);
-}
-
-/* Block Components */
-.dndlv__iconCell {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 0;
-}
-
-.dndlv__blockIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.dndlv__blockIcon:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.dndlv__blockIcon.is-selected {
-  background: var(--wp-admin-theme-color, #2271b1);
-  color: white;
-}
-
-.dndlv__blockIcon.is-selected:hover {
-  background: var(--wp-admin-theme-color-darker-10, #135e96);
-}
-
-.dndlv__blockLabel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  margin-left: var(--indent, 0px);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  min-height: 40px;
-}
-
-.dndlv__blockLabel:hover {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-.dndlv__blockLabel.is-selected {
-  background: rgba(34, 113, 177, 0.1);
-  border: 1px solid var(--wp-admin-theme-color, #2271b1);
-}
-
-.dndlv__blockLabel:focus {
-  outline: 2px solid var(--wp-admin-theme-color, #2271b1);
-  outline-offset: 2px;
-}
-
-.dndlv__dragIndicator {
-  opacity: 0.5;
-  font-size: 14px;
-  color: #666;
-  transition: opacity 0.15s ease;
-}
-
-.dndlv__blockLabel:hover .dndlv__dragIndicator {
-  opacity: 0.8;
-}
-
-.dndlv__blockTitle {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-/* Expansion Toggle */
-.dndlv__expansionToggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  color: #666;
-}
-
-.dndlv__expansionToggle:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: #333;
-}
-
-.dndlv__expansionToggle:focus {
-  outline: 2px solid var(--wp-admin-theme-color, #2271b1);
-  outline-offset: 2px;
-}
-
-/* Enhanced Drop Zones */
-.dndlv__dropZone {
-  position: absolute;
-  pointer-events: none;
-}
-
-.dndlv.is-dragging .dndlv__dropZone {
-  pointer-events: auto;
-}
-
-.dndlv__dropLine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: transparent;
-  transition: all 0.15s ease;
-  z-index: 10;
-}
-
-.dndlv__dropLine--before {
-  top: -1px;
-}
-
-.dndlv__dropLine--after {
-  bottom: -1px;
-}
-
-.dndlv__dropZone.is-active .dndlv__dropLine {
-  background: var(--wp-admin-theme-color, #2271b1);
-  box-shadow: 0 0 4px rgba(34, 113, 177, 0.3);
-}
-
-.dndlv__dropIndicator {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--wp-admin-theme-color, #2271b1);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-  opacity: 0;
-  transition: all 0.2s ease;
-  z-index: 20;
-}
-
-.dndlv__dropIndicator.is-visible {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1.1);
-}
-
-.dndlv__dropIndicator.is-targeted {
-  background: var(--wp-admin-theme-color-darker-10, #135e96);
-  transform: translate(-50%, -50%) scale(1.2);
-}
-
-/* Enhanced Drop Into Zone */
-.dndlv__dropInto {
-  position: absolute;
-  left: 24px;
-  right: 8px;
-  bottom: 4px;
-  height: 24px;
-  border: 2px dashed rgba(34, 113, 177, 0.3);
-  background: transparent;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  z-index: 5;
-}
-
-.dndlv__dropInto.is-over {
-  border-color: var(--wp-admin-theme-color, #2271b1);
-  background: rgba(34, 113, 177, 0.08);
-  border-style: solid;
-}
-
-/* Content Cell Layout */
-.dndlv__contentCell {
-  position: relative;
-  min-height: 48px;
-}
-
-/* Animations */
-@keyframes dndlv-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.dndlv__dropZone.is-active .dndlv__dropIndicator {
-  animation: dndlv-pulse 1s infinite;
-}
-
-/* RTL Support */
-.dndlv.is-rtl .dndlv__blockLabel {
-  margin-left: 0;
-  margin-right: var(--indent, 0px);
-}
-
-.dndlv.is-rtl .dndlv__dropInto {
-  left: 8px;
-  right: 24px;
-}
-
-/* Focus States */
-.dndlv__enhancedHandle:focus-visible,
-.dndlv__blockIcon:focus-visible,
-.dndlv__expansionToggle:focus-visible {
-  outline: 2px solid var(--wp-admin-theme-color, #2271b1);
-  outline-offset: 2px;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .dndlv__blockLabel {
-    border: 1px solid;
-  }
-
-  .dndlv__dropLine {
-    height: 3px;
-  }
-
-  .dndlv__dropInto {
-    border-width: 3px;
-  }
-}
-
-/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-  .dndlv__enhancedHandle,
-  .dndlv__blockIcon,
-  .dndlv__blockLabel,
-  .dndlv__expansionToggle,
-  .dndlv__dropLine,
-  .dndlv__dropIndicator,
-  .dndlv__dropInto {
+  .cb-editor__sidebar {
     transition: none;
   }
-
-  .dndlv__dropZone.is-active .dndlv__dropIndicator {
-    animation: none;
+  .cb-editor .components-interface-skeleton__sidebar,
+  .cb-editor .components-interface-skeleton__secondary-sidebar,
+  .cb-editor .interface-interface-skeleton__sidebar,
+  .cb-editor .interface-interface-skeleton__secondary-sidebar {
+    transition: none;
   }
 }

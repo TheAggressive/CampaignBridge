@@ -79,7 +79,7 @@ export default function Sidebar() {
 
   return (
     <div
-      className="cb-editor-sidebar"
+      className="cb-editor__sidebar-panel"
       role="region"
       aria-label={__("Editor Sidebar", "campaignbridge")}
       tabIndex="-1"

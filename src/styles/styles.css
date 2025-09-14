@@ -17,32 +17,7 @@
 }
 
 @layer components {
-  /* ================= Admin: Common (shared layout/utilities for UI) ================= */
-  .cb-field {
-    @apply mb-3 max-w-2xl;
-  }
-
-  .cb-input-wide {
-    @apply w-full max-w-2xl;
-  }
-
-  .cb-label {
-    @apply mb-6 block;
-  }
-
-  .cb-hidden {
-    @apply hidden;
-  }
-
-  .cb-pill {
-    @apply mr-6 inline-block rounded-full bg-emerald-500 px-4 py-2 text-white;
-  }
-
   #campaignbridge-verify-status {
     @apply font-semibold;
-  }
-
-  .cb-inline-spinner {
-    @apply float-none mr-6 align-middle;
   }
 }

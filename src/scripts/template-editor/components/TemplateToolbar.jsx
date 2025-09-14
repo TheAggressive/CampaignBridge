@@ -52,7 +52,7 @@ export default function TemplateToolbar({
     value: String(p.id),
   }));
   return (
-    <div className="cb-block-editor-toolbar">
+    <div className="cb-editor__toolbar">
       <SelectControl
         label={__("Templates", "campaignbridge")}
         value={currentId ? String(currentId) : ""}

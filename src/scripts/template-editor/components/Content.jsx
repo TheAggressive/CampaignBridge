@@ -17,7 +17,7 @@ import BlockCanvas from "./BlockCanvas";
  */
 export default function Content() {
   return (
-    <div className="cb-editor-content">
+    <div className="cb-editor__content">
       <BlockEditorKeyboardShortcuts />
       <BlockCanvas />
     </div>

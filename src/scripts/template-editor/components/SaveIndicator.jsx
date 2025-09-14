@@ -75,7 +75,7 @@ export default function SaveIndicator({ status }) {
 
   return (
     <div
-      className={`cb-save-notification cb-save-notification--${messageType}`}
+      className={`cb-editor__save cb-editor__save--${messageType}`}
       style={{
         position: "fixed",
         bottom: "20px",

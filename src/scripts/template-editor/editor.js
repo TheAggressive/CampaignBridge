@@ -69,7 +69,7 @@ export default function CampaignBridgeBlockEditor() {
   };
 
   return (
-    <div className="cb-block-editor-shell">
+    <div className="cb-editor-shell">
       {error && (
         <Notice status="error" isDismissible={false}>
           {error}

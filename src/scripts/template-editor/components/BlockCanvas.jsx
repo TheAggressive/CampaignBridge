@@ -26,8 +26,8 @@ import HistoryControls from "./Toolbar/HistoryControls";
  */
 export default function BlockCanvas() {
   return (
-    <div className="cb-block-editor">
-      <div className="cb-block-editor-tools">
+    <div className="cb-editor__canvas">
+      <div className="cb-editor__canvas-tools">
         <Inserter rootClientId={null} />
         <HistoryControls />
       </div>

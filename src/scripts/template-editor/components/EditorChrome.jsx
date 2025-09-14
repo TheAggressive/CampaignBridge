@@ -1,9 +1,11 @@
 import { BlockEditorProvider } from "@wordpress/block-editor";
 import { parse } from "@wordpress/blocks";
-import { Popover, SlotFillProvider } from "@wordpress/components";
-import { useSelect } from "@wordpress/data";
-import { useEffect, useMemo, useState } from "@wordpress/element";
+import { Button, Popover, SlotFillProvider } from "@wordpress/components";
+import { useDispatch, useSelect } from "@wordpress/data";
+import { useEffect, useMemo, useRef, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
+/* Keep InterfaceSkeleton if it’s already working in your bundle.
+   If not, this still acts as a simple layout container. */
 import { FullscreenMode, InterfaceSkeleton } from "@wordpress/interface";
 import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
 import { getPostRaw, savePostContent } from "../services/api";
@@ -15,6 +17,14 @@ import Footer from "./Footer";
 import Header from "./Header";
 import SecondarySidebar from "./SecondarySidebar/SecondarySidebar";
 import Sidebar from "./Sidebar";
+
+/* NEW: Preferences store for UI state */
+import { store as preferencesStore } from "@wordpress/preferences";
+
+/* Namespace/keys (must match Header.jsx) */
+const NS = "campaignbridge/template-editor";
+const K_PRIMARY = "primaryOpen";
+const K_SECONDARY = "secondaryOpen";
 
 /**
  * Editor Chrome Component
@@ -149,6 +159,102 @@ export default function EditorChrome({
     [],
   );
 
+  /* NEW: read open states from Preferences */
+  const primaryOpen = useSelect((select) => {
+    const v = select(preferencesStore).get(NS, K_PRIMARY);
+    return typeof v === "boolean" ? v : true;
+  }, []);
+  const secondaryOpen = useSelect((select) => {
+    const v = select(preferencesStore).get(NS, K_SECONDARY);
+    return typeof v === "boolean" ? v : false;
+  }, []);
+
+  /* NEW: setters for the close “X” buttons */
+  const { set } = useDispatch(preferencesStore);
+
+  // Button refs for polished focus management
+  const primaryToggleRef = useRef(null);
+  const secondaryToggleRef = useRef(null);
+
+  const moveFocusAfterClose = (sidebarId, toggleRef) => {
+    // Defer to after state change so aria-hidden/inert have applied
+    requestAnimationFrame(() => {
+      const sidebar = document.getElementById(sidebarId);
+      const active = document.activeElement;
+      if (sidebar && active && sidebar.contains(active)) {
+        const btn = toggleRef?.current;
+        if (btn && typeof btn.focus === "function") {
+          btn.focus();
+        } else if (typeof document.body.focus === "function") {
+          document.body.focus();
+        }
+      }
+    });
+  };
+
+  const closePrimary = () => {
+    set(NS, K_PRIMARY, false);
+    moveFocusAfterClose("cb-primary-sidebar", primaryToggleRef);
+  };
+  const closeSecondary = () => {
+    set(NS, K_SECONDARY, false);
+    moveFocusAfterClose("cb-secondary-sidebar", secondaryToggleRef);
+  };
+
+  // Keyboard: match Gutenberg + ESC close
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const active = document.activeElement;
+      const primaryEl = document.getElementById("cb-primary-sidebar");
+      const secondaryEl = document.getElementById("cb-secondary-sidebar");
+      const onPrimaryToggle = active === primaryToggleRef.current;
+      const onSecondaryToggle = active === secondaryToggleRef.current;
+
+      // Toggle Settings (primary): Ctrl+Shift+Comma (Win) / Cmd+Shift+Comma (Mac)
+      const isTogglePrimary =
+        (event.code === "Comma" || event.key === ",") &&
+        event.shiftKey &&
+        ((event.ctrlKey && !event.metaKey) ||
+          (event.metaKey && !event.ctrlKey));
+      if (isTogglePrimary) {
+        event.preventDefault();
+        set(NS, K_PRIMARY, !primaryOpen);
+        return;
+      }
+
+      // Toggle List View (secondary): Shift+Alt+O
+      const key = (event.key || "").toLowerCase();
+      const isToggleSecondary =
+        (event.code === "KeyO" || key === "o") &&
+        event.altKey &&
+        event.shiftKey;
+      if (isToggleSecondary) {
+        event.preventDefault();
+        set(NS, K_SECONDARY, !secondaryOpen);
+        return;
+      }
+
+      // ESC closes the sidebar that currently has focus (or its toggle is focused)
+      if (event.key === "Escape") {
+        if (primaryOpen && (primaryEl?.contains(active) || onPrimaryToggle)) {
+          event.preventDefault();
+          closePrimary();
+          return;
+        }
+        if (
+          secondaryOpen &&
+          (secondaryEl?.contains(active) || onSecondaryToggle)
+        ) {
+          event.preventDefault();
+          closeSecondary();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [primaryOpen, secondaryOpen]);
+
   if (!ready) {
     return (
       <div className="cb-editor-loading">
@@ -179,6 +285,10 @@ export default function EditorChrome({
     ...blockPatternCategories,
   };
 
+  const skeletonClassName = `cb-editor ${
+    primaryOpen ? "cb-editor--has-primary" : "cb-editor--no-primary"
+  } ${secondaryOpen ? "cb-editor--has-secondary" : "cb-editor--no-secondary"}`;
+
   return (
     <ShortcutProvider>
       <SlotFillProvider>
@@ -199,6 +309,7 @@ export default function EditorChrome({
           settings={mergedEditorSettings}
         >
           <InterfaceSkeleton
+            className={skeletonClassName}
             header={
               <Header
                 list={list}
@@ -207,11 +318,70 @@ export default function EditorChrome({
                 onSelect={onSelect}
                 onNew={onNew}
                 saveStatus={saveStatus}
+                primaryToggleRef={primaryToggleRef}
+                secondaryToggleRef={secondaryToggleRef}
               />
             }
+            /* CONTENT stays the same */
             content={<Content />}
-            sidebar={<Sidebar />}
-            secondarySidebar={<SecondarySidebar />}
+            /* PRIMARY SIDEBAR — always render for width animation */
+            sidebar={
+              <aside
+                className={`cb-editor__sidebar cb-editor__sidebar--primary ${
+                  primaryOpen
+                    ? "cb-editor__sidebar--open"
+                    : "cb-editor__sidebar--closed"
+                }`}
+                id="cb-primary-sidebar"
+                inert={primaryOpen ? undefined : "true"}
+                aria-hidden={!primaryOpen}
+                aria-label={__("Primary sidebar", "campaignbridge")}
+              >
+                <div className="cb-editor__sidebar-inner">
+                  <div className="cb-editor__sidebar-chrome">
+                    <Button
+                      className="cb-editor__close-btn"
+                      variant="tertiary"
+                      onClick={closePrimary}
+                      label={__("Close primary sidebar", "campaignbridge")}
+                      icon="no"
+                    />
+                  </div>
+                  <div className="cb-editor__sidebar-content">
+                    <Sidebar />
+                  </div>
+                </div>
+              </aside>
+            }
+            /* SECONDARY SIDEBAR — always render for width animation */
+            secondarySidebar={
+              <aside
+                className={`cb-editor__sidebar cb-editor__sidebar--secondary ${
+                  secondaryOpen
+                    ? "cb-editor__sidebar--open"
+                    : "cb-editor__sidebar--closed"
+                }`}
+                id="cb-secondary-sidebar"
+                inert={secondaryOpen ? undefined : "true"}
+                aria-hidden={!secondaryOpen}
+                aria-label={__("Secondary sidebar", "campaignbridge")}
+              >
+                <div className="cb-editor__sidebar-inner">
+                  <div className="cb-editor__sidebar-chrome">
+                    <Button
+                      className="cb-editor__close-btn"
+                      variant="tertiary"
+                      onClick={closeSecondary}
+                      label={__("Close secondary sidebar", "campaignbridge")}
+                      icon="no"
+                    />
+                  </div>
+                  <div className="cb-editor__sidebar-content">
+                    <SecondarySidebar />
+                  </div>
+                </div>
+              </aside>
+            }
             footer={<Footer />}
           />
         </BlockEditorProvider>
