@@ -7,7 +7,13 @@ import {
   SnackbarList,
 } from "@wordpress/components";
 import { useDispatch, useSelect } from "@wordpress/data";
-import { useCallback, useEffect, useRef, useState } from "@wordpress/element";
+import {
+  createPortal,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 /* Keep InterfaceSkeleton if it’s already working in your bundle.
    If not, this still acts as a simple layout container. */
@@ -409,7 +415,15 @@ export default function EditorChrome({
         </BlockEditorProvider>
 
         <Popover.Slot />
-        <SnackbarList notices={snackbarNotices} onRemove={removeNotice} />
+        {typeof document !== "undefined" &&
+          createPortal(
+            <SnackbarList
+              className="edit-post-layout__snackbar"
+              notices={snackbarNotices}
+              onRemove={removeNotice}
+            />,
+            document.body,
+          )}
       </SlotFillProvider>
     </ShortcutProvider>
   );

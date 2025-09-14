@@ -429,3 +429,15 @@
 .is-fullscreen-mode .cb-fullscreen-toggle.components-button:hover svg {
   fill: currentColor;
 }
+
+/* Snackbar positioning for native notices (match Gutenberg bottom-left) */
+.edit-post-layout__snackbar {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 100000;
+  pointer-events: none;
+}
+.edit-post-layout__snackbar .components-snackbar {
+  pointer-events: auto;
+}
