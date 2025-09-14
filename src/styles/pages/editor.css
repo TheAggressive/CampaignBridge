@@ -256,6 +256,10 @@
     height: 32px;
     padding: 0 4px;
     border-radius: 2px; /* match native */
+
+    &.is-primary {
+      padding: 0 16px;
+    }
   }
 
   /* Toggle buttons */
