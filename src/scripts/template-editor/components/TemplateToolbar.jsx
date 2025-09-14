@@ -54,14 +54,12 @@ export default function TemplateToolbar({
   return (
     <div className="cb-editor__toolbar">
       <SelectControl
+        className="cb-editor__templates-select"
         label={__("Templates", "campaignbridge")}
+        hideLabelFromVision={true}
         value={currentId ? String(currentId) : ""}
-        onChange={
-          // Handle template selection from dropdown - convert string to number
-          (val) => onSelect(Number(val) || null)
-        }
+        onChange={(val) => onSelect(Number(val) || null)}
         disabled={loading}
-        __next40pxDefaultSize={true}
         __nextHasNoMarginBottom={true}
         options={[
           ...(currentId

@@ -117,7 +117,7 @@ class PostTypesPage extends AdminPage {
 											<label class="cb-post-types__switch">
 												<input type="checkbox" name="<?php echo esc_attr( self::get_option_name() ); ?>[included_post_types][]" value="<?php echo esc_attr( $obj->name ); ?>" <?php checked( $checked ); ?> />
 												<span class="cb-post-types__slider" aria-hidden="true"></span>
-												<span class="cb-switch-label"><?php echo esc_html( $obj->labels->singular_name ); ?></span>
+												<span class="cb-post-types__switch-label"><?php echo esc_html( $obj->labels->singular_name ); ?></span>
 											</label>
 										<?php endforeach; ?>
 									</div>

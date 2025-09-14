@@ -1,7 +1,11 @@
 import { Button, Icon } from "@wordpress/components";
 import { useDispatch, useSelect } from "@wordpress/data";
 import { __ } from "@wordpress/i18n";
-import { fullscreen as fullscreenIcon } from "@wordpress/icons";
+import {
+  drawerRight,
+  fullscreen as fullscreenIcon,
+  listView,
+} from "@wordpress/icons";
 import SaveIndicator from "./SaveIndicator";
 import TemplateToolbar from "./TemplateToolbar";
 
@@ -90,9 +94,9 @@ export default function Header({
 
   return (
     <div className="cb-editor__header">
-      <h1>Template Editor</h1>
-      <div className="cb-editor__header-actions">
-        <SaveIndicator status={saveStatus} />
+      <div className="cb-editor__header-left">
+        <h1 className="cb-editor__title">Template Editor</h1>
+        <span className="cb-editor__divider" aria-hidden="true" />
         <TemplateToolbar
           list={list}
           currentId={currentId}
@@ -100,21 +104,10 @@ export default function Header({
           onSelect={onSelect}
           onNew={onNew}
         />
+      </div>
 
-        {/* Sidebar toggle buttons */}
-        <Button
-          ref={primaryToggleRef}
-          className={`cb-editor__toggle cb-editor__toggle--primary ${
-            primaryOpen ? "is-active" : ""
-          }`}
-          onClick={toggleSidebar}
-          label={__("Toggle Sidebar", "campaignbridge")}
-          aria-controls="cb-primary-sidebar"
-          aria-pressed={primaryOpen}
-          aria-keyshortcuts="Esc, Ctrl+Shift+Comma, Meta+Shift+Comma"
-          showTooltip={true}
-          icon="admin-settings"
-        />
+      <div className="cb-editor__header-actions">
+        <SaveIndicator status={saveStatus} />
 
         <Button
           ref={secondaryToggleRef}
@@ -122,13 +115,31 @@ export default function Header({
             secondaryOpen ? "is-active" : ""
           }`}
           onClick={toggleSecondarySidebar}
-          label={__("Toggle List View", "campaignbridge")}
+          aria-label={__("Toggle List View", "campaignbridge")}
           aria-controls="cb-secondary-sidebar"
           aria-pressed={secondaryOpen}
           aria-keyshortcuts="Esc, Shift+Alt+O"
           showTooltip={true}
-          icon="list-view"
-        />
+          variant="tertiary"
+        >
+          <Icon icon={listView} size={24} />
+        </Button>
+
+        <Button
+          ref={primaryToggleRef}
+          className={`cb-editor__toggle cb-editor__toggle--primary ${
+            primaryOpen ? "is-active" : ""
+          }`}
+          onClick={toggleSidebar}
+          aria-label={__("Toggle Sidebar", "campaignbridge")}
+          aria-controls="cb-primary-sidebar"
+          aria-pressed={primaryOpen}
+          aria-keyshortcuts="Esc, Ctrl+Shift+Comma, Meta+Shift+Comma"
+          showTooltip={true}
+          variant="tertiary"
+        >
+          <Icon icon={drawerRight} size={24} />
+        </Button>
 
         <Button
           className="cb-fullscreen-toggle"
@@ -140,7 +151,7 @@ export default function Header({
           }
           showTooltip={true}
         >
-          <Icon icon={fullscreenIcon} size={20} />
+          <Icon icon={fullscreenIcon} size={24} />
         </Button>
       </div>
     </div>

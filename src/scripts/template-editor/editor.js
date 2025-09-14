@@ -1,9 +1,10 @@
 import { registerCoreBlocks } from "@wordpress/block-library";
-import { Notice, Spinner } from "@wordpress/components";
+import { Button, Icon, Notice, Spinner } from "@wordpress/components";
 import domReady from "@wordpress/dom-ready";
 import { createRoot, useEffect, useState } from "@wordpress/element";
 import "@wordpress/format-library";
 import { __ } from "@wordpress/i18n";
+import { layout, plus } from "@wordpress/icons";
 import { InterfaceSkeleton } from "@wordpress/interface";
 import EditorChrome from "./components/EditorChrome";
 import Header from "./components/Header";
@@ -117,25 +118,44 @@ function EmptyState({ list, loading, onSelect, onNew }) {
   return (
     <InterfaceSkeleton
       header={
-        <>
-          <Header
-            list={list}
-            currentId={null}
-            loading={loading}
-            onSelect={onSelect}
-            onNew={onNew}
-          />
-        </>
+        <Header
+          list={list}
+          currentId={null}
+          loading={loading}
+          onSelect={onSelect}
+          onNew={onNew}
+        />
       }
       content={
-        <div className="cb-block-editor-placeholder-content">
-          <h3>{__("Select a Template", "campaignbridge")}</h3>
-          <p>
-            {__(
-              "Choose a template from the dropdown above, or create a new one.",
-              "campaignbridge",
-            )}
-          </p>
+        <div
+          className="cb-editor__empty"
+          role="region"
+          aria-label={__("No template selected", "campaignbridge")}
+        >
+          <div className="cb-editor__empty-card">
+            <div className="cb-editor__empty-icon" aria-hidden>
+              <Icon icon={layout} size={32} />
+            </div>
+            <h3 className="cb-editor__empty-title">
+              {__("Get Started", "campaignbridge")}
+            </h3>
+            <p className="cb-editor__empty-desc">
+              {__(
+                "Use the template dropdown in the header to select an existing template, or create a new one to start designing.",
+                "campaignbridge",
+              )}
+            </p>
+            <div className="cb-editor__empty-actions">
+              <Button
+                variant="primary"
+                className="cb-editor__empty-primary"
+                onClick={onNew}
+              >
+                <Icon icon={plus} size={20} />{" "}
+                {__("New Template", "campaignbridge")}
+              </Button>
+            </div>
+          </div>
         </div>
       }
     />
