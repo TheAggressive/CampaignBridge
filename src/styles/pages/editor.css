@@ -12,62 +12,96 @@
   --cb-sidebar-width: 320px;
 }
 
-.cb-editor__header {
-  padding: 1rem;
+.cb-editor {
+  &__header {
+    padding: 1rem;
+  }
+
+  &__toolbar,
+  &__header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* Loading and placeholder states */
+  &-loading,
+  &-placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+  }
+
+  &-placeholder-content {
+    text-align: center;
+  }
+
+  &__content {
+    height: 100%;
+    overflow: auto;
+  }
+
+  &__canvas {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* required so BlockList scrolls properly */
+    flex: 1;
+    position: relative;
+
+    &-tools {
+      @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
+    }
+  }
+
+  /* Animate InterfaceSkeleton column widths when toggling sidebars */
+  .components-interface-skeleton__sidebar,
+  .components-interface-skeleton__secondary-sidebar,
+  /* Legacy classnames in some WP versions */
+  .interface-interface-skeleton__sidebar,
+  .interface-interface-skeleton__secondary-sidebar {
+    transition:
+      width 0.2s ease,
+      flex-basis 0.2s ease;
+    overflow: hidden;
+    min-width: 0;
+    will-change: width, flex-basis;
+  }
+
+  &.cb-editor--has-primary {
+    .components-interface-skeleton__sidebar,
+    .interface-interface-skeleton__sidebar {
+      width: var(--cb-sidebar-width);
+      flex: 0 0 var(--cb-sidebar-width);
+    }
+  }
+  &.cb-editor--no-primary {
+    .components-interface-skeleton__sidebar,
+    .interface-interface-skeleton__sidebar {
+      width: 0;
+      flex: 0 0 0;
+    }
+  }
+  &.cb-editor--has-secondary {
+    .components-interface-skeleton__secondary-sidebar,
+    .interface-interface-skeleton__secondary-sidebar {
+      width: var(--cb-sidebar-width);
+      flex: 0 0 var(--cb-sidebar-width);
+    }
+  }
+  &.cb-editor--no-secondary {
+    .components-interface-skeleton__secondary-sidebar,
+    .interface-interface-skeleton__secondary-sidebar {
+      width: 0;
+      flex: 0 0 0;
+    }
+  }
 }
 
-.cb-editor__toolbar,
-.cb-editor__header-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-/* Loading and placeholder states */
-.cb-block-editor-loading,
-.cb-block-editor-placeholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #555;
-}
-
-.cb-block-editor-placeholder-content {
-  text-align: center;
-}
-
-.cb-editor__content {
-  height: 100%;
-  overflow: auto;
-}
-
-.cb-editor__canvas {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* required so BlockList scrolls properly */
-}
-
-.cb-editor__canvas {
-  flex: 1;
-}
-
-/* Sidebar base */
-.cb-editor__sidebar {
-  width: var(--cb-sidebar-width);
-  height: 100%;
-}
-.cb-editor__sidebar-panel {
-  width: 100%;
-  height: 100%;
-}
-.cb-editor__sidebar-content-inner {
-  width: 100%;
-  height: 100%;
-}
-
+/* Sidebar */
 .cb-editor__sidebar {
   width: var(--cb-sidebar-width);
   height: 100%;
@@ -79,55 +113,66 @@
   display: flex;
   flex-direction: column;
   will-change: transform, opacity;
-}
 
-.cb-editor__sidebar-inner {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
+  &-panel {
+    width: 100%;
+    height: 100%;
+  }
 
-.cb-editor__sidebar-chrome {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 6px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
+  &-content-inner {
+    width: 100%;
+    height: 100%;
+  }
 
-.cb-editor__sidebar-content {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
+  &-inner {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
 
-/* Primary (left) sidebar */
-.cb-editor__sidebar--primary {
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
-}
-.cb-editor__sidebar--primary.cb-editor__sidebar--open {
-  transform: translateX(0);
-  opacity: 1;
-}
-.cb-editor__sidebar--primary.cb-editor__sidebar--closed {
-  transform: translateX(100%);
-  opacity: 0;
-  pointer-events: none;
-}
+  &-chrome {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
 
-/* Secondary (right) sidebar */
-.cb-editor__sidebar--secondary {
-  border-left: 1px solid rgba(0, 0, 0, 0.06);
-}
-.cb-editor__sidebar--secondary.cb-editor__sidebar--open {
-  transform: translateX(0);
-  opacity: 1;
-}
-.cb-editor__sidebar--secondary.cb-editor__sidebar--closed {
-  transform: translateX(-100%);
-  opacity: 0;
-  pointer-events: none;
+  &-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  /* Modifiers */
+  &--primary {
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
+
+    &.cb-editor__sidebar--open {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    &.cb-editor__sidebar--closed {
+      transform: translateX(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  &--secondary {
+    border-left: 1px solid rgba(0, 0, 0, 0.06);
+
+    &.cb-editor__sidebar--open {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    &.cb-editor__sidebar--closed {
+      transform: translateX(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
 }
 
 /* Close button tweaks */
@@ -135,66 +180,6 @@
   min-width: 28px;
   height: 28px;
   padding: 0 6px;
-}
-
-/* Inserter row above content */
-.cb-editor__canvas-tools {
-  @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
-}
-
-/* Editor Loading State */
-.cb-editor-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 400px;
-  font-size: 16px;
-  color: #666;
-}
-
-/* Ensure proper stacking context */
-.cb-editor__canvas {
-  position: relative;
-}
-
-/* Animate InterfaceSkeleton column widths when toggling sidebars */
-.cb-editor .components-interface-skeleton__sidebar,
-.cb-editor .components-interface-skeleton__secondary-sidebar,
-/* Legacy classnames in some WP versions */
-.cb-editor .interface-interface-skeleton__sidebar,
-.cb-editor .interface-interface-skeleton__secondary-sidebar {
-  transition:
-    width 0.2s ease,
-    flex-basis 0.2s ease;
-  overflow: hidden;
-  min-width: 0;
-  will-change: width, flex-basis;
-}
-
-.cb-editor.cb-editor--has-primary .components-interface-skeleton__sidebar,
-.cb-editor.cb-editor--has-primary .interface-interface-skeleton__sidebar {
-  width: var(--cb-sidebar-width);
-  flex: 0 0 var(--cb-sidebar-width);
-}
-.cb-editor.cb-editor--no-primary .components-interface-skeleton__sidebar,
-.cb-editor.cb-editor--no-primary .interface-interface-skeleton__sidebar {
-  width: 0;
-  flex: 0 0 0;
-}
-
-.cb-editor.cb-editor--has-secondary
-  .components-interface-skeleton__secondary-sidebar,
-.cb-editor.cb-editor--has-secondary
-  .interface-interface-skeleton__secondary-sidebar {
-  width: var(--cb-sidebar-width);
-  flex: 0 0 var(--cb-sidebar-width);
-}
-.cb-editor.cb-editor--no-secondary
-  .components-interface-skeleton__secondary-sidebar,
-.cb-editor.cb-editor--no-secondary
-  .interface-interface-skeleton__secondary-sidebar {
-  width: 0;
-  flex: 0 0 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

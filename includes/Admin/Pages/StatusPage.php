@@ -223,13 +223,13 @@ class StatusPage extends AdminPage {
 				'campaignbridge/email-post-button',
 			);
 			?>
-			<div class="cb-status-details">
+			<div class="cb-status__details">
 				<h4><?php esc_html_e( 'Required Block Status', 'campaignbridge' ); ?></h4>
-				<div class="cb-block-list">
+				<div class="cb-status__block-list">
 					<?php foreach ( $specific_blocks as $block_name ) : ?>
 						<?php
 						$is_registered = Blocks::is_block_registered( $block_name );
-						$status_class  = $is_registered ? 'cb-status-ok' : 'cb-status-error';
+						$status_class  = $is_registered ? 'cb-status__value--ok' : 'cb-status__value--error';
 						$status_icon   = $is_registered ? '✅' : '❌';
 						?>
 						<div class="cb-status__block-item">
