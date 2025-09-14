@@ -7,7 +7,7 @@ import apiFetch from "@wordpress/api-fetch";
  */
 export async function listTemplates() {
   return apiFetch({
-    path: `/wp/v2/cb_email_template?per_page=100&status=publish,draft&context=edit&_fields=id,title,status,date`,
+    path: `/wp/v2/cb_email_template?per_page=100&status=publish&context=view&_fields=id,title,status,date`,
   });
 }
 
@@ -21,7 +21,7 @@ export async function createDraft(title) {
     path: `/wp/v2/cb_email_template`,
     method: "POST",
     data: {
-      status: "draft",
+      status: "publish",
       title:
         title && String(title).trim()
           ? String(title).trim()
@@ -43,22 +43,29 @@ export async function getPostRaw(id) {
 }
 
 /**
- * Saves content and metadata for an existing email template via the WordPress REST API.
+ * Saves content and metadata for an existing email template via the REST API.
  *
- * @param {number} id                    - The ID of the template to update
- * @param {Object} data                  - The data to update
- * @param {string} data.content          - The block content to save
- * @param {string} [data.status="draft"] - The post status (defaults to "draft")
- * @param {string} [data.title]          - The post title (optional)
- * @return {Promise<Object>} The updated template object
+ * @param {number} id                      Template ID
+ * @param {Object} data                    Payload
+ * @param {string} data.content            Serialized block content
+ * @param {string} [data.status]           Optional post status
+ * @param {string} [data.title]            Optional post title
+ * @param {Object} [options]               fetch options (e.g., { signal })
+ * @return {Promise<Object>}               Updated template
  */
 export async function savePostContent(
   id,
-  { content, status = "draft", title },
+  { content, status, title },
+  options = {},
 ) {
   return apiFetch({
     path: `/wp/v2/cb_email_template/${id}`,
     method: "POST",
-    data: { content, status, ...(title != null ? { title } : {}) },
+    data: {
+      content,
+      ...(status != null ? { status } : {}),
+      ...(title != null ? { title } : {}),
+    },
+    ...options,
   });
 }

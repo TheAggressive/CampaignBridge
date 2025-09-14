@@ -2,7 +2,7 @@ import { BlockEditorProvider } from "@wordpress/block-editor";
 import { parse } from "@wordpress/blocks";
 import { Button, Popover, SlotFillProvider } from "@wordpress/components";
 import { useDispatch, useSelect } from "@wordpress/data";
-import { useEffect, useMemo, useRef, useState } from "@wordpress/element";
+import { useCallback, useEffect, useRef, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 /* Keep InterfaceSkeleton if it’s already working in your bundle.
    If not, this still acts as a simple layout container. */
@@ -20,6 +20,8 @@ import Sidebar from "./Sidebar";
 
 /* NEW: Preferences store for UI state */
 import { store as preferencesStore } from "@wordpress/preferences";
+import { useAutoSave } from "../utils/useAutoSave";
+import { useNotices } from "../utils/useNotices";
 
 /* Namespace/keys (must match Header.jsx) */
 const NS = "campaignbridge/template-editor";
@@ -71,6 +73,7 @@ export default function EditorChrome({
   const [ready, setReady] = useState(false);
   const [blocks, setBlocks] = useState([]);
   const [saveStatus, setSaveStatus] = useState("saved"); // 'saved', 'saving', 'error'
+  const { success, error: errorNotice } = useNotices();
   const {
     settings: editorSettings,
     error: editorSettingsError,
@@ -95,24 +98,34 @@ export default function EditorChrome({
     };
   }, [postId]);
 
-  /**
-   * Enhanced save function with status tracking and auto-save functionality.
-   * Includes debounced saving, status updates, and error handling.
-   */
-  const save = useMemo(() => {
-    let debounceTimer;
-    let autoSaveTimer;
+  // No RAF cleanup needed; scheduling handled in useAutoSave
 
-    const performSave = async (blocksToSave, isAutoSave = false) => {
+  // Debounced save using hook
+  const lastNoticeAtRef = useRef(0);
+
+  const performSave = useCallback(
+    async (blocksToSave, { signal } = {}) => {
       try {
-        setSaveStatus(isAutoSave ? "autosaving" : "saving");
+        setSaveStatus("saving");
 
-        const result = await savePostContent(postId, {
-          content: serializeSafe(blocksToSave),
-          isAutoSave,
-        });
+        const result = await savePostContent(
+          postId,
+          {
+            content: serializeSafe(blocksToSave),
+          },
+          signal,
+        );
 
         setSaveStatus("saved");
+
+        // Native snackbar notification (throttled to avoid spam)
+        try {
+          const now = Date.now();
+          if (now - lastNoticeAtRef.current > 8000) {
+            success(__("Template saved", "campaignbridge"));
+            lastNoticeAtRef.current = now;
+          }
+        } catch {}
 
         onBlocksChange && onBlocksChange(blocksToSave);
 
@@ -120,38 +133,41 @@ export default function EditorChrome({
       } catch (error) {
         console.error("Save failed:", error);
         setSaveStatus("error");
+        try {
+          errorNotice(__("Failed to save changes", "campaignbridge"));
+        } catch {}
         throw error;
       }
-    };
+    },
+    [postId, onBlocksChange, success, errorNotice],
+  );
 
-    // Debounced manual save (for user actions)
-    const debouncedSave = (next) => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => performSave(next, false), 600);
-    };
+  // Use default debounce from hook; can override by passing second arg
+  const save = useAutoSave(performSave);
 
-    // Auto-save every 60 seconds (WordPress standard)
-    const startAutoSave = (next) => {
-      clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(() => {
-        performSave(next, true);
-        startAutoSave(next); // Restart the cycle
-      }, 60000); // 60 seconds
-    };
-
-    // Return the main save function
-    return (next, force = false) => {
-      if (force) {
-        // Immediate save for critical operations
-        clearTimeout(debounceTimer);
-        clearTimeout(autoSaveTimer);
-        return performSave(next, false);
+  // Unified update handler that coalesces onInput/onChange into a single save per frame
+  const handleBlocksUpdate = useCallback(
+    (next) => {
+      setBlocks(next);
+      if (typeof save.schedule === "function") {
+        save.schedule(next);
+      } else {
+        save(next);
       }
+    },
+    [save],
+  );
 
-      debouncedSave(next);
-      startAutoSave(next);
+  // Flush pending save on navigation/unload
+  useEffect(() => {
+    const beforeUnload = () => {
+      if (typeof save.flush === "function") {
+        save.flush();
+      }
     };
-  }, [postId, onBlocksChange]);
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [save]);
 
   const isFullscreen = useSelect(
     (select) =>
@@ -295,17 +311,8 @@ export default function EditorChrome({
         <FullscreenMode isActive={isFullscreen} />
         <BlockEditorProvider
           value={blocks}
-          onChange={
-            /**
-             * Handles block content changes by updating local state and triggering save.
-             * Changes are tracked by our custom history system for undo/redo functionality.
-             * @param {Array} n - The new array of block objects
-             */
-            (n) => {
-              setBlocks(n);
-              save(n);
-            }
-          }
+          onInput={handleBlocksUpdate}
+          onChange={handleBlocksUpdate}
           settings={mergedEditorSettings}
         >
           <InterfaceSkeleton

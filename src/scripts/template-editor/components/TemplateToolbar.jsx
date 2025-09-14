@@ -1,4 +1,5 @@
 import { Button, SelectControl } from "@wordpress/components";
+import { useMemo } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 
 /**
@@ -45,12 +46,13 @@ export default function TemplateToolbar({
   onSelect,
   onNew,
 }) {
-  // Transform the template list into select control options
-  // Uses the rendered title if available, otherwise falls back to the template ID
-  const options = (list || []).map((p) => ({
-    label: p?.title?.rendered || `#${p.id}`,
-    value: String(p.id),
-  }));
+  // Transform the template list into select options (memoized)
+  const options = useMemo(() => {
+    return (list || []).map((p) => ({
+      label: p?.title?.rendered || `#${p?.id}`,
+      value: String(p?.id),
+    }));
+  }, [list]);
   return (
     <div className="cb-editor__toolbar">
       <SelectControl

@@ -1,7 +1,7 @@
 import { registerCoreBlocks } from "@wordpress/block-library";
 import { Button, Icon, Notice, Spinner } from "@wordpress/components";
 import domReady from "@wordpress/dom-ready";
-import { createRoot, useEffect, useState } from "@wordpress/element";
+import { createRoot, useState } from "@wordpress/element";
 import "@wordpress/format-library";
 import { __ } from "@wordpress/i18n";
 import { layout, plus } from "@wordpress/icons";
@@ -9,10 +9,10 @@ import { InterfaceSkeleton } from "@wordpress/interface";
 import EditorChrome from "./components/EditorChrome";
 import Header from "./components/Header";
 import NewTemplateModal from "./components/NewTemplateModal";
-import { listTemplates } from "./services/api";
 import { registerCampaignBridgeBlocks } from "./utils/registerCampaignBridgeBlocks";
-import { getParam, setParamAndReload } from "./utils/url";
 import { useNewTemplate } from "./utils/useNewTemplate";
+import { useTemplateRouting } from "./utils/useTemplateRouting";
+import { useTemplates } from "./utils/useTemplates";
 
 /**
  * Main application component for the CampaignBridge Template Editor.
@@ -25,9 +25,12 @@ import { useNewTemplate } from "./utils/useNewTemplate";
  * @return {JSX.Element} The main editor application
  */
 export default function CampaignBridgeBlockEditor() {
-  const [list, setList] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const {
+    items: list,
+    loading,
+    error: loadError,
+  } = useTemplates({ onError: setError });
   const {
     open: newModalOpen,
     title: newTitle,
@@ -38,38 +41,16 @@ export default function CampaignBridgeBlockEditor() {
     confirmCreate,
   } = useNewTemplate({ onError: setError });
 
-  const currentId = getParam("post_id") ? Number(getParam("post_id")) : null;
+  const { currentId, selectTemplate } = useTemplateRouting();
 
-  // Load the list of available templates on component mount
-  // Uses cleanup flag to prevent state updates if component unmounts during async operation
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const posts = await listTemplates();
-        if (alive) {
-          setList(posts || []);
-        }
-      } catch (e) {
-        if (alive) {
-          setError(e?.message || "Failed to load templates.");
-        }
-      } finally {
-        if (alive) {
-          setLoading(false);
-        }
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // If hook provided a load error, surface it via Notice too
+  const effectiveError = error || loadError || "";
 
   /**
    * Handles template selection by updating the URL parameter and reloading the page.
    * @param {number|null} id - The ID of the selected template, or null to deselect
    */
-  const onSelect = (id) => (id ? setParamAndReload("post_id", id) : null);
+  const onSelect = (id) => (id ? selectTemplate(id) : null);
 
   /**
    * Opens the naming modal for creating a new template.
@@ -78,9 +59,9 @@ export default function CampaignBridgeBlockEditor() {
 
   return (
     <div className="cb-editor-shell">
-      {error && (
+      {effectiveError && (
         <Notice status="error" isDismissible={false}>
-          {error}
+          {effectiveError}
         </Notice>
       )}
       <NewTemplateModal
