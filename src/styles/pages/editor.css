@@ -1,15 +1,14 @@
 @import "tailwindcss";
 
+:root {
+  --cb-sidebar-width: 320px;
+}
+
 /* Editor Shell wrapper (outside InterfaceSkeleton) */
 .cb-editor-shell {
   height: 100vh;
   overflow: hidden;
-  z-index: 1000;
   position: relative;
-}
-
-:root {
-  --cb-sidebar-width: 320px;
 }
 
 .cb-editor {
@@ -309,6 +308,26 @@
     svg {
       fill: currentColor;
     }
+
+    /* Fullscreen active (match others when active) */
+    .is-fullscreen-mode & {
+      background: #111;
+      color: #fff;
+
+      svg {
+        fill: currentColor;
+      }
+    }
+
+    /* Fullscreen active hover should remain black/white */
+    .is-fullscreen-mode &:hover {
+      background: #111;
+      color: #fff;
+
+      svg {
+        fill: currentColor;
+      }
+    }
   }
 }
 
@@ -412,32 +431,13 @@
   }
 }
 
-/* Fullscreen active (match others when active) */
-.is-fullscreen-mode .cb-fullscreen-toggle.components-button {
-  background: #111;
-  color: #fff;
-}
-.is-fullscreen-mode .cb-fullscreen-toggle.components-button svg {
-  fill: currentColor;
-}
-
-/* Fullscreen active hover should remain black/white */
-.is-fullscreen-mode .cb-fullscreen-toggle.components-button:hover {
-  background: #111;
-  color: #fff;
-}
-.is-fullscreen-mode .cb-fullscreen-toggle.components-button:hover svg {
-  fill: currentColor;
-}
-
-/* Snackbar positioning for native notices (match Gutenberg bottom-left) */
-.edit-post-layout__snackbar {
-  position: fixed;
-  left: 16px;
-  bottom: 16px;
-  z-index: 100000;
-  pointer-events: none;
-}
-.edit-post-layout__snackbar .components-snackbar {
-  pointer-events: auto;
+/* Snackbar within editor */
+.cb-editor {
+  &__snackbar {
+    .components-snackbar-list {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+    }
+  }
 }
