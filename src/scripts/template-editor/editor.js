@@ -9,10 +9,10 @@ import { InterfaceSkeleton } from "@wordpress/interface";
 import EditorChrome from "./components/EditorChrome";
 import Header from "./components/Header";
 import NewTemplateModal from "./components/NewTemplateModal";
+import { useNewTemplate } from "./hooks/useNewTemplate";
+import { useTemplateRouting } from "./hooks/useTemplateRouting";
+import { useTemplates } from "./hooks/useTemplates";
 import { registerCampaignBridgeBlocks } from "./utils/registerCampaignBridgeBlocks";
-import { useNewTemplate } from "./utils/useNewTemplate";
-import { useTemplateRouting } from "./utils/useTemplateRouting";
-import { useTemplates } from "./utils/useTemplates";
 
 /**
  * Main application component for the CampaignBridge Template Editor.

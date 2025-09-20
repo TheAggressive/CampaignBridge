@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "@wordpress/element";
-import { getParam, setParamAndReload } from "./url";
+import { getParam, setParamAndReload } from "../utils/url";
 
 /**
  * useTemplateRouting

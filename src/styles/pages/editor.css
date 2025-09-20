@@ -43,6 +43,10 @@
     overflow: auto;
   }
 
+  .components-panel__header {
+    /* padding: 0; */
+  }
+
   /* Make content section background transparent to let page background show through */
   .components-interface-skeleton__content {
     background: transparent;

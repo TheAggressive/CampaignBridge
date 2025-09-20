@@ -21,7 +21,7 @@ export default function SecondarySidebar() {
           rootClientId=""
           selectedBlockClientId={selectedBlockClientId}
           showNestedBlocks
-          showBlockMovers
+          showBlockMovers={false}
           showAppender={false}
         />
       ) : (

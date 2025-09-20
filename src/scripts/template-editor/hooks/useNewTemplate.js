@@ -1,6 +1,6 @@
 import { useCallback, useState } from "@wordpress/element";
 import { createDraft } from "../services/api";
-import { setParamAndReload } from "./url";
+import { setParamAndReload } from "../utils/url";
 
 /**
  * useNewTemplate

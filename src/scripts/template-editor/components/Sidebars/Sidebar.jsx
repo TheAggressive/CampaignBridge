@@ -144,14 +144,7 @@ export function SidebarHeader({ activeTab, onTabChange }) {
 export function SidebarContent({ activeTab }) {
   try {
     return (
-      <div
-        className={CSS_CLASSES.SIDEBAR_PANEL}
-        role="tabpanel"
-        aria-labelledby={
-          activeTab === TABS.TEMPLATE ? "tab-document" : "tab-block"
-        }
-        id="sidebar-content"
-      >
+      <>
         {activeTab === TABS.TEMPLATE ? (
           <>
             <TemplateSettings />
@@ -167,7 +160,7 @@ export function SidebarContent({ activeTab }) {
             <p>{__("Invalid tab selected", "campaignbridge")}</p>
           </div>
         )}
-      </div>
+      </>
     );
   } catch (error) {
     console.error("SidebarContent: Error rendering content:", error);
@@ -239,16 +232,7 @@ function Sidebar({ initialTab = DEFAULT_PROPS.ACTIVE_TAB }) {
   );
 
   try {
-    return (
-      <div
-        className={CSS_CLASSES.SIDEBAR_PANEL}
-        role="region"
-        aria-label={__("Editor Sidebar", "campaignbridge")}
-        tabIndex="-1"
-      >
-        <SidebarContent activeTab={activeTab} />
-      </div>
-    );
+    return <SidebarContent activeTab={activeTab} />;
   } catch (error) {
     console.error("Sidebar: Error rendering component:", error);
     return (
@@ -258,11 +242,6 @@ function Sidebar({ initialTab = DEFAULT_PROPS.ACTIVE_TAB }) {
     );
   }
 }
-
-// Default props for better DX
-Sidebar.defaultProps = {
-  initialTab: DEFAULT_PROPS.ACTIVE_TAB,
-};
 
 // Wrap with memo for performance optimization
 export default memo(Sidebar);

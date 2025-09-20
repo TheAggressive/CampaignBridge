@@ -10,10 +10,10 @@ import {
   InterfaceSkeleton,
 } from "@wordpress/interface";
 import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
+import { useEditorSettings } from "../hooks/useEditorSettings";
 import { getPostRaw, savePostContent } from "../services/api";
 import { blockPatternCategories, blockPatterns } from "../utils/blockPatterns";
 import { serializeSafe } from "../utils/blocks";
-import { useEditorSettings } from "../utils/useEditorSettings";
 import Content from "./Content";
 import Footer from "./Footer";
 import Header from "./Header";
@@ -23,8 +23,8 @@ import { SidebarContent, SidebarHeader } from "./Sidebars/Sidebar";
 /* NEW: Preferences store for UI state */
 import { store as noticesStore } from "@wordpress/notices";
 import { store as preferencesStore } from "@wordpress/preferences";
-import { useAutoSave } from "../utils/useAutoSave";
-import { useNotices } from "../utils/useNotices";
+import { useAutoSave } from "../hooks/useAutoSave";
+import { useNotices } from "../hooks/useNotices";
 
 /* Interface scopes (must match Header.jsx) - separate scopes for independent sidebars */
 const SCOPE_PRIMARY = "campaignbridge/template-editor/primary";
@@ -306,6 +306,7 @@ export default function EditorChrome({
           isSecondary
           className="cb-editor__sidebar cb-editor__sidebar--secondary"
           isPinnable={false}
+          header={"List View"}
         >
           <div className="cb-editor__sidebar-content">
             <SecondarySidebar />
