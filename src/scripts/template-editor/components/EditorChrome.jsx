@@ -1,8 +1,7 @@
 import { BlockEditorProvider } from "@wordpress/block-editor";
-import { parse } from "@wordpress/blocks";
 import { Popover, SlotFillProvider, SnackbarList } from "@wordpress/components";
-import { useDispatch, useSelect } from "@wordpress/data";
-import { useCallback, useEffect, useRef, useState } from "@wordpress/element";
+import { useSelect } from "@wordpress/data";
+import { useCallback, useEffect } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 import {
   ComplementaryArea,
@@ -10,33 +9,32 @@ import {
   InterfaceSkeleton,
 } from "@wordpress/interface";
 import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
+import { EDITOR_CONSTANTS } from "../constants/editor";
+import { useAutoSaveManager } from "../hooks/useAutoSaveManager";
+import { useEditorData } from "../hooks/useEditorData";
+import { useEditorLayout } from "../hooks/useEditorLayout";
 import { useEditorSettings } from "../hooks/useEditorSettings";
-import { getPostRaw, savePostContent } from "../services/api";
+import { useNotices } from "../hooks/useNotices";
 import { blockPatternCategories, blockPatterns } from "../utils/blockPatterns";
-import { serializeSafe } from "../utils/blocks";
 import Content from "./Content";
+import { ErrorState, LoadingState } from "./EditorStates";
 import Footer from "./Footer";
 import Header from "./Header";
 import SecondarySidebar from "./Sidebars/SecondarySidebar";
 import { SidebarContent, SidebarHeader } from "./Sidebars/Sidebar";
 
-/* NEW: Preferences store for UI state */
-import { store as noticesStore } from "@wordpress/notices";
-import { store as preferencesStore } from "@wordpress/preferences";
-import { useAutoSave } from "../hooks/useAutoSave";
-import { useNotices } from "../hooks/useNotices";
-
-/* Interface scopes (must match Header.jsx) - separate scopes for independent sidebars */
-const SCOPE_PRIMARY = "campaignbridge/template-editor/primary";
-const SCOPE_SECONDARY = "campaignbridge/template-editor/secondary";
-
 /**
- * Editor Chrome Component
+ * Editor Chrome Component (Refactored)
  *
- * Main editor component that orchestrates the WordPress block editor experience.
- * Sets up essential providers including ShortcutProvider, SlotFillProvider, and
- * BlockEditorProvider to ensure proper editor functionality. Manages post loading,
- * block state, and save operations while providing the InterfaceSkeleton layout.
+ * Lightweight coordinator component that orchestrates the WordPress block editor experience
+ * using custom hooks for state management. This component focuses solely on coordination
+ * and rendering, with all complex logic extracted to specialized hooks.
+ *
+ * Features:
+ * - Custom hooks for data loading, auto-save, and layout management
+ * - Clean separation of concerns with dedicated state components
+ * - Centralized constants for maintainability
+ * - Simplified JSX with reusable components
  *
  * @param {Object} props - Component props
  * @param {Array} props.list - Array of available templates for the header dropdown
@@ -72,9 +70,15 @@ export default function EditorChrome({
   onBlocksChange,
   postType = "post",
 }) {
-  const [ready, setReady] = useState(false);
-  const [blocks, setBlocks] = useState([]);
-  const [saveStatus, setSaveStatus] = useState("saved"); // 'saved', 'saving', 'error'
+  // Use custom hooks to manage complex state
+  const {
+    ready,
+    blocks,
+    error,
+    loading: dataLoading,
+    setBlocks,
+  } = useEditorData(postId, postType);
+
   const { success, error: errorNotice } = useNotices();
   const {
     settings: editorSettings,
@@ -82,69 +86,32 @@ export default function EditorChrome({
     loading: editorSettingsLoading,
   } = useEditorSettings(postType);
 
-  // Load the post content and initialize the block editor
-  // Waits for block types to be registered, fetches the post data,
-  // parses the content, and sets the component as ready
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!postId) return;
-      const post = await getPostRaw(postId);
-      if (!alive) return;
-      const parsedBlocks = parse(post?.content?.raw || "");
-      setBlocks(parsedBlocks);
-      setReady(true);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [postId]);
-
-  // Debounced save using hook
-  const lastNoticeAtRef = useRef(0);
-
-  const performSave = useCallback(
-    async (blocksToSave, { signal } = {}) => {
-      try {
-        setSaveStatus("saving");
-
-        const result = await savePostContent(
-          postId,
-          {
-            content: serializeSafe(blocksToSave),
-          },
-          signal,
-        );
-
-        setSaveStatus("saved");
-
-        // Native snackbar notification (throttled to avoid spam)
-        try {
-          const now = Date.now();
-          if (now - lastNoticeAtRef.current > 8000) {
-            success(__("Template saved", "campaignbridge"));
-            lastNoticeAtRef.current = now;
-          }
-        } catch {}
-
-        onBlocksChange && onBlocksChange(blocksToSave);
-
-        return result;
-      } catch (error) {
-        console.error("Save failed:", error);
-        setSaveStatus("error");
-        try {
-          errorNotice(__("Failed to save changes", "campaignbridge"));
-        } catch {}
-        throw error;
-      }
-    },
-    [postId, onBlocksChange, success, errorNotice],
+  const { save, saveStatus } = useAutoSaveManager(
+    postId,
+    onBlocksChange,
+    success,
+    errorNotice,
   );
 
-  const save = useAutoSave(performSave);
+  const {
+    skeletonClassName,
+    sidebarActiveTab,
+    setSidebarActiveTab,
+    primarySidebarProps,
+    secondarySidebarProps,
+    snackbarNotices,
+    removeNotice,
+  } = useEditorLayout();
 
-  // Unified update handler that coalesces onInput/onChange into a single save per frame
+  const isFullscreen = useSelect(
+    (select) =>
+      select("core/preferences").get(
+        EDITOR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE,
+      ),
+    [],
+  );
+
+  // Unified update handler using custom hook
   const handleBlocksUpdate = useCallback(
     (next) => {
       setBlocks(next);
@@ -154,7 +121,7 @@ export default function EditorChrome({
         save(next);
       }
     },
-    [save],
+    [save, setBlocks],
   );
 
   // Flush pending save on navigation/unload
@@ -168,125 +135,44 @@ export default function EditorChrome({
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [save]);
 
-  const isFullscreen = useSelect(
-    (select) =>
-      select("core/preferences").get("core/edit-post", "fullscreenMode"),
-    [],
-  );
-
-  // Track active complementary areas to drive layout classes - independent sidebars
-  const activePrimary = useSelect(
-    (select) =>
-      select("core/interface").getActiveComplementaryArea(SCOPE_PRIMARY),
-    [SCOPE_PRIMARY],
-  );
-  const activeSecondary = useSelect(
-    (select) =>
-      select("core/interface").getActiveComplementaryArea(SCOPE_SECONDARY),
-    [SCOPE_SECONDARY],
-  );
-
-  // For animations: each slot has content when its respective area is active
-  const hasPrimary = !!activePrimary; // Any primary area active
-  const hasSecondary = activeSecondary === "secondary";
-
-  // Sidebar tab state management
-  const [sidebarActiveTab, setSidebarActiveTab] = useState("template-settings");
-
-  // Auto-switch to block inspector when a block is selected
-  const selectedBlock = useSelect((select) => {
-    const { getSelectedBlock } = select("core/block-editor");
-    return getSelectedBlock();
-  }, []);
-
-  useEffect(() => {
-    if (selectedBlock) {
-      setSidebarActiveTab("block-inspector");
-    }
-  }, [selectedBlock]);
-
-  // Restore sidebar states from preferences on mount
-  const { enableComplementaryArea } = useDispatch("core/interface");
-  const { get: getPreference } = useSelect(
-    (select) => select(preferencesStore),
-    [],
-  );
-
-  useEffect(() => {
-    // Restore primary sidebar state from preferences
-    const primaryOpen = getPreference(
-      "campaignbridge/template-editor",
-      "primarySidebarOpen",
-    );
-    if (primaryOpen) {
-      enableComplementaryArea(SCOPE_PRIMARY, "primary");
-    }
-
-    // Restore secondary sidebar state from preferences
-    const secondaryOpen = getPreference(
-      "campaignbridge/template-editor",
-      "secondarySidebarOpen",
-    );
-    if (secondaryOpen) {
-      enableComplementaryArea(SCOPE_SECONDARY, "secondary");
-    }
-  }, []); // Run once on mount
-
-  // Hoist snackbar hooks (avoid calling hooks inside JSX props)
-  const snackbarNotices = useSelect(
-    (select) =>
-      select(noticesStore)
-        .getNotices()
-        .filter((n) => n.type === "snackbar"),
-    [],
-  );
-  const { removeNotice } = useDispatch(noticesStore);
-
+  // Early returns for loading and error states
   if (!ready) {
     return (
-      <div className="cb-editor-loading">
-        <p>{__("Initializing editor…", "campaignbridge")}</p>
-      </div>
+      <LoadingState message={__("Initializing editor…", "campaignbridge")} />
     );
   }
 
   if (editorSettingsLoading) {
     return (
-      <div className="cb-editor-loading">
-        <p>{__("Loading editor settings…", "campaignbridge")}</p>
-      </div>
+      <LoadingState
+        message={__("Loading editor settings…", "campaignbridge")}
+      />
     );
   }
 
   if (editorSettingsError) {
     return (
-      <div className="cb-editor-error">
-        <p>{__("Error loading editor settings…", "campaignbridge")}</p>
-      </div>
+      <ErrorState
+        message={__("Error loading editor settings…", "campaignbridge")}
+      />
     );
   }
 
+  // Merge editor settings with patterns
   const mergedEditorSettings = {
     ...editorSettings,
     ...blockPatterns,
     ...blockPatternCategories,
   };
 
-  const skeletonClassName = `cb-editor ${
-    hasPrimary ? "cb-editor--has-primary" : "cb-editor--no-primary"
-  } ${hasSecondary ? "cb-editor--has-secondary" : "cb-editor--no-secondary"}`;
-
   return (
     <ShortcutProvider>
       <SlotFillProvider>
         <FullscreenMode isActive={isFullscreen} />
 
-        {/* Single ComplementaryArea with tabs in header like WordPress core */}
+        {/* Primary sidebar with tabs */}
         <ComplementaryArea
-          scope={SCOPE_PRIMARY}
-          identifier="primary"
-          className="cb-editor__sidebar cb-editor__sidebar--primary"
-          isPinnable={false}
+          {...primarySidebarProps}
           header={
             <SidebarHeader
               activeTab={sidebarActiveTab}
@@ -294,25 +180,19 @@ export default function EditorChrome({
             />
           }
         >
-          <div className="cb-editor__sidebar-content">
+          <div className={EDITOR_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
             <SidebarContent activeTab={sidebarActiveTab} />
           </div>
         </ComplementaryArea>
 
-        <ComplementaryArea
-          scope={SCOPE_SECONDARY}
-          identifier="secondary"
-          closeLabel={__("Close list view", "campaignbridge")}
-          isSecondary
-          className="cb-editor__sidebar cb-editor__sidebar--secondary"
-          isPinnable={false}
-          header={"List View"}
-        >
-          <div className="cb-editor__sidebar-content">
+        {/* Secondary sidebar (list view) */}
+        <ComplementaryArea {...secondarySidebarProps}>
+          <div className={EDITOR_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
             <SecondarySidebar />
           </div>
         </ComplementaryArea>
 
+        {/* Block editor with merged settings */}
         <BlockEditorProvider
           value={blocks}
           onInput={handleBlocksUpdate}
@@ -330,28 +210,17 @@ export default function EditorChrome({
                 onNew={onNew}
               />
             }
-            /* CONTENT stays the same */
             content={<Content />}
-            /* PRIMARY SIDEBAR */
-            sidebar={
-              <ComplementaryArea.Slot
-                scope={SCOPE_PRIMARY}
-                identifier="primary"
-              />
-            }
-            /* SECONDARY SIDEBAR */
+            sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
             secondarySidebar={
-              <ComplementaryArea.Slot
-                scope={SCOPE_SECONDARY}
-                identifier="secondary"
-              />
+              <ComplementaryArea.Slot {...secondarySidebarProps} />
             }
             footer={<Footer />}
           />
         </BlockEditorProvider>
 
         <Popover.Slot />
-        <div className="cb-editor__snackbar">
+        <div className={EDITOR_CONSTANTS.CSS_CLASSES.EDITOR_SNACKBAR}>
           <SnackbarList notices={snackbarNotices} onRemove={removeNotice} />
         </div>
       </SlotFillProvider>
