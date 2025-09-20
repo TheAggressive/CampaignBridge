@@ -86,6 +86,7 @@ class TemplateEditorPage extends AdminPage {
 		wp_enqueue_style( 'wp-format-library' );
 		wp_enqueue_style( 'wp-edit-post' );
 		wp_enqueue_style( 'wp-icons' );
+		wp_enqueue_style( 'wp-interface' );
 
 		// Core editor JS and registries.
 		wp_enqueue_script( 'wp-element' );
@@ -101,6 +102,7 @@ class TemplateEditorPage extends AdminPage {
 		wp_enqueue_script( 'wp-keyboard-shortcuts' );
 		wp_enqueue_script( 'wp-format-library' );
 		wp_enqueue_script( 'wp-block-library' );
+		wp_enqueue_script( 'wp-interface' );
 
 		// Enqueue all assets declared by register_block_type() / block.json.
 		if ( function_exists( 'wp_enqueue_registered_block_scripts_and_styles' ) ) {

@@ -102,27 +102,67 @@ class AssetManager {
 		// true
 		// );
 
-		// Register template manager page script.
-		wp_register_script(
+		// Register template manager page script using generated asset metadata.
+		self::register_script_with_asset(
 			'campaignbridge-block-editor-script',
-			CB_URL . 'dist/scripts/template-editor/editor.js',
-			array(
-				'wp-block-editor',
-				'wp-edit-post',
-				'wp-components',
-				'wp-element',
-				'wp-data',
-				'wp-core-data',
-				'wp-blocks',
-				'wp-keycodes',
-				'wp-i18n',
-				'wp-compose',
-				'wp-primitives',
-				'wp-format-library',
-				'wp-block-library',
-			),
-			CB_VERSION,
-			true
+			'dist/scripts/template-editor/editor.js',
+		);
+	}
+
+	/**
+	 * Helper: Register a script using its generated *.asset.php for deps/version.
+	 *
+	 * @param string $handle            Script handle.
+	 * @param string $script_rel_path   Script path relative to plugin root.
+	 * @param array  $extra_deps        Additional dependencies to merge (optional).
+	 * @param bool   $in_footer         Whether to load in footer.
+	 * @return void
+	 */
+	private static function register_script_with_asset( string $handle, string $script_rel_path, array $extra_deps = array(), bool $in_footer = true ): void {
+		$asset = self::get_asset_info( $script_rel_path );
+		$deps  = array_values( array_unique( array_merge( $asset['dependencies'], $extra_deps ) ) );
+
+		wp_register_script(
+			$handle,
+			CB_URL . $script_rel_path,
+			$deps,
+			$asset['version'],
+			$in_footer
+		);
+	}
+
+	/**
+	 * Helper: Read WP build asset info (dependencies, version) for a built script.
+	 *
+	 * Expects an accompanying file with the same basename and `.asset.php`,
+	 * e.g. `editor.js` → `editor.asset.php` in the same directory.
+	 * Falls back to filemtime for version and empty dependencies when missing.
+	 *
+	 * @param string $script_rel_path   Script path relative to plugin root.
+	 * @return array{dependencies: array, version: string|null}
+	 */
+	private static function get_asset_info( string $script_rel_path ): array {
+		$plugin_dir       = dirname( __DIR__, 2 ); // plugin root
+		$script_file_path = $plugin_dir . '/' . $script_rel_path;
+		$asset_rel_path   = preg_replace( '/\.js$/', '.asset.php', $script_rel_path );
+		$asset_file_path  = $plugin_dir . '/' . $asset_rel_path;
+
+		$dependencies = array();
+		$version      = defined( 'CB_VERSION' ) ? CB_VERSION : null;
+
+		if ( is_string( $asset_rel_path ) && file_exists( $asset_file_path ) ) {
+			$asset = require $asset_file_path;
+			if ( is_array( $asset ) ) {
+				$dependencies = isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ? $asset['dependencies'] : array();
+				$version      = isset( $asset['version'] ) ? (string) $asset['version'] : $version;
+			}
+		} elseif ( file_exists( $script_file_path ) ) {
+			$version = (string) filemtime( $script_file_path );
+		}
+
+		return array(
+			'dependencies' => $dependencies,
+			'version'      => $version,
 		);
 	}
 

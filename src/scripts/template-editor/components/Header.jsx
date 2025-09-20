@@ -1,21 +1,23 @@
 import { Button, Icon } from "@wordpress/components";
-import { useDispatch, useSelect } from "@wordpress/data";
+import { useSelect } from "@wordpress/data";
 import { __ } from "@wordpress/i18n";
 import {
   drawerRight,
   fullscreen as fullscreenIcon,
   listView,
 } from "@wordpress/icons";
+import { store as preferencesStore } from "@wordpress/preferences";
+// Use core/interface store by key to avoid relying on direct store import
 import TemplateToolbar from "./TemplateToolbar";
 
-/* NEW: use Preferences store for persistent UI state */
+/* Keyboard shortcut for fullscreen */
+import { useDispatch } from "@wordpress/data";
 import { useEffect } from "@wordpress/element";
-import { store as preferencesStore } from "@wordpress/preferences";
+import { useSidebarState } from "../hooks/useSidebarState";
 
-/* Shared namespace & keys for this screen */
-const NS = "campaignbridge/template-editor";
-const K_PRIMARY = "primaryOpen";
-const K_SECONDARY = "secondaryOpen";
+/* Shared scopes for this screen - independent sidebars */
+const SCOPE_PRIMARY = "campaignbridge/template-editor/primary";
+const SCOPE_SECONDARY = "campaignbridge/template-editor/secondary";
 
 /**
  * Header Component
@@ -31,8 +33,6 @@ const K_SECONDARY = "secondaryOpen";
  * @param {boolean} props.loading - Whether templates are currently loading
  * @param {function} props.onSelect - Callback fired when a template is selected
  * @param {function} props.onNew - Callback fired when creating a new template
- * @param {object} [props.primaryToggleRef] - Ref to primary sidebar toggle button
- * @param {object} [props.secondaryToggleRef] - Ref to secondary sidebar toggle button
  * @returns {JSX.Element} The editor header with toolbar and controls
  *
  * @example
@@ -47,20 +47,7 @@ const K_SECONDARY = "secondaryOpen";
  * />
  * ```
  */
-export default function Header({
-  list,
-  currentId,
-  loading,
-  onSelect,
-  onNew,
-  /* NOTE: these three props are no longer required because we read/write from Preferences directly.
-	   Keeping them in the signature comment to preserve your original docs. */
-  // enableComplementaryArea,
-  // disableComplementaryArea,
-  // activeComplementaryArea,
-  primaryToggleRef,
-  secondaryToggleRef,
-}) {
+export default function Header({ list, currentId, loading, onSelect, onNew }) {
   const isFullscreen = useSelect(
     (select) =>
       select("core/preferences").get("core/edit-post", "fullscreenMode"),
@@ -68,19 +55,9 @@ export default function Header({
   );
 
   const { toggle } = useDispatch("core/preferences");
-
-  /* NEW: read current open state from Preferences (defaults: primary true, secondary false) */
-  const primaryOpen = useSelect((select) => {
-    const v = select(preferencesStore).get(NS, K_PRIMARY);
-    return typeof v === "boolean" ? v : true;
-  }, []);
-  const secondaryOpen = useSelect((select) => {
-    const v = select(preferencesStore).get(NS, K_SECONDARY);
-    return typeof v === "boolean" ? v : false;
-  }, []);
-
-  /* NEW: setters */
-  const { set } = useDispatch(preferencesStore);
+  const { enableComplementaryArea, disableComplementaryArea } =
+    useDispatch("core/interface");
+  const { set: setPreference } = useDispatch(preferencesStore);
 
   const toggleFullscreen = () => {
     toggle("core/edit-post", "fullscreenMode");
@@ -99,9 +76,12 @@ export default function Header({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  /* UPDATED: toggle via Preferences store */
-  const toggleSidebar = () => set(NS, K_PRIMARY, !primaryOpen);
-  const toggleSecondarySidebar = () => set(NS, K_SECONDARY, !secondaryOpen);
+  /**
+   * Use custom hook for sidebar state management.
+   * This encapsulates all the complex state logic and provides clean APIs.
+   */
+  const { isPrimaryOpen, isSecondaryOpen, togglePrimary, toggleSecondary } =
+    useSidebarState(SCOPE_PRIMARY, SCOPE_SECONDARY);
 
   return (
     <div className="cb-editor__header">
@@ -118,50 +98,26 @@ export default function Header({
 
       <div className="cb-editor__header-actions">
         <Button
-          ref={secondaryToggleRef}
           className={`cb-editor__toggle cb-editor__toggle--secondary ${
-            secondaryOpen ? "is-active" : ""
+            isSecondaryOpen ? "is-active" : ""
           }`}
-          onClick={toggleSecondarySidebar}
-          aria-label={
-            secondaryOpen
-              ? __("Close List View Shift+Alt+O", "campaignbridge")
-              : __("Open List View Shift+Alt+O", "campaignbridge")
-          }
-          label={
-            secondaryOpen
-              ? __("Close List View Shift+Alt+O", "campaignbridge")
-              : __("Open List View Shift+Alt+O", "campaignbridge")
-          }
-          aria-controls="cb-secondary-sidebar"
-          aria-pressed={secondaryOpen}
-          aria-keyshortcuts="Esc, Shift+Alt+O"
-          showTooltip={true}
+          onClick={toggleSecondary}
+          aria-pressed={isSecondaryOpen}
+          label={__("List View Shift+Alt+O", "campaignbridge")}
+          showTooltip
           variant="tertiary"
         >
           <Icon icon={listView} size={24} />
         </Button>
 
         <Button
-          ref={primaryToggleRef}
           className={`cb-editor__toggle cb-editor__toggle--primary ${
-            primaryOpen ? "is-active" : ""
+            isPrimaryOpen ? "is-active" : ""
           }`}
-          onClick={toggleSidebar}
-          aria-label={
-            primaryOpen
-              ? __("Close Sidebar Ctrl+Shift+,", "campaignbridge")
-              : __("Open Sidebar Ctrl+Shift+,", "campaignbridge")
-          }
-          label={
-            primaryOpen
-              ? __("Close Sidebar Ctrl+Shift+,", "campaignbridge")
-              : __("Open Sidebar Ctrl+Shift+,", "campaignbridge")
-          }
-          aria-controls="cb-primary-sidebar"
-          aria-pressed={primaryOpen}
-          aria-keyshortcuts="Esc, Ctrl+Shift+Comma, Meta+Shift+Comma"
-          showTooltip={true}
+          onClick={togglePrimary}
+          aria-pressed={isPrimaryOpen}
+          label={__("Sidebar Ctrl+Shift+,", "campaignbridge")}
+          showTooltip
           variant="tertiary"
         >
           <Icon icon={drawerRight} size={24} />

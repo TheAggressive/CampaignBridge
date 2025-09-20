@@ -1,17 +1,14 @@
 import { BlockEditorProvider } from "@wordpress/block-editor";
 import { parse } from "@wordpress/blocks";
-import {
-  Button,
-  Popover,
-  SlotFillProvider,
-  SnackbarList,
-} from "@wordpress/components";
+import { Popover, SlotFillProvider, SnackbarList } from "@wordpress/components";
 import { useDispatch, useSelect } from "@wordpress/data";
 import { useCallback, useEffect, useRef, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
-/* Keep InterfaceSkeleton if it’s already working in your bundle.
-   If not, this still acts as a simple layout container. */
-import { FullscreenMode, InterfaceSkeleton } from "@wordpress/interface";
+import {
+  ComplementaryArea,
+  FullscreenMode,
+  InterfaceSkeleton,
+} from "@wordpress/interface";
 import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
 import { getPostRaw, savePostContent } from "../services/api";
 import { blockPatternCategories, blockPatterns } from "../utils/blockPatterns";
@@ -20,8 +17,8 @@ import { useEditorSettings } from "../utils/useEditorSettings";
 import Content from "./Content";
 import Footer from "./Footer";
 import Header from "./Header";
-import SecondarySidebar from "./SecondarySidebar/SecondarySidebar";
-import Sidebar from "./Sidebar";
+import SecondarySidebar from "./Sidebars/SecondarySidebar";
+import { SidebarContent, SidebarHeader } from "./Sidebars/Sidebar";
 
 /* NEW: Preferences store for UI state */
 import { store as noticesStore } from "@wordpress/notices";
@@ -29,10 +26,9 @@ import { store as preferencesStore } from "@wordpress/preferences";
 import { useAutoSave } from "../utils/useAutoSave";
 import { useNotices } from "../utils/useNotices";
 
-/* Namespace/keys (must match Header.jsx) */
-const NS = "campaignbridge/template-editor";
-const K_PRIMARY = "primaryOpen";
-const K_SECONDARY = "secondaryOpen";
+/* Interface scopes (must match Header.jsx) - separate scopes for independent sidebars */
+const SCOPE_PRIMARY = "campaignbridge/template-editor/primary";
+const SCOPE_SECONDARY = "campaignbridge/template-editor/secondary";
 
 /**
  * Editor Chrome Component
@@ -59,8 +55,8 @@ const K_SECONDARY = "secondaryOpen";
  *   list={templates}
  *   currentId={1}
  *   loading={false}
- *   onSelect={handleSelect}
- *   onNew={handleNew}
+ *   onSelect={onSelect}
+ *   onNew={onNew}
  *   postId={1}
  *   postType="post"
  * />
@@ -104,8 +100,6 @@ export default function EditorChrome({
     };
   }, [postId]);
 
-  // No RAF cleanup needed; scheduling handled in useAutoSave
-
   // Debounced save using hook
   const lastNoticeAtRef = useRef(0);
 
@@ -148,7 +142,6 @@ export default function EditorChrome({
     [postId, onBlocksChange, success, errorNotice],
   );
 
-  // Use default debounce from hook; can override by passing second arg
   const save = useAutoSave(performSave);
 
   // Unified update handler that coalesces onInput/onChange into a single save per frame
@@ -181,6 +174,64 @@ export default function EditorChrome({
     [],
   );
 
+  // Track active complementary areas to drive layout classes - independent sidebars
+  const activePrimary = useSelect(
+    (select) =>
+      select("core/interface").getActiveComplementaryArea(SCOPE_PRIMARY),
+    [SCOPE_PRIMARY],
+  );
+  const activeSecondary = useSelect(
+    (select) =>
+      select("core/interface").getActiveComplementaryArea(SCOPE_SECONDARY),
+    [SCOPE_SECONDARY],
+  );
+
+  // For animations: each slot has content when its respective area is active
+  const hasPrimary = !!activePrimary; // Any primary area active
+  const hasSecondary = activeSecondary === "secondary";
+
+  // Sidebar tab state management
+  const [sidebarActiveTab, setSidebarActiveTab] = useState("template-settings");
+
+  // Auto-switch to block inspector when a block is selected
+  const selectedBlock = useSelect((select) => {
+    const { getSelectedBlock } = select("core/block-editor");
+    return getSelectedBlock();
+  }, []);
+
+  useEffect(() => {
+    if (selectedBlock) {
+      setSidebarActiveTab("block-inspector");
+    }
+  }, [selectedBlock]);
+
+  // Restore sidebar states from preferences on mount
+  const { enableComplementaryArea } = useDispatch("core/interface");
+  const { get: getPreference } = useSelect(
+    (select) => select(preferencesStore),
+    [],
+  );
+
+  useEffect(() => {
+    // Restore primary sidebar state from preferences
+    const primaryOpen = getPreference(
+      "campaignbridge/template-editor",
+      "primarySidebarOpen",
+    );
+    if (primaryOpen) {
+      enableComplementaryArea(SCOPE_PRIMARY, "primary");
+    }
+
+    // Restore secondary sidebar state from preferences
+    const secondaryOpen = getPreference(
+      "campaignbridge/template-editor",
+      "secondarySidebarOpen",
+    );
+    if (secondaryOpen) {
+      enableComplementaryArea(SCOPE_SECONDARY, "secondary");
+    }
+  }, []); // Run once on mount
+
   // Hoist snackbar hooks (avoid calling hooks inside JSX props)
   const snackbarNotices = useSelect(
     (select) =>
@@ -190,102 +241,6 @@ export default function EditorChrome({
     [],
   );
   const { removeNotice } = useDispatch(noticesStore);
-
-  /* NEW: read open states from Preferences */
-  const primaryOpen = useSelect((select) => {
-    const v = select(preferencesStore).get(NS, K_PRIMARY);
-    return typeof v === "boolean" ? v : true;
-  }, []);
-  const secondaryOpen = useSelect((select) => {
-    const v = select(preferencesStore).get(NS, K_SECONDARY);
-    return typeof v === "boolean" ? v : false;
-  }, []);
-
-  /* NEW: setters for the close “X” buttons */
-  const { set } = useDispatch(preferencesStore);
-
-  // Button refs for polished focus management
-  const primaryToggleRef = useRef(null);
-  const secondaryToggleRef = useRef(null);
-
-  const moveFocusAfterClose = (sidebarId, toggleRef) => {
-    // Defer to after state change so aria-hidden/inert have applied
-    requestAnimationFrame(() => {
-      const sidebar = document.getElementById(sidebarId);
-      const active = document.activeElement;
-      if (sidebar && active && sidebar.contains(active)) {
-        const btn = toggleRef?.current;
-        if (btn && typeof btn.focus === "function") {
-          btn.focus();
-        } else if (typeof document.body.focus === "function") {
-          document.body.focus();
-        }
-      }
-    });
-  };
-
-  const closePrimary = () => {
-    set(NS, K_PRIMARY, false);
-    moveFocusAfterClose("cb-primary-sidebar", primaryToggleRef);
-  };
-  const closeSecondary = () => {
-    set(NS, K_SECONDARY, false);
-    moveFocusAfterClose("cb-secondary-sidebar", secondaryToggleRef);
-  };
-
-  // Keyboard: match Gutenberg + ESC close
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      const active = document.activeElement;
-      const primaryEl = document.getElementById("cb-primary-sidebar");
-      const secondaryEl = document.getElementById("cb-secondary-sidebar");
-      const onPrimaryToggle = active === primaryToggleRef.current;
-      const onSecondaryToggle = active === secondaryToggleRef.current;
-
-      // Toggle Settings (primary): Ctrl+Shift+Comma (Win) / Cmd+Shift+Comma (Mac)
-      const isTogglePrimary =
-        (event.code === "Comma" || event.key === ",") &&
-        event.shiftKey &&
-        ((event.ctrlKey && !event.metaKey) ||
-          (event.metaKey && !event.ctrlKey));
-      if (isTogglePrimary) {
-        event.preventDefault();
-        set(NS, K_PRIMARY, !primaryOpen);
-        return;
-      }
-
-      // Toggle List View (secondary): Shift+Alt+O
-      const key = (event.key || "").toLowerCase();
-      const isToggleSecondary =
-        (event.code === "KeyO" || key === "o") &&
-        event.altKey &&
-        event.shiftKey;
-      if (isToggleSecondary) {
-        event.preventDefault();
-        set(NS, K_SECONDARY, !secondaryOpen);
-        return;
-      }
-
-      // ESC closes the sidebar that currently has focus (or its toggle is focused)
-      if (event.key === "Escape") {
-        if (primaryOpen && (primaryEl?.contains(active) || onPrimaryToggle)) {
-          event.preventDefault();
-          closePrimary();
-          return;
-        }
-        if (
-          secondaryOpen &&
-          (secondaryEl?.contains(active) || onSecondaryToggle)
-        ) {
-          event.preventDefault();
-          closeSecondary();
-        }
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [primaryOpen, secondaryOpen]);
 
   if (!ready) {
     return (
@@ -318,13 +273,45 @@ export default function EditorChrome({
   };
 
   const skeletonClassName = `cb-editor ${
-    primaryOpen ? "cb-editor--has-primary" : "cb-editor--no-primary"
-  } ${secondaryOpen ? "cb-editor--has-secondary" : "cb-editor--no-secondary"}`;
+    hasPrimary ? "cb-editor--has-primary" : "cb-editor--no-primary"
+  } ${hasSecondary ? "cb-editor--has-secondary" : "cb-editor--no-secondary"}`;
 
   return (
     <ShortcutProvider>
       <SlotFillProvider>
         <FullscreenMode isActive={isFullscreen} />
+
+        {/* Single ComplementaryArea with tabs in header like WordPress core */}
+        <ComplementaryArea
+          scope={SCOPE_PRIMARY}
+          identifier="primary"
+          className="cb-editor__sidebar cb-editor__sidebar--primary"
+          isPinnable={false}
+          header={
+            <SidebarHeader
+              activeTab={sidebarActiveTab}
+              onTabChange={setSidebarActiveTab}
+            />
+          }
+        >
+          <div className="cb-editor__sidebar-content">
+            <SidebarContent activeTab={sidebarActiveTab} />
+          </div>
+        </ComplementaryArea>
+
+        <ComplementaryArea
+          scope={SCOPE_SECONDARY}
+          identifier="secondary"
+          closeLabel={__("Close list view", "campaignbridge")}
+          isSecondary
+          className="cb-editor__sidebar cb-editor__sidebar--secondary"
+          isPinnable={false}
+        >
+          <div className="cb-editor__sidebar-content">
+            <SecondarySidebar />
+          </div>
+        </ComplementaryArea>
+
         <BlockEditorProvider
           value={blocks}
           onInput={handleBlocksUpdate}
@@ -340,69 +327,23 @@ export default function EditorChrome({
                 loading={loading}
                 onSelect={onSelect}
                 onNew={onNew}
-                primaryToggleRef={primaryToggleRef}
-                secondaryToggleRef={secondaryToggleRef}
               />
             }
             /* CONTENT stays the same */
             content={<Content />}
-            /* PRIMARY SIDEBAR — always render for width animation */
+            /* PRIMARY SIDEBAR */
             sidebar={
-              <aside
-                className={`cb-editor__sidebar cb-editor__sidebar--primary ${
-                  primaryOpen
-                    ? "cb-editor__sidebar--open"
-                    : "cb-editor__sidebar--closed"
-                }`}
-                id="cb-primary-sidebar"
-                inert={primaryOpen ? undefined : "true"}
-                aria-hidden={!primaryOpen}
-                aria-label={__("Primary sidebar", "campaignbridge")}
-              >
-                <div className="cb-editor__sidebar-inner">
-                  <div className="cb-editor__sidebar-chrome">
-                    <Button
-                      className="cb-editor__close-btn"
-                      variant="tertiary"
-                      onClick={closePrimary}
-                      label={__("Close primary sidebar", "campaignbridge")}
-                      icon="no"
-                    />
-                  </div>
-                  <div className="cb-editor__sidebar-content">
-                    <Sidebar />
-                  </div>
-                </div>
-              </aside>
+              <ComplementaryArea.Slot
+                scope={SCOPE_PRIMARY}
+                identifier="primary"
+              />
             }
-            /* SECONDARY SIDEBAR — always render for width animation */
+            /* SECONDARY SIDEBAR */
             secondarySidebar={
-              <aside
-                className={`cb-editor__sidebar cb-editor__sidebar--secondary ${
-                  secondaryOpen
-                    ? "cb-editor__sidebar--open"
-                    : "cb-editor__sidebar--closed"
-                }`}
-                id="cb-secondary-sidebar"
-                inert={secondaryOpen ? undefined : "true"}
-                aria-hidden={!secondaryOpen}
-                aria-label={__("Secondary sidebar", "campaignbridge")}
-              >
-                <div className="cb-editor__sidebar-inner">
-                  <div className="cb-editor__sidebar-chrome">
-                    <Button
-                      className="cb-editor__close-btn"
-                      variant="tertiary"
-                      onClick={closeSecondary}
-                      label={__("Close secondary sidebar", "campaignbridge")}
-                      icon="no"
-                    />
-                  </div>
-                  <div className="cb-editor__sidebar-content">
-                    <SecondarySidebar />
-                  </div>
-                </div>
-              </aside>
+              <ComplementaryArea.Slot
+                scope={SCOPE_SECONDARY}
+                identifier="secondary"
+              />
             }
             footer={<Footer />}
           />

@@ -27,11 +27,11 @@ PHP/WordPress
 - Implement proper database schema changes using dbDelta() function.
 - Always use the most current block theme development API's and conventions
 
-
 Dependencies
 - WordPress (latest stable version)
 - Composer for dependency management (when building advanced plugins or themes)
 - Packages for javascript dependency management
+- Gutenberg Block Editor (latest stable version)
 
 WordPress Best Practices
 - Use WordPress hooks (actions and filters) instead of modifying core files.
@@ -51,6 +51,7 @@ WordPress Best Practices
 - Use WordPress current Block Theme best practices and documentation when developing the theme.
 - Use WordPress current, most up-to-date documentation: https://wordpress.org/documentation/
 - Utilize WordPress REST API endpoints for asynchronous operations instead of admin-ajax.php
+- Ensure WordPress current best security practices
 
 Key Conventions
 1. Follow WordPress's plugin API for extending functionality.

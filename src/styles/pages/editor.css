@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --cb-sidebar-width: 320px;
+  --cb-sidebar-width: 280px;
 }
 
 /* Editor Shell wrapper (outside InterfaceSkeleton) */
@@ -441,3 +441,4 @@
     }
   }
 }
+/* Header Toggle Buttons */
