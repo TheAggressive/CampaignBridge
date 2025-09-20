@@ -78,4 +78,23 @@ export const EDITOR_CONSTANTS = {
       SECONDARY_OPEN: "secondarySidebarOpen",
     },
   },
+
+  // URL parameters
+  URL_PARAMS: {
+    TEMPLATE_ID: "post_id",
+  },
+
+  // Template configuration
+  TEMPLATES: {
+    CACHE_DURATION_MS: 5 * 60 * 1000, // 5 minutes
+    RETRY: {
+      MAX_RETRIES: 3,
+      DELAY_MS: 1000,
+    },
+    ERROR_MESSAGES: {
+      LOAD_FAILED: "Failed to load templates.",
+      INVALID_RESPONSE: "Invalid response format: expected array",
+      API_NOT_AVAILABLE: "Templates API not available.",
+    },
+  },
 };
