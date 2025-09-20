@@ -66,4 +66,16 @@ export const EDITOR_CONSTANTS = {
   API_PATHS: {
     EDITOR_SETTINGS: "/campaignbridge/v1/editor-settings",
   },
+
+  // Sidebar configuration
+  SIDEBAR: {
+    IDENTIFIERS: {
+      PRIMARY: "primary",
+      SECONDARY: "secondary",
+    },
+    PREFERENCE_KEYS: {
+      PRIMARY_OPEN: "primarySidebarOpen",
+      SECONDARY_OPEN: "secondarySidebarOpen",
+    },
+  },
 };
