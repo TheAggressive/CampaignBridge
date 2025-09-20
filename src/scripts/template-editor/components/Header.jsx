@@ -1,17 +1,14 @@
 import { Button, Icon } from "@wordpress/components";
-import { useSelect } from "@wordpress/data";
 import { __ } from "@wordpress/i18n";
 import {
   drawerRight,
   fullscreen as fullscreenIcon,
   listView,
 } from "@wordpress/icons";
-import { store as preferencesStore } from "@wordpress/preferences";
 // Use core/interface store by key to avoid relying on direct store import
 import TemplateToolbar from "./TemplateToolbar";
 
 /* Keyboard shortcut for fullscreen */
-import { useDispatch } from "@wordpress/data";
 import { useEffect } from "@wordpress/element";
 import { useSidebarState } from "../hooks/useSidebarState";
 
@@ -53,11 +50,6 @@ export default function Header({ list, currentId, loading, onSelect, onNew }) {
       select("core/preferences").get("core/edit-post", "fullscreenMode"),
     [],
   );
-
-  const { toggle } = useDispatch("core/preferences");
-  const { enableComplementaryArea, disableComplementaryArea } =
-    useDispatch("core/interface");
-  const { set: setPreference } = useDispatch(preferencesStore);
 
   const toggleFullscreen = () => {
     toggle("core/edit-post", "fullscreenMode");
