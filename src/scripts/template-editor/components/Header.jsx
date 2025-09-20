@@ -55,6 +55,13 @@ export default function Header({ list, currentId, loading, onSelect, onNew }) {
     toggle("core/edit-post", "fullscreenMode");
   };
 
+  /**
+   * Use custom hook for sidebar state management.
+   * This encapsulates all the complex state logic and provides clean APIs.
+   */
+  const { isPrimaryOpen, isSecondaryOpen, togglePrimary, toggleSecondary } =
+    useSidebarState(SCOPE_PRIMARY, SCOPE_SECONDARY);
+
   // Keyboard shortcut: Ctrl+Shift+Alt+F toggles fullscreen (match WP)
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -67,13 +74,6 @@ export default function Header({ list, currentId, loading, onSelect, onNew }) {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
-
-  /**
-   * Use custom hook for sidebar state management.
-   * This encapsulates all the complex state logic and provides clean APIs.
-   */
-  const { isPrimaryOpen, isSecondaryOpen, togglePrimary, toggleSecondary } =
-    useSidebarState(SCOPE_PRIMARY, SCOPE_SECONDARY);
 
   return (
     <div className="cb-editor__header">
