@@ -30,7 +30,7 @@
     "shadow": true
   },
   "attributes": {
-    "maxChars": { "type": "number", "default": 240 },
+    "maxWords": { "type": "number", "default": 50 },
     "showMore": { "type": "boolean", "default": false },
     "moreStyle": { "type": "string", "default": "link" },
     "moreLabel": { "type": "string", "default": "Read more" },

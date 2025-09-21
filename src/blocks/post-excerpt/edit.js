@@ -14,7 +14,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
   const show = context["campaignbridge:showExcerpt"] !== false;
   const postType = context["campaignbridge:postType"] || "post";
   const {
-    maxChars = 240,
+    maxWords = 50,
     showMore = false,
     moreStyle = "link",
     moreLabel = "Read more",
@@ -40,7 +40,11 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  const excerpt = text.slice(0, maxChars);
+
+  // Split text into words and limit by word count
+  const words = text.split(/\s+/).filter((word) => word.length > 0);
+  const limitedWords = words.slice(0, maxWords);
+  const excerpt = limitedWords.join(" ");
   let linkUrl = "";
   if (post) {
     if (linkTo === "postType") {
@@ -71,12 +75,12 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
           <RangeControl
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-            label="Max characters"
-            value={Number(maxChars) || 0}
-            onChange={(v) => setAttributes({ maxChars: Number(v) || 0 })}
-            min={40}
-            max={600}
-            step={10}
+            label="Max words"
+            value={Number(maxWords) || 0}
+            onChange={(v) => setAttributes({ maxWords: Number(v) || 0 })}
+            min={10}
+            max={150}
+            step={1}
           />
         </PanelBody>
         <PanelBody title="More Link" initialOpen={false}>

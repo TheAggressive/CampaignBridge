@@ -2,7 +2,7 @@ import { useMemo, useRef } from "@wordpress/element";
 
 // AutoSave-specific constants (exported for reuse if needed)
 export const AUTOSAVE_CONSTANTS = {
-  DEFAULT_DEBOUNCE_MS: 2500,
+  DEFAULT_DEBOUNCE_MS: 2000,
   MIN_DEBOUNCE_MS: 100,
   MAX_DEBOUNCE_MS: 10000,
   NOTIFICATION_THROTTLE: 8000,

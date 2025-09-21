@@ -16,7 +16,7 @@ return function ( $attributes, $content, $block ) {
 	if ( $post_id <= 0 ) {
 		return '';
 	}
-	$max_chars   = isset( $attributes['maxChars'] ) ? absint( $attributes['maxChars'] ) : 240;
+	$max_words   = isset( $attributes['maxWords'] ) ? absint( $attributes['maxWords'] ) : 50;
 	$show_more   = ! empty( $attributes['showMore'] );
 	$more_style  = isset( $attributes['moreStyle'] ) ? (string) $attributes['moreStyle'] : 'link';
 	$more_label  = isset( $attributes['moreLabel'] ) ? (string) $attributes['moreLabel'] : 'Read more';
@@ -27,8 +27,11 @@ return function ( $attributes, $content, $block ) {
 	$raw         = '' !== $raw_excerpt ? $raw_excerpt : $raw_content;
 	$decoded     = html_entity_decode( $raw, ENT_QUOTES, 'UTF-8' );
 	$plain       = trim( preg_replace( '/<[^>]*>/', ' ', $decoded ) );
-	$trimmed     = mb_substr( $plain, 0, max( 0, $max_chars ) );
-	$excerpt     = esc_html( $trimmed );
+
+	// Split into words and limit by word count
+	$words         = preg_split( '/\s+/', $plain, -1, PREG_SPLIT_NO_EMPTY );
+	$limited_words = array_slice( $words, 0, max( 0, $max_words ) );
+	$excerpt       = esc_html( implode( ' ', $limited_words ) );
 
 	$link = '';
 	if ( $show_more ) {
