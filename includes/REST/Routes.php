@@ -2,13 +2,8 @@
 /**
  * General REST API Routes for CampaignBridge Admin Operations.
  *
- * This class provides general REST API endpoints for CampaignBridge admin
- * functionality, including posts and post types management. Mailchimp-specific
- * routes have been extracted to the separate MailchimpRoutes class for better
- * organization and maintainability.
- *
- * It follows WordPress REST API standards and provides secure, authenticated
- * endpoints for modern JavaScript-based interactions and AJAX operations.
+ * Provides REST API endpoints for posts and post types management
+ * with rate limiting and security features.
  *
  * @package CampaignBridge
  * @since 0.1.0
@@ -28,6 +23,41 @@ if ( ! defined( 'ABSPATH' ) ) {
  * REST API routes for CampaignBridge admin operations.
  */
 class Routes {
+	/**
+	 * API namespace
+	 */
+	private const API_NAMESPACE = 'campaignbridge/v1';
+
+	/**
+	 * Endpoint paths
+	 */
+	private const ENDPOINT_POSTS      = '/posts';
+	private const ENDPOINT_POST_TYPES = '/post-types';
+
+	/**
+	 * Default post type
+	 */
+	private const DEFAULT_POST_TYPE = 'post';
+
+	/**
+	 * Query defaults
+	 */
+	private const POSTS_PER_PAGE = 100;
+
+	/**
+	 * Rate limiting defaults
+	 */
+	private const RATE_LIMIT_REQUESTS = 30;
+	private const RATE_LIMIT_WINDOW   = 60;
+	private const CACHE_KEY_PREFIX    = 'cb_rate_limit_';
+
+	/**
+	 * HTTP status codes
+	 */
+	private const HTTP_UNAUTHORIZED      = 401;
+	private const HTTP_BAD_REQUEST       = 400;
+	private const HTTP_TOO_MANY_REQUESTS = 429;
+
 	/**
 	 * Option key used to store plugin settings.
 	 *
@@ -68,11 +98,27 @@ class Routes {
 	 * @return void
 	 */
 	public static function register() {
-		$ns = 'campaignbridge/v1';
+		self::register_posts_route();
+		self::register_post_types_route();
 
+		// Mapping slots endpoint removed (block-based workflow).
+
+		// Register editor settings routes.
+		self::$editor_settings_routes->register();
+
+		// Register Mailchimp-specific routes.
+		MailchimpRoutes::register();
+	}
+
+	/**
+	 * Register the posts endpoint.
+	 *
+	 * @return void
+	 */
+	private static function register_posts_route(): void {
 		register_rest_route(
-			$ns,
-			'/posts',
+			self::API_NAMESPACE,
+			self::ENDPOINT_POSTS,
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( __CLASS__, 'r_posts' ),
@@ -85,24 +131,23 @@ class Routes {
 				),
 			)
 		);
+	}
 
+	/**
+	 * Register the post types endpoint.
+	 *
+	 * @return void
+	 */
+	private static function register_post_types_route(): void {
 		register_rest_route(
-			$ns,
-			'/post-types',
+			self::API_NAMESPACE,
+			self::ENDPOINT_POST_TYPES,
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( __CLASS__, 'r_post_types' ),
 				'permission_callback' => array( __CLASS__, 'can_manage' ),
 			)
 		);
-
-		// Mapping slots endpoint removed (block-based workflow).
-
-		// Register editor settings routes.
-		self::$editor_settings_routes->register();
-
-		// Register Mailchimp-specific routes.
-		MailchimpRoutes::register();
 	}
 
 	/**
@@ -122,13 +167,13 @@ class Routes {
 	 * @param int    $time_window Time window in seconds.
 	 * @return bool|\WP_Error True if allowed, WP_Error if rate limited.
 	 */
-	public static function check_rate_limit( string $endpoint_name, int $max_requests = 30, int $time_window = 60 ) {
+	public static function check_rate_limit( string $endpoint_name, int $max_requests = self::RATE_LIMIT_REQUESTS, int $time_window = self::RATE_LIMIT_WINDOW ) {
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			return new \WP_Error( 'rate_limit_no_user', 'User not authenticated', array( 'status' => 401 ) );
+			return new \WP_Error( 'rate_limit_no_user', 'User not authenticated', array( 'status' => self::HTTP_UNAUTHORIZED ) );
 		}
 
-		$cache_key = 'cb_rate_limit_' . $endpoint_name . '_' . $user_id;
+		$cache_key = self::CACHE_KEY_PREFIX . $endpoint_name . '_' . $user_id;
 		$requests  = get_transient( $cache_key );
 
 		if ( false === $requests ) {
@@ -143,7 +188,7 @@ class Routes {
 					__( 'Rate limit exceeded. Try again in %d seconds.', 'campaignbridge' ),
 					$time_window
 				),
-				array( 'status' => 429 )
+				array( 'status' => self::HTTP_TOO_MANY_REQUESTS )
 			);
 		}
 
@@ -164,31 +209,17 @@ class Routes {
 			return $rate_limit;
 		}
 
-		$post_type = $req->get_param( 'post_type' ) ? sanitize_key( $req->get_param( 'post_type' ) ) : 'post';
+		$post_type = $req->get_param( 'post_type' ) ? sanitize_key( $req->get_param( 'post_type' ) ) : self::DEFAULT_POST_TYPE;
 		if ( ! post_type_exists( $post_type ) ) {
-			return new \WP_Error( 'bad_post_type', 'Invalid post type', array( 'status' => 400 ) );
+			return new \WP_Error( 'bad_post_type', 'Invalid post type', array( 'status' => self::HTTP_BAD_REQUEST ) );
 		}
 
 		$settings       = get_option( self::$option_name );
 		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
 		if ( in_array( $post_type, $excluded_types, true ) ) {
-			return new \WP_Error( 'excluded_post_type', 'Post type excluded', array( 'status' => 400 ) );
+			return new \WP_Error( 'excluded_post_type', 'Post type excluded', array( 'status' => self::HTTP_BAD_REQUEST ) );
 		}
-		$post_ids = get_posts(
-			array(
-				'post_type'              => $post_type,
-				'posts_per_page'         => 100,
-				'post_status'            => 'publish',
-				'orderby'                => 'date',
-				'order'                  => 'DESC',
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-				'ignore_sticky_posts'    => true,
-				'suppress_filters'       => true,
-			)
-		);
+		$post_ids = get_posts( self::get_posts_query_args( $post_type ) );
 		$items    = array();
 		foreach ( (array) $post_ids as $pid ) {
 			$title_raw     = (string) get_post_field( 'post_title', $pid );
@@ -199,6 +230,28 @@ class Routes {
 			);
 		}
 		return \rest_ensure_response( array( 'items' => $items ) );
+	}
+
+	/**
+	 * Get query arguments for posts endpoint.
+	 *
+	 * @param string $post_type Post type to query.
+	 * @return array Query arguments array.
+	 */
+	private static function get_posts_query_args( string $post_type ): array {
+		return array(
+			'post_type'              => $post_type,
+			'posts_per_page'         => self::POSTS_PER_PAGE,
+			'post_status'            => 'publish',
+			'orderby'                => 'date',
+			'order'                  => 'DESC',
+			'fields'                 => 'ids',
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+			'ignore_sticky_posts'    => true,
+			'suppress_filters'       => true,
+		);
 	}
 
 	/**
