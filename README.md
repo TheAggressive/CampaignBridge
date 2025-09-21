@@ -140,6 +140,15 @@ campaignbridge/
 └── uninstall.php               # Comprehensive uninstall script
 ```
 
+### 🔧 WordPress Integration
+
+The plugin leverages official WordPress packages for consistent behavior:
+
+- **@wordpress/data** - State management and data persistence
+- **@wordpress/components** - UI components with accessibility support
+- **@wordpress/block-editor** - Block-based email template editor
+- **@wordpress/i18n** - Internationalization support
+
 ### Key Classes and Components
 
 #### Service Container Pattern
