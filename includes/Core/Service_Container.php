@@ -2,13 +2,8 @@
 /**
  * Service Container for CampaignBridge Dependency Injection System.
  *
- * This class implements a comprehensive dependency injection container that
- * follows SOLID principles and provides centralized service management for
- * the entire CampaignBridge plugin. It serves as the backbone for service
- * registration, instantiation, and lifecycle management.
- *
- * This class is essential for the plugin's architecture and provides
- * the foundation for all service-based functionality.
+ * Provides centralized service management, registration, and instantiation
+ * following SOLID principles for the entire plugin architecture.
  *
  * @package CampaignBridge
  * @since 0.1.0
@@ -26,6 +21,28 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Service Container for dependency injection and service management
  */
 class Service_Container {
+	/**
+	 * Service name constants
+	 */
+	private const SERVICE_NOTICES            = 'notices';
+	private const SERVICE_DISPATCHER         = 'dispatcher';
+	private const SERVICE_MAILCHIMP_PROVIDER = 'mailchimp_provider';
+	private const SERVICE_HTML_PROVIDER      = 'html_provider';
+	private const SERVICE_REST_ROUTES        = 'rest_routes';
+
+	/**
+	 * Provider type constants
+	 */
+	private const PROVIDER_MAILCHIMP = 'mailchimp';
+	private const PROVIDER_HTML      = 'html';
+
+	/**
+	 * Error message constants
+	 */
+	private const ERROR_SERVICE_NOT_FOUND      = 'Service \'%s\' not registered';
+	private const ERROR_INVALID_IMPLEMENTATION = 'Invalid service implementation';
+	private const ERROR_PROVIDER_NOT_FOUND     = '%sProvider class not found. Please ensure all dependencies are loaded.';
+
 	/**
 	 * Registered services
 	 *
@@ -49,7 +66,7 @@ class Service_Container {
 
 
 	/**
-	 * Register a service
+	 * Register a service.
 	 *
 	 * @param string $name Service name.
 	 * @param mixed  $implementation Service implementation or factory.
@@ -64,7 +81,7 @@ class Service_Container {
 	}
 
 	/**
-	 * Get a service instance
+	 * Get a service instance.
 	 *
 	 * @param string $name Service name.
 	 * @return object Service instance.
@@ -72,7 +89,7 @@ class Service_Container {
 	 */
 	public function get( string $name ) {
 		if ( ! isset( $this->services[ $name ] ) ) {
-			throw new \InvalidArgumentException( sprintf( 'Service \'%s\' not registered', esc_html( $name ) ) );
+			throw new \InvalidArgumentException( sprintf( esc_html( self::ERROR_SERVICE_NOT_FOUND ), esc_html( $name ) ) );
 		}
 
 		$service = $this->services[ $name ];
@@ -120,7 +137,7 @@ class Service_Container {
 			return $implementation;
 		}
 
-		throw new \InvalidArgumentException( 'Invalid service implementation' );
+		throw new \InvalidArgumentException( esc_html( self::ERROR_INVALID_IMPLEMENTATION ) );
 	}
 
 	/**
@@ -138,47 +155,58 @@ class Service_Container {
 	}
 
 	/**
-	 * Register core services
+	 * Register core services.
 	 *
 	 * @return void
 	 */
 	private function register_services(): void {
-		// Core services.
-		$this->register( 'notices', \CampaignBridge\Notices::class );
-		$this->register( 'dispatcher', \CampaignBridge\Core\Dispatcher::class );
+		// ========== CORE SERVICES ==========
+		$this->register( self::SERVICE_NOTICES, \CampaignBridge\Notices::class );
+		$this->register( self::SERVICE_DISPATCHER, \CampaignBridge\Core\Dispatcher::class );
 
-		// Providers - with error handling for missing classes.
-		$this->register(
-			'mailchimp_provider',
-			function ( $container ) {
-				if ( ! class_exists( '\\CampaignBridge\\Providers\\MailchimpProvider' ) ) {
-					throw new \RuntimeException( 'MailchimpProvider class not found. Please ensure all dependencies are loaded.' );
-				}
-				return new \CampaignBridge\Providers\MailchimpProvider();
-			}
+		// ========== EMAIL PROVIDERS ==========
+		$this->register_provider(
+			self::SERVICE_MAILCHIMP_PROVIDER,
+			'Mailchimp'
 		);
 
-		$this->register(
-			'html_provider',
-			function ( $container ) {
-				if ( ! class_exists( '\\CampaignBridge\\Providers\\HtmlProvider' ) ) {
-					throw new \RuntimeException( 'HtmlProvider class not found. Please ensure all dependencies are loaded.' );
-				}
-				return new \CampaignBridge\Providers\HtmlProvider();
-			}
+		$this->register_provider(
+			self::SERVICE_HTML_PROVIDER,
+			'Html'
 		);
 
-		// Admin services - UI class uses static methods, no instantiation needed.
-
-		// REST API.
+		// ========== REST API ==========
 		$this->register(
-			'rest_routes',
+			self::SERVICE_REST_ROUTES,
 			function ( $container ) {
 				$providers = array(
-					'mailchimp' => $container->get( 'mailchimp_provider' ),
-					'html'      => $container->get( 'html_provider' ),
+					self::PROVIDER_MAILCHIMP => $container->get( self::SERVICE_MAILCHIMP_PROVIDER ),
+					self::PROVIDER_HTML      => $container->get( self::SERVICE_HTML_PROVIDER ),
 				);
 				return new \CampaignBridge\REST\Routes( $providers );
+			}
+		);
+	}
+
+	/**
+	 * Register a provider with error handling
+	 *
+	 * @param string $service_name Service name constant.
+	 * @param string $provider_name Provider class name suffix.
+	 * @return void
+	 */
+	private function register_provider( string $service_name, string $provider_name ): void {
+		$this->register(
+			$service_name,
+			function ( $container ) use ( $provider_name ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+				// $container is used within the closure for getting other services
+				$class_name = '\\CampaignBridge\\Providers\\' . $provider_name . 'Provider';
+				if ( ! class_exists( $class_name ) ) {
+					throw new \RuntimeException(
+						sprintf( esc_html( self::ERROR_PROVIDER_NOT_FOUND ), esc_html( $provider_name ) )
+					);
+				}
+				return new $class_name();
 			}
 		);
 	}

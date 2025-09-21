@@ -2,14 +2,8 @@
 /**
  * Block System Manager for CampaignBridge.
  *
- * This class manages the registration, discovery, and management of all
- * CampaignBridge blocks used for email template creation and content
- * management. It automatically discovers and registers blocks from the
- * plugin's build directory and provides utilities for block validation
- * and status checking.
- *
- * This class is essential for the block-based email template system
- * and provides the foundation for visual email campaign creation.
+ * Handles automatic discovery and registration of CampaignBridge blocks
+ * from the build directory with utilities for block validation.
  *
  * @package CampaignBridge
  * @since 0.1.0
@@ -29,74 +23,88 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Blocks {
 	/**
-	 * Initialize the CampaignBridge block system and register all necessary hooks.
-	 *
-	 * This method sets up the complete block management system by registering
-	 * WordPress hooks for block registration, editor assets, and frontend
-	 * asset management. It ensures that all blocks are properly discovered,
-	 * registered, and available for use in the block editor.
+	 * Build directory path relative to plugin root.
+	 */
+	private const BUILD_DIR = 'dist/blocks/';
+
+	/**
+	 * CampaignBridge block namespace prefix.
+	 */
+	private const BLOCK_NAMESPACE = 'campaignbridge/';
+
+	// === INITIALIZATION ===
+
+	/**
+	 * Initialize the CampaignBridge block system.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function init(): void {
 		add_action( 'init', array( __CLASS__, 'register' ) );
-		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'enqueue_editor_assets' ) );
-		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend_assets' ) );
 	}
 
 	/**
-	 * Automatically discover and register all CampaignBridge blocks from the build directory.
-	 *
-	 * This method scans the plugin's dist/blocks directory to discover all available
-	 * blocks and automatically registers them with WordPress using the block
-	 * registration system. It provides a dynamic and maintainable approach to
-	 * block management without manual registration requirements.
+	 * Automatically discover and register all CampaignBridge blocks.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function register(): void {
-		$plugin_root_dir = CB_PATH;
-		$build_dir       = trailingslashit( $plugin_root_dir ) . 'dist/blocks/';
+		$build_dir = self::get_build_directory();
 
 		if ( ! is_dir( $build_dir ) ) {
 			return;
 		}
 
-		foreach ( scandir( $build_dir ) as $result ) {
-			if ( '.' === $result || '..' === $result ) {
+		$block_directories = self::get_block_directories( $build_dir );
+		self::register_blocks_from_directories( $block_directories );
+	}
+
+	/**
+	 * Get the build directory path for blocks.
+	 *
+	 * @return string The full path to the blocks build directory.
+	 */
+	private static function get_build_directory(): string {
+		return trailingslashit( CB_PATH ) . self::BUILD_DIR;
+	}
+
+	/**
+	 * Get all block directories from the build directory.
+	 *
+	 * @param string $build_dir The build directory path.
+	 * @return array<string> Array of block directory paths.
+	 */
+	private static function get_block_directories( string $build_dir ): array {
+		$directories = array();
+
+		foreach ( scandir( $build_dir ) as $item ) {
+			if ( '.' === $item || '..' === $item ) {
 				continue;
 			}
 
-			$block_location = $build_dir . $result;
-
-			if ( is_dir( $block_location ) ) {
-				// Use register_block_type_from_metadata for better performance and metadata handling.
-				register_block_type_from_metadata( $block_location );
+			$block_path = $build_dir . $item;
+			if ( is_dir( $block_path ) ) {
+				$directories[] = $block_path;
 			}
+		}
+
+		return $directories;
+	}
+
+	/**
+	 * Register blocks from directory paths.
+	 *
+	 * @param array<string> $block_directories Array of block directory paths.
+	 * @return void
+	 */
+	private static function register_blocks_from_directories( array $block_directories ): void {
+		foreach ( $block_directories as $block_location ) {
+			register_block_type_from_metadata( $block_location );
 		}
 	}
 
-	/**
-	 * Enqueue block editor assets.
-	 *
-	 * @return void
-	 */
-	public static function enqueue_editor_assets(): void {
-		// Enqueue any additional editor-specific assets here
-		// This could include custom block styles, editor scripts, etc.
-	}
-
-	/**
-	 * Enqueue frontend assets for blocks.
-	 *
-	 * @return void
-	 */
-	public static function enqueue_frontend_assets(): void {
-		// Enqueue any frontend assets needed for blocks
-		// This could include block styles, frontend scripts, etc.
-	}
 
 	/**
 	 * Check if a specific block is registered.
@@ -118,7 +126,7 @@ class Blocks {
 		$registry = \WP_Block_Type_Registry::get_instance();
 
 		foreach ( $registry->get_all_registered() as $block_name => $block_type ) {
-			if ( strpos( $block_type->name, 'campaignbridge/' ) === 0 ) {
+			if ( strpos( $block_type->name, self::BLOCK_NAMESPACE ) === 0 ) {
 				$blocks[] = $block_name;
 			}
 		}
@@ -132,7 +140,8 @@ class Blocks {
 	 * @return bool True if blocks directory exists and contains blocks.
 	 */
 	public static function blocks_available(): bool {
-		$build_dir = trailingslashit( CB_PATH ) . 'dist/blocks/';
+		$build_dir = self::get_build_directory();
+
 		if ( ! is_dir( $build_dir ) ) {
 			return false;
 		}

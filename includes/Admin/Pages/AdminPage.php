@@ -28,11 +28,26 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 abstract class AdminPage {
 	/**
+	 * Default option key for plugin settings.
+	 */
+	private const DEFAULT_OPTION_NAME = 'campaignbridge_settings';
+
+	/**
+	 * Settings update parameter name.
+	 */
+	private const SETTINGS_UPDATED_PARAM = 'settings-updated';
+
+	/**
+	 * Settings messages group name.
+	 */
+	private const SETTINGS_MESSAGES_GROUP = 'campaignbridge_messages';
+
+	/**
 	 * Option key used to store plugin settings.
 	 *
 	 * @var string
 	 */
-	protected static string $option_name = 'campaignbridge_settings';
+	protected static string $option_name = self::DEFAULT_OPTION_NAME;
 
 	/**
 	 * Page slug for this admin page.
@@ -49,14 +64,10 @@ abstract class AdminPage {
 	protected static array $providers = array();
 
 	/**
-	 * Initialize shared state and configuration for all CampaignBridge admin pages.
-	 *
-	 * This method sets up the common state that all admin pages share, including
-	 * the plugin option name for settings storage and the registered providers map.
-	 * It ensures consistent data access and configuration across all admin pages.
+	 * Initialize shared state and configuration for all admin pages.
 	 *
 	 * @since 0.1.0
-	 * @param string $option_name The WordPress option key used to store plugin settings.
+	 * @param string $option_name The WordPress option key for settings storage.
 	 * @param array  $providers   Map of registered provider instances indexed by slug.
 	 * @return void
 	 */
@@ -76,25 +87,17 @@ abstract class AdminPage {
 	}
 
 	/**
-	 * Retrieve the current WordPress option name used for plugin settings storage.
-	 *
-	 * This method provides access to the centralized option name that all admin
-	 * pages use for storing and retrieving plugin settings. It ensures consistent
-	 * data access patterns across the entire admin interface.
+	 * Get the WordPress option name for settings storage.
 	 *
 	 * @since 0.1.0
-	 * @return string The WordPress option name used for plugin settings storage.
+	 * @return string The option name.
 	 */
 	protected static function get_option_name(): string {
 		return self::$option_name;
 	}
 
 	/**
-	 * Retrieve the map of registered email service providers available to admin pages.
-	 *
-	 * This method provides access to the centralized providers map that all admin
-	 * pages use for email service integration. It ensures consistent provider
-	 * access patterns across the entire admin interface.
+	 * Get the map of registered email service providers.
 	 *
 	 * @since 0.1.0
 	 * @return array<string,object> Map of provider slugs to provider instances.
@@ -104,14 +107,10 @@ abstract class AdminPage {
 	}
 
 	/**
-	 * Retrieve the current plugin settings from WordPress options API.
-	 *
-	 * This method provides access to the centralized plugin settings that all admin
-	 * pages use for configuration and functionality. It ensures consistent settings
-	 * access patterns across the entire admin interface.
+	 * Get the current plugin settings from WordPress options API.
 	 *
 	 * @since 0.1.0
-	 * @return array The current plugin settings array, or empty array if no settings exist.
+	 * @return array The current settings array, or empty array if no settings exist.
 	 */
 	protected static function get_settings(): array {
 		return get_option( self::$option_name, array() );
@@ -132,15 +131,15 @@ abstract class AdminPage {
 	abstract public static function get_page_title(): string;
 
 	/**
-	 * Display WordPress admin notices for settings updates and validation errors.
+	 * Display WordPress admin notices for settings updates.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	protected static function display_messages(): void {
-		if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			add_settings_error( 'campaignbridge_messages', 'campaignbridge_message', __( 'Settings saved.', 'campaignbridge' ), 'updated' );
+		if ( isset( $_GET[ self::SETTINGS_UPDATED_PARAM ] ) && 'true' === $_GET[ self::SETTINGS_UPDATED_PARAM ] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			add_settings_error( self::SETTINGS_MESSAGES_GROUP, 'campaignbridge_message', __( 'Settings saved.', 'campaignbridge' ), 'updated' );
 		}
-		settings_errors( 'campaignbridge_messages' );
+		settings_errors( self::SETTINGS_MESSAGES_GROUP );
 	}
 }

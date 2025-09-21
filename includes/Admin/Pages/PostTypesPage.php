@@ -2,14 +2,8 @@
 /**
  * Post Types Admin Page for CampaignBridge Admin Interface.
  *
- * This class handles the Post Types configuration page, which allows administrators
- * to control which WordPress post types are available for use in CampaignBridge
- * email campaigns. It provides an intuitive interface for managing post type
- * inclusion/exclusion with real-time updates and validation.
- *
- * This page serves as the main configuration interface for determining
- * which content types can be included in email campaigns, making it
- * a critical component for content management workflows.
+ * Handles configuration of which WordPress post types are available
+ * for use in CampaignBridge email campaigns.
  *
  * @package CampaignBridge
  * @since 0.1.0
@@ -37,47 +31,50 @@ class PostTypesPage extends AdminPage {
 	protected static string $page_slug = 'campaignbridge-post-types';
 
 	/**
-	 * Initialize the Post Types page and set up asset management.
-	 *
-	 * This method sets up the Post Types page by registering the necessary WordPress
-	 * hooks for conditional asset loading. It ensures that page-specific CSS and
-	 * JavaScript files are only loaded when viewing the Post Types page, optimizing
-	 * performance across the admin interface.
+	 * Settings field name.
+	 */
+	private const SETTINGS_FIELD = 'campaignbridge';
+
+	/**
+	 * Nonce action name.
+	 */
+	private const NONCE_ACTION = 'campaignbridge-options';
+
+	/**
+	 * Submit button text.
+	 */
+	private const SUBMIT_BUTTON_TEXT = 'Save Post Types';
+
+	/**
+	 * Form field name for included post types.
+	 */
+	private const INCLUDED_POST_TYPES_FIELD = 'included_post_types';
+
+	/**
+	 * Initialize the Post Types page.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function init(): void {
-		// Hook into admin_enqueue_scripts to conditionally load assets.
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_post_types_assets' ) );
 	}
 
 	/**
-	 * Conditionally enqueue Post Types page-specific CSS and JavaScript assets.
-	 *
-	 * This method ensures that Post Types page assets are only loaded when viewing
-	 * the Post Types page. It uses the PageUtils helper to check if the current
-	 * page matches this class's page_slug property.
+	 * Enqueue Post Types page assets.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function enqueue_post_types_assets(): void {
-		// Only load assets on the specific Post Types page.
 		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
 			return;
 		}
 
-		// Enqueue post-types-specific assets only.
 		wp_enqueue_style( 'campaignbridge-post-types' );
 	}
 	/**
-	 * Render the complete Post Types configuration page with dynamic form interface.
-	 *
-	 * This method generates the full Post Types page HTML, providing administrators
-	 * with an intuitive interface for configuring which WordPress post types are
-	 * available for use in CampaignBridge email campaigns. It displays all public
-	 * post types with toggle switches for easy configuration.
+	 * Render the Post Types configuration page.
 	 *
 	 * @since 0.1.0
 	 * @return void
@@ -85,15 +82,48 @@ class PostTypesPage extends AdminPage {
 	public static function render(): void {
 		$settings = self::get_settings();
 		self::display_messages();
+		self::render_post_types_form( $settings );
+	}
+
+	/**
+	 * Get the list of post types that should be included.
+	 *
+	 * @param array $settings Current settings.
+	 * @return array List of post type names that are included.
+	 */
+	private static function get_included_post_types( array $settings ): array {
+		$public_types   = get_post_types( array( 'public' => true ), 'objects' );
+		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] )
+			? array_map( 'sanitize_key', $settings['exclude_post_types'] )
+			: array();
+
+		$included_names = array();
+		foreach ( $public_types as $obj ) {
+			$included_names[] = $obj->name;
+		}
+
+		return array_values( array_diff( $included_names, $excluded_types ) );
+	}
+
+	/**
+	 * Render the post types form HTML.
+	 *
+	 * @param array $settings Current settings.
+	 * @return void
+	 */
+	private static function render_post_types_form( array $settings ): void {
+		$public_types   = get_post_types( array( 'public' => true ), 'objects' );
+		$included_types = self::get_included_post_types( $settings );
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( self::get_page_title() ); ?></h1>
 
 			<form method="post" action="options.php">
 				<?php
-				settings_fields( 'campaignbridge' );
-				wp_nonce_field( 'campaignbridge-options' );
+				settings_fields( self::SETTINGS_FIELD );
+				wp_nonce_field( self::NONCE_ACTION );
 				?>
+
 				<table class="form-table">
 					<tr>
 						<th scope="row"><?php echo esc_html__( 'Included post types', 'campaignbridge' ); ?></th>
@@ -102,20 +132,10 @@ class PostTypesPage extends AdminPage {
 							<div class="cb-post-types__switches-box">
 								<div class="cb-post-types__switches-group">
 									<div class="cb-post-types__switches-grid">
-										<?php
-										$public_types   = get_post_types( array( 'public' => true ), 'objects' );
-										$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
-										$included_names = array();
-										foreach ( $public_types as $obj ) {
-											$included_names[] = $obj->name;
-										}
-										$included_names = array_values( array_diff( $included_names, $excluded_types ) );
-
-										foreach ( $public_types as $obj ) :
-											$checked = in_array( $obj->name, $included_names, true );
-											?>
+										<?php foreach ( $public_types as $obj ) : ?>
+											<?php $checked = in_array( $obj->name, $included_types, true ); ?>
 											<label class="cb-post-types__switch">
-												<input type="checkbox" name="<?php echo esc_attr( self::get_option_name() ); ?>[included_post_types][]" value="<?php echo esc_attr( $obj->name ); ?>" <?php checked( $checked ); ?> />
+												<input type="checkbox" name="<?php echo esc_attr( self::get_option_name() . '[' . self::INCLUDED_POST_TYPES_FIELD . '][]' ); ?>" value="<?php echo esc_attr( $obj->name ); ?>" <?php checked( $checked ); ?> />
 												<span class="cb-post-types__slider" aria-hidden="true"></span>
 												<span class="cb-post-types__switch-label"><?php echo esc_html( $obj->labels->singular_name ); ?></span>
 											</label>
@@ -127,21 +147,18 @@ class PostTypesPage extends AdminPage {
 						</td>
 					</tr>
 				</table>
-				<?php submit_button( 'Save Post Types' ); ?>
+
+				<?php submit_button( self::SUBMIT_BUTTON_TEXT ); ?>
 			</form>
 		</div>
 		<?php
 	}
 
 	/**
-	 * Get the localized page title for the Post Types configuration page.
-	 *
-	 * This method returns the human-readable title that will be displayed
-	 * at the top of the Post Types page. The title is localized for internationalization
-	 * support and provides clear identification of the page's purpose.
+	 * Get the page title.
 	 *
 	 * @since 0.1.0
-	 * @return string The localized page title "Post Types".
+	 * @return string The localized page title.
 	 */
 	public static function get_page_title(): string {
 		return __( 'Post Types', 'campaignbridge' );
