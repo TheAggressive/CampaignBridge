@@ -28,50 +28,96 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 interface ProviderInterface {
 	/**
-	 * Unique slug for the provider (e.g., 'mailchimp', 'html').
-	 *
-	 * @return string
+	 * Default provider slug constant.
 	 */
-	public function slug();
+	public const DEFAULT_SLUG = 'default';
 
 	/**
-	 * Human-readable label for the provider.
-	 *
-	 * @return string
+	 * Configuration status constants.
 	 */
-	public function label();
+	public const CONFIGURED      = 'configured';
+	public const NOT_CONFIGURED  = 'not_configured';
+	public const CONFIG_REQUIRED = 'config_required';
 
 	/**
-	 * Whether the provider has sufficient settings to operate.
-	 *
-	 * @param array $settings Plugin settings array.
-	 * @return bool
+	 * Common setting keys used by providers.
 	 */
-	public function is_configured( $settings );
+	public const SETTING_API_KEY     = 'api_key';
+	public const SETTING_AUDIENCE_ID = 'audience_id';
+	public const SETTING_PROVIDER    = 'provider';
 
 	/**
-	 * Render provider-specific settings fields (within a table row context).
+	 * Get unique slug for the provider.
 	 *
-	 * @param array  $settings    Plugin settings array.
-	 * @param string $option_name Root option name used for field names.
-	 * @return void
+	 * This slug is used as an identifier throughout the system and should
+	 * be unique across all providers. Examples: 'mailchimp', 'html', 'sendgrid'.
+	 *
+	 * @return string Provider slug identifier.
 	 */
-	public function render_settings_fields( $settings, $option_name );
+	public function slug(): string;
 
 	/**
-	 * Create/update a campaign with the given blocks (Mailchimp)/export HTML (HTML provider).
+	 * Get human-readable label for the provider.
 	 *
-	 * @param array $blocks   Associative array of section_key => HTML string.
-	 * @param array $settings Plugin settings array.
-	 * @return bool True on success, false on error (and provider should surface notices).
+	 * This label is displayed in the admin interface and should be
+	 * user-friendly. Examples: 'Mailchimp', 'HTML Export', 'SendGrid'.
+	 *
+	 * @return string Provider display name.
 	 */
-	public function send_campaign( $blocks, $settings );
+	public function label(): string;
 
 	/**
-	 * Return a list of template section keys (if supported by provider), used for mapping.
+	 * Check if the provider has sufficient settings to operate.
 	 *
-	 * @param array $settings Plugin settings array.
-	 * @return array|\WP_Error Array of strings (keys) or WP_Error on failure/unsupported.
+	 * Validates that all required configuration is present and valid.
+	 * This method should check for API keys, endpoints, and other
+	 * provider-specific requirements.
+	 *
+	 * @param array $settings Plugin settings array containing provider configuration.
+	 * @return bool True if provider is ready to send campaigns.
 	 */
-	public function get_section_keys( $settings );
+	public function is_configured( array $settings ): bool;
+
+	/**
+	 * Render provider-specific settings fields in the admin interface.
+	 *
+	 * Outputs HTML form fields for provider configuration within a table row.
+	 * Should include all necessary inputs for provider setup including
+	 * API keys, audience selection, and other provider-specific options.
+	 *
+	 * @param array  $settings    Current plugin settings array.
+	 * @param string $option_name Root option name for form field namespacing.
+	 * @return void Outputs HTML directly to the page.
+	 */
+	public function render_settings_fields( array $settings, string $option_name ): void;
+
+	/**
+	 * Send campaign or export content based on provider type.
+	 *
+	 * For email service providers (Mailchimp, etc.): Creates or updates
+	 * a campaign with the provided content blocks.
+	 *
+	 * For export providers (HTML): Generates static HTML files or exports
+	 * content to the specified format.
+	 *
+	 * @param array $blocks   Associative array mapping section keys to HTML content.
+	 *                       Format: ['header' => '<html>...</html>', 'body' => '<html>...</html>']
+	 * @param array $settings Plugin settings array with provider configuration.
+	 * @return bool|\WP_Error True on success, WP_Error on failure with details.
+	 */
+	public function send_campaign( array $blocks, array $settings );
+
+	/**
+	 * Get available template section keys for content mapping.
+	 *
+	 * Returns an array of section identifiers that this provider supports
+	 * for template mapping. These keys correspond to sections in email
+	 * templates where dynamic content can be inserted.
+	 *
+	 * Examples: ['header', 'body', 'footer'] or ['content', 'sidebar']
+	 *
+	 * @param array $settings Plugin settings array (for provider-specific logic).
+	 * @return array|\WP_Error Array of section key strings, or WP_Error if unsupported/unavailable.
+	 */
+	public function get_section_keys( array $settings );
 }

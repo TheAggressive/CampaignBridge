@@ -32,7 +32,7 @@ class HtmlProvider implements ProviderInterface {
 	 *
 	 * @return string
 	 */
-	public function slug() {
+	public function slug(): string {
 		return 'html';
 	}
 
@@ -41,7 +41,7 @@ class HtmlProvider implements ProviderInterface {
 	 *
 	 * @return string
 	 */
-	public function label() {
+	public function label(): string {
 		return __( 'HTML Export (download)', 'campaignbridge' );
 	}
 
@@ -51,7 +51,7 @@ class HtmlProvider implements ProviderInterface {
 	 * @param array $settings Plugin settings array.
 	 * @return bool
 	 */
-	public function is_configured( $settings ) {
+	public function is_configured( array $settings ): bool {
 		return true;
 	}
 
@@ -62,7 +62,7 @@ class HtmlProvider implements ProviderInterface {
 	 * @param string $option_name Root option name used for field names.
 	 * @return void
 	 */
-	public function render_settings_fields( $settings, $option_name ) {
+	public function render_settings_fields( array $settings, string $option_name ): void {
 		/* no specific fields */
 	}
 
@@ -72,7 +72,7 @@ class HtmlProvider implements ProviderInterface {
 	 * @param array $settings Plugin settings array.
 	 * @return array
 	 */
-	public function get_section_keys( $settings ) {
+	public function get_section_keys( array $settings ) {
 		return array();
 	}
 
@@ -83,7 +83,7 @@ class HtmlProvider implements ProviderInterface {
 	 * @param array $settings Plugin settings array.
 	 * @return void
 	 */
-	public function send_campaign( $blocks, $settings ) {
+	public function send_campaign( array $blocks, array $settings ) {
 		// Combine blocks into a simple HTML export for download.
 		$html  = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>Email Export</title></head><body>";
 		$html .= '<div class="campaignbridge-export">';

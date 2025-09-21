@@ -41,7 +41,7 @@ class MailchimpProvider implements ProviderInterface {
 	 *
 	 * @return string
 	 */
-	public function slug() {
+	public function slug(): string {
 		return 'mailchimp';
 	}
 
@@ -50,7 +50,7 @@ class MailchimpProvider implements ProviderInterface {
 	 *
 	 * @return string
 	 */
-	public function label() {
+	public function label(): string {
 		return __( 'Mailchimp', 'campaignbridge' );
 	}
 
@@ -60,7 +60,7 @@ class MailchimpProvider implements ProviderInterface {
 	 * @param array $settings Plugin settings.
 	 * @return bool
 	 */
-	public function is_configured( $settings ) {
+	public function is_configured( array $settings ): bool {
 		return ! empty( $settings['api_key'] ) && ! empty( $settings['audience_id'] ) && ! empty( $settings['template_id'] );
 	}
 
@@ -71,7 +71,7 @@ class MailchimpProvider implements ProviderInterface {
 	 * @param string $option_name Root option name.
 	 * @return void
 	 */
-	public function render_settings_fields( $settings, $option_name ) {
+	public function render_settings_fields( array $settings, string $option_name ): void {
 		?>
 		<tr>
 			<th scope="row"><?php echo esc_html__( 'API Key', 'campaignbridge' ); ?></th>
@@ -151,7 +151,7 @@ class MailchimpProvider implements ProviderInterface {
 	 * @param array $settings Provider settings (api_key, audience_id, template_id).
 	 * @return bool
 	 */
-	public function send_campaign( $blocks, $settings ) {
+	public function send_campaign( array $blocks, array $settings ) {
 		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		$audience_id = isset( $settings['audience_id'] ) ? $settings['audience_id'] : '';
 		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;
@@ -355,7 +355,7 @@ class MailchimpProvider implements ProviderInterface {
 	 * @param bool  $refresh  Force refresh.
 	 * @return array|WP_Error
 	 */
-	public function get_section_keys( $settings, $refresh = false ) {
+	public function get_section_keys( array $settings ) {
 		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;
 		if ( empty( $api_key ) || empty( $template_id ) ) {
