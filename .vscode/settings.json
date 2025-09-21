@@ -3,6 +3,7 @@
     "ABSPATH",
     "bloginfo",
     "dashicons",
-    "kses"
+    "kses",
+    "wpdb"
   ]
 }

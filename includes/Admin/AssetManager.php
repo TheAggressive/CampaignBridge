@@ -183,7 +183,7 @@ class AssetManager {
 				'version'      => $version,
 			);
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
 				error_log(
 					sprintf(
 						'[CampaignBridge] Error loading asset info for %s: %s',
@@ -231,7 +231,7 @@ class AssetManager {
 				CB_VERSION
 			);
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
 				error_log(
 					sprintf(
 						'[CampaignBridge] Error registering block editor style: %s',
@@ -265,7 +265,7 @@ class AssetManager {
 			$file_path = CB_URL . $path;
 
 			if ( ! file_exists( CB_PATH . $path ) ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
 					error_log(
 						sprintf(
 							'[CampaignBridge] Style file not found: %s',
@@ -283,7 +283,7 @@ class AssetManager {
 				CB_VERSION
 			);
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
 				error_log(
 					sprintf(
 						'[CampaignBridge] Error registering style %s: %s',
