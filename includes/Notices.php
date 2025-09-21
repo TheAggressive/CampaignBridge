@@ -31,6 +31,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Notices {
 	/**
+	 * Notice type constants.
+	 */
+	private const NOTICE_SUCCESS = 'success';
+	private const NOTICE_WARNING = 'warning';
+	private const NOTICE_ERROR   = 'error';
+	private const NOTICE_INFO    = 'info';
+
+	/**
+	 * Maximum notice message length.
+	 */
+	private const MAX_MESSAGE_LENGTH = 1000;
+
+	/**
 	 * Notice queue.
 	 *
 	 * @var array<int,array{message:string,type:string}>
@@ -51,14 +64,20 @@ class Notices {
 	 * Queue a notice.
 	 *
 	 * @param string $message HTML/text message (will be kses-escaped on render).
-	 * @param string $type    success|warning|error|info.
+	 * @param string $type    Notice type: success|warning|error|info.
 	 * @return void
 	 */
-	public static function add( $message, $type = 'info' ) {
-		self::$notices[] = array(
-			'message' => $message,
-			'type'    => $type,
-		);
+	public static function add( string $message, string $type = self::NOTICE_INFO ): void {
+		// Validate and sanitize input.
+		$message = self::sanitize_message( $message );
+		$type    = self::validate_notice_type( $type );
+
+		if ( ! empty( $message ) && ! empty( $type ) ) {
+			self::$notices[] = array(
+				'message' => $message,
+				'type'    => $type,
+			);
+		}
 	}
 
 	/**
@@ -67,8 +86,9 @@ class Notices {
 	 * @param string $message Message text or HTML.
 	 * @return void
 	 */
-	public static function success( $message ) {
-		self::add( $message, 'success' ); }
+	public static function success( string $message ): void {
+		self::add( $message, self::NOTICE_SUCCESS );
+	}
 
 	/**
 	 * Queue a warning notice.
@@ -76,8 +96,9 @@ class Notices {
 	 * @param string $message Message text or HTML.
 	 * @return void
 	 */
-	public static function warning( $message ) {
-		self::add( $message, 'warning' ); }
+	public static function warning( string $message ): void {
+		self::add( $message, self::NOTICE_WARNING );
+	}
 
 	/**
 	 * Queue an error notice.
@@ -85,8 +106,9 @@ class Notices {
 	 * @param string $message Message text or HTML.
 	 * @return void
 	 */
-	public static function error( $message ) {
-		self::add( $message, 'error' ); }
+	public static function error( string $message ): void {
+		self::add( $message, self::NOTICE_ERROR );
+	}
 
 	/**
 	 * Queue an informational notice.
@@ -94,39 +116,128 @@ class Notices {
 	 * @param string $message Message text or HTML.
 	 * @return void
 	 */
-	public static function info( $message ) {
-		self::add( $message, 'info' ); }
+	public static function info( string $message ): void {
+		self::add( $message, self::NOTICE_INFO );
+	}
 
 	/**
 	 * Render all queued notices and clear the queue.
 	 *
 	 * @return void
 	 */
-	public static function render() {
+	public static function render(): void {
 		if ( empty( self::$notices ) ) {
 			return;
 		}
+
 		foreach ( self::$notices as $notice ) {
-			$class = 'notice';
-			switch ( $notice['type'] ) {
-				case 'success':
-					$class .= ' notice-success';
-					break;
-				case 'warning':
-					$class .= ' notice-warning';
-					break;
-				case 'error':
-					$class .= ' notice-error';
-					break;
-				default:
-					$class .= ' notice-info';
-			}
+			$class = self::get_notice_css_class( $notice['type'] );
 			printf(
 				'<div class="%1$s is-dismissible"><p>%2$s</p></div>',
 				esc_attr( $class ),
 				wp_kses_post( $notice['message'] )
 			);
 		}
+
 		self::$notices = array();
+	}
+
+	/**
+	 * Get the CSS class for a notice type.
+	 *
+	 * @param string $type Notice type.
+	 * @return string CSS class string.
+	 */
+	private static function get_notice_css_class( string $type ): string {
+		$class = 'notice';
+
+		switch ( $type ) {
+			case self::NOTICE_SUCCESS:
+				$class .= ' notice-success';
+				break;
+			case self::NOTICE_WARNING:
+				$class .= ' notice-warning';
+				break;
+			case self::NOTICE_ERROR:
+				$class .= ' notice-error';
+				break;
+			default:
+				$class .= ' notice-info';
+		}
+
+		return $class;
+	}
+
+	/**
+	 * Sanitize and validate a notice message.
+	 *
+	 * @param string $message Raw message content.
+	 * @return string Sanitized message.
+	 */
+	private static function sanitize_message( string $message ): string {
+		// Trim whitespace and limit length.
+		$message = trim( $message );
+
+		if ( strlen( $message ) > self::MAX_MESSAGE_LENGTH ) {
+			$message = substr( $message, 0, self::MAX_MESSAGE_LENGTH ) . '...';
+		}
+
+		// Basic sanitization - we'll use wp_kses_post in render() for final output.
+		return wp_strip_all_tags( $message );
+	}
+
+	/**
+	 * Validate notice type.
+	 *
+	 * @param string $type Notice type to validate.
+	 * @return string Valid notice type or empty string if invalid.
+	 */
+	private static function validate_notice_type( string $type ): string {
+		$valid_types = array(
+			self::NOTICE_SUCCESS,
+			self::NOTICE_WARNING,
+			self::NOTICE_ERROR,
+			self::NOTICE_INFO,
+		);
+
+		return in_array( $type, $valid_types, true ) ? $type : '';
+	}
+
+	/**
+	 * Get the count of queued notices.
+	 *
+	 * @return int Number of notices in queue.
+	 */
+	public static function count(): int {
+		return count( self::$notices );
+	}
+
+	/**
+	 * Check if there are any queued notices.
+	 *
+	 * @return bool True if notices exist, false otherwise.
+	 */
+	public static function has_notices(): bool {
+		return ! empty( self::$notices );
+	}
+
+	/**
+	 * Clear all queued notices without rendering.
+	 *
+	 * @return int Number of notices cleared.
+	 */
+	public static function clear(): int {
+		$count         = count( self::$notices );
+		self::$notices = array();
+		return $count;
+	}
+
+	/**
+	 * Get all queued notices (for debugging or external processing).
+	 *
+	 * @return array<int,array{message:string,type:string}> Array of notices.
+	 */
+	public static function get_all(): array {
+		return self::$notices;
 	}
 }
