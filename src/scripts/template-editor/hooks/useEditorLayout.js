@@ -1,8 +1,24 @@
 import { useDispatch, useSelect } from "@wordpress/data";
 import { useEffect, useState } from "@wordpress/element";
 import { store as noticesStore } from "@wordpress/notices";
-import { store as preferencesStore } from "@wordpress/preferences";
-import { EDITOR_CONSTANTS } from "../constants/editor";
+import { SIDEBAR_CONSTANTS } from "./useSidebarState";
+
+// Layout-specific constants (exported for reuse if needed)
+export const LAYOUT_CONSTANTS = {
+  MODIFIERS: {
+    HAS_PRIMARY: "cb-editor--has-primary",
+    NO_PRIMARY: "cb-editor--no-primary",
+    HAS_SECONDARY: "cb-editor--has-secondary",
+    NO_SECONDARY: "cb-editor--no-secondary",
+  },
+  CSS_CLASSES: {
+    EDITOR: "cb-editor",
+    EDITOR_SNACKBAR: "cb-editor__snackbar",
+    SIDEBAR_PRIMARY: "cb-editor__sidebar cb-editor__sidebar--primary",
+    SIDEBAR_SECONDARY: "cb-editor__sidebar cb-editor__sidebar--secondary",
+    SIDEBAR_CONTENT: "cb-editor__sidebar-content",
+  },
+};
 
 /**
  * Custom hook for managing editor layout state and sidebar coordination
@@ -11,25 +27,23 @@ import { EDITOR_CONSTANTS } from "../constants/editor";
  */
 export function useEditorLayout() {
   // Sidebar tab state
-  const [sidebarActiveTab, setSidebarActiveTab] = useState(
-    EDITOR_CONSTANTS.SIDEBAR_TABS.TEMPLATE,
-  );
+  const [sidebarActiveTab, setSidebarActiveTab] = useState("template-settings");
 
   // Track active complementary areas
   const activePrimary = useSelect(
     (select) =>
       select("core/interface").getActiveComplementaryArea(
-        EDITOR_CONSTANTS.SIDEBAR_SCOPES.PRIMARY,
+        SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
       ),
-    [EDITOR_CONSTANTS.SIDEBAR_SCOPES.PRIMARY],
+    [SIDEBAR_CONSTANTS.SCOPES.PRIMARY],
   );
 
   const activeSecondary = useSelect(
     (select) =>
       select("core/interface").getActiveComplementaryArea(
-        EDITOR_CONSTANTS.SIDEBAR_SCOPES.SECONDARY,
+        SIDEBAR_CONSTANTS.SCOPES.SECONDARY,
       ),
-    [EDITOR_CONSTANTS.SIDEBAR_SCOPES.SECONDARY],
+    [SIDEBAR_CONSTANTS.SCOPES.SECONDARY],
   );
 
   // Detect block selection for auto-switching
@@ -48,46 +62,12 @@ export function useEditorLayout() {
 
   // Auto-switch to block inspector when a block is selected
   useEffect(() => {
-    if (
-      selectedBlock &&
-      sidebarActiveTab !== EDITOR_CONSTANTS.SIDEBAR_TABS.INSPECTOR
-    ) {
-      setSidebarActiveTab(EDITOR_CONSTANTS.SIDEBAR_TABS.INSPECTOR);
+    if (selectedBlock && sidebarActiveTab !== "block-inspector") {
+      setSidebarActiveTab("block-inspector");
     }
   }, [selectedBlock, sidebarActiveTab]);
 
-  // Restore sidebar states from preferences on mount
-  const { enableComplementaryArea } = useDispatch("core/interface");
-  const { get: getPreference } = useSelect(
-    (select) => select(preferencesStore),
-    [],
-  );
-
-  useEffect(() => {
-    // Restore primary sidebar state from preferences
-    const primaryOpen = getPreference(
-      "campaignbridge/template-editor",
-      "primarySidebarOpen",
-    );
-    if (primaryOpen) {
-      enableComplementaryArea(
-        EDITOR_CONSTANTS.SIDEBAR_SCOPES.PRIMARY,
-        "primary",
-      );
-    }
-
-    // Restore secondary sidebar state from preferences
-    const secondaryOpen = getPreference(
-      "campaignbridge/template-editor",
-      "secondarySidebarOpen",
-    );
-    if (secondaryOpen) {
-      enableComplementaryArea(
-        EDITOR_CONSTANTS.SIDEBAR_SCOPES.SECONDARY,
-        "secondary",
-      );
-    }
-  }, [getPreference, enableComplementaryArea]);
+  // Note: Sidebar state restoration is now handled by useSidebarState hook
 
   // Snackbar notifications
   const snackbarNotices = useSelect(
@@ -102,32 +82,33 @@ export function useEditorLayout() {
 
   // Layout class management
   const hasPrimary = !!activePrimary;
-  const hasSecondary = activeSecondary === "secondary";
+  const hasSecondary =
+    activeSecondary === SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY;
 
-  const skeletonClassName = `${EDITOR_CONSTANTS.CSS_CLASSES.EDITOR} ${
+  const skeletonClassName = `${LAYOUT_CONSTANTS.CSS_CLASSES.EDITOR} ${
     hasPrimary
-      ? EDITOR_CONSTANTS.LAYOUT_MODIFIERS.HAS_PRIMARY
-      : EDITOR_CONSTANTS.LAYOUT_MODIFIERS.NO_PRIMARY
+      ? LAYOUT_CONSTANTS.MODIFIERS.HAS_PRIMARY
+      : LAYOUT_CONSTANTS.MODIFIERS.NO_PRIMARY
   } ${
     hasSecondary
-      ? EDITOR_CONSTANTS.LAYOUT_MODIFIERS.HAS_SECONDARY
-      : EDITOR_CONSTANTS.LAYOUT_MODIFIERS.NO_SECONDARY
+      ? LAYOUT_CONSTANTS.MODIFIERS.HAS_SECONDARY
+      : LAYOUT_CONSTANTS.MODIFIERS.NO_SECONDARY
   }`;
 
   // Sidebar configuration
   const primarySidebarProps = {
-    scope: EDITOR_CONSTANTS.SIDEBAR_SCOPES.PRIMARY,
-    identifier: "primary",
-    className: EDITOR_CONSTANTS.CSS_CLASSES.SIDEBAR_PRIMARY,
+    scope: SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+    identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
+    className: LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_PRIMARY,
     isPinnable: false,
   };
 
   const secondarySidebarProps = {
-    scope: EDITOR_CONSTANTS.SIDEBAR_SCOPES.SECONDARY,
-    identifier: "secondary",
+    scope: SIDEBAR_CONSTANTS.SCOPES.SECONDARY,
+    identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
     closeLabel: "Close list view",
     isSecondary: true,
-    className: EDITOR_CONSTANTS.CSS_CLASSES.SIDEBAR_SECONDARY,
+    className: LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_SECONDARY,
     isPinnable: false,
     header: "List View",
   };

@@ -1,6 +1,31 @@
-import { useDispatch, useSelect } from "@wordpress/data";
+import { select, subscribe, useDispatch, useSelect } from "@wordpress/data";
 import { useCallback, useEffect, useState } from "@wordpress/element";
-import { EDITOR_CONSTANTS } from "../constants/editor";
+
+// Sidebar-specific constants (exported for reuse if needed)
+export const SIDEBAR_CONSTANTS = {
+  IDENTIFIERS: {
+    PRIMARY: "primary",
+    SECONDARY: "secondary",
+  },
+  PREFERENCE_KEYS: {
+    PRIMARY_OPEN: "primarySidebarOpen",
+    SECONDARY_OPEN: "secondarySidebarOpen",
+  },
+  PREFERENCES: {
+    PRIMARY_SIDEBAR_OPEN: "campaignbridge/template-editor/primarySidebarOpen",
+    SECONDARY_SIDEBAR_OPEN:
+      "campaignbridge/template-editor/secondarySidebarOpen",
+    FULLSCREEN_MODE: "core/edit-post/fullscreenMode",
+  },
+  SCOPES: {
+    PRIMARY: "campaignbridge/template-editor/primary",
+    SECONDARY: "campaignbridge/template-editor/secondary",
+  },
+  TABS: {
+    TEMPLATE: "template-settings",
+    INSPECTOR: "block-inspector",
+  },
+};
 
 /**
  * @typedef {Object} SidebarState
@@ -16,9 +41,9 @@ import { EDITOR_CONSTANTS } from "../constants/editor";
  * Enhanced custom hook for managing sidebar states with proper subscription, error handling, and preference persistence.
  *
  * Features:
- * - **Consistent Package Imports**: Uses @wordpress/data package imports instead of global wp.data
+ * - **Consistent Package Imports**: Uses @wordpress/data package imports (useSelect, useDispatch, subscribe) instead of global wp.data
  * - **Constants Integration**: Uses centralized constants for preference keys and identifiers
- * - **Preference Restoration**: Automatically restores sidebar states from WordPress preferences on mount
+ * - **Dual State Synchronization**: Combines useSelect with subscribe() for robust state tracking
  * - **Enhanced Type Safety**: Comprehensive JSDoc with TypeScript-like typedefs
  * - **Memory Management**: Proper cleanup to prevent memory leaks
  * - **Error Recovery**: Graceful error handling with development-only logging
@@ -38,8 +63,8 @@ import { EDITOR_CONSTANTS } from "../constants/editor";
  *   togglePrimary,
  *   toggleSecondary
  * } = useSidebarState(
- *   EDITOR_CONSTANTS.SIDEBAR_SCOPES.PRIMARY,
- *   EDITOR_CONSTANTS.SIDEBAR_SCOPES.SECONDARY
+ *   SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+ *   SIDEBAR_CONSTANTS.SCOPES.SECONDARY
  * );
  *
  * // Toggle primary sidebar
@@ -55,15 +80,6 @@ export function useSidebarState(primaryScope, secondaryScope) {
   const [activePrimary, setActivePrimary] = useState(null);
   const [activeSecondary, setActiveSecondary] = useState(null);
 
-  // Get required functions from WordPress data package using consistent package imports
-  const { set: setPreference } = useDispatch("core/preferences");
-  const { enableComplementaryArea, disableComplementaryArea } =
-    useDispatch("core/interface");
-  const { get: getPreference } = useSelect(
-    (select) => select("core/preferences"),
-    [],
-  );
-
   // Get sidebar state from WordPress data using package imports
   const primaryState = useSelect(
     (select) =>
@@ -76,61 +92,27 @@ export function useSidebarState(primaryScope, secondaryScope) {
     [secondaryScope],
   );
 
+  // Get required functions from WordPress data package for state management
+  const { set: setPreference } = useDispatch("core/preferences");
+  const { enableComplementaryArea, disableComplementaryArea } =
+    useDispatch("core/interface");
+
+  // Subscribe to interface store changes to ensure state updates
   useEffect(() => {
-    // Restore sidebar states from preferences on mount
-    try {
-      const primaryOpen = getPreference(
-        "campaignbridge/template-editor",
-        EDITOR_CONSTANTS.SIDEBAR.PREFERENCE_KEYS.PRIMARY_OPEN,
-      );
-      const secondaryOpen = getPreference(
-        "campaignbridge/template-editor",
-        EDITOR_CONSTANTS.SIDEBAR.PREFERENCE_KEYS.SECONDARY_OPEN,
-      );
+    const unsubscribe = subscribe(() => {
+      const newPrimaryState =
+        select("core/interface").getActiveComplementaryArea(primaryScope);
+      const newSecondaryState =
+        select("core/interface").getActiveComplementaryArea(secondaryScope);
 
-      // Restore primary sidebar state from preferences
-      if (
-        primaryOpen &&
-        primaryState !== EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.PRIMARY
-      ) {
-        enableComplementaryArea(
-          primaryScope,
-          EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.PRIMARY,
-        );
-      } else if (
-        !primaryOpen &&
-        primaryState === EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.PRIMARY
-      ) {
-        disableComplementaryArea(primaryScope);
-      }
+      setActivePrimary(newPrimaryState);
+      setActiveSecondary(newSecondaryState);
+    });
 
-      // Restore secondary sidebar state from preferences
-      if (
-        secondaryOpen &&
-        secondaryState !== EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.SECONDARY
-      ) {
-        enableComplementaryArea(
-          secondaryScope,
-          EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.SECONDARY,
-        );
-      } else if (
-        !secondaryOpen &&
-        secondaryState === EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.SECONDARY
-      ) {
-        disableComplementaryArea(secondaryScope);
-      }
-    } catch (error) {
-      // Handle preference restoration errors gracefully
-      if (process.env.NODE_ENV === "development") {
-        console.warn(
-          "useSidebarState: Error restoring sidebar preferences:",
-          error,
-        );
-      }
-    }
-  }, []); // Empty dependency array - run only on mount
+    return unsubscribe;
+  }, [primaryScope, secondaryScope]);
 
-  // Update local state when WordPress state changes
+  // Also update state when useSelect results change
   useEffect(() => {
     setActivePrimary(primaryState);
   }, [primaryState]);
@@ -144,21 +126,21 @@ export function useSidebarState(primaryScope, secondaryScope) {
    */
   const togglePrimary = useCallback(() => {
     try {
-      if (activePrimary === EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.PRIMARY) {
+      if (activePrimary === SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY) {
         disableComplementaryArea(primaryScope);
         setPreference(
-          "campaignbridge/template-editor",
-          EDITOR_CONSTANTS.SIDEBAR.PREFERENCE_KEYS.PRIMARY_OPEN,
+          SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
+          SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
           false,
         );
       } else {
         enableComplementaryArea(
           primaryScope,
-          EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.PRIMARY,
+          SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
         );
         setPreference(
-          "campaignbridge/template-editor",
-          EDITOR_CONSTANTS.SIDEBAR.PREFERENCE_KEYS.PRIMARY_OPEN,
+          SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
+          SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
           true,
         );
       }
@@ -180,21 +162,21 @@ export function useSidebarState(primaryScope, secondaryScope) {
    */
   const toggleSecondary = useCallback(() => {
     try {
-      if (activeSecondary === EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.SECONDARY) {
+      if (activeSecondary === SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY) {
         disableComplementaryArea(secondaryScope);
         setPreference(
-          "campaignbridge/template-editor",
-          EDITOR_CONSTANTS.SIDEBAR.PREFERENCE_KEYS.SECONDARY_OPEN,
+          SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
+          SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
           false,
         );
       } else {
         enableComplementaryArea(
           secondaryScope,
-          EDITOR_CONSTANTS.SIDEBAR.IDENTIFIERS.SECONDARY,
+          SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
         );
         setPreference(
-          "campaignbridge/template-editor",
-          EDITOR_CONSTANTS.SIDEBAR.PREFERENCE_KEYS.SECONDARY_OPEN,
+          SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
+          SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
           true,
         );
       }
@@ -215,11 +197,12 @@ export function useSidebarState(primaryScope, secondaryScope) {
   ]);
 
   return {
-    // State
+    // State - directly from WordPress
     activePrimary,
     activeSecondary,
-    isPrimaryOpen: activePrimary === "primary",
-    isSecondaryOpen: activeSecondary === "secondary",
+    isPrimaryOpen: activePrimary === SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
+    isSecondaryOpen:
+      activeSecondary === SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
 
     // Actions
     togglePrimary,

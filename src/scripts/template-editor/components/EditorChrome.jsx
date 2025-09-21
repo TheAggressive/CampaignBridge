@@ -9,12 +9,12 @@ import {
   InterfaceSkeleton,
 } from "@wordpress/interface";
 import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
-import { EDITOR_CONSTANTS } from "../constants/editor";
 import { useAutoSaveManager } from "../hooks/useAutoSaveManager";
 import { useEditorData } from "../hooks/useEditorData";
-import { useEditorLayout } from "../hooks/useEditorLayout";
+import { LAYOUT_CONSTANTS, useEditorLayout } from "../hooks/useEditorLayout";
 import { useEditorSettings } from "../hooks/useEditorSettings";
 import { useNotices } from "../hooks/useNotices";
+import { SIDEBAR_CONSTANTS } from "../hooks/useSidebarState";
 import { blockPatternCategories, blockPatterns } from "../utils/blockPatterns";
 import Content from "./Content";
 import { ErrorState, LoadingState } from "./EditorStates";
@@ -106,7 +106,7 @@ export default function EditorChrome({
   const isFullscreen = useSelect(
     (select) =>
       select("core/preferences").get(
-        EDITOR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE,
+        SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE,
       ),
     [],
   );
@@ -180,14 +180,14 @@ export default function EditorChrome({
             />
           }
         >
-          <div className={EDITOR_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
+          <div className={LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
             <SidebarContent activeTab={sidebarActiveTab} />
           </div>
         </ComplementaryArea>
 
         {/* Secondary sidebar (list view) */}
         <ComplementaryArea {...secondarySidebarProps}>
-          <div className={EDITOR_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
+          <div className={LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
             <SecondarySidebar />
           </div>
         </ComplementaryArea>
@@ -220,7 +220,7 @@ export default function EditorChrome({
         </BlockEditorProvider>
 
         <Popover.Slot />
-        <div className={EDITOR_CONSTANTS.CSS_CLASSES.EDITOR_SNACKBAR}>
+        <div className={LAYOUT_CONSTANTS.CSS_CLASSES.EDITOR_SNACKBAR}>
           <SnackbarList notices={snackbarNotices} onRemove={removeNotice} />
         </div>
       </SlotFillProvider>

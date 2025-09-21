@@ -1,5 +1,17 @@
 import { useMemo, useRef } from "@wordpress/element";
-import { EDITOR_CONSTANTS } from "../constants/editor";
+
+// AutoSave-specific constants (exported for reuse if needed)
+export const AUTOSAVE_CONSTANTS = {
+  DEFAULT_DEBOUNCE_MS: 2500,
+  MIN_DEBOUNCE_MS: 100,
+  MAX_DEBOUNCE_MS: 10000,
+  NOTIFICATION_THROTTLE: 8000,
+  SAVE_STATUS: {
+    SAVED: "saved",
+    SAVING: "saving",
+    ERROR: "error",
+  },
+};
 
 /**
  * useAutoSave
@@ -41,7 +53,7 @@ import { EDITOR_CONSTANTS } from "../constants/editor";
  */
 function validateDelayMs(delayMs) {
   const { MIN_DEBOUNCE_MS, MAX_DEBOUNCE_MS, DEFAULT_DEBOUNCE_MS } =
-    EDITOR_CONSTANTS.AUTOSAVE;
+    AUTOSAVE_CONSTANTS;
 
   // Handle undefined/null values explicitly
   if (delayMs == null) {

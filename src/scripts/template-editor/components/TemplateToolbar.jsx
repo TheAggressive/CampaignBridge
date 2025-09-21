@@ -2,6 +2,22 @@ import { Button, SelectControl } from "@wordpress/components";
 import { useMemo } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 
+// Component-specific constants
+const TOOLBAR_LABELS = {
+  TEMPLATES: __("Templates", "campaignbridge"),
+  SELECT_TEMPLATE: __("Please Select a Template", "campaignbridge"),
+  LOADING: __("Loading…", "campaignbridge"),
+  NEW_TEMPLATE: __("New Template", "campaignbridge"),
+};
+
+const TOOLBAR_CLASSES = {
+  CONTAINER: "cb-editor__toolbar",
+  SELECT: "cb-editor__templates-select",
+  // Export for potential reuse by other toolbar components
+};
+
+export { TOOLBAR_CLASSES };
+
 /**
  * Template Toolbar Component
  *
@@ -54,10 +70,10 @@ export default function TemplateToolbar({
     }));
   }, [list]);
   return (
-    <div className="cb-editor__toolbar">
+    <div className={TOOLBAR_CLASSES.CONTAINER}>
       <SelectControl
-        className="cb-editor__templates-select"
-        label={__("Templates", "campaignbridge")}
+        className={TOOLBAR_CLASSES.SELECT}
+        label={TOOLBAR_LABELS.TEMPLATES}
         hideLabelFromVision={true}
         value={currentId ? String(currentId) : ""}
         onChange={(val) => onSelect(Number(val) || null)}
@@ -69,17 +85,17 @@ export default function TemplateToolbar({
             ? []
             : [
                 {
-                  label: __("Please Select a Template", "campaignbridge"),
+                  label: TOOLBAR_LABELS.SELECT_TEMPLATE,
                   value: "",
                 },
               ]),
           ...(loading
-            ? [{ label: __("Loading…", "campaignbridge"), value: "" }]
+            ? [{ label: TOOLBAR_LABELS.LOADING, value: "" }]
             : options),
         ]}
       />
       <Button variant="primary" onClick={onNew}>
-        {__("New Template", "campaignbridge")}
+        {TOOLBAR_LABELS.NEW_TEMPLATE}
       </Button>
     </div>
   );

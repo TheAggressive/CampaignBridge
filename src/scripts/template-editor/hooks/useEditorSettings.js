@@ -1,6 +1,12 @@
 import apiFetch from "@wordpress/api-fetch";
 import { useEffect, useRef, useState } from "@wordpress/element";
-import { EDITOR_CONSTANTS } from "../constants/editor";
+
+// Editor settings-specific constants (exported for reuse if needed)
+export const EDITOR_SETTINGS_CONSTANTS = {
+  API_PATHS: {
+    EDITOR_SETTINGS: "/campaignbridge/v1/editor-settings",
+  },
+};
 
 /**
  * @typedef {Object} EditorSettings
@@ -64,7 +70,7 @@ export function useEditorSettings(postType = "post") {
         }
 
         const response = await apiFetch({
-          path: `${EDITOR_CONSTANTS.API_PATHS.EDITOR_SETTINGS}?post_type=${encodeURIComponent(postType)}`,
+          path: `${EDITOR_SETTINGS_CONSTANTS.API_PATHS.EDITOR_SETTINGS}?post_type=${encodeURIComponent(postType)}`,
         });
 
         // Validate response before caching

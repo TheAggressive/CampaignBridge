@@ -5,8 +5,24 @@ import {
   useRef,
   useState,
 } from "@wordpress/element";
-import { EDITOR_CONSTANTS } from "../constants/editor";
 import { listTemplates } from "../services/api";
+
+// Template-specific constants (exported for reuse if needed)
+export const TEMPLATES_CONSTANTS = {
+  CACHE_DURATION_MS: 5 * 60 * 1000, // 5 minutes
+  RETRY: {
+    MAX_RETRIES: 3,
+    DELAY_MS: 1000,
+  },
+  ERROR_MESSAGES: {
+    LOAD_FAILED: "Failed to load templates.",
+    INVALID_RESPONSE: "Invalid response format: expected array",
+    API_NOT_AVAILABLE: "Templates API not available.",
+  },
+};
+
+// Template-specific error messages
+const TEMPLATE_ERROR_MESSAGES = TEMPLATES_CONSTANTS.ERROR_MESSAGES;
 
 /**
  * @typedef {Object} TemplateItem
@@ -89,8 +105,7 @@ export function useTemplates(options = {}) {
     return (
       disableCache ||
       !cacheRef.current.data ||
-      now - cacheRef.current.timestamp >
-        EDITOR_CONSTANTS.TEMPLATES.CACHE_DURATION_MS
+      now - cacheRef.current.timestamp > TEMPLATES_CONSTANTS.CACHE_DURATION_MS
     );
   }, [disableCache]);
 
@@ -113,9 +128,7 @@ export function useTemplates(options = {}) {
 
         // Validate response
         if (!Array.isArray(posts)) {
-          throw new Error(
-            EDITOR_CONSTANTS.TEMPLATES.ERROR_MESSAGES.INVALID_RESPONSE,
-          );
+          throw new Error(TEMPLATE_ERROR_MESSAGES.INVALID_RESPONSE);
         }
 
         // Update cache
@@ -128,25 +141,22 @@ export function useTemplates(options = {}) {
         if (signal?.aborted) return;
 
         // Determine error message based on error type
-        let msg = EDITOR_CONSTANTS.TEMPLATES.ERROR_MESSAGES.LOAD_FAILED;
+        let msg = TEMPLATE_ERROR_MESSAGES.LOAD_FAILED;
         if (e?.message) msg = e.message;
         if (e?.code === "rest_no_route") {
-          msg = EDITOR_CONSTANTS.TEMPLATES.ERROR_MESSAGES.API_NOT_AVAILABLE;
+          msg = TEMPLATE_ERROR_MESSAGES.API_NOT_AVAILABLE;
         }
 
         // Retry logic for retryable errors
         const isRetryable =
           e?.code !== "rest_forbidden" && e?.code !== "rest_invalid_param";
 
-        if (
-          isRetryable &&
-          retryCount < EDITOR_CONSTANTS.TEMPLATES.RETRY.MAX_RETRIES
-        ) {
+        if (isRetryable && retryCount < TEMPLATES_CONSTANTS.RETRY.MAX_RETRIES) {
           const delayMs =
-            EDITOR_CONSTANTS.TEMPLATES.RETRY.DELAY_MS * Math.pow(2, retryCount);
+            TEMPLATES_CONSTANTS.RETRY.DELAY_MS * Math.pow(2, retryCount);
           if (process.env.NODE_ENV === "development") {
             console.warn(
-              `useTemplates: Retrying templates fetch (attempt ${retryCount + 1}/${EDITOR_CONSTANTS.TEMPLATES.RETRY.MAX_RETRIES}):`,
+              `useTemplates: Retrying templates fetch (attempt ${retryCount + 1}/${TEMPLATES_CONSTANTS.RETRY.MAX_RETRIES}):`,
               e,
             );
           }

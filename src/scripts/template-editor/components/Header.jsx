@@ -7,6 +7,7 @@ import {
   listView,
 } from "@wordpress/icons";
 // Use core/interface store by key to avoid relying on direct store import
+import { SIDEBAR_CONSTANTS } from "../hooks/useSidebarState";
 import TemplateToolbar from "./TemplateToolbar";
 
 /* Keyboard shortcut for fullscreen */
@@ -14,8 +15,8 @@ import { useEffect } from "@wordpress/element";
 import { useSidebarState } from "../hooks/useSidebarState";
 
 /* Shared scopes for this screen - independent sidebars */
-const SCOPE_PRIMARY = "campaignbridge/template-editor/primary";
-const SCOPE_SECONDARY = "campaignbridge/template-editor/secondary";
+const SCOPE_PRIMARY = SIDEBAR_CONSTANTS.SCOPES.PRIMARY;
+const SCOPE_SECONDARY = SIDEBAR_CONSTANTS.SCOPES.SECONDARY;
 
 /**
  * Header Component
@@ -48,12 +49,14 @@ const SCOPE_SECONDARY = "campaignbridge/template-editor/secondary";
 export default function Header({ list, currentId, loading, onSelect, onNew }) {
   const isFullscreen = useSelect(
     (select) =>
-      select("core/preferences").get("core/edit-post", "fullscreenMode"),
+      select("core/preferences").get(
+        SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE,
+      ),
     [],
   );
 
   const toggleFullscreen = () => {
-    toggle("core/edit-post", "fullscreenMode");
+    toggle(SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE);
   };
 
   /**

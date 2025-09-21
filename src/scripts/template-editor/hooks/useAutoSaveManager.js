@@ -1,8 +1,7 @@
 import { useCallback, useRef, useState } from "@wordpress/element";
-import { EDITOR_CONSTANTS } from "../constants/editor";
 import { savePostContent } from "../services/api";
 import { serializeSafe } from "../utils/blocks";
-import { useAutoSave } from "./useAutoSave";
+import { AUTOSAVE_CONSTANTS, useAutoSave } from "./useAutoSave";
 
 /**
  * Custom hook for managing auto-save functionality with status tracking
@@ -15,14 +14,14 @@ import { useAutoSave } from "./useAutoSave";
  */
 export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
   const [saveStatus, setSaveStatus] = useState(
-    EDITOR_CONSTANTS.SAVE_STATUS.SAVED,
+    AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED,
   );
   const lastNoticeAtRef = useRef(0);
 
   const performSave = useCallback(
     async (blocksToSave, { signal } = {}) => {
       try {
-        setSaveStatus(EDITOR_CONSTANTS.SAVE_STATUS.SAVING);
+        setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVING);
 
         const result = await savePostContent(
           postId,
@@ -30,14 +29,14 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
           signal,
         );
 
-        setSaveStatus(EDITOR_CONSTANTS.SAVE_STATUS.SAVED);
+        setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED);
 
         // Throttled success notification
         try {
           const now = Date.now();
           if (
             now - lastNoticeAtRef.current >
-            EDITOR_CONSTANTS.NOTIFICATION_THROTTLE
+            AUTOSAVE_CONSTANTS.NOTIFICATION_THROTTLE
           ) {
             onSuccess && onSuccess("Template saved");
             lastNoticeAtRef.current = now;
@@ -50,7 +49,7 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
         return result;
       } catch (error) {
         console.error("Save failed:", error);
-        setSaveStatus(EDITOR_CONSTANTS.SAVE_STATUS.ERROR);
+        setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.ERROR);
 
         try {
           onError && onError("Failed to save changes");
@@ -64,10 +63,7 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
     [postId, onBlocksChange, onSuccess, onError],
   );
 
-  const save = useAutoSave(
-    performSave,
-    EDITOR_CONSTANTS.AUTOSAVE.DEFAULT_DEBOUNCE_MS,
-  );
+  const save = useAutoSave(performSave, AUTOSAVE_CONSTANTS.DEFAULT_DEBOUNCE_MS);
 
   return {
     save,

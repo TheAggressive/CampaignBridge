@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo } from "@wordpress/element";
-import { EDITOR_CONSTANTS } from "../constants/editor";
 import { getParam, setParamAndReload } from "../utils/url";
+
+// Template routing-specific constants (exported for reuse if needed)
+export const ROUTING_CONSTANTS = {
+  URL_PARAMS: {
+    TEMPLATE_ID: "post_id",
+  },
+};
 
 /**
  * @typedef {Object} TemplateRoutingState
@@ -48,14 +54,14 @@ export function useTemplateRouting() {
   // Parse current template ID from URL with enhanced error handling
   const currentId = useMemo(() => {
     try {
-      const raw = getParam(EDITOR_CONSTANTS.URL_PARAMS.TEMPLATE_ID);
+      const raw = getParam(ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID);
       if (!raw) return null;
 
       const parsed = Number(raw);
       if (isNaN(parsed) || parsed <= 0) {
         if (process.env.NODE_ENV === "development") {
           console.warn(
-            `useTemplateRouting: Invalid ${EDITOR_CONSTANTS.URL_PARAMS.TEMPLATE_ID} parameter: ${raw}`,
+            `useTemplateRouting: Invalid ${ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID} parameter: ${raw}`,
           );
         }
         return null;
@@ -96,7 +102,7 @@ export function useTemplateRouting() {
         return;
       }
 
-      setParamAndReload(EDITOR_CONSTANTS.URL_PARAMS.TEMPLATE_ID, numericId);
+      setParamAndReload(ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID, numericId);
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
         console.error("useTemplateRouting: Error selecting template:", error);
