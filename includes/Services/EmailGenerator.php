@@ -2,9 +2,8 @@
 /**
  * Email Generation Service for CampaignBridge.
  *
- * This class converts WordPress blocks to email-safe HTML while maintaining
- * design fidelity. It provides comprehensive email generation capabilities
- * for creating professional email campaigns from block-based content.
+ * Converts WordPress blocks to email-safe HTML with CSS inlining
+ * and responsive design for professional email campaigns.
  *
  * @package CampaignBridge
  * @since 0.1.0
@@ -22,6 +21,25 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Email Generator Service
  */
 class EmailGenerator {
+	/**
+	 * Default email generation options
+	 */
+	private const DEFAULT_OPTIONS = array(
+		'email_width'      => 600,
+		'max_width'        => 600,
+		'background_color' => '#ffffff',
+		'text_color'       => '#333333',
+		'font_family'      => 'Arial, sans-serif',
+		'css_inline'       => true,
+		'responsive'       => true,
+		'email_client'     => 'universal',
+	);
+
+	/**
+	 * Block namespace prefixes
+	 */
+	private const CAMPAIGNBRIDGE_BLOCK_PREFIX = 'campaignbridge/';
+	private const CORE_BLOCK_PREFIX           = 'core/';
 
 	/**
 	 * Convert blocks to email-safe HTML.
@@ -31,18 +49,7 @@ class EmailGenerator {
 	 * @return string Email-safe HTML.
 	 */
 	public static function generate_email_html( array $blocks, array $options = array() ): string {
-		$defaults = array(
-			'email_width'      => 600,
-			'max_width'        => 600,
-			'background_color' => '#ffffff',
-			'text_color'       => '#333333',
-			'font_family'      => 'Arial, sans-serif',
-			'css_inline'       => true,
-			'responsive'       => true,
-			'email_client'     => 'universal',
-		);
-
-		$options = wp_parse_args( $options, $defaults );
+		$options = wp_parse_args( $options, self::DEFAULT_OPTIONS );
 
 		// Start building the email HTML.
 		$html  = self::build_email_header( $options );
@@ -156,39 +163,67 @@ class EmailGenerator {
 		$inner_blocks  = $block['innerBlocks'] ?? array();
 
 		// Handle CampaignBridge blocks.
-		if ( strpos( $block_name, 'campaignbridge/' ) === 0 ) {
-			return self::convert_campaignbridge_block( $block_name, $attributes, $inner_blocks, $options );
+		if ( strpos( $block_name, self::CAMPAIGNBRIDGE_BLOCK_PREFIX ) === 0 ) {
+			return self::convert_campaignbridge_block( $block_name, $attributes, $inner_content, $inner_blocks, $options );
 		}
 
 		// Handle core WordPress blocks.
-		switch ( $block_name ) {
-			case 'core/paragraph':
+		if ( strpos( $block_name, self::CORE_BLOCK_PREFIX ) === 0 ) {
+			$core_block_type = str_replace( self::CORE_BLOCK_PREFIX, '', $block_name );
+			return self::convert_core_block( $core_block_type, $attributes, $inner_content, $inner_blocks, $options );
+		}
+
+		// Fallback for unknown blocks.
+		return self::convert_unknown_block( $block, $options );
+	}
+
+	/**
+	 * Convert core WordPress blocks to HTML.
+	 *
+	 * @param string $block_type Block type (without namespace).
+	 * @param array  $attributes Block attributes.
+	 * @param array  $inner_content Inner content.
+	 * @param array  $inner_blocks Inner blocks.
+	 * @param array  $options Generation options.
+	 * @return string Converted HTML.
+	 */
+	private static function convert_core_block( string $block_type, array $attributes, array $inner_content, array $inner_blocks, array $options ): string {
+		switch ( $block_type ) {
+			case 'paragraph':
 				return self::convert_paragraph_block( $attributes, $inner_content );
 
-			case 'core/heading':
+			case 'heading':
 				return self::convert_heading_block( $attributes, $inner_content );
 
-			case 'core/image':
+			case 'image':
 				return self::convert_image_block( $attributes );
 
-			case 'core/buttons':
+			case 'buttons':
 				return self::convert_buttons_block( $attributes, $inner_blocks );
 
-			case 'core/columns':
+			case 'columns':
 				return self::convert_columns_block( $attributes, $inner_blocks, $options );
 
-			case 'core/group':
+			case 'group':
 				return self::convert_group_block( $attributes, $inner_blocks );
 
-			case 'core/spacer':
+			case 'spacer':
 				return self::convert_spacer_block( $attributes );
 
-			case 'core/separator':
+			case 'separator':
 				return self::convert_separator_block( $attributes );
 
 			default:
-				// Fallback for unknown blocks.
-				return self::convert_unknown_block( $block, $options );
+				// Fallback for unknown core blocks.
+				return self::convert_unknown_block(
+					array(
+						'blockName'    => 'core/' . $block_type,
+						'attrs'        => $attributes,
+						'innerContent' => $inner_content,
+						'innerBlocks'  => $inner_blocks,
+					),
+					$options
+				);
 		}
 	}
 
@@ -197,29 +232,27 @@ class EmailGenerator {
 	 *
 	 * @param string $block_name Block name.
 	 * @param array  $attributes Block attributes.
+	 * @param array  $inner_content Inner content.
 	 * @param array  $inner_blocks Inner blocks.
 	 * @param array  $options Generation options.
 	 * @return string Converted HTML.
 	 */
-	private static function convert_campaignbridge_block( string $block_name, array $attributes, array $inner_blocks, array $options ): string {
+	private static function convert_campaignbridge_block( string $block_name, array $attributes, array $inner_content, array $inner_blocks, array $options ): string {
 		switch ( $block_name ) {
-			case 'campaignbridge/email-template':
-				return self::convert_email_template_block( $attributes, $inner_blocks, $options );
+			case 'campaignbridge/post-card':
+				return self::convert_post_card_block( $attributes );
 
-			case 'campaignbridge/email-post-slot':
-				return self::convert_post_slot_block( $attributes );
-
-			case 'campaignbridge/email-post-title':
+			case 'campaignbridge/post-title':
 				return self::convert_post_title_block( $attributes );
 
-			case 'campaignbridge/email-post-excerpt':
+			case 'campaignbridge/post-excerpt':
 				return self::convert_post_excerpt_block( $attributes, $options );
 
-			case 'campaignbridge/email-post-image':
+			case 'campaignbridge/post-image':
 				return self::convert_post_image_block( $attributes, $options );
 
-			case 'campaignbridge/email-post-button':
-				return self::convert_post_button_block( $attributes, $options );
+			case 'campaignbridge/post-cta':
+				return self::convert_post_button_block( $attributes );
 
 			default:
 				return '';
@@ -468,18 +501,14 @@ class EmailGenerator {
 	 * @param array $options Generation options.
 	 * @return string Converted HTML.
 	 */
-	private static function convert_email_template_block( array $attributes, array $inner_blocks, array $options ): string {
-		// Email template block is just a container, so we process its inner blocks.
-		return self::convert_blocks_to_html( $inner_blocks, $options );
-	}
 
 	/**
-	 * Convert post slot block to HTML.
+	 * Convert post card block to HTML.
 	 *
 	 * @param array $attributes Block attributes.
 	 * @return string Converted HTML.
 	 */
-	private static function convert_post_slot_block( array $attributes ): string {
+	private static function convert_post_card_block( array $attributes ): string {
 		$post_id      = $attributes['postId'] ?? 0;
 		$display_mode = $attributes['displayMode'] ?? 'title_excerpt';
 

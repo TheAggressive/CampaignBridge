@@ -26,6 +26,7 @@ use CampaignBridge\Admin\Pages\SettingsPage;
 use CampaignBridge\Admin\Pages\StatusPage;
 use CampaignBridge\Admin\Pages\TemplateEditorPage;
 use CampaignBridge\Core\Service_Container;
+use CampaignBridge\Core\SettingsHandler;
 use CampaignBridge\PostTypes\EmailTemplate;
 use CampaignBridge\REST\Routes as RestRoutes;
 use CampaignBridge\REST\MailchimpRoutes;
@@ -43,11 +44,51 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Plugin {
 	/**
+	 * Plugin option name for settings persistence.
+	 */
+	private const OPTION_NAME = 'campaignbridge_settings';
+
+	/**
+	 * Default email service provider.
+	 */
+	private const DEFAULT_PROVIDER = 'mailchimp';
+
+	/**
+	 * Required capability for admin access.
+	 */
+	private const ADMIN_CAPABILITY = 'manage_options';
+
+	/**
+	 * Menu position in WordPress admin.
+	 */
+	private const MENU_POSITION = 30;
+
+	/**
+	 * Admin menu icon.
+	 */
+	private const MENU_ICON = 'dashicons-email-alt';
+
+	/**
+	 * API key minimum length.
+	 */
+	private const API_KEY_MIN_LENGTH = 10;
+
+	/**
+	 * API key maximum length.
+	 */
+	private const API_KEY_MAX_LENGTH = 100;
+
+	/**
+	 * Cache prefix for Mailchimp data.
+	 */
+	private const CACHE_PREFIX = 'cb_mc_';
+
+	/**
 	 * Option key used to persist plugin settings.
 	 *
 	 * @var string
 	 */
-	private string $option_name = 'campaignbridge_settings';
+	private string $option_name = self::OPTION_NAME;
 
 	/**
 	 * Map of provider slug => provider instance.
@@ -64,6 +105,73 @@ class Plugin {
 	private Service_Container $service_container;
 
 	/**
+	 * Settings handler instance.
+	 *
+	 * @var SettingsHandler
+	 */
+	private SettingsHandler $settings_handler;
+
+	/**
+	 * Initialize service container and providers.
+	 *
+	 * Sets up the core service container and initializes email service providers.
+	 * If initialization fails, the plugin will display an admin notice and stop.
+	 *
+	 * @since 0.1.0
+	 * @return void
+	 */
+	private function initialize_services(): void {
+		try {
+			// Initialize service container.
+			$this->service_container = new Service_Container();
+			$this->service_container->initialize();
+
+			// Initialize settings handler.
+			$this->settings_handler = new SettingsHandler();
+
+			// Get providers from service container.
+			$this->providers = array(
+				'mailchimp' => $this->service_container->get( 'mailchimp_provider' ),
+				'html'      => $this->service_container->get( 'html_provider' ),
+			);
+		} catch ( \Exception $e ) {
+			$this->handle_initialization_error( $e );
+		}
+	}
+
+	/**
+	 * Handle critical plugin initialization errors.
+	 *
+	 * Logs the error and displays an admin notice when service container
+	 * or provider initialization fails.
+	 *
+	 * @since 0.1.0
+	 * @param \Exception $e The exception that occurred during initialization.
+	 * @return void
+	 */
+	private function handle_initialization_error( \Exception $e ): void {
+		// Log the error and show admin notice.
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'CampaignBridge Plugin Error: ' . $e->getMessage() );
+		}
+
+		// Add admin notice about the error.
+		add_action(
+			'admin_notices',
+			function () use ( $e ) {
+				echo '<div class="notice notice-error"><p>';
+				echo '<strong>CampaignBridge Error:</strong> ' . esc_html( $e->getMessage() );
+				echo '<br><small>Check the error logs for more details.</small>';
+				echo '</p></div>';
+			}
+		);
+
+		// Don't continue with plugin initialization if there's a critical error.
+		exit;
+	}
+
+	/**
 	 * Construct and wire plugin hooks.
 	 *
 	 * This constructor initializes the CampaignBridge plugin by setting up the service
@@ -75,37 +183,8 @@ class Plugin {
 	 * @throws \Exception When critical services fail to initialize.
 	 */
 	public function __construct() {
-		try {
-			// Initialize service container.
-			$this->service_container = new Service_Container();
-			$this->service_container->initialize();
-
-			// Get providers from service container.
-			$this->providers = array(
-				'mailchimp' => $this->service_container->get( 'mailchimp_provider' ),
-				'html'      => $this->service_container->get( 'html_provider' ),
-			);
-		} catch ( \Exception $e ) {
-			// Log the error and show admin notice.
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( 'CampaignBridge Plugin Error: ' . $e->getMessage() );
-			}
-
-			// Add admin notice about the error.
-			add_action(
-				'admin_notices',
-				function () use ( $e ) {
-					echo '<div class="notice notice-error"><p>';
-					echo '<strong>CampaignBridge Error:</strong> ' . esc_html( $e->getMessage() );
-					echo '<br><small>Check the error logs for more details.</small>';
-					echo '</p></div>';
-				}
-			);
-
-			// Don't continue with plugin initialization if there's a critical error.
-			return;
-		}
+		// Initialize service container and providers.
+		$this->initialize_services();
 
 		// Initialize core systems.
 		$this->init_core_systems();
@@ -133,19 +212,19 @@ class Plugin {
 	 */
 	public function add_admin_menu(): void {
 		// Initialize shared state for all admin pages.
-		PostTypesPage::init_shared_state( $this->option_name, $this->providers );
-		SettingsPage::init_shared_state( $this->option_name, $this->providers );
-		StatusPage::init_shared_state( $this->option_name, $this->providers );
+		PostTypesPage::init_shared_state( self::OPTION_NAME, $this->providers );
+		SettingsPage::init_shared_state( self::OPTION_NAME, $this->providers );
+		StatusPage::init_shared_state( self::OPTION_NAME, $this->providers );
 
 		// Add main menu page.
 		add_menu_page(
 			'CampaignBridge',
 			'CampaignBridge',
-			'manage_options',
+			self::ADMIN_CAPABILITY,
 			'campaignbridge',
 			array( PostTypesPage::class, 'render' ),
-			'dashicons-email-alt',
-			30
+			self::MENU_ICON,
+			self::MENU_POSITION
 		);
 
 		// Add submenu pages.
@@ -153,7 +232,7 @@ class Plugin {
 			'campaignbridge',
 			'Post Types',
 			'Post Types',
-			'manage_options',
+			self::ADMIN_CAPABILITY,
 			PostTypesPage::get_page_slug(),
 			array( PostTypesPage::class, 'render' )
 		);
@@ -162,7 +241,7 @@ class Plugin {
 			'campaignbridge',
 			'Settings',
 			'Settings',
-			'manage_options',
+			self::ADMIN_CAPABILITY,
 			SettingsPage::get_page_slug(),
 			array( SettingsPage::class, 'render' )
 		);
@@ -172,7 +251,7 @@ class Plugin {
 			'campaignbridge',
 			'Status',
 			'Status',
-			'manage_options',
+			self::ADMIN_CAPABILITY,
 			StatusPage::get_page_slug(),
 			array( StatusPage::class, 'render' )
 		);
@@ -181,7 +260,7 @@ class Plugin {
 			'campaignbridge',
 			'Template Editor',
 			'Template Editor',
-			'manage_options',
+			self::ADMIN_CAPABILITY,
 			TemplateEditorPage::get_page_slug(),
 			array( TemplateEditorPage::class, 'render' )
 		);
@@ -201,83 +280,15 @@ class Plugin {
 	public function register_settings(): void {
 		register_setting(
 			'campaignbridge',
-			$this->option_name,
+			self::OPTION_NAME,
 			array(
 				'type'              => 'array',
-				'sanitize_callback' => array( $this, 'sanitize_settings' ),
+				'sanitize_callback' => array( $this->settings_handler, 'sanitize' ),
 				'default'           => array(),
 			)
 		);
 	}
 
-	/**
-	 * Sanitize and validate submitted plugin settings before persistence.
-	 *
-	 * This method processes all submitted form data to ensure data integrity,
-	 * security, and consistency. It applies WordPress sanitization functions,
-	 * validates data types, and provides intelligent fallbacks for missing
-	 * or invalid data.
-	 *
-	 * @since 0.1.0
-	 * @param array $input Raw submitted form values from the settings form.
-	 * @return array Cleaned, validated, and sanitized settings array ready for storage.
-	 */
-	public function sanitize_settings( array $input ): array {
-		// Verify nonce for CSRF protection.
-		check_admin_referer( 'campaignbridge-options' );
-
-		$clean             = array();
-		$previous          = get_option( $this->option_name, array() );
-		$clean['provider'] = $input['provider'] ?? 'mailchimp';
-		$clean['provider'] = sanitize_key( $clean['provider'] );
-
-		$posted_api_key = $input['api_key'] ?? '';
-
-		// Handle API key with additional security measures.
-		if ( '' === $posted_api_key && isset( $previous['api_key'] ) ) {
-			$clean['api_key'] = $previous['api_key'];
-		} else {
-			$sanitized_key = sanitize_text_field( $posted_api_key );
-
-			// Validate API key format and length.
-			if ( ! empty( $sanitized_key ) ) {
-				// Basic length check to prevent abuse.
-				if ( strlen( $sanitized_key ) < 10 || strlen( $sanitized_key ) > 100 ) {
-					add_settings_error(
-						'campaignbridge_messages',
-						'campaignbridge_api_key_length',
-						__( 'API key must be between 10 and 100 characters.', 'campaignbridge' ),
-						'error'
-					);
-					$clean['api_key'] = isset( $previous['api_key'] ) ? $previous['api_key'] : '';
-				} else {
-					$clean['api_key'] = $sanitized_key;
-				}
-			} else {
-				$clean['api_key'] = '';
-			}
-		}
-
-		$clean['audience_id']        = sanitize_text_field( $input['audience_id'] ?? '' );
-		$clean['exclude_post_types'] = array();
-
-		if ( isset( $input['included_post_types'] ) && is_array( $input['included_post_types'] ) ) {
-			$included = array();
-			foreach ( $input['included_post_types'] as $pt ) {
-				$pt = sanitize_key( $pt );
-				if ( post_type_exists( $pt ) ) {
-					$included[] = $pt;
-				}
-			}
-			$public_types = get_post_types( array( 'public' => true ), 'names' );
-			foreach ( $public_types as $pt ) {
-				if ( ! in_array( $pt, $included, true ) ) {
-					$clean['exclude_post_types'][] = $pt;
-				}
-			}
-		}
-		return $clean;
-	}
 
 	/**
 	 * Initialize core plugin systems.
@@ -321,13 +332,13 @@ class Plugin {
 	 * @return void
 	 */
 	private function init_rest_api(): void {
-		RestRoutes::init( $this->option_name, $this->providers );
+		RestRoutes::init( self::OPTION_NAME, $this->providers );
 		add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
 
 		// Only register Mailchimp routes if Mailchimp is the selected provider.
-		$settings = get_option( $this->option_name );
-		if ( isset( $settings['provider'] ) && 'mailchimp' === $settings['provider'] ) {
-			MailchimpRoutes::init( $this->option_name, $this->providers );
+		$settings = get_option( self::OPTION_NAME );
+		if ( isset( $settings['provider'] ) && self::DEFAULT_PROVIDER === $settings['provider'] ) {
+			MailchimpRoutes::init( self::OPTION_NAME, $this->providers );
 			add_action( 'rest_api_init', array( MailchimpRoutes::class, 'register' ) );
 		}
 	}
@@ -341,13 +352,13 @@ class Plugin {
 	private function setup_cache_management(): void {
 		// Bust Mailchimp caches if API key changes.
 		add_action(
-			'update_option_' . $this->option_name,
+			'update_option_' . self::OPTION_NAME,
 			function ( $old, $new ) {
 				$old_key = isset( $old['api_key'] ) ? (string) $old['api_key'] : '';
 				$new_key = isset( $new['api_key'] ) ? (string) $new['api_key'] : '';
 				if ( $old_key !== $new_key && ! empty( $old_key ) ) {
-					delete_transient( 'cb_mc_audiences_' . md5( $old_key ) );
-					delete_transient( 'cb_mc_templates_' . md5( $old_key ) );
+					delete_transient( self::CACHE_PREFIX . 'audiences_' . md5( $old_key ) );
+					delete_transient( self::CACHE_PREFIX . 'templates_' . md5( $old_key ) );
 				}
 			},
 			10,
