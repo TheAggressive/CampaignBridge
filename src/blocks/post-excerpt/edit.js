@@ -333,6 +333,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
               <p style={{ margin: "12px 0 0" }}>
                 <a
                   href={linkUrl}
+                  onClick={(e) => e.preventDefault()}
                   style={{
                     display: "inline-block",
                     background: buttonBg || "#111",
@@ -343,6 +344,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                     }px`,
                     borderRadius: buttonRadius || 0,
                   }}
+                  title="Link disabled in editor"
                 >
                   {moreLabel || "Read more"}
                 </a>
@@ -351,10 +353,12 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
               <>
                 <a
                   href={linkUrl}
+                  onClick={(e) => e.preventDefault()}
                   style={{
                     color: linkColor || "#2271b1",
                     textDecoration: linkUnderline ? "underline" : "none",
                   }}
+                  title="Link disabled in editor"
                 >
                   {moreLabel || "Read more"}
                 </a>
