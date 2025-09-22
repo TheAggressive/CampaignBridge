@@ -28,7 +28,7 @@ return function ( $attributes, $content, $block ) {
 	$decoded     = html_entity_decode( $raw, ENT_QUOTES, 'UTF-8' );
 	$plain       = trim( preg_replace( '/<[^>]*>/', ' ', $decoded ) );
 
-	// Split into words and limit by word count
+	// Split into words and limit by word count.
 	$words         = preg_split( '/\s+/', $plain, -1, PREG_SPLIT_NO_EMPTY );
 	$limited_words = array_slice( $words, 0, max( 0, $max_words ) );
 	$excerpt       = esc_html( implode( ' ', $limited_words ) );
