@@ -6,6 +6,7 @@ import {
 import { PanelBody, SelectControl, ToggleControl } from "@wordpress/components";
 import { useEffect, useState } from "@wordpress/element";
 
+// Constants
 const ALLOWED_BLOCKS = [
   "campaignbridge/post-image",
   "campaignbridge/post-title",
@@ -19,6 +20,18 @@ const ALLOWED_BLOCKS = [
   "core/spacer",
   "core/separator",
 ];
+
+const LINK_TO_OPTIONS = [
+  { label: "Post", value: "post" },
+  { label: "Post Type", value: "postType" },
+];
+
+const API_ENDPOINTS = {
+  POST_TYPES: "campaignbridge/v1/post-types",
+  POSTS: "campaignbridge/v1/posts",
+};
+
+const DEFAULT_SELECT_LABEL = "— Select —";
 
 export default function Edit({ attributes, setAttributes, clientId }) {
   const {
@@ -47,7 +60,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     (async () => {
       try {
         const root = window.wpApiSettings?.root || "/wp-json/";
-        const url = `${root}campaignbridge/v1/post-types`;
+        const url = `${root}${API_ENDPOINTS.POST_TYPES}`;
         const res = await fetch(url, {
           headers: window.wpApiSettings?.nonce
             ? { "X-WP-Nonce": window.wpApiSettings.nonce }
@@ -77,7 +90,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     const fetchPosts = async () => {
       try {
         const root = window.wpApiSettings?.root || "/wp-json/";
-        const url = `${root}campaignbridge/v1/posts?post_type=${encodeURIComponent(
+        const url = `${root}${API_ENDPOINTS.POSTS}?post_type=${encodeURIComponent(
           postType || "post",
         )}`;
         const res = await fetch(url, {
@@ -114,7 +127,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             label="Post"
             value={String(postId || "")}
             options={[
-              { label: "— Select —", value: "" },
+              { label: DEFAULT_SELECT_LABEL, value: "" },
               ...postItems.map((it) => ({
                 label: it.label,
                 value: String(it.id),
@@ -134,10 +147,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
               __nextHasNoMarginBottom
               label="Link to"
               value={slotLinkTo}
-              options={[
-                { label: "Post", value: "post" },
-                { label: "Post Type", value: "postType" },
-              ]}
+              options={LINK_TO_OPTIONS}
               onChange={(v) => setAttributes({ slotLinkTo: v })}
             />
           ) : null}
