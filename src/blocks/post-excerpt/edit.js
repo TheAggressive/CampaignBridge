@@ -75,7 +75,6 @@ import { default as LinkColorPicker } from "./components/LinkColorPicker";
 
 export default function Edit({ attributes, setAttributes, context = {} }) {
   const postId = Number(context["campaignbridge:postId"]) || 0;
-  const show = context["campaignbridge:showExcerpt"] !== false;
   const postType = context["campaignbridge:postType"] || "post";
   const {
     maxWords,
@@ -432,7 +431,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
           ) : null}
         </PanelBody>
       </InspectorControls>
-      {show && excerpt ? (
+      {excerpt ? (
         <>
           {excerpt}
           {enableSeparator && customSeparator

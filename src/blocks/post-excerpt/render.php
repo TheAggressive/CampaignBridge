@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 return function ( $attributes, $content, $block ) {
 	$ctx     = isset( $block->context ) && is_array( $block->context ) ? $block->context : array();
 	$post_id = isset( $ctx['campaignbridge:postId'] ) ? absint( $ctx['campaignbridge:postId'] ) : 0;
-	// showExcerpt context removed; always render when postId is present.
+	// Always render when postId is present (showExcerpt context not implemented).
 	if ( $post_id <= 0 ) {
 		return '';
 	}
