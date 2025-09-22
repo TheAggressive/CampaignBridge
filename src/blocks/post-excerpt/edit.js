@@ -9,25 +9,89 @@ import {
 import { useSelect } from "@wordpress/data";
 import { decodeEntities } from "@wordpress/html-entities";
 
+// Constants
+const DEFAULT_ATTRIBUTES = {
+  maxWords: 50,
+  showMore: false,
+  moreStyle: "link",
+  moreLabel: "Read more",
+  linkTo: "post",
+  morePrefix: "",
+  addSpaceBeforeLink: true,
+  enableSeparator: false,
+  separatorType: "custom",
+  customSeparator: "",
+  addSpaceBeforeSeparator: false,
+  linkColor: "#2271b1",
+  linkUnderline: true,
+  buttonBg: "#111111",
+  buttonColor: "#ffffff",
+  buttonRadius: 4,
+  buttonPaddingX: 16,
+  buttonPaddingY: 10,
+};
+
+const SEPARATOR_OPTIONS = [
+  { label: "Custom", value: "custom" },
+  { label: "Em dash (—)", value: "em-dash" },
+  { label: "En dash (–)", value: "en-dash" },
+  { label: "Ellipsis (...)", value: "ellipsis" },
+  { label: "Pipe (|)", value: "pipe" },
+  { label: "Colon (:)", value: "colon" },
+  { label: "Semicolon (;)", value: "semicolon" },
+  { label: "Bullet (•)", value: "bullet" },
+];
+
+const SEPARATOR_MAPPING = {
+  "em-dash": "—",
+  "en-dash": "–",
+  ellipsis: "...",
+  pipe: "|",
+  colon: ":",
+  semicolon: ";",
+  bullet: "•",
+};
+
+const LINK_TO_OPTIONS = [
+  { label: "Post", value: "post" },
+  { label: "Post Type", value: "postType" },
+];
+
+const MORE_STYLE_OPTIONS = [
+  { label: "Link", value: "link" },
+  { label: "Button", value: "button" },
+];
+
+// Components
+import { default as ButtonColorPickers } from "./components/ButtonColorPickers";
+import { default as LinkColorPicker } from "./components/LinkColorPicker";
+// Constants are defined above, no need to import
+
 export default function Edit({ attributes, setAttributes, context = {} }) {
   const postId = Number(context["campaignbridge:postId"]) || 0;
   const show = context["campaignbridge:showExcerpt"] !== false;
   const postType = context["campaignbridge:postType"] || "post";
   const {
-    maxWords = 50,
-    showMore = false,
-    moreStyle = "link",
-    moreLabel = "Read more",
-    linkTo = "post",
-    morePrefix = "",
-    linkColor = "#2271b1",
-    linkUnderline = true,
-    buttonBg = "#111111",
-    buttonColor = "#ffffff",
-    buttonRadius = 4,
-    buttonPaddingX = 16,
-    buttonPaddingY = 10,
-  } = attributes || {};
+    maxWords,
+    showMore,
+    moreStyle,
+    moreLabel,
+    linkTo,
+    morePrefix,
+    addSpaceBeforeLink,
+    enableSeparator,
+    separatorType,
+    customSeparator,
+    addSpaceBeforeSeparator,
+    linkColor,
+    linkUnderline,
+    buttonBg,
+    buttonColor,
+    buttonRadius,
+    buttonPaddingX,
+    buttonPaddingY,
+  } = { ...DEFAULT_ATTRIBUTES, ...attributes };
+
   const post = useSelect(
     (select) =>
       postId
@@ -44,7 +108,12 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
   // Split text into words and limit by word count
   const words = text.split(/\s+/).filter((word) => word.length > 0);
   const limitedWords = words.slice(0, maxWords);
-  const excerpt = limitedWords.join(" ");
+  let excerpt = limitedWords.join(" ");
+
+  // Remove trailing period if show more link is enabled
+  if (showMore && excerpt.endsWith(".")) {
+    excerpt = excerpt.slice(0, -1).trim();
+  }
   let linkUrl = "";
   if (post) {
     if (linkTo === "postType") {
@@ -97,66 +166,65 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                 __nextHasNoMarginBottom
                 label="Style"
                 value={moreStyle}
-                options={[
-                  { label: "Link", value: "link" },
-                  { label: "Button", value: "button" },
-                ]}
+                options={MORE_STYLE_OPTIONS}
                 onChange={(v) => setAttributes({ moreStyle: v })}
               />
               <TextControl
+                __next40pxDefaultSize
+                __nextHasNoMarginBottom
                 label="Label"
                 value={moreLabel}
                 onChange={(v) => setAttributes({ moreLabel: v })}
               />
-              <TextControl
-                label="Separator (after excerpt)"
-                value={morePrefix}
-                onChange={(v) => setAttributes({ morePrefix: v })}
+              <ToggleControl
+                __nextHasNoMarginBottom
+                label="Add space before link"
+                checked={!!addSpaceBeforeLink}
+                onChange={(v) => setAttributes({ addSpaceBeforeLink: !!v })}
+                help="Adds a space between the excerpt text and the read more link"
               />
               <SelectControl
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
                 label="Link to"
                 value={linkTo}
-                options={[
-                  { label: "Post", value: "post" },
-                  { label: "Post Type", value: "postType" },
-                ]}
+                options={LINK_TO_OPTIONS}
                 onChange={(v) => setAttributes({ linkTo: v })}
               />
-              {moreStyle === "link" ? (
+              {/* Color Pickers */}
+              {moreStyle === "link" && (
+                <LinkColorPicker
+                  value={linkColor}
+                  onChange={(color) => setAttributes({ linkColor: color })}
+                />
+              )}
+
+              {moreStyle === "button" && (
+                <ButtonColorPickers
+                  buttonBg={buttonBg}
+                  buttonColor={buttonColor}
+                  onButtonBgChange={(color) =>
+                    setAttributes({ buttonBg: color })
+                  }
+                  onButtonColorChange={(color) =>
+                    setAttributes({ buttonColor: color })
+                  }
+                />
+              )}
+              {moreStyle === "link" && (
+                <ToggleControl
+                  __nextHasNoMarginBottom
+                  label="Underline"
+                  checked={!!linkUnderline}
+                  onChange={(v) =>
+                    setAttributes({
+                      linkUnderline: !!v,
+                    })
+                  }
+                />
+              )}
+              {moreStyle === "button" && (
                 <>
-                  <TextControl
-                    type="color"
-                    label="Link color"
-                    value={linkColor}
-                    onChange={(v) => setAttributes({ linkColor: v })}
-                  />
-                  <ToggleControl
-                    __nextHasNoMarginBottom
-                    label="Underline"
-                    checked={!!linkUnderline}
-                    onChange={(v) =>
-                      setAttributes({
-                        linkUnderline: !!v,
-                      })
-                    }
-                  />
-                </>
-              ) : (
-                <>
-                  <TextControl
-                    type="color"
-                    label="Button background"
-                    value={buttonBg}
-                    onChange={(v) => setAttributes({ buttonBg: v })}
-                  />
-                  <TextControl
-                    type="color"
-                    label="Button text color"
-                    value={buttonColor}
-                    onChange={(v) => setAttributes({ buttonColor: v })}
-                  />
                   <RangeControl
                     __next40pxDefaultSize
                     __nextHasNoMarginBottom
@@ -203,11 +271,63 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
             </>
           ) : null}
         </PanelBody>
+
+        {/* Separator Section */}
+        <PanelBody title="Separator" initialOpen={false}>
+          <ToggleControl
+            __nextHasNoMarginBottom
+            label="Enable separator"
+            checked={!!enableSeparator}
+            onChange={(v) => setAttributes({ enableSeparator: !!v })}
+            help="Add a separator between the excerpt and the read more link"
+          />
+          {enableSeparator ? (
+            <>
+              <SelectControl
+                __next40pxDefaultSize
+                __nextHasNoMarginBottom
+                label="Separator type"
+                value={separatorType}
+                options={SEPARATOR_OPTIONS}
+                onChange={(value) => {
+                  setAttributes({ separatorType: value });
+                  // Set the corresponding custom separator value
+                  setAttributes({
+                    customSeparator: SEPARATOR_MAPPING[value] || "",
+                  });
+                }}
+              />
+              {separatorType === "custom" && (
+                <TextControl
+                  __next40pxDefaultSize
+                  __nextHasNoMarginBottom
+                  label="Custom separator"
+                  value={customSeparator}
+                  onChange={(v) => setAttributes({ customSeparator: v })}
+                  help="Enter your own separator text"
+                  placeholder="e.g., |, —, •, etc."
+                />
+              )}
+              <ToggleControl
+                __nextHasNoMarginBottom
+                label="Add space before separator"
+                checked={!!addSpaceBeforeSeparator}
+                onChange={(v) =>
+                  setAttributes({ addSpaceBeforeSeparator: !!v })
+                }
+                help="Adds a space between the excerpt text and the separator"
+              />
+            </>
+          ) : null}
+        </PanelBody>
       </InspectorControls>
       {show && excerpt ? (
         <>
           {excerpt}
-          {morePrefix ? `${morePrefix} ` : ""}
+          {enableSeparator && customSeparator
+            ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator} `
+            : ""}
+          {addSpaceBeforeLink && !enableSeparator ? " " : ""}
           {showMore && linkUrl ? (
             moreStyle === "button" ? (
               <p style={{ margin: "12px 0 0" }}>

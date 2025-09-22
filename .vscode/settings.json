@@ -5,6 +5,7 @@
     "bloginfo",
     "dashicons",
     "kses",
+    "trailingslashit",
     "wpdb"
   ]
 }
