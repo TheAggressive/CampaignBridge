@@ -29,6 +29,12 @@ const DEFAULT_ATTRIBUTES = {
   buttonRadius: 4,
   buttonPaddingX: 16,
   buttonPaddingY: 10,
+  buttonLayout: "new-line",
+  buttonAlignment: "left",
+  buttonMarginTop: 12,
+  buttonMarginBottom: 0,
+  buttonMarginLeft: 0,
+  buttonMarginRight: 0,
 };
 
 const SEPARATOR_OPTIONS = [
@@ -90,6 +96,12 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
     buttonRadius,
     buttonPaddingX,
     buttonPaddingY,
+    buttonLayout,
+    buttonAlignment,
+    buttonMarginTop,
+    buttonMarginBottom,
+    buttonMarginLeft,
+    buttonMarginRight,
   } = { ...DEFAULT_ATTRIBUTES, ...attributes };
 
   const post = useSelect(
@@ -181,7 +193,11 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                 label="Add space before link"
                 checked={!!addSpaceBeforeLink}
                 onChange={(v) => setAttributes({ addSpaceBeforeLink: !!v })}
-                help="Adds a space between the excerpt text and the read more link"
+                help={
+                  enableSeparator
+                    ? "Not used when separator is enabled"
+                    : "Adds spacing between the excerpt text and the read more link"
+                }
               />
               <SelectControl
                 __next40pxDefaultSize
@@ -210,6 +226,101 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                     setAttributes({ buttonColor: color })
                   }
                 />
+              )}
+
+              {moreStyle === "button" && (
+                <>
+                  <SelectControl
+                    __next40pxDefaultSize
+                    __nextHasNoMarginBottom
+                    label="Button style"
+                    value={buttonLayout}
+                    options={[
+                      { label: "New line", value: "new-line" },
+                      { label: "Full Width", value: "full-width" },
+                      { label: "Inline", value: "inline" },
+                    ]}
+                    onChange={(value) => setAttributes({ buttonLayout: value })}
+                    help="Choose the button display style"
+                  />
+
+                  <SelectControl
+                    __next40pxDefaultSize
+                    __nextHasNoMarginBottom
+                    label="Button alignment"
+                    value={buttonAlignment}
+                    options={[
+                      { label: "Left", value: "left" },
+                      { label: "Center", value: "center" },
+                      { label: "Right", value: "right" },
+                    ]}
+                    onChange={(value) =>
+                      setAttributes({ buttonAlignment: value })
+                    }
+                    help="Align the button horizontally"
+                  />
+
+                  {(buttonLayout === "new-line" ||
+                    buttonLayout === "full-width") && (
+                    <>
+                      <RangeControl
+                        __next40pxDefaultSize
+                        __nextHasNoMarginBottom
+                        label="Top margin (px)"
+                        value={buttonMarginTop}
+                        onChange={(value) =>
+                          setAttributes({ buttonMarginTop: value })
+                        }
+                        min={0}
+                        max={50}
+                        step={1}
+                        help="Space above the button"
+                      />
+
+                      <RangeControl
+                        __next40pxDefaultSize
+                        __nextHasNoMarginBottom
+                        label="Bottom margin (px)"
+                        value={buttonMarginBottom}
+                        onChange={(value) =>
+                          setAttributes({ buttonMarginBottom: value })
+                        }
+                        min={0}
+                        max={50}
+                        step={1}
+                        help="Space below the button"
+                      />
+
+                      <RangeControl
+                        __next40pxDefaultSize
+                        __nextHasNoMarginBottom
+                        label="Left margin (px)"
+                        value={buttonMarginLeft}
+                        onChange={(value) =>
+                          setAttributes({ buttonMarginLeft: value })
+                        }
+                        min={0}
+                        max={50}
+                        step={1}
+                        help="Space to the left of the button"
+                      />
+
+                      <RangeControl
+                        __next40pxDefaultSize
+                        __nextHasNoMarginBottom
+                        label="Right margin (px)"
+                        value={buttonMarginRight}
+                        onChange={(value) =>
+                          setAttributes({ buttonMarginRight: value })
+                        }
+                        min={0}
+                        max={50}
+                        step={1}
+                        help="Space to the right of the button"
+                      />
+                    </>
+                  )}
+                </>
               )}
               {moreStyle === "link" && (
                 <ToggleControl
@@ -327,10 +438,12 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
           {enableSeparator && customSeparator
             ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator} `
             : ""}
-          {addSpaceBeforeLink && !enableSeparator ? " " : ""}
+          {addSpaceBeforeLink && !enableSeparator && buttonLayout !== "inline"
+            ? " "
+            : ""}
           {showMore && linkUrl ? (
             moreStyle === "button" ? (
-              <p style={{ margin: "12px 0 0" }}>
+              buttonLayout === "inline" ? (
                 <a
                   href={linkUrl}
                   onClick={(e) => e.preventDefault()}
@@ -343,12 +456,42 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                       buttonPaddingX || 16
                     }px`,
                     borderRadius: buttonRadius || 0,
+                    marginLeft: addSpaceBeforeLink ? "8px" : "0",
                   }}
                   title="Link disabled in editor"
                 >
                   {moreLabel || "Read more"}
                 </a>
-              </p>
+              ) : (
+                <div
+                  style={{
+                    margin: `${buttonMarginTop || 0}px ${buttonMarginRight || 0}px ${buttonMarginBottom || 0}px ${buttonMarginLeft || 0}px`,
+                    textAlign: buttonAlignment,
+                  }}
+                >
+                  <a
+                    href={linkUrl}
+                    onClick={(e) => e.preventDefault()}
+                    style={{
+                      display:
+                        buttonLayout === "full-width"
+                          ? "block"
+                          : "inline-block",
+                      width: buttonLayout === "full-width" ? "100%" : "auto",
+                      background: buttonBg || "#111",
+                      color: buttonColor || "#fff",
+                      textDecoration: "none",
+                      padding: `${buttonPaddingY || 10}px ${
+                        buttonPaddingX || 16
+                      }px`,
+                      borderRadius: buttonRadius || 0,
+                    }}
+                    title="Link disabled in editor"
+                  >
+                    {moreLabel || "Read more"}
+                  </a>
+                </div>
+              )
             ) : (
               <>
                 <a
