@@ -8,26 +8,9 @@
   "description": "Shows the post summary with customizable text length and read-more link.",
   "supports": {
     "html": false,
-    "typography": {
-      "fontSize": true,
-      "lineHeight": true,
-      "textAlign": true,
-      "__experimentalFontFamily": true,
-      "__experimentalFontWeight": true,
-      "__experimentalFontStyle": true,
-      "__experimentalTextDecoration": true,
-      "__experimentalLetterSpacing": true
-    },
-    "color": {
-      "text": true,
-      "background": true,
-      "link": true
-    },
-    "spacing": {
-      "margin": true,
-      "padding": true
-    },
-    "shadow": true
+    "inserter": true,
+    "multiple": true,
+    "reusable": true
   },
   "attributes": {
     "maxWords": { "type": "number", "default": 50 },
@@ -36,26 +19,13 @@
     "moreLabel": { "type": "string", "default": "Read more" },
     "linkTo": { "type": "string", "default": "post" },
     "morePrefix": { "type": "string", "default": "" },
-    "addSpaceBeforeLink": { "type": "boolean", "default": true },
-    "enableSeparator": { "type": "boolean", "default": false },
-    "separatorType": { "type": "string", "default": "custom" },
-    "customSeparator": { "type": "string", "default": "" },
-    "addSpaceBeforeSeparator": { "type": "boolean", "default": false },
-    "linkColor": { "type": "string", "default": "#2271b1" },
-    "linkUnderline": { "type": "boolean", "default": true },
-    "buttonBg": { "type": "string", "default": "#111111" },
-    "buttonColor": { "type": "string", "default": "#ffffff" },
-    "buttonRadius": { "type": "number", "default": 4 },
-    "buttonPaddingX": { "type": "number", "default": 16 },
-    "buttonPaddingY": { "type": "number", "default": 10 },
-    "buttonLayout": { "type": "string", "default": "new-line" },
-    "buttonAlignment": { "type": "string", "default": "left" },
-    "buttonMarginTop": { "type": "number", "default": 12 },
-    "buttonMarginBottom": { "type": "number", "default": 0 },
-    "buttonMarginLeft": { "type": "number", "default": 0 },
-    "buttonMarginRight": { "type": "number", "default": 0 }
+    "addSpaceBeforeLink": { "type": "boolean", "default": true }
+  },
+  "providesContext": {
+    "campaignbridge/postExcerptUrl": "postUrl"
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
+  "allowedBlocks": ["core/paragraph", "core/button", "core/buttons"],
   "editorScript": "file:./index.js",
-  "render": "file:./render.php"
+  "script": "file:./save.js"
 }

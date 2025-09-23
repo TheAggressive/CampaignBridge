@@ -1,13 +1,35 @@
-import { InspectorControls, useBlockProps } from "@wordpress/block-editor";
 import {
+  store as blockEditorStore,
+  InnerBlocks,
+  InspectorControls,
+  useBlockProps,
+} from "@wordpress/block-editor";
+import { createBlocksFromInnerBlocksTemplate } from "@wordpress/blocks";
+import {
+  Button,
   PanelBody,
   RangeControl,
   SelectControl,
   TextControl,
   ToggleControl,
 } from "@wordpress/components";
-import { useSelect } from "@wordpress/data";
+import { useDispatch, useSelect } from "@wordpress/data";
+import { useMemo } from "@wordpress/element";
 import { decodeEntities } from "@wordpress/html-entities";
+import { useSyncInnerBlocks } from "./hooks/useSyncInnerBlocks";
+
+// Simple focus restoration for the parent block
+const restoreBlockSelection = (selectBlock, clientId, callback) => {
+  const result = callback();
+
+  try {
+    selectBlock(clientId);
+  } catch (e) {
+    // If selection fails, that's okay
+  }
+
+  return result;
+};
 
 // Constants
 const DEFAULT_ATTRIBUTES = {
@@ -22,19 +44,6 @@ const DEFAULT_ATTRIBUTES = {
   separatorType: "custom",
   customSeparator: "",
   addSpaceBeforeSeparator: false,
-  linkColor: "#2271b1",
-  linkUnderline: true,
-  buttonBg: "#111111",
-  buttonColor: "#ffffff",
-  buttonRadius: 4,
-  buttonPaddingX: 16,
-  buttonPaddingY: 10,
-  buttonLayout: "new-line",
-  buttonAlignment: "left",
-  buttonMarginTop: 12,
-  buttonMarginBottom: 0,
-  buttonMarginLeft: 0,
-  buttonMarginRight: 0,
 };
 
 const SEPARATOR_OPTIONS = [
@@ -68,12 +77,16 @@ const MORE_STYLE_OPTIONS = [
   { label: "Button", value: "button" },
 ];
 
-// Components
-import { default as ButtonColorPickers } from "./components/ButtonColorPickers";
-import { default as LinkColorPicker } from "./components/LinkColorPicker";
 // Constants are defined above, no need to import
 
-export default function Edit({ attributes, setAttributes, context = {} }) {
+export default function Edit({
+  attributes,
+  setAttributes,
+  context = {},
+  clientId,
+}) {
+  const { replaceInnerBlocks } = useDispatch(blockEditorStore);
+  const { selectBlock } = useDispatch("core/block-editor");
   const postId = Number(context["campaignbridge:postId"]) || 0;
   const postType = context["campaignbridge:postType"] || "post";
   const {
@@ -88,19 +101,6 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
     separatorType,
     customSeparator,
     addSpaceBeforeSeparator,
-    linkColor,
-    linkUnderline,
-    buttonBg,
-    buttonColor,
-    buttonRadius,
-    buttonPaddingX,
-    buttonPaddingY,
-    buttonLayout,
-    buttonAlignment,
-    buttonMarginTop,
-    buttonMarginBottom,
-    buttonMarginLeft,
-    buttonMarginRight,
   } = { ...DEFAULT_ATTRIBUTES, ...attributes };
 
   const post = useSelect(
@@ -147,11 +147,55 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
       linkUrl = post.link || "";
     }
   }
-  const props = useBlockProps({ style: { fontSize: 14, lineHeight: 1.5 } });
+  // Set up the template based on moreStyle
+  const getTemplate = () => {
+    if (!showMore || !linkUrl) return [];
+
+    if (moreStyle === "button") {
+      return [
+        [
+          "core/button",
+          {
+            text: moreLabel || "Read more",
+            url: linkUrl,
+          },
+        ],
+      ];
+    } else {
+      return [
+        [
+          "core/paragraph",
+          {
+            content: `<a href="${linkUrl}">${moreLabel || "Read more"}</a>`,
+          },
+        ],
+      ];
+    }
+  };
+
+  const props = useBlockProps();
+
+  // Memoize template to only recalculate when dependencies change
+  const template = useMemo(() => {
+    return getTemplate();
+  }, [
+    showMore,
+    moreStyle,
+    moreLabel,
+    linkUrl,
+    linkTo, // Added missing dependency
+  ]);
+
+  // Use the reusable hook for synchronizing InnerBlocks
+  useSyncInnerBlocks(clientId, template, showMore && !!linkUrl, {
+    lockTemplate: true, // Enable template locking
+    clearOnDisable: true,
+  });
+
   return (
     <div {...props}>
       <InspectorControls>
-        <PanelBody title="Excerpt Settings" initialOpen>
+        <PanelBody title="Excerpt & More Link" initialOpen>
           <RangeControl
             __next40pxDefaultSize
             __nextHasNoMarginBottom
@@ -162,14 +206,14 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
             max={150}
             step={1}
           />
-        </PanelBody>
-        <PanelBody title="More Link" initialOpen={false}>
+
           <ToggleControl
             __nextHasNoMarginBottom
             label="Show more link/button"
             checked={!!showMore}
             onChange={(v) => setAttributes({ showMore: !!v })}
           />
+
           {showMore ? (
             <>
               <SelectControl
@@ -206,180 +250,25 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
                 options={LINK_TO_OPTIONS}
                 onChange={(v) => setAttributes({ linkTo: v })}
               />
-              {/* Color Pickers */}
-              {moreStyle === "link" && (
-                <LinkColorPicker
-                  value={linkColor}
-                  onChange={(color) => setAttributes({ linkColor: color })}
-                />
-              )}
-
-              {moreStyle === "button" && (
-                <ButtonColorPickers
-                  buttonBg={buttonBg}
-                  buttonColor={buttonColor}
-                  onButtonBgChange={(color) =>
-                    setAttributes({ buttonBg: color })
-                  }
-                  onButtonColorChange={(color) =>
-                    setAttributes({ buttonColor: color })
-                  }
-                />
-              )}
-
-              {moreStyle === "button" && (
-                <>
-                  <SelectControl
-                    __next40pxDefaultSize
-                    __nextHasNoMarginBottom
-                    label="Button style"
-                    value={buttonLayout}
-                    options={[
-                      { label: "New line", value: "new-line" },
-                      { label: "Full Width", value: "full-width" },
-                      { label: "Inline", value: "inline" },
-                    ]}
-                    onChange={(value) => setAttributes({ buttonLayout: value })}
-                    help="Choose the button display style"
-                  />
-
-                  <SelectControl
-                    __next40pxDefaultSize
-                    __nextHasNoMarginBottom
-                    label="Button alignment"
-                    value={buttonAlignment}
-                    options={[
-                      { label: "Left", value: "left" },
-                      { label: "Center", value: "center" },
-                      { label: "Right", value: "right" },
-                    ]}
-                    onChange={(value) =>
-                      setAttributes({ buttonAlignment: value })
-                    }
-                    help="Align the button horizontally"
-                  />
-
-                  {(buttonLayout === "new-line" ||
-                    buttonLayout === "full-width") && (
-                    <>
-                      <RangeControl
-                        __next40pxDefaultSize
-                        __nextHasNoMarginBottom
-                        label="Top margin (px)"
-                        value={buttonMarginTop}
-                        onChange={(value) =>
-                          setAttributes({ buttonMarginTop: value })
-                        }
-                        min={0}
-                        max={50}
-                        step={1}
-                        help="Space above the button"
-                      />
-
-                      <RangeControl
-                        __next40pxDefaultSize
-                        __nextHasNoMarginBottom
-                        label="Bottom margin (px)"
-                        value={buttonMarginBottom}
-                        onChange={(value) =>
-                          setAttributes({ buttonMarginBottom: value })
-                        }
-                        min={0}
-                        max={50}
-                        step={1}
-                        help="Space below the button"
-                      />
-
-                      <RangeControl
-                        __next40pxDefaultSize
-                        __nextHasNoMarginBottom
-                        label="Left margin (px)"
-                        value={buttonMarginLeft}
-                        onChange={(value) =>
-                          setAttributes({ buttonMarginLeft: value })
-                        }
-                        min={0}
-                        max={50}
-                        step={1}
-                        help="Space to the left of the button"
-                      />
-
-                      <RangeControl
-                        __next40pxDefaultSize
-                        __nextHasNoMarginBottom
-                        label="Right margin (px)"
-                        value={buttonMarginRight}
-                        onChange={(value) =>
-                          setAttributes({ buttonMarginRight: value })
-                        }
-                        min={0}
-                        max={50}
-                        step={1}
-                        help="Space to the right of the button"
-                      />
-                    </>
-                  )}
-                </>
-              )}
-              {moreStyle === "link" && (
-                <ToggleControl
-                  __nextHasNoMarginBottom
-                  label="Underline"
-                  checked={!!linkUnderline}
-                  onChange={(v) =>
-                    setAttributes({
-                      linkUnderline: !!v,
-                    })
-                  }
-                />
-              )}
-              {moreStyle === "button" && (
-                <>
-                  <RangeControl
-                    __next40pxDefaultSize
-                    __nextHasNoMarginBottom
-                    label="Border radius"
-                    value={Number(buttonRadius) || 0}
-                    min={0}
-                    max={24}
-                    onChange={(v) =>
-                      setAttributes({
-                        buttonRadius: Number(v) || 0,
-                      })
-                    }
-                  />
-                  <RangeControl
-                    __next40pxDefaultSize
-                    __nextHasNoMarginBottom
-                    label="Padding X"
-                    value={Number(buttonPaddingX) || 0}
-                    min={4}
-                    max={40}
-                    step={2}
-                    onChange={(v) =>
-                      setAttributes({
-                        buttonPaddingX: Number(v) || 0,
-                      })
-                    }
-                  />
-                  <RangeControl
-                    __next40pxDefaultSize
-                    __nextHasNoMarginBottom
-                    label="Padding Y"
-                    value={Number(buttonPaddingY) || 0}
-                    min={4}
-                    max={32}
-                    step={2}
-                    onChange={(v) =>
-                      setAttributes({
-                        buttonPaddingY: Number(v) || 0,
-                      })
-                    }
-                  />
-                </>
-              )}
             </>
           ) : null}
+
+          <Button
+            variant="secondary"
+            onClick={() => {
+              if (!clientId) return;
+              const template = getTemplate();
+              const blocks = createBlocksFromInnerBlocksTemplate(template);
+              restoreBlockSelection(selectBlock, clientId, () => {
+                replaceInnerBlocks(clientId, blocks, {
+                  updateSelection: false,
+                });
+              });
+            }}
+            style={{ marginTop: "16px" }}
+          >
+            Reset to Default {moreStyle === "button" ? "Button" : "Link"}
+          </Button>
         </PanelBody>
 
         {/* Separator Section */}
@@ -437,76 +326,14 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
           {enableSeparator && customSeparator
             ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator} `
             : ""}
-          {addSpaceBeforeLink && !enableSeparator && buttonLayout !== "inline"
-            ? " "
-            : ""}
-          {showMore && linkUrl ? (
-            moreStyle === "button" ? (
-              buttonLayout === "inline" ? (
-                <a
-                  href={linkUrl}
-                  onClick={(e) => e.preventDefault()}
-                  style={{
-                    display: "inline-block",
-                    background: buttonBg || "#111",
-                    color: buttonColor || "#fff",
-                    textDecoration: "none",
-                    padding: `${buttonPaddingY || 10}px ${
-                      buttonPaddingX || 16
-                    }px`,
-                    borderRadius: buttonRadius || 0,
-                    marginLeft: addSpaceBeforeLink ? "8px" : "0",
-                  }}
-                  title="Link disabled in editor"
-                >
-                  {moreLabel || "Read more"}
-                </a>
-              ) : (
-                <div
-                  style={{
-                    margin: `${buttonMarginTop || 0}px ${buttonMarginRight || 0}px ${buttonMarginBottom || 0}px ${buttonMarginLeft || 0}px`,
-                    textAlign: buttonAlignment,
-                  }}
-                >
-                  <a
-                    href={linkUrl}
-                    onClick={(e) => e.preventDefault()}
-                    style={{
-                      display:
-                        buttonLayout === "full-width"
-                          ? "block"
-                          : "inline-block",
-                      width: buttonLayout === "full-width" ? "100%" : "auto",
-                      background: buttonBg || "#111",
-                      color: buttonColor || "#fff",
-                      textDecoration: "none",
-                      padding: `${buttonPaddingY || 10}px ${
-                        buttonPaddingX || 16
-                      }px`,
-                      borderRadius: buttonRadius || 0,
-                    }}
-                    title="Link disabled in editor"
-                  >
-                    {moreLabel || "Read more"}
-                  </a>
-                </div>
-              )
-            ) : (
-              <>
-                <a
-                  href={linkUrl}
-                  onClick={(e) => e.preventDefault()}
-                  style={{
-                    color: linkColor || "#2271b1",
-                    textDecoration: linkUnderline ? "underline" : "none",
-                  }}
-                  title="Link disabled in editor"
-                >
-                  {moreLabel || "Read more"}
-                </a>
-              </>
-            )
-          ) : null}
+          {addSpaceBeforeLink && !enableSeparator && showMore ? " " : ""}
+          {showMore && (
+            <InnerBlocks
+              templateLock="all"
+              allowedBlocks={["core/paragraph", "core/button", "core/buttons"]}
+              templateInsertUpdatesSelection={false}
+            />
+          )}
         </>
       ) : null}
     </div>

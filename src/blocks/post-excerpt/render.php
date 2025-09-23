@@ -29,15 +29,9 @@ return function ( $attributes, $content, $block ) {
 	$add_space_before_separator = isset( $attributes['addSpaceBeforeSeparator'] ) ? (bool) $attributes['addSpaceBeforeSeparator'] : false;
 	$button_layout              = isset( $attributes['buttonLayout'] ) ? (string) $attributes['buttonLayout'] : 'new-line';
 	$button_alignment           = isset( $attributes['buttonAlignment'] ) ? (string) $attributes['buttonAlignment'] : 'left';
-	$button_bg                  = isset( $attributes['buttonBg'] ) ? (string) $attributes['buttonBg'] : '#111111';
-	$button_color               = isset( $attributes['buttonColor'] ) ? (string) $attributes['buttonColor'] : '#ffffff';
 	$button_radius              = isset( $attributes['buttonRadius'] ) ? (int) $attributes['buttonRadius'] : 4;
 	$button_padding_x           = isset( $attributes['buttonPaddingX'] ) ? (int) $attributes['buttonPaddingX'] : 16;
 	$button_padding_y           = isset( $attributes['buttonPaddingY'] ) ? (int) $attributes['buttonPaddingY'] : 10;
-	$button_margin_top          = isset( $attributes['buttonMarginTop'] ) ? (int) $attributes['buttonMarginTop'] : 12;
-	$button_margin_bottom       = isset( $attributes['buttonMarginBottom'] ) ? (int) $attributes['buttonMarginBottom'] : 0;
-	$button_margin_left         = isset( $attributes['buttonMarginLeft'] ) ? (int) $attributes['buttonMarginLeft'] : 0;
-	$button_margin_right        = isset( $attributes['buttonMarginRight'] ) ? (int) $attributes['buttonMarginRight'] : 0;
 	$raw_excerpt                = (string) get_post_field( 'post_excerpt', $post_id );
 	$raw_content                = (string) get_post_field( 'post_content', $post_id );
 	$raw                        = '' !== $raw_excerpt ? $raw_excerpt : $raw_content;
@@ -70,63 +64,47 @@ return function ( $attributes, $content, $block ) {
 		}
 	}
 
-	$more_html = '';
-	if ( $show_more && $link ) {
-		$label = esc_html( $more_label ? $more_label : 'Read more' );
-		// Build the separator.
-		$separator_text = '';
-		if ( $enable_separator && '' !== $custom_separator ) {
-			$separator_text = esc_html( $custom_separator );
-			if ( $add_space_before_separator ) {
-				$separator_text = ' ' . $separator_text;
-			}
+	// Build the separator.
+	$separator_text = '';
+	if ( $enable_separator && '' !== $custom_separator ) {
+		$separator_text = esc_html( $custom_separator );
+		if ( $add_space_before_separator ) {
+			$separator_text = ' ' . $separator_text;
 		}
-		// Add space before link if no separator or if separator doesn't have space
-		if ( $add_space_before_link && '' === $separator_text ) {
-			$separator_text = ' ';
-		}
+	}
+	// Add space before link if no separator
+	if ( $add_space_before_link && '' === $separator_text && $show_more ) {
+		$separator_text = ' ';
+	}
 
-		if ( 'button' === $more_style ) {
-			if ( 'inline' === $button_layout ) {
-				// Inline button at the end of excerpt
-				$button_style = sprintf(
-					'display:inline-block;background:%s;color:%s;text-decoration:none;padding:%dpx %dpx;border-radius:%dpx;margin-left:%dpx;',
-					esc_attr( $button_bg ),
-					esc_attr( $button_color ),
-					$button_padding_y,
-					$button_padding_x,
-					$button_radius,
-					$add_space_before_link ? 8 : 0
-				);
-				$more_html    = sprintf( '%s<a href="%s" style="%s">%s</a>', $separator_text, esc_url( $link ), $button_style, $label );
-			} else {
-				// New line or Full-width button with custom margins
-				$button_style = sprintf(
-					'display:%s;width:%s;background:%s;color:%s;text-decoration:none;padding:%dpx %dpx;border-radius:%dpx;',
-					'full-width' === $button_layout ? 'block' : 'inline-block',
-					'full-width' === $button_layout ? '100%' : 'auto',
-					esc_attr( $button_bg ),
-					esc_attr( $button_color ),
-					$button_padding_y,
-					$button_padding_x,
-					$button_radius
-				);
-				$more_html    = sprintf(
-					'<div style="margin:%dpx %dpx %dpx %dpx;text-align:%s;">%s<a href="%s" style="%s">%s</a></div>',
-					$button_margin_top,
-					$button_margin_right,
-					$button_margin_bottom,
-					$button_margin_left,
-					esc_attr( $button_alignment ),
-					$separator_text,
-					esc_url( $link ),
-					$button_style,
-					$label
-				);
+	// Get InnerBlocks content
+	$more_html = '';
+	if ( $show_more ) {
+		// For InnerBlocks, we need to render them with the context
+		if ( function_exists( 'render_block' ) ) {
+			$blocks = parse_blocks( $content );
+			foreach ( $blocks as $block ) {
+				if ( isset( $block['blockName'] ) && in_array( $block['blockName'], array( 'core/button', 'core/paragraph', 'core/buttons' ) ) ) {
+					// Replace placeholder URLs in the block content
+					if ( isset( $block['innerHTML'] ) ) {
+						$block['innerHTML'] = str_replace( '#', esc_url( $link ), $block['innerHTML'] );
+					}
+					if ( isset( $block['innerContent'] ) && is_array( $block['innerContent'] ) ) {
+						foreach ( $block['innerContent'] as &$content_item ) {
+							if ( is_string( $content_item ) ) {
+								$content_item = str_replace( '#', esc_url( $link ), $content_item );
+							}
+						}
+					}
+					$more_html .= render_block( $block );
+				}
 			}
-		} else {
-			$more_html = sprintf( '%s<a href="%s">%s</a>', $separator_text, esc_url( $link ), $label );
 		}
+	}
+
+	// Apply separator to the more_html
+	if ( $more_html && $separator_text ) {
+		$more_html = $separator_text . $more_html;
 	}
 
 	return sprintf( '<div style="font-size:14px;line-height:1.5;color:#333;">%s%s</div>', $excerpt, $more_html );
