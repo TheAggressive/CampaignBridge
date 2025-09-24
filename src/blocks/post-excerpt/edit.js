@@ -1,35 +1,41 @@
 import {
-  store as blockEditorStore,
   InnerBlocks,
   InspectorControls,
   useBlockProps,
+  store as blockEditorStore,
 } from "@wordpress/block-editor";
 import {
-  Button,
   PanelBody,
   RangeControl,
   SelectControl,
   TextControl,
   ToggleControl,
 } from "@wordpress/components";
-import { useDispatch, useSelect } from "@wordpress/data";
-import { useMemo } from "@wordpress/element";
+import { useDispatch, useSelect, select } from "@wordpress/data";
+import { useEffect, useMemo } from "@wordpress/element";
 import { decodeEntities } from "@wordpress/html-entities";
-import { useSyncInnerBlocks } from "./hooks/useSyncInnerBlocks";
+import { createBlocksFromInnerBlocksTemplate } from "@wordpress/blocks";
 
-// Constants
+/** ------------------ Constants ------------------ */
+
 const DEFAULT_ATTRIBUTES = {
   maxWords: 50,
   showMore: false,
-  moreStyle: "link",
+  moreStyle: "link", // 'link' | 'button'
   moreLabel: "Read more",
-  linkTo: "post",
+  linkTo: "post", // 'post' | 'postType' (PHP decides final URL)
   morePrefix: "",
   addSpaceBeforeLink: true,
   enableSeparator: false,
   separatorType: "custom",
   customSeparator: "",
   addSpaceBeforeSeparator: false,
+  // Button cosmetics
+  buttonRadius: 4,
+  buttonPaddingX: 16,
+  buttonPaddingY: 10,
+  buttonLayout: "new-line", // 'new-line' | 'full-width' | 'inline'
+  buttonAlignment: "left", // 'left' | 'center' | 'right'
 };
 
 const SEPARATOR_OPTIONS = [
@@ -63,7 +69,22 @@ const MORE_STYLE_OPTIONS = [
   { label: "Button", value: "button" },
 ];
 
-// Constants are defined above, no need to import
+/** ------------------ Helpers ------------------ */
+
+// Compare block *structure* only (names + nesting), not attributes
+const shape = (blocks = []) =>
+  blocks.map((b) => ({ n: b.name, c: shape(b.innerBlocks || []) }));
+
+const sameStructure = (a = [], b = []) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].n !== b[i].n) return false;
+    if (!sameStructure(a[i].c, b[i].c)) return false;
+  }
+  return true;
+};
+
+/** ------------------ Component ------------------ */
 
 export default function Edit({
   attributes,
@@ -71,128 +92,234 @@ export default function Edit({
   context = {},
   clientId,
 }) {
-  const { replaceInnerBlocks } = useDispatch(blockEditorStore);
-  const { selectBlock } = useDispatch("core/block-editor");
-  const postId = Number(context["campaignbridge:postId"]) || 0;
-  const postType = context["campaignbridge:postType"] || "post";
   const {
     maxWords,
     showMore,
     moreStyle,
     moreLabel,
     linkTo,
-    morePrefix,
+    morePrefix, // currently not used in this edit preview, preserved for attributes
     addSpaceBeforeLink,
     enableSeparator,
     separatorType,
     customSeparator,
     addSpaceBeforeSeparator,
+    buttonRadius,
+    buttonPaddingX,
+    buttonPaddingY,
+    buttonLayout,
+    buttonAlignment,
   } = { ...DEFAULT_ATTRIBUTES, ...attributes };
 
+  const postId = Number(context["campaignbridge:postId"]) || 0;
+  const postType = context["campaignbridge:postType"] || "post";
+
+  // Get post data just to render an excerpt preview in the editor
   const post = useSelect(
-    (select) =>
-      postId
-        ? select("core").getEntityRecord("postType", postType, postId)
-        : null,
+    (s) =>
+      postId ? s("core").getEntityRecord("postType", postType, postId) : null,
     [postType, postId],
   );
+
   const raw = post?.excerpt?.rendered || post?.content?.rendered || "";
   const text = decodeEntities(raw)
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+  const words = text.split(/\s+/).filter(Boolean);
+  let excerpt = words.slice(0, maxWords).join(" ");
+  if (showMore && excerpt.endsWith(".")) excerpt = excerpt.slice(0, -1).trim();
 
-  // Split text into words and limit by word count
-  const words = text.split(/\s+/).filter((word) => word.length > 0);
-  const limitedWords = words.slice(0, maxWords);
-  let excerpt = limitedWords.join(" ");
-
-  // Remove trailing period if show more link is enabled
-  if (showMore && excerpt.endsWith(".")) {
-    excerpt = excerpt.slice(0, -1).trim();
-  }
-  let linkUrl = "";
-  if (post) {
-    if (linkTo === "postType") {
-      // Best effort: build from postType root (REST doesn’t expose archive easily)
-      try {
-        const base = new URL(post.link || "", window.location.origin);
-        // Strip trailing slash and last path segment (post slug) to get /post-type/
-        const parts = base.pathname.replace(/\/$/, "").split("/");
-        if (parts.length > 1) {
-          const parentPath = `/${parts[1]}/`;
-          base.pathname = parentPath;
-          base.search = "";
-          base.hash = "";
-          linkUrl = base.toString();
-        }
-      } catch (e) {
-        linkUrl = post.link || "";
-      }
-    } else {
-      linkUrl = post.link || "";
-    }
-  }
-  // Set up the template based on moreStyle
+  // Template builder (STRUCTURE ONLY). Use '#' in editor; PHP replaces with real link.
   const getTemplate = () => {
-    if (!showMore || !linkUrl) return [];
+    if (!showMore) return [];
 
     if (moreStyle === "button") {
+      const justify =
+        buttonAlignment === "center"
+          ? "center"
+          : buttonAlignment === "right"
+            ? "flex-end"
+            : "flex-start";
+
+      const buttonAttrs = {
+        text: moreLabel || "Read more",
+        url: "#", // placeholder; PHP swaps to permalink/archive
+        style: {
+          border: { radius: buttonRadius || 0 },
+          spacing: {
+            padding: {
+              top: buttonPaddingY || 10,
+              bottom: buttonPaddingY || 10,
+              left: buttonPaddingX || 16,
+              right: buttonPaddingX || 16,
+            },
+          },
+        },
+      };
+      if (buttonLayout === "full-width") {
+        buttonAttrs.width = 100; // core/button width %
+      }
+
       return [
         [
           "core/buttons",
-          {
-            layout: {
-              type: "flex",
-              justifyContent: "left",
-            },
-          },
-          [
-            [
-              "core/button",
-              {
-                text: moreLabel || "Read more",
-                url: linkUrl,
-              },
-            ],
-          ],
-        ],
-      ];
-    } else {
-      return [
-        [
-          "core/paragraph",
-          {
-            content: `<a href="${linkUrl}">${moreLabel || "Read more"}</a>`,
-          },
+          { layout: { type: "flex", justifyContent: justify } },
+          [["core/button", buttonAttrs]],
         ],
       ];
     }
+
+    // Link variant: paragraph with align + anchor
+    const align =
+      buttonAlignment === "center"
+        ? "center"
+        : buttonAlignment === "right"
+          ? "right"
+          : "left";
+
+    return [
+      [
+        "core/paragraph",
+        { align, content: `<a href="#">${moreLabel || "Read more"}</a>` },
+      ],
+    ];
   };
 
-  const props = useBlockProps();
+  const props = useBlockProps({ style: { fontSize: 14, lineHeight: 1.5 } });
 
-  // Create structure key that only changes when structure actually changes
+  // Memoize *only* on structure-affecting inputs
+  const template = useMemo(getTemplate, [
+    showMore,
+    moreStyle,
+    moreLabel,
+    buttonRadius,
+    buttonPaddingX,
+    buttonPaddingY,
+    buttonLayout,
+    buttonAlignment,
+  ]);
+
+  const { replaceInnerBlocks, selectBlock, updateBlockAttributes } =
+    useDispatch(blockEditorStore);
+
+  // Key that flips only on structure changes
   const structureKey = `${showMore ? 1 : 0}|${moreStyle}`;
 
-  // Memoize template - only include structural dependencies
-  const template = useMemo(
-    () => getTemplate(),
-    [
-      showMore,
-      moreStyle,
-      linkUrl, // URL is structural since it affects the template
-    ],
-  );
+  /** Replace children ONLY when the structure changes (and avoid no-op replaces). */
+  useEffect(() => {
+    if (!clientId) return;
 
-  // Use the new hook API
-  const { resetToTemplate } = useSyncInnerBlocks(clientId, template, showMore, {
-    structureKey,
-    lockTemplate: true,
-    clearOnDisable: true,
-    keepParentSelected: true,
-    debounceMs: 150, // Debounce to prevent rapid rebuilds
-  });
+    const desired = createBlocksFromInnerBlocksTemplate(template || []);
+    const current = select(blockEditorStore).getBlocks(clientId);
+
+    if (sameStructure(shape(current), shape(desired))) return;
+
+    replaceInnerBlocks(clientId, desired, { updateSelection: false });
+    const inside = select(blockEditorStore).hasSelectedInnerBlock(
+      clientId,
+      true,
+    );
+    if (!inside) selectBlock(clientId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, structureKey]);
+
+  /** Cosmetic updates (no replace): alignments, label, padding, radius, width */
+  useEffect(() => {
+    if (!showMore) return;
+
+    const state = select(blockEditorStore);
+    const kids = state.getBlocks(clientId);
+
+    if (moreStyle === "button") {
+      const wrapper = kids.find((b) => b.name === "core/buttons");
+      const button = wrapper?.innerBlocks?.find(
+        (b) => b.name === "core/button",
+      );
+
+      if (wrapper) {
+        const wantJustify =
+          buttonAlignment === "center"
+            ? "center"
+            : buttonAlignment === "right"
+              ? "flex-end"
+              : "flex-start";
+        const haveJustify = wrapper.attributes?.layout?.justifyContent;
+        if (haveJustify !== wantJustify) {
+          updateBlockAttributes(wrapper.clientId, {
+            layout: { type: "flex", justifyContent: wantJustify },
+          });
+        }
+      }
+
+      if (button) {
+        const next = {
+          text: moreLabel || "Read more",
+          url: "#",
+          style: {
+            border: { radius: buttonRadius || 0 },
+            spacing: {
+              padding: {
+                top: buttonPaddingY || 10,
+                bottom: buttonPaddingY || 10,
+                left: buttonPaddingX || 16,
+                right: buttonPaddingX || 16,
+              },
+            },
+          },
+          ...(buttonLayout === "full-width" ? { width: 100 } : {}),
+        };
+
+        const cur = {
+          text: button.attributes?.text,
+          url: button.attributes?.url,
+          style: button.attributes?.style,
+          width: button.attributes?.width,
+        };
+
+        if (JSON.stringify(cur) !== JSON.stringify(next)) {
+          updateBlockAttributes(button.clientId, next);
+        }
+      }
+    } else {
+      const para = kids.find((b) => b.name === "core/paragraph");
+      if (para) {
+        const wantAlign =
+          buttonAlignment === "center"
+            ? "center"
+            : buttonAlignment === "right"
+              ? "right"
+              : "left";
+        const wantContent = `<a href="#">${moreLabel || "Read more"}</a>`;
+        if (
+          para.attributes?.align !== wantAlign ||
+          para.attributes?.content !== wantContent
+        ) {
+          updateBlockAttributes(para.clientId, {
+            align: wantAlign,
+            content: wantContent,
+          });
+        }
+      }
+    }
+  }, [
+    clientId,
+    showMore,
+    moreStyle,
+    moreLabel,
+    buttonAlignment,
+    buttonLayout,
+    buttonRadius,
+    buttonPaddingX,
+    buttonPaddingY,
+    updateBlockAttributes,
+  ]);
+
+  // Separator (editor preview string)
+  const sep =
+    enableSeparator && customSeparator
+      ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator} `
+      : "";
 
   return (
     <div {...props}>
@@ -216,7 +343,7 @@ export default function Edit({
             onChange={(v) => setAttributes({ showMore: !!v })}
           />
 
-          {showMore ? (
+          {showMore && (
             <>
               <SelectControl
                 __next40pxDefaultSize
@@ -253,27 +380,18 @@ export default function Edit({
                 onChange={(v) => setAttributes({ linkTo: v })}
               />
             </>
-          ) : null}
-
-          <Button
-            variant="secondary"
-            onClick={() => resetToTemplate()}
-            style={{ marginTop: "16px" }}
-          >
-            Reset to Default {moreStyle === "button" ? "Button" : "Link"}
-          </Button>
+          )}
         </PanelBody>
 
-        {/* Separator Section */}
         <PanelBody title="Separator" initialOpen={false}>
           <ToggleControl
             __nextHasNoMarginBottom
             label="Enable separator"
             checked={!!enableSeparator}
             onChange={(v) => setAttributes({ enableSeparator: !!v })}
-            help="Add a separator between the excerpt and the read more link"
+            help="Add a separator between the excerpt text and the read more link"
           />
-          {enableSeparator ? (
+          {enableSeparator && (
             <>
               <SelectControl
                 __next40pxDefaultSize
@@ -283,7 +401,6 @@ export default function Edit({
                 options={SEPARATOR_OPTIONS}
                 onChange={(value) => {
                   setAttributes({ separatorType: value });
-                  // Set the corresponding custom separator value
                   setAttributes({
                     customSeparator: SEPARATOR_MAPPING[value] || "",
                   });
@@ -310,25 +427,24 @@ export default function Edit({
                 help="Adds a space between the excerpt text and the separator"
               />
             </>
-          ) : null}
+          )}
         </PanelBody>
       </InspectorControls>
-      {excerpt ? (
+
+      {!!excerpt && (
         <>
           {excerpt}
-          {enableSeparator && customSeparator
-            ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator} `
-            : ""}
+          {enableSeparator && customSeparator ? sep : ""}
           {addSpaceBeforeLink && !enableSeparator && showMore ? " " : ""}
           {showMore && (
             <InnerBlocks
               templateLock="all"
-              allowedBlocks={["core/paragraph", "core/button", "core/buttons"]}
+              allowedBlocks={["core/paragraph", "core/buttons", "core/button"]}
               templateInsertUpdatesSelection={false}
             />
           )}
         </>
-      ) : null}
+      )}
     </div>
   );
 }

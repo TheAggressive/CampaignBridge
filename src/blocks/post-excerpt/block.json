@@ -25,7 +25,7 @@
     "campaignbridge/postExcerptUrl": "postUrl"
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
-  "allowedBlocks": ["core/paragraph", "core/buttons"],
+  "allowedBlocks": ["core/paragraph", "core/buttons", "core/button"],
   "editorScript": "file:./index.js",
   "render": "file:./render.php"
 }
