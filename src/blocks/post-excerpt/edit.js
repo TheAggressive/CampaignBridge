@@ -15,6 +15,7 @@ import { useDispatch, useSelect, select } from "@wordpress/data";
 import { useEffect, useMemo } from "@wordpress/element";
 import { decodeEntities } from "@wordpress/html-entities";
 import { createBlocksFromInnerBlocksTemplate } from "@wordpress/blocks";
+import { __ } from "@wordpress/i18n";
 
 /** ------------------ Constants ------------------ */
 
@@ -338,7 +339,7 @@ export default function Edit({
 
           <ToggleControl
             __nextHasNoMarginBottom
-            label="Show more link/button"
+            label={__("Show Link/Button", "campaignbridge")}
             checked={!!showMore}
             onChange={(v) => setAttributes({ showMore: !!v })}
           />
@@ -348,7 +349,7 @@ export default function Edit({
               <SelectControl
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
-                label="Style"
+                label={__("Style", "campaignbridge")}
                 value={moreStyle}
                 options={MORE_STYLE_OPTIONS}
                 onChange={(v) => setAttributes({ moreStyle: v })}
@@ -356,13 +357,13 @@ export default function Edit({
               <TextControl
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
-                label="Label"
+                label={__("Label", "campaignbridge")}
                 value={moreLabel}
                 onChange={(v) => setAttributes({ moreLabel: v })}
               />
               <ToggleControl
                 __nextHasNoMarginBottom
-                label="Add space before link"
+                label={__("Add space before link", "campaignbridge")}
                 checked={!!addSpaceBeforeLink}
                 onChange={(v) => setAttributes({ addSpaceBeforeLink: !!v })}
                 help={
@@ -374,7 +375,7 @@ export default function Edit({
               <SelectControl
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
-                label="Link to"
+                label={__("Link to", "campaignbridge")}
                 value={linkTo}
                 options={LINK_TO_OPTIONS}
                 onChange={(v) => setAttributes({ linkTo: v })}
@@ -386,7 +387,7 @@ export default function Edit({
         <PanelBody title="Separator" initialOpen={false}>
           <ToggleControl
             __nextHasNoMarginBottom
-            label="Enable separator"
+            label={__("Enable separator", "campaignbridge")}
             checked={!!enableSeparator}
             onChange={(v) => setAttributes({ enableSeparator: !!v })}
             help="Add a separator between the excerpt text and the read more link"
@@ -396,7 +397,7 @@ export default function Edit({
               <SelectControl
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
-                label="Separator type"
+                label={__("Separator type", "campaignbridge")}
                 value={separatorType}
                 options={SEPARATOR_OPTIONS}
                 onChange={(value) => {
@@ -410,7 +411,7 @@ export default function Edit({
                 <TextControl
                   __next40pxDefaultSize
                   __nextHasNoMarginBottom
-                  label="Custom separator"
+                  label={__("Custom separator", "campaignbridge")}
                   value={customSeparator}
                   onChange={(v) => setAttributes({ customSeparator: v })}
                   help="Enter your own separator text"
@@ -419,7 +420,7 @@ export default function Edit({
               )}
               <ToggleControl
                 __nextHasNoMarginBottom
-                label="Add space before separator"
+                label={__("Add space before separator", "campaignbridge")}
                 checked={!!addSpaceBeforeSeparator}
                 onChange={(v) =>
                   setAttributes({ addSpaceBeforeSeparator: !!v })
