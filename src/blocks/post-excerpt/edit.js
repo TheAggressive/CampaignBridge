@@ -4,7 +4,6 @@ import {
   InspectorControls,
   useBlockProps,
 } from "@wordpress/block-editor";
-import { createBlocksFromInnerBlocksTemplate } from "@wordpress/blocks";
 import {
   Button,
   PanelBody,
@@ -17,19 +16,6 @@ import { useDispatch, useSelect } from "@wordpress/data";
 import { useMemo } from "@wordpress/element";
 import { decodeEntities } from "@wordpress/html-entities";
 import { useSyncInnerBlocks } from "./hooks/useSyncInnerBlocks";
-
-// Simple focus restoration for the parent block
-const restoreBlockSelection = (selectBlock, clientId, callback) => {
-  const result = callback();
-
-  try {
-    selectBlock(clientId);
-  } catch (e) {
-    // If selection fails, that's okay
-  }
-
-  return result;
-};
 
 // Constants
 const DEFAULT_ATTRIBUTES = {
@@ -154,11 +140,22 @@ export default function Edit({
     if (moreStyle === "button") {
       return [
         [
-          "core/button",
+          "core/buttons",
           {
-            text: moreLabel || "Read more",
-            url: linkUrl,
+            layout: {
+              type: "flex",
+              justifyContent: "left",
+            },
           },
+          [
+            [
+              "core/button",
+              {
+                text: moreLabel || "Read more",
+                url: linkUrl,
+              },
+            ],
+          ],
         ],
       ];
     } else {
@@ -175,21 +172,26 @@ export default function Edit({
 
   const props = useBlockProps();
 
-  // Memoize template to only recalculate when dependencies change
-  const template = useMemo(() => {
-    return getTemplate();
-  }, [
-    showMore,
-    moreStyle,
-    moreLabel,
-    linkUrl,
-    linkTo, // Added missing dependency
-  ]);
+  // Create structure key that only changes when structure actually changes
+  const structureKey = `${showMore ? 1 : 0}|${moreStyle}`;
 
-  // Use the reusable hook for synchronizing InnerBlocks
-  useSyncInnerBlocks(clientId, template, showMore && !!linkUrl, {
-    lockTemplate: true, // Enable template locking
+  // Memoize template - only include structural dependencies
+  const template = useMemo(
+    () => getTemplate(),
+    [
+      showMore,
+      moreStyle,
+      linkUrl, // URL is structural since it affects the template
+    ],
+  );
+
+  // Use the new hook API
+  const { resetToTemplate } = useSyncInnerBlocks(clientId, template, showMore, {
+    structureKey,
+    lockTemplate: true,
     clearOnDisable: true,
+    keepParentSelected: true,
+    debounceMs: 150, // Debounce to prevent rapid rebuilds
   });
 
   return (
@@ -255,16 +257,7 @@ export default function Edit({
 
           <Button
             variant="secondary"
-            onClick={() => {
-              if (!clientId) return;
-              const template = getTemplate();
-              const blocks = createBlocksFromInnerBlocksTemplate(template);
-              restoreBlockSelection(selectBlock, clientId, () => {
-                replaceInnerBlocks(clientId, blocks, {
-                  updateSelection: false,
-                });
-              });
-            }}
+            onClick={() => resetToTemplate()}
             style={{ marginTop: "16px" }}
           >
             Reset to Default {moreStyle === "button" ? "Button" : "Link"}
