@@ -1,9 +1,10 @@
 import {
+  store as blockEditorStore,
   InnerBlocks,
   InspectorControls,
   useBlockProps,
-  store as blockEditorStore,
 } from "@wordpress/block-editor";
+import { createBlocksFromInnerBlocksTemplate } from "@wordpress/blocks";
 import {
   PanelBody,
   RangeControl,
@@ -11,10 +12,9 @@ import {
   TextControl,
   ToggleControl,
 } from "@wordpress/components";
-import { useDispatch, useSelect, select } from "@wordpress/data";
+import { select, useDispatch, useSelect } from "@wordpress/data";
 import { useEffect, useMemo } from "@wordpress/element";
 import { decodeEntities } from "@wordpress/html-entities";
-import { createBlocksFromInnerBlocksTemplate } from "@wordpress/blocks";
 import { __ } from "@wordpress/i18n";
 
 /** ------------------ Constants ------------------ */
@@ -23,7 +23,6 @@ const DEFAULT_ATTRIBUTES = {
   maxWords: 50,
   showMore: false,
   moreStyle: "link", // 'link' | 'button'
-  moreLabel: "Read more",
   linkTo: "post", // 'post' | 'postType' (PHP decides final URL)
   morePrefix: "",
   addSpaceBeforeLink: true,
@@ -31,6 +30,7 @@ const DEFAULT_ATTRIBUTES = {
   separatorType: "custom",
   customSeparator: "",
   addSpaceBeforeSeparator: false,
+
   // Button cosmetics
   buttonRadius: 4,
   buttonPaddingX: 16,
@@ -85,6 +85,23 @@ const sameStructure = (a = [], b = []) => {
   return true;
 };
 
+const escapeHtml = (s = "") =>
+  s.replace(
+    /[&<>"']/g,
+    (m) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        m
+      ],
+  );
+
+/** Extract the visible text from a paragraph’s anchor content. */
+function extractLabelFromParagraph(html = "") {
+  const m = /<a[^>]*>([\s\S]*?)<\/a>/i.exec(html);
+  const inner = m ? m[1] : html;
+  // decode entities already handled by Gutenberg; still strip tags/trim
+  return inner.replace(/<[^>]*>/g, "").trim();
+}
+
 /** ------------------ Component ------------------ */
 
 export default function Edit({
@@ -97,14 +114,15 @@ export default function Edit({
     maxWords,
     showMore,
     moreStyle,
-    moreLabel,
     linkTo,
-    morePrefix, // currently not used in this edit preview, preserved for attributes
+    morePrefix, // not used in editor preview, preserved on attributes
     addSpaceBeforeLink,
     enableSeparator,
     separatorType,
     customSeparator,
     addSpaceBeforeSeparator,
+
+    // button cosmetics
     buttonRadius,
     buttonPaddingX,
     buttonPaddingY,
@@ -144,7 +162,7 @@ export default function Edit({
             : "flex-start";
 
       const buttonAttrs = {
-        text: moreLabel || "Read more",
+        text: "Read more", // will be replaced with user's current label on structure change
         url: "#", // placeholder; PHP swaps to permalink/archive
         style: {
           border: { radius: buttonRadius || 0 },
@@ -182,7 +200,7 @@ export default function Edit({
     return [
       [
         "core/paragraph",
-        { align, content: `<a href="#">${moreLabel || "Read more"}</a>` },
+        { align, content: `<a href="#">Read more</a>` }, // will be replaced with user's current label on structure change
       ],
     ];
   };
@@ -193,7 +211,6 @@ export default function Edit({
   const template = useMemo(getTemplate, [
     showMore,
     moreStyle,
-    moreLabel,
     buttonRadius,
     buttonPaddingX,
     buttonPaddingY,
@@ -207,25 +224,59 @@ export default function Edit({
   // Key that flips only on structure changes
   const structureKey = `${showMore ? 1 : 0}|${moreStyle}`;
 
-  /** Replace children ONLY when the structure changes (and avoid no-op replaces). */
+  /** Replace children ONLY when the structure changes. Also migrate the user's label. */
   useEffect(() => {
     if (!clientId) return;
 
-    const desired = createBlocksFromInnerBlocksTemplate(template || []);
-    const current = select(blockEditorStore).getBlocks(clientId);
+    const state = select(blockEditorStore);
+    const current = state.getBlocks(clientId);
 
+    // Pull the user's current label (from button.text or paragraph content)
+    let userLabel = "Read more";
+    const wrapper = current.find((b) => b.name === "core/buttons");
+    const btn = wrapper?.innerBlocks?.find((b) => b.name === "core/button");
+    if (btn?.attributes?.text) {
+      userLabel = String(btn.attributes.text).trim() || userLabel;
+    } else {
+      const para = current.find((b) => b.name === "core/paragraph");
+      if (para?.attributes?.content) {
+        const extracted = extractLabelFromParagraph(para.attributes.content);
+        if (extracted) userLabel = extracted;
+      }
+    }
+
+    // Build desired template blocks and inject the user's label
+    const desired = createBlocksFromInnerBlocksTemplate(template || []);
+    if (moreStyle === "button") {
+      const buttons = desired[0];
+      const button = buttons?.innerBlocks?.[0];
+      if (button) {
+        button.attributes = {
+          ...button.attributes,
+          text: userLabel || "Read more",
+        };
+      }
+    } else {
+      const para = desired[0];
+      if (para) {
+        const label = escapeHtml(userLabel || "Read more");
+        para.attributes = {
+          ...para.attributes,
+          content: `<a href="#">${label}</a>`,
+        };
+      }
+    }
+
+    // No-op replace if structure already matches
     if (sameStructure(shape(current), shape(desired))) return;
 
     replaceInnerBlocks(clientId, desired, { updateSelection: false });
-    const inside = select(blockEditorStore).hasSelectedInnerBlock(
-      clientId,
-      true,
-    );
+    const inside = state.hasSelectedInnerBlock(clientId, true);
     if (!inside) selectBlock(clientId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, structureKey]);
 
-  /** Cosmetic updates (no replace): alignments, label, padding, radius, width */
+  /** Cosmetic updates (no replace): alignments, padding, radius, width — NOT the label. */
   useEffect(() => {
     if (!showMore) return;
 
@@ -238,6 +289,7 @@ export default function Edit({
         (b) => b.name === "core/button",
       );
 
+      // wrapper alignment
       if (wrapper) {
         const wantJustify =
           buttonAlignment === "center"
@@ -253,9 +305,9 @@ export default function Edit({
         }
       }
 
+      // button visuals (do NOT touch button.text; users edit that inline)
       if (button) {
         const next = {
-          text: moreLabel || "Read more",
           url: "#",
           style: {
             border: { radius: buttonRadius || 0 },
@@ -272,7 +324,6 @@ export default function Edit({
         };
 
         const cur = {
-          text: button.attributes?.text,
           url: button.attributes?.url,
           style: button.attributes?.style,
           width: button.attributes?.width,
@@ -291,23 +342,16 @@ export default function Edit({
             : buttonAlignment === "right"
               ? "right"
               : "left";
-        const wantContent = `<a href="#">${moreLabel || "Read more"}</a>`;
-        if (
-          para.attributes?.align !== wantAlign ||
-          para.attributes?.content !== wantContent
-        ) {
-          updateBlockAttributes(para.clientId, {
-            align: wantAlign,
-            content: wantContent,
-          });
+        if (para.attributes?.align !== wantAlign) {
+          updateBlockAttributes(para.clientId, { align: wantAlign });
         }
+        // Do NOT overwrite para.content here; user edits it inline.
       }
     }
   }, [
     clientId,
     showMore,
     moreStyle,
-    moreLabel,
     buttonAlignment,
     buttonLayout,
     buttonRadius,
@@ -325,11 +369,14 @@ export default function Edit({
   return (
     <div {...props}>
       <InspectorControls>
-        <PanelBody title="Excerpt & More Link" initialOpen>
+        <PanelBody
+          title={__("Excerpt & More Link", "campaignbridge")}
+          initialOpen
+        >
           <RangeControl
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-            label="Max words"
+            label={__("Max words", "campaignbridge")}
             value={Number(maxWords) || 0}
             onChange={(v) => setAttributes({ maxWords: Number(v) || 0 })}
             min={10}
@@ -339,7 +386,7 @@ export default function Edit({
 
           <ToggleControl
             __nextHasNoMarginBottom
-            label={__("Show Link/Button", "campaignbridge")}
+            label={__("Show more link/button", "campaignbridge")}
             checked={!!showMore}
             onChange={(v) => setAttributes({ showMore: !!v })}
           />
@@ -354,13 +401,6 @@ export default function Edit({
                 options={MORE_STYLE_OPTIONS}
                 onChange={(v) => setAttributes({ moreStyle: v })}
               />
-              <TextControl
-                __next40pxDefaultSize
-                __nextHasNoMarginBottom
-                label={__("Label", "campaignbridge")}
-                value={moreLabel}
-                onChange={(v) => setAttributes({ moreLabel: v })}
-              />
               <ToggleControl
                 __nextHasNoMarginBottom
                 label={__("Add space before link", "campaignbridge")}
@@ -368,8 +408,11 @@ export default function Edit({
                 onChange={(v) => setAttributes({ addSpaceBeforeLink: !!v })}
                 help={
                   enableSeparator
-                    ? "Not used when separator is enabled"
-                    : "Adds spacing between the excerpt text and the read more link"
+                    ? __("Not used when separator is enabled", "campaignbridge")
+                    : __(
+                        "Adds spacing between the excerpt text and the read more link",
+                        "campaignbridge",
+                      )
                 }
               />
               <SelectControl
@@ -390,7 +433,10 @@ export default function Edit({
             label={__("Enable separator", "campaignbridge")}
             checked={!!enableSeparator}
             onChange={(v) => setAttributes({ enableSeparator: !!v })}
-            help="Add a separator between the excerpt text and the read more link"
+            help={__(
+              "Add a separator between the excerpt text and the read more link",
+              "campaignbridge",
+            )}
           />
           {enableSeparator && (
             <>
@@ -414,10 +460,11 @@ export default function Edit({
                   label={__("Custom separator", "campaignbridge")}
                   value={customSeparator}
                   onChange={(v) => setAttributes({ customSeparator: v })}
-                  help="Enter your own separator text"
+                  help={__("Enter your own separator text", "campaignbridge")}
                   placeholder="e.g., |, —, •, etc."
                 />
               )}
+
               <ToggleControl
                 __nextHasNoMarginBottom
                 label={__("Add space before separator", "campaignbridge")}
@@ -425,7 +472,10 @@ export default function Edit({
                 onChange={(v) =>
                   setAttributes({ addSpaceBeforeSeparator: !!v })
                 }
-                help="Adds a space between the excerpt text and the separator"
+                help={__(
+                  "Adds a space between the excerpt text and the separator",
+                  "campaignbridge",
+                )}
               />
             </>
           )}

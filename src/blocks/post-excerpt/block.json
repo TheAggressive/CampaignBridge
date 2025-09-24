@@ -5,7 +5,7 @@
   "title": "Post Excerpt",
   "category": "widgets",
   "icon": "editor-justify",
-  "description": "Shows the post summary with customizable text length and read-more link.",
+  "description": "Shows the post summary with customizable text length and a read-more link or button.",
   "supports": {
     "html": false,
     "inserter": true,
@@ -16,16 +16,21 @@
     "maxWords": { "type": "number", "default": 50 },
     "showMore": { "type": "boolean", "default": false },
     "moreStyle": { "type": "string", "default": "link" },
-    "moreLabel": { "type": "string", "default": "Read more" },
     "linkTo": { "type": "string", "default": "post" },
     "morePrefix": { "type": "string", "default": "" },
-    "addSpaceBeforeLink": { "type": "boolean", "default": true }
+    "addSpaceBeforeLink": { "type": "boolean", "default": true },
+    "enableSeparator": { "type": "boolean", "default": false },
+    "separatorType": { "type": "string", "default": "custom" },
+    "customSeparator": { "type": "string", "default": "" },
+    "addSpaceBeforeSeparator": { "type": "boolean", "default": false },
+    "buttonRadius": { "type": "number", "default": 4 },
+    "buttonPaddingX": { "type": "number", "default": 16 },
+    "buttonPaddingY": { "type": "number", "default": 10 },
+    "buttonLayout": { "type": "string", "default": "new-line" },
+    "buttonAlignment": { "type": "string", "default": "left" }
   },
-  "providesContext": {
-    "campaignbridge/postExcerptUrl": "postUrl"
-  },
-  "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "allowedBlocks": ["core/paragraph", "core/buttons", "core/button"],
+  "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js",
   "render": "file:./render.php"
 }
