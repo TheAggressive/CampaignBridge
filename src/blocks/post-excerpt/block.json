@@ -5,7 +5,7 @@
   "title": "Post Excerpt",
   "category": "widgets",
   "icon": "editor-justify",
-  "description": "Shows the post summary with customizable text length and a read-more link or button.",
+  "description": "Shows the post summary with customizable text length and an optional read-more link/button.",
   "supports": {
     "html": false,
     "inserter": true,

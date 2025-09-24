@@ -16,16 +16,23 @@ return function ( $attributes, $content, $block ) {
 		return '';
 	}
 
-	$max_words                  = isset( $attributes['maxWords'] ) ? absint( $attributes['maxWords'] ) : 50;
-	$show_more                  = ! empty( $attributes['showMore'] );
-	$more_label                 = isset( $attributes['moreLabel'] ) ? (string) $attributes['moreLabel'] : 'Read more';
-	$link_to                    = isset( $attributes['linkTo'] ) ? (string) $attributes['linkTo'] : 'post';
-	$add_space_before_link      = isset( $attributes['addSpaceBeforeLink'] ) ? (bool) $attributes['addSpaceBeforeLink'] : true;
-	$enable_separator           = isset( $attributes['enableSeparator'] ) ? (bool) $attributes['enableSeparator'] : false;
-	$custom_separator           = isset( $attributes['customSeparator'] ) ? (string) $attributes['customSeparator'] : '';
-	$add_space_before_separator = isset( $attributes['addSpaceBeforeSeparator'] ) ? (bool) $attributes['addSpaceBeforeSeparator'] : false;
+	$max_words = isset( $attributes['maxWords'] ) ? absint( $attributes['maxWords'] ) : 50;
+	$show_more = ! empty( $attributes['showMore'] );
+	$link_to   = isset( $attributes['linkTo'] ) ? (string) $attributes['linkTo'] : 'post';
 
-	// Build the excerpt from the post content/excerpt.
+	// Separator (support legacy misspelling keys just in case).
+	$enable_separator           = isset( $attributes['enableSeparator'] )
+		? (bool) $attributes['enableSeparator']
+		: ( isset( $attributes['enableSeperator'] ) ? (bool) $attributes['enableSeperator'] : false );
+	$custom_separator           = isset( $attributes['customSeparator'] )
+		? (string) $attributes['customSeparator']
+		: ( isset( $attributes['customSeperator'] ) ? (string) $attributes['customSeperator'] : '' );
+	$add_space_before_separator = isset( $attributes['addSpaceBeforeSeparator'] )
+		? (bool) $attributes['addSpaceBeforeSeparator']
+		: ( isset( $attributes['addSpaceBeforeSeperator'] ) ? (bool) $attributes['addSpaceBeforeSeperator'] : false );
+	$add_space_before_link      = isset( $attributes['addSpaceBeforeLink'] ) ? (bool) $attributes['addSpaceBeforeLink'] : true;
+
+	// Excerpt from post.
 	$raw_excerpt = (string) get_post_field( 'post_excerpt', $post_id );
 	$raw_content = (string) get_post_field( 'post_content', $post_id );
 	$raw         = '' !== $raw_excerpt ? $raw_excerpt : $raw_content;
@@ -39,7 +46,7 @@ return function ( $attributes, $content, $block ) {
 		$excerpt = rtrim( substr( $excerpt, 0, -1 ) );
 	}
 
-	// Compute the target link (match JS values: 'post' | 'postType').
+	// Compute link.
 	$link = '';
 	if ( $show_more ) {
 		if ( 'postType' === $link_to ) {
@@ -56,7 +63,7 @@ return function ( $attributes, $content, $block ) {
 		}
 	}
 
-	// Separator text (optional).
+	// Separator text.
 	$separator_text = '';
 	if ( $enable_separator && '' !== $custom_separator ) {
 		$separator_text = esc_html( $custom_separator ) . ' ';
@@ -68,7 +75,7 @@ return function ( $attributes, $content, $block ) {
 		$separator_text = ' ';
 	}
 
-	// Preserve saved inner markup; only update placeholder href="#".
+	// Use saved inner markup; swap href="#" to real link.
 	$more_html = '';
 	if ( $show_more && $content ) {
 		$more_html = $content;

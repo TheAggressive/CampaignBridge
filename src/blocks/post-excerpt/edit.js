@@ -13,7 +13,7 @@ import {
   ToggleControl,
 } from "@wordpress/components";
 import { select, useDispatch, useSelect } from "@wordpress/data";
-import { useEffect, useMemo } from "@wordpress/element";
+import { useEffect, useMemo, useRef } from "@wordpress/element";
 import { decodeEntities } from "@wordpress/html-entities";
 import { __ } from "@wordpress/i18n";
 
@@ -26,28 +26,23 @@ const DEFAULT_ATTRIBUTES = {
   linkTo: "post", // 'post' | 'postType' (PHP decides final URL)
   morePrefix: "",
   addSpaceBeforeLink: true,
+
+  // Separator
   enableSeparator: false,
   separatorType: "custom",
   customSeparator: "",
   addSpaceBeforeSeparator: false,
-
-  // Button cosmetics
-  buttonRadius: 4,
-  buttonPaddingX: 16,
-  buttonPaddingY: 10,
-  buttonLayout: "new-line", // 'new-line' | 'full-width' | 'inline'
-  buttonAlignment: "left", // 'left' | 'center' | 'right'
 };
 
 const SEPARATOR_OPTIONS = [
-  { label: "Custom", value: "custom" },
-  { label: "Em dash (—)", value: "em-dash" },
-  { label: "En dash (–)", value: "en-dash" },
-  { label: "Ellipsis (...)", value: "ellipsis" },
-  { label: "Pipe (|)", value: "pipe" },
-  { label: "Colon (:)", value: "colon" },
-  { label: "Semicolon (;)", value: "semicolon" },
-  { label: "Bullet (•)", value: "bullet" },
+  { label: __("Custom", "campaignbridge"), value: "custom" },
+  { label: __("Em dash (—)", "campaignbridge"), value: "em-dash" },
+  { label: __("En dash (–)", "campaignbridge"), value: "en-dash" },
+  { label: __("Ellipsis (...)", "campaignbridge"), value: "ellipsis" },
+  { label: __("Pipe (|)", "campaignbridge"), value: "pipe" },
+  { label: __("Colon (:)", "campaignbridge"), value: "colon" },
+  { label: __("Semicolon (;)", "campaignbridge"), value: "semicolon" },
+  { label: __("Bullet (•)", "campaignbridge"), value: "bullet" },
 ];
 
 const SEPARATOR_MAPPING = {
@@ -61,18 +56,18 @@ const SEPARATOR_MAPPING = {
 };
 
 const LINK_TO_OPTIONS = [
-  { label: "Post", value: "post" },
-  { label: "Post Type", value: "postType" },
+  { label: __("Post", "campaignbridge"), value: "post" },
+  { label: __("Post Type", "campaignbridge"), value: "postType" },
 ];
 
 const MORE_STYLE_OPTIONS = [
-  { label: "Link", value: "link" },
-  { label: "Button", value: "button" },
+  { label: __("Link", "campaignbridge"), value: "link" },
+  { label: __("Button", "campaignbridge"), value: "button" },
 ];
 
 /** ------------------ Helpers ------------------ */
 
-// Compare block *structure* only (names + nesting), not attributes
+// structure-only comparison (names + nesting)
 const shape = (blocks = []) =>
   blocks.map((b) => ({ n: b.name, c: shape(b.innerBlocks || []) }));
 
@@ -94,11 +89,10 @@ const escapeHtml = (s = "") =>
       ],
   );
 
-/** Extract the visible text from a paragraph’s anchor content. */
+// pull inner text from a paragraph’s <a>
 function extractLabelFromParagraph(html = "") {
   const m = /<a[^>]*>([\s\S]*?)<\/a>/i.exec(html);
   const inner = m ? m[1] : html;
-  // decode entities already handled by Gutenberg; still strip tags/trim
   return inner.replace(/<[^>]*>/g, "").trim();
 }
 
@@ -115,25 +109,20 @@ export default function Edit({
     showMore,
     moreStyle,
     linkTo,
-    morePrefix, // not used in editor preview, preserved on attributes
+    morePrefix, // not used in editor preview
     addSpaceBeforeLink,
+
+    // separator
     enableSeparator,
     separatorType,
     customSeparator,
     addSpaceBeforeSeparator,
-
-    // button cosmetics
-    buttonRadius,
-    buttonPaddingX,
-    buttonPaddingY,
-    buttonLayout,
-    buttonAlignment,
   } = { ...DEFAULT_ATTRIBUTES, ...attributes };
 
   const postId = Number(context["campaignbridge:postId"]) || 0;
   const postType = context["campaignbridge:postType"] || "post";
 
-  // Get post data just to render an excerpt preview in the editor
+  // Post -> excerpt preview only
   const post = useSelect(
     (s) =>
       postId ? s("core").getEntityRecord("postType", postType, postId) : null,
@@ -149,95 +138,85 @@ export default function Edit({
   let excerpt = words.slice(0, maxWords).join(" ");
   if (showMore && excerpt.endsWith(".")) excerpt = excerpt.slice(0, -1).trim();
 
-  // Template builder (STRUCTURE ONLY). Use '#' in editor; PHP replaces with real link.
+  // Templates (STRUCTURE ONLY). Use '#' in editor; PHP replaces with real link.
   const getTemplate = () => {
     if (!showMore) return [];
 
     if (moreStyle === "button") {
-      const justify =
-        buttonAlignment === "center"
-          ? "center"
-          : buttonAlignment === "right"
-            ? "flex-end"
-            : "flex-start";
-
-      const buttonAttrs = {
-        text: "Read more", // will be replaced with user's current label on structure change
-        url: "#", // placeholder; PHP swaps to permalink/archive
-        style: {
-          border: { radius: buttonRadius || 0 },
-          spacing: {
-            padding: {
-              top: buttonPaddingY || 10,
-              bottom: buttonPaddingY || 10,
-              left: buttonPaddingX || 16,
-              right: buttonPaddingX || 16,
-            },
-          },
-        },
-      };
-      if (buttonLayout === "full-width") {
-        buttonAttrs.width = 100; // core/button width %
-      }
-
       return [
         [
           "core/buttons",
-          { layout: { type: "flex", justifyContent: justify } },
-          [["core/button", buttonAttrs]],
+          {},
+          [
+            [
+              "core/button",
+              { text: __("Read more", "campaignbridge"), url: "#" },
+            ],
+          ],
         ],
       ];
     }
 
-    // Link variant: paragraph with align + anchor
-    const align =
-      buttonAlignment === "center"
-        ? "center"
-        : buttonAlignment === "right"
-          ? "right"
-          : "left";
-
+    // Link variant: paragraph with anchor
     return [
       [
         "core/paragraph",
-        { align, content: `<a href="#">Read more</a>` }, // will be replaced with user's current label on structure change
+        {
+          content: `<a href="#">${escapeHtml(__("Read more", "campaignbridge"))}</a>`,
+        },
       ],
     ];
   };
 
   const props = useBlockProps({ style: { fontSize: 14, lineHeight: 1.5 } });
 
-  // Memoize *only* on structure-affecting inputs
-  const template = useMemo(getTemplate, [
-    showMore,
-    moreStyle,
-    buttonRadius,
-    buttonPaddingX,
-    buttonPaddingY,
-    buttonLayout,
-    buttonAlignment,
-  ]);
+  // Only recalc when the shape can change
+  const template = useMemo(getTemplate, [showMore, moreStyle]);
 
-  const { replaceInnerBlocks, selectBlock, updateBlockAttributes } =
-    useDispatch(blockEditorStore);
+  const { replaceInnerBlocks, selectBlock } = useDispatch(blockEditorStore);
 
-  // Key that flips only on structure changes
+  // Track previous structure to ensure we only act on user-initiated structure changes
+  const prevStructureKey = useRef(null);
   const structureKey = `${showMore ? 1 : 0}|${moreStyle}`;
 
-  /** Replace children ONLY when the structure changes. Also migrate the user's label. */
+  // Only touch InnerBlocks when structure changes (showMore / moreStyle)
   useEffect(() => {
     if (!clientId) return;
+
+    // Skip the very first run after mount: we want to load whatever is saved
+    if (prevStructureKey.current === null) {
+      prevStructureKey.current = structureKey;
+      return;
+    }
+
+    // If nothing changed (same structure), do nothing
+    if (prevStructureKey.current === structureKey) return;
 
     const state = select(blockEditorStore);
     const current = state.getBlocks(clientId);
 
-    // Pull the user's current label (from button.text or paragraph content)
-    let userLabel = "Read more";
+    // Handle disabling: clear children when turning showMore OFF
+    const wasOn = prevStructureKey.current.startsWith("1|");
+    const isOn = structureKey.startsWith("1|");
+    if (!isOn && wasOn) {
+      if (current.length > 0) {
+        replaceInnerBlocks(clientId, [], { updateSelection: false });
+        selectBlock(clientId);
+      }
+      prevStructureKey.current = structureKey;
+      return;
+    }
+
+    // We’re enabled & a style switch may have happened: build desired and migrate label
+    let userLabel = __("Read more", "campaignbridge");
+
+    // Prefer button text if present
     const wrapper = current.find((b) => b.name === "core/buttons");
     const btn = wrapper?.innerBlocks?.find((b) => b.name === "core/button");
     if (btn?.attributes?.text) {
       userLabel = String(btn.attributes.text).trim() || userLabel;
     } else {
+      // Else read paragraph <a> text
       const para = current.find((b) => b.name === "core/paragraph");
       if (para?.attributes?.content) {
         const extracted = extractLabelFromParagraph(para.attributes.content);
@@ -245,7 +224,6 @@ export default function Edit({
       }
     }
 
-    // Build desired template blocks and inject the user's label
     const desired = createBlocksFromInnerBlocksTemplate(template || []);
     if (moreStyle === "button") {
       const buttons = desired[0];
@@ -253,13 +231,15 @@ export default function Edit({
       if (button) {
         button.attributes = {
           ...button.attributes,
-          text: userLabel || "Read more",
+          text: userLabel || __("Read more", "campaignbridge"),
         };
       }
     } else {
       const para = desired[0];
       if (para) {
-        const label = escapeHtml(userLabel || "Read more");
+        const label = escapeHtml(
+          userLabel || __("Read more", "campaignbridge"),
+        );
         para.attributes = {
           ...para.attributes,
           content: `<a href="#">${label}</a>`,
@@ -267,98 +247,19 @@ export default function Edit({
       }
     }
 
-    // No-op replace if structure already matches
-    if (sameStructure(shape(current), shape(desired))) return;
+    // If structures match already, do nothing (preserve user styles/text)
+    if (sameStructure(shape(current), shape(desired))) {
+      prevStructureKey.current = structureKey;
+      return;
+    }
 
+    // First-time insert or style switch: replace
     replaceInnerBlocks(clientId, desired, { updateSelection: false });
     const inside = state.hasSelectedInnerBlock(clientId, true);
     if (!inside) selectBlock(clientId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId, structureKey]);
 
-  /** Cosmetic updates (no replace): alignments, padding, radius, width — NOT the label. */
-  useEffect(() => {
-    if (!showMore) return;
-
-    const state = select(blockEditorStore);
-    const kids = state.getBlocks(clientId);
-
-    if (moreStyle === "button") {
-      const wrapper = kids.find((b) => b.name === "core/buttons");
-      const button = wrapper?.innerBlocks?.find(
-        (b) => b.name === "core/button",
-      );
-
-      // wrapper alignment
-      if (wrapper) {
-        const wantJustify =
-          buttonAlignment === "center"
-            ? "center"
-            : buttonAlignment === "right"
-              ? "flex-end"
-              : "flex-start";
-        const haveJustify = wrapper.attributes?.layout?.justifyContent;
-        if (haveJustify !== wantJustify) {
-          updateBlockAttributes(wrapper.clientId, {
-            layout: { type: "flex", justifyContent: wantJustify },
-          });
-        }
-      }
-
-      // button visuals (do NOT touch button.text; users edit that inline)
-      if (button) {
-        const next = {
-          url: "#",
-          style: {
-            border: { radius: buttonRadius || 0 },
-            spacing: {
-              padding: {
-                top: buttonPaddingY || 10,
-                bottom: buttonPaddingY || 10,
-                left: buttonPaddingX || 16,
-                right: buttonPaddingX || 16,
-              },
-            },
-          },
-          ...(buttonLayout === "full-width" ? { width: 100 } : {}),
-        };
-
-        const cur = {
-          url: button.attributes?.url,
-          style: button.attributes?.style,
-          width: button.attributes?.width,
-        };
-
-        if (JSON.stringify(cur) !== JSON.stringify(next)) {
-          updateBlockAttributes(button.clientId, next);
-        }
-      }
-    } else {
-      const para = kids.find((b) => b.name === "core/paragraph");
-      if (para) {
-        const wantAlign =
-          buttonAlignment === "center"
-            ? "center"
-            : buttonAlignment === "right"
-              ? "right"
-              : "left";
-        if (para.attributes?.align !== wantAlign) {
-          updateBlockAttributes(para.clientId, { align: wantAlign });
-        }
-        // Do NOT overwrite para.content here; user edits it inline.
-      }
-    }
-  }, [
-    clientId,
-    showMore,
-    moreStyle,
-    buttonAlignment,
-    buttonLayout,
-    buttonRadius,
-    buttonPaddingX,
-    buttonPaddingY,
-    updateBlockAttributes,
-  ]);
+    prevStructureKey.current = structureKey;
+  }, [clientId, structureKey, template, replaceInnerBlocks, selectBlock]);
 
   // Separator (editor preview string)
   const sep =
@@ -427,7 +328,10 @@ export default function Edit({
           )}
         </PanelBody>
 
-        <PanelBody title="Separator" initialOpen={false}>
+        <PanelBody
+          title={__("Separator", "campaignbridge")}
+          initialOpen={false}
+        >
           <ToggleControl
             __nextHasNoMarginBottom
             label={__("Enable separator", "campaignbridge")}
@@ -438,6 +342,7 @@ export default function Edit({
               "campaignbridge",
             )}
           />
+
           {enableSeparator && (
             <>
               <SelectControl
@@ -453,6 +358,7 @@ export default function Edit({
                   });
                 }}
               />
+
               {separatorType === "custom" && (
                 <TextControl
                   __next40pxDefaultSize
@@ -460,8 +366,7 @@ export default function Edit({
                   label={__("Custom separator", "campaignbridge")}
                   value={customSeparator}
                   onChange={(v) => setAttributes({ customSeparator: v })}
-                  help={__("Enter your own separator text", "campaignbridge")}
-                  placeholder="e.g., |, —, •, etc."
+                  placeholder={__("e.g., |, —, •, etc.", "campaignbridge")}
                 />
               )}
 
@@ -485,11 +390,13 @@ export default function Edit({
       {!!excerpt && (
         <>
           {excerpt}
-          {enableSeparator && customSeparator ? sep : ""}
+          {enableSeparator && customSeparator
+            ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator} `
+            : ""}
           {addSpaceBeforeLink && !enableSeparator && showMore ? " " : ""}
           {showMore && (
             <InnerBlocks
-              templateLock="all"
+              templateLock="all" // users can edit text but cannot add/move/remove blocks
               allowedBlocks={["core/paragraph", "core/buttons", "core/button"]}
               templateInsertUpdatesSelection={false}
             />
