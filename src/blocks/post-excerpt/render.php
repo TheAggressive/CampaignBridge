@@ -16,21 +16,19 @@ return function ( $attributes, $content, $block ) {
 		return '';
 	}
 
-	// Attributes with defaults.
+	// Attributes with defaults (mirror block.json).
 	$max_words             = isset( $attributes['maxWords'] ) ? absint( $attributes['maxWords'] ) : 50;
-	$show_more             = ! empty( $attributes['showMore'] );
+	$show_more             = isset( $attributes['showMore'] ) ? (bool) $attributes['showMore'] : true;
 	$more_style            = isset( $attributes['moreStyle'] ) ? (string) $attributes['moreStyle'] : 'link'; // 'link' | 'button'
-	$link_to               = isset( $attributes['linkTo'] ) ? (string) $attributes['linkTo'] : 'post';       // 'post' | 'postType'
+	$more_placement        = isset( $attributes['morePlacement'] ) ? (string) $attributes['morePlacement'] : 'new-line'; // 'new-line' | 'inline'
+	$link_to               = isset( $attributes['linkTo'] ) ? (string) $attributes['linkTo'] : 'post'; // 'post' | 'postType'
 	$add_space_before_link = isset( $attributes['addSpaceBeforeLink'] ) ? (bool) $attributes['addSpaceBeforeLink'] : true;
 
 	$enable_separator           = isset( $attributes['enableSeparator'] ) ? (bool) $attributes['enableSeparator'] : false;
-	$separator_type             = isset( $attributes['separatorType'] ) ? (string) $attributes['separatorType'] : 'custom';
 	$custom_separator           = isset( $attributes['customSeparator'] ) ? (string) $attributes['customSeparator'] : '';
 	$add_space_before_separator = isset( $attributes['addSpaceBeforeSeparator'] ) ? (bool) $attributes['addSpaceBeforeSeparator'] : false;
 
-	$more_placement = isset( $attributes['morePlacement'] ) ? (string) $attributes['morePlacement'] : 'new-line'; // 'new-line' | 'inline'
-
-	// Build plain excerpt.
+	// Build plain-text excerpt.
 	$raw_excerpt = (string) get_post_field( 'post_excerpt', $post_id );
 	$raw_content = (string) get_post_field( 'post_content', $post_id );
 	$raw         = '' !== $raw_excerpt ? $raw_excerpt : $raw_content;
@@ -40,11 +38,13 @@ return function ( $attributes, $content, $block ) {
 	$words         = preg_split( '/\s+/', $plain, -1, PREG_SPLIT_NO_EMPTY );
 	$limited_words = array_slice( $words, 0, max( 0, $max_words ) );
 	$excerpt       = esc_html( implode( ' ', $limited_words ) );
+
+	// Remove trailing period if showing "more".
 	if ( $show_more && substr( $excerpt, -1 ) === '.' ) {
 		$excerpt = rtrim( substr( $excerpt, 0, -1 ) );
 	}
 
-	// Compute target URL.
+	// Resolve target URL.
 	$link = '';
 	if ( $show_more ) {
 		if ( 'postType' === $link_to ) {
@@ -61,7 +61,7 @@ return function ( $attributes, $content, $block ) {
 		}
 	}
 
-	// Prefix (separator or spacing) that precedes the saved inner blocks.
+	// Build prefix (separator or space before InnerBlocks).
 	$prefix = '';
 	if ( $show_more ) {
 		if ( $enable_separator && '' !== $custom_separator ) {
@@ -74,12 +74,12 @@ return function ( $attributes, $content, $block ) {
 		}
 	}
 
-	// Start with the saved inner blocks content.
+	// Start with saved InnerBlocks content.
 	$more_html = '';
 	if ( $show_more && $content ) {
 		$more_html = $content;
 
-		// 1) Ensure href "#" becomes the real link.
+		// 1) Replace placeholder hrefs '#' with the real URL.
 		if ( $link ) {
 			if ( class_exists( 'WP_HTML_Tag_Processor' ) ) {
 				$p = new WP_HTML_Tag_Processor( $more_html );
@@ -99,7 +99,7 @@ return function ( $attributes, $content, $block ) {
 			}
 		}
 
-		// 2) If placement is inline, add inline class to child wrapper/tag (frontend parity).
+		// 2) Ensure inline placement class on child wrapper/tag (frontend parity).
 		if ( 'inline' === $more_placement ) {
 			if ( class_exists( 'WP_HTML_Tag_Processor' ) ) {
 				$p     = new WP_HTML_Tag_Processor( $more_html );
@@ -115,7 +115,7 @@ return function ( $attributes, $content, $block ) {
 					}
 				}
 
-				// Otherwise try Paragraph (link style).
+				// Otherwise Paragraph (link style).
 				if ( ! $added ) {
 					$p->seek( 0 );
 					while ( $p->next_tag( 'p' ) ) {
@@ -129,7 +129,7 @@ return function ( $attributes, $content, $block ) {
 
 				$more_html = $p->get_updated_html();
 			} else {
-				// Fallback: inject class via regex if Tag Processor isn't available.
+				// Fallback regex: add class to the first matching buttons/paragraph wrapper.
 				$cnt       = 0;
 				$more_html = preg_replace(
 					'#<div([^>]*class="[^"]*\bwp-block-buttons\b[^"]*)"#i',
@@ -152,21 +152,20 @@ return function ( $attributes, $content, $block ) {
 			}
 		}
 
-		// Prepend separator/space.
+		// 3) Prepend separator/space.
 		if ( $prefix ) {
 			$more_html = $prefix . $more_html;
 		}
 	}
 
-	// Wrapper attributes (adds has-inline-readmore on the outer wrapper for CSS hooks).
+	// Outer wrapper: no hardcoded color; let theme/user styles win.
 	$wrapper_attrs = function_exists( 'get_block_wrapper_attributes' )
 		? get_block_wrapper_attributes(
 			array(
 				'class' => ( 'inline' === $more_placement ? 'has-inline-readmore' : '' ),
-				'style' => 'font-size:14px;line-height:1.5;color:#333;',
 			)
 		)
-		: 'style="font-size:14px;line-height:1.5;color:#333;"';
+		: '';
 
 	return sprintf(
 		'<div %s>%s%s</div>',

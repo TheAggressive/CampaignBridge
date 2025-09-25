@@ -1,7 +1,7 @@
 import {
-  InnerBlocks,
   InspectorControls,
   useBlockProps,
+  useInnerBlocksProps,
 } from "@wordpress/block-editor";
 import {
   PanelBody,
@@ -10,27 +10,29 @@ import {
   TextControl,
   ToggleControl,
 } from "@wordpress/components";
-import { __ } from "@wordpress/i18n";
 import { useMemo } from "@wordpress/element";
+import { __ } from "@wordpress/i18n";
 import { useExcerptPreview } from "./hooks/useExcerptPreview";
+import { useInlinePlacementClass } from "./hooks/useInlinePlacementClass";
 import { useReadMoreTemplate } from "./hooks/useReadMoreTemplate";
 import { useSyncReadMoreStructure } from "./hooks/useSyncReadMoreStructure";
-import { useInlinePlacementClass } from "./hooks/useInlinePlacementClass";
 
-const D = {
+/** Fallback defaults (keep block.json as source of truth). */
+const DEFAULTS = {
   maxWords: 50,
-  showMore: false,
-  moreStyle: "link",
-  morePlacement: "new-line",
-  linkTo: "post",
+  showMore: true,
+  moreStyle: "link", // 'link' | 'button'
+  morePlacement: "new-line", // 'new-line' | 'inline'
+  linkTo: "post", // 'post' | 'postType'
   addSpaceBeforeLink: true,
+
   enableSeparator: false,
   separatorType: "custom",
   customSeparator: "",
   addSpaceBeforeSeparator: false,
 };
 
-const SEP_OPTIONS = [
+const SEPARATOR_OPTIONS = [
   { label: __("Custom", "campaignbridge"), value: "custom" },
   { label: __("Em dash (—)", "campaignbridge"), value: "em-dash" },
   { label: __("En dash (–)", "campaignbridge"), value: "en-dash" },
@@ -73,45 +75,55 @@ export default function Edit({
   context = {},
   clientId,
 }) {
-  const a = { ...D, ...attributes };
+  const {
+    maxWords,
+    showMore,
+    moreStyle,
+    morePlacement,
+    linkTo,
+    addSpaceBeforeLink,
+    enableSeparator,
+    separatorType,
+    customSeparator,
+    addSpaceBeforeSeparator,
+  } = { ...DEFAULTS, ...attributes };
+
   const postId = Number(context["campaignbridge:postId"]) || 0;
   const postType = context["campaignbridge:postType"] || "post";
 
-  const excerpt = useExcerptPreview({
-    postId,
-    postType,
-    maxWords: a.maxWords,
-    showMore: a.showMore,
-  });
-  const template = useReadMoreTemplate({
-    showMore: a.showMore,
-    moreStyle: a.moreStyle,
-    morePlacement: a.morePlacement,
-  });
+  const excerpt = useExcerptPreview({ postId, postType, maxWords, showMore });
+  const template = useReadMoreTemplate({ showMore, moreStyle, morePlacement });
 
-  useSyncReadMoreStructure(
-    clientId,
-    { showMore: a.showMore, moreStyle: a.moreStyle },
-    template,
-  );
-  useInlinePlacementClass(clientId, {
-    showMore: a.showMore,
-    moreStyle: a.moreStyle,
-    morePlacement: a.morePlacement,
-  });
+  // Structure change & placement class toggling (preserve user edits)
+  useSyncReadMoreStructure(clientId, { showMore, moreStyle }, template);
+  useInlinePlacementClass(clientId, { showMore, moreStyle, morePlacement });
 
   const blockProps = useBlockProps({
-    className: a.morePlacement === "inline" ? "has-inline-readmore" : undefined,
-    style: { fontSize: 14, lineHeight: 1.5 },
+    className: morePlacement === "inline" ? "has-inline-readmore" : undefined,
   });
 
-  const sep = useMemo(
-    () =>
-      a.enableSeparator && a.customSeparator
-        ? `${a.addSpaceBeforeSeparator ? " " : ""}${a.customSeparator} `
-        : "",
-    [a.enableSeparator, a.customSeparator, a.addSpaceBeforeSeparator],
+  // Editor: render InnerBlocks via our own container (span when inline).
+  const Tag = showMore ? (morePlacement === "inline" ? "span" : "div") : "div";
+  const innerBlocksProps = useInnerBlocksProps(
+    {
+      className:
+        morePlacement === "inline" ? "is-inline-readmore-wrap" : undefined,
+    },
+    {
+      template,
+      allowedBlocks: ALLOWED,
+      templateLock: "all",
+      renderAppender: false,
+      templateInsertUpdatesSelection: false,
+    },
   );
+
+  // Separator preview string
+  const sep = useMemo(() => {
+    return enableSeparator && customSeparator
+      ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator} `
+      : "";
+  }, [enableSeparator, customSeparator, addSpaceBeforeSeparator]);
 
   return (
     <div {...blockProps}>
@@ -124,7 +136,7 @@ export default function Edit({
             __next40pxDefaultSize
             __nextHasNoMarginBottom
             label={__("Max words", "campaignbridge")}
-            value={Number(a.maxWords) || 0}
+            value={Number(maxWords) || 0}
             onChange={(v) => setAttributes({ maxWords: Number(v) || 0 })}
             min={10}
             max={150}
@@ -133,18 +145,18 @@ export default function Edit({
 
           <ToggleControl
             __nextHasNoMarginBottom
-            label={__("Show more link/button", "campaignbridge")}
-            checked={!!a.showMore}
+            label={__("Show more", "campaignbridge")}
+            checked={!!showMore}
             onChange={(v) => setAttributes({ showMore: !!v })}
           />
 
-          {a.showMore && (
+          {showMore && (
             <>
               <SelectControl
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
                 label={__("Style", "campaignbridge")}
-                value={a.moreStyle}
+                value={moreStyle}
                 options={STYLE_OPTIONS}
                 onChange={(v) => setAttributes({ moreStyle: v })}
               />
@@ -153,16 +165,20 @@ export default function Edit({
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
                 label={__("Placement", "campaignbridge")}
-                value={a.morePlacement}
+                value={morePlacement}
                 options={PLACEMENT_OPTIONS}
                 onChange={(v) => setAttributes({ morePlacement: v })}
+                help={__(
+                  "Choose “Inline” to place the link/button at the end of the excerpt line.",
+                  "campaignbridge",
+                )}
               />
 
               <SelectControl
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
                 label={__("Link to", "campaignbridge")}
-                value={a.linkTo}
+                value={linkTo}
                 options={LINK_TO_OPTIONS}
                 onChange={(v) => setAttributes({ linkTo: v })}
               />
@@ -170,10 +186,10 @@ export default function Edit({
               <ToggleControl
                 __nextHasNoMarginBottom
                 label={__("Add space before link", "campaignbridge")}
-                checked={!!a.addSpaceBeforeLink}
+                checked={!!addSpaceBeforeLink}
                 onChange={(v) => setAttributes({ addSpaceBeforeLink: !!v })}
                 help={
-                  a.enableSeparator
+                  enableSeparator
                     ? __("Not used when separator is enabled", "campaignbridge")
                     : __(
                         "Adds spacing between the excerpt text and the read more link",
@@ -192,7 +208,7 @@ export default function Edit({
           <ToggleControl
             __nextHasNoMarginBottom
             label={__("Enable separator", "campaignbridge")}
-            checked={!!a.enableSeparator}
+            checked={!!enableSeparator}
             onChange={(v) => setAttributes({ enableSeparator: !!v })}
             help={__(
               "Add a separator between the excerpt text and the read more link",
@@ -200,14 +216,14 @@ export default function Edit({
             )}
           />
 
-          {a.enableSeparator && (
+          {enableSeparator && (
             <>
               <SelectControl
                 __next40pxDefaultSize
                 __nextHasNoMarginBottom
                 label={__("Separator type", "campaignbridge")}
-                value={a.separatorType}
-                options={SEP_OPTIONS}
+                value={separatorType}
+                options={SEPARATOR_OPTIONS}
                 onChange={(value) =>
                   setAttributes({
                     separatorType: value,
@@ -216,12 +232,12 @@ export default function Edit({
                 }
               />
 
-              {a.separatorType === "custom" && (
+              {separatorType === "custom" && (
                 <TextControl
                   __next40pxDefaultSize
                   __nextHasNoMarginBottom
                   label={__("Custom separator", "campaignbridge")}
-                  value={a.customSeparator}
+                  value={customSeparator}
                   onChange={(v) => setAttributes({ customSeparator: v })}
                   placeholder={__("e.g., |, —, •, etc.", "campaignbridge")}
                 />
@@ -230,7 +246,7 @@ export default function Edit({
               <ToggleControl
                 __nextHasNoMarginBottom
                 label={__("Add space before separator", "campaignbridge")}
-                checked={!!a.addSpaceBeforeSeparator}
+                checked={!!addSpaceBeforeSeparator}
                 onChange={(v) =>
                   setAttributes({ addSpaceBeforeSeparator: !!v })
                 }
@@ -243,17 +259,10 @@ export default function Edit({
       {!!excerpt && (
         <>
           {excerpt}
-          {a.enableSeparator && a.customSeparator ? sep : ""}
-          {!a.enableSeparator && a.addSpaceBeforeLink && a.showMore ? " " : ""}
+          {enableSeparator && customSeparator ? sep : ""}
+          {!enableSeparator && addSpaceBeforeLink && showMore ? " " : ""}
 
-          {a.showMore && (
-            <InnerBlocks
-              template={template} // seed only when empty
-              templateLock="all"
-              allowedBlocks={ALLOWED}
-              templateInsertUpdatesSelection={false}
-            />
-          )}
+          {showMore && <Tag {...innerBlocksProps} />}
         </>
       )}
     </div>

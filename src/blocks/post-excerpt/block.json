@@ -33,8 +33,8 @@
   },
   "allowedBlocks": ["core/paragraph", "core/buttons", "core/button"],
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
-  "style": "file:./style.css",
   "editorScript": "file:./index.js",
   "render": "file:./render.php",
-  "editorStyle": "file:./editor.css"
+  "style": "file:./style-index.css",
+  "editorStyle": "file:./index.css"
 }

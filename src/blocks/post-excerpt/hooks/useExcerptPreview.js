@@ -2,9 +2,7 @@ import { useSelect } from "@wordpress/data";
 import { useMemo } from "@wordpress/element";
 import { decodeEntities } from "@wordpress/html-entities";
 
-/**
- * Returns a memoized plain-text excerpt preview (client-side only).
- */
+/** Returns a memoized plain-text excerpt preview for the editor. */
 export function useExcerptPreview({ postId, postType, maxWords, showMore }) {
   const post = useSelect(
     (s) =>

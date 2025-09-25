@@ -1,7 +1,7 @@
 import { useMemo } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 
-const escapeHtml = (s = "") =>
+const esc = (s = "") =>
   s.replace(
     /[&<>"']/g,
     (m) =>
@@ -11,7 +11,7 @@ const escapeHtml = (s = "") =>
   );
 
 /**
- * Builds the InnerBlocks template (seeded only when empty by InnerBlocks itself).
+ * Builds the InnerBlocks template (seeded only when empty).
  * Uses '#' for URL; render.php replaces it with the real link.
  */
 export function useReadMoreTemplate({ showMore, moreStyle, morePlacement }) {
@@ -40,7 +40,7 @@ export function useReadMoreTemplate({ showMore, moreStyle, morePlacement }) {
         {
           className:
             morePlacement === "inline" ? "is-inline-readmore" : undefined,
-          content: `<a href="#">${escapeHtml(__("Read more", "campaignbridge"))}</a>`,
+          content: `<a href="#">${esc(__("Read more", "campaignbridge"))}</a>`,
         },
       ],
     ];

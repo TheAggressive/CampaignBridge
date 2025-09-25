@@ -4,7 +4,7 @@ import { select, useDispatch } from "@wordpress/data";
 import { useEffect, useRef } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 
-const escapeHtml = (s = "") =>
+const esc = (s = "") =>
   s.replace(
     /[&<>"']/g,
     (m) =>
@@ -13,8 +13,8 @@ const escapeHtml = (s = "") =>
       ],
   );
 
-/** Extract anchor text from a paragraph's HTML */
-const extractLabelFromParagraph = (html = "") => {
+/** Extract anchor text from a paragraph’s content HTML */
+const anchorText = (html = "") => {
   const m = /<a[^>]*>([\s\S]*?)<\/a>/i.exec(html);
   const inner = m ? m[1] : html;
   return inner.replace(/<[^>]*>/g, "").trim();
@@ -22,9 +22,9 @@ const extractLabelFromParagraph = (html = "") => {
 
 /**
  * Rebuild children ONLY when structure changes:
- * - ShowMore toggle (on/off)
- * - Link ↔ Button swap
- * Preserves user label when swapping.
+ *  - ShowMore ON/OFF
+ *  - Link ↔ Button swap
+ * Preserves the user’s label when swapping.
  */
 export function useSyncReadMoreStructure(
   clientId,
@@ -51,7 +51,7 @@ export function useSyncReadMoreStructure(
     const wasOn = prevKeyRef.current.startsWith("1|");
     const isOn = structureKey.startsWith("1|");
 
-    // Turning OFF -> clear children
+    // Turning OFF showMore -> clear children
     if (!isOn && wasOn) {
       if (current.length) {
         replaceInnerBlocks(clientId, [], { updateSelection: false });
@@ -63,14 +63,14 @@ export function useSyncReadMoreStructure(
 
     // Enabled + maybe style changed: rebuild desired and migrate label text
     let userLabel = __("Read more", "campaignbridge");
-    const wrapper = current.find((b) => b.name === "core/buttons");
-    const btn = wrapper?.innerBlocks?.find((b) => b.name === "core/button");
+    const buttonsWrap = current.find((b) => b.name === "core/buttons");
+    const btn = buttonsWrap?.innerBlocks?.find((b) => b.name === "core/button");
     if (btn?.attributes?.text) {
       userLabel = String(btn.attributes.text).trim() || userLabel;
     } else {
       const para = current.find((b) => b.name === "core/paragraph");
       if (para?.attributes?.content) {
-        const t = extractLabelFromParagraph(para.attributes.content);
+        const t = anchorText(para.attributes.content);
         if (t) userLabel = t;
       }
     }
@@ -85,7 +85,7 @@ export function useSyncReadMoreStructure(
       if (para)
         para.attributes = {
           ...para.attributes,
-          content: `<a href="#">${escapeHtml(userLabel)}</a>`,
+          content: `<a href="#">${esc(userLabel)}</a>`,
         };
     }
 

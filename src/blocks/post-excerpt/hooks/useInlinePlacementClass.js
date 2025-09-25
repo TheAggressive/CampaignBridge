@@ -3,8 +3,8 @@ import { select, useDispatch } from "@wordpress/data";
 import { useEffect } from "@wordpress/element";
 
 /**
- * Placement change: only toggles `is-inline-readmore` on the existing child.
- * Never replaces, so user edits/styles persist.
+ * On placement change, toggle `is-inline-readmore` on the existing child
+ * (paragraph or buttons wrapper). Never replaces children, so edits persist.
  */
 export function useInlinePlacementClass(
   clientId,
@@ -17,7 +17,7 @@ export function useInlinePlacementClass(
 
     const kids = select(blockEditorStore).getBlocks(clientId);
 
-    const toggleInline = (block) => {
+    const toggle = (block) => {
       if (!block) return;
       const cur = block.attributes?.className || "";
       const parts = cur.split(/\s+/).filter(Boolean);
@@ -36,7 +36,7 @@ export function useInlinePlacementClass(
     };
 
     if (moreStyle === "button")
-      toggleInline(kids.find((b) => b.name === "core/buttons"));
-    else toggleInline(kids.find((b) => b.name === "core/paragraph"));
+      toggle(kids.find((b) => b.name === "core/buttons"));
+    else toggle(kids.find((b) => b.name === "core/paragraph"));
   }, [clientId, showMore, moreStyle, morePlacement, updateBlockAttributes]);
 }
