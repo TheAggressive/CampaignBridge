@@ -1,0 +1,47 @@
+/* Make editor wrappers inline when placement is inline */
+.wp-block-campaignbridge-post-excerpt.has-inline-readmore
+  .block-editor-inner-blocks,
+.wp-block-campaignbridge-post-excerpt.has-inline-readmore
+  .block-editor-inner-blocks
+  > .block-editor-block-list__layout {
+  display: inline !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+/* Force the child block itself to be inline inside the editor wrapper */
+.wp-block-campaignbridge-post-excerpt.has-inline-readmore
+  .block-editor-block-list__layout
+  > .block-editor-block-list__block.is-inline-readmore {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  vertical-align: baseline !important;
+}
+
+/* Buttons variant: beat core's is-layout-flex */
+.wp-block-buttons.is-inline-readmore,
+.wp-block-buttons.is-inline-readmore.is-layout-flex {
+  display: inline-flex !important;
+  gap: 0 !important;
+  margin: 0 !important;
+  vertical-align: baseline !important;
+}
+.wp-block-buttons.is-inline-readmore .wp-block-button {
+  margin: 0 !important;
+}
+.wp-block-buttons.is-inline-readmore .wp-block-button__link {
+  white-space: nowrap !important;
+  line-height: inherit !important;
+}
+
+/* Paragraph variant */
+.wp-block-paragraph.is-inline-readmore {
+  display: inline !important;
+  margin: 0 !important;
+  vertical-align: baseline !important;
+}
+.wp-block-paragraph.is-inline-readmore a {
+  white-space: nowrap !important;
+  line-height: inherit !important;
+}

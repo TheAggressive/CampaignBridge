@@ -14,7 +14,7 @@
   },
   "attributes": {
     "maxWords": { "type": "number", "default": 50 },
-    "showMore": { "type": "boolean", "default": false },
+    "showMore": { "type": "boolean", "default": true },
     "moreStyle": { "type": "string", "default": "link" },
     "linkTo": { "type": "string", "default": "post" },
     "morePrefix": { "type": "string", "default": "" },
@@ -27,10 +27,14 @@
     "buttonPaddingX": { "type": "number", "default": 16 },
     "buttonPaddingY": { "type": "number", "default": 10 },
     "buttonLayout": { "type": "string", "default": "new-line" },
-    "buttonAlignment": { "type": "string", "default": "left" }
+    "buttonAlignment": { "type": "string", "default": "left" },
+    "morePlacement": { "type": "string", "default": "inline" },
+    "moreLabel": { "type": "string", "default": "Read more" }
   },
   "allowedBlocks": ["core/paragraph", "core/buttons", "core/button"],
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
+  "style": "file:./style.css",
   "editorScript": "file:./index.js",
-  "render": "file:./render.php"
+  "render": "file:./render.php",
+  "editorStyle": "file:./editor.css"
 }
