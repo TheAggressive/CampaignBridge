@@ -65,7 +65,7 @@ return function ( $attributes, $content, $block ) {
 	$prefix = '';
 	if ( $show_more ) {
 		if ( $enable_separator && '' !== $custom_separator ) {
-			$prefix = esc_html( $custom_separator ) . ' ';
+			$prefix = esc_html( $custom_separator );
 			if ( $add_space_before_separator ) {
 				$prefix = ' ' . $prefix;
 			}

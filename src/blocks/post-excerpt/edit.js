@@ -121,7 +121,7 @@ export default function Edit({
   // Separator preview string
   const sep = useMemo(() => {
     return enableSeparator && customSeparator
-      ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator} `
+      ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator}`
       : "";
   }, [enableSeparator, customSeparator, addSpaceBeforeSeparator]);
 
