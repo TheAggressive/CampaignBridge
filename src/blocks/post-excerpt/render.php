@@ -65,12 +65,16 @@ return function ( $attributes, $content, $block ) {
 	$prefix = '';
 	if ( $show_more ) {
 		if ( $enable_separator && '' !== $custom_separator ) {
-			$prefix = esc_html( $custom_separator );
+			// Add space before separator if enabled
 			if ( $add_space_before_separator ) {
-				$prefix = ' ' . $prefix;
+				$prefix = '&nbsp;';
 			}
-		} elseif ( $add_space_before_link ) {
-			$prefix = ' ';
+			$prefix .= esc_html( $custom_separator );
+		}
+
+		// Add space before link if enabled (works regardless of separator)
+		if ( $add_space_before_link ) {
+			$prefix = '&nbsp;' . $prefix;
 		}
 	}
 

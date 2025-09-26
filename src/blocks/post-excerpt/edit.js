@@ -121,7 +121,7 @@ export default function Edit({
   // Separator preview string
   const sep = useMemo(() => {
     return enableSeparator && customSeparator
-      ? `${addSpaceBeforeSeparator ? " " : ""}${customSeparator}`
+      ? `${addSpaceBeforeSeparator ? "\u00A0" : ""}${customSeparator}`
       : "";
   }, [enableSeparator, customSeparator, addSpaceBeforeSeparator]);
 
@@ -188,14 +188,10 @@ export default function Edit({
                 label={__("Add space before link", "campaignbridge")}
                 checked={!!addSpaceBeforeLink}
                 onChange={(v) => setAttributes({ addSpaceBeforeLink: !!v })}
-                help={
-                  enableSeparator
-                    ? __("Not used when separator is enabled", "campaignbridge")
-                    : __(
-                        "Adds spacing between the excerpt text and the read more link",
-                        "campaignbridge",
-                      )
-                }
+                help={__(
+                  "Adds spacing between the excerpt text and the read more link",
+                  "campaignbridge",
+                )}
               />
             </>
           )}
@@ -260,7 +256,7 @@ export default function Edit({
         <>
           {excerpt}
           {enableSeparator && customSeparator ? sep : ""}
-          {!enableSeparator && addSpaceBeforeLink && showMore ? " " : ""}
+          {addSpaceBeforeLink && showMore ? "\u00A0" : ""}
 
           {showMore && <Tag {...innerBlocksProps} />}
         </>
