@@ -32,12 +32,6 @@ class CampaignBridge_Uninstaller {
 	private const PLUGIN_SLUG = 'campaignbridge';
 	private const CPT_SLUG    = 'cb_email_template';
 
-	/**
-	 * Meta field constants.
-	 */
-	private const META_WIDTH    = '_cb_template_width';
-	private const META_CATEGORY = '_cb_template_category';
-	private const META_ACTIVE   = '_cb_template_active';
 
 	/**
 	 * Option name constants.
@@ -308,52 +302,6 @@ class CampaignBridge_Uninstaller {
 	 *
 	 * @return int Number of orphaned meta entries deleted.
 	 */
-	private static function cleanup_orphaned_meta(): int {
-		$deleted = 0;
-
-		try {
-			// Clean up orphaned meta for our custom post type using WordPress functions.
-			$meta_keys = array(
-				self::META_WIDTH,
-				self::META_CATEGORY,
-				self::META_ACTIVE,
-			);
-
-			foreach ( $meta_keys as $meta_key ) {
-				// Get all post meta entries for this key.
-				$meta_entries = get_posts(
-					array(
-						'post_type'      => 'any',
-						'post_status'    => 'any',
-						'meta_key'       => $meta_key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-						'posts_per_page' => -1,
-						'fields'         => 'ids',
-						'no_found_rows'  => true,
-					)
-				);
-
-				if ( ! empty( $meta_entries ) ) {
-					foreach ( $meta_entries as $post_id ) {
-						// Check if the post still exists.
-						if ( ! get_post_status( $post_id ) ) {
-							// Post doesn't exist, delete the meta.
-							if ( delete_post_meta( $post_id, $meta_key ) ) {
-								++$deleted;
-							}
-						}
-					}
-				}
-			}
-
-			if ( $deleted > 0 ) {
-				self::log( "Deleted {$deleted} orphaned post meta entries." );
-			}
-		} catch ( \Exception $e ) {
-			self::log( 'Error cleaning up orphaned meta: ' . $e->getMessage() );
-		}
-
-		return $deleted;
-	}
 
 	/**
 	 * Clean up any plugin files if needed.

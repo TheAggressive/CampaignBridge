@@ -264,12 +264,12 @@ class StatusPage extends AdminPage {
 				</div>
 
 				<div class="cb-status__card">
-					<h3><?php esc_html_e( 'Active Templates', 'campaignbridge' ); ?></h3>
+					<h3><?php esc_html_e( 'Email Templates', 'campaignbridge' ); ?></h3>
 					<?php
-					$active_templates = EmailTemplate::get_active_templates();
-					$active_count     = count( $active_templates );
+					$templates      = EmailTemplate::get_templates();
+					$template_count = count( $templates );
 					?>
-					<p class="cb-status__value"><?php echo esc_html( $active_count ); ?></p>
+					<p class="cb-status__value"><?php echo esc_html( $template_count ); ?></p>
 				</div>
 
 				<div class="cb-status__card">
@@ -282,20 +282,16 @@ class StatusPage extends AdminPage {
 				</div>
 			</div>
 
-			<?php if ( $active_count > 0 ) : ?>
+			<?php if ( $template_count > 0 ) : ?>
 				<div class="cb-status__details">
-					<h4><?php esc_html_e( 'Recent Active Templates', 'campaignbridge' ); ?></h4>
+					<h4><?php esc_html_e( 'Recent Templates', 'campaignbridge' ); ?></h4>
 					<div class="cb-status__template-list">
-						<?php foreach ( array_slice( $active_templates, 0, 5 ) as $template ) : ?>
+						<?php foreach ( array_slice( $templates, 0, 5 ) as $template ) : ?>
 							<div class="cb-status__template-item">
 								<strong><?php echo esc_html( $template->post_title ); ?></strong>
 								<span class="cb-status__template-meta">
 									<?php
-									$category = get_post_meta( $template->ID, '_cb_template_category', true );
-									if ( empty( $category ) ) {
-										$category = 'general';
-									}
-									echo esc_html( $categories[ $category ] ?? $category );
+									echo esc_html( 'General' );
 									?>
 								</span>
 							</div>

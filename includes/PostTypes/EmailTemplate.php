@@ -31,53 +31,106 @@ class EmailTemplate {
 	public const POST_TYPE = 'cb_email_template';
 
 	/**
-	 * Meta field names
+	 * Meta field constants.
 	 */
-	private const META_WIDTH    = '_cb_template_width';
-	private const META_CATEGORY = '_cb_template_category';
-	private const META_ACTIVE   = '_cb_template_active';
+	public const META_CATEGORY            = 'cb_template_category';
+	public const META_SUBJECT             = 'cb_subject';
+	public const META_PREHEADER           = 'cb_preheader';
+	public const META_VIEW_ONLINE_ENABLED = 'cb_view_online_enabled';
+	public const META_VIEW_ONLINE_URL     = 'cb_view_online_url';
+	public const META_ADDRESS_HTML        = 'cb_address_html';
+	public const META_UNSUBSCRIBE_URL     = 'cb_unsubscribe_url';
+	public const META_SENDER_NAME         = 'cb_sender_name';
+	public const META_SENDER_EMAIL        = 'cb_sender_email';
+	public const META_UTM_ENABLED         = 'cb_utm_enabled';
+	public const META_UTM_TEMPLATE        = 'cb_utm_template';
+	public const META_AUDIENCE_TAGS       = 'cb_audience_tags';
+	public const META_FOOTER_ENABLED      = 'cb_footer_enabled';
+	public const META_FOOTER_PATTERN      = 'cb_footer_pattern';
 
 	/**
-	 * Default values
+	 * Meta field configuration for registration.
+	 * Defines all meta fields with their types and sanitization.
 	 */
-	private const DEFAULT_WIDTH    = 600;
-	private const DEFAULT_CATEGORY = 'general';
-	private const DEFAULT_ACTIVE   = true;
+	private const META_FIELD_CONFIG = array(
+		// String fields.
+		'cb_subject'             => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+		),
+		'cb_preheader'           => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+		),
+		'cb_sender_name'         => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+		),
+		'cb_sender_email'        => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_email',
+		),
+		'cb_view_online_url'     => array(
+			'type'     => 'string',
+			'sanitize' => 'esc_url_raw',
+		),
+		'cb_unsubscribe_url'     => array(
+			'type'     => 'string',
+			'sanitize' => 'esc_url_raw',
+		),
+		'cb_utm_template'        => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+		),
+		'cb_audience_tags'       => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+		),
+		'cb_footer_pattern'      => array(
+			'type'     => 'string',
+			'sanitize' => 'sanitize_text_field',
+		),
 
-	/**
-	 * Nonce constants
-	 */
-	private const NONCE_ACTION = 'cb_email_template_settings';
-	private const NONCE_FIELD  = 'cb_email_template_nonce';
+		// Boolean fields.
+		'cb_view_online_enabled' => array(
+			'type'     => 'boolean',
+			'sanitize' => 'wp_validate_boolean',
+		),
+		'cb_utm_enabled'         => array(
+			'type'     => 'boolean',
+			'sanitize' => 'wp_validate_boolean',
+		),
+		'cb_footer_enabled'      => array(
+			'type'     => 'boolean',
+			'sanitize' => 'wp_validate_boolean',
+		),
 
-	/**
-	 * Custom column names
-	 */
-	private const COL_CATEGORY = 'cb_template_category';
-	private const COL_WIDTH    = 'cb_template_width';
-	private const COL_STATUS   = 'cb_template_status';
+		// HTML field.
+		'cb_address_html'        => array(
+			'type'     => 'string',
+			'sanitize' => 'wp_kses_post',
+		),
 
-	/**
-	 * Meta box IDs
-	 */
-	private const META_BOX_SETTINGS = 'cb-email-template-settings';
-	private const META_BOX_PREVIEW  = 'cb-email-template-preview';
+		// Category field with custom validation.
+		'cb_template_category'   => array(
+			'type'     => 'string',
+			'sanitize' => array( __CLASS__, 'sanitize_category_field' ),
+		),
+	);
 
 	/**
 	 * Initialize the Email Template custom post type.
 	 *
-	 * Registers the CPT, meta boxes, custom columns, and WordPress hooks.
+	 * Registers the CPT and WordPress hooks.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function init(): void {
 		add_action( 'init', array( __CLASS__, 'register_post_type' ) );
+		add_action( 'init', array( __CLASS__, 'register_meta_fields' ) );
+		add_action( 'add_meta_boxes', array( __CLASS__, 'add_custom_fields_meta_box' ) );
 		add_filter( 'post_updated_messages', array( __CLASS__, 'custom_post_messages' ) );
-		add_action( 'add_meta_boxes', array( __CLASS__, 'add_meta_boxes' ) );
-		add_action( 'save_post', array( __CLASS__, 'save_meta_boxes' ) );
-		add_filter( 'manage_' . self::POST_TYPE . '_posts_columns', array( __CLASS__, 'add_custom_columns' ) );
-		add_action( 'manage_' . self::POST_TYPE . '_posts_custom_column', array( __CLASS__, 'populate_custom_columns' ), 10, 2 );
 	}
 
 	/**
@@ -127,6 +180,141 @@ class EmailTemplate {
 	}
 
 	/**
+	 * Add custom fields meta box to the post editor.
+	 *
+	 * @return void
+	 */
+	public static function add_custom_fields_meta_box(): void {
+		// Enable the built-in custom fields meta box.
+		add_post_type_support( self::POST_TYPE, 'custom-fields' );
+
+		// Force show custom fields meta box in block editor.
+		add_filter(
+			'get_user_option_meta-box-hidden_' . self::POST_TYPE,
+			function ( $hidden ) {
+				if ( ! is_array( $hidden ) ) {
+					$hidden = array();
+				}
+				// Remove 'postcustom' from hidden meta boxes to ensure it shows.
+				return array_filter(
+					$hidden,
+					function ( $box ) {
+						return 'postcustom' !== $box;
+					}
+				);
+			},
+			999
+		);
+
+		// Ensure custom fields appear in the meta box order.
+		add_filter(
+			'get_user_option_meta-box-order_' . self::POST_TYPE,
+			function ( $order ) {
+				if ( ! $order ) {
+					$order = array(
+						'normal'   => 'postcustom,slugdiv,postimagediv',
+						'side'     => 'submitdiv,formatdiv,categorydiv,tagsdiv-campaignbridge_category',
+						'advanced' => 'postexcerpt,trackbacksdiv,commentstatusdiv,commentsdiv,authordiv,revisionsdiv',
+					);
+				}
+				return $order;
+			}
+		);
+	}
+
+	/**
+	 * Register meta fields for the email template post type.
+	 *
+	 * @return void
+	 */
+	public static function register_meta_fields(): void {
+		// String fields.
+		$string_fields = array(
+			self::META_SUBJECT,
+			self::META_PREHEADER,
+			self::META_SENDER_NAME,
+			self::META_SENDER_EMAIL,
+			self::META_VIEW_ONLINE_URL,
+			self::META_UNSUBSCRIBE_URL,
+			self::META_UTM_TEMPLATE,
+			self::META_AUDIENCE_TAGS,
+			self::META_FOOTER_PATTERN,
+		);
+
+		foreach ( $string_fields as $field ) {
+			register_post_meta(
+				self::POST_TYPE,
+				$field,
+				array(
+					'show_in_rest'      => true,
+					'single'            => true,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'auth_callback'     => function () {
+						return current_user_can( 'edit_posts' );
+					},
+				)
+			);
+		}
+
+		// Boolean fields.
+		$boolean_fields = array(
+			self::META_VIEW_ONLINE_ENABLED,
+			self::META_UTM_ENABLED,
+			self::META_FOOTER_ENABLED,
+		);
+
+		foreach ( $boolean_fields as $field ) {
+			register_post_meta(
+				self::POST_TYPE,
+				$field,
+				array(
+					'show_in_rest'      => true,
+					'single'            => true,
+					'type'              => 'boolean',
+					'sanitize_callback' => 'wp_validate_boolean',
+					'auth_callback'     => function () {
+						return current_user_can( 'edit_posts' );
+					},
+				)
+			);
+		}
+
+		// HTML field.
+		register_post_meta(
+			self::POST_TYPE,
+			self::META_ADDRESS_HTML,
+			array(
+				'show_in_rest'      => true,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => 'wp_kses_post',
+				'auth_callback'     => function () {
+					return current_user_can( 'edit_posts' );
+				},
+			)
+		);
+
+		// Category field with enum validation.
+		register_post_meta(
+			self::POST_TYPE,
+			self::META_CATEGORY,
+			array(
+				'show_in_rest'      => true,
+				'single'            => true,
+				'type'              => 'string',
+				'sanitize_callback' => function ( $value ) {
+					$valid_categories = array_keys( self::get_template_categories() );
+					return in_array( $value, $valid_categories, true ) ? $value : 'general';
+				},
+				'auth_callback'     => function () {
+					return current_user_can( 'edit_posts' );
+				},
+			)
+		);
+	}
+
+	/**
 	 * Get post type arguments.
 	 *
 	 * @param array $labels Post type labels.
@@ -163,257 +351,6 @@ class EmailTemplate {
 		);
 	}
 
-	/**
-	 * Add meta boxes for template settings.
-	 *
-	 * @return void
-	 */
-	public static function add_meta_boxes(): void {
-		add_meta_box(
-			self::META_BOX_SETTINGS,
-			__( 'Template Settings', 'campaignbridge' ),
-			array( __CLASS__, 'render_settings_meta_box' ),
-			self::POST_TYPE,
-			'side',
-			'high'
-		);
-
-		add_meta_box(
-			self::META_BOX_PREVIEW,
-			__( 'Email Preview', 'campaignbridge' ),
-			array( __CLASS__, 'render_preview_meta_box' ),
-			self::POST_TYPE,
-			'normal',
-			'high'
-		);
-	}
-
-	/**
-	 * Render the settings meta box.
-	 *
-	 * @param \WP_Post $post The post object.
-	 * @return void
-	 */
-	public static function render_settings_meta_box( \WP_Post $post ): void {
-		wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD );
-
-		$template_width = get_post_meta( $post->ID, self::META_WIDTH, true );
-		if ( empty( $template_width ) ) {
-			$template_width = self::DEFAULT_WIDTH;
-		}
-		$template_width = (int) $template_width;
-
-		$template_category = get_post_meta( $post->ID, self::META_CATEGORY, true );
-		if ( empty( $template_category ) ) {
-			$template_category = self::DEFAULT_CATEGORY;
-		}
-		$template_category = (string) $template_category;
-
-		$is_active = get_post_meta( $post->ID, self::META_ACTIVE, true );
-		if ( empty( $is_active ) ) {
-			$is_active = self::DEFAULT_ACTIVE;
-		}
-		$is_active = (bool) $is_active;
-
-		echo self::render_settings_form( $template_width, $template_category, $is_active ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-	}
-
-	/**
-	 * Render the settings form HTML.
-	 *
-	 * @param int    $width     Template width.
-	 * @param string $category Template category.
-	 * @param bool   $is_active  Template active status.
-	 * @return string HTML form.
-	 */
-	private static function render_settings_form( int $width, string $category, bool $is_active ): string {
-		ob_start();
-		?>
-		<table class="form-table">
-			<tr>
-				<th scope="row">
-					<label for="cb_template_width"><?php esc_html_e( 'Email Width (px)', 'campaignbridge' ); ?></label>
-				</th>
-				<td>
-					<input type="number" id="cb_template_width" name="cb_template_width" value="<?php echo esc_attr( $width ); ?>" min="300" max="800" step="10" />
-					<p class="description"><?php esc_html_e( 'Standard email width is 600px for best compatibility.', 'campaignbridge' ); ?></p>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row">
-					<label for="cb_template_category"><?php esc_html_e( 'Category', 'campaignbridge' ); ?></label>
-				</th>
-				<td>
-					<select id="cb_template_category" name="cb_template_category">
-						<?php foreach ( self::get_template_categories() as $value => $label ) : ?>
-							<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $category, $value ); ?>>
-								<?php echo esc_html( $label ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row">
-					<label for="cb_template_active"><?php esc_html_e( 'Active', 'campaignbridge' ); ?></label>
-				</th>
-				<td>
-					<input type="checkbox" id="cb_template_active" name="cb_template_active" value="1" <?php checked( $is_active, true ); ?> />
-					<label for="cb_template_active"><?php esc_html_e( 'Enable this template for use', 'campaignbridge' ); ?></label>
-				</td>
-			</tr>
-		</table>
-		<?php
-		return ob_get_clean();
-	}
-
-		/**
-		 * Render the preview meta box.
-		 *
-		 * @param \WP_Post $post The post object.
-		 * @return void
-		 */
-	public static function render_preview_meta_box( \WP_Post $post ): void {
-		$template_width = get_post_meta( $post->ID, self::META_WIDTH, true );
-		if ( empty( $template_width ) ) {
-			$template_width = self::DEFAULT_WIDTH;
-		}
-		$template_width = (int) $template_width;
-
-		echo self::render_preview_frame( $post, $template_width ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-	}
-
-		/**
-		 * Render the preview frame HTML.
-		 *
-		 * @param \WP_Post $post   The post object.
-		 * @param int      $width  Template width.
-		 * @return string HTML preview.
-		 */
-	private static function render_preview_frame( \WP_Post $post, int $width ): string {
-		ob_start();
-		?>
-		<div class="cb-email-preview-container">
-			<div class="cb-email-preview-frame" style="width: <?php echo esc_attr( $width ); ?>px; max-width: 100%; margin: 0 auto; border: 1px solid #ddd; background: #fff;">
-				<div class="cb-email-preview-header" style="background: #f8f9fa; padding: 10px; border-bottom: 1px solid #ddd; text-align: center; font-size: 12px; color: #666;">
-				<?php esc_html_e( 'Email Preview', 'campaignbridge' ); ?> (<?php echo esc_html( $width ); ?>px)
-				</div>
-				<div class="cb-email-preview-content" style="padding: 20px;">
-				<?php echo wp_kses_post( $post->post_content ); ?>
-				</div>
-			</div>
-			<p class="description">
-			<?php esc_html_e( 'This preview shows how your email template will look. Use the block editor above to design your template.', 'campaignbridge' ); ?>
-			</p>
-		</div>
-			<?php
-			return ob_get_clean();
-	}
-
-		/**
-		 * Save meta box data.
-		 *
-		 * @param int $post_id The post ID.
-		 * @return void
-		 */
-	public static function save_meta_boxes( int $post_id ): void {
-		// Check if this is an autosave.
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-			return;
-		}
-
-		// Verify nonce.
-		if ( ! isset( $_POST[ self::NONCE_FIELD ] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ self::NONCE_FIELD ] ) ), self::NONCE_ACTION ) ) {
-			return;
-		}
-
-		// Check user permissions.
-		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			return;
-		}
-
-		// Save template width.
-		if ( isset( $_POST['cb_template_width'] ) ) {
-			$width = absint( $_POST['cb_template_width'] );
-			if ( $width >= 300 && $width <= 800 ) {
-				update_post_meta( $post_id, self::META_WIDTH, $width );
-			}
-		}
-
-		// Save template category.
-		if ( isset( $_POST['cb_template_category'] ) ) {
-			$category = sanitize_key( $_POST['cb_template_category'] );
-			update_post_meta( $post_id, self::META_CATEGORY, $category );
-		}
-
-		// Save template active status.
-		$is_active = isset( $_POST['cb_template_active'] ) ? true : false;
-		update_post_meta( $post_id, self::META_ACTIVE, $is_active );
-	}
-
-		/**
-		 * Add custom columns to the admin list.
-		 *
-		 * @param array $columns The existing columns.
-		 * @return array
-		 */
-	public static function add_custom_columns( array $columns ): array {
-		$new_columns = array();
-
-		foreach ( $columns as $key => $value ) {
-			$new_columns[ $key ] = $value;
-
-			// Insert our custom columns after the title.
-			if ( 'title' === $key ) {
-				$new_columns[ self::COL_CATEGORY ] = __( 'Category', 'campaignbridge' );
-				$new_columns[ self::COL_WIDTH ]    = __( 'Width', 'campaignbridge' );
-				$new_columns[ self::COL_STATUS ]   = __( 'Status', 'campaignbridge' );
-			}
-		}
-
-		return $new_columns;
-	}
-
-		/**
-		 * Populate custom columns with data.
-		 *
-		 * @param string $column  The column name.
-		 * @param int    $post_id The post ID.
-		 * @return void
-		 */
-	public static function populate_custom_columns( string $column, int $post_id ): void {
-		switch ( $column ) {
-			case self::COL_CATEGORY:
-				$category = get_post_meta( $post_id, self::META_CATEGORY, true );
-				if ( empty( $category ) ) {
-					$category = self::DEFAULT_CATEGORY;
-				}
-				$category   = (string) $category;
-				$categories = self::get_template_categories();
-				echo esc_html( $categories[ $category ] ?? $category );
-				break;
-
-			case self::COL_WIDTH:
-				$width = get_post_meta( $post_id, self::META_WIDTH, true );
-				if ( empty( $width ) ) {
-					$width = self::DEFAULT_WIDTH;
-				}
-				$width = (int) $width;
-				echo esc_html( $width . 'px' );
-				break;
-
-			case self::COL_STATUS:
-				$is_active = get_post_meta( $post_id, self::META_ACTIVE, true );
-				$is_active = (bool) $is_active;
-				if ( $is_active ) {
-					echo '<span class="cb-status-active" style="color: #00a32a; font-weight: 600;">' . esc_html__( 'Active', 'campaignbridge' ) . '</span>';
-				} else {
-					echo '<span class="cb-status-inactive" style="color: #d63638;">' . esc_html__( 'Inactive', 'campaignbridge' ) . '</span>';
-				}
-				break;
-		}
-	}
-
 		/**
 		 * Customize post update messages.
 		 *
@@ -432,8 +369,8 @@ class EmailTemplate {
 		$messages[ self::POST_TYPE ] = array(
 			0  => '', // Unused. Messages start at index 1.
 			1  => __( 'Email template updated.', 'campaignbridge' ),
-			2  => __( 'Custom field updated.', 'campaignbridge' ),
-			3  => __( 'Custom field deleted.', 'campaignbridge' ),
+			2  => __( 'Email template updated.', 'campaignbridge' ),
+			3  => __( 'Email template deleted.', 'campaignbridge' ),
 			4  => __( 'Email template updated.', 'campaignbridge' ),
 			5  => isset( $_GET['revision'] ) ? sprintf( // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				// translators: %s is the revision date.
@@ -459,17 +396,15 @@ class EmailTemplate {
 	}
 
 		/**
-		 * Get all active email templates.
+		 * Get all email templates.
 		 *
 		 * @return array Array of template posts.
 		 */
-	public static function get_active_templates(): array {
+	public static function get_templates(): array {
 		return get_posts(
 			array(
 				'post_type'      => self::POST_TYPE,
 				'post_status'    => 'publish',
-				'meta_key'       => self::META_ACTIVE, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value'     => self::DEFAULT_ACTIVE, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 				'posts_per_page' => -1,
 				'orderby'        => 'title',
 				'order'          => 'ASC',
@@ -497,41 +432,13 @@ class EmailTemplate {
 		);
 	}
 
-		/**
-		 * Get template by ID with meta data.
-		 *
-		 * @param int $template_id The template post ID.
-		 * @return array|null Template data or null if not found.
-		 */
-	public static function get_template_data( int $template_id ): ?array {
-		$post = get_post( $template_id );
-		if ( ! $post || self::POST_TYPE !== $post->post_type ) {
-			return null;
-		}
 
-		$width     = get_post_meta( $post->ID, self::META_WIDTH, true ) ?: self::DEFAULT_WIDTH;
-		$category  = get_post_meta( $post->ID, self::META_CATEGORY, true ) ?: self::DEFAULT_CATEGORY;
-		$is_active = get_post_meta( $post->ID, self::META_ACTIVE, true ) ?: self::DEFAULT_ACTIVE;
-
-		return array(
-			'id'        => $post->ID,
-			'title'     => $post->post_title,
-			'content'   => $post->post_content,
-			'excerpt'   => $post->post_excerpt,
-			'width'     => (int) $width,
-			'category'  => (string) $category,
-			'is_active' => (bool) $is_active,
-			'created'   => $post->post_date,
-			'modified'  => $post->post_modified,
-		);
-	}
-
-		/**
-		 * Create a new email template.
-		 *
-		 * @param array $template_data Template data.
-		 * @return int|WP_Error Template ID on success, WP_Error on failure.
-		 */
+	/**
+	 * Create a new email template.
+	 *
+	 * @param array $template_data Template data.
+	 * @return int|WP_Error Template ID on success, WP_Error on failure.
+	 */
 	public static function create_template( array $template_data ) {
 		$post_data = array(
 			'post_title'   => $template_data['title'] ?? '',
@@ -541,47 +448,25 @@ class EmailTemplate {
 			'post_type'    => self::POST_TYPE,
 		);
 
-		$template_id = wp_insert_post( $post_data );
-
-		if ( is_wp_error( $template_id ) ) {
-			return $template_id;
-		}
-
-		// Save meta data.
-		if ( isset( $template_data['width'] ) ) {
-			update_post_meta( $template_id, self::META_WIDTH, absint( $template_data['width'] ) );
-		}
-
-		if ( isset( $template_data['category'] ) ) {
-			update_post_meta( $template_id, self::META_CATEGORY, sanitize_key( $template_data['category'] ) );
-		}
-
-		if ( isset( $template_data['is_active'] ) ) {
-			update_post_meta( $template_id, self::META_ACTIVE, (bool) $template_data['is_active'] );
-		}
-
-		return $template_id;
+		return wp_insert_post( $post_data );
 	}
 
-		/**
-		 * Duplicate an existing template.
-		 *
-		 * @param int $template_id The template ID to duplicate.
-		 * @return int|WP_Error New template ID on success, WP_Error on failure.
-		 */
+	/**
+	 * Duplicate an existing template.
+	 *
+	 * @param int $template_id The template ID to duplicate.
+	 * @return int|WP_Error New template ID on success, WP_Error on failure.
+	 */
 	public static function duplicate_template( int $template_id ) {
-		$original = self::get_template_data( $template_id );
-		if ( ! $original ) {
+		$original = get_post( $template_id );
+		if ( ! $original || self::POST_TYPE !== $original->post_type ) {
 			return new \WP_Error( 'template_not_found', __( 'Template not found.', 'campaignbridge' ) );
 		}
 
 		$duplicate_data = array(
-			'title'     => $original['title'] . ' - ' . __( 'Copy', 'campaignbridge' ),
-			'content'   => $original['content'],
-			'excerpt'   => $original['excerpt'],
-			'width'     => $original['width'],
-			'category'  => $original['category'],
-			'is_active' => false, // Duplicates start as inactive.
+			'title'   => $original->post_title . ' - ' . __( 'Copy', 'campaignbridge' ),
+			'content' => $original->post_content,
+			'excerpt' => $original->post_excerpt,
 		);
 
 		return self::create_template( $duplicate_data );
@@ -600,5 +485,28 @@ class EmailTemplate {
 			'welcome'     => __( 'Welcome', 'campaignbridge' ),
 			'custom'      => __( 'Custom', 'campaignbridge' ),
 		);
+	}
+
+
+	/**
+	 * Get meta value with default fallback.
+	 *
+	 * @param int    $post_id The post ID.
+	 * @param string $meta_key The meta key.
+	 * @param mixed  $fallback The default value.
+	 * @return mixed The meta value or fallback.
+	 */
+	public static function get_meta( int $post_id, string $meta_key, $fallback = '' ) {
+		$value = get_post_meta( $post_id, $meta_key, true );
+		return ! empty( $value ) ? $value : $fallback;
+	}
+
+	/**
+	 * Get all available meta field keys for block binding.
+	 *
+	 * @return array Array of meta field keys.
+	 */
+	public static function get_meta_field_keys(): array {
+		return array_keys( self::META_FIELD_CONFIG );
 	}
 }
