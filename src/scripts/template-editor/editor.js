@@ -14,6 +14,8 @@ import { useTemplateRouting } from "./hooks/useTemplateRouting";
 import { useTemplates } from "./hooks/useTemplates";
 import { registerCampaignBridgeBlocks } from "./utils/registerCampaignBridgeBlocks";
 
+export const POST_TYPE = "cb_email_template";
+
 /**
  * Main application component for the CampaignBridge Template Editor.
  *
@@ -84,6 +86,7 @@ export default function CampaignBridgeBlockEditor() {
           onSelect={onSelect}
           onNew={onNew}
           postId={currentId}
+          postType={POST_TYPE}
         />
       ) : (
         <EmptyState

@@ -31,26 +31,16 @@ class EmailTemplate {
 	public const POST_TYPE = 'cb_email_template';
 
 	/**
-	 * Meta field constants.
+	 * Meta field keys are defined in META_FIELD_CONFIG for consistency.
+	 * All field definitions, validation rules, and categories are centralized here.
+	 * Use self::get_meta_field_keys() to get all available field keys,
+	 * or self::get_meta_field_key($name) to get a specific field key by name.
+	 * Use self::get_meta_field_config() to get field configuration details.
 	 */
-	public const META_CATEGORY            = 'cb_template_category';
-	public const META_SUBJECT             = 'cb_subject';
-	public const META_PREHEADER           = 'cb_preheader';
-	public const META_VIEW_ONLINE_ENABLED = 'cb_view_online_enabled';
-	public const META_VIEW_ONLINE_URL     = 'cb_view_online_url';
-	public const META_ADDRESS_HTML        = 'cb_address_html';
-	public const META_UNSUBSCRIBE_URL     = 'cb_unsubscribe_url';
-	public const META_SENDER_NAME         = 'cb_sender_name';
-	public const META_SENDER_EMAIL        = 'cb_sender_email';
-	public const META_UTM_ENABLED         = 'cb_utm_enabled';
-	public const META_UTM_TEMPLATE        = 'cb_utm_template';
-	public const META_AUDIENCE_TAGS       = 'cb_audience_tags';
-	public const META_FOOTER_ENABLED      = 'cb_footer_enabled';
-	public const META_FOOTER_PATTERN      = 'cb_footer_pattern';
 
 	/**
 	 * Meta field configuration for registration.
-	 * Defines all meta fields with their types and sanitization.
+	 * Defines all meta fields with their types, sanitization, and validation.
 	 */
 	private const META_FIELD_CONFIG = array(
 		// String fields.
@@ -111,10 +101,11 @@ class EmailTemplate {
 			'sanitize' => 'wp_kses_post',
 		),
 
-		// Category field with custom validation.
+		// Category field with enum validation.
 		'cb_template_category'   => array(
-			'type'     => 'string',
-			'sanitize' => array( __CLASS__, 'sanitize_category_field' ),
+			'type'         => 'string',
+			'sanitize'     => array( __CLASS__, 'sanitize_category_field' ),
+			'valid_values' => array( 'general', 'newsletter', 'promotional', 'welcome', 'custom' ),
 		),
 	);
 
@@ -228,90 +219,40 @@ class EmailTemplate {
 	 * @return void
 	 */
 	public static function register_meta_fields(): void {
-		// String fields.
-		$string_fields = array(
-			self::META_SUBJECT,
-			self::META_PREHEADER,
-			self::META_SENDER_NAME,
-			self::META_SENDER_EMAIL,
-			self::META_VIEW_ONLINE_URL,
-			self::META_UNSUBSCRIBE_URL,
-			self::META_UTM_TEMPLATE,
-			self::META_AUDIENCE_TAGS,
-			self::META_FOOTER_PATTERN,
-		);
+		foreach ( self::META_FIELD_CONFIG as $field_key => $config ) {
+			$sanitize_callback = $config['sanitize'];
 
-		foreach ( $string_fields as $field ) {
+			// Handle callable sanitization functions.
+			if ( is_array( $sanitize_callback ) && is_callable( $sanitize_callback ) ) {
+				$sanitize_callback = $sanitize_callback;
+			}
+
 			register_post_meta(
 				self::POST_TYPE,
-				$field,
+				$field_key,
 				array(
 					'show_in_rest'      => true,
 					'single'            => true,
-					'type'              => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
+					'type'              => $config['type'],
+					'sanitize_callback' => $sanitize_callback,
 					'auth_callback'     => function () {
 						return current_user_can( 'edit_posts' );
 					},
 				)
 			);
 		}
+	}
 
-		// Boolean fields.
-		$boolean_fields = array(
-			self::META_VIEW_ONLINE_ENABLED,
-			self::META_UTM_ENABLED,
-			self::META_FOOTER_ENABLED,
-		);
-
-		foreach ( $boolean_fields as $field ) {
-			register_post_meta(
-				self::POST_TYPE,
-				$field,
-				array(
-					'show_in_rest'      => true,
-					'single'            => true,
-					'type'              => 'boolean',
-					'sanitize_callback' => 'wp_validate_boolean',
-					'auth_callback'     => function () {
-						return current_user_can( 'edit_posts' );
-					},
-				)
-			);
-		}
-
-		// HTML field.
-		register_post_meta(
-			self::POST_TYPE,
-			self::META_ADDRESS_HTML,
-			array(
-				'show_in_rest'      => true,
-				'single'            => true,
-				'type'              => 'string',
-				'sanitize_callback' => 'wp_kses_post',
-				'auth_callback'     => function () {
-					return current_user_can( 'edit_posts' );
-				},
-			)
-		);
-
-		// Category field with enum validation.
-		register_post_meta(
-			self::POST_TYPE,
-			self::META_CATEGORY,
-			array(
-				'show_in_rest'      => true,
-				'single'            => true,
-				'type'              => 'string',
-				'sanitize_callback' => function ( $value ) {
-					$valid_categories = array_keys( self::get_template_categories() );
-					return in_array( $value, $valid_categories, true ) ? $value : 'general';
-				},
-				'auth_callback'     => function () {
-					return current_user_can( 'edit_posts' );
-				},
-			)
-		);
+	/**
+	 * Sanitize category field value.
+	 *
+	 * @param string $value The field value to sanitize.
+	 * @return string The sanitized value.
+	 */
+	private static function sanitize_category_field( string $value ): string {
+		$category_config = self::get_meta_field_config( 'cb_template_category' );
+		$valid_values    = $category_config['valid_values'] ?? array();
+		return in_array( $value, $valid_values, true ) ? $value : 'general';
 	}
 
 	/**
@@ -358,9 +299,8 @@ class EmailTemplate {
 		 * @return array
 		 */
 	public static function custom_post_messages( array $messages ): array {
-		$post             = get_post();
-		$post_type        = get_post_type( $post );
-		$post_type_object = get_post_type_object( $post_type );
+		$post      = get_post();
+		$post_type = get_post_type( $post );
 
 		if ( self::POST_TYPE !== $post_type ) {
 			return $messages;
@@ -423,8 +363,8 @@ class EmailTemplate {
 			array(
 				'post_type'      => self::POST_TYPE,
 				'post_status'    => 'publish',
-				'meta_key'       => self::META_CATEGORY, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value'     => $category, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_key'       => 'cb_template_category',
+				'meta_value'     => $category,
 				'posts_per_page' => -1,
 				'orderby'        => 'title',
 				'order'          => 'ASC',
@@ -478,13 +418,15 @@ class EmailTemplate {
 		 * @return array Array of category labels.
 		 */
 	public static function get_template_categories(): array {
-		return array(
-			'general'     => __( 'General', 'campaignbridge' ),
-			'newsletter'  => __( 'Newsletter', 'campaignbridge' ),
-			'promotional' => __( 'Promotional', 'campaignbridge' ),
-			'welcome'     => __( 'Welcome', 'campaignbridge' ),
-			'custom'      => __( 'Custom', 'campaignbridge' ),
-		);
+		$category_config = self::get_meta_field_config( 'cb_template_category' );
+		$valid_values    = $category_config['valid_values'] ?? array();
+
+		$categories = array();
+		foreach ( $valid_values as $value ) {
+			$categories[ $value ] = ucfirst( str_replace( '_', ' ', $value ) );
+		}
+
+		return $categories;
 	}
 
 
@@ -508,5 +450,42 @@ class EmailTemplate {
 	 */
 	public static function get_meta_field_keys(): array {
 		return array_keys( self::META_FIELD_CONFIG );
+	}
+
+	/**
+	 * Get meta field configuration.
+	 *
+	 * @param string|null $field_key Optional field key to get specific config.
+	 * @return array|array|null Configuration for specific field or all fields.
+	 */
+	public static function get_meta_field_config( ?string $field_key = null ): array {
+		if ( null === $field_key ) {
+			return self::META_FIELD_CONFIG;
+		}
+
+		return self::META_FIELD_CONFIG[ $field_key ] ?? array();
+	}
+
+	/**
+	 * Get a specific meta field key by name.
+	 * Provides a stable API for accessing field keys without exposing the config array.
+	 *
+	 * @param string $field_name The field name (e.g., 'subject', 'preheader').
+	 * @return string|null The field key or null if not found.
+	 */
+	public static function get_meta_field_key( string $field_name ): ?string {
+		// Create a reverse lookup from config.
+		static $reverse_map = null;
+
+		if ( null === $reverse_map ) {
+			$reverse_map = array();
+			foreach ( array_keys( self::META_FIELD_CONFIG ) as $field_key ) {
+				// Extract the base name from the field key (remove 'cb_' prefix).
+				$base_name                 = str_replace( 'cb_', '', $field_key );
+				$reverse_map[ $base_name ] = $field_key;
+			}
+		}
+
+		return isset( $reverse_map[ $field_name ] ) ? $reverse_map[ $field_name ] : null;
 	}
 }

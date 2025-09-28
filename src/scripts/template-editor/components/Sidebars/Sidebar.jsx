@@ -141,13 +141,13 @@ export function SidebarHeader({ activeTab, onTabChange }) {
  * <SidebarContent activeTab={TABS.TEMPLATE} />
  * ```
  */
-export function SidebarContent({ activeTab }) {
+export function SidebarContent({ activeTab, postType, postId }) {
   try {
     return (
       <>
         {activeTab === TABS.TEMPLATE ? (
           <>
-            <TemplateSettings />
+            <TemplateSettings postType={postType} postId={postId} />
             <TemplateSlot bubblesVirtually />
           </>
         ) : activeTab === TABS.INSPECTOR ? (
@@ -232,7 +232,7 @@ function Sidebar({ initialTab = DEFAULT_PROPS.ACTIVE_TAB }) {
   );
 
   try {
-    return <SidebarContent activeTab={activeTab} />;
+    return <SidebarContent activeTab={activeTab} postType={postType} postId={postId} />;
   } catch (error) {
     console.error("Sidebar: Error rendering component:", error);
     return (

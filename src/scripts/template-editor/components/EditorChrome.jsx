@@ -181,7 +181,11 @@ export default function EditorChrome({
           }
         >
           <div className={LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
-            <SidebarContent activeTab={sidebarActiveTab} />
+            <SidebarContent
+              activeTab={sidebarActiveTab}
+              postType={postType}
+              postId={postId}
+            />
           </div>
         </ComplementaryArea>
 

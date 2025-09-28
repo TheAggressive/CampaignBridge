@@ -1,5 +1,14 @@
-import { Panel, PanelBody, TextControl } from "@wordpress/components";
+import {
+  Panel,
+  PanelBody,
+  SelectControl,
+  TextControl,
+  TextareaControl,
+  ToggleControl,
+} from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
+import { useAutoSaveMetaManager } from "../../hooks/useAutoSaveMetaManager";
+import { useNotices } from "../../hooks/useNotices";
 
 /**
  * Template Settings Panel Component
@@ -15,41 +24,240 @@ import { __ } from "@wordpress/i18n";
  * <TemplateSettings />
  * ```
  */
-export default function TemplateSettings() {
+export default function TemplateSettings({ postType, postId }) {
+  console.log("postType", postType);
+  console.log("postId", postId);
+
+  const { success, error } = useNotices();
+
+  const { values, update, saveStatus, isLoading } = useAutoSaveMetaManager({
+    postType,
+    postId,
+    keys: [
+      "cb_subject",
+      "cb_preheader",
+      "cb_sender_name",
+      "cb_sender_email",
+      "cb_view_online_url",
+      "cb_unsubscribe_url",
+      "cb_utm_template",
+      "cb_audience_tags",
+      "cb_footer_pattern",
+      "cb_view_online_enabled",
+      "cb_utm_enabled",
+      "cb_footer_enabled",
+      "cb_address_html",
+      "cb_template_category",
+    ],
+    onSuccess: success,
+    onError: error,
+  });
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Panel>
+        <PanelBody title={__("Template Settings", "campaignbridge")}>
+          <p>{__("Loading template settings...", "campaignbridge")}</p>
+        </PanelBody>
+      </Panel>
+    );
+  }
+
+  console.log("Values:", values);
+
+  // Template categories for dropdown
+  const categoryOptions = [
+    { label: __("General", "campaignbridge"), value: "general" },
+    { label: __("Newsletter", "campaignbridge"), value: "newsletter" },
+    { label: __("Promotional", "campaignbridge"), value: "promotional" },
+    { label: __("Welcome", "campaignbridge"), value: "welcome" },
+    { label: __("Custom", "campaignbridge"), value: "custom" },
+  ];
+
   return (
-    <Panel>
-      <PanelBody
-        title={__("Template Configuration", "campaignbridge")}
-        initialOpen={true}
-      >
-        <TextControl
-          label={__("Default Subject Line", "campaignbridge")}
-          placeholder={__("Enter default subject line...", "campaignbridge")}
-          help={__(
-            "This will be used as the default subject for new emails",
-            "campaignbridge",
+    <>
+      {/* Basic Settings */}
+      <Panel>
+        <PanelBody
+          title={__("Template Settings", "campaignbridge")}
+          initialOpen={true}
+        >
+          <SelectControl
+            label={__("Category", "campaignbridge")}
+            value={values.cb_template_category || "general"}
+            options={categoryOptions}
+            onChange={(value) => update("cb_template_category", value)}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+
+          <TextControl
+            label={__("Subject Line", "campaignbridge")}
+            value={values.cb_subject || ""}
+            onChange={(value) => update("cb_subject", value)}
+            placeholder={__("Enter email subject...", "campaignbridge")}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+
+          <TextControl
+            label={__("Preheader Text", "campaignbridge")}
+            value={values.cb_preheader || ""}
+            onChange={(value) => update("cb_preheader", value)}
+            placeholder={__("Hidden preview text...", "campaignbridge")}
+            help={__("Shown in email client previews", "campaignbridge")}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+
+          <TextControl
+            label={__("Audience Tags", "campaignbridge")}
+            value={values.cb_audience_tags || ""}
+            onChange={(value) => update("cb_audience_tags", value)}
+            placeholder={__("tag1, tag2, tag3", "campaignbridge")}
+            help={__("Comma-separated list of audience tags", "campaignbridge")}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+        </PanelBody>
+      </Panel>
+
+      {/* Email Settings */}
+      <Panel>
+        <PanelBody
+          title={__("Email Settings", "campaignbridge")}
+          initialOpen={false}
+        >
+          <TextControl
+            label={__("Sender Name", "campaignbridge")}
+            value={values.cb_sender_name || ""}
+            onChange={(value) => update("cb_sender_name", value)}
+            placeholder={__("Your Name", "campaignbridge")}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+
+          <TextControl
+            label={__("Sender Email", "campaignbridge")}
+            value={values.cb_sender_email || ""}
+            onChange={(value) => update("cb_sender_email", value)}
+            type="email"
+            placeholder={__("sender@domain.com", "campaignbridge")}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+
+          <ToggleControl
+            label={__("Enable View Online Link", "campaignbridge")}
+            checked={
+              values.cb_view_online_enabled === "1" ||
+              values.cb_view_online_enabled === true
+            }
+            onChange={(checked) =>
+              update("cb_view_online_enabled", checked ? "1" : "0")
+            }
+            __nextHasNoMarginBottom
+          />
+
+          {(values.cb_view_online_enabled === "1" ||
+            values.cb_view_online_enabled === true) && (
+            <TextControl
+              label={__("View Online URL", "campaignbridge")}
+              value={values.cb_view_online_url || ""}
+              onChange={(value) => update("cb_view_online_url", value)}
+              type="url"
+              placeholder={__("https://...", "campaignbridge")}
+              __next40pxDefaultSize
+              __nextHasNoMarginBottom
+            />
           )}
-          __next40pxDefaultSize
-          __nextHasNoMarginBottom
-        />
 
-        <TextControl
-          label={__("From Name", "campaignbridge")}
-          placeholder={__("Your Name", "campaignbridge")}
-          help={__("The name that will appear as the sender", "campaignbridge")}
-          __next40pxDefaultSize
-          __nextHasNoMarginBottom
-        />
+          <TextControl
+            label={__("Unsubscribe URL", "campaignbridge")}
+            value={values.cb_unsubscribe_url || ""}
+            onChange={(value) => update("cb_unsubscribe_url", value)}
+            type="url"
+            placeholder={__("https://unsubscribe...", "campaignbridge")}
+            help={__(
+              "Can use merge tags like {unsubscribe_url}",
+              "campaignbridge",
+            )}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+        </PanelBody>
+      </Panel>
 
-        <TextControl
-          label={__("Reply-To Email", "campaignbridge")}
-          type="email"
-          placeholder={__("reply@yourdomain.com", "campaignbridge")}
-          help={__("Email address for replies", "campaignbridge")}
-          __next40pxDefaultSize
-          __nextHasNoMarginBottom
-        />
-      </PanelBody>
-    </Panel>
+      {/* Footer & Compliance */}
+      <Panel>
+        <PanelBody
+          title={__("Footer & Compliance", "campaignbridge")}
+          initialOpen={false}
+        >
+          <TextareaControl
+            label={__("Address / Compliance", "campaignbridge")}
+            value={values.cb_address_html || ""}
+            onChange={(value) => update("cb_address_html", value)}
+            placeholder={__(
+              "Physical address and compliance info...",
+              "campaignbridge",
+            )}
+            help={__("HTML allowed for formatting", "campaignbridge")}
+            rows={3}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+
+          <ToggleControl
+            label={__("Enable UTM Tracking", "campaignbridge")}
+            checked={
+              values.cb_utm_enabled === "1" || values.cb_utm_enabled === true
+            }
+            onChange={(checked) =>
+              update("cb_utm_enabled", checked ? "1" : "0")
+            }
+            __nextHasNoMarginBottom
+          />
+
+          {(values.cb_utm_enabled === "1" ||
+            values.cb_utm_enabled === true) && (
+            <TextControl
+              label={__("UTM Template", "campaignbridge")}
+              value={values.cb_utm_template || ""}
+              onChange={(value) => update("cb_utm_template", value)}
+              placeholder={"utm_source=newsletter&utm_campaign={post_slug}"}
+              help={__("Template for UTM query parameters", "campaignbridge")}
+              __next40pxDefaultSize
+              __nextHasNoMarginBottom
+            />
+          )}
+
+          <ToggleControl
+            label={__("Enable Default Footer", "campaignbridge")}
+            checked={
+              values.cb_footer_enabled === "1" ||
+              values.cb_footer_enabled === true
+            }
+            onChange={(checked) =>
+              update("cb_footer_enabled", checked ? "1" : "0")
+            }
+            __nextHasNoMarginBottom
+          />
+
+          {(values.cb_footer_enabled === "1" ||
+            values.cb_footer_enabled === true) && (
+            <TextControl
+              label={__("Footer Pattern", "campaignbridge")}
+              value={values.cb_footer_pattern || ""}
+              onChange={(value) => update("cb_footer_pattern", value)}
+              placeholder={__("Footer template slug", "campaignbridge")}
+              __next40pxDefaultSize
+              __nextHasNoMarginBottom
+            />
+          )}
+        </PanelBody>
+      </Panel>
+    </>
   );
 }
