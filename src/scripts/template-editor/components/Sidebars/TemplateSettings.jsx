@@ -25,11 +25,8 @@ import { useNotices } from "../../hooks/useNotices";
  * ```
  */
 export default function TemplateSettings({ postType, postId }) {
-  console.log("postType", postType);
-  console.log("postId", postId);
-
+  console.log("[TemplateSettings] props:", { postType, postId });
   const { success, error } = useNotices();
-
   const { values, update, saveStatus, isLoading } = useAutoSaveMetaManager({
     postType,
     postId,
@@ -63,8 +60,6 @@ export default function TemplateSettings({ postType, postId }) {
       </Panel>
     );
   }
-
-  console.log("Values:", values);
 
   // Template categories for dropdown
   const categoryOptions = [

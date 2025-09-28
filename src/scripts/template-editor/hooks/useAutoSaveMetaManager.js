@@ -1,22 +1,22 @@
 // src/scripts/template-editor/hooks/useAutoSaveMetaManager.js
 import { useEntityProp } from "@wordpress/core-data";
-import { useDispatch } from "@wordpress/data";
+import { useDispatch, useSelect } from "@wordpress/data";
 import { useCallback, useMemo, useRef, useState } from "@wordpress/element";
 import { AUTOSAVE_CONSTANTS, useAutoSave } from "./useAutoSave";
 
 /**
- * Auto-save manager for post meta
- * - Debounced, abortable saves (via your useAutoSave)
- * - Updates editor state first (setMeta), then persists via savePost()
+ * Auto-save manager for post meta.
+ * - Updates editor state via setMeta (instant UI)
+ * - Debounced persist via core-data saveEntityRecord (no dependency on core/editor context)
  * - Throttled success notices via callbacks you pass in
  *
- * @param {Object} opts
- * @param {string} opts.postType          e.g. 'cb_email_template'
- * @param {number} opts.postId
- * @param {string[]} opts.keys            meta keys this manager will handle
- * @param {function} [opts.onSuccess]     (msg) => void  // e.g. snackbar
- * @param {function} [opts.onError]       (msg) => void
- * @param {number} [opts.debounceMs]      defaults to AUTOSAVE_CONSTANTS.DEFAULT_DEBOUNCE_MS
+ * @param {Object}   opts
+ * @param {string}   opts.postType          e.g. 'cb_email_template'
+ * @param {number}   opts.postId
+ * @param {string[]} opts.keys              meta keys this manager will handle
+ * @param {function} [opts.onSuccess]       (msg) => void
+ * @param {function} [opts.onError]         (msg) => void
+ * @param {number}   [opts.debounceMs]      defaults to AUTOSAVE_CONSTANTS.DEFAULT_DEBOUNCE_MS
  */
 export function useAutoSaveMetaManager({
   postType,
@@ -26,57 +26,88 @@ export function useAutoSaveMetaManager({
   onError,
   debounceMs = AUTOSAVE_CONSTANTS.DEFAULT_DEBOUNCE_MS,
 }) {
-  // Guard against undefined postType or postId during initial render
+  // --- lightweight input assert (non-breaking, helps find wrong callers)
+  if (!postType || !postId) {
+    // eslint-disable-next-line no-console
+    console.error("[useAutoSaveMetaManager] Missing postType or postId", {
+      postType,
+      postId,
+      keys,
+    });
+  }
+
+  // Bind to post meta for this specific record
   const [meta = {}, setMeta] = useEntityProp(
     "postType",
-    postType || "post", // Fallback to default post type
+    postType,
     "meta",
-    postId || 0, // Fallback to 0 (won't match any real post)
+    postId,
   );
 
-  // Save status (optional but handy for UI)
+  // Only persist once the post-type schema is loaded
+  const ready = useSelect(
+    (select) => {
+      try {
+        return !!select("core").getPostType(postType);
+      } catch {
+        return false;
+      }
+    },
+    [postType],
+  );
+
+  // Save status for UI
   const [saveStatus, setSaveStatus] = useState(
     AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED,
   );
   const lastNoticeAtRef = useRef(0);
 
-  // Editor save dispatcher
-  const { editPost } = useDispatch("core/editor");
+  // core-data persister (NOT core/editor)
+  const { saveEntityRecord } = useDispatch("core");
 
-  // Build a stable projector for controlled values
+  // Project to a controlled values object
   const values = useMemo(() => {
     const out = {};
     for (const k of keys) out[k] = meta?.[k] ?? "";
     return out;
   }, [meta, keys]);
 
-  // The concrete performSave for useAutoSave
+  /**
+   * Debounced persist:
+   * 1) merge into meta (setMeta) for immediate UI
+   * 2) persist via core-data saveEntityRecord('postType', postType, postId, { meta: next })
+   */
   const performSave = useCallback(
-    async (partial, { signal } = {}) => {
+    async (partial /*, { signal } = {} */) => {
       try {
-        // Guard: Don't save if we don't have valid post info
-        if (!postType || !postId) {
-          console.warn(
-            "useAutoSaveMetaManager: Skipping save - missing postType or postId",
-          );
+        if (!postType || !postId || !ready) {
+          // eslint-disable-next-line no-console
+          console.warn("[useAutoSaveMetaManager] Skipping save (not ready)", {
+            postType,
+            postId,
+            ready,
+          });
           return;
         }
 
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVING);
 
-        // 1) Update editor state (so UI stays the source of truth)
+        // 1) Update editor state (keeps UI authoritative)
         const next = { ...meta };
         for (const k of Object.keys(partial)) {
           if (keys.includes(k)) next[k] = partial[k];
         }
         setMeta(next);
 
-        // 2) Update the post in the editor (this marks it as dirty for saving)
-        editPost({ meta: next });
+        // 2) Persist to REST via core-data
+        await saveEntityRecord("postType", postType, {
+          id: postId,
+          meta: next,
+        });
 
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED);
 
-        // Throttled success toast
+        // Throttle success notices
         const now = Date.now();
         if (
           onSuccess &&
@@ -87,31 +118,40 @@ export function useAutoSaveMetaManager({
           lastNoticeAtRef.current = now;
         }
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.error("Meta save failed:", err);
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.ERROR);
         onError?.("Failed to save changes");
         throw err;
       }
     },
-    [meta, setMeta, editPost, keys, onSuccess, onError, postType, postId],
+    [
+      meta,
+      setMeta,
+      saveEntityRecord,
+      keys,
+      onSuccess,
+      onError,
+      postType,
+      postId,
+      ready,
+    ],
   );
 
   // Your existing debounced/abortable runner
   const save = useAutoSave(performSave, debounceMs);
 
-  // Field updater that schedules a debounced save
+  // Update helpers
   const update = useCallback(
     (key, value) => {
       if (!keys.includes(key)) return;
-      // Update editor state immediately for snappy inputs
-      setMeta({ ...meta, [key]: value });
-      // Debounced persist with just the delta
-      save({ [key]: value });
+      if ((meta?.[key] ?? "") === value) return; // avoid churn
+      setMeta({ ...meta, [key]: value }); // immediate UI
+      save({ [key]: value }); // debounced persist
     },
     [meta, setMeta, keys, save],
   );
 
-  // Batch updater (e.g., paste multiple fields)
   const setMany = useCallback(
     (partial) => {
       const next = { ...meta };
@@ -131,11 +171,7 @@ export function useAutoSaveMetaManager({
     [meta, setMeta, keys, save],
   );
 
-  // Expose an immediate save
-  const saveNow = useCallback(
-    (partial = {}) => save(partial, true), // your useAutoSave supports force via second arg
-    [save],
-  );
+  const saveNow = useCallback((partial = {}) => save(partial, true), [save]);
 
   return {
     save,
