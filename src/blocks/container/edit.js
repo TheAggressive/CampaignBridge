@@ -3,12 +3,14 @@
  * - Uses core color panel (supports.color) for background/text colors.
  * - Keeps BoxControls for outerPadding (gutter) and inner padding.
  * - Locks the block (single, undeletable/unmovable).
+ * - Mounts InnerBlocks via useInnerArea hook for a centered appender + minHeight.
  */
 
 import {
   InnerBlocks,
   InspectorControls,
   useBlockProps,
+  useInnerBlocksProps,
 } from "@wordpress/block-editor";
 import {
   __experimentalBoxControl as BoxControl,
@@ -18,10 +20,32 @@ import {
 import { useDispatch } from "@wordpress/data";
 import { useEffect } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
+import useHasInnerBlocks from "../../scripts/template-editor/hooks/useHasInnerBlocks";
 
 export default function Edit({ attributes, setAttributes, clientId }) {
   const { maxWidth, outerPadding, padding } = attributes;
   const { updateBlockAttributes } = useDispatch("core/block-editor");
+  const hasInnerBlocks = useHasInnerBlocks(clientId);
+  const innerBlocksProps = useInnerBlocksProps(
+    {
+      className: "cb-email-container__inner",
+    },
+    {
+      allowedBlocks: [
+        "campaignbridge/section",
+        "campaignbridge/columns",
+        "campaignbridge/heading",
+        "campaignbridge/paragraph",
+        "campaignbridge/image",
+        "campaignbridge/button",
+        "campaignbridge/post-card",
+      ],
+      templateLock: false,
+      renderAppender: hasInnerBlocks
+        ? InnerBlocks.DefaultBlockAppender
+        : InnerBlocks.ButtonBlockAppender,
+    },
+  );
 
   // Hard lock: cannot remove or move the root container
   useEffect(() => {
@@ -31,8 +55,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
   // Note: Background/Text colors come from core color support UI
   const blockProps = useBlockProps({
     className: "cb-email-container",
-    // Editor-only hint (kept minimal; actual email styles come from render.php)
-    style: { outline: "1px dashed #e5e7eb" },
   });
 
   return (
@@ -67,7 +89,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         </PanelBody>
       </InspectorControls>
 
-      {/* Editor scaffold (for authoring). Final email HTML is rendered in PHP. */}
+      {/* Editor scaffold only. Final email HTML is from render.php */}
       <div
         style={{
           margin: "0 auto",
@@ -75,18 +97,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
           padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
         }}
       >
-        <InnerBlocks
-          allowedBlocks={[
-            "campaignbridge/section",
-            "campaignbridge/columns",
-            "campaignbridge/heading",
-            "campaignbridge/paragraph",
-            "campaignbridge/image",
-            "campaignbridge/button",
-            "campaignbridge/post-card",
-          ]}
-          templateLock={false}
-        />
+        <div {...innerBlocksProps} />
       </div>
     </div>
   );
