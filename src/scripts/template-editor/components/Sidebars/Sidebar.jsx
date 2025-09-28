@@ -101,6 +101,7 @@ export function SidebarHeader({ activeTab, onTabChange }) {
         aria-selected={activeTab === TABS.TEMPLATE}
         aria-controls="sidebar-content"
         id="tab-document"
+        style={{ "marginLeft": "-16px" }}
         tabIndex={activeTab === TABS.TEMPLATE ? 0 : -1}
       >
         {__("Document", "campaignbridge")}
@@ -232,7 +233,13 @@ function Sidebar({ initialTab = DEFAULT_PROPS.ACTIVE_TAB }) {
   );
 
   try {
-    return <SidebarContent activeTab={activeTab} postType={postType} postId={postId} />;
+    return (
+      <SidebarContent
+        activeTab={activeTab}
+        postType={postType}
+        postId={postId}
+      />
+    );
   } catch (error) {
     console.error("Sidebar: Error rendering component:", error);
     return (

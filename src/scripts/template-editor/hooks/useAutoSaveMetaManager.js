@@ -1,4 +1,3 @@
-// src/scripts/template-editor/hooks/useAutoSaveMetaManager.js
 import { useEntityProp } from "@wordpress/core-data";
 import { useDispatch, useSelect } from "@wordpress/data";
 import { useCallback, useMemo, useRef, useState } from "@wordpress/element";
