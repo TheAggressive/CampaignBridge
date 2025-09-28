@@ -25,7 +25,6 @@ import { useNotices } from "../../hooks/useNotices";
  * ```
  */
 export default function TemplateSettings({ postType, postId }) {
-  console.log("[TemplateSettings] props:", { postType, postId });
   const { success, error } = useNotices();
   const { values, update, saveStatus, isLoading } = useAutoSaveMetaManager({
     postType,
