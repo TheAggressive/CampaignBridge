@@ -24,8 +24,8 @@ const ALLOWED_BLOCKS = [
 ];
 
 const LINK_TO_OPTIONS = [
-  { label: "Post", value: "post" },
-  { label: "Post Type", value: "postType" },
+  { label: __("Post", "campaignbridge"), value: "post" },
+  { label: __("Post Type", "campaignbridge"), value: "postType" },
 ];
 
 const API_ENDPOINTS = {
@@ -33,7 +33,14 @@ const API_ENDPOINTS = {
   POSTS: "campaignbridge/v1/posts",
 };
 
-const DEFAULT_SELECT_LABEL = "— Select —";
+const DEFAULT_POST_SELECT_LABEL = __(
+  "— Please Select Post —",
+  "campaignbridge",
+);
+const DEFAULT_POST_TYPE_SELECT_LABEL = __(
+  "— Please Select Post Type —",
+  "campaignbridge",
+);
 
 export default function Edit({ attributes, setAttributes, clientId }) {
   const {
@@ -74,7 +81,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
           );
         }
       } catch (error) {
-        console.warn("Failed to fetch post types:", error);
+        console.warn(
+          __("Failed to fetch post types:", "campaignbridge"),
+          error,
+        );
         // Set empty array on error to prevent UI issues
         setTypeItems([]);
       } finally {
@@ -97,7 +107,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
       setPostItems(Array.isArray(response?.items) ? response.items : []);
     } catch (error) {
-      console.warn("Failed to fetch posts:", error);
+      console.warn(__("Failed to fetch posts:", "campaignbridge"), error);
       setPostItems([]);
     } finally {
       setIsLoadingPosts(false);
@@ -105,39 +115,21 @@ export default function Edit({ attributes, setAttributes, clientId }) {
   };
   // Note: default layout insertion has been removed.
 
-  // Enhanced placeholder with inline controls
-  const PlaceholderContent = () => (
-    <div
-      style={{
-        padding: "30px",
-        textAlign: "center",
-        backgroundColor: "#f8f9fa",
-        border: "2px dashed #dee2e6",
-        borderRadius: "8px",
-      }}
-    >
-      <h3 style={{ margin: "0 0 20px 0", color: "#495057", fontSize: "18px" }}>
-        {__("Select a Post", "campaignbridge")}
-      </h3>
+  const PlaceholderContent = () => {
+    return (
+      <div className="campaignbridge-placeholder-container">
+        <h3 className="campaignbridge-placeholder-title">
+          {__("Select a Post", "campaignbridge")}
+        </h3>
 
-      <div style={{ maxWidth: "400px", margin: "0 auto", textAlign: "left" }}>
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: "500",
-              color: "#495057",
-            }}
-          >
-            {__("Post Type", "campaignbridge")}
-          </label>
+        <div className="campaignbridge-placeholder-form">
           <SelectControl
+            label={__("Post Type", "campaignbridge")}
             value={postType || ""}
             options={[
               ...(isLoadingTypes
-                ? [{ label: "Loading post types...", value: "" }]
-                : [{ label: "— Please Select Post Type —", value: "" }]),
+                ? [{ label: "Loading Post Types...", value: "" }]
+                : [{ label: DEFAULT_POST_TYPE_SELECT_LABEL, value: "" }]),
               ...typeItems,
             ]}
             onChange={(v) => {
@@ -151,25 +143,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
-        </div>
 
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: "500",
-              color: "#495057",
-            }}
-          >
-            {__("Post", "campaignbridge")}
-          </label>
           <SelectControl
+            label={__("Post", "campaignbridge")}
             value={String(postId || "")}
             options={[
-              { label: DEFAULT_SELECT_LABEL, value: "" },
+              { label: DEFAULT_POST_SELECT_LABEL, value: "" },
               ...(isLoadingPosts
-                ? [{ label: "Loading posts...", value: "" }]
+                ? [
+                    {
+                      label: __("Loading posts...", "campaignbridge"),
+                      value: "",
+                    },
+                  ]
                 : postItems.map((it) => ({
                     label: it.label,
                     value: String(it.id),
@@ -181,16 +167,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             disabled={!postType || isLoadingPosts}
           />
         </div>
-      </div>
 
-      <p style={{ margin: "20px 0 0 0", fontSize: "14px", color: "#6c757d" }}>
-        {__(
-          "You can also change these selections later in the sidebar settings.",
-          "campaignbridge",
-        )}
-      </p>
-    </div>
-  );
+        <p className="campaignbridge-placeholder-description">
+          {__(
+            "You can also change these selections later in the sidebar settings.",
+            "campaignbridge",
+          )}
+        </p>
+      </div>
+    );
+  };
 
   return (
     <div {...props}>
@@ -199,12 +185,17 @@ export default function Edit({ attributes, setAttributes, clientId }) {
           <SelectControl
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-            label="Post type"
+            label={__("Post type", "campaignbridge")}
             value={postType || ""}
             options={[
               ...(isLoadingTypes
-                ? [{ label: "Loading post types...", value: "" }]
-                : [{ label: "— Please Select Post Type —", value: "" }]),
+                ? [
+                    {
+                      label: __("Loading Post Types...", "campaignbridge"),
+                      value: "",
+                    },
+                  ]
+                : [{ label: DEFAULT_POST_TYPE_SELECT_LABEL, value: "" }]),
               ...typeItems,
             ]}
             onChange={(v) => {
@@ -222,7 +213,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             label="Post"
             value={String(postId || "")}
             options={[
-              { label: DEFAULT_SELECT_LABEL, value: "" },
+              { label: DEFAULT_POST_SELECT_LABEL, value: "" },
               ...postItems.map((it) => ({
                 label: it.label,
                 value: String(it.id),
@@ -232,7 +223,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
           />
           <ToggleControl
             __nextHasNoMarginBottom
-            label="Make entire card clickable"
+            label={__("Make entire card clickable", "campaignbridge")}
             checked={!!slotLinkEnabled}
             onChange={(v) => setAttributes({ slotLinkEnabled: !!v })}
           />
@@ -240,7 +231,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             <SelectControl
               __next40pxDefaultSize
               __nextHasNoMarginBottom
-              label="Link to"
+              label={__("Link to", "campaignbridge")}
               value={slotLinkTo}
               options={LINK_TO_OPTIONS}
               onChange={(v) => setAttributes({ slotLinkTo: v })}
