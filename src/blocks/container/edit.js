@@ -20,24 +20,22 @@ import {
 import { useDispatch } from "@wordpress/data";
 import { useEffect } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
-import useHasInnerBlocks from "../../scripts/template-editor/hooks/useHasInnerBlocks";
+import { useBlockSelection } from "../../scripts/template-editor/hooks/useBlockSelection";
 
 export default function Edit({ attributes, setAttributes, clientId }) {
   const { maxWidth, outerPadding, padding } = attributes;
   const { updateBlockAttributes } = useDispatch("core/block-editor");
-  const hasInnerBlocks = useHasInnerBlocks(clientId);
+  const { hasInnerBlocks } = useBlockSelection(clientId);
+
   const innerBlocksProps = useInnerBlocksProps(
     {
       className: "cb-email-container__inner",
     },
     {
       allowedBlocks: [
-        "campaignbridge/section",
-        "campaignbridge/columns",
-        "campaignbridge/heading",
-        "campaignbridge/paragraph",
-        "campaignbridge/image",
-        "campaignbridge/button",
+        "campaignbridge/post-excerpt",
+        "campaignbridge/post-image",
+        "campaignbridge/post-cta",
         "campaignbridge/post-card",
       ],
       templateLock: false,
@@ -54,7 +52,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
   // Note: Background/Text colors come from core color support UI
   const blockProps = useBlockProps({
-    className: "cb-email-container",
+    style: {
+      margin: "0 auto",
+      maxWidth,
+      padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
+    },
   });
 
   return (
@@ -89,14 +91,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         </PanelBody>
       </InspectorControls>
 
-      {/* Editor scaffold only. Final email HTML is from render.php */}
-      <div
-        style={{
-          margin: "0 auto",
-          maxWidth,
-          padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
-        }}
-      >
+      <div {...blockProps}>
         <div {...innerBlocksProps} />
       </div>
     </div>
