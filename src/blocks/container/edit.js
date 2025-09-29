@@ -30,6 +30,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
   const innerBlocksProps = useInnerBlocksProps(
     {
       className: "cb-email-container__inner",
+      style: {
+        maxWidth: maxWidth,
+        margin: "0 auto",
+      },
     },
     {
       allowedBlocks: [
@@ -53,8 +57,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
   // Note: Background/Text colors come from core color support UI
   const blockProps = useBlockProps({
     style: {
-      margin: "0 auto",
-      maxWidth,
       padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
     },
   });
