@@ -98,7 +98,7 @@ All namespaces under `CampaignBridge\...` must map correctly via your autoloader
   - [√] Central registry for all services (Admin, PostTypes, Providers, REST, CLI).
   - [√] `get( id )` must always return the same instance.
   - [√] Should register hooks only once (idempotent).
-  - [x] **Test:** `get('mailchimp_provider')` and `get('email_generator')` work; no double hooks.
+  - [√] **Test:** `get('mailchimp_provider')` and `get('email_generator')` work; no double hooks.
 
 - [⚠️] **CPT: cb_email_template**
   - [ ] Registered with editor support.
