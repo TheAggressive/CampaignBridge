@@ -72,6 +72,7 @@ class MailchimpRoutes {
 	 */
 	private static array $providers = array();
 
+
 	/**
 	 * Initialize shared state.
 	 *
@@ -90,6 +91,14 @@ class MailchimpRoutes {
 	 * @return void
 	 */
 	public static function register(): void {
+		static $registered = false;
+
+		// Use static variable for function-level idempotency.
+		if ( $registered ) {
+			return;
+		}
+		$registered = true;
+
 		self::register_sections_route();
 		self::register_audiences_route();
 		self::register_templates_route();

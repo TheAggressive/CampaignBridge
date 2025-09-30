@@ -98,6 +98,14 @@ class Routes {
 	 * @return void
 	 */
 	public static function register() {
+		static $registered = false;
+
+		// Use static variable for function-level idempotency.
+		if ( $registered ) {
+			return;
+		}
+		$registered = true;
+
 		self::register_posts_route();
 		self::register_post_types_route();
 

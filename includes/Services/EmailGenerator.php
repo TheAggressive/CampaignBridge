@@ -42,6 +42,33 @@ class EmailGenerator {
 	private const CORE_BLOCK_PREFIX           = 'core/';
 
 	/**
+	 * Extract container background color from first block if it's a container.
+	 *
+	 * @param array $blocks Array of block data.
+	 * @return string|null Container background color or null if not applicable.
+	 */
+	private static function extract_container_background( array $blocks ): ?string {
+		if ( empty( $blocks ) ) {
+			return null;
+		}
+
+		$first_block = $blocks[0];
+		$block_name  = $first_block['blockName'] ?? '';
+
+		// Check if first block is a container
+		if ( $block_name !== 'campaignbridge/container' ) {
+			return null;
+		}
+
+		$attributes  = $first_block['attrs'] ?? array();
+		$style       = $attributes['style'] ?? array();
+		$color_style = $style['color'] ?? array();
+		$background  = $color_style['background'] ?? null;
+
+		return $background ?: null;
+	}
+
+	/**
 	 * Convert blocks to email-safe HTML.
 	 *
 	 * @param array $blocks Array of block data.
@@ -51,10 +78,14 @@ class EmailGenerator {
 	public static function generate_email_html( array $blocks, array $options = array() ): string {
 		$options = wp_parse_args( $options, self::DEFAULT_OPTIONS );
 
-		// Start building the email HTML.
-		$html  = self::build_email_header( $options );
-		$html .= self::convert_blocks_to_html( $blocks, $options );
-		$html .= self::build_email_footer( $options );
+		// Check if first block is a container and extract its background for global email background
+		$container_bg = self::extract_container_background( $blocks );
+
+		// Start building the email HTML with container background if available.
+		$header_options = $container_bg ? array_merge( $options, array( 'background_color' => $container_bg ) ) : $options;
+		$html           = self::build_email_header( $header_options );
+		$html          .= self::convert_blocks_to_html( $blocks, $options );
+		$html          .= self::build_email_footer( $options );
 
 		// Process the HTML for email compatibility.
 		if ( $options['css_inline'] ) {
@@ -239,6 +270,9 @@ class EmailGenerator {
 	 */
 	private static function convert_campaignbridge_block( string $block_name, array $attributes, array $inner_content, array $inner_blocks, array $options ): string {
 		switch ( $block_name ) {
+			case 'campaignbridge/container':
+				return self::convert_container_block( $attributes, $inner_content, $inner_blocks );
+
 			case 'campaignbridge/post-card':
 				return self::convert_post_card_block( $attributes );
 
@@ -257,6 +291,75 @@ class EmailGenerator {
 			default:
 				return '';
 		}
+	}
+
+	/**
+	 * Convert container block to HTML.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @param array $inner_content Inner content.
+	 * @param array $inner_blocks Inner blocks.
+	 * @return string Converted HTML.
+	 */
+	private static function convert_container_block( array $attributes, array $inner_content, array $inner_blocks ): string {
+		$max_width      = $attributes['maxWidth'] ?? 600;
+		$background_hex = '#ffffff';
+		$text_hex       = '#000000';
+
+		// Extract colors from attributes
+		$style       = $attributes['style'] ?? array();
+		$color_style = $style['color'] ?? array();
+		if ( isset( $color_style['background'] ) ) {
+			$background_hex = $color_style['background'];
+		}
+		if ( isset( $color_style['text'] ) ) {
+			$text_hex = $color_style['text'];
+		}
+
+		// Get padding from attributes
+		$padding = $attributes['padding'] ?? array(
+			'top'    => 0,
+			'right'  => 24,
+			'bottom' => 0,
+			'left'   => 24,
+		);
+
+		$inner_td_style = sprintf(
+			'padding: %dpx %dpx %dpx %dpx; mso-line-height-rule: exactly; color: %s;',
+			$padding['top'] ?? 0,
+			$padding['right'] ?? 24,
+			$padding['bottom'] ?? 0,
+			$padding['left'] ?? 24,
+			esc_attr( $text_hex )
+		);
+
+		// Generate the HTML structure for the global container
+		$content = self::convert_blocks_to_html( $inner_blocks, array() );
+
+		return sprintf(
+			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;">
+				<tbody>
+				<tr>
+					<td align="center">
+						<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="%d" style="max-width: 100%%; background: %s; color: %s; mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse;">
+							<tbody>
+							<tr>
+								<td align="left" style="%s">
+									%s
+								</td>
+							</tr>
+							</tbody>
+						</table>
+					</td>
+				</tr>
+				</tbody>
+			</table>',
+			(int) $max_width,
+			esc_attr( $background_hex ),
+			esc_attr( $text_hex ),
+			$inner_td_style,
+			$content
+		);
 	}
 
 	/**

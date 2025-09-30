@@ -53,7 +53,7 @@ $text_hex       = isset( $color_style['text'] ) ? (string) $color_style['text'] 
 
 $max_width = (int) $attrs['maxWidth'];
 
-// Outer padding (full-width TD)
+// Regular container rendering (when not global)
 $op             = array_merge(
 	array(
 		'top'    => 0,
