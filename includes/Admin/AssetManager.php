@@ -30,6 +30,8 @@ class AssetManager {
 	private const GLOBAL_STYLES_HANDLE       = 'campaignbridge-styles';
 	private const POST_TYPES_STYLES_HANDLE   = 'campaignbridge-post-types';
 	private const STATUS_STYLES_HANDLE       = 'campaignbridge-status';
+	private const SETTINGS_STYLES_HANDLE     = 'campaignbridge-settings';
+	private const SETTINGS_SCRIPT_HANDLE     = 'campaignbridge-settings';
 	private const BLOCK_EDITOR_STYLES_HANDLE = 'campaignbridge-block-editor-style';
 	private const BLOCK_EDITOR_SCRIPT_HANDLE = 'campaignbridge-block-editor-script';
 
@@ -39,6 +41,8 @@ class AssetManager {
 	private const GLOBAL_STYLES_PATH       = 'dist/styles/styles.css';
 	private const POST_TYPES_STYLES_PATH   = 'dist/styles/pages/post-types.css';
 	private const STATUS_STYLES_PATH       = 'dist/styles/pages/status.css';
+	private const SETTINGS_STYLES_PATH     = 'dist/styles/pages/settings.css';
+	private const SETTINGS_SCRIPT_PATH     = 'dist/scripts/admin/settings.js';
 	private const BLOCK_EDITOR_STYLES_PATH = 'dist/styles/pages/editor.css';
 	private const BLOCK_EDITOR_SCRIPT_PATH = 'dist/scripts/template-editor/editor.js';
 
@@ -100,6 +104,15 @@ class AssetManager {
 	 * @return void
 	 */
 	public static function register_scripts(): void {
+		// Register settings page script.
+		wp_register_script(
+			self::SETTINGS_SCRIPT_HANDLE,
+			CB_URL . self::SETTINGS_SCRIPT_PATH,
+			array(),
+			filemtime( CB_PATH . self::SETTINGS_SCRIPT_PATH ),
+			true
+		);
+
 		// Register template editor page script using generated asset metadata.
 		self::register_script_with_asset(
 			self::BLOCK_EDITOR_SCRIPT_HANDLE,
@@ -220,6 +233,9 @@ class AssetManager {
 		}
 		if ( ! self::register_style( self::STATUS_STYLES_HANDLE, self::STATUS_STYLES_PATH ) ) {
 			$errors[] = 'status styles';
+		}
+		if ( ! self::register_style( self::SETTINGS_STYLES_HANDLE, self::SETTINGS_STYLES_PATH ) ) {
+			$errors[] = 'settings styles';
 		}
 
 		// Register block editor style with dependencies.

@@ -1,0 +1,89 @@
+/**
+ * CampaignBridge Settings Page Styles
+ *
+ * Styles for the settings configuration interface using BEM methodology.
+ */
+
+.cb-settings {
+  &__verify-status {
+    margin-left: 8px;
+    font-weight: 500;
+    font-size: 12px;
+
+    &--valid {
+      color: #10b981; /* green-500 */
+    }
+
+    &--invalid {
+      color: #ef4444; /* red-500 */
+    }
+  }
+
+  &__api-key-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    .cb-settings__api-key-field {
+      flex: 1;
+      font-family: monospace;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  &__api-key-toggle {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  &__form-table {
+    th {
+      font-weight: 600;
+    }
+
+    .description {
+      font-style: italic;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+  }
+
+  &__provider-fields {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 16px;
+
+    h4 {
+      margin: 0 0 12px 0;
+      color: #374151;
+      font-size: 14px;
+      font-weight: 600;
+    }
+  }
+
+  &__status-message {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  &__dropdown-container {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+
+    select {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    button {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+  }
+}

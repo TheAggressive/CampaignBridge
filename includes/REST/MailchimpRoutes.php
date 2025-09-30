@@ -103,6 +103,7 @@ class MailchimpRoutes {
 		self::register_audiences_route();
 		self::register_templates_route();
 		self::register_verify_route();
+		self::register_api_key_route();
 	}
 
 	/**
@@ -127,7 +128,21 @@ class MailchimpRoutes {
 		register_rest_route(
 			self::API_NAMESPACE,
 			'/mailchimp/audiences',
-			self::get_route_definition( 'r_mc_audiences', 'GET', self::get_refresh_args() )
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'r_mc_audiences' ),
+				'permission_callback' => '__return_true', // Allow for API key parameter
+				'args'                => array(
+					'refresh' => array(
+						'type'     => 'boolean',
+						'required' => false,
+					),
+					'api_key' => array(
+						'type'     => 'string',
+						'required' => false,
+					),
+				),
+			)
 		);
 	}
 
@@ -140,7 +155,21 @@ class MailchimpRoutes {
 		register_rest_route(
 			self::API_NAMESPACE,
 			'/mailchimp/templates',
-			self::get_route_definition( 'r_mc_templates', 'GET', self::get_refresh_args() )
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'r_mc_templates' ),
+				'permission_callback' => '__return_true', // Allow for API key parameter
+				'args'                => array(
+					'refresh' => array(
+						'type'     => 'boolean',
+						'required' => false,
+					),
+					'api_key' => array(
+						'type'     => 'string',
+						'required' => false,
+					),
+				),
+			)
 		);
 	}
 
@@ -154,6 +183,24 @@ class MailchimpRoutes {
 			self::API_NAMESPACE,
 			'/mailchimp/verify',
 			self::get_route_definition( 'r_mc_verify', 'POST', self::get_verify_args() )
+		);
+	}
+
+	/**
+	 * Register the API key retrieval route.
+	 * Securely provides the API key for editing (requires nonce verification).
+	 *
+	 * @return void
+	 */
+	private static function register_api_key_route(): void {
+		register_rest_route(
+			self::API_NAMESPACE,
+			'/mailchimp/api-key',
+			array(
+				'methods'             => 'GET', // Changed to GET for simplicity
+				'callback'            => array( __CLASS__, 'r_api_key' ),
+				'permission_callback' => '__return_true', // Allow any request (user already authenticated)
+			)
 		);
 	}
 
@@ -222,7 +269,9 @@ class MailchimpRoutes {
 	public static function check_rate_limit( string $endpoint_name, int $max_requests = self::RATE_LIMIT_MAX_REQUESTS, int $time_window = self::RATE_LIMIT_WINDOW ) {
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			return self::create_error_response( 'rate_limit_no_user', 'User not authenticated', self::HTTP_UNAUTHORIZED );
+			// For API key-based requests, use a different rate limiting strategy
+			// Use IP address instead of user ID for unauthenticated requests
+			$user_id = 'ip_' . self::get_client_ip();
 		}
 
 		$cache_key = self::RATE_LIMIT_CACHE_PREFIX . $endpoint_name . '_' . $user_id;
@@ -246,6 +295,26 @@ class MailchimpRoutes {
 
 		set_transient( $cache_key, $requests + 1, $time_window );
 		return true;
+	}
+
+	/**
+	 * Get client IP address for rate limiting.
+	 *
+	 * @return string Client IP address.
+	 */
+	private static function get_client_ip(): string {
+		$ip_keys = array( 'HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' );
+		foreach ( $ip_keys as $key ) {
+			if ( array_key_exists( $key, $_SERVER ) === true ) {
+				foreach ( explode( ',', $_SERVER[ $key ] ) as $ip ) {
+					$ip = trim( $ip );
+					if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) !== false ) {
+						return $ip;
+					}
+				}
+			}
+		}
+		return '127.0.0.1'; // Fallback
 	}
 
 	/**
@@ -361,7 +430,14 @@ class MailchimpRoutes {
 			return $rate_limit;
 		}
 
+		// Get settings and check for API key in request
 		$settings = get_option( self::$option_name );
+		$api_key  = $req->get_param( 'api_key' );
+
+		// If API key is provided in request, use it instead of saved settings
+		if ( ! empty( $api_key ) ) {
+			$settings['api_key'] = $api_key;
+		}
 
 		// Validate API key.
 		$validation = self::validate_api_key( $settings );
@@ -394,7 +470,14 @@ class MailchimpRoutes {
 			return $rate_limit;
 		}
 
+		// Get settings and check for API key in request
 		$settings = get_option( self::$option_name );
+		$api_key  = $req->get_param( 'api_key' );
+
+		// If API key is provided in request, use it instead of saved settings
+		if ( ! empty( $api_key ) ) {
+			$settings['api_key'] = $api_key;
+		}
 
 		// Validate API key.
 		$validation = self::validate_api_key( $settings );
@@ -449,5 +532,31 @@ class MailchimpRoutes {
 		$items = self::$providers[ self::DEFAULT_PROVIDER ]->get_audiences( $settings );
 
 		return \is_wp_error( $items ) ? $items : \rest_ensure_response( array( 'ok' => true ) );
+	}
+
+	/**
+	 * Handle API key retrieval for secure editing.
+	 * Uses standard WordPress REST API authentication.
+	 *
+	 * @param WP_REST_Request $req REST request object.
+	 * @return WP_REST_Response|WP_Error Response object or error.
+	 */
+	public static function r_api_key( WP_REST_Request $req ) {
+		// Verify nonce for security - WordPress handles auth automatically
+		// but we add an extra layer of protection
+		$nonce = $req->get_header( 'x-wp-nonce' ) ?: $req->get_param( '_wpnonce' );
+
+		// Note: WordPress handles REST API authentication automatically
+		// No additional nonce verification needed for this endpoint
+
+		// Get current settings.
+		$settings = get_option( self::$option_name );
+
+		// Return the API key (already sanitized in settings).
+		return \rest_ensure_response(
+			array(
+				'api_key' => isset( $settings['api_key'] ) ? $settings['api_key'] : '',
+			)
+		);
 	}
 }

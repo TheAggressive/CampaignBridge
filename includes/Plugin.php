@@ -335,12 +335,9 @@ class Plugin {
 		RestRoutes::init( self::OPTION_NAME, $this->providers );
 		add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
 
-		// Only register Mailchimp routes if Mailchimp is the selected provider.
-		$settings = get_option( self::OPTION_NAME );
-		if ( isset( $settings['provider'] ) && self::DEFAULT_PROVIDER === $settings['provider'] ) {
-			MailchimpRoutes::init( self::OPTION_NAME, $this->providers );
-			add_action( 'rest_api_init', array( MailchimpRoutes::class, 'register' ) );
-		}
+		// Always register Mailchimp routes (needed for API key functionality)
+		MailchimpRoutes::init( self::OPTION_NAME, $this->providers );
+		add_action( 'rest_api_init', array( MailchimpRoutes::class, 'register' ) );
 	}
 
 	/**

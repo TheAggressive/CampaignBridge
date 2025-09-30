@@ -76,6 +76,7 @@ class SettingsPage extends AdminPage {
 		}
 
 		wp_enqueue_style( 'campaignbridge-settings' );
+		wp_enqueue_script( 'campaignbridge-settings' );
 	}
 	/**
 	 * Render the Settings configuration page.
@@ -123,7 +124,7 @@ class SettingsPage extends AdminPage {
 				settings_fields( self::SETTINGS_FIELD );
 				?>
 
-				<table class="form-table">
+				<table class="form-table cb-settings__form-table">
 					<tr>
 						<th scope="row"><?php echo esc_html__( 'Provider', 'campaignbridge' ); ?></th>
 						<td>
@@ -135,6 +136,23 @@ class SettingsPage extends AdminPage {
 							<p class="description"><?php echo esc_html__( 'Choose which email client or export method to use.', 'campaignbridge' ); ?></p>
 						</td>
 					</tr>
+
+					<!-- Global Email Settings -->
+					<tr>
+						<th scope="row"><?php echo esc_html__( 'From Name', 'campaignbridge' ); ?></th>
+						<td>
+							<input type="text" name="<?php echo esc_attr( self::get_option_name() ); ?>[from_name]" value="<?php echo esc_attr( $settings['from_name'] ?? '' ); ?>" size="50" />
+							<p class="description"><?php echo esc_html__( 'Default sender name for all emails.', 'campaignbridge' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php echo esc_html__( 'From Email', 'campaignbridge' ); ?></th>
+						<td>
+							<input type="email" name="<?php echo esc_attr( self::get_option_name() ); ?>[from_email]" value="<?php echo esc_attr( $settings['from_email'] ?? '' ); ?>" size="50" />
+							<p class="description"><?php echo esc_html__( 'Default sender email address for all emails.', 'campaignbridge' ); ?></p>
+						</td>
+					</tr>
+
 					<?php
 					// Provider-specific fields.
 					if ( isset( $providers[ $provider ] ) ) {

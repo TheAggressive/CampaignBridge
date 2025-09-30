@@ -68,6 +68,8 @@ class SettingsHandler {
 		$clean['provider']           = $this->sanitize_provider( $input, $previous );
 		$clean['api_key']            = $this->sanitize_api_key( $input, $previous );
 		$clean['audience_id']        = $this->sanitize_audience_id( $input );
+		$clean['from_name']          = $this->sanitize_from_name( $input );
+		$clean['from_email']         = $this->sanitize_from_email( $input );
 		$clean['exclude_post_types'] = $this->sanitize_post_types( $input );
 
 		return $clean;
@@ -133,6 +135,39 @@ class SettingsHandler {
 	 */
 	private function sanitize_audience_id( array $input ): string {
 		return sanitize_text_field( $input['audience_id'] ?? '' );
+	}
+
+	/**
+	 * Sanitize the default sender name.
+	 *
+	 * @param array $input Raw input array.
+	 * @return string Sanitized sender name.
+	 */
+	private function sanitize_from_name( array $input ): string {
+		return sanitize_text_field( $input['from_name'] ?? '' );
+	}
+
+	/**
+	 * Sanitize the default sender email.
+	 *
+	 * @param array $input Raw input array.
+	 * @return string Sanitized sender email.
+	 */
+	private function sanitize_from_email( array $input ): string {
+		$email = sanitize_email( $input['from_email'] ?? '' );
+
+		// Validate email format.
+		if ( ! empty( $email ) && ! is_email( $email ) ) {
+			add_settings_error(
+				'campaignbridge_messages',
+				'campaignbridge_from_email_invalid',
+				__( 'Please enter a valid email address.', 'campaignbridge' ),
+				'error'
+			);
+			return '';
+		}
+
+		return $email;
 	}
 
 	/**

@@ -98,7 +98,7 @@ All namespaces under `CampaignBridge\...` must map correctly via your autoloader
   - [√] Central registry for all services (Admin, PostTypes, Providers, REST, CLI).
   - [√] `get( id )` must always return the same instance.
   - [√] Should register hooks only once (idempotent).
-  - [ ] **Test:** `get('mailchimp_provider')` and `get('email_generator')` work; no double hooks.
+  - [x] **Test:** `get('mailchimp_provider')` and `get('email_generator')` work; no double hooks.
 
 - [⚠️] **CPT: cb_email_template**
   - [ ] Registered with editor support.
@@ -108,12 +108,12 @@ All namespaces under `CampaignBridge\...` must map correctly via your autoloader
   - [ ] Expose to REST safely.
   - [ ] **Test:** Create/edit template, fields save, values appear in REST.
 
-- [⚠️] **Settings Page**
-  - [ ] For Mailchimp API key, default list, from name/email.
-  - [ ] Stored in `options` with `autoload=no`.
-  - [ ] Mask API key in UI; only last 4 chars shown.
-  - [ ] **Security:** `manage_options` cap; nonce protection.
-  - [ ] **Test:** Save settings → refresh → values persist, key masked.
+- [x] **Settings Page**
+  - [x] For Mailchimp API key, default list, from name/email.
+  - [x] Stored in `options` with `autoload=no`.
+  - [x] Mask API key in UI; only last 4 chars shown.
+  - [x] **Security:** `manage_options` cap; nonce protection.
+  - [x] **Test:** Save settings → refresh → values persist, key masked.
 
 ---
 

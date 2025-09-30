@@ -72,85 +72,125 @@ class MailchimpProvider implements ProviderInterface {
 	 * @return void
 	 */
 	public function render_settings_fields( array $settings, string $option_name ): void {
+		$api_key      = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+		$masked_value = '';
+
+		// Mask API key - show only last 4 characters if exists
+		if ( ! empty( $api_key ) ) {
+			$last_four    = substr( $api_key, -4 );
+			$masked_value = str_repeat( '•', strlen( $api_key ) - 4 ) . $last_four;
+		}
+
 		?>
 		<tr>
 			<th scope="row"><?php echo esc_html__( 'API Key', 'campaignbridge' ); ?></th>
 			<td>
-				<input id="campaignbridge-mailchimp-api-key" type="password" autocomplete="new-password" name="<?php echo esc_attr( $option_name ); ?>[api_key]" value="<?php echo esc_attr( isset( $settings['api_key'] ) ? $settings['api_key'] : '' ); ?>" size="50" />
-				<span id="campaignbridge-verify-status" class="cb-verify-status"></span>
+				<div class="cb-settings__api-key-container">
+					<input
+						id="campaignbridge-mailchimp-api-key"
+						class="cb-settings__api-key-field"
+						type="password"
+						autocomplete="new-password"
+						name="<?php echo esc_attr( $option_name ); ?>[api_key]"
+						value=""
+						size="50"
+						placeholder="<?php echo esc_attr( $masked_value ); ?>"
+						data-has-key="<?php echo ! empty( $api_key ) ? '1' : '0'; ?>"
+					/>
+					<button type="button" class="cb-settings__api-key-toggle button button-secondary" data-field-id="campaignbridge-mailchimp-api-key">
+						<?php echo esc_html__( 'Show', 'campaignbridge' ); ?>
+					</button>
+				</div>
+				<span id="campaignbridge-verify-status" class="cb-settings__verify-status"></span>
 				<?php if ( empty( $settings['api_key'] ) ) : ?>
 					<p class="description"><?php echo esc_html__( 'Enter and save your API key to select an audience and template.', 'campaignbridge' ); ?></p>
+				<?php else : ?>
+					<p class="description"><?php echo esc_html__( 'API key is saved and masked for security. Click "Show" to edit.', 'campaignbridge' ); ?></p>
 				<?php endif; ?>
 			</td>
 		</tr>
-		<?php if ( ! empty( $settings['api_key'] ) ) : ?>
-		<tr>
+		<tr class="cb-settings__audience-row" style="<?php echo empty( $settings['api_key'] ) ? 'display: none;' : ''; ?>">
 			<th scope="row"><?php echo esc_html__( 'Audience', 'campaignbridge' ); ?></th>
 			<td>
-				<?php
-				$current_audience_label = '';
-				if ( ! empty( $settings['audience_id'] ) ) {
-					$aud_items = $this->get_audiences( $settings );
-					if ( is_array( $aud_items ) ) {
-						foreach ( $aud_items as $it ) {
-							if ( isset( $it['id'] ) && (string) $it['id'] === (string) $settings['audience_id'] ) {
-								$current_audience_label = isset( $it['name'] ) ? (string) $it['name'] : '';
-								break;
+				<div class="cb-settings__dropdown-container">
+					<?php
+					$current_audience_label = '';
+					$audience_options       = array();
+
+					// Try to get audiences if we have an API key
+					if ( ! empty( $settings['api_key'] ) ) {
+						$aud_items = $this->get_audiences( $settings );
+						if ( is_array( $aud_items ) ) {
+							foreach ( $aud_items as $it ) {
+								if ( isset( $it['id'], $it['name'] ) ) {
+									$audience_options[] = $it;
+									if ( ! empty( $settings['audience_id'] ) && (string) $it['id'] === (string) $settings['audience_id'] ) {
+										$current_audience_label = (string) $it['name'];
+									}
+								}
 							}
 						}
 					}
-				}
-				?>
-				<select id="campaignbridge-mailchimp-audience" name="<?php echo esc_attr( $option_name ); ?>[audience_id]" style="min-width:320px;">
-					<?php if ( ! empty( $settings['audience_id'] ) ) : ?>
-						<option value="<?php echo esc_attr( $settings['audience_id'] ); ?>" selected><?php echo esc_html( $current_audience_label ? $current_audience_label : (string) $settings['audience_id'] ); ?></option>
-					<?php else : ?>
-						<option value="">—</option>
-					<?php endif; ?>
-				</select>
-				<button type="button" class="button" id="campaignbridge-fetch-audiences"><?php echo esc_html__( 'Reset Audiences', 'campaignbridge' ); ?></button>
+					?>
+					<select id="campaignbridge-mailchimp-audience" name="<?php echo esc_attr( $option_name ); ?>[audience_id]" data-has-api-key="<?php echo ! empty( $settings['api_key'] ) ? '1' : '0'; ?>">
+						<?php if ( ! empty( $settings['audience_id'] ) ) : ?>
+							<option value="<?php echo esc_attr( $settings['audience_id'] ); ?>" selected><?php echo esc_html( $current_audience_label ? $current_audience_label : (string) $settings['audience_id'] ); ?></option>
+						<?php else : ?>
+							<option value="">— Select Audience —</option>
+						<?php endif; ?>
+						<!-- Additional options will be populated by JavaScript -->
+					</select>
+					<button type="button" class="button" id="campaignbridge-fetch-audiences"><?php echo esc_html__( 'Refresh', 'campaignbridge' ); ?></button>
+				</div>
 				<p class="description"><?php echo esc_html__( 'Pick your Mailchimp Audience (list). Requires API key.', 'campaignbridge' ); ?></p>
 			</td>
 		</tr>
-		<tr>
+		<tr class="cb-settings__template-row" style="<?php echo empty( $settings['api_key'] ) ? 'display: none;' : ''; ?>">
 			<th scope="row"><?php echo esc_html__( 'Template', 'campaignbridge' ); ?></th>
 			<td>
 				<?php
 				$current_template_label = '';
-				if ( ! empty( $settings['template_id'] ) ) {
+				$template_options       = array();
+
+				// Try to get templates if we have an API key
+				if ( ! empty( $settings['api_key'] ) ) {
 					$tpl_items = $this->get_templates( $settings );
 					if ( is_array( $tpl_items ) ) {
 						foreach ( $tpl_items as $it ) {
-							if ( isset( $it['id'] ) && (int) $it['id'] === (int) $settings['template_id'] ) {
-								$current_template_label = isset( $it['name'] ) ? (string) $it['name'] : '';
-								break;
+							if ( isset( $it['id'], $it['name'] ) ) {
+								$template_options[] = $it;
+								if ( ! empty( $settings['template_id'] ) && (int) $it['id'] === (int) $settings['template_id'] ) {
+									$current_template_label = (string) $it['name'];
+								}
 							}
 						}
 					}
 				}
 				?>
-				<select id="campaignbridge-mailchimp-templates" name="<?php echo esc_attr( $option_name ); ?>[template_id]" style="min-width:320px;">
-					<?php if ( ! empty( $settings['template_id'] ) ) : ?>
-						<option value="<?php echo esc_attr( $settings['template_id'] ); ?>" selected><?php echo esc_html( $current_template_label ? $current_template_label : (string) $settings['template_id'] ); ?></option>
-					<?php else : ?>
-						<option value="">—</option>
-					<?php endif; ?>
-				</select>
-				<button type="button" class="button" id="campaignbridge-fetch-templates"><?php echo esc_html__( 'Reset Templates', 'campaignbridge' ); ?></button>
+				<div class="cb-settings__dropdown-container">
+					<select id="campaignbridge-mailchimp-templates" name="<?php echo esc_attr( $option_name ); ?>[template_id]" data-has-api-key="<?php echo ! empty( $settings['api_key'] ) ? '1' : '0'; ?>">
+						<?php if ( ! empty( $settings['template_id'] ) ) : ?>
+							<option value="<?php echo esc_attr( $settings['template_id'] ); ?>" selected><?php echo esc_html( $current_template_label ? $current_template_label : (string) $settings['template_id'] ); ?></option>
+						<?php else : ?>
+							<option value="">— Select Template —</option>
+						<?php endif; ?>
+						<!-- Additional options will be populated by JavaScript -->
+					</select>
+					<button type="button" class="button" id="campaignbridge-fetch-templates"><?php echo esc_html__( 'Refresh', 'campaignbridge' ); ?></button>
+				</div>
 				<p class="description"><?php echo esc_html__( 'Pick your Saved Template. Requires API key.', 'campaignbridge' ); ?></p>
 			</td>
 		</tr>
-		<?php endif; ?>
 		<?php
 	}
 
-	/**
-	 * Create a draft campaign and update its content using the given blocks.
-	 *
-	 * @param array $blocks   section_key => HTML string.
-	 * @param array $settings Provider settings (api_key, audience_id, template_id).
-	 * @return bool
-	 */
+		/**
+		 * Create a draft campaign and update its content using the given blocks.
+		 *
+		 * @param array $blocks   section_key => HTML string.
+		 * @param array $settings Provider settings (api_key, audience_id, template_id).
+		 * @return bool
+		 */
 	public function send_campaign( array $blocks, array $settings ) {
 		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		$audience_id = isset( $settings['audience_id'] ) ? $settings['audience_id'] : '';
@@ -244,20 +284,26 @@ class MailchimpProvider implements ProviderInterface {
 		return true;
 	}
 
-	/**
-	 * Fetch Mailchimp audiences (lists).
-	 *
-	 * @param array $settings Provider settings (api_key).
-	 * @param bool  $refresh  Force refresh.
-	 * @return array|WP_Error
-	 */
+		/**
+		 * Fetch Mailchimp audiences (lists).
+		 *
+		 * @param array $settings Provider settings (api_key).
+		 * @param bool  $refresh  Force refresh.
+		 * @return array|WP_Error
+		 */
 	public function get_audiences( $settings, $refresh = false ) {
 		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		if ( empty( $api_key ) ) {
 			return new WP_Error( 'missing_key', __( 'API key is required.', 'campaignbridge' ) );
 		}
+
+		// Debug: Log API key format for troubleshooting
+		error_log( 'CampaignBridge Debug - API key length: ' . strlen( $api_key ) );
+		error_log( 'CampaignBridge Debug - API key format: ' . substr( $api_key, 0, 10 ) . '...' );
+
 		$parts = explode( '-', $api_key );
 		if ( count( $parts ) < 2 ) {
+			error_log( 'CampaignBridge Debug - Invalid API key format: ' . $api_key );
 			return new WP_Error( 'bad_key', __( 'Invalid Mailchimp API key format.', 'campaignbridge' ) );
 		}
 		$cache_key = 'cb_mc_audiences_' . md5( $api_key );
@@ -268,18 +314,27 @@ class MailchimpProvider implements ProviderInterface {
 		}
 		$dc       = end( $parts );
 		$endpoint = sprintf( 'https://%s.api.mailchimp.com/3.0', $dc );
-		$resp     = wp_remote_get(
+
+		error_log( 'CampaignBridge Debug - Mailchimp endpoint: ' . $endpoint );
+		error_log( 'CampaignBridge Debug - API key datacenter: ' . $dc );
+
+		$resp = wp_remote_get(
 			$endpoint . '/lists?count=1000',
 			array(
 				'headers' => array( 'Authorization' => 'apikey ' . $api_key ),
 				'timeout' => 20,
 			)
 		);
+
+		error_log( 'CampaignBridge Debug - Mailchimp response code: ' . wp_remote_retrieve_response_code( $resp ) );
+
 		if ( is_wp_error( $resp ) ) {
+			error_log( 'CampaignBridge Debug - Mailchimp API error: ' . $resp->get_error_message() );
 			return $resp;
 		}
 		$code = (int) wp_remote_retrieve_response_code( $resp );
 		if ( $code < 200 || $code >= 300 ) {
+			error_log( 'CampaignBridge Debug - Mailchimp HTTP error: ' . $code );
 			return new WP_Error( 'http_error', __( 'Failed to fetch audiences.', 'campaignbridge' ) );
 		}
 		$data  = json_decode( wp_remote_retrieve_body( $resp ), true );
@@ -296,13 +351,13 @@ class MailchimpProvider implements ProviderInterface {
 		return $items;
 	}
 
-	/**
-	 * Fetch user (saved) templates.
-	 *
-	 * @param array $settings Provider settings (api_key).
-	 * @param bool  $refresh  Force refresh.
-	 * @return array|WP_Error
-	 */
+		/**
+		 * Fetch user (saved) templates.
+		 *
+		 * @param array $settings Provider settings (api_key).
+		 * @param bool  $refresh  Force refresh.
+		 * @return array|WP_Error
+		 */
 	public function get_templates( $settings, $refresh = false ) {
 		$api_key = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		if ( empty( $api_key ) ) {
@@ -348,13 +403,13 @@ class MailchimpProvider implements ProviderInterface {
 		return $items;
 	}
 
-	/**
-	 * Fetch template section keys.
-	 *
-	 * @param array $settings Plugin settings.
-	 * @param bool  $refresh  Force refresh.
-	 * @return array|WP_Error
-	 */
+		/**
+		 * Fetch template section keys.
+		 *
+		 * @param array $settings Plugin settings.
+		 * @param bool  $refresh  Force refresh.
+		 * @return array|WP_Error
+		 */
 	public function get_section_keys( array $settings ) {
 		$api_key     = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
 		$template_id = isset( $settings['template_id'] ) ? (int) $settings['template_id'] : 0;
