@@ -94,7 +94,13 @@ class SettingsHandler {
 	 * @return string Encrypted API key for storage or empty string.
 	 */
 	private function sanitize_api_key( array $input, array $previous ): string {
-		$posted_api_key = $input['api_key'] ?? '';
+		$posted_api_key    = $input['api_key'] ?? '';
+		$selected_provider = $input['provider'] ?? '';
+
+		// Skip API key processing for providers that don't need it (like HTML export)
+		if ( 'html' === $selected_provider ) {
+			return ''; // HTML provider doesn't need API keys
+		}
 
 		// If no new API key provided, return existing encrypted key (if any)
 		if ( '' === $posted_api_key ) {

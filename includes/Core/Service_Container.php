@@ -162,12 +162,18 @@ class Service_Container {
 			\CampaignBridge\Providers\ExampleProvider::class
 		);
 
+		$this->register(
+			'html_provider',
+			\CampaignBridge\Providers\HtmlProvider::class
+		);
+
 		// ========== REST API ==========
 		$this->register(
 			self::SERVICE_REST_ROUTES,
 			function ( $container ) {
 				$providers = array(
 					'example' => $container->get( 'example_provider' ),
+					'html'    => $container->get( 'html_provider' ),
 				);
 				return new \CampaignBridge\REST\Routes( $providers );
 			}

@@ -12,10 +12,7 @@
  */
 function initSettingsPage() {
   initTabNavigation();
-  initApiKeyMasking();
-  initApiKeyVerification();
-  initAudienceFetching();
-  initApiKeyVisibility();
+  initProviderSpecificFeatures();
 }
 
 /**
@@ -31,25 +28,134 @@ function initTabNavigation() {
     return;
   }
 
+  // Restore active tab from localStorage or URL hash
+  const savedTab = localStorage.getItem("campaignbridge_active_tab");
+  const urlHash = window.location.hash.replace("#", "");
+  const activeTab = savedTab || urlHash || "general";
+
+  // Set initial active tab
+  setActiveTab(activeTab);
+
   // Handle tab clicks
   tabLinks.forEach((tab) => {
     tab.addEventListener("click", (event) => {
       event.preventDefault();
 
       const targetTab = tab.getAttribute("data-tab");
+      setActiveTab(targetTab);
 
-      // Remove active class from all tabs and contents
-      tabLinks.forEach((t) => t.classList.remove("nav-tab-active"));
-      tabContents.forEach((c) => c.classList.remove("active"));
-
-      // Add active class to clicked tab and corresponding content
-      tab.classList.add("nav-tab-active");
-      const targetContent = document.getElementById(targetTab);
-      if (targetContent) {
-        targetContent.classList.add("active");
-      }
+      // Save active tab to localStorage
+      localStorage.setItem("campaignbridge_active_tab", targetTab);
     });
   });
+
+  // Save active tab before form submission
+  const form = document.querySelector("form[action='options.php']");
+  if (form) {
+    form.addEventListener("submit", () => {
+      const activeTabElement = document.querySelector(".nav-tab-active");
+      if (activeTabElement) {
+        const activeTab = activeTabElement.getAttribute("data-tab");
+        localStorage.setItem("campaignbridge_active_tab", activeTab);
+      }
+    });
+  }
+}
+
+/**
+ * Set the active tab and content
+ * @param {string} tabId - The tab ID to activate
+ */
+function setActiveTab(tabId) {
+  const tabLinks = document.querySelectorAll(".nav-tab");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  // Remove active class from all tabs and contents
+  tabLinks.forEach((t) => t.classList.remove("nav-tab-active"));
+  tabContents.forEach((c) => c.classList.remove("active"));
+
+  // Add active class to target tab and corresponding content
+  const targetTab = document.querySelector(`[data-tab="${tabId}"]`);
+  const targetContent = document.getElementById(tabId);
+
+  if (targetTab) {
+    targetTab.classList.add("nav-tab-active");
+  }
+  if (targetContent) {
+    targetContent.classList.add("active");
+  }
+}
+
+/**
+ * Initialize provider-specific features based on selected provider
+ */
+function initProviderSpecificFeatures() {
+  const providerSelect = document.querySelector('select[name*="[provider]"]');
+
+  if (!providerSelect) {
+    return;
+  }
+
+  // Initialize features for current provider
+  updateProviderFeatures(providerSelect.value);
+
+  // Update features when provider changes
+  providerSelect.addEventListener("change", (event) => {
+    updateProviderFeatures(event.target.value);
+  });
+}
+
+/**
+ * Update provider-specific features based on selected provider
+ * @param {string} provider - The selected provider slug
+ */
+function updateProviderFeatures(provider) {
+  // Clear any existing provider-specific features
+  clearProviderFeatures();
+
+  // Initialize features based on provider
+  switch (provider) {
+    case "example":
+      initApiKeyFeatures();
+      initAudienceFeatures();
+      break;
+    case "html":
+      // HTML provider doesn't need API key or audience features
+      break;
+    default:
+      // For unknown providers, try to initialize API key features
+      initApiKeyFeatures();
+      break;
+  }
+}
+
+/**
+ * Clear provider-specific features
+ */
+function clearProviderFeatures() {
+  // Remove any existing event listeners and reset UI
+  const apiKeyField = document.querySelector(".cb-settings__api-key-field");
+  const audienceRow = document.querySelector(".cb-settings__audience-row");
+
+  if (audienceRow) {
+    audienceRow.style.display = "none";
+  }
+}
+
+/**
+ * Initialize API key features for providers that need them
+ */
+function initApiKeyFeatures() {
+  initApiKeyMasking();
+  initApiKeyVerification();
+  initApiKeyVisibility();
+}
+
+/**
+ * Initialize audience features for providers that support them
+ */
+function initAudienceFeatures() {
+  initAudienceFetching();
 }
 
 /**
@@ -126,7 +232,7 @@ function initApiKeyVerification() {
 
 /**
  * Validate API key format and update status indicator.
- * More flexible validation that handles partial input and various formats.
+ * Generic validation that works with different provider formats.
  *
  * @param {string} apiKey The API key to validate
  * @param {HTMLElement} statusElement The status element to update
@@ -143,34 +249,23 @@ function validateApiKey(apiKey, statusElement) {
     return;
   }
 
-  // Check if it looks like a complete API key (has dashes and proper length)
-  const hasDashes = apiKey.includes("-");
-  const totalLength = apiKey.replace(/[^a-f0-9-]/gi, "").length;
+  // Basic validation - check for reasonable length and alphanumeric characters
+  const cleanKey = apiKey.replace(/[^a-zA-Z0-9-_]/g, "");
+  const isValidLength = cleanKey.length >= 10 && cleanKey.length <= 100;
+  const hasValidChars = /^[a-zA-Z0-9_-]+$/.test(cleanKey);
 
-  // If it has dashes and is reasonably long, check format
-  if (hasDashes && totalLength >= 30) {
-    // Mailchimp API key format: xxxxxxxx-xxxxxx-xxxxxx-xxxxxx (32 chars total)
-    const mailchimpPattern =
-      /^[a-f0-9]{8}-[a-f0-9]{6}-[a-f0-9]{6}-[a-f0-9]{6}$/i;
-
-    if (mailchimpPattern.test(apiKey)) {
-      statusElement.classList.add("cb-settings__verify-status--valid");
-      statusElement.textContent = "✓ Valid Mailchimp API key";
-      return;
-    }
-  }
-
-  // For partial input or other formats, show helpful message
-  if (apiKey.length < 10) {
-    statusElement.classList.add("cb-settings__verify-status--invalid");
-    statusElement.textContent = "Enter your full API key";
-  } else if (!hasDashes) {
-    statusElement.classList.add("cb-settings__verify-status--invalid");
-    statusElement.textContent = "API key should contain dashes";
-  } else {
-    // For any reasonably complete key, assume it's valid
+  if (isValidLength && hasValidChars) {
     statusElement.classList.add("cb-settings__verify-status--valid");
-    statusElement.textContent = "✓ API key entered - click Refresh to test";
+    statusElement.textContent = "✓ Valid API key format";
+  } else if (apiKey.length < 10) {
+    statusElement.classList.add("cb-settings__verify-status--invalid");
+    statusElement.textContent = "API key too short (minimum 10 characters)";
+  } else if (!hasValidChars) {
+    statusElement.classList.add("cb-settings__verify-status--invalid");
+    statusElement.textContent = "API key contains invalid characters";
+  } else {
+    statusElement.classList.add("cb-settings__verify-status--invalid");
+    statusElement.textContent = "Invalid API key format";
   }
 }
 
@@ -383,7 +478,5 @@ function initApiKeyVisibility() {
   apiKeyField.addEventListener("input", updateVisibility);
   apiKeyField.addEventListener("blur", updateVisibility);
 }
-
-// Template fetching removed - templates are now managed in the template editor
 
 // Note: WordPress provides wpApiSettings.nonce for authenticated AJAX requests

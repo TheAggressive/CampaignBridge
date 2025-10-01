@@ -123,6 +123,7 @@ class Plugin {
 			// Get providers from service container.
 			$this->providers = array(
 				'example' => $this->service_container->get( 'example_provider' ),
+				'html'    => $this->service_container->get( 'html_provider' ),
 			);
 		} catch ( \Exception $e ) {
 			$this->handle_initialization_error( $e );
