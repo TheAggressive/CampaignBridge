@@ -23,7 +23,7 @@ use CampaignBridge\Admin\AssetManager;
 use CampaignBridge\Blocks\Blocks;
 use CampaignBridge\Admin\Pages\PostTypes;
 use CampaignBridge\Admin\Pages\Settings;
-use CampaignBridge\Admin\Pages\StatusPage;
+use CampaignBridge\Admin\Pages\Status;
 use CampaignBridge\Admin\Pages\Editor;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\Core\SettingsHandler;
@@ -210,7 +210,7 @@ class Plugin {
 		// Initialize shared state for all admin pages.
 		PostTypes::init_shared_state( self::OPTION_NAME, $this->providers );
 		Settings::init_shared_state( self::OPTION_NAME, $this->providers );
-		StatusPage::init_shared_state( self::OPTION_NAME, $this->providers );
+		Status::init_shared_state( self::OPTION_NAME, $this->providers );
 
 		// Add main menu page.
 		add_menu_page(
@@ -248,8 +248,8 @@ class Plugin {
 			'Status',
 			'Status',
 			self::ADMIN_CAPABILITY,
-			StatusPage::get_page_slug(),
-			array( StatusPage::class, 'render' )
+			Status::get_page_slug(),
+			array( Status::class, 'render' )
 		);
 
 		add_submenu_page(
@@ -316,7 +316,7 @@ class Plugin {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 
 		// Initialize Admin Pages.
-		StatusPage::init();
+		Status::init();
 		PostTypes::init();
 		Settings::init();
 		Editor::init();

@@ -1,6 +1,6 @@
 <?php
 /**
- * Status Admin Page for CampaignBridge Admin Interface.
+ * Status for CampaignBridge Admin Interface.
  *
  * This class handles the System Status page, providing comprehensive debugging
  * information, system health checks, and development insights for the
@@ -24,9 +24,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Status Page: provides development debugging and system status information.
+ * Status: provides development debugging and system status information.
  */
-class StatusPage extends Admin {
+class Status extends Admin {
 	/**
 	 * Page slug for this admin page.
 	 *
@@ -212,33 +212,6 @@ class StatusPage extends Admin {
 				</div>
 			<?php endif; ?>
 
-			<?php
-			// Check specific blocks.
-			$specific_blocks = array(
-				'campaignbridge/email-template',
-				'campaignbridge/email-post-slot',
-				'campaignbridge/email-post-title',
-				'campaignbridge/email-post-excerpt',
-				'campaignbridge/email-post-image',
-				'campaignbridge/email-post-button',
-			);
-			?>
-			<div class="cb-status__details">
-				<h4><?php esc_html_e( 'Required Block Status', 'campaignbridge' ); ?></h4>
-				<div class="cb-status__block-list">
-					<?php foreach ( $specific_blocks as $block_name ) : ?>
-						<?php
-						$is_registered = Blocks::is_block_registered( $block_name );
-						$status_class  = $is_registered ? 'cb-status__value--ok' : 'cb-status__value--error';
-						$status_icon   = $is_registered ? '✅' : '❌';
-						?>
-						<div class="cb-status__block-item">
-							<code><?php echo esc_html( $block_name ); ?></code>
-							<span class="cb-status__block-status <?php echo esc_attr( $status_class ); ?>"><?php echo esc_html( $status_icon ); ?></span>
-						</div>
-					<?php endforeach; ?>
-				</div>
-			</div>
 		</div>
 		<?php
 	}
