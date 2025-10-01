@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Core;
 
+use CampaignBridge\Admin\Pages\Admin;
 use CampaignBridge\Notices;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -48,19 +49,22 @@ class Dispatcher {
 	 * Generate email blocks and send via provider.
 	 *
 	 * @param int[] $post_ids    Selected post IDs.
-	 * @param array $settings    Plugin settings.
+	 * @param array $settings    Plugin settings (should contain decrypted API keys for provider use).
 	 * @param array $sections_map Optional section mapping for Mailchimp.
 	 * @param array $providers   Provider instances.
 	 * @return bool True on success.
 	 */
 	public static function generate_and_send_campaign( array $post_ids, array $settings, array $sections_map, array $providers ): bool {
+		// Ensure settings contain decrypted API keys for provider use
+		$decrypted_settings = self::ensure_decrypted_settings( $settings );
+
 		// Handle sections map (Mailchimp sections)
 		if ( ! empty( $sections_map ) ) {
-			return self::process_sections_and_dispatch( $sections_map, $settings, $providers );
+			return self::process_sections_and_dispatch( $sections_map, $decrypted_settings, $providers );
 		}
 
 		// Handle regular posts (limit to 8 for performance)
-		return self::process_posts_and_dispatch( $post_ids, $settings, $providers );
+		return self::process_posts_and_dispatch( $post_ids, $decrypted_settings, $providers );
 	}
 
 	/**
@@ -144,12 +148,12 @@ class Dispatcher {
 	 * Dispatch the prepared blocks to the selected provider.
 	 *
 	 * @param array $blocks    section_key => HTML string.
-	 * @param array $settings  Plugin settings.
+	 * @param array $settings  Plugin settings with decrypted API keys.
 	 * @param array $providers Providers map.
 	 * @return bool
 	 */
 	public static function dispatch_to_provider( array $blocks, array $settings, array $providers ): bool {
-		$provider_slug = $settings['provider'] ?? 'mailchimp';
+		$provider_slug = $settings['provider'] ?? 'example';
 		$provider      = $providers[ $provider_slug ] ?? null;
 
 		if ( ! $provider ) {
@@ -159,5 +163,68 @@ class Dispatcher {
 			return false;
 		}
 		return $provider->send_campaign( $blocks, $settings );
+	}
+
+	/**
+	 * Ensure settings contain decrypted API keys for provider use.
+	 *
+	 * This method checks if sensitive fields in settings are encrypted and decrypts them
+	 * if necessary. This ensures providers receive usable API keys for external API calls.
+	 *
+	 * @param array $settings Raw settings that may contain encrypted sensitive data.
+	 * @return array Settings with decrypted sensitive fields.
+	 */
+	private static function ensure_decrypted_settings( array $settings ): array {
+		$decrypted_settings = $settings;
+
+		// Decrypt sensitive fields that providers need
+		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
+		foreach ( $sensitive_fields as $field ) {
+			if ( isset( $decrypted_settings[ $field ] ) && ! empty( $decrypted_settings[ $field ] ) ) {
+				// Check if field appears to be encrypted (base64 encoded binary data)
+				$value = $decrypted_settings[ $field ];
+				if ( is_string( $value ) && self::is_encrypted_value( $value ) ) {
+					try {
+						$decrypted_settings[ $field ] = ApiKeyEncryption::decrypt( $value );
+					} catch ( \Throwable $e ) {
+						// Log error but don't expose details
+						error_log(
+							sprintf(
+								'CampaignBridge Dispatcher: Failed to decrypt sensitive field "%s": %s',
+								$field,
+								$e->getMessage()
+							)
+						);
+
+						// Remove corrupted sensitive data rather than passing invalid data
+						unset( $decrypted_settings[ $field ] );
+					}
+				}
+			}
+		}
+
+		return $decrypted_settings;
+	}
+
+	/**
+	 * Check if a value appears to be encrypted data.
+	 *
+	 * @param string $value The value to check.
+	 * @return bool True if value appears to be encrypted.
+	 */
+	private static function is_encrypted_value( string $value ): bool {
+		// Check if it's base64 encoded (encrypted data is base64 encoded)
+		if ( ! preg_match( '/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $value ) ) {
+			return false;
+		}
+
+		// Try to decode and check if it looks like encrypted binary data
+		$decoded = base64_decode( $value, true );
+		if ( false === $decoded ) {
+			return false;
+		}
+
+		// Encrypted data should be at least 28 bytes (IV + tag + minimal ciphertext)
+		return strlen( $decoded ) >= 28;
 	}
 }

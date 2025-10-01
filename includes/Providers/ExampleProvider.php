@@ -42,6 +42,9 @@ class ExampleProvider extends AbstractProvider {
 			'automation' => false,
 			'analytics'  => true,
 		);
+
+		// Set custom API key pattern for this provider.
+		$this->api_key_pattern = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern for example
 	}
 
 	/**

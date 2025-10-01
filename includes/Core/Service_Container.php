@@ -156,12 +156,19 @@ class Service_Container {
 		$this->register( self::SERVICE_NOTICES, \CampaignBridge\Notices::class );
 		$this->register( self::SERVICE_DISPATCHER, \CampaignBridge\Core\Dispatcher::class );
 
+		// ========== EMAIL PROVIDERS ==========
+		$this->register(
+			'example_provider',
+			\CampaignBridge\Providers\ExampleProvider::class
+		);
+
 		// ========== REST API ==========
 		$this->register(
 			self::SERVICE_REST_ROUTES,
-			function ( $container ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-				// No providers registered yet.
-				$providers = array();
+			function ( $container ) {
+				$providers = array(
+					'example' => $container->get( 'example_provider' ),
+				);
 				return new \CampaignBridge\REST\Routes( $providers );
 			}
 		);

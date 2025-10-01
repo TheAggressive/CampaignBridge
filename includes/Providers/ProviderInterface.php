@@ -173,4 +173,15 @@ interface ProviderInterface {
 	 *               ['audiences' => true, 'templates' => true, 'scheduling' => false]
 	 */
 	public function get_capabilities(): array;
+
+	/**
+	 * Get API key validation pattern for this provider.
+	 *
+	 * Returns a regex pattern used to validate API keys specific to this provider.
+	 * This ensures that only valid API keys for the provider are accepted during
+	 * configuration and migration processes.
+	 *
+	 * @return string Regex pattern for API key validation.
+	 */
+	public function get_api_key_pattern(): string;
 }

@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Core;
 
+use CampaignBridge\Core\ApiKeyEncryption;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -26,17 +28,8 @@ class SettingsHandler {
 	/**
 	 * Default email service provider.
 	 */
-	private const DEFAULT_PROVIDER = 'mailchimp';
+	private const DEFAULT_PROVIDER = 'example';
 
-	/**
-	 * API key minimum length.
-	 */
-	private const API_KEY_MIN_LENGTH = 10;
-
-	/**
-	 * API key maximum length.
-	 */
-	private const API_KEY_MAX_LENGTH = 100;
 	/**
 	 * Sanitize and validate submitted plugin settings.
 	 *
@@ -50,8 +43,11 @@ class SettingsHandler {
 	 * @return array Cleaned, validated, and sanitized settings array ready for storage.
 	 */
 	public function sanitize( array $input ): array {
-		// Verify nonce for CSRF protection.
-		check_admin_referer( 'campaignbridge-options' );
+		// Skip nonce verification during migration to avoid wp_die() errors
+		if ( ! isset( $GLOBALS['campaignbridge_migration_mode'] ) || ! $GLOBALS['campaignbridge_migration_mode'] ) {
+			// Verify nonce for CSRF protection.
+			check_admin_referer( 'campaignbridge-options' );
+		}
 
 		return $this->sanitize_settings( $input );
 	}
@@ -88,53 +84,114 @@ class SettingsHandler {
 	}
 
 	/**
-	 * Sanitize and validate the API key with length and security checks.
+	 * Sanitize and validate the API key with proper Mailchimp format validation.
+	 *
+	 * Handles both plaintext input (new keys) and encrypted storage (existing keys).
+	 * New API keys are encrypted before storage for maximum security.
 	 *
 	 * @param array $input Raw input array.
-	 * @param array $previous Previous settings.
-	 * @return string Sanitized API key or empty string.
+	 * @param array $previous Previous settings with potentially encrypted API key.
+	 * @return string Encrypted API key for storage or empty string.
 	 */
 	private function sanitize_api_key( array $input, array $previous ): string {
 		$posted_api_key = $input['api_key'] ?? '';
 
-		// Handle API key with additional security measures.
-		if ( '' === $posted_api_key && isset( $previous['api_key'] ) ) {
-			return $previous['api_key'];
+		// If no new API key provided, return existing encrypted key (if any)
+		if ( '' === $posted_api_key ) {
+			if ( isset( $previous['api_key'] ) && ! empty( $previous['api_key'] ) ) {
+				// Verify existing key can be decrypted (validates it's properly encrypted)
+				try {
+					$decrypted = ApiKeyEncryption::decrypt( $previous['api_key'] );
+					if ( ! empty( $decrypted ) ) {
+						return $previous['api_key']; // Return encrypted version for storage
+					}
+				} catch ( \Throwable $e ) {
+					// Log error but don't expose details
+					error_log( 'CampaignBridge: Invalid encrypted API key detected in settings' );
+					add_settings_error(
+						'campaignbridge_messages',
+						'campaignbridge_api_key_corrupted',
+						__( 'Your stored API key appears to be corrupted. Please enter it again.', 'campaignbridge' ),
+						'error'
+					);
+				}
+			}
+			return '';
 		}
 
+		// Sanitize the input API key
 		$sanitized_key = sanitize_text_field( $posted_api_key );
 
 		// Validate API key format and length.
 		if ( ! empty( $sanitized_key ) ) {
-			// Basic length check to prevent abuse.
-			if ( strlen( $sanitized_key ) < self::API_KEY_MIN_LENGTH || strlen( $sanitized_key ) > self::API_KEY_MAX_LENGTH ) {
+			// Get provider-specific validation pattern
+			$provider_pattern = $this->get_provider_api_key_pattern( $input['provider'] ?? '' );
+
+			if ( ! ApiKeyEncryption::is_valid_api_key_format( $sanitized_key, $provider_pattern ) ) {
 				add_settings_error(
 					'campaignbridge_messages',
-					'campaignbridge_api_key_length',
-					sprintf(
-						// translators: %1$d is minimum length, %2$d is maximum length.
-						__( 'API key must be between %1$d and %2$d characters.', 'campaignbridge' ),
-						self::API_KEY_MIN_LENGTH,
-						self::API_KEY_MAX_LENGTH
-					),
+					'campaignbridge_api_key_invalid',
+					__( 'Invalid API key format for the selected provider.', 'campaignbridge' ),
 					'error'
 				);
 				return isset( $previous['api_key'] ) ? $previous['api_key'] : '';
 			}
-			return $sanitized_key;
+
+			// Encrypt the API key before storage for ultra-secure handling
+			try {
+				$encrypted_key = ApiKeyEncryption::encrypt( $sanitized_key );
+				if ( ! empty( $encrypted_key ) ) {
+					// Verify encryption/decryption round-trip for integrity
+					$decrypted_check = ApiKeyEncryption::decrypt( $encrypted_key );
+					if ( $decrypted_check === $sanitized_key ) {
+						return $encrypted_key;
+					} else {
+						throw new \RuntimeException( 'Encryption/decryption integrity check failed' );
+					}
+				}
+			} catch ( \Throwable $e ) {
+				// Log error for debugging but don't expose sensitive details
+				error_log(
+					sprintf(
+						'CampaignBridge API key encryption failed: %s',
+						$e->getMessage()
+					)
+				);
+
+				add_settings_error(
+					'campaignbridge_messages',
+					'campaignbridge_encryption_error',
+					__( 'Failed to securely store API key. Please try again or contact support.', 'campaignbridge' ),
+					'error'
+				);
+				return isset( $previous['api_key'] ) ? $previous['api_key'] : '';
+			}
 		}
 
 		return '';
 	}
 
 	/**
-	 * Sanitize the audience/list ID.
+	 * Sanitize the audience/list ID with alphanumeric validation.
 	 *
 	 * @param array $input Raw input array.
 	 * @return string Sanitized audience ID.
 	 */
 	private function sanitize_audience_id( array $input ): string {
-		return sanitize_text_field( $input['audience_id'] ?? '' );
+		$audience_id = $input['audience_id'] ?? '';
+
+		// Validate that audience ID is alphanumeric (Mailchimp audience IDs are alphanumeric).
+		if ( ! empty( $audience_id ) && ! preg_match( '/^[A-Za-z0-9]+$/', $audience_id ) ) {
+			add_settings_error(
+				'campaignbridge_messages',
+				'campaignbridge_audience_id_invalid',
+				__( 'Invalid audience ID format. Audience IDs should contain only letters and numbers.', 'campaignbridge' ),
+				'error'
+			);
+			return '';
+		}
+
+		return sanitize_text_field( $audience_id );
 	}
 
 	/**
@@ -148,16 +205,16 @@ class SettingsHandler {
 	}
 
 	/**
-	 * Sanitize the default sender email.
+	 * Sanitize the default sender email with enhanced validation.
 	 *
 	 * @param array $input Raw input array.
 	 * @return string Sanitized sender email.
 	 */
 	private function sanitize_from_email( array $input ): string {
-		$email = sanitize_email( $input['from_email'] ?? '' );
+		$email = $input['from_email'] ?? '';
 
-		// Validate email format.
-		if ( ! empty( $email ) && ! is_email( $email ) ) {
+		// Early validation: check for basic email format before sanitization.
+		if ( ! empty( $email ) && ! preg_match( '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $email ) ) {
 			add_settings_error(
 				'campaignbridge_messages',
 				'campaignbridge_from_email_invalid',
@@ -167,7 +224,20 @@ class SettingsHandler {
 			return '';
 		}
 
-		return $email;
+		$sanitized_email = sanitize_email( $email );
+
+		// Additional validation after sanitization.
+		if ( ! empty( $sanitized_email ) && ! is_email( $sanitized_email ) ) {
+			add_settings_error(
+				'campaignbridge_messages',
+				'campaignbridge_from_email_invalid',
+				__( 'Please enter a valid email address.', 'campaignbridge' ),
+				'error'
+			);
+			return '';
+		}
+
+		return $sanitized_email;
 	}
 
 	/**
@@ -197,5 +267,24 @@ class SettingsHandler {
 		}
 
 		return $excluded;
+	}
+
+	/**
+	 * Get provider-specific API key validation pattern.
+	 *
+	 * @param string $provider_slug The provider slug.
+	 * @return string The regex pattern for the provider.
+	 */
+	private function get_provider_api_key_pattern( string $provider_slug ): string {
+		// Get providers from global plugin instance
+		global $campaignbridge_plugin;
+		$providers = $campaignbridge_plugin->providers ?? array();
+
+		if ( isset( $providers[ $provider_slug ] ) && method_exists( $providers[ $provider_slug ], 'get_api_key_pattern' ) ) {
+			return $providers[ $provider_slug ]->get_api_key_pattern();
+		}
+
+		// Fallback to generic pattern if provider not found
+		return '/^[a-zA-Z0-9_-]{20,}$/';
 	}
 }

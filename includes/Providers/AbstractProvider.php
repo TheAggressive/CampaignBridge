@@ -64,6 +64,13 @@ abstract class AbstractProvider implements ProviderInterface {
 	protected array $capabilities;
 
 	/**
+	 * API key validation pattern.
+	 *
+	 * @var string
+	 */
+	protected string $api_key_pattern;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param string $slug Provider slug identifier.
@@ -84,6 +91,7 @@ abstract class AbstractProvider implements ProviderInterface {
 			'automation' => false,
 			'analytics'  => false,
 		);
+		$this->api_key_pattern     = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern by default
 	}
 
 	/**
@@ -129,6 +137,15 @@ abstract class AbstractProvider implements ProviderInterface {
 	 */
 	public function get_capabilities(): array {
 		return $this->capabilities;
+	}
+
+	/**
+	 * Get API key validation pattern for this provider.
+	 *
+	 * @return string Regex pattern for API key validation.
+	 */
+	public function get_api_key_pattern(): string {
+		return $this->api_key_pattern;
 	}
 
 	/**

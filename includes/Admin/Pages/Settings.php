@@ -32,7 +32,7 @@ class Settings extends Admin {
 	/**
 	 * Default provider slug.
 	 */
-	private const DEFAULT_PROVIDER = 'mailchimp';
+	private const DEFAULT_PROVIDER = 'example';
 
 	/**
 	 * Settings field name.
@@ -85,6 +85,10 @@ class Settings extends Admin {
 	 * @return void
 	 */
 	public static function render(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'campaignbridge' ) );
+		}
+
 		$settings  = self::get_settings();
 		$providers = self::get_providers();
 		$provider  = self::get_selected_provider( $settings, $providers );
@@ -94,7 +98,7 @@ class Settings extends Admin {
 	}
 
 	/**
-	 * Get the selected provider or default to mailchimp.
+	 * Get the selected provider or default to example.
 	 *
 	 * @param array $settings  Current settings.
 	 * @param array $providers Available providers.
@@ -122,6 +126,7 @@ class Settings extends Admin {
 			<form method="post" action="options.php">
 				<?php
 				settings_fields( self::SETTINGS_FIELD );
+				wp_nonce_field( self::NONCE_ACTION );
 				?>
 
 				<div class="nav-tab-wrapper">

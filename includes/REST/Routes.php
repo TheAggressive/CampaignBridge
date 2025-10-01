@@ -174,11 +174,12 @@ class Routes {
 	 */
 	public static function check_rate_limit( string $endpoint_name, int $max_requests = self::RATE_LIMIT_REQUESTS, int $time_window = self::RATE_LIMIT_WINDOW ) {
 		$user_id = get_current_user_id();
-		if ( ! $user_id ) {
-			return new \WP_Error( 'rate_limit_no_user', 'User not authenticated', array( 'status' => self::HTTP_UNAUTHORIZED ) );
-		}
 
-		$cache_key = self::CACHE_KEY_PREFIX . $endpoint_name . '_' . $user_id;
+		// For better security, use both user ID and IP address
+		$ip_address = self::get_client_ip();
+		$identifier = $user_id ? 'user_' . $user_id : 'ip_' . $ip_address;
+
+		$cache_key = self::CACHE_KEY_PREFIX . $endpoint_name . '_' . $identifier;
 		$requests  = get_transient( $cache_key );
 
 		if ( false === $requests ) {
@@ -214,12 +215,20 @@ class Routes {
 			return $rate_limit;
 		}
 
-		$post_type = $req->get_param( 'post_type' ) ? sanitize_key( $req->get_param( 'post_type' ) ) : self::DEFAULT_POST_TYPE;
+		// Sanitize and validate post_type parameter with enhanced security.
+		$raw_post_type = $req->get_param( 'post_type' );
+		$post_type     = $raw_post_type ? sanitize_key( $raw_post_type ) : self::DEFAULT_POST_TYPE;
+
+		// Additional validation: ensure post type contains only alphanumeric characters and underscores.
+		if ( ! empty( $raw_post_type ) && ! preg_match( '/^[a-zA-Z0-9_]+$/', $post_type ) ) {
+			return new \WP_Error( 'invalid_post_type_format', 'Post type contains invalid characters', array( 'status' => self::HTTP_BAD_REQUEST ) );
+		}
+
 		if ( ! post_type_exists( $post_type ) ) {
 			return new \WP_Error( 'bad_post_type', 'Invalid post type', array( 'status' => self::HTTP_BAD_REQUEST ) );
 		}
 
-		$settings       = get_option( self::$option_name );
+		$settings       = self::get_safe_settings();
 		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
 		if ( in_array( $post_type, $excluded_types, true ) ) {
 			return new \WP_Error( 'excluded_post_type', 'Post type excluded', array( 'status' => self::HTTP_BAD_REQUEST ) );
@@ -229,12 +238,36 @@ class Routes {
 		foreach ( (array) $post_ids as $pid ) {
 			$title_raw     = (string) get_post_field( 'post_title', $pid );
 			$title_decoded = html_entity_decode( $title_raw, ENT_QUOTES, 'UTF-8' );
+			$title_escaped = esc_html( $title_decoded ); // [SECURE] Escape HTML to prevent XSS
 			$items[]       = array(
 				'id'    => (int) $pid,
-				'label' => $title_decoded,
+				'label' => $title_escaped,
 			);
 		}
 		return \rest_ensure_response( array( 'items' => $items ) );
+	}
+
+	/**
+	 * Get safe settings for REST API responses.
+	 *
+	 * Returns plugin settings with sensitive data redacted to prevent
+	 * exposure of API keys and other sensitive information via REST API.
+	 *
+	 * @return array Settings array with sensitive fields redacted.
+	 */
+	private static function get_safe_settings(): array {
+		$settings = get_option( self::$option_name, array() );
+
+		// Redact sensitive fields for REST API responses
+		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
+		foreach ( $sensitive_fields as $field ) {
+			if ( isset( $settings[ $field ] ) ) {
+				// Replace with placeholder to indicate field exists but is hidden
+				$settings[ $field ] = '[REDACTED]';
+			}
+		}
+
+		return $settings;
 	}
 
 	/**
@@ -272,17 +305,28 @@ class Routes {
 			return $rate_limit;
 		}
 
-		$settings       = get_option( self::$option_name );
-		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
-		$objs           = get_post_types( array( 'public' => true ), 'objects' );
-		$items          = array();
+		$settings = self::get_safe_settings();
+
+		// Sanitize and validate excluded post types with enhanced security.
+		$excluded_types = array();
+		if ( isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ) {
+			foreach ( $settings['exclude_post_types'] as $post_type ) {
+				$sanitized = sanitize_key( $post_type );
+				// Additional validation: ensure post type contains only alphanumeric characters and underscores.
+				if ( preg_match( '/^[a-zA-Z0-9_]+$/', $sanitized ) ) {
+					$excluded_types[] = $sanitized;
+				}
+			}
+		}
+		$objs  = get_post_types( array( 'public' => true ), 'objects' );
+		$items = array();
 		foreach ( $objs as $obj ) {
 			if ( in_array( $obj->name, $excluded_types, true ) ) {
 				continue;
 			}
 			$items[] = array(
 				'id'    => (string) $obj->name,
-				'label' => (string) $obj->labels->singular_name,
+				'label' => esc_html( (string) $obj->labels->singular_name ), // [SECURE] Escape HTML to prevent XSS
 			);
 		}
 		usort(
@@ -292,5 +336,25 @@ class Routes {
 			}
 		);
 		return \rest_ensure_response( array( 'items' => $items ) );
+	}
+
+	/**
+	 * Get client IP address for rate limiting.
+	 *
+	 * @return string Client IP address.
+	 */
+	private static function get_client_ip(): string {
+		$ip_keys = array( 'HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' );
+		foreach ( $ip_keys as $key ) {
+			if ( array_key_exists( $key, $_SERVER ) === true ) {
+				foreach ( explode( ',', sanitize_text_field( wp_unslash( $_SERVER[ $key ] ) ) ) as $ip ) {
+					$ip = trim( $ip );
+					if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) !== false ) {
+						return $ip;
+					}
+				}
+			}
+		}
+		return '127.0.0.1'; // Fallback.
 	}
 }

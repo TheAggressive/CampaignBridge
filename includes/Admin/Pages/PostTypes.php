@@ -80,6 +80,10 @@ class PostTypes extends Admin {
 	 * @return void
 	 */
 	public static function render(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'campaignbridge' ) );
+		}
+
 		$settings = self::get_settings();
 		self::display_messages();
 		self::render_post_types_form( $settings );

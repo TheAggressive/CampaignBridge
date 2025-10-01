@@ -94,6 +94,10 @@ class Status extends Admin {
 	 * @return void
 	 */
 	public static function render(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'campaignbridge' ) );
+		}
+
 		self::display_messages();
 		?>
 		<div class="wrap cb-status">
@@ -290,7 +294,7 @@ class Status extends Admin {
 			<div class="cb-status__grid">
 				<div class="cb-status__card">
 					<h3><?php esc_html_e( 'Provider', 'campaignbridge' ); ?></h3>
-					<p class="cb-status__value"><?php echo esc_html( $settings['provider'] ?? 'mailchimp' ); ?></p>
+					<p class="cb-status__value"><?php echo esc_html( $settings['provider'] ?? 'example' ); ?></p>
 				</div>
 
 				<div class="cb-status__card">

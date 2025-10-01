@@ -17,6 +17,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin\Pages;
 
+use CampaignBridge\Core\ApiKeyEncryption;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -114,6 +116,43 @@ abstract class Admin {
 	 */
 	protected static function get_settings(): array {
 		return get_option( self::$option_name, array() );
+	}
+
+	/**
+	 * Get decrypted settings for use by providers and other system components.
+	 *
+	 * This method decrypts sensitive fields like API keys before returning settings.
+	 * Use this method when settings need to be passed to external services.
+	 *
+	 * @since 0.1.0
+	 * @return array Settings array with decrypted sensitive fields.
+	 */
+	protected static function get_decrypted_settings(): array {
+		$settings = self::get_settings();
+
+		// Decrypt sensitive fields
+		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
+		foreach ( $sensitive_fields as $field ) {
+			if ( isset( $settings[ $field ] ) && ! empty( $settings[ $field ] ) ) {
+				try {
+					$settings[ $field ] = ApiKeyEncryption::decrypt( $settings[ $field ] );
+				} catch ( \Throwable $e ) {
+					// Log error but don't expose sensitive details
+					error_log(
+						sprintf(
+							'CampaignBridge: Failed to decrypt sensitive field "%s": %s',
+							$field,
+							$e->getMessage()
+						)
+					);
+
+					// Remove corrupted sensitive data
+					unset( $settings[ $field ] );
+				}
+			}
+		}
+
+		return $settings;
 	}
 
 	/**
