@@ -219,7 +219,7 @@ class Dispatcher {
 		}
 
 		// Try to decode and check if it looks like encrypted binary data
-		$decoded = base64_decode( $value, true );
+		$decoded = base64_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_base64_decode -- Used for encrypted data validation.
 		if ( false === $decoded ) {
 			return false;
 		}
