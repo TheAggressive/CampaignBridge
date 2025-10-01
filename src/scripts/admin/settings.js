@@ -11,17 +11,51 @@
  * Initialize all settings page functionality when DOM is ready
  */
 function initSettingsPage() {
+  initTabNavigation();
   initApiKeyMasking();
   initApiKeyVerification();
   initAudienceFetching();
-  initTemplateFetching();
   initApiKeyVisibility();
+}
+
+/**
+ * Initialize tab navigation functionality.
+ * - Handles switching between General and Providers tabs
+ * - Manages active tab states and content visibility
+ */
+function initTabNavigation() {
+  const tabLinks = document.querySelectorAll(".nav-tab");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  if (tabLinks.length === 0 || tabContents.length === 0) {
+    return;
+  }
+
+  // Handle tab clicks
+  tabLinks.forEach((tab) => {
+    tab.addEventListener("click", (event) => {
+      event.preventDefault();
+
+      const targetTab = tab.getAttribute("data-tab");
+
+      // Remove active class from all tabs and contents
+      tabLinks.forEach((t) => t.classList.remove("nav-tab-active"));
+      tabContents.forEach((c) => c.classList.remove("active"));
+
+      // Add active class to clicked tab and corresponding content
+      tab.classList.add("nav-tab-active");
+      const targetContent = document.getElementById(targetTab);
+      if (targetContent) {
+        targetContent.classList.add("active");
+      }
+    });
+  });
 }
 
 /**
  * Initialize API key field masking behavior.
  * - Shows masked placeholder when field is not focused
- * - Securely retrieves and populates field when "Show" button is clicked
+ * - Toggles visibility without exposing API key via REST API
  * - Restores masking when focus is lost and field is empty
  */
 function initApiKeyMasking() {
@@ -37,41 +71,15 @@ function initApiKeyMasking() {
   const hasKey = apiKeyField.getAttribute("data-has-key") === "1";
 
   // Handle Show/Hide button click
-  toggleButton.addEventListener("click", async (event) => {
+  toggleButton.addEventListener("click", (event) => {
     event.preventDefault();
 
     if (apiKeyField.type === "password") {
-      // Show the API key - make secure AJAX call using WordPress REST API auth
-      try {
-        // For API key retrieval, use simple GET request (WordPress handles auth)
-        console.log("Making API request to retrieve API key");
-
-        const response = await fetch(
-          "/wp-json/campaignbridge/v1/mailchimp/api-key",
-          {
-            method: "GET",
-          },
-        );
-
-        console.log("API response status:", response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          apiKeyField.value = data.api_key || "";
-          apiKeyField.type = "text";
-          toggleButton.textContent = "Hide";
-          showStatusMessage("API key loaded successfully", "success");
-        } else {
-          const errorText = await response.text();
-          console.error("API request failed:", response.status, errorText);
-          showStatusMessage(
-            `Failed to retrieve API key (${response.status})`,
-            "error",
-          );
-        }
-      } catch (error) {
-        console.error("Error retrieving API key:", error);
-      }
+      // Show the API key field - user can enter new key
+      apiKeyField.type = "text";
+      apiKeyField.focus();
+      toggleButton.textContent = "Hide";
+      showStatusMessage("Enter your API key", "info");
     } else {
       // Hide the API key - restore masked state
       apiKeyField.value = "";
@@ -205,21 +213,23 @@ function initAudienceFetching() {
       console.log("API key from field:", apiKey ? "present" : "missing");
       console.log("API key length:", apiKey ? apiKey.length : 0);
 
-      const params = new URLSearchParams({ refresh: "1" });
-      if (apiKey) {
-        params.append("api_key", apiKey);
-      }
+      // Send API key for testing if provided (will be validated server-side)
+      const requestBody = {
+        refresh: "1",
+        ...(apiKey && { api_key: apiKey }), // Only include if API key is present
+      };
 
-      console.log(
-        "Making fetch request to:",
-        `/wp-json/campaignbridge/v1/mailchimp/audiences?${params.toString()}`,
-      );
-      console.log("Final params:", params.toString());
+      console.log("Making POST request to audiences endpoint");
 
       const response = await fetch(
-        `/wp-json/campaignbridge/v1/mailchimp/audiences?${params.toString()}`,
+        "/wp-json/campaignbridge/v1/mailchimp/audiences",
         {
-          method: "GET",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": wpApiSettings ? wpApiSettings.nonce : "", // [SECURE]
+          },
+          body: JSON.stringify(requestBody),
         },
       );
 
@@ -342,15 +352,14 @@ function showStatusMessage(message, type) {
 }
 
 /**
- * Initialize API key visibility for audience/template sections.
- * Shows audience and template dropdowns when API key is present.
+ * Initialize API key visibility for audience section.
+ * Shows audience dropdown when API key is present.
  */
 function initApiKeyVisibility() {
   const apiKeyField = document.querySelector(".cb-settings__api-key-field");
   const audienceRow = document.querySelector(".cb-settings__audience-row");
-  const templateRow = document.querySelector(".cb-settings__template-row");
 
-  if (!apiKeyField || !audienceRow || !templateRow) {
+  if (!apiKeyField || !audienceRow) {
     return;
   }
 
@@ -362,10 +371,8 @@ function initApiKeyVisibility() {
 
     if (savedApiKey || enteredApiKey) {
       audienceRow.style.display = "table-row";
-      templateRow.style.display = "table-row";
     } else {
       audienceRow.style.display = "none";
-      templateRow.style.display = "none";
     }
   }
 
@@ -377,92 +384,6 @@ function initApiKeyVisibility() {
   apiKeyField.addEventListener("blur", updateVisibility);
 }
 
-/**
- * Initialize template fetching functionality.
- * - Handles "Reset Templates" button clicks
- * - Fetches and populates template dropdown via AJAX
- */
-function initTemplateFetching() {
-  const fetchButton = document.querySelector("#campaignbridge-fetch-templates");
-  const templateSelect = document.querySelector(
-    "#campaignbridge-mailchimp-templates",
-  );
-  const apiKeyField = document.querySelector(
-    "#campaignbridge-mailchimp-api-key",
-  );
-
-  if (!fetchButton || !templateSelect || !apiKeyField) {
-    return;
-  }
-
-  fetchButton.addEventListener("click", async (event) => {
-    event.preventDefault();
-
-    try {
-      // Show loading state
-      fetchButton.textContent = "Loading...";
-      fetchButton.disabled = true;
-
-      // Get the API key from the field (user just entered it)
-      const apiKey = apiKeyField.value;
-
-      console.log(
-        "Template fetch - API key from field:",
-        apiKey ? "present" : "missing",
-      );
-
-      const params = new URLSearchParams({ refresh: "1" });
-      if (apiKey) {
-        params.append("api_key", apiKey);
-      }
-
-      const response = await fetch(
-        `/wp-json/campaignbridge/v1/mailchimp/templates?${params.toString()}`,
-        {
-          method: "GET",
-        },
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Template fetch failed:", response.status, errorText);
-        showStatusMessage(
-          `Failed to fetch templates (${response.status})`,
-          "error",
-        );
-        return;
-      }
-
-      const data = await response.json();
-
-      // Clear existing options (except the first empty one)
-      while (templateSelect.children.length > 1) {
-        templateSelect.removeChild(templateSelect.lastChild);
-      }
-
-      // Populate with new templates
-      if (data.items && Array.isArray(data.items)) {
-        data.items.forEach((template) => {
-          const option = document.createElement("option");
-          option.value = template.id;
-          option.textContent = template.name || `Template ${template.id}`;
-          templateSelect.appendChild(option);
-        });
-
-        // Show success message
-        showStatusMessage("Templates updated successfully", "success");
-      } else {
-        showStatusMessage("No templates found", "warning");
-      }
-    } catch (error) {
-      console.error("Error fetching templates:", error);
-      showStatusMessage("Error fetching templates", "error");
-    } finally {
-      // Restore button state
-      fetchButton.textContent = "Refresh";
-      fetchButton.disabled = false;
-    }
-  });
-}
+// Template fetching removed - templates are now managed in the template editor
 
 // Note: WordPress provides wpApiSettings.nonce for authenticated AJAX requests

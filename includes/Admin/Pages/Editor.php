@@ -1,6 +1,6 @@
 <?php
 /**
- * Template Editor Page - Block editor interface for email template design.
+ * Editor - Block editor interface for email template design.
  *
  * Provides a WordPress block editor interface for creating and editing
  * email campaign templates with drag-and-drop functionality.
@@ -13,19 +13,19 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin\Pages;
 
-use CampaignBridge\Admin\Pages\AdminPage;
+use CampaignBridge\Admin\Pages\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Template Editor Page: handles the email template management interface.
+ * Editor: handles the email template management interface.
  *
- * This class extends AdminPage to provide a block editor interface for
+ * This class extends Admin to provide a block editor interface for
  * creating and managing email campaign templates.
  */
-class TemplateEditorPage extends AdminPage {
+class Editor extends Admin {
 	/**
 	 * Page slug for this admin page.
 	 *

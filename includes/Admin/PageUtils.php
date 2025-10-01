@@ -215,7 +215,7 @@ class PageUtils {
 	 */
 	private static function is_valid_admin_page_class( string $class_name ): bool {
 		return class_exists( $class_name ) &&
-				is_subclass_of( $class_name, \CampaignBridge\Admin\Pages\AdminPage::class );
+				is_subclass_of( $class_name, \CampaignBridge\Admin\Pages\Admin::class );
 	}
 
 	/**

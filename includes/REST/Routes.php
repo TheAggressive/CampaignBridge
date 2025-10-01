@@ -113,9 +113,6 @@ class Routes {
 
 		// Register editor settings routes.
 		self::$editor_settings_routes->register();
-
-		// Register Mailchimp-specific routes.
-		MailchimpRoutes::register();
 	}
 
 	/**

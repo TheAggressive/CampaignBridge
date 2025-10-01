@@ -1,6 +1,6 @@
 <?php
 /**
- * Settings Admin Page for CampaignBridge Admin Interface.
+ * Settings for CampaignBridge Admin Interface.
  *
  * Handles plugin settings configuration and email service provider integration.
  *
@@ -12,16 +12,16 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin\Pages;
 
-use CampaignBridge\Admin\Pages\AdminPage;
+use CampaignBridge\Admin\Pages\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Settings Page: handles the plugin settings configuration interface.
+ * Settings: handles the plugin settings configuration interface.
  */
-class SettingsPage extends AdminPage {
+class Settings extends Admin {
 	/**
 	 * Page slug for this admin page.
 	 *
@@ -124,42 +124,54 @@ class SettingsPage extends AdminPage {
 				settings_fields( self::SETTINGS_FIELD );
 				?>
 
-				<table class="form-table cb-settings__form-table">
-					<tr>
-						<th scope="row"><?php echo esc_html__( 'Provider', 'campaignbridge' ); ?></th>
-						<td>
-							<select name="<?php echo esc_attr( self::get_option_name() . '[' . self::PROVIDER_FIELD_NAME . ']' ); ?>">
-								<?php foreach ( $providers as $slug => $obj ) : ?>
-									<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $slug, $provider ); ?>><?php echo esc_html( $obj->label() ); ?></option>
-								<?php endforeach; ?>
-							</select>
-							<p class="description"><?php echo esc_html__( 'Choose which email client or export method to use.', 'campaignbridge' ); ?></p>
-						</td>
-					</tr>
+				<div class="nav-tab-wrapper">
+					<a href="#general" class="nav-tab nav-tab-active" data-tab="general"><?php echo esc_html__( 'General', 'campaignbridge' ); ?></a>
+					<a href="#providers" class="nav-tab" data-tab="providers"><?php echo esc_html__( 'Providers', 'campaignbridge' ); ?></a>
+				</div>
 
-					<!-- Global Email Settings -->
-					<tr>
-						<th scope="row"><?php echo esc_html__( 'From Name', 'campaignbridge' ); ?></th>
-						<td>
-							<input type="text" name="<?php echo esc_attr( self::get_option_name() ); ?>[from_name]" value="<?php echo esc_attr( $settings['from_name'] ?? '' ); ?>" size="50" />
-							<p class="description"><?php echo esc_html__( 'Default sender name for all emails.', 'campaignbridge' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php echo esc_html__( 'From Email', 'campaignbridge' ); ?></th>
-						<td>
-							<input type="email" name="<?php echo esc_attr( self::get_option_name() ); ?>[from_email]" value="<?php echo esc_attr( $settings['from_email'] ?? '' ); ?>" size="50" />
-							<p class="description"><?php echo esc_html__( 'Default sender email address for all emails.', 'campaignbridge' ); ?></p>
-						</td>
-					</tr>
+				<!-- General Settings Tab -->
+				<div id="general" class="tab-content active">
+					<table class="form-table cb-settings__form-table">
+						<tr>
+							<th scope="row"><?php echo esc_html__( 'From Name', 'campaignbridge' ); ?></th>
+							<td>
+								<input type="text" name="<?php echo esc_attr( self::get_option_name() ); ?>[from_name]" value="<?php echo esc_attr( $settings['from_name'] ?? '' ); ?>" size="50" />
+								<p class="description"><?php echo esc_html__( 'Default sender name for all emails.', 'campaignbridge' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php echo esc_html__( 'From Email', 'campaignbridge' ); ?></th>
+							<td>
+								<input type="email" name="<?php echo esc_attr( self::get_option_name() ); ?>[from_email]" value="<?php echo esc_attr( $settings['from_email'] ?? '' ); ?>" size="50" />
+								<p class="description"><?php echo esc_html__( 'Default sender email address for all emails.', 'campaignbridge' ); ?></p>
+							</td>
+						</tr>
+					</table>
+				</div>
 
-					<?php
-					// Provider-specific fields.
-					if ( isset( $providers[ $provider ] ) ) {
-						$providers[ $provider ]->render_settings_fields( $settings, self::get_option_name() );
-					}
-					?>
-				</table>
+				<!-- Providers Settings Tab -->
+				<div id="providers" class="tab-content">
+					<table class="form-table cb-settings__form-table">
+						<tr>
+							<th scope="row"><?php echo esc_html__( 'Provider', 'campaignbridge' ); ?></th>
+							<td>
+								<select name="<?php echo esc_attr( self::get_option_name() . '[' . self::PROVIDER_FIELD_NAME . ']' ); ?>">
+									<?php foreach ( $providers as $slug => $obj ) : ?>
+										<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $slug, $provider ); ?>><?php echo esc_html( $obj->label() ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<p class="description"><?php echo esc_html__( 'Choose which email client or export method to use.', 'campaignbridge' ); ?></p>
+							</td>
+						</tr>
+
+						<?php
+						// Provider-specific fields (API Key, Audience, etc.).
+						if ( isset( $providers[ $provider ] ) ) {
+							$providers[ $provider ]->render_settings_fields( $settings, self::get_option_name() );
+						}
+						?>
+					</table>
+				</div>
 
 				<?php submit_button( self::SUBMIT_BUTTON_TEXT ); ?>
 			</form>

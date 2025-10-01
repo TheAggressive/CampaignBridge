@@ -24,17 +24,9 @@ class Service_Container {
 	/**
 	 * Service name constants
 	 */
-	private const SERVICE_NOTICES            = 'notices';
-	private const SERVICE_DISPATCHER         = 'dispatcher';
-	private const SERVICE_MAILCHIMP_PROVIDER = 'mailchimp_provider';
-	private const SERVICE_HTML_PROVIDER      = 'html_provider';
-	private const SERVICE_REST_ROUTES        = 'rest_routes';
-
-	/**
-	 * Provider type constants
-	 */
-	private const PROVIDER_MAILCHIMP = 'mailchimp';
-	private const PROVIDER_HTML      = 'html';
+	private const SERVICE_NOTICES     = 'notices';
+	private const SERVICE_DISPATCHER  = 'dispatcher';
+	private const SERVICE_REST_ROUTES = 'rest_routes';
 
 	/**
 	 * Error message constants
@@ -164,52 +156,17 @@ class Service_Container {
 		$this->register( self::SERVICE_NOTICES, \CampaignBridge\Notices::class );
 		$this->register( self::SERVICE_DISPATCHER, \CampaignBridge\Core\Dispatcher::class );
 
-		// ========== EMAIL PROVIDERS ==========
-		$this->register_provider(
-			self::SERVICE_MAILCHIMP_PROVIDER,
-			'Mailchimp'
-		);
-
-		$this->register_provider(
-			self::SERVICE_HTML_PROVIDER,
-			'Html'
-		);
-
 		// ========== REST API ==========
 		$this->register(
 			self::SERVICE_REST_ROUTES,
-			function ( $container ) {
-				$providers = array(
-					self::PROVIDER_MAILCHIMP => $container->get( self::SERVICE_MAILCHIMP_PROVIDER ),
-					self::PROVIDER_HTML      => $container->get( self::SERVICE_HTML_PROVIDER ),
-				);
+			function ( $container ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+				// No providers registered yet.
+				$providers = array();
 				return new \CampaignBridge\REST\Routes( $providers );
 			}
 		);
 	}
 
-	/**
-	 * Register a provider with error handling
-	 *
-	 * @param string $service_name Service name constant.
-	 * @param string $provider_name Provider class name suffix.
-	 * @return void
-	 */
-	private function register_provider( string $service_name, string $provider_name ): void {
-		$this->register(
-			$service_name,
-			function ( $container ) use ( $provider_name ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
-				// $container is used within the closure for getting other services
-				$class_name = '\\CampaignBridge\\Providers\\' . $provider_name . 'Provider';
-				if ( ! class_exists( $class_name ) ) {
-					throw new \RuntimeException(
-						sprintf( esc_html( self::ERROR_PROVIDER_NOT_FOUND ), esc_html( $provider_name ) )
-					);
-				}
-				return new $class_name();
-			}
-		);
-	}
 
 	/**
 	 * Get all registered services

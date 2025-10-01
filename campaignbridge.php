@@ -85,6 +85,12 @@ function campaignbridge_activate() {
 		);
 	}
 
+	// Grant custom capability to administrators.
+	$admin_role = get_role( 'administrator' );
+	if ( $admin_role && ! $admin_role->has_cap( 'campaignbridge_manage' ) ) {
+		$admin_role->add_cap( 'campaignbridge_manage' );
+	}
+
 	// Flush rewrite rules on activation.
 	flush_rewrite_rules();
 

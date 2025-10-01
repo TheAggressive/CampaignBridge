@@ -20,7 +20,7 @@ import {
 import { useDispatch } from "@wordpress/data";
 import { useEffect } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
-import { useBlockSelection } from "../../scripts/template-editor/hooks/useBlockSelection";
+import { useBlockSelection } from "../../scripts/editor/hooks/useBlockSelection";
 
 export default function Edit({ attributes, setAttributes, clientId }) {
   const { maxWidth, outerPadding, padding } = attributes;

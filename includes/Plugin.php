@@ -21,15 +21,14 @@ namespace CampaignBridge;
 
 use CampaignBridge\Admin\AssetManager;
 use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\Admin\Pages\PostTypesPage;
-use CampaignBridge\Admin\Pages\SettingsPage;
+use CampaignBridge\Admin\Pages\PostTypes;
+use CampaignBridge\Admin\Pages\Settings;
 use CampaignBridge\Admin\Pages\StatusPage;
-use CampaignBridge\Admin\Pages\TemplateEditorPage;
+use CampaignBridge\Admin\Pages\Editor;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\Core\SettingsHandler;
 use CampaignBridge\PostTypes\EmailTemplate;
 use CampaignBridge\REST\Routes as RestRoutes;
-use CampaignBridge\REST\MailchimpRoutes;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -129,11 +128,8 @@ class Plugin {
 			// Initialize settings handler.
 			$this->settings_handler = new SettingsHandler();
 
-			// Get providers from service container.
-			$this->providers = array(
-				'mailchimp' => $this->service_container->get( 'mailchimp_provider' ),
-				'html'      => $this->service_container->get( 'html_provider' ),
-			);
+			// No providers registered yet.
+			$this->providers = array();
 		} catch ( \Exception $e ) {
 			$this->handle_initialization_error( $e );
 		}
@@ -212,8 +208,8 @@ class Plugin {
 	 */
 	public function add_admin_menu(): void {
 		// Initialize shared state for all admin pages.
-		PostTypesPage::init_shared_state( self::OPTION_NAME, $this->providers );
-		SettingsPage::init_shared_state( self::OPTION_NAME, $this->providers );
+		PostTypes::init_shared_state( self::OPTION_NAME, $this->providers );
+		Settings::init_shared_state( self::OPTION_NAME, $this->providers );
 		StatusPage::init_shared_state( self::OPTION_NAME, $this->providers );
 
 		// Add main menu page.
@@ -222,7 +218,7 @@ class Plugin {
 			'CampaignBridge',
 			self::ADMIN_CAPABILITY,
 			'campaignbridge',
-			array( PostTypesPage::class, 'render' ),
+			array( PostTypes::class, 'render' ),
 			self::MENU_ICON,
 			self::MENU_POSITION
 		);
@@ -233,8 +229,8 @@ class Plugin {
 			'Post Types',
 			'Post Types',
 			self::ADMIN_CAPABILITY,
-			PostTypesPage::get_page_slug(),
-			array( PostTypesPage::class, 'render' )
+			PostTypes::get_page_slug(),
+			array( PostTypes::class, 'render' )
 		);
 
 		add_submenu_page(
@@ -242,8 +238,8 @@ class Plugin {
 			'Settings',
 			'Settings',
 			self::ADMIN_CAPABILITY,
-			SettingsPage::get_page_slug(),
-			array( SettingsPage::class, 'render' )
+			Settings::get_page_slug(),
+			array( Settings::class, 'render' )
 		);
 
 		// Add Status submenu page.
@@ -261,8 +257,8 @@ class Plugin {
 			'Template Editor',
 			'Template Editor',
 			self::ADMIN_CAPABILITY,
-			TemplateEditorPage::get_page_slug(),
-			array( TemplateEditorPage::class, 'render' )
+			Editor::get_page_slug(),
+			array( Editor::class, 'render' )
 		);
 	}
 
@@ -283,6 +279,7 @@ class Plugin {
 			self::OPTION_NAME,
 			array(
 				'type'              => 'array',
+				'autoload'          => false, // [SECURE] Prevent sensitive data from being loaded on every request
 				'sanitize_callback' => array( $this->settings_handler, 'sanitize' ),
 				'default'           => array(),
 			)
@@ -320,9 +317,9 @@ class Plugin {
 
 		// Initialize Admin Pages.
 		StatusPage::init();
-		PostTypesPage::init();
-		SettingsPage::init();
-		TemplateEditorPage::init();
+		PostTypes::init();
+		Settings::init();
+		Editor::init();
 	}
 
 	/**
@@ -332,12 +329,11 @@ class Plugin {
 	 * @return void
 	 */
 	private function init_rest_api(): void {
+		// Initialize REST routes with providers.
 		RestRoutes::init( self::OPTION_NAME, $this->providers );
-		add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
 
-		// Always register Mailchimp routes (needed for API key functionality)
-		MailchimpRoutes::init( self::OPTION_NAME, $this->providers );
-		add_action( 'rest_api_init', array( MailchimpRoutes::class, 'register' ) );
+		// Register REST routes when REST API is initialized.
+		add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
 	}
 
 	/**

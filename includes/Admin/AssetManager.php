@@ -44,7 +44,7 @@ class AssetManager {
 	private const SETTINGS_STYLES_PATH     = 'dist/styles/pages/settings.css';
 	private const SETTINGS_SCRIPT_PATH     = 'dist/scripts/admin/settings.js';
 	private const BLOCK_EDITOR_STYLES_PATH = 'dist/styles/pages/editor.css';
-	private const BLOCK_EDITOR_SCRIPT_PATH = 'dist/scripts/template-editor/editor.js';
+	private const BLOCK_EDITOR_SCRIPT_PATH = 'dist/scripts/editor/editor.js';
 
 	/**
 	 * WordPress dependencies for block editor styles.

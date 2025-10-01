@@ -15,7 +15,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin\Pages;
 
-use CampaignBridge\Admin\Pages\AdminPage;
+use CampaignBridge\Admin\Pages\Admin;
 use CampaignBridge\Blocks\Blocks;
 use CampaignBridge\PostTypes\EmailTemplate;
 
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Status Page: provides development debugging and system status information.
  */
-class StatusPage extends AdminPage {
+class StatusPage extends Admin {
 	/**
 	 * Page slug for this admin page.
 	 *

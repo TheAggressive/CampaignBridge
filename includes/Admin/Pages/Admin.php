@@ -1,6 +1,6 @@
 <?php
 /**
- * Base Admin Page Class for CampaignBridge Admin Interface.
+ * Base Admin Class for CampaignBridge Admin Interface.
  *
  * This abstract class serves as the foundation for all CampaignBridge admin pages,
  * providing shared functionality, state management, and common patterns that
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Handles shared state and provides common functionality for all admin pages.
  */
-abstract class AdminPage {
+abstract class Admin {
 	/**
 	 * Default option key for plugin settings.
 	 */

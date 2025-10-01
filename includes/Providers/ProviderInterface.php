@@ -7,8 +7,38 @@
  * behavior, configuration management, and campaign delivery across different
  * email services and export formats.
  *
- * This interface ensures that all providers follow consistent patterns
- * and provide reliable email campaign functionality.
+ * ## Implementation Guide
+ *
+ * To create a new provider (e.g., SendGrid, Constant Contact, etc.):
+ *
+ * 1. Create a class that implements this interface
+ * 2. Implement all required methods with proper error handling
+ * 3. Register the provider in Service_Container.php
+ * 4. Add provider-specific settings to admin interface
+ * 5. Handle API authentication and rate limiting
+ *
+ * ## Example Provider Structure:
+ *
+ * ```php
+ * class MyProvider implements ProviderInterface {
+ *     public function slug(): string { return 'myprovider'; }
+ *     public function label(): string { return 'My Provider'; }
+ *
+ *     public function is_configured(array $settings): bool {
+ *         return !empty($settings['api_key']);
+ *     }
+ *
+ *     // ... implement other methods
+ * }
+ * ```
+ *
+ * ## Security Considerations:
+ *
+ * - Always validate and sanitize settings in settings_schema()
+ * - Use redact_settings() to mask sensitive data in logs
+ * - Implement proper rate limiting via rate_limit_policy()
+ * - Validate all input parameters in send_campaign()
+ * - Handle API errors gracefully with user-friendly messages
  *
  * @package CampaignBridge
  * @since 0.1.0
@@ -27,24 +57,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Provider interface for CampaignBridge providers.
  */
 interface ProviderInterface {
-	/**
-	 * Default provider slug constant.
-	 */
-	public const DEFAULT_SLUG = 'default';
-
-	/**
-	 * Configuration status constants.
-	 */
-	public const CONFIGURED      = 'configured';
-	public const NOT_CONFIGURED  = 'not_configured';
-	public const CONFIG_REQUIRED = 'config_required';
-
-	/**
-	 * Common setting keys used by providers.
-	 */
-	public const SETTING_API_KEY     = 'api_key';
-	public const SETTING_AUDIENCE_ID = 'audience_id';
-	public const SETTING_PROVIDER    = 'provider';
 
 	/**
 	 * Get unique slug for the provider.
@@ -117,7 +129,48 @@ interface ProviderInterface {
 	 * Examples: ['header', 'body', 'footer'] or ['content', 'sidebar']
 	 *
 	 * @param array $settings Plugin settings array (for provider-specific logic).
+	 * @param bool  $refresh  Force refresh of cached data.
 	 * @return array|\WP_Error Array of section key strings, or WP_Error if unsupported/unavailable.
 	 */
-	public function get_section_keys( array $settings );
+	public function get_section_keys( array $settings, bool $refresh = false );
+
+	/**
+	 * Get the required capability for this provider.
+	 *
+	 * @return string Capability slug (e.g., 'campaignbridge_manage').
+	 */
+	public function required_capability(): string;
+
+	/**
+	 * Get rate limiting policy for this provider.
+	 *
+	 * @return array Array with 'bucket' and 'max_per_minute' keys.
+	 */
+	public function rate_limit_policy(): array;
+
+	/**
+	 * Get settings schema for validation and redaction.
+	 *
+	 * @return array Schema array with field definitions.
+	 */
+	public function settings_schema(): array;
+
+	/**
+	 * Redact sensitive settings for display/logging.
+	 *
+	 * @param array $settings Raw settings array.
+	 * @return array Redacted settings array.
+	 */
+	public function redact_settings( array $settings ): array;
+
+	/**
+	 * Get provider capabilities and supported features.
+	 *
+	 * Returns an array of features this provider supports, which can be used
+	 * to conditionally show/hide UI elements or functionality.
+	 *
+	 * @return array Array of supported features. Examples:
+	 *               ['audiences' => true, 'templates' => true, 'scheduling' => false]
+	 */
+	public function get_capabilities(): array;
 }

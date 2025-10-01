@@ -1,6 +1,6 @@
 <?php
 /**
- * Post Types Admin Page for CampaignBridge Admin Interface.
+ * Post Types for CampaignBridge Admin Interface.
  *
  * Handles configuration of which WordPress post types are available
  * for use in CampaignBridge email campaigns.
@@ -13,16 +13,16 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin\Pages;
 
-use CampaignBridge\Admin\Pages\AdminPage;
+use CampaignBridge\Admin\Pages\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Post Types Page: handles the post type configuration interface.
+ * Post Types: handles the post type configuration interface.
  */
-class PostTypesPage extends AdminPage {
+class PostTypes extends Admin {
 	/**
 	 * Page slug for this admin page.
 	 *
