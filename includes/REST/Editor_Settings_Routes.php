@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Editor Settings REST API routes handler.
  */
-class EditorSettingsRoutes {
+class Editor_Settings_Routes {
 	/**
 	 * API namespace
 	 */

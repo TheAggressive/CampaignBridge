@@ -153,7 +153,7 @@ class Dispatcher {
 	 * @return bool
 	 */
 	public static function dispatch_to_provider( array $blocks, array $settings, array $providers ): bool {
-		$provider_slug = $settings['provider'] ?? 'example';
+		$provider_slug = $settings['provider'] ?? 'html';
 		$provider      = $providers[ $provider_slug ] ?? null;
 
 		if ( ! $provider ) {

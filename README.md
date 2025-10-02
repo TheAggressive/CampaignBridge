@@ -126,7 +126,7 @@ campaignbridge/
 │   ├── REST/                    # REST API endpoints
 │   │   ├── Routes.php           # General REST routes
 │   │   ├── MailchimpRoutes.php  # Mailchimp-specific routes
-│   │   └── EditorSettingsRoutes.php # Editor settings
+│   │   └── Editor_Settings_Routes.php # Editor settings
 │   └── Services/                # Business logic services
 │       └── Email_Generator.php   # Email HTML generation
 ├── src/blocks/                  # WordPress block definitions

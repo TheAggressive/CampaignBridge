@@ -75,9 +75,9 @@ class Routes {
 	/**
 	 * Editor settings routes instance.
 	 *
-	 * @var EditorSettingsRoutes
+	 * @var Editor_Settings_Routes
 	 */
-	private static EditorSettingsRoutes $editor_settings_routes;
+	private static Editor_Settings_Routes $editor_settings_routes;
 
 	/**
 	 * Initialize shared state.
@@ -89,7 +89,7 @@ class Routes {
 	public static function init( string $option_name, array $providers ): void {
 		self::$option_name            = $option_name;
 		self::$providers              = $providers;
-		self::$editor_settings_routes = new EditorSettingsRoutes( $option_name );
+		self::$editor_settings_routes = new Editor_Settings_Routes( $option_name );
 	}
 
 	/**
@@ -132,8 +132,8 @@ class Routes {
 					'post_type' => array(
 						'type'              => 'string',
 						'required'          => false,
-						'sanitize_callback' => 'sanitize_text_field', // [SECURE]
-						'validate_callback' => array( __CLASS__, 'validate_post_type' ), // [SECURE]
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => array( __CLASS__, 'validate_post_type' ),
 					),
 				),
 			)
@@ -163,26 +163,24 @@ class Routes {
 	private const MANAGE_CAP = 'manage_options';
 
 	/**
-	 * Whether current user can manage plugin settings. // [SECURE]
+	 * Whether current user can manage plugin settings.
 	 *
-	 * @return bool // [SECURE]
+	 * @return bool
 	 */
 	public static function can_manage(): bool {
-		// [SECURE]
-		return current_user_can( self::MANAGE_CAP ); // [SECURE]
+		return current_user_can( self::MANAGE_CAP );
 	}
 
 	/**
-	 * Validate post type parameter. // [SECURE]
+	 * Validate post type parameter.
 	 *
-	 * @param string $value Post type value to validate
-	 * @return bool // [SECURE]
+	 * @param string $value Post type value to validate.
+	 * @return bool
 	 */
 	public static function validate_post_type( string $value ): bool {
-		// [SECURE]
-		// Only allow valid post types that exist in WordPress
+		// Only allow valid post types that exist in WordPress.
 		$post_types = get_post_types( array( 'public' => true ) );
-		return array_key_exists( $value, $post_types ); // [SECURE]
+		return array_key_exists( $value, $post_types );
 	}
 
 	/**
@@ -196,7 +194,7 @@ class Routes {
 	public static function check_rate_limit( string $endpoint_name, int $max_requests = self::RATE_LIMIT_REQUESTS, int $time_window = self::RATE_LIMIT_WINDOW ) {
 		$user_id = get_current_user_id();
 
-		// For better security, use both user ID and IP address
+		// For better security, use both user ID and IP address.
 		$ip_address = self::get_client_ip();
 		$identifier = $user_id ? 'user_' . $user_id : 'ip_' . $ip_address;
 
@@ -259,7 +257,7 @@ class Routes {
 		foreach ( (array) $post_ids as $pid ) {
 			$title_raw     = (string) get_post_field( 'post_title', $pid );
 			$title_decoded = html_entity_decode( $title_raw, ENT_QUOTES, 'UTF-8' );
-			$title_escaped = esc_html( $title_decoded ); // [SECURE] Escape HTML to prevent XSS
+			$title_escaped = esc_html( $title_decoded ); // Escape HTML to prevent XSS.
 			$items[]       = array(
 				'id'    => (int) $pid,
 				'label' => $title_escaped,
@@ -279,11 +277,11 @@ class Routes {
 	private static function get_safe_settings(): array {
 		$settings = get_option( self::$option_name, array() );
 
-		// Redact sensitive fields for REST API responses
+		// Redact sensitive fields for REST API responses.
 		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
 		foreach ( $sensitive_fields as $field ) {
 			if ( isset( $settings[ $field ] ) ) {
-				// Replace with placeholder to indicate field exists but is hidden
+				// Replace with placeholder to indicate field exists but is hidden.
 				$settings[ $field ] = '[REDACTED]';
 			}
 		}
@@ -347,7 +345,7 @@ class Routes {
 			}
 			$items[] = array(
 				'id'    => (string) $obj->name,
-				'label' => esc_html( (string) $obj->labels->singular_name ), // [SECURE] Escape HTML to prevent XSS
+				'label' => esc_html( (string) $obj->labels->singular_name ), // Escape HTML to prevent XSS.
 			);
 		}
 		usort(

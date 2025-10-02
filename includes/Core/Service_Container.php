@@ -162,11 +162,6 @@ class Service_Container {
 
 		// ========== EMAIL PROVIDERS ==========
 		$this->register(
-			'example_provider',
-			\CampaignBridge\Providers\ExampleProvider::class
-		);
-
-		$this->register(
 			'mailchimp_provider',
 			\CampaignBridge\Providers\Mailchimp_Provider::class
 		);
