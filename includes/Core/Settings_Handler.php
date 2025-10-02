@@ -28,7 +28,7 @@ class Settings_Handler {
 	/**
 	 * Default email service provider.
 	 */
-	private const DEFAULT_PROVIDER = 'example';
+	private const DEFAULT_PROVIDER = 'html';
 
 	/**
 	 * Sanitize and validate submitted plugin settings.
@@ -43,18 +43,18 @@ class Settings_Handler {
 	 * @return array Cleaned, validated, and sanitized settings array ready for storage.
 	 */
 	public function sanitize( array $input ): array {
-		// Skip nonce verification during migration to avoid wp_die() errors
-		if ( ! isset( $GLOBALS['campaignbridge_migration_mode'] ) || ! $GLOBALS['campaignbridge_migration_mode'] ) {
+		// Skip nonce verification only during migration to avoid wp_die() errors.
+		if ( ! ( isset( $GLOBALS['campaignbridge_migration_mode'] ) && $GLOBALS['campaignbridge_migration_mode'] ) ) {
 			// Verify nonce for CSRF protection.
-			// Check for the appropriate nonce action based on the current request
-			$nonce_action = 'campaignbridge-options'; // fallback
+			// Check for the appropriate nonce action based on the current request.
+			$nonce_action = 'campaignbridge-options'; // fallback.
 
-			// Check if this is from a specific tab
+			// Check if this is from a specific tab.
 			if ( isset( $_POST['option_page'] ) ) {
 				$option_page = sanitize_key( wp_unslash( $_POST['option_page'] ) );
-				if ( $option_page === 'campaignbridge_general' ) {
+				if ( 'campaignbridge_general' === $option_page ) {
 					$nonce_action = 'campaignbridge_general-options';
-				} elseif ( $option_page === 'campaignbridge_providers' ) {
+				} elseif ( 'campaignbridge_providers' === $option_page ) {
 					$nonce_action = 'campaignbridge_providers-options';
 				}
 			}
@@ -74,7 +74,7 @@ class Settings_Handler {
 	private function sanitize_settings( array $input ): array {
 		$clean                       = array();
 		$previous                    = get_option( 'campaignbridge_settings', array() );
-		$clean['provider']           = $this->sanitize_provider( $input, $previous );
+		$clean['provider']           = $this->sanitize_provider( $input );
 		$clean['api_key']            = $this->sanitize_api_key( $input, $previous );
 		$clean['audience_id']        = $this->sanitize_audience_id( $input );
 		$clean['from_name']          = $this->sanitize_from_name( $input );
@@ -88,10 +88,9 @@ class Settings_Handler {
 	 * Sanitize and validate the email provider selection.
 	 *
 	 * @param array $input Raw input array.
-	 * @param array $previous Previous settings.
 	 * @return string Sanitized provider name.
 	 */
-	private function sanitize_provider( array $input, array $previous ): string {
+	private function sanitize_provider( array $input ): string {
 		$provider = $input['provider'] ?? self::DEFAULT_PROVIDER;
 		return sanitize_key( $provider );
 	}
@@ -110,22 +109,22 @@ class Settings_Handler {
 		$posted_api_key    = $input['api_key'] ?? '';
 		$selected_provider = $input['provider'] ?? '';
 
-		// Skip API key processing for providers that don't need it (like HTML export)
+		// Skip API key processing for providers that don't need it (like HTML export).
 		if ( 'html' === $selected_provider ) {
-			return ''; // HTML provider doesn't need API keys
+			return ''; // HTML provider doesn't need API keys.
 		}
 
-		// If no new API key provided, return existing encrypted key (if any)
+		// If no new API key provided, return existing encrypted key (if any).
 		if ( '' === $posted_api_key ) {
 			if ( isset( $previous['api_key'] ) && ! empty( $previous['api_key'] ) ) {
-				// Verify existing key can be decrypted (validates it's properly encrypted)
+				// Verify existing key can be decrypted (validates it's properly encrypted).
 				try {
 					$decrypted = Api_Key_Encryption::decrypt( $previous['api_key'] );
 					if ( ! empty( $decrypted ) ) {
-						return $previous['api_key']; // Return encrypted version for storage
+						return $previous['api_key']; // Return encrypted version for storage.
 					}
 				} catch ( \Throwable $e ) {
-					// Log error but don't expose details
+					// Log error but don't expose details.
 					error_log( 'CampaignBridge: Invalid encrypted API key detected in settings' );
 					add_settings_error(
 						'campaignbridge_messages',
@@ -138,12 +137,12 @@ class Settings_Handler {
 			return '';
 		}
 
-		// Sanitize the input API key
+		// Sanitize the input API key.
 		$sanitized_key = sanitize_text_field( $posted_api_key );
 
 		// Validate API key format and length.
 		if ( ! empty( $sanitized_key ) ) {
-			// Get provider-specific validation pattern
+			// Get provider-specific validation pattern.
 			$provider_pattern = $this->get_provider_api_key_pattern( $input['provider'] ?? '' );
 
 			if ( ! Api_Key_Encryption::is_valid_api_key_format( $sanitized_key, $provider_pattern ) ) {
@@ -156,11 +155,11 @@ class Settings_Handler {
 				return isset( $previous['api_key'] ) ? $previous['api_key'] : '';
 			}
 
-			// Encrypt the API key before storage for ultra-secure handling
+			// Encrypt the API key before storage for ultra-secure handling.
 			try {
 				$encrypted_key = Api_Key_Encryption::encrypt( $sanitized_key );
 				if ( ! empty( $encrypted_key ) ) {
-					// Verify encryption/decryption round-trip for integrity
+					// Verify encryption/decryption round-trip for integrity.
 					$decrypted_check = Api_Key_Encryption::decrypt( $encrypted_key );
 					if ( $decrypted_check === $sanitized_key ) {
 						return $encrypted_key;
@@ -169,7 +168,7 @@ class Settings_Handler {
 					}
 				}
 			} catch ( \Throwable $e ) {
-				// Log error for debugging but don't expose sensitive details
+				// Log error for debugging but don't expose sensitive details.
 				error_log(
 					sprintf(
 						'CampaignBridge API key encryption failed: %s',
@@ -295,7 +294,7 @@ class Settings_Handler {
 	 * @return string The regex pattern for the provider.
 	 */
 	private function get_provider_api_key_pattern( string $provider_slug ): string {
-		// Get providers from global plugin instance
+		// Get providers from global plugin instance.
 		global $campaignbridge_plugin;
 		$providers = $campaignbridge_plugin->providers ?? array();
 
@@ -303,7 +302,7 @@ class Settings_Handler {
 			return $providers[ $provider_slug ]->get_api_key_pattern();
 		}
 
-		// Fallback to generic pattern if provider not found
+		// Fallback to generic pattern if provider not found.
 		return '/^[a-zA-Z0-9_-]{20,}$/';
 	}
 }

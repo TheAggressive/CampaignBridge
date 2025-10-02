@@ -294,7 +294,7 @@ class Status extends Admin {
 			<div class="cb-status__grid">
 				<div class="cb-status__card">
 					<h3><?php esc_html_e( 'Provider', 'campaignbridge' ); ?></h3>
-					<p class="cb-status__value"><?php echo esc_html( $settings['provider'] ?? 'example' ); ?></p>
+					<p class="cb-status__value"><?php echo esc_html( $settings['provider'] ?? 'html' ); ?></p>
 				</div>
 
 				<div class="cb-status__card">

@@ -35,7 +35,6 @@ class Service_Container {
 	 */
 	private const ERROR_SERVICE_NOT_FOUND      = 'Service \'%s\' not registered';
 	private const ERROR_INVALID_IMPLEMENTATION = 'Invalid service implementation';
-	private const ERROR_PROVIDER_NOT_FOUND     = '%sProvider class not found. Please ensure all dependencies are loaded.';
 
 	/**
 	 * Registered services

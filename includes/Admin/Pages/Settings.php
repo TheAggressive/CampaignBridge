@@ -229,7 +229,7 @@ class Settings extends Admin {
 	}
 
 	/**
-	 * Get the selected provider or default to example.
+	 * Get the selected provider or default to html.
 	 *
 	 * @param array $settings  Current settings.
 	 * @param array $providers Available providers.

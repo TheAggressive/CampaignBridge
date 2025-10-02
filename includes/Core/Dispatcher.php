@@ -15,7 +15,6 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Core;
 
-use CampaignBridge\Admin\Pages\Admin;
 use CampaignBridge\Notices;
 
 if ( ! defined( 'ABSPATH' ) ) {

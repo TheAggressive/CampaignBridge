@@ -95,10 +95,10 @@ class Api_Key_Encryption {
 			throw new \RuntimeException( 'API key encryption failed' );
 		}
 
-		// Combine IV, tag, and ciphertext for storage
+		// Combine IV, tag, and ciphertext for storage.
 		$encrypted = $iv . $tag . $ciphertext;
 
-		// Return base64 encoded for safe storage
+		// Return base64 encoded for safe storage.
 		return base64_encode( $encrypted ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_base64_encode -- Used for encrypted data storage.
 	}
 

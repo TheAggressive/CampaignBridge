@@ -51,7 +51,7 @@ class Plugin {
 	/**
 	 * Default email service provider.
 	 */
-	private const DEFAULT_PROVIDER = 'example';
+	private const DEFAULT_PROVIDER = 'html';
 
 	/**
 	 * Required capability for admin access.
