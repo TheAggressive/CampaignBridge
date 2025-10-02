@@ -5,6 +5,8 @@
     "bloginfo",
     "ciphertext",
     "dashicons",
+    "errfile",
+    "errline",
     "kses",
     "trailingslashit",
     "unslash",

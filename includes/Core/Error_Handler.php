@@ -217,34 +217,45 @@ class Error_Handler {
 	}
 
 	/**
-	 * Register WordPress error handler
+	 * Register WordPress error handling hooks
 	 *
 	 * @return void
 	 */
 	public function register_error_handler(): void {
-		set_error_handler(
-			function ( $errno, $errstr, $errfile, $errline ) {
-				// Only handle errors we want to log.
-				if ( ! ( error_reporting() & $errno ) ) {
-						return;
-				}
+		// Use WordPress hooks instead of PHP error handlers for better security.
+		add_action( 'wp_php_error', array( $this, 'handle_wp_php_error' ), 10, 2 );
+		add_action( 'wp_die_handler', array( $this, 'handle_wp_die' ) );
+	}
 
-				$this->error(
-					'PHP Error',
-					array(
-						'errno'   => $errno,
-						'errstr'  => $errstr,
-						'errfile' => $errfile,
-						'errline' => $errline,
-					)
-				);
-			}
+	/**
+	 * Handle WordPress PHP errors
+	 *
+	 * @param array  $error Error details.
+	 * @param string $message Error message.
+	 * @return void
+	 */
+	public function handle_wp_php_error( array $error, string $message ): void {
+		$this->error(
+			'WordPress PHP Error',
+			array(
+				'message' => $message,
+				'error'   => $error,
+			)
 		);
+	}
 
-		set_exception_handler(
-			function ( $exception ) {
-				$this->handle_exception( $exception, 'Unhandled exception' );
-			}
+	/**
+	 * Handle WordPress die events
+	 *
+	 * @param string $message Die message.
+	 * @return void
+	 */
+	public function handle_wp_die( string $message ): void {
+		$this->error(
+			'WordPress Die Event',
+			array(
+				'message' => $message,
+			)
 		);
 	}
 }
