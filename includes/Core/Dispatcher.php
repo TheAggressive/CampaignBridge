@@ -55,15 +55,15 @@ class Dispatcher {
 	 * @return bool True on success.
 	 */
 	public static function generate_and_send_campaign( array $post_ids, array $settings, array $sections_map, array $providers ): bool {
-		// Ensure settings contain decrypted API keys for provider use
+		// Ensure settings contain decrypted API keys for provider use.
 		$decrypted_settings = self::ensure_decrypted_settings( $settings );
 
-		// Handle sections map (Mailchimp sections)
+		// Handle sections map (Mailchimp sections).
 		if ( ! empty( $sections_map ) ) {
 			return self::process_sections_and_dispatch( $sections_map, $decrypted_settings, $providers );
 		}
 
-		// Handle regular posts (limit to 8 for performance)
+		// Handle regular posts (limit to 8 for performance).
 		return self::process_posts_and_dispatch( $post_ids, $decrypted_settings, $providers );
 	}
 
@@ -177,17 +177,17 @@ class Dispatcher {
 	private static function ensure_decrypted_settings( array $settings ): array {
 		$decrypted_settings = $settings;
 
-		// Decrypt sensitive fields that providers need
+		// Decrypt sensitive fields that providers need.
 		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
 		foreach ( $sensitive_fields as $field ) {
 			if ( isset( $decrypted_settings[ $field ] ) && ! empty( $decrypted_settings[ $field ] ) ) {
-				// Check if field appears to be encrypted (base64 encoded binary data)
+				// Check if field appears to be encrypted (base64 encoded binary data).
 				$value = $decrypted_settings[ $field ];
 				if ( is_string( $value ) && self::is_encrypted_value( $value ) ) {
 					try {
 						$decrypted_settings[ $field ] = Api_Key_Encryption::decrypt( $value );
 					} catch ( \Throwable $e ) {
-						// Log error but don't expose details
+						// Log error but don't expose details.
 						error_log(
 							sprintf(
 								'CampaignBridge Dispatcher: Failed to decrypt sensitive field "%s": %s',
@@ -196,7 +196,7 @@ class Dispatcher {
 							)
 						);
 
-						// Remove corrupted sensitive data rather than passing invalid data
+						// Remove corrupted sensitive data rather than passing invalid data.
 						unset( $decrypted_settings[ $field ] );
 					}
 				}
@@ -213,18 +213,18 @@ class Dispatcher {
 	 * @return bool True if value appears to be encrypted.
 	 */
 	private static function is_encrypted_value( string $value ): bool {
-		// Check if it's base64 encoded (encrypted data is base64 encoded)
+		// Check if it's base64 encoded (encrypted data is base64 encoded).
 		if ( ! preg_match( '/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $value ) ) {
 			return false;
 		}
 
-		// Try to decode and check if it looks like encrypted binary data
+		// Try to decode and check if it looks like encrypted binary data.
 		$decoded = base64_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_base64_decode -- Used for encrypted data validation.
 		if ( false === $decoded ) {
 			return false;
 		}
 
-		// Encrypted data should be at least 28 bytes (IV + tag + minimal ciphertext)
+		// Encrypted data should be at least 28 bytes (IV + tag + minimal ciphertext).
 		return strlen( $decoded ) >= 28;
 	}
 }

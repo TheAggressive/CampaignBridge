@@ -181,7 +181,6 @@ class Service_Container {
 			self::SERVICE_REST_ROUTES,
 			function ( $container ) {
 				$providers = array(
-					'example'   => $container->get( 'example_provider' ),
 					'mailchimp' => $container->get( 'mailchimp_provider' ),
 					'html'      => $container->get( 'html_provider' ),
 				);

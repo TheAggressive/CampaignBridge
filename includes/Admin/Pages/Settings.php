@@ -32,7 +32,7 @@ class Settings extends Admin {
 	/**
 	 * Default provider slug.
 	 */
-	private const DEFAULT_PROVIDER = 'example';
+	private const DEFAULT_PROVIDER = 'html';
 
 	/**
 	 * Settings field name.
@@ -100,7 +100,7 @@ class Settings extends Admin {
 	 * @return void.
 	 */
 	public static function register_settings_sections(): void {
-		// Register sections based on current tab
+		// Register sections based on current tab.
 		$current_tab = self::get_current_tab();
 
 		if ( 'general' === $current_tab ) {
@@ -211,6 +211,10 @@ class Settings extends Admin {
 
 		echo '<select name="' . esc_attr( self::get_option_name() . '[' . self::PROVIDER_FIELD_NAME . ']' ) . '">';
 		foreach ( $providers as $slug => $obj ) {
+			// Skip example provider in production dropdown.
+			if ( 'example' === $slug ) {
+				continue;
+			}
 			echo '<option value="' . esc_attr( $slug ) . '" ' . selected( $slug, $provider, false ) . '>' . esc_html( $obj->label() ) . '</option>';
 		}
 		echo '</select>';
@@ -232,8 +236,10 @@ class Settings extends Admin {
 	 * @return string The selected provider slug.
 	 */
 	private static function get_selected_provider( array $settings, array $providers ): string {
-		return ( isset( $settings['provider'] ) && isset( $providers[ $settings['provider'] ] ) )
-			? $settings['provider']
+		$current_provider = $settings['provider'] ?? self::DEFAULT_PROVIDER;
+
+		return ( isset( $providers[ $current_provider ] ) )
+			? $current_provider
 			: self::DEFAULT_PROVIDER;
 	}
 

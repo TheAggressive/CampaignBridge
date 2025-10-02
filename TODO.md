@@ -125,8 +125,8 @@ All namespaces under `CampaignBridge\...` must map correctly via your autoloader
   - [ ] Data-only, no business logic.
   - [ ] **Test:** Instantiate and encode to JSON.
 
-- [⚠️] **Basic EmailGenerator**
-  - [ ] File: `includes/Services/EmailGenerator.php`
+- [⚠️] **Basic Email_Generator**
+  - [ ] File: `includes/Services/Email_Generator.php`
   - [ ] Basic implementation: Load CPT + meta → render simple HTML → return payload.
   - [ ] **Test:** Generate basic payload from simple template.
 
@@ -134,8 +134,8 @@ All namespaces under `CampaignBridge\...` must map correctly via your autoloader
 
 ## M2. Payload Pipeline
 
-- [📋] **EmailGenerator** (Full Implementation)
-  - [ ] File: `includes/Services/EmailGenerator.php`
+- [📋] **Email_Generator** (Full Implementation)
+  - [ ] File: `includes/Services/Email_Generator.php`
   - [ ] Steps:
     1. Load CPT + meta.
     2. Render block tree into **table-based HTML** (via block `render.php`).
@@ -282,7 +282,7 @@ Rendering must be **email-safe** (nested tables, inline CSS).
 ### **Immediate Next Steps**
 1. **Complete M0** - Validate all dependencies and setup before core development
 2. **Start with M1** - Get foundations solid (autoloader, service container)
-3. **Implement M1.5** - Validate core services early with basic EmailGenerator
+3. **Implement M1.5** - Validate core services early with basic Email_Generator
 4. **Begin Phase 1 blocks** - header, text, image, button (test email rendering)
 
 ### **Risk Mitigation**

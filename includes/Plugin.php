@@ -122,8 +122,8 @@ class Plugin {
 
 			// Get providers from service container.
 			$this->providers = array(
-				'example' => $this->service_container->get( 'example_provider' ),
-				'html'    => $this->service_container->get( 'html_provider' ),
+				'html'      => $this->service_container->get( 'html_provider' ),
+				'mailchimp' => $this->service_container->get( 'mailchimp_provider' ),
 			);
 		} catch ( \Exception $e ) {
 			$this->handle_initialization_error( $e );
@@ -177,7 +177,7 @@ class Plugin {
 		// Initialize service container and providers.
 		$this->initialize_services();
 
-		// Make plugin instance globally accessible
+		// Make plugin instance globally accessible.
 		global $campaignbridge_plugin;
 		$campaignbridge_plugin = $this;
 
@@ -272,23 +272,23 @@ class Plugin {
 	 * @return void
 	 */
 	public function run_security_migration(): void {
-		// Only run migration if encryption is available and we haven't migrated yet
+		// Only run migration if encryption is available and we haven't migrated yet.
 		if ( ! Api_Key_Encryption::security_check()['secure'] ) {
 			return;
 		}
 
-		$migration_version = '1.0.0'; // Version when encryption was implemented
+		$migration_version = '1.0.0'; // Version when encryption was implemented.
 		$migrated_version  = get_option( 'campaignbridge_migration_version', '0.0.0' );
 
 		if ( version_compare( $migrated_version, $migration_version, '>=' ) ) {
-			return; // Already migrated
+			return; // Already migrated.
 		}
 
-		// Run the migration
+		// Run the migration.
 		$result = Api_Key_Encryption::migrate_plaintext_keys( self::OPTION_NAME );
 
 		if ( ! empty( $result['migrated_fields'] ) ) {
-			// Log successful migration
+			// Log successful migration.
 			error_log(
 				sprintf(
 					'CampaignBridge: Security migration completed. Migrated fields: %s',
@@ -296,10 +296,10 @@ class Plugin {
 				)
 			);
 
-			// Mark migration as complete
+			// Mark migration as complete.
 			update_option( 'campaignbridge_migration_version', $migration_version );
 
-			// Show admin notice about migration
+			// Show admin notice about migration.
 			if ( current_user_can( 'manage_options' ) ) {
 				add_action(
 					'admin_notices',
@@ -322,7 +322,7 @@ class Plugin {
 			}
 		}
 
-		// Handle any migration errors
+		// Handle any migration errors.
 		if ( ! empty( $result['errors'] ) ) {
 			error_log(
 				sprintf(
@@ -345,7 +345,7 @@ class Plugin {
 	 * @return void
 	 */
 	public function register_settings(): void {
-		// Main settings option
+		// Main settings option.
 		register_setting(
 			'campaignbridge',
 			self::OPTION_NAME,
@@ -357,7 +357,7 @@ class Plugin {
 			)
 		);
 
-		// General settings tab
+		// General settings tab.
 		register_setting(
 			'campaignbridge_general',
 			self::OPTION_NAME,
@@ -369,7 +369,7 @@ class Plugin {
 			)
 		);
 
-		// Provider settings tab
+		// Provider settings tab.
 		register_setting(
 			'campaignbridge_providers',
 			self::OPTION_NAME,

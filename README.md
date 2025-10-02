@@ -128,7 +128,7 @@ campaignbridge/
 │   │   ├── MailchimpRoutes.php  # Mailchimp-specific routes
 │   │   └── EditorSettingsRoutes.php # Editor settings
 │   └── Services/                # Business logic services
-│       └── EmailGenerator.php   # Email HTML generation
+│       └── Email_Generator.php   # Email HTML generation
 ├── src/blocks/                  # WordPress block definitions
 │   ├── post/                    # Post content blocks
 │   ├── post-cta/               # Call-to-action blocks

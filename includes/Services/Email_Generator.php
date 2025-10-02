@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Email Generator Service
  */
-class EmailGenerator {
+class Email_Generator {
 	/**
 	 * Default email generation options
 	 */
