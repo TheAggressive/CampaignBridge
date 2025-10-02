@@ -104,6 +104,7 @@ class Settings_Handler {
 	 * @param array $input Raw input array.
 	 * @param array $previous Previous settings with potentially encrypted API key.
 	 * @return string Encrypted API key for storage or empty string.
+	 * @throws \RuntimeException If encryption/decryption integrity check fails.
 	 */
 	private function sanitize_api_key( array $input, array $previous ): string {
 		$posted_api_key    = $input['api_key'] ?? '';
@@ -125,7 +126,7 @@ class Settings_Handler {
 					}
 				} catch ( \Throwable $e ) {
 					// Log error but don't expose details.
-					error_log( 'CampaignBridge: Invalid encrypted API key detected in settings' );
+					error_log( 'CampaignBridge: Invalid encrypted API key detected in settings' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 					add_settings_error(
 						'campaignbridge_messages',
 						'campaignbridge_api_key_corrupted',

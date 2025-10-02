@@ -211,7 +211,7 @@ class Performance_Optimizer {
 
 		// Log slow operations (> 1 second).
 		if ( $execution_time > 1.0 ) {
-			error_log(
+			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Production logging.
 				sprintf(
 					'[CAMPAIGNBRIDGE PERFORMANCE] Slow operation "%s": %.4fs, %s memory used',
 					$operation,

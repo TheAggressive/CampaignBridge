@@ -167,9 +167,9 @@ class Error_Handler {
 
 		// Use error_log for production or file_put_contents for development.
 		if ( WP_DEBUG ) {
-			file_put_contents( $this->log_file, $log_line, FILE_APPEND | LOCK_EX );
+			file_put_contents( $this->log_file, $log_line, FILE_APPEND | LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Logging only.
 		} else {
-			error_log( $log_line );
+			error_log( $log_line ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Production logging.
 		}
 	}
 
