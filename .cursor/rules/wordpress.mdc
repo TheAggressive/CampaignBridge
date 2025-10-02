@@ -326,6 +326,14 @@ public function test_hook_integration(): void {
 
 ## Documentation & Code Comments
 
+### Comment Requirements
+- **All comments must end with a full stop (period)** - both PHP and JavaScript
+- Single-line comments: `// This is a comment.`
+- Multi-line comments: Each line should end with a period
+- PHPDoc comments: All descriptions must end with a period
+- Inline comments: Must end with a period
+- Exception: Comments that are questions or exclamations may end with `?` or `!`
+
 ### PHPDoc Standards
 ```php
 /**

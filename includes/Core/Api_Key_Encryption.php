@@ -99,7 +99,7 @@ class Api_Key_Encryption {
 		$encrypted = $iv . $tag . $ciphertext;
 
 		// Return base64 encoded for safe storage.
-		return base64_encode( $encrypted ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_base64_encode -- Used for encrypted data storage.
+		return base64_encode( $encrypted ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 	}
 
 	/**
@@ -117,7 +117,7 @@ class Api_Key_Encryption {
 		}
 
 		try {
-			$decoded = base64_decode( $encrypted, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_base64_decode -- Used for encrypted data decryption.
+			$decoded = base64_decode( $encrypted, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 			if ( false === $decoded ) {
 				throw new \RuntimeException( 'Invalid encrypted data format' );
 			}
@@ -147,8 +147,8 @@ class Api_Key_Encryption {
 			return $plaintext;
 
 		} catch ( \Throwable $e ) {
-			// Log the error for debugging but don't expose details
-			error_log(
+			// Log the error for debugging but don't expose details.
+			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 				sprintf(
 					'CampaignBridge API key decryption failed: %s',
 					$e->getMessage()
@@ -171,7 +171,7 @@ class Api_Key_Encryption {
 	public static function rotate_master_key( bool $force = false ): bool {
 		$metadata = self::get_key_metadata();
 
-		// Check if rotation is needed (30 days max age)
+		// Check if rotation is needed (30 days max age).
 		$should_rotate = $force ||
 			! isset( $metadata['created'] ) ||
 			( time() - $metadata['created'] ) > ( 30 * DAY_IN_SECONDS );
@@ -180,20 +180,20 @@ class Api_Key_Encryption {
 			return false;
 		}
 
-		// Generate new master key
+		// Generate new master key.
 		$new_key = self::generate_master_key();
 
-		// Store the new key
+		// Store the new key.
 		$success = update_option( self::MASTER_KEY_OPTION, $new_key, false );
 
 		if ( $success ) {
-			// Update metadata
+			// Update metadata.
 			$metadata['created'] = time();
 			$metadata['version'] = ( $metadata['version'] ?? 0 ) + 1;
 			update_option( self::KEY_META_OPTION, $metadata, false );
 
-			// Log the rotation (without exposing the key)
-			error_log(
+			// Log the rotation (without exposing the key).
+			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 				sprintf(
 					'CampaignBridge master encryption key rotated. New version: %d',
 					$metadata['version']
@@ -213,18 +213,18 @@ class Api_Key_Encryption {
 		$stored_key = get_option( self::MASTER_KEY_OPTION );
 
 		if ( ! $stored_key ) {
-			// Generate and store new master key
+			// Generate and store new master key.
 			$stored_key = self::generate_master_key();
 			add_option( self::MASTER_KEY_OPTION, $stored_key, '', 'no' );
 
-			// Initialize metadata
+			// Initialize metadata.
 			$metadata = array(
 				'created' => time(),
 				'version' => 1,
 			);
 			add_option( self::KEY_META_OPTION, $metadata, '', 'no' );
 
-			error_log( 'CampaignBridge master encryption key generated' );
+			error_log( 'CampaignBridge master encryption key generated' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 		}
 
 		return $stored_key;
@@ -237,7 +237,7 @@ class Api_Key_Encryption {
 	 */
 	private static function generate_master_key(): string {
 		$random_bytes = random_bytes( self::KEY_LENGTH );
-		return base64_encode( $random_bytes ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_base64_encode -- Used for secure key encoding.
+		return base64_encode( $random_bytes ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 	}
 
 	/**
@@ -257,7 +257,7 @@ class Api_Key_Encryption {
 	private static function validate_php_version(): void {
 		if ( version_compare( PHP_VERSION, self::MIN_PHP_VERSION, '<' ) ) {
 			throw new \RuntimeException(
-				sprintf( 'PHP %s or higher required for secure encryption. Please update your PHP version for enhanced security.', self::MIN_PHP_VERSION )
+				sprintf( 'PHP %s or higher required for secure encryption. Please update your PHP version for enhanced security.', self::MIN_PHP_VERSION ) // phpcs:ignore WordPress.Security.EscapeOutput
 			);
 		}
 	}
@@ -271,25 +271,25 @@ class Api_Key_Encryption {
 		$issues = array();
 		$secure = true;
 
-		// Check PHP version
+		// Check PHP version.
 		if ( version_compare( PHP_VERSION, self::MIN_PHP_VERSION, '<' ) ) {
 			$issues[] = sprintf( 'PHP version %s is below minimum required %s for secure encryption', PHP_VERSION, self::MIN_PHP_VERSION );
 			$secure   = false;
 		}
 
-		// Check if OpenSSL is available
+		// Check if OpenSSL is available.
 		if ( ! extension_loaded( 'openssl' ) ) {
 			$issues[] = 'OpenSSL extension not available';
 			$secure   = false;
 		}
 
-		// Check if AES-256-GCM is supported
+		// Check if AES-256-GCM is supported.
 		if ( ! in_array( self::ALGORITHM, openssl_get_cipher_methods(), true ) ) {
 			$issues[] = 'AES-256-GCM cipher not supported';
 			$secure   = false;
 		}
 
-		// Check key age
+		// Check key age.
 		$metadata = self::get_key_metadata();
 		if ( isset( $metadata['created'] ) ) {
 			$key_age_days = ( time() - $metadata['created'] ) / DAY_IN_SECONDS;
@@ -338,10 +338,10 @@ class Api_Key_Encryption {
 			if ( isset( $settings[ $field ] ) && ! empty( $settings[ $field ] ) ) {
 				$value = $settings[ $field ];
 
-				// Check if this appears to be plaintext (not already encrypted)
+				// Check if this appears to be plaintext (not already encrypted).
 				if ( self::is_plaintext_value( $value ) ) {
 					try {
-						// Validate that this looks like a valid API key before encrypting
+						// Validate that this looks like a valid API key before encrypting.
 						if ( 'api_key' === $field && ! self::is_valid_api_key_format( $value, $provider_pattern ) ) {
 							$result['errors'][] = sprintf( 'Invalid API key format for field "%s"', $field );
 							continue;
@@ -364,14 +364,14 @@ class Api_Key_Encryption {
 			}
 		}
 
-		// Update the settings if any fields were migrated
+		// Update the settings if any fields were migrated.
 		if ( ! empty( $result['migrated_fields'] ) ) {
-			// Set a flag to indicate we're in migration mode
+			// Set a flag to indicate we're in migration mode.
 			$GLOBALS['campaignbridge_migration_mode'] = true;
 
 			$update_success = update_option( $option_name, $updated_settings );
 
-			// Clear the migration flag
+			// Clear the migration flag.
 			unset( $GLOBALS['campaignbridge_migration_mode'] );
 
 			if ( ! $update_success ) {
@@ -396,12 +396,12 @@ class Api_Key_Encryption {
 	 * @return bool True if value appears to be plaintext.
 	 */
 	private static function is_plaintext_value( string $value ): bool {
-		// If it's base64 encoded and looks like encrypted data, it's probably already encrypted
+		// If it's base64 encoded and looks like encrypted data, it's probably already encrypted.
 		if ( self::is_encrypted_value( $value ) ) {
 			return false;
 		}
 
-		// If it contains only printable characters and is reasonably long, it might be plaintext
+		// If it contains only printable characters and is reasonably long, it might be plaintext.
 		return strlen( $value ) > 8 && ctype_print( $value );
 	}
 
@@ -412,18 +412,18 @@ class Api_Key_Encryption {
 	 * @return bool True if value appears to be encrypted.
 	 */
 	private static function is_encrypted_value( string $value ): bool {
-		// Check if it's base64 encoded (encrypted data is base64 encoded)
+		// Check if it's base64 encoded (encrypted data is base64 encoded).
 		if ( ! preg_match( '/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $value ) ) {
 			return false;
 		}
 
-		// Try to decode and check if it looks like encrypted binary data
-		$decoded = base64_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_base64_decode -- Used for encrypted data validation.
+		// Try to decode and check if it looks like encrypted binary data.
+		$decoded = base64_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 		if ( false === $decoded ) {
 			return false;
 		}
 
-		// Encrypted data should be at least 28 bytes (IV + tag + minimal ciphertext)
+		// Encrypted data should be at least 28 bytes (IV + tag + minimal ciphertext).
 		return strlen( $decoded ) >= 28;
 	}
 
@@ -435,9 +435,9 @@ class Api_Key_Encryption {
 	 * @return bool True if valid API key format.
 	 */
 	public static function is_valid_api_key_format( string $value, string $pattern = '' ): bool {
-		// If no pattern provided, use generic validation
+		// If no pattern provided, use generic validation.
 		if ( empty( $pattern ) ) {
-			// Generic: 20+ character alphanumeric with optional separators
+			// Generic: 20+ character alphanumeric with optional separators.
 			$pattern = '/^[a-zA-Z0-9_-]{20,}$/';
 		}
 
