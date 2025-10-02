@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:disable WordPress.Files.FileName
 /**
  * Plugin bootstrap and orchestrator for CampaignBridge.
  *
@@ -47,11 +47,6 @@ class Plugin {
 	 * Plugin option name for settings persistence.
 	 */
 	private const OPTION_NAME = 'campaignbridge_settings';
-
-	/**
-	 * Default email service provider.
-	 */
-	private const DEFAULT_PROVIDER = 'html';
 
 	/**
 	 * Required capability for admin access.
@@ -289,7 +284,7 @@ class Plugin {
 
 		if ( ! empty( $result['migrated_fields'] ) ) {
 			// Log successful migration.
-			error_log(
+			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 				sprintf(
 					'CampaignBridge: Security migration completed. Migrated fields: %s',
 					implode( ', ', $result['migrated_fields'] )
@@ -310,6 +305,7 @@ class Plugin {
 							<strong>CampaignBridge Security Update:</strong>
 							<?php
 							printf(
+								// translators: %d is the number of fields migrated.
 								esc_html__( 'Successfully migrated %d sensitive fields to encrypted storage for enhanced security.', 'campaignbridge' ),
 								$result['success']
 							);
@@ -324,7 +320,7 @@ class Plugin {
 
 		// Handle any migration errors.
 		if ( ! empty( $result['errors'] ) ) {
-			error_log(
+			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 				sprintf(
 					'CampaignBridge: Security migration errors: %s',
 					implode( '; ', $result['errors'] )
