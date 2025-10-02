@@ -295,7 +295,7 @@ class Settings extends Admin {
 	 * @return string The current tab slug, defaults to 'general'.
 	 */
 	private static function get_current_tab(): string {
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'general';
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab parameter for UI display.
 
 		// Validate tab exists.
 		$valid_tabs = array( 'general', 'providers' );
