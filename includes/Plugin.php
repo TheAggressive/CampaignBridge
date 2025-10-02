@@ -19,16 +19,16 @@ declare(strict_types=1);
 
 namespace CampaignBridge;
 
-use CampaignBridge\Admin\AssetManager;
+use CampaignBridge\Admin\Asset_Manager;
 use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\Admin\Pages\PostTypes;
+use CampaignBridge\Admin\Pages\Post_Types;
 use CampaignBridge\Admin\Pages\Settings;
 use CampaignBridge\Admin\Pages\Status;
 use CampaignBridge\Admin\Pages\Editor;
-use CampaignBridge\Core\ApiKeyEncryption;
+use CampaignBridge\Core\Api_Key_Encryption;
 use CampaignBridge\Core\Service_Container;
-use CampaignBridge\Core\SettingsHandler;
-use CampaignBridge\PostTypes\EmailTemplate;
+use CampaignBridge\Core\Settings_Handler;
+use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\REST\Routes as RestRoutes;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -98,9 +98,9 @@ class Plugin {
 	/**
 	 * Settings handler instance.
 	 *
-	 * @var SettingsHandler
+	 * @var Settings_Handler
 	 */
-	private SettingsHandler $settings_handler;
+	private Settings_Handler $settings_handler;
 
 	/**
 	 * Initialize service container and providers.
@@ -118,7 +118,7 @@ class Plugin {
 			$this->service_container->initialize();
 
 			// Initialize settings handler.
-			$this->settings_handler = new SettingsHandler();
+			$this->settings_handler = new Settings_Handler();
 
 			// Get providers from service container.
 			$this->providers = array(
@@ -207,7 +207,7 @@ class Plugin {
 	 */
 	public function add_admin_menu(): void {
 		// Initialize shared state for all admin pages.
-		PostTypes::init_shared_state( self::OPTION_NAME, $this->providers );
+		Post_Types::init_shared_state( self::OPTION_NAME, $this->providers );
 		Settings::init_shared_state( self::OPTION_NAME, $this->providers );
 		Status::init_shared_state( self::OPTION_NAME, $this->providers );
 
@@ -217,7 +217,7 @@ class Plugin {
 			'CampaignBridge',
 			self::ADMIN_CAPABILITY,
 			'campaignbridge',
-			array( PostTypes::class, 'render' ),
+			array( Post_Types::class, 'render' ),
 			self::MENU_ICON,
 			self::MENU_POSITION
 		);
@@ -228,8 +228,8 @@ class Plugin {
 			'Post Types',
 			'Post Types',
 			self::ADMIN_CAPABILITY,
-			PostTypes::get_page_slug(),
-			array( PostTypes::class, 'render' )
+			Post_Types::get_page_slug(),
+			array( Post_Types::class, 'render' )
 		);
 
 		add_submenu_page(
@@ -273,7 +273,7 @@ class Plugin {
 	 */
 	public function run_security_migration(): void {
 		// Only run migration if encryption is available and we haven't migrated yet
-		if ( ! ApiKeyEncryption::security_check()['secure'] ) {
+		if ( ! Api_Key_Encryption::security_check()['secure'] ) {
 			return;
 		}
 
@@ -285,7 +285,7 @@ class Plugin {
 		}
 
 		// Run the migration
-		$result = ApiKeyEncryption::migrate_plaintext_keys( self::OPTION_NAME );
+		$result = Api_Key_Encryption::migrate_plaintext_keys( self::OPTION_NAME );
 
 		if ( ! empty( $result['migrated_fields'] ) ) {
 			// Log successful migration
@@ -345,12 +345,37 @@ class Plugin {
 	 * @return void
 	 */
 	public function register_settings(): void {
+		// Main settings option
 		register_setting(
 			'campaignbridge',
 			self::OPTION_NAME,
 			array(
 				'type'              => 'array',
 				'autoload'          => false, // [SECURE] Prevent sensitive data from being loaded on every request
+				'sanitize_callback' => array( $this->settings_handler, 'sanitize' ),
+				'default'           => array(),
+			)
+		);
+
+		// General settings tab
+		register_setting(
+			'campaignbridge_general',
+			self::OPTION_NAME,
+			array(
+				'type'              => 'array',
+				'autoload'          => false,
+				'sanitize_callback' => array( $this->settings_handler, 'sanitize' ),
+				'default'           => array(),
+			)
+		);
+
+		// Provider settings tab
+		register_setting(
+			'campaignbridge_providers',
+			self::OPTION_NAME,
+			array(
+				'type'              => 'array',
+				'autoload'          => false,
 				'sanitize_callback' => array( $this->settings_handler, 'sanitize' ),
 				'default'           => array(),
 			)
@@ -366,13 +391,13 @@ class Plugin {
 	 */
 	private function init_core_systems(): void {
 		// Initialize Asset Manager.
-		AssetManager::init();
+		Asset_Manager::init();
 
 		// Initialize Blocks system.
 		Blocks::init();
 
 		// Initialize Email Template CPT.
-		EmailTemplate::init();
+		Post_Type_Email_Template::init();
 	}
 
 	/**
@@ -389,7 +414,7 @@ class Plugin {
 
 		// Initialize Admin Pages.
 		Status::init();
-		PostTypes::init();
+		Post_Types::init();
 		Settings::init();
 		Editor::init();
 	}

@@ -130,8 +130,10 @@ class Routes {
 				'permission_callback' => array( __CLASS__, 'can_manage' ),
 				'args'                => array(
 					'post_type' => array(
-						'type'     => 'string',
-						'required' => false,
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field', // [SECURE]
+						'validate_callback' => array( __CLASS__, 'validate_post_type' ), // [SECURE]
 					),
 				),
 			)
@@ -156,12 +158,31 @@ class Routes {
 	}
 
 	/**
-	 * Whether current user can manage plugin settings.
-	 *
-	 * @return bool
+	 * Required capability for managing CampaignBridge settings.
 	 */
-	public static function can_manage() {
-		return current_user_can( 'manage_options' );
+	private const MANAGE_CAP = 'manage_options';
+
+	/**
+	 * Whether current user can manage plugin settings. // [SECURE]
+	 *
+	 * @return bool // [SECURE]
+	 */
+	public static function can_manage(): bool {
+		// [SECURE]
+		return current_user_can( self::MANAGE_CAP ); // [SECURE]
+	}
+
+	/**
+	 * Validate post type parameter. // [SECURE]
+	 *
+	 * @param string $value Post type value to validate
+	 * @return bool // [SECURE]
+	 */
+	public static function validate_post_type( string $value ): bool {
+		// [SECURE]
+		// Only allow valid post types that exist in WordPress
+		$post_types = get_post_types( array( 'public' => true ) );
+		return array_key_exists( $value, $post_types ); // [SECURE]
 	}
 
 	/**

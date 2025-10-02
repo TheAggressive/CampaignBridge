@@ -95,7 +95,7 @@ All namespaces under `CampaignBridge\...` must map correctly via your autoloader
   - [√] **Test:** Activate plugin → no `Class not found` fatals.
 
 - [√] **Service_Container**
-  - [√] Central registry for all services (Admin, PostTypes, Providers, REST, CLI).
+  - [√] Central registry for all services (Admin, Post_Types, Providers, REST, CLI).
   - [√] `get( id )` must always return the same instance.
   - [√] Should register hooks only once (idempotent).
   - [√] **Test:** `get('mailchimp_provider')` and `get('email_generator')` work; no double hooks.

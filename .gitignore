@@ -2,3 +2,5 @@ node_modules
 build
 dist
 vendor
+.cursor
+.vscode

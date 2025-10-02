@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - Comprehensive error handling
  * - WordPress security best practices
  */
-class ApiKeyEncryption {
+class Api_Key_Encryption {
 
 	/**
 	 * Encryption algorithm constant.

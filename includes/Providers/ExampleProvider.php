@@ -3,7 +3,7 @@
  * Example Provider Implementation for CampaignBridge.
  *
  * This is a template/example provider that demonstrates how to implement
- * the ProviderInterface and extend AbstractProvider. It serves as a
+ * the ProviderInterface and extend Abstract_Provider. It serves as a
  * starting point for creating new email service providers.
  *
  * To create a real provider, copy this file, rename it, and implement
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * This class demonstrates the recommended pattern for implementing providers.
  * Replace with actual provider logic when implementing real email services.
  */
-class ExampleProvider extends AbstractProvider {
+class ExampleProvider extends Abstract_Provider {
 	/**
 	 * Constructor.
 	 */

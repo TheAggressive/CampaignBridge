@@ -24,9 +24,11 @@ class Service_Container {
 	/**
 	 * Service name constants
 	 */
-	private const SERVICE_NOTICES     = 'notices';
-	private const SERVICE_DISPATCHER  = 'dispatcher';
-	private const SERVICE_REST_ROUTES = 'rest_routes';
+	private const SERVICE_NOTICES       = 'notices';
+	private const SERVICE_DISPATCHER    = 'dispatcher';
+	private const SERVICE_REST_ROUTES   = 'rest_routes';
+	private const SERVICE_PERFORMANCE   = 'performance_optimizer';
+	private const SERVICE_ERROR_HANDLER = 'error_handler';
 
 	/**
 	 * Error message constants
@@ -155,6 +157,8 @@ class Service_Container {
 		// ========== CORE SERVICES ==========
 		$this->register( self::SERVICE_NOTICES, \CampaignBridge\Notices::class );
 		$this->register( self::SERVICE_DISPATCHER, \CampaignBridge\Core\Dispatcher::class );
+		$this->register( self::SERVICE_PERFORMANCE, \CampaignBridge\Core\Performance_Optimizer::class );
+		$this->register( self::SERVICE_ERROR_HANDLER, \CampaignBridge\Core\Error_Handler::class );
 
 		// ========== EMAIL PROVIDERS ==========
 		$this->register(
@@ -163,8 +167,13 @@ class Service_Container {
 		);
 
 		$this->register(
+			'mailchimp_provider',
+			\CampaignBridge\Providers\Mailchimp_Provider::class
+		);
+
+		$this->register(
 			'html_provider',
-			\CampaignBridge\Providers\HtmlProvider::class
+			\CampaignBridge\Providers\Html_Provider::class
 		);
 
 		// ========== REST API ==========
@@ -172,8 +181,9 @@ class Service_Container {
 			self::SERVICE_REST_ROUTES,
 			function ( $container ) {
 				$providers = array(
-					'example' => $container->get( 'example_provider' ),
-					'html'    => $container->get( 'html_provider' ),
+					'example'   => $container->get( 'example_provider' ),
+					'mailchimp' => $container->get( 'mailchimp_provider' ),
+					'html'      => $container->get( 'html_provider' ),
 				);
 				return new \CampaignBridge\REST\Routes( $providers );
 			}

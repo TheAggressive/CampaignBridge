@@ -17,6 +17,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return void
  */
 function campaignbridge_autoloader( $class_name ) {
+	// Debug logging for troubleshooting
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( "CampaignBridge Autoloader: Attempting to load class: $class_name" );
+	}
+
 	// Configuration constants.
 	$namespace_prefix = 'CampaignBridge\\';
 	$base_directory   = __DIR__;

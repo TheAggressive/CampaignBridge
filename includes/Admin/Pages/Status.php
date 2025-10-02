@@ -17,7 +17,7 @@ namespace CampaignBridge\Admin\Pages;
 
 use CampaignBridge\Admin\Pages\Admin;
 use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\PostTypes\EmailTemplate;
+use CampaignBridge\Post_Types\Post_Type_Email_Template;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -60,7 +60,7 @@ class Status extends Admin {
 	 * Conditionally enqueue Status page-specific CSS and JavaScript assets.
 	 *
 	 * This method ensures that Status page assets are only loaded when viewing
-	 * the Status page. It uses the PageUtils helper to check if the current
+	 * the Status page. It uses the Page_Utils helper to check if the current
 	 * page matches this class's page_slug property.
 	 *
 	 * Asset Management:
@@ -74,7 +74,7 @@ class Status extends Admin {
 	 */
 	public static function enqueue_status_assets(): void {
 		// Only load assets on the specific Status page.
-		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
+		if ( ! \CampaignBridge\Admin\Page_Utils::is_current_page( static::get_page_slug() ) ) {
 			return;
 		}
 
@@ -234,7 +234,7 @@ class Status extends Admin {
 				<div class="cb-status__card">
 					<h3><?php esc_html_e( 'Total Templates', 'campaignbridge' ); ?></h3>
 					<?php
-					$total_templates = wp_count_posts( EmailTemplate::POST_TYPE );
+					$total_templates = wp_count_posts( Post_Type_Email_Template::POST_TYPE );
 					$total_count     = $total_templates->publish ?? 0;
 					?>
 					<p class="cb-status__value"><?php echo esc_html( $total_count ); ?></p>
@@ -243,7 +243,7 @@ class Status extends Admin {
 				<div class="cb-status__card">
 					<h3><?php esc_html_e( 'Email Templates', 'campaignbridge' ); ?></h3>
 					<?php
-					$templates      = EmailTemplate::get_templates();
+					$templates      = Post_Type_Email_Template::get_templates();
 					$template_count = count( $templates );
 					?>
 					<p class="cb-status__value"><?php echo esc_html( $template_count ); ?></p>
@@ -252,7 +252,7 @@ class Status extends Admin {
 				<div class="cb-status__card">
 					<h3><?php esc_html_e( 'Template Categories', 'campaignbridge' ); ?></h3>
 					<?php
-					$categories = EmailTemplate::get_template_categories();
+					$categories = Post_Type_Email_Template::get_template_categories();
 					$cat_count  = count( $categories );
 					?>
 					<p class="cb-status__value"><?php echo esc_html( $cat_count ); ?></p>

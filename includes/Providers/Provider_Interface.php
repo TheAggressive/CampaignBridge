@@ -20,7 +20,7 @@
  * ## Example Provider Structure:
  *
  * ```php
- * class MyProvider implements ProviderInterface {
+ * class MyProvider implements Provider_Interface {
  *     public function slug(): string { return 'myprovider'; }
  *     public function label(): string { return 'My Provider'; }
  *
@@ -56,7 +56,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Provider interface for CampaignBridge providers.
  */
-interface ProviderInterface {
+interface Provider_Interface {
 
 	/**
 	 * Get unique slug for the provider.

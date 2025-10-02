@@ -26,15 +26,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  * It provides a simple way to generate email-safe HTML without requiring
  * external API integrations.
  */
-class HtmlProvider extends AbstractProvider {
+class Html_Provider extends Abstract_Provider {
 	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		parent::__construct( 'html', __( 'HTML Export', 'campaignbridge' ) );
 
-		// Set custom API key pattern for HTML provider (not applicable)
-		$this->api_key_pattern = '/^$/'; // Empty pattern since no API key needed
+		// Set custom API key pattern for HTML provider (not applicable).
+		$this->api_key_pattern = '/^$/'; // Empty pattern since no API key needed.
 	}
 
 	/**
@@ -46,7 +46,7 @@ class HtmlProvider extends AbstractProvider {
 	 * @return bool Always true for HTML export.
 	 */
 	public function is_configured( array $settings ): bool {
-		return true; // HTML export requires no configuration
+		return true; // HTML export requires no configuration.
 	}
 
 	/**
@@ -94,17 +94,17 @@ class HtmlProvider extends AbstractProvider {
 	 */
 	public function send_campaign( array $blocks, array $settings ) {
 		try {
-			// Generate HTML content from blocks
+			// Generate HTML content from blocks.
 			$html_content = $this->generate_html_content( $blocks, $settings );
 
-			// Create downloadable file
+			// Create downloadable file.
 			$file_path = $this->create_html_file( $html_content );
 
 			if ( is_wp_error( $file_path ) ) {
 				return $file_path;
 			}
 
-			// Log successful export
+			// Log successful export.
 			$this->log(
 				'HTML export completed successfully',
 				array(
@@ -181,7 +181,7 @@ class HtmlProvider extends AbstractProvider {
 	 * @return array Redacted settings array.
 	 */
 	public function redact_settings( array $settings ): array {
-		// HTML export has no sensitive data to redact
+		// HTML export has no sensitive data to redact.
 		return $settings;
 	}
 
@@ -218,7 +218,7 @@ class HtmlProvider extends AbstractProvider {
 		$html .= '</head>' . "\n";
 		$html .= '<body>' . "\n";
 
-		// Add content sections
+		// Add content sections.
 		foreach ( $blocks as $section => $content ) {
 			$html .= "<!-- {$section} section -->\n";
 			$html .= $content . "\n";
@@ -237,7 +237,7 @@ class HtmlProvider extends AbstractProvider {
 	 * @return string|\WP_Error File path on success, WP_Error on failure.
 	 */
 	private function create_html_file( string $content ) {
-		// Create uploads directory if it doesn't exist
+		// Create uploads directory if it doesn't exist.
 		$upload_dir = wp_upload_dir();
 		$export_dir = $upload_dir['basedir'] . '/campaignbridge-exports/';
 
@@ -249,11 +249,11 @@ class HtmlProvider extends AbstractProvider {
 			);
 		}
 
-		// Generate unique filename
+		// Generate unique filename.
 		$filename  = 'campaign-export-' . date( 'Y-m-d-H-i-s' ) . '.html';
 		$file_path = $export_dir . $filename;
 
-		// Write file
+		// Write file.
 		$result = file_put_contents( $file_path, $content );
 
 		if ( false === $result ) {

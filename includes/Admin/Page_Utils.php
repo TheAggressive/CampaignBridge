@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Page Utilities: provides common page detection and management functions.
  */
-class PageUtils {
+class Page_Utils {
 	/**
 	 * WordPress screen ID patterns.
 	 */

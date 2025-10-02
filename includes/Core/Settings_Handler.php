@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Core;
 
-use CampaignBridge\Core\ApiKeyEncryption;
+use CampaignBridge\Core\Api_Key_Encryption;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Manages plugin settings sanitization and validation.
  */
-class SettingsHandler {
+class Settings_Handler {
 	/**
 	 * Default email service provider.
 	 */
@@ -46,7 +46,20 @@ class SettingsHandler {
 		// Skip nonce verification during migration to avoid wp_die() errors
 		if ( ! isset( $GLOBALS['campaignbridge_migration_mode'] ) || ! $GLOBALS['campaignbridge_migration_mode'] ) {
 			// Verify nonce for CSRF protection.
-			check_admin_referer( 'campaignbridge-options' );
+			// Check for the appropriate nonce action based on the current request
+			$nonce_action = 'campaignbridge-options'; // fallback
+
+			// Check if this is from a specific tab
+			if ( isset( $_POST['option_page'] ) ) {
+				$option_page = sanitize_key( wp_unslash( $_POST['option_page'] ) );
+				if ( $option_page === 'campaignbridge_general' ) {
+					$nonce_action = 'campaignbridge_general-options';
+				} elseif ( $option_page === 'campaignbridge_providers' ) {
+					$nonce_action = 'campaignbridge_providers-options';
+				}
+			}
+
+			check_admin_referer( $nonce_action );
 		}
 
 		return $this->sanitize_settings( $input );
@@ -107,7 +120,7 @@ class SettingsHandler {
 			if ( isset( $previous['api_key'] ) && ! empty( $previous['api_key'] ) ) {
 				// Verify existing key can be decrypted (validates it's properly encrypted)
 				try {
-					$decrypted = ApiKeyEncryption::decrypt( $previous['api_key'] );
+					$decrypted = Api_Key_Encryption::decrypt( $previous['api_key'] );
 					if ( ! empty( $decrypted ) ) {
 						return $previous['api_key']; // Return encrypted version for storage
 					}
@@ -133,7 +146,7 @@ class SettingsHandler {
 			// Get provider-specific validation pattern
 			$provider_pattern = $this->get_provider_api_key_pattern( $input['provider'] ?? '' );
 
-			if ( ! ApiKeyEncryption::is_valid_api_key_format( $sanitized_key, $provider_pattern ) ) {
+			if ( ! Api_Key_Encryption::is_valid_api_key_format( $sanitized_key, $provider_pattern ) ) {
 				add_settings_error(
 					'campaignbridge_messages',
 					'campaignbridge_api_key_invalid',
@@ -145,10 +158,10 @@ class SettingsHandler {
 
 			// Encrypt the API key before storage for ultra-secure handling
 			try {
-				$encrypted_key = ApiKeyEncryption::encrypt( $sanitized_key );
+				$encrypted_key = Api_Key_Encryption::encrypt( $sanitized_key );
 				if ( ! empty( $encrypted_key ) ) {
 					// Verify encryption/decryption round-trip for integrity
-					$decrypted_check = ApiKeyEncryption::decrypt( $encrypted_key );
+					$decrypted_check = Api_Key_Encryption::decrypt( $encrypted_key );
 					if ( $decrypted_check === $sanitized_key ) {
 						return $encrypted_key;
 					} else {

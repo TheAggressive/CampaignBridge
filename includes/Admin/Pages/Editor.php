@@ -96,7 +96,7 @@ class Editor extends Admin {
 	 * @return bool True if assets should be loaded.
 	 */
 	private static function should_load_assets(): bool {
-		return \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() );
+		return \CampaignBridge\Admin\Page_Utils::is_current_page( static::get_page_slug() );
 	}
 
 	/**

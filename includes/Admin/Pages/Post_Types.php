@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Post Types: handles the post type configuration interface.
  */
-class PostTypes extends Admin {
+class Post_Types extends Admin {
 	/**
 	 * Page slug for this admin page.
 	 *
@@ -67,7 +67,7 @@ class PostTypes extends Admin {
 	 * @return void
 	 */
 	public static function enqueue_post_types_assets(): void {
-		if ( ! \CampaignBridge\Admin\PageUtils::is_current_page( static::get_page_slug() ) ) {
+		if ( ! \CampaignBridge\Admin\Page_Utils::is_current_page( static::get_page_slug() ) ) {
 			return;
 		}
 

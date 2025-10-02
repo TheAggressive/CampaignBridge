@@ -113,16 +113,16 @@ campaignbridge/
 ├── includes/                    # Core PHP classes
 │   ├── Admin/                   # Admin interface classes
 │   │   ├── Pages/               # Admin page classes
-│   │   └── AssetManager.php     # Asset management
+│   │   └── Asset_Manager.php     # Asset management
 │   ├── Core/                    # Core functionality
 │   │   ├── Service_Container.php # Dependency injection
-│   │   └── SettingsHandler.php  # Settings management
-│   ├── PostTypes/               # Custom post type classes
-│   │   └── EmailTemplate.php    # Email template management
+│   │   └── Settings_Handler.php  # Settings management
+│   ├── Post_Types/               # Custom post type classes
+│   │   └── Post_Type_Email_Template.php    # Email template management
 │   ├── Providers/               # Email service providers
-│   │   ├── ProviderInterface.php # Provider contract
-│   │   ├── MailchimpProvider.php # Mailchimp integration
-│   │   └── HtmlProvider.php     # HTML export provider
+│   │   ├── Provider_Interface.php # Provider contract
+│   │   ├── Mailchimp_Provider.php # Mailchimp integration
+│   │   └── Html_Provider.php     # HTML export provider
 │   ├── REST/                    # REST API endpoints
 │   │   ├── Routes.php           # General REST routes
 │   │   ├── MailchimpRoutes.php  # Mailchimp-specific routes

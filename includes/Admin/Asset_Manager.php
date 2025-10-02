@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Asset Manager: provides methods to register scripts and styles.
  */
-class AssetManager {
+class Asset_Manager {
 
 	// === CONSTANTS ===
 
@@ -343,7 +343,7 @@ class AssetManager {
 	 */
 	public static function enqueue_global_assets(): void {
 		// Only enqueue global assets on CampaignBridge pages.
-		if ( ! \CampaignBridge\Admin\PageUtils::is_campaignbridge_page( get_current_screen()?->id ?? '' ) ) {
+		if ( ! \CampaignBridge\Admin\Page_Utils::is_campaignbridge_page( get_current_screen()?->id ?? '' ) ) {
 			return;
 		}
 

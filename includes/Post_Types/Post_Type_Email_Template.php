@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace CampaignBridge\PostTypes;
+namespace CampaignBridge\Post_Types;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Handles registration, capabilities, and management of the email template CPT.
  */
-class EmailTemplate {
+class Post_Type_Email_Template {
 	/**
 	 * Post type name.
 	 *

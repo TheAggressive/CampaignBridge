@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Provides common functionality like basic validation, logging, and
  * default implementations that can be overridden as needed.
  */
-abstract class AbstractProvider implements ProviderInterface {
+abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Provider slug identifier.
 	 *
