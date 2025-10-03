@@ -123,6 +123,12 @@ class Api_Key_Encryption {
 			return '';
 		}
 
+		// Check if the data appears to be encrypted (base64 encoded)
+		if ( ! self::is_encrypted_value( $encrypted ) ) {
+			// Data is not encrypted, return as-is (plain text)
+			return $encrypted;
+		}
+
 		try {
 			$decoded = base64_decode( $encrypted, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 			if ( false === $decoded ) {
@@ -418,20 +424,40 @@ class Api_Key_Encryption {
 	 * @param string $value The value to check.
 	 * @return bool True if value appears to be encrypted.
 	 */
-	private static function is_encrypted_value( string $value ): bool {
-		// Check if it's base64 encoded (encrypted data is base64 encoded).
+	public static function is_encrypted_value( string $value ): bool {
+		// Basic security: only accept reasonable length values
+		if ( strlen( $value ) < 20 || strlen( $value ) > 1000 ) {
+			return false;
+		}
+
+		// Check if it's valid base64 (encrypted data is base64 encoded).
 		if ( ! preg_match( '/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $value ) ) {
 			return false;
 		}
 
-		// Try to decode and check if it looks like encrypted binary data.
+		// Try to decode and validate the structure.
 		$decoded = base64_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 		if ( false === $decoded ) {
 			return false;
 		}
 
-		// Encrypted data should be at least 28 bytes (IV + tag + minimal ciphertext).
-		return strlen( $decoded ) >= 28;
+		// Must be at least IV (12) + tag (16) + minimal ciphertext (8) = 36 bytes
+		if ( strlen( $decoded ) < 36 ) {
+			return false;
+		}
+
+		// Additional validation: check that decoded data looks like binary (not just valid base64)
+		// Valid encrypted data should have high entropy (not just printable characters)
+		$printable_chars = 0;
+		$total_chars = strlen( $decoded );
+		for ( $i = 0; $i < min( $total_chars, 100 ); $i++ ) {
+			if ( ctype_print( $decoded[ $i ] ) ) {
+				$printable_chars++;
+			}
+		}
+
+		// If more than 80% of the data is printable, it's likely not encrypted binary data
+		return ( $printable_chars / min( $total_chars, 100 ) ) < 0.8;
 	}
 
 	/**

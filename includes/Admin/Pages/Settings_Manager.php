@@ -263,6 +263,11 @@ class Settings_Manager {
 			$sanitized['provider'] = sanitize_key( $settings['provider'] );
 		}
 
+		// Sanitize API key field.
+		if ( isset( $settings['api_key'] ) ) {
+			$sanitized['api_key'] = sanitize_text_field( $settings['api_key'] );
+		}
+
 		// Sanitize provider-specific settings.
 		$providers = Admin::get_providers();
 		if ( isset( $settings['provider'] ) && isset( $providers[ $settings['provider'] ] ) ) {
@@ -279,7 +284,66 @@ class Settings_Manager {
 			}
 		}
 
+		// Encrypt sensitive fields before saving.
+		$sanitized = self::encrypt_sensitive_fields( $sanitized );
+
 		return $sanitized;
+	}
+
+	/**
+	 * Encrypt sensitive fields before saving to database.
+	 *
+	 * @param array $settings Settings array to encrypt.
+	 * @return array Settings with sensitive fields encrypted.
+	 */
+	private static function encrypt_sensitive_fields( array $settings ): array {
+		// Only encrypt if the encryption system is available and secure
+		if ( ! class_exists( '\CampaignBridge\Core\Api_Key_Encryption' ) ) {
+			return $settings;
+		}
+
+		$security_check = \CampaignBridge\Core\Api_Key_Encryption::security_check();
+		if ( ! $security_check['secure'] ) {
+			return $settings;
+		}
+
+		// Fields that should be encrypted
+		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
+
+		foreach ( $sensitive_fields as $field ) {
+			if ( isset( $settings[ $field ] ) ) {
+				$value = $settings[ $field ];
+
+				// Skip encryption for empty values or masked values (containing •)
+				if ( empty( $value ) || strpos( $value, '•' ) !== false ) {
+					// Clear empty or masked values
+					$settings[ $field ] = '';
+					continue;
+				}
+
+				// Check if it's already encrypted
+				if ( ! \CampaignBridge\Core\Api_Key_Encryption::is_encrypted_value( $value ) ) {
+					try {
+						// Encrypt the value
+						$encrypted_value = \CampaignBridge\Core\Api_Key_Encryption::encrypt( $value );
+						if ( ! empty( $encrypted_value ) ) {
+							$settings[ $field ] = $encrypted_value;
+						}
+					} catch ( \Throwable $e ) {
+						// Log encryption failure but don't fail the save
+						error_log(
+							sprintf(
+								'CampaignBridge: Failed to encrypt field "%s": %s',
+								$field,
+								$e->getMessage()
+							)
+						);
+					}
+				}
+			}
+		}
+
+		return $settings;
 	}
 
 	/**
