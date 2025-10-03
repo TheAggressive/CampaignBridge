@@ -241,4 +241,195 @@ abstract class Abstract_Provider implements Provider_Interface {
 		}
 		return true;
 	}
+
+	/**
+	 * Sanitize provider-specific settings based on schema.
+	 *
+	 * Validates and sanitizes settings according to the provider's schema definition.
+	 * This ensures that only valid, properly formatted settings are stored and used.
+	 *
+	 * @param array $settings Raw settings array to sanitize.
+	 * @return array Sanitized settings array.
+	 */
+	public function sanitize_settings( array $settings ): array {
+		$schema    = $this->settings_schema();
+		$sanitized = array();
+
+		foreach ( $schema as $field_name => $field_schema ) {
+			$value = $settings[ $field_name ] ?? null;
+
+			// Skip fields that aren't in the input
+			if ( ! array_key_exists( $field_name, $settings ) ) {
+				continue;
+			}
+
+			// Apply sanitization based on field type
+			$sanitized_value = $this->sanitize_field_value( $value, $field_schema );
+
+			// Only include non-null values or use default if specified
+			if ( null !== $sanitized_value || isset( $field_schema['default'] ) ) {
+				$sanitized[ $field_name ] = $sanitized_value ?? $field_schema['default'];
+			}
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Sanitize a single field value based on its schema.
+	 *
+	 * @param mixed $value        Raw field value.
+	 * @param array $field_schema Field schema definition.
+	 * @return mixed Sanitized field value.
+	 */
+	private function sanitize_field_value( $value, array $field_schema ) {
+		$type = $field_schema['type'] ?? 'string';
+
+		switch ( $type ) {
+			case 'string':
+				return $this->sanitize_string_field( $value, $field_schema );
+
+			case 'boolean':
+				return $this->sanitize_boolean_field( $value );
+
+			case 'integer':
+				return $this->sanitize_integer_field( $value, $field_schema );
+
+			case 'email':
+				return $this->sanitize_email_field( $value );
+
+			case 'url':
+				return $this->sanitize_url_field( $value );
+
+			default:
+				// For unknown types, return as-is but log a warning
+				$this->log( "Unknown field type '{$type}' for field", array( 'field' => array_keys( $field_schema ) ) );
+				return $value;
+		}
+	}
+
+	/**
+	 * Sanitize string field value.
+	 *
+	 * @param mixed $value        Raw field value.
+	 * @param array $field_schema Field schema definition.
+	 * @return string|null Sanitized string value.
+	 */
+	private function sanitize_string_field( $value, array $field_schema ): ?string {
+		if ( ! is_string( $value ) && ! is_numeric( $value ) ) {
+			return null;
+		}
+
+		$value = (string) $value;
+
+		// Check length constraints
+		$min_length = $field_schema['min_length'] ?? 0;
+		$max_length = $field_schema['max_length'] ?? 1000;
+
+		if ( strlen( $value ) < $min_length || strlen( $value ) > $max_length ) {
+			return null;
+		}
+
+		// Apply pattern validation if specified
+		if ( isset( $field_schema['pattern'] ) ) {
+			if ( ! preg_match( $field_schema['pattern'], $value ) ) {
+				return null;
+			}
+		}
+
+		return sanitize_text_field( $value );
+	}
+
+	/**
+	 * Sanitize boolean field value.
+	 *
+	 * @param mixed $value Raw field value.
+	 * @return bool|null Sanitized boolean value.
+	 */
+	private function sanitize_boolean_field( $value ): ?bool {
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		if ( is_string( $value ) ) {
+			$lower_value = strtolower( $value );
+			if ( in_array( $lower_value, array( 'true', '1', 'yes', 'on' ), true ) ) {
+				return true;
+			}
+			if ( in_array( $lower_value, array( 'false', '0', 'no', 'off' ), true ) ) {
+				return false;
+			}
+		}
+
+		if ( is_numeric( $value ) ) {
+			return (bool) $value;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Sanitize integer field value.
+	 *
+	 * @param mixed $value        Raw field value.
+	 * @param array $field_schema Field schema definition.
+	 * @return int|null Sanitized integer value.
+	 */
+	private function sanitize_integer_field( $value, array $field_schema ): ?int {
+		if ( ! is_numeric( $value ) ) {
+			return null;
+		}
+
+		$value = (int) $value;
+
+		// Check range constraints
+		$min = $field_schema['min'] ?? PHP_INT_MIN;
+		$max = $field_schema['max'] ?? PHP_INT_MAX;
+
+		if ( $value < $min || $value > $max ) {
+			return null;
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Sanitize email field value.
+	 *
+	 * @param mixed $value Raw field value.
+	 * @return string|null Sanitized email value.
+	 */
+	private function sanitize_email_field( $value ): ?string {
+		if ( ! is_string( $value ) ) {
+			return null;
+		}
+
+		$value = sanitize_email( $value );
+
+		if ( ! is_email( $value ) ) {
+			return null;
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Sanitize URL field value.
+	 *
+	 * @param mixed $value Raw field value.
+	 * @return string|null Sanitized URL value.
+	 */
+	private function sanitize_url_field( $value ): ?string {
+		if ( ! is_string( $value ) ) {
+			return null;
+		}
+
+		$value = esc_url_raw( $value );
+
+		if ( empty( $value ) ) {
+			return null;
+		}
+
+		return $value;
+	}
 }

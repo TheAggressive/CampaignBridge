@@ -348,7 +348,7 @@ class Plugin {
 			array(
 				'type'              => 'array',
 				'autoload'          => false, // [SECURE] Prevent sensitive data from being loaded on every request
-				'sanitize_callback' => array( $this->settings_handler, 'sanitize' ),
+				'sanitize_callback' => array( 'CampaignBridge\Admin\Pages\Settings', 'sanitize_settings' ),
 				'default'           => array(),
 			)
 		);
@@ -360,7 +360,7 @@ class Plugin {
 			array(
 				'type'              => 'array',
 				'autoload'          => false,
-				'sanitize_callback' => array( $this->settings_handler, 'sanitize' ),
+				'sanitize_callback' => array( 'CampaignBridge\Admin\Pages\Settings', 'sanitize_settings' ),
 				'default'           => array(),
 			)
 		);
@@ -372,7 +372,7 @@ class Plugin {
 			array(
 				'type'              => 'array',
 				'autoload'          => false,
-				'sanitize_callback' => array( $this->settings_handler, 'sanitize' ),
+				'sanitize_callback' => array( 'CampaignBridge\Admin\Pages\Settings', 'sanitize_settings' ),
 				'default'           => array(),
 			)
 		);

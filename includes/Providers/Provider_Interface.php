@@ -184,4 +184,15 @@ interface Provider_Interface {
 	 * @return string Regex pattern for API key validation.
 	 */
 	public function get_api_key_pattern(): string;
+
+	/**
+	 * Sanitize provider-specific settings based on schema.
+	 *
+	 * Validates and sanitizes settings according to the provider's schema definition.
+	 * This ensures that only valid, properly formatted settings are stored and used.
+	 *
+	 * @param array $settings Raw settings array to sanitize.
+	 * @return array Sanitized settings array.
+	 */
+	public function sanitize_settings( array $settings ): array;
 }

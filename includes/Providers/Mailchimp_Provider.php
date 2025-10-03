@@ -67,7 +67,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * @return bool
 	 */
 	public function is_configured( array $settings ): bool {
-		$required_fields = array( 'api_key', 'audience_id' );
+		$required_fields = array( 'api_key' );
 		return $this->validate_required_settings( $settings, $required_fields );
 	}
 
@@ -79,8 +79,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * @return void
 	 */
 	public function render_settings_fields( array $settings, string $option_name ): void {
-		$api_key     = $settings['api_key'] ?? '';
-		$audience_id = $settings['audience_id'] ?? '';
+		$api_key = $settings['api_key'] ?? '';
 
 		?>
 		<tr>
@@ -97,24 +96,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 				/>
 				<p class="description">
 					<?php esc_html_e( 'Your Mailchimp API key (starts with letters and numbers, ends with -us followed by numbers)', 'campaignbridge' ); ?>
-				</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row"><?php esc_html_e( 'Audience/List ID', 'campaignbridge' ); ?></th>
-			<td>
-				<input
-					type="text"
-					name="<?php echo esc_attr( $option_name ); ?>[audience_id]"
-					value="<?php echo esc_attr( $audience_id ); ?>"
-					class="regular-text"
-					placeholder="a1b2c3d4e5f6g7h8i9j0"
-					pattern="[a-f0-9]+"
-					title="<?php esc_attr_e( 'Mailchimp audience ID (hexadecimal)', 'campaignbridge' ); ?>"
-					required
-				/>
-				<p class="description">
-					<?php esc_html_e( 'The ID of your Mailchimp audience/list', 'campaignbridge' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -140,8 +121,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 				);
 			}
 
-			$api_key     = $settings['api_key'];
-			$audience_id = $settings['audience_id'];
+			$api_key = $settings['api_key'];
 
 			// Create campaign data
 			$campaign_data = $this->prepare_campaign_data( $blocks, $settings );
@@ -213,19 +193,12 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 */
 	public function settings_schema(): array {
 		return array(
-			'api_key'     => array(
+			'api_key' => array(
 				'sensitive'  => true,
 				'required'   => true,
 				'pattern'    => $this->api_key_pattern,
 				'min_length' => 32,
 				'max_length' => 50,
-			),
-			'audience_id' => array(
-				'sensitive'  => false,
-				'required'   => true,
-				'pattern'    => '/^[a-f0-9]{10,}$/',
-				'min_length' => 10,
-				'max_length' => 20,
 			),
 		);
 	}
@@ -244,18 +217,24 @@ class Mailchimp_Provider extends Abstract_Provider {
 		// Combine all blocks into HTML content
 		$content_html = $this->combine_blocks_to_html( $blocks );
 
-		return array(
-			'type'       => 'regular',
-			'recipients' => array(
-				'list_id' => $settings['audience_id'],
-			),
-			'settings'   => array(
+		$campaign_data = array(
+			'type'     => 'regular',
+			'settings' => array(
 				'subject_line' => $subject,
 				'preview_text' => $preheader,
 				'from_name'    => $settings['from_name'] ?? '',
 				'reply_to'     => $settings['from_email'] ?? '',
 			),
 		);
+
+		// Only add recipients if audience_id is available
+		if ( ! empty( $settings['audience_id'] ) ) {
+			$campaign_data['recipients'] = array(
+				'list_id' => $settings['audience_id'],
+			);
+		}
+
+		return $campaign_data;
 	}
 
 	/**

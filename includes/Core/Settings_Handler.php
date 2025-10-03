@@ -76,7 +76,6 @@ class Settings_Handler {
 		$previous                    = get_option( 'campaignbridge_settings', array() );
 		$clean['provider']           = $this->sanitize_provider( $input );
 		$clean['api_key']            = $this->sanitize_api_key( $input, $previous );
-		$clean['audience_id']        = $this->sanitize_audience_id( $input );
 		$clean['from_name']          = $this->sanitize_from_name( $input );
 		$clean['from_email']         = $this->sanitize_from_email( $input );
 		$clean['exclude_post_types'] = $this->sanitize_post_types( $input );
@@ -190,28 +189,6 @@ class Settings_Handler {
 		return '';
 	}
 
-	/**
-	 * Sanitize the audience/list ID with alphanumeric validation.
-	 *
-	 * @param array $input Raw input array.
-	 * @return string Sanitized audience ID.
-	 */
-	private function sanitize_audience_id( array $input ): string {
-		$audience_id = $input['audience_id'] ?? '';
-
-		// Validate that audience ID is alphanumeric (Mailchimp audience IDs are alphanumeric).
-		if ( ! empty( $audience_id ) && ! preg_match( '/^[A-Za-z0-9]+$/', $audience_id ) ) {
-			add_settings_error(
-				'campaignbridge_messages',
-				'campaignbridge_audience_id_invalid',
-				__( 'Invalid audience ID format. Audience IDs should contain only letters and numbers.', 'campaignbridge' ),
-				'error'
-			);
-			return '';
-		}
-
-		return sanitize_text_field( $audience_id );
-	}
 
 	/**
 	 * Sanitize the default sender name.

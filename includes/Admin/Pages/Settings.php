@@ -1,10 +1,11 @@
 <?php
 /**
- * Settings for CampaignBridge Admin Interface.
+ * Settings Entry Point for CampaignBridge Admin Interface.
  *
- * Handles plugin settings configuration and email service provider integration.
+ * Main entry point for the plugin settings page that handles tab navigation,
+ * form submission, and delegates to specific tab implementations.
  *
- * @package CampaignBridge
+ * @package CampaignBridge\Admin\Pages
  * @since 0.1.0
  */
 
@@ -13,13 +14,20 @@ declare(strict_types=1);
 namespace CampaignBridge\Admin\Pages;
 
 use CampaignBridge\Admin\Pages\Admin;
+use CampaignBridge\Admin\Pages\Tabs\Settings_Tab_Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Settings: handles the plugin settings configuration interface.
+ * Settings: Main entry point for the plugin settings configuration interface.
+ *
+ * This class serves as the entry point for the settings page and handles:
+ * - Page initialization and asset loading
+ * - Form submission and processing
+ * - Tab navigation and rendering
+ * - Delegation to specific tab implementations
  */
 class Settings extends Admin {
 	/**
@@ -30,29 +38,9 @@ class Settings extends Admin {
 	protected static string $page_slug = 'campaignbridge-settings';
 
 	/**
-	 * Default provider slug.
-	 */
-	private const DEFAULT_PROVIDER = 'html';
-
-	/**
-	 * Settings field name.
-	 */
-	private const SETTINGS_FIELD = 'campaignbridge';
-
-	/**
-	 * Nonce action name.
-	 */
-	private const NONCE_ACTION = 'campaignbridge-options';
-
-	/**
 	 * Submit button text.
 	 */
 	private const SUBMIT_BUTTON_TEXT = 'Save Settings';
-
-	/**
-	 * Provider select name attribute.
-	 */
-	private const PROVIDER_FIELD_NAME = 'provider';
 
 	/**
 	 * Initialize the Settings page.
@@ -61,7 +49,11 @@ class Settings extends Admin {
 	 * @return void
 	 */
 	public static function init(): void {
+		// Initialize default tabs.
+		Settings_Tab_Manager::init_default_tabs();
+
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_settings_assets' ) );
+		add_action( 'admin_init', array( __CLASS__, 'handle_form_submission' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register_settings_sections' ) );
 	}
 
@@ -79,6 +71,7 @@ class Settings extends Admin {
 		wp_enqueue_style( 'campaignbridge-settings' );
 		wp_enqueue_script( 'campaignbridge-settings' );
 	}
+
 	/**
 	 * Render the Settings configuration page.
 	 *
@@ -90,7 +83,54 @@ class Settings extends Admin {
 			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'campaignbridge' ) );
 		}
 
-		self::render_settings_form();
+		self::render_settings_page();
+	}
+
+	/**
+	 * Handle form submission and validation.
+	 *
+	 * @since 0.1.0
+	 * @return void
+	 */
+	public static function handle_form_submission(): void {
+		if ( ! isset( $_POST['submit'] ) ) {
+			return;
+		}
+
+		// Get current tab for context-aware processing.
+		$current_tab = Settings_Tab_Manager::get_current_tab();
+
+		// Get submitted settings.
+		$new_settings = $_POST[ Settings_Manager::get_option_name() ] ?? array();
+
+		// Update settings through the manager (which handles nonce verification).
+		$success = Settings_Manager::update_settings( $new_settings, $current_tab );
+
+		if ( $success ) {
+			// Redirect to avoid form resubmission and preserve current tab.
+			$redirect_url = add_query_arg(
+				array(
+					'page'             => static::get_page_slug(),
+					'tab'              => $current_tab,
+					'settings-updated' => 'true',
+				),
+				admin_url( 'admin.php' )
+			);
+			wp_redirect( $redirect_url );
+			exit;
+		} else {
+			// Settings save failed - redirect back to settings page with error and preserve tab.
+			$redirect_url = add_query_arg(
+				array(
+					'page'           => static::get_page_slug(),
+					'tab'            => $current_tab,
+					'settings-error' => 'true',
+				),
+				admin_url( 'admin.php' )
+			);
+			wp_redirect( $redirect_url );
+			exit;
+		}
 	}
 
 	/**
@@ -101,221 +141,76 @@ class Settings extends Admin {
 	 */
 	public static function register_settings_sections(): void {
 		// Register sections based on current tab.
-		$current_tab = self::get_current_tab();
+		$current_tab = Settings_Tab_Manager::get_current_tab();
 
-		if ( 'general' === $current_tab ) {
-			// General settings section.
-			add_settings_section(
-				'campaignbridge_general',
-				__( 'General Settings', 'campaignbridge' ),
-				array( __CLASS__, 'render_general_section' ),
-				self::SETTINGS_FIELD . '_general'
-			);
-
-			// General settings fields.
-			add_settings_field(
-				'from_name',
-				__( 'From Name', 'campaignbridge' ),
-				array( __CLASS__, 'render_from_name_field' ),
-				self::SETTINGS_FIELD . '_general',
-				'campaignbridge_general'
-			);
-
-			add_settings_field(
-				'from_email',
-				__( 'From Email', 'campaignbridge' ),
-				array( __CLASS__, 'render_from_email_field' ),
-				self::SETTINGS_FIELD . '_general',
-				'campaignbridge_general'
-			);
-		} elseif ( 'providers' === $current_tab ) {
-			// Provider settings section.
-			add_settings_section(
-				'campaignbridge_providers',
-				__( 'Provider Settings', 'campaignbridge' ),
-				array( __CLASS__, 'render_provider_section' ),
-				self::SETTINGS_FIELD . '_providers'
-			);
-
-			// Provider settings fields.
-			add_settings_field(
-				'provider',
-				__( 'Provider', 'campaignbridge' ),
-				array( __CLASS__, 'render_provider_field' ),
-				self::SETTINGS_FIELD . '_providers',
-				'campaignbridge_providers'
-			);
-
-			// Provider-specific fields will be added dynamically in render_provider_field.
+		// Get the tab class and register its settings.
+		$tab_class = Settings_Tab_Manager::get_tab_class( $current_tab );
+		if ( $tab_class && class_exists( $tab_class ) ) {
+			$tab_class::register_settings();
 		}
 	}
 
 	/**
-	 * Render the general settings section description.
+	 * Sanitize settings input.
+	 *
+	 * This method is a compatibility wrapper that delegates to the Settings_Manager.
 	 *
 	 * @since 0.1.0
-	 * @return void.
+	 * @param array $input Raw input data from the form.
+	 * @return array Sanitized settings data.
 	 */
-	public static function render_general_section(): void {
-		echo '<p>' . esc_html__( 'Configure the default sender information for all campaign emails.', 'campaignbridge' ) . '</p>';
+	public static function sanitize_settings( array $input ): array {
+		// Delegate sanitization to the Settings_Manager.
+		return Settings_Manager::sanitize_settings( $input );
 	}
 
 	/**
-	 * Render the provider settings section description.
+	 * Render the complete settings page.
 	 *
 	 * @since 0.1.0
-	 * @return void.
+	 * @return void
 	 */
-	public static function render_provider_section(): void {
-		echo '<p>' . esc_html__( 'Select your email service provider and configure the connection settings.', 'campaignbridge' ) . '</p>';
-	}
-
-	/**
-	 * Render the from name field.
-	 *
-	 * @since 0.1.0
-	 * @return void.
-	 */
-	public static function render_from_name_field(): void {
-		$settings = self::get_settings();
-		$value    = $settings['from_name'] ?? '';
-
-		echo '<input type="text" name="' . esc_attr( self::get_option_name() ) . '[from_name]" value="' . esc_attr( $value ) . '" size="50" />';
-		echo '<p class="description">' . esc_html__( 'Default sender name for all emails.', 'campaignbridge' ) . '</p>';
-	}
-
-	/**
-	 * Render the from email field.
-	 *
-	 * @since 0.1.0
-	 * @return void.
-	 */
-	public static function render_from_email_field(): void {
-		$settings = self::get_settings();
-		$value    = $settings['from_email'] ?? '';
-
-		echo '<input type="email" name="' . esc_attr( self::get_option_name() ) . '[from_email]" value="' . esc_attr( $value ) . '" size="50" />';
-		echo '<p class="description">' . esc_html__( 'Default sender email address for all emails.', 'campaignbridge' ) . '</p>';
-	}
-
-	/**
-	 * Render the provider field.
-	 *
-	 * @since 0.1.0
-	 * @return void.
-	 */
-	public static function render_provider_field(): void {
-		$settings  = self::get_settings();
-		$providers = self::get_providers();
-		$provider  = self::get_selected_provider( $settings, $providers );
-
-		echo '<select name="' . esc_attr( self::get_option_name() . '[' . self::PROVIDER_FIELD_NAME . ']' ) . '">';
-		foreach ( $providers as $slug => $obj ) {
-			// Skip example provider in production dropdown.
-			if ( 'example' === $slug ) {
-				continue;
-			}
-			echo '<option value="' . esc_attr( $slug ) . '" ' . selected( $slug, $provider, false ) . '>' . esc_html( $obj->label() ) . '</option>';
-		}
-		echo '</select>';
-		echo '<p class="description">' . esc_html__( 'Choose which email client or export method to use.', 'campaignbridge' ) . '</p>';
-
-		// Render provider-specific fields.
-		if ( isset( $providers[ $provider ] ) ) {
-			echo '<div class="provider-specific-fields" style="margin-top: 16px;">';
-			$providers[ $provider ]->render_settings_fields( $settings, self::get_option_name() );
-			echo '</div>';
-		}
-	}
-
-	/**
-	 * Get the selected provider or default to html.
-	 *
-	 * @param array $settings  Current settings.
-	 * @param array $providers Available providers.
-	 * @return string The selected provider slug.
-	 */
-	private static function get_selected_provider( array $settings, array $providers ): string {
-		$current_provider = $settings['provider'] ?? self::DEFAULT_PROVIDER;
-
-		return ( isset( $providers[ $current_provider ] ) )
-			? $current_provider
-			: self::DEFAULT_PROVIDER;
-	}
-
-	/**
-	 * Render the settings form using WordPress Settings API.
-	 *
-	 * @return void.
-	 */
-	private static function render_settings_form(): void {
-		$current_tab = self::get_current_tab();
+	private static function render_settings_page(): void {
+		$current_tab  = Settings_Tab_Manager::get_current_tab();
+		$nonce_action = Settings_Manager::get_nonce_action( $current_tab );
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( self::get_page_title() ); ?></h1>
 
-			<?php self::display_messages(); ?>
+			<?php
+			// Display validation errors if any.
+			Settings_Manager::display_validation_errors();
 
-			<form method="post" action="options.php">
+			// Display success messages.
+			self::display_messages();
+
+			// Display save error if present.
+			if ( isset( $_GET['settings-error'] ) && 'true' === $_GET['settings-error'] ) {
+				echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Settings could not be saved. Please try again.', 'campaignbridge' ) . '</p></div>';
+			}
+			?>
+
+			<form method="post" action="">
+				<?php wp_nonce_field( $nonce_action, 'campaignbridge_settings_nonce' ); ?>
+
 				<?php
-				$current_tab    = self::get_current_tab();
-				$settings_field = ( 'general' === $current_tab ) ? self::SETTINGS_FIELD . '_general' : self::SETTINGS_FIELD . '_providers';
-				settings_fields( $settings_field );
+				// Set option_page for compatibility with old Settings_Handler.
+				$option_page = 'general' === $current_tab ? 'campaignbridge_general' : 'campaignbridge_providers';
 				?>
+				<input type="hidden" name="option_page" value="<?php echo esc_attr( $option_page ); ?>" />
 
-				<nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Secondary menu' ); ?>">
-					<a href="<?php echo esc_url( self::get_tab_url( 'general' ) ); ?>"
-						class="nav-tab<?php echo ( 'general' === $current_tab ) ? ' nav-tab-active' : ''; ?>">
-						<?php esc_html_e( 'General', 'campaignbridge' ); ?>
-					</a>
-					<a href="<?php echo esc_url( self::get_tab_url( 'providers' ) ); ?>"
-						class="nav-tab<?php echo ( 'providers' === $current_tab ) ? ' nav-tab-active' : ''; ?>">
-						<?php esc_html_e( 'Providers', 'campaignbridge' ); ?>
-					</a>
-				</nav>
+				<?php
+				// Render tab navigation.
+				Settings_Tab_Manager::render_navigation();
 
-				<div class="tab-content">
-					<?php
-					$current_tab    = self::get_current_tab();
-					$settings_field = ( 'general' === $current_tab ) ? self::SETTINGS_FIELD . '_general' : self::SETTINGS_FIELD . '_providers';
-					do_settings_sections( $settings_field );
-					?>
-				</div>
+				// Render current tab content.
+				Settings_Tab_Manager::render_current_tab();
+				?>
 
 				<?php submit_button( self::SUBMIT_BUTTON_TEXT ); ?>
 			</form>
 		</div>
 		<?php
-	}
-
-	/**
-	 * Get the current active tab from URL parameters.
-	 *
-	 * @since 0.1.0
-	 * @return string The current tab slug, defaults to 'general'.
-	 */
-	private static function get_current_tab(): string {
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab parameter for UI display.
-
-		// Validate tab exists.
-		$valid_tabs = array( 'general', 'providers' );
-		if ( ! in_array( $tab, $valid_tabs, true ) ) {
-			$tab = 'general';
-		}
-
-		return $tab;
-	}
-
-	/**
-	 * Get URL for a specific tab.
-	 *
-	 * @since 0.1.0
-	 * @param string $tab The tab slug.
-	 * @return string The URL for the tab.
-	 */
-	private static function get_tab_url( string $tab ): string {
-		$base_url = admin_url( 'admin.php?page=' . self::get_page_slug() );
-		return add_query_arg( 'tab', $tab, $base_url );
 	}
 
 	/**

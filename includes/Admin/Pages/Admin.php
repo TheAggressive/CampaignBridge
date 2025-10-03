@@ -94,7 +94,7 @@ abstract class Admin {
 	 * @since 0.1.0
 	 * @return string The option name.
 	 */
-	protected static function get_option_name(): string {
+	public static function get_option_name(): string {
 		return self::$option_name;
 	}
 
@@ -104,7 +104,7 @@ abstract class Admin {
 	 * @since 0.1.0
 	 * @return array<string,object> Map of provider slugs to provider instances.
 	 */
-	protected static function get_providers(): array {
+	public static function get_providers(): array {
 		return self::$providers;
 	}
 
@@ -114,7 +114,7 @@ abstract class Admin {
 	 * @since 0.1.0
 	 * @return array The current settings array, or empty array if no settings exist.
 	 */
-	protected static function get_settings(): array {
+	public static function get_settings(): array {
 		return get_option( self::$option_name, array() );
 	}
 
@@ -130,14 +130,14 @@ abstract class Admin {
 	protected static function get_decrypted_settings(): array {
 		$settings = self::get_settings();
 
-		// Decrypt sensitive fields
+		// Decrypt sensitive fields.
 		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
 		foreach ( $sensitive_fields as $field ) {
 			if ( isset( $settings[ $field ] ) && ! empty( $settings[ $field ] ) ) {
 				try {
 					$settings[ $field ] = Api_Key_Encryption::decrypt( $settings[ $field ] );
 				} catch ( \Throwable $e ) {
-					// Log error but don't expose sensitive details
+					// Log error but don't expose sensitive details.
 					error_log(
 						sprintf(
 							'CampaignBridge: Failed to decrypt sensitive field "%s": %s',
@@ -146,7 +146,7 @@ abstract class Admin {
 						)
 					);
 
-					// Remove corrupted sensitive data
+					// Remove corrupted sensitive data.
 					unset( $settings[ $field ] );
 				}
 			}

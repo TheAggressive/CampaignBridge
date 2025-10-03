@@ -8,9 +8,10 @@
       "name": "Listen for Xdebug",
       "type": "php",
       "request": "launch",
+      "hostname": "127.0.0.1",
       "port": 9003,
       "pathMappings": {
-        "/var/www/html/wp-content/plugins/campaignbridge": "${workspaceFolder}"
+        "/var/www/html/wp-content/plugins/campaignbridge": "${workspaceFolder}/"
       }
     },
     {
@@ -28,7 +29,9 @@
       "program": "${file}",
       "cwd": "${fileDirname}",
       "port": 9003,
-      "runtimeArgs": ["-dxdebug.start_with_request=yes"],
+      "runtimeArgs": [
+        "-dxdebug.start_with_request=yes"
+      ],
       "env": {
         "XDEBUG_MODE": "debug,develop",
         "XDEBUG_CONFIG": "client_port=${port}"

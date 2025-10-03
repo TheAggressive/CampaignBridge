@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return void
  */
 function campaignbridge_autoloader( $class_name ) {
-	// Debug logging for troubleshooting
+	// Debug logging for troubleshooting.
 	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 		error_log( "CampaignBridge Autoloader: Attempting to load class: $class_name" );
 	}
@@ -80,7 +80,7 @@ function campaignbridge_autoloader( $class_name ) {
  * @return bool True if path is valid, false otherwise.
  */
 function campaignbridge_validate_class_path( $relative_class ) {
-	// Prevent directory traversal.
+	// Basic validation - prevent obvious directory traversal.
 	if ( false !== strpos( $relative_class, '..' ) ) {
 		return false;
 	}
@@ -90,7 +90,7 @@ function campaignbridge_validate_class_path( $relative_class ) {
 		return false;
 	}
 
-	// Basic character validation.
+	// Allow alphanumeric, underscores, forward slashes, and backslashes.
 	if ( ! preg_match( '/^[a-zA-Z0-9_\/\\\\]+$/', $relative_class ) ) {
 		return false;
 	}
