@@ -299,9 +299,10 @@ class Mailchimp_Provider extends Abstract_Provider {
 	private function send_mailchimp_campaign( string $campaign_id, string $api_key ) {
 		$send_data = array( 'send' => true );
 
-		$response = wp_remote_patch(
+		$response = wp_remote_request(
 			self::API_BASE_URL . self::ENDPOINT_CAMPAIGNS . '/' . $campaign_id . '/actions/send',
 			array(
+				'method'  => 'PATCH',
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
 					'Content-Type'  => 'application/json',
