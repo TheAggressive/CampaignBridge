@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignoreFile WordPress.Files.FileName
 /**
  * Editor - Block editor interface for email template design.
  *

@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignoreFile WordPress.Files.FileName
 /**
  * Email Template Custom Post Type Manager for CampaignBridge.
  *

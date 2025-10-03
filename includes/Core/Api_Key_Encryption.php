@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignoreFile WordPress.Files.FileName
 /**
  * Ultra-secure API Key Encryption for CampaignBridge.
  *

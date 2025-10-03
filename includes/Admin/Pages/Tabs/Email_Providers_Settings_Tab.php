@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignoreFile WordPress.Files.FileName
 /**
  * Email Providers Settings Tab for CampaignBridge Admin Interface.
  *

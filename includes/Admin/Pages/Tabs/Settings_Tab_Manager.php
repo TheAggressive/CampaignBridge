@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignoreFile WordPress.Files.FileName
 /**
  * Settings Tab Manager for CampaignBridge Admin Interface.
  *

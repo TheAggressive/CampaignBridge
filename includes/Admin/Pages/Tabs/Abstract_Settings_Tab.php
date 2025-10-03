@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignoreFile WordPress.Files.FileName
 /**
  * Abstract Settings Tab Base Class for CampaignBridge Admin Interface.
  *

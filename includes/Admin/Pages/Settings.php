@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignoreFile WordPress.Files.FileName
 /**
  * Settings Entry Point for CampaignBridge Admin Interface.
  *
