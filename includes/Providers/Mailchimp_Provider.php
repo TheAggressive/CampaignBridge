@@ -37,7 +37,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * API endpoints
 	 */
-	private const ENDPOINT_LISTS     = '/lists';
 	private const ENDPOINT_CAMPAIGNS = '/campaigns';
 	private const ENDPOINT_TEMPLATES = '/templates';
 
@@ -92,7 +91,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 					placeholder="<?php echo esc_attr( $this->get_masked_api_key( $api_key ) ); ?>"
 					class="regular-text"
 					autocomplete="new-password"
-					required
 				/>
 				<p class="description">
 					<?php esc_html_e( 'Your Mailchimp API key (starts with letters and numbers, ends with -us followed by numbers)', 'campaignbridge' ); ?>

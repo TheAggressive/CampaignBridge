@@ -287,7 +287,7 @@ abstract class Abstract_Settings_Tab {
 	 * @return void
 	 */
 	protected static function render_field( string $field_name, string $field_type = 'text', array $attributes = array() ): void {
-		$settings = Settings_Manager::get_settings();
+		$settings = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
 		$value    = $settings[ $field_name ] ?? '';
 
 		$default_attributes = array(
@@ -329,7 +329,7 @@ abstract class Abstract_Settings_Tab {
 	 * @return void
 	 */
 	protected static function render_select_field( string $field_name, array $options, array $attributes = array() ): void {
-		$settings = Settings_Manager::get_settings();
+		$settings = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
 		$value    = $settings[ $field_name ] ?? '';
 
 		$default_attributes = array(
@@ -377,7 +377,7 @@ abstract class Abstract_Settings_Tab {
 	 * @return void
 	 */
 	protected static function render_textarea_field( string $field_name, array $attributes = array() ): void {
-		$settings = Settings_Manager::get_settings();
+		$settings = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
 		$value    = $settings[ $field_name ] ?? '';
 
 		$default_attributes = array(
@@ -416,7 +416,7 @@ abstract class Abstract_Settings_Tab {
 	 * @return void
 	 */
 	protected static function render_checkbox_field( string $field_name, array $attributes = array() ): void {
-		$settings = Settings_Manager::get_settings();
+		$settings = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
 		$value    = $settings[ $field_name ] ?? '';
 
 		$default_attributes = array(
@@ -565,7 +565,7 @@ abstract class Abstract_Settings_Tab {
 	 * @return void
 	 */
 	protected static function render_radio_field( string $field_name, array $options, array $attributes = array() ): void {
-		$settings = Settings_Manager::get_settings();
+		$settings = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
 		$value    = $settings[ $field_name ] ?? '';
 
 		$base_id = Settings_Manager::get_option_name() . '_' . $field_name;

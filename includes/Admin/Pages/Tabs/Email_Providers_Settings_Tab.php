@@ -198,7 +198,7 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 	public static function render_provider_field(): void {
 		self::display_field_errors( 'provider' );
 
-		$settings  = Settings_Manager::get_settings();
+		$settings  = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
 		$providers = Admin::get_providers();
 		$provider  = self::get_selected_provider( $settings, $providers );
 

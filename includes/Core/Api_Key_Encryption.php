@@ -110,6 +110,13 @@ class Api_Key_Encryption {
 	 * @throws \RuntimeException If decryption fails or data is corrupted.
 	 */
 	public static function decrypt( string $encrypted ): string {
+		// Security: Only allow admin users to decrypt sensitive data
+		if ( ! current_user_can( 'manage_options' ) ) {
+			throw new \RuntimeException(
+				'Unauthorized attempt to decrypt sensitive data. Admin access required.'
+			);
+		}
+
 		self::validate_php_version();
 
 		if ( empty( $encrypted ) ) {

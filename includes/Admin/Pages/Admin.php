@@ -127,7 +127,7 @@ abstract class Admin {
 	 * @since 0.1.0
 	 * @return array Settings array with decrypted sensitive fields.
 	 */
-	protected static function get_decrypted_settings(): array {
+	public static function get_decrypted_settings(): array {
 		$settings = self::get_settings();
 
 		// Decrypt sensitive fields.

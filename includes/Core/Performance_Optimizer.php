@@ -115,6 +115,11 @@ class Performance_Optimizer {
 	 * @return bool
 	 */
 	public function batch_update_post_meta( array $post_meta_updates ): bool {
+		// Security: Only allow admin users to perform bulk database operations
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+
 		global $wpdb;
 
 		// Use batch updates for better performance.

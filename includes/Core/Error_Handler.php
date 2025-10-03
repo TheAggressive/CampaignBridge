@@ -205,6 +205,11 @@ class Error_Handler {
 	 * @return int
 	 */
 	private function get_log_level(): int {
+		// Security: Only allow admin users to access log level settings
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return self::LOG_LEVEL_ERROR; // Default to most restrictive level for non-admins
+		}
+
 		$level = get_option( 'campaignbridge_log_level', 'INFO' );
 
 		return match ( strtoupper( $level ) ) {
