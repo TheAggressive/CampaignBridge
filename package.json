@@ -54,6 +54,7 @@
     "@wordpress/dependency-extraction-webpack-plugin": "^6.31.0",
     "@wordpress/dom-ready": "^4.31.0",
     "@wordpress/editor": "^14.31.0",
+    "@wordpress/env": "^10.32.0",
     "@wordpress/icons": "^10.31.0",
     "@wordpress/interface": "^9.16.0",
     "@wordpress/keyboard-shortcuts": "^5.31.0",

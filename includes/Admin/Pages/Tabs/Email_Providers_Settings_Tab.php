@@ -15,7 +15,7 @@ namespace CampaignBridge\Admin\Pages\Tabs;
 
 use CampaignBridge\Admin\Pages\Admin;
 use CampaignBridge\Admin\Pages\Settings_Manager;
-
+use CampaignBridge\Core\Api_Key_Encryption;
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -98,6 +98,9 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 	 * @return void
 	 */
 	public static function render(): void {
+		$settings = \CampaignBridge\Admin\Pages\Admin::get_settings();
+    print_r('api_key encrypted: ' . $settings['api_key'] );
+    print_r('<br/> api_key decrypted: ' . Api_Key_Encryption::decrypt( $settings['api_key'] ) );
 		?>
 		<div class="tab-content">
 			<?php do_settings_sections( 'campaignbridge_providers' ); ?>

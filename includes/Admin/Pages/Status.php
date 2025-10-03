@@ -312,9 +312,10 @@ class Status extends Admin {
 				<div class="cb-status__card">
 					<h3><?php esc_html_e( 'Post Types', 'campaignbridge' ); ?></h3>
 					<?php
-					$excluded_types = $settings['exclude_post_types'] ?? array();
-					$public_types   = get_post_types( array( 'public' => true ), 'names' );
-					$included_count = count( array_diff( $public_types, $excluded_types ) );
+					$excluded_types_raw = $settings['exclude_post_types'] ?? array();
+					$excluded_types     = is_array( $excluded_types_raw ) ? $excluded_types_raw : array();
+					$public_types       = get_post_types( array( 'public' => true ), 'names' );
+					$included_count     = count( array_diff( $public_types, $excluded_types ) );
 					?>
 					<p class="cb-status__value"><?php echo esc_html( $included_count ); ?></p>
 					<p class="cb-status__detail"><?php esc_html_e( 'Available for campaigns', 'campaignbridge' ); ?></p>
