@@ -33,10 +33,6 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 	 */
 	private const DEFAULT_PROVIDER = 'html';
 
-	/**
-	 * Provider field name attribute.
-	 */
-	private const PROVIDER_FIELD_NAME = 'provider';
 
 	/**
 	 * Get the tab slug (used as identifier and URL parameter).
@@ -120,26 +116,67 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 	}
 
 	/**
-	 * Validate settings for this tab.
+	 * Get field configuration for validation rules.
 	 *
 	 * @since 0.1.0
-	 * @param array $settings Settings to validate.
-	 * @return array Validation errors or empty array if valid.
+	 * @param string $field_name Field name.
+	 * @return array Field configuration array.
 	 */
-	public static function validate_settings( array $settings ): array {
-		$errors = array();
+	protected static function get_field_config( string $field_name ): array {
+		$config = array(
+			'provider' => array(
+				'label' => __( 'Email Service Provider', 'campaignbridge' ),
+				'type' => 'select',
+				'required' => true,
+				'options' => array_keys( Admin::get_providers() ),
+				'validate_callback' => array( __CLASS__, 'validate_provider_selection' ),
+				'sanitize_callback' => 'sanitize_key',
+			),
+		);
 
-		// Validate provider selection
-		if ( isset( $settings['provider'] ) ) {
-			$provider            = sanitize_key( $settings['provider'] );
-			$available_providers = array_keys( Admin::get_providers() );
+		return $config[ $field_name ] ?? parent::get_field_config( $field_name );
+	}
 
-			if ( ! in_array( $provider, $available_providers, true ) ) {
-				$errors['provider'] = __( 'Please select a valid email service provider.', 'campaignbridge' );
+	/**
+	 * Validate provider selection.
+	 *
+	 * @since 0.1.0
+	 * @param string $value Provider value.
+	 * @param string $field_name Field name.
+	 * @return string|null Error message or null if valid.
+	 */
+	public static function validate_provider_selection( $value, string $field_name ): ?string {
+		$available_providers = array_keys( Admin::get_providers() );
+
+		if ( ! in_array( $value, $available_providers, true ) ) {
+			return __( 'Please select a valid email service provider.', 'campaignbridge' );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Sanitize settings for this tab.
+	 *
+	 * @since 0.1.0
+	 * @param array $settings Settings to sanitize.
+	 * @return array Sanitized settings.
+	 */
+	public static function sanitize_settings( array $settings ): array {
+		$sanitized = array();
+
+		foreach ( static::get_tab_fields() as $field_name ) {
+			$value = $settings[ $field_name ] ?? '';
+			$config = static::get_field_config( $field_name );
+
+			if ( isset( $config['sanitize_callback'] ) && is_callable( $config['sanitize_callback'] ) ) {
+				$sanitized[ $field_name ] = call_user_func( $config['sanitize_callback'], $value );
+			} else {
+				$sanitized[ $field_name ] = sanitize_text_field( $value );
 			}
 		}
 
-		return $errors;
+		return $sanitized;
 	}
 
 	/**

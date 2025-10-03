@@ -111,36 +111,54 @@ class General_Settings_Tab extends Abstract_Settings_Tab {
 	}
 
 	/**
-	 * Validate settings for this tab.
+	 * Get field configuration for validation rules.
 	 *
 	 * @since 0.1.0
-	 * @param array $settings Settings to validate.
-	 * @return array Validation errors or empty array if valid.
+	 * @param string $field_name Field name.
+	 * @return array Field configuration array.
 	 */
-	public static function validate_settings( array $settings ): array {
-		$errors = array();
+	protected static function get_field_config( string $field_name ): array {
+		$config = array(
+			'from_name' => array(
+				'label' => __( 'From Name', 'campaignbridge' ),
+				'type' => 'text',
+				'required' => true,
+				'max_length' => 100,
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'from_email' => array(
+				'label' => __( 'From Email', 'campaignbridge' ),
+				'type' => 'email',
+				'required' => true,
+				'sanitize_callback' => 'sanitize_email',
+			),
+		);
 
-		// Validate from name
-		if ( isset( $settings['from_name'] ) ) {
-			$from_name = trim( $settings['from_name'] );
-			if ( empty( $from_name ) ) {
-				$errors['from_name'] = __( 'From Name is required.', 'campaignbridge' );
-			} elseif ( strlen( $from_name ) > 100 ) {
-				$errors['from_name'] = __( 'From Name must be less than 100 characters.', 'campaignbridge' );
+		return $config[ $field_name ] ?? parent::get_field_config( $field_name );
+	}
+
+	/**
+	 * Sanitize settings for this tab.
+	 *
+	 * @since 0.1.0
+	 * @param array $settings Settings to sanitize.
+	 * @return array Sanitized settings.
+	 */
+	public static function sanitize_settings( array $settings ): array {
+		$sanitized = array();
+
+		foreach ( static::get_tab_fields() as $field_name ) {
+			$value = $settings[ $field_name ] ?? '';
+			$config = static::get_field_config( $field_name );
+
+			if ( isset( $config['sanitize_callback'] ) && is_callable( $config['sanitize_callback'] ) ) {
+				$sanitized[ $field_name ] = call_user_func( $config['sanitize_callback'], $value );
+			} else {
+				$sanitized[ $field_name ] = sanitize_text_field( $value );
 			}
 		}
 
-		// Validate from email
-		if ( isset( $settings['from_email'] ) ) {
-			$from_email = trim( $settings['from_email'] );
-			if ( empty( $from_email ) ) {
-				$errors['from_email'] = __( 'From Email is required.', 'campaignbridge' );
-			} elseif ( ! is_email( $from_email ) ) {
-				$errors['from_email'] = __( 'Please enter a valid email address.', 'campaignbridge' );
-			}
-		}
-
-		return $errors;
+		return $sanitized;
 	}
 
 	/**
