@@ -102,7 +102,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 						</div>
 
 						<!-- Hidden edit field -->
-						<div class="api-key-edit" style="display: none; margin-top: 8px;">
+						<div class="api-key-edit" style="display: none;">
 							<input
 								type="password"
 								name="<?php echo esc_attr( $option_name ); ?>[api_key]"

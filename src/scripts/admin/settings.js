@@ -103,17 +103,37 @@ class CampaignBridgeSettings {
       return;
     }
 
+    // Validate Mailchimp API key pattern
+    const mailchimpPattern = /^[a-f0-9]{32}-us[0-9]+$/;
+    if (!mailchimpPattern.test(newValue)) {
+      this.showError(
+        input,
+        "Invalid Mailchimp API key format. Please check your Mailchimp API key.",
+      );
+      return;
+    }
+
     // Show loading state
     edit.querySelectorAll(".button").forEach((button) => {
       button.disabled = true;
     });
     input.disabled = true;
 
-    // Here you would typically make an AJAX call to validate the API key
-    // For now, we'll just simulate a successful save
-    setTimeout(() => {
-      this.completeSave(container, display, edit, input, newValue);
-    }, 1000);
+    // Make AJAX call to save settings
+    this.saveSettingsAjax(newValue)
+      .then((response) => {
+        console.log("CampaignBridgeSettings: AJAX response:", response);
+        this.completeSave(container, display, edit, input, newValue);
+      })
+      .catch((error) => {
+        console.error("CampaignBridgeSettings: AJAX error:", error);
+        this.showError(input, error.message || "Failed to save API key");
+        // Reset loading state
+        edit.querySelectorAll(".button").forEach((button) => {
+          button.disabled = false;
+        });
+        input.disabled = false;
+      });
   }
 
   /**
@@ -204,6 +224,48 @@ class CampaignBridgeSettings {
         notice.remove();
       }, 300);
     }, 3000);
+  }
+
+  /**
+   * Save settings via AJAX to WordPress admin-ajax.php
+   *
+   * @param {string} apiKey The API key to save
+   * @return {Promise} Promise that resolves on success, rejects on error
+   */
+  static saveSettingsAjax(apiKey) {
+    const ajaxUrl = window.campaignbridgeSettings?.ajaxUrl || "";
+    const nonce = window.campaignbridgeSettings?.nonce || "";
+    const action =
+      window.campaignbridgeSettings?.action || "campaignbridge_save_settings";
+
+    return fetch(ajaxUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        action: action,
+        nonce: nonce,
+        api_key: apiKey,
+        tab: "providers",
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (!data.success) {
+          throw new Error(data.data || "Failed to save settings");
+        }
+        return data;
+      })
+      .catch((error) => {
+        console.error("CampaignBridgeSettings: AJAX error:", error);
+        throw error;
+      });
   }
 
   /**
