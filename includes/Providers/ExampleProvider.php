@@ -68,19 +68,57 @@ class ExampleProvider extends Abstract_Provider {
 	public function render_settings_fields( array $settings, string $option_name ): void {
 		$api_key  = $settings['api_key'] ?? '';
 		$endpoint = $settings['endpoint'] ?? '';
+		$has_api_key = !empty($api_key);
 
 		?>
 		<tr>
 			<th scope="row"><?php echo esc_html__( 'API Key', 'campaignbridge' ); ?></th>
 			<td>
-				<input
-					type="password"
-					name="<?php echo esc_attr( $option_name ); ?>[api_key]"
-					value=""
-					placeholder="<?php echo esc_attr( $this->get_masked_api_key( $api_key ) ); ?>"
-					class="regular-text"
-					autocomplete="new-password"
-				/>
+				<div class="campaignbridge-api-key-field" data-has-key="<?php echo esc_attr( $has_api_key ? 'true' : 'false' ); ?>">
+					<?php if ($has_api_key) : ?>
+						<!-- Show masked API key when configured -->
+						<div class="api-key-display">
+							<input
+								type="text"
+								value="<?php echo esc_attr( $this->get_masked_api_key( $api_key ) ); ?>"
+								class="regular-text api-key-masked"
+								readonly
+								disabled
+							/>
+							<button type="button" class="button button-secondary api-key-toggle" aria-label="<?php esc_attr_e( 'Edit API Key', 'campaignbridge' ); ?>">
+								<?php esc_html_e( 'Change', 'campaignbridge' ); ?>
+							</button>
+						</div>
+
+						<!-- Hidden edit field -->
+						<div class="api-key-edit" style="display: none; margin-top: 8px;">
+							<input
+								type="password"
+								name="<?php echo esc_attr( $option_name ); ?>[api_key]"
+								value=""
+								class="regular-text api-key-input"
+								placeholder="<?php esc_attr_e( 'Enter new API key', 'campaignbridge' ); ?>"
+								autocomplete="new-password"
+							/>
+							<button type="button" class="button button-primary api-key-save">
+								<?php esc_html_e( 'Save', 'campaignbridge' ); ?>
+							</button>
+							<button type="button" class="button button-secondary api-key-cancel">
+								<?php esc_html_e( 'Cancel', 'campaignbridge' ); ?>
+							</button>
+						</div>
+					<?php else : ?>
+						<!-- Show empty field for initial setup -->
+						<input
+							type="password"
+							name="<?php echo esc_attr( $option_name ); ?>[api_key]"
+							value=""
+							class="regular-text api-key-input"
+							placeholder="<?php esc_attr_e( 'Enter your API key', 'campaignbridge' ); ?>"
+							autocomplete="new-password"
+						/>
+					<?php endif; ?>
+				</div>
 				<p class="description"><?php echo esc_html__( 'Your API key for the email service.', 'campaignbridge' ); ?></p>
 			</td>
 		</tr>

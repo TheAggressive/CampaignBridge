@@ -266,72 +266,6 @@ class Plugin {
 	 * @since 0.1.0
 	 * @return void
 	 */
-	public function run_security_migration(): void {
-		// Only run migration if encryption is available and we haven't migrated yet.
-		if ( ! Api_Key_Encryption::security_check()['secure'] ) {
-			return;
-		}
-
-		$migration_version = '1.0.0'; // Version when encryption was implemented.
-		$migrated_version  = get_option( 'campaignbridge_migration_version', '0.0.0' );
-
-		if ( version_compare( $migrated_version, $migration_version, '>=' ) ) {
-			return; // Already migrated.
-		}
-
-		// Run the migration.
-		$result = Api_Key_Encryption::migrate_plaintext_keys( self::OPTION_NAME );
-
-		if ( ! empty( $result['migrated_fields'] ) ) {
-			// Log successful migration.
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-				error_log(
-					sprintf(
-						'CampaignBridge: Security migration completed. Migrated fields: %s',
-						implode( ', ', $result['migrated_fields'] )
-					)
-				);
-			}
-
-			// Mark migration as complete.
-			update_option( 'campaignbridge_migration_version', $migration_version );
-
-			// Show admin notice about migration.
-			if ( current_user_can( 'manage_options' ) ) {
-				add_action(
-					'admin_notices',
-					function () use ( $result ) {
-						?>
-					<div class="notice notice-success is-dismissible">
-						<p>
-							<strong>CampaignBridge Security Update:</strong>
-							<?php
-							printf(
-								// translators: %d is the number of fields migrated.
-								esc_html__( 'Successfully migrated %d sensitive fields to encrypted storage for enhanced security.', 'campaignbridge' ),
-								$result['success']
-							);
-							?>
-						</p>
-					</div>
-						<?php
-					}
-				);
-			}
-		}
-
-		// Handle any migration errors.
-		if ( ! empty( $result['errors'] ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-				error_log(
-					sprintf(
-						'CampaignBridge: Security migration errors: %s',
-						implode( '; ', $result['errors'] )
-					)
-				);
-			}
-		}
-	}
 
 	/**
 	 * Register plugin settings with WordPress options API and sanitization.
@@ -410,7 +344,6 @@ class Plugin {
 		// Wire admin hooks.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
-		add_action( 'admin_init', array( $this, 'run_security_migration' ) );
 
 		// Initialize Admin Pages.
 		Status::init();
