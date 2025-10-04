@@ -125,7 +125,9 @@ class Settings_Handler {
 					}
 				} catch ( \Throwable $e ) {
 					// Log error but don't expose details.
-					error_log( 'CampaignBridge: Invalid encrypted API key detected in settings' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+						error_log( 'CampaignBridge: Invalid encrypted API key detected in settings' );
+					}
 					add_settings_error(
 						'campaignbridge_messages',
 						'campaignbridge_api_key_corrupted',
@@ -169,12 +171,14 @@ class Settings_Handler {
 				}
 			} catch ( \Throwable $e ) {
 				// Log error for debugging but don't expose sensitive details.
-				error_log(
-					sprintf(
-						'CampaignBridge API key encryption failed: %s',
-						$e->getMessage()
-					)
-				);
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log(
+						sprintf(
+							'CampaignBridge API key encryption failed: %s',
+							$e->getMessage()
+						)
+					);
+				}
 
 				add_settings_error(
 					'campaignbridge_messages',

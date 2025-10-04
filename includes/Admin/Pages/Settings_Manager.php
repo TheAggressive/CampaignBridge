@@ -331,13 +331,15 @@ class Settings_Manager {
 						}
 					} catch ( \Throwable $e ) {
 						// Log encryption failure but don't fail the save
-						error_log(
-							sprintf(
-								'CampaignBridge: Failed to encrypt field "%s": %s',
-								$field,
-								$e->getMessage()
-							)
-						);
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log(
+								sprintf(
+									'CampaignBridge: Failed to encrypt field "%s": %s',
+									$field,
+									$e->getMessage()
+								)
+							);
+						}
 					}
 				}
 			}

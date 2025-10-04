@@ -126,7 +126,7 @@ class Editor extends Admin {
 		}
 
 		// Log errors if any occurred.
-		if ( ! empty( $errors ) && defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
+		if ( ! empty( $errors ) && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log(
 				sprintf(
 					'[CampaignBridge] Some assets failed to load in Template Editor: %s',
@@ -151,7 +151,7 @@ class Editor extends Admin {
 			wp_enqueue_style( self::WP_CORE_STYLE );
 			return true;
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log(
 					sprintf(
 						'[CampaignBridge] Failed to enqueue WordPress core assets: %s',
@@ -180,7 +180,7 @@ class Editor extends Admin {
 			do_action( 'enqueue_block_editor_assets' );
 			return true;
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log(
 					sprintf(
 						'[CampaignBridge] Failed to enqueue third-party block assets: %s',
@@ -205,7 +205,7 @@ class Editor extends Admin {
 			wp_enqueue_script( self::PLUGIN_SCRIPT );
 			return true;
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log(
 					sprintf(
 						'[CampaignBridge] Failed to enqueue plugin assets: %s',
@@ -235,7 +235,7 @@ class Editor extends Admin {
 			}
 			return true;
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log(
 					sprintf(
 						'[CampaignBridge] Failed to enqueue global styles: %s',

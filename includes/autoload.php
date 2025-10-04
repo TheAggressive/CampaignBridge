@@ -151,7 +151,7 @@ function campaignbridge_validate_file_path( $file_path, $base_directory, $max_le
  * @return void
  */
 function campaignbridge_log_autoload_error( $message ) {
-	if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		error_log( 'CampaignBridge Autoloader: ' . $message );
 	}

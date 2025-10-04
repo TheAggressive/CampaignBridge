@@ -161,12 +161,14 @@ class Api_Key_Encryption {
 
 		} catch ( \Throwable $e ) {
 			// Log the error for debugging but don't expose details.
-			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-				sprintf(
-					'CampaignBridge API key decryption failed: %s',
-					$e->getMessage()
-				)
-			);
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+				error_log(
+					sprintf(
+						'CampaignBridge API key decryption failed: %s',
+						$e->getMessage()
+					)
+				);
+			}
 
 			throw new \RuntimeException( 'API key decryption failed' );
 		}
@@ -206,12 +208,14 @@ class Api_Key_Encryption {
 			update_option( self::KEY_META_OPTION, $metadata, false );
 
 			// Log the rotation (without exposing the key).
-			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-				sprintf(
-					'CampaignBridge master encryption key rotated. New version: %d',
-					$metadata['version']
-				)
-			);
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+				error_log(
+					sprintf(
+						'CampaignBridge master encryption key rotated. New version: %d',
+						$metadata['version']
+					)
+				);
+			}
 		}
 
 		return $success;
@@ -237,7 +241,9 @@ class Api_Key_Encryption {
 			);
 			add_option( self::KEY_META_OPTION, $metadata, '', 'no' );
 
-			error_log( 'CampaignBridge master encryption key generated' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+				error_log( 'CampaignBridge master encryption key generated' );
+			}
 		}
 
 		return $stored_key;
@@ -390,12 +396,14 @@ class Api_Key_Encryption {
 			if ( ! $update_success ) {
 				$result['errors'][] = 'Failed to save updated settings to database';
 			} else {
-				error_log(
-					sprintf(
-						'CampaignBridge: Successfully migrated %d sensitive fields to encrypted storage',
-						$result['success']
-					)
-				);
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log(
+						sprintf(
+							'CampaignBridge: Successfully migrated %d sensitive fields to encrypted storage',
+							$result['success']
+						)
+					);
+				}
 			}
 		}
 

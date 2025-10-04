@@ -94,9 +94,9 @@ function campaignbridge_activate() {
 	// Flush rewrite rules on activation.
 	flush_rewrite_rules();
 
-	// Log activation.
-	if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
-		error_log( 'CampaignBridge plugin activated successfully.' );
+	// Log activation (debug only).
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( 'CampaignBridge plugin activated successfully.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 	}
 }
 
@@ -110,9 +110,9 @@ function campaignbridge_deactivate() {
 	// Flush rewrite rules on deactivation.
 	flush_rewrite_rules();
 
-	// Log deactivation.
-	if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
-		error_log( 'CampaignBridge plugin deactivated.' );
+	// Log deactivation (debug only).
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( 'CampaignBridge plugin deactivated.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 	}
 }
 
@@ -150,9 +150,9 @@ try {
 		}
 	);
 
-	// Log the error for debugging.
-	if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
-		error_log( 'CampaignBridge Bootstrap Error: ' . $e->getMessage() );
-		error_log( 'Stack trace: ' . $e->getTraceAsString() );
+	// Log the error for debugging (debug only).
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( 'CampaignBridge Bootstrap Error: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+		error_log( 'Stack trace: ' . $e->getTraceAsString() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 	}
 }

@@ -187,13 +187,15 @@ class Dispatcher {
 						$decrypted_settings[ $field ] = Api_Key_Encryption::decrypt( $value );
 					} catch ( \Throwable $e ) {
 						// Log error but don't expose details.
-						error_log(
-							sprintf(
-								'CampaignBridge Dispatcher: Failed to decrypt sensitive field "%s": %s',
-								$field,
-								$e->getMessage()
-							)
-						);
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log(
+								sprintf(
+									'CampaignBridge Dispatcher: Failed to decrypt sensitive field "%s": %s',
+									$field,
+									$e->getMessage()
+								)
+							);
+						}
 
 						// Remove corrupted sensitive data rather than passing invalid data.
 						unset( $decrypted_settings[ $field ] );
@@ -218,7 +220,7 @@ class Dispatcher {
 		}
 
 		// Try to decode and check if it looks like encrypted binary data.
-		$decoded = base64_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_base64_decode -- Used for encrypted data validation.
+		$decoded = base64_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 		if ( false === $decoded ) {
 			return false;
 		}

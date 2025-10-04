@@ -137,7 +137,7 @@ class Plugin {
 	 */
 	private function handle_initialization_error( \Exception $e ): void {
 		// Log the error and show admin notice.
-		if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'CampaignBridge Plugin Error: ' . $e->getMessage() );
 		}
@@ -284,12 +284,14 @@ class Plugin {
 
 		if ( ! empty( $result['migrated_fields'] ) ) {
 			// Log successful migration.
-			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-				sprintf(
-					'CampaignBridge: Security migration completed. Migrated fields: %s',
-					implode( ', ', $result['migrated_fields'] )
-				)
-			);
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+				error_log(
+					sprintf(
+						'CampaignBridge: Security migration completed. Migrated fields: %s',
+						implode( ', ', $result['migrated_fields'] )
+					)
+				);
+			}
 
 			// Mark migration as complete.
 			update_option( 'campaignbridge_migration_version', $migration_version );
@@ -320,12 +322,14 @@ class Plugin {
 
 		// Handle any migration errors.
 		if ( ! empty( $result['errors'] ) ) {
-			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-				sprintf(
-					'CampaignBridge: Security migration errors: %s',
-					implode( '; ', $result['errors'] )
-				)
-			);
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+				error_log(
+					sprintf(
+						'CampaignBridge: Security migration errors: %s',
+						implode( '; ', $result['errors'] )
+					)
+				);
+			}
 		}
 	}
 

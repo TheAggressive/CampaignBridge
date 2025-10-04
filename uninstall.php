@@ -318,8 +318,8 @@ class CampaignBridge_Uninstaller {
 	 */
 	private static function log( string $message ) {
 		// Only log if WP_DEBUG is enabled.
-		if ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) {
-			error_log( '[CampaignBridge Uninstall] ' . $message );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[CampaignBridge Uninstall] ' . $message ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 		}
 	}
 

@@ -138,13 +138,15 @@ abstract class Admin {
 					$settings[ $field ] = Api_Key_Encryption::decrypt( $settings[ $field ] );
 				} catch ( \Throwable $e ) {
 					// Log error but don't expose sensitive details.
-					error_log(
-						sprintf(
-							'CampaignBridge: Failed to decrypt sensitive field "%s": %s',
-							$field,
-							$e->getMessage()
-						)
-					);
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log(
+							sprintf(
+								'CampaignBridge: Failed to decrypt sensitive field "%s": %s',
+								$field,
+								$e->getMessage()
+							)
+						);
+					}
 
 					// Remove corrupted sensitive data.
 					unset( $settings[ $field ] );
