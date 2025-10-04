@@ -88,22 +88,68 @@ class Settings_Manager {
 	}
 
 	/**
+	 * Validate general settings for WordPress Settings API.
+	 *
+	 * @since 0.1.0
+	 * @param array $input Input data to validate.
+	 * @return array Validated and sanitized settings.
+	 */
+	public static function validate_general_settings_callback( array $input ): array {
+		$errors = self::validate_general_settings( $input );
+
+		if ( ! empty( $errors ) ) {
+			// Store validation errors for display using WordPress Settings API
+			foreach ( $errors as $field => $message ) {
+				add_settings_error(
+					'campaignbridge_general',
+					"campaignbridge_{$field}",
+					$message,
+					'error'
+				);
+			}
+		}
+
+		return self::sanitize_settings( $input );
+	}
+
+	/**
+	 * Validate provider settings for WordPress Settings API.
+	 *
+	 * @since 0.1.0
+	 * @param array $input Input data to validate.
+	 * @return array Validated and sanitized settings.
+	 */
+	public static function validate_provider_settings_callback( array $input ): array {
+		$errors = self::validate_provider_settings( $input );
+
+		if ( ! empty( $errors ) ) {
+			// Store validation errors for display using WordPress Settings API
+			foreach ( $errors as $field => $message ) {
+				add_settings_error(
+					'campaignbridge_providers',
+					"campaignbridge_{$field}",
+					$message,
+					'error'
+				);
+			}
+		}
+
+		return self::sanitize_settings( $input );
+	}
+
+	/**
 	 * Update plugin settings with validation and sanitization.
+	 * This method is kept for backward compatibility but delegates to Settings API.
 	 *
 	 * @since 0.1.0
 	 * @param array  $new_settings New settings to save.
 	 * @param string $current_tab  Current active tab for context-aware validation.
 	 * @return bool True on success, false on failure.
+	 * @deprecated Use WordPress Settings API instead.
 	 */
 	public static function update_settings( array $new_settings, string $current_tab = '' ): bool {
-		// Determine the correct nonce action based on current tab.
-		$nonce_action = self::get_nonce_action( $current_tab );
-
-		// Verify nonce for security - use the correct nonce field name.
-		$nonce_field = 'campaignbridge_settings_nonce';
-		if ( ! wp_verify_nonce( $_POST[ $nonce_field ] ?? '', $nonce_action ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'campaignbridge' ) );
-		}
+		// For backward compatibility, still handle direct calls
+		// but prefer Settings API for new implementations
 
 		// Get existing settings to preserve other tabs' data.
 		$existing_settings = self::get_settings();

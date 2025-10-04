@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin\Pages\Tabs;
 
+use CampaignBridge\Admin\Pages\Settings_Manager;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -172,40 +174,44 @@ class General_Settings_Tab extends Abstract_Settings_Tab {
 	}
 
 	/**
-	 * Render the from name field.
+	 * Render the from name field using WordPress Settings API.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function render_from_name_field(): void {
-		self::display_field_errors( 'from_name' );
-
-		self::render_field(
-			'from_name',
-			'text',
-			array(
-				'description' => __( 'Default sender name for all emails.', 'campaignbridge' ),
-				'placeholder' => __( 'Your Name', 'campaignbridge' ),
-			)
-		);
+		$field_name = Settings_Manager::get_option_name() . '[from_name]';
+		$settings = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
+		$value = $settings['from_name'] ?? '';
+		?>
+		<input type="text"
+			   name="<?php echo esc_attr( $field_name ); ?>"
+			   id="<?php echo esc_attr( Settings_Manager::get_option_name() . '_from_name' ); ?>"
+			   value="<?php echo esc_attr( $value ); ?>"
+			   class="regular-text campaignbridge-field"
+			   placeholder="<?php esc_attr_e( 'Your Name', 'campaignbridge' ); ?>" />
+		<p class="description"><?php esc_html_e( 'Default sender name for all emails.', 'campaignbridge' ); ?></p>
+		<?php
 	}
 
 	/**
-	 * Render the from email field.
+	 * Render the from email field using WordPress Settings API.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function render_from_email_field(): void {
-		self::display_field_errors( 'from_email' );
-
-		self::render_field(
-			'from_email',
-			'email',
-			array(
-				'description' => __( 'Default sender email address for all emails.', 'campaignbridge' ),
-				'placeholder' => __( 'your-email@example.com', 'campaignbridge' ),
-			)
-		);
+		$field_name = Settings_Manager::get_option_name() . '[from_email]';
+		$settings = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
+		$value = $settings['from_email'] ?? '';
+		?>
+		<input type="email"
+			   name="<?php echo esc_attr( $field_name ); ?>"
+			   id="<?php echo esc_attr( Settings_Manager::get_option_name() . '_from_email' ); ?>"
+			   value="<?php echo esc_attr( $value ); ?>"
+			   class="regular-text campaignbridge-field"
+			   placeholder="<?php esc_attr_e( 'your-email@example.com', 'campaignbridge' ); ?>" />
+		<p class="description"><?php esc_html_e( 'Default sender email address for all emails.', 'campaignbridge' ); ?></p>
+		<?php
 	}
 }

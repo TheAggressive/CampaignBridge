@@ -92,15 +92,12 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 	}
 
 	/**
-	 * Render the tab content.
+	 * Render the tab content using WordPress Settings API.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function render(): void {
-		$settings = \CampaignBridge\Admin\Pages\Admin::get_settings();
-    print_r('api_key encrypted: ' . $settings['api_key'] );
-    print_r('<br/> api_key decrypted: ' . Api_Key_Encryption::decrypt( $settings['api_key'] ) );
 		?>
 		<div class="tab-content">
 			<?php do_settings_sections( 'campaignbridge_providers' ); ?>
@@ -193,14 +190,12 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 	}
 
 	/**
-	 * Render the provider field.
+	 * Render the provider field using WordPress Settings API.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function render_provider_field(): void {
-		self::display_field_errors( 'provider' );
-
 		$settings  = \CampaignBridge\Admin\Pages\Admin::get_decrypted_settings();
 		$providers = Admin::get_providers();
 		$provider  = self::get_selected_provider( $settings, $providers );
@@ -214,15 +209,22 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 			$options[ $slug ] = $obj->label();
 		}
 
-		self::render_select_field(
-			'provider',
-			$options,
-			array(
-				'description' => __( 'Choose which email client or export method to use.', 'campaignbridge' ),
-			)
-		);
+		// Use WordPress Settings API field rendering
+		$field_name = Settings_Manager::get_option_name() . '[provider]';
+		$current_value = $settings['provider'] ?? '';
 
-		// Render provider-specific fields.
+		?>
+		<select name="<?php echo esc_attr( $field_name ); ?>" id="<?php echo esc_attr( Settings_Manager::get_option_name() . '_provider' ); ?>" class="regular-text campaignbridge-field campaignbridge-select">
+			<?php foreach ( $options as $option_value => $option_label ) : ?>
+				<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $current_value, $option_value ); ?>>
+					<?php echo esc_html( $option_label ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<p class="description"><?php esc_html_e( 'Choose which email client or export method to use.', 'campaignbridge' ); ?></p>
+		<?php
+
+		// Render provider-specific fields using Settings API
 		if ( isset( $providers[ $provider ] ) ) {
 			echo '<div class="provider-specific-fields" style="margin-top: 16px;">';
 			$providers[ $provider ]->render_settings_fields( $settings, Settings_Manager::get_option_name() );

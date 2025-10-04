@@ -369,49 +369,23 @@ class Settings extends Admin {
 	}
 
 	/**
-	 * Handle form submission and validation.
+	 * Handle form submission and validation using WordPress Settings API.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function handle_form_submission(): void {
-		if ( ! isset( $_POST['submit'] ) ) {
-			return;
-		}
+		// WordPress Settings API handles form submission automatically
+		// We just need to handle any custom post-submission logic here
 
-		// Get current tab for context-aware processing.
-		$current_tab = Settings_Tab_Manager::get_current_tab();
-
-		// Get submitted settings.
-		$new_settings = $_POST[ Settings_Manager::get_option_name() ] ?? array();
-
-		// Update settings through the manager (which handles nonce verification).
-		$success = Settings_Manager::update_settings( $new_settings, $current_tab );
-
-		if ( $success ) {
-			// Redirect to avoid form resubmission and preserve current tab.
-			$redirect_url = add_query_arg(
-				array(
-					'page'             => static::get_page_slug(),
-					'tab'              => $current_tab,
-					'settings-updated' => 'true',
-				),
-				admin_url( 'admin.php' )
+		if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) {
+			// Settings were successfully updated
+			add_settings_error(
+				'campaignbridge_settings',
+				'settings_updated',
+				__( 'Settings saved successfully.', 'campaignbridge' ),
+				'success'
 			);
-			wp_redirect( $redirect_url );
-			exit;
-		} else {
-			// Settings save failed - redirect back to settings page with error and preserve tab.
-			$redirect_url = add_query_arg(
-				array(
-					'page'           => static::get_page_slug(),
-					'tab'            => $current_tab,
-					'settings-error' => 'true',
-				),
-				admin_url( 'admin.php' )
-			);
-			wp_redirect( $redirect_url );
-			exit;
 		}
 	}
 
@@ -422,6 +396,9 @@ class Settings extends Admin {
 	 * @return void
 	 */
 	public static function register_settings_sections(): void {
+		// Register all settings groups for all tabs
+		self::register_settings_groups();
+
 		// Register sections based on current tab.
 		$current_tab = Settings_Tab_Manager::get_current_tab();
 
@@ -430,6 +407,36 @@ class Settings extends Admin {
 		if ( $tab_class && class_exists( $tab_class ) ) {
 			$tab_class::register_settings();
 		}
+	}
+
+	/**
+	 * Register settings groups for all tabs using WordPress Settings API.
+	 *
+	 * @since 0.1.0
+	 * @return void
+	 */
+	private static function register_settings_groups(): void {
+		// General settings group
+		register_setting(
+			'campaignbridge_general',
+			Settings_Manager::get_option_name(),
+			array(
+				'type' => 'array',
+				'sanitize_callback' => array( Settings_Manager::class, 'validate_general_settings_callback' ),
+				'default' => array(),
+			)
+		);
+
+		// Providers settings group
+		register_setting(
+			'campaignbridge_providers',
+			Settings_Manager::get_option_name(),
+			array(
+				'type' => 'array',
+				'sanitize_callback' => array( Settings_Manager::class, 'validate_provider_settings_callback' ),
+				'default' => array(),
+			)
+		);
 	}
 
 	// === PAGE RENDERING ===
@@ -493,7 +500,7 @@ class Settings extends Admin {
 	}
 
 	/**
-	 * Render the settings form with tabs and content.
+	 * Render the settings form with tabs and content using WordPress Settings API.
 	 *
 	 * @since 0.1.0
 	 * @param string $current_tab Current active tab.
@@ -501,22 +508,19 @@ class Settings extends Admin {
 	 * @return void
 	 */
 	private static function render_settings_form( string $current_tab, string $nonce_action ): void {
+		// Determine the correct settings group for the current tab
+		$settings_group = 'general' === $current_tab ? 'campaignbridge_general' : 'campaignbridge_providers';
 		?>
 		<div class="wrap">
-			<form method="post" action="">
-				<?php wp_nonce_field( $nonce_action, 'campaignbridge_settings_nonce' ); ?>
-
+			<form method="post" action="options.php">
 				<?php
-				// Set option_page for compatibility with old Settings_Handler.
-				$option_page = 'general' === $current_tab ? 'campaignbridge_general' : 'campaignbridge_providers';
-				?>
-				<input type="hidden" name="option_page" value="<?php echo esc_attr( $option_page ); ?>" />
+				// Output security fields for the registered setting
+				settings_fields( $settings_group );
 
-				<?php
 				// Render tab navigation.
 				Settings_Tab_Manager::render_navigation();
 
-				// Render current tab content.
+				// Render current tab content using Settings API
 				Settings_Tab_Manager::render_current_tab();
 				?>
 
