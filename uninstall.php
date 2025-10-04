@@ -120,10 +120,6 @@ class CampaignBridge_Uninstaller {
 			$user_meta_deleted = self::cleanup_user_meta();
 			$success_count    += $user_meta_deleted;
 
-			// 5. Clean up post meta for any orphaned data.
-			$meta_deleted   = self::cleanup_orphaned_meta();
-			$success_count += $meta_deleted;
-
 			// Report results.
 			self::log(
 				sprintf(
@@ -138,7 +134,7 @@ class CampaignBridge_Uninstaller {
 			}
 		} catch ( \Exception $e ) {
 			self::log( 'CampaignBridge cleanup failed: ' . $e->getMessage() );
-			error_log( 'CampaignBridge Uninstall Error: ' . $e->getMessage() );
+			self::log( 'CampaignBridge Uninstall Error: ' . $e->getMessage() );
 		}
 	}
 
@@ -296,12 +292,6 @@ class CampaignBridge_Uninstaller {
 
 		return $deleted;
 	}
-
-	/**
-	 * Clean up orphaned post meta.
-	 *
-	 * @return int Number of orphaned meta entries deleted.
-	 */
 
 	/**
 	 * Clean up any plugin files if needed.
