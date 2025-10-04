@@ -98,7 +98,7 @@ class Settings_Manager {
 		$errors = self::validate_general_settings( $input );
 
 		if ( ! empty( $errors ) ) {
-			// Store validation errors for display using WordPress Settings API
+			// Add validation errors using WordPress Settings API
 			foreach ( $errors as $field => $message ) {
 				add_settings_error(
 					'campaignbridge_general',
@@ -123,7 +123,7 @@ class Settings_Manager {
 		$errors = self::validate_provider_settings( $input );
 
 		if ( ! empty( $errors ) ) {
-			// Store validation errors for display using WordPress Settings API
+			// Add validation errors using WordPress Settings API
 			foreach ( $errors as $field => $message ) {
 				add_settings_error(
 					'campaignbridge_providers',
@@ -137,93 +137,7 @@ class Settings_Manager {
 		return self::sanitize_settings( $input );
 	}
 
-	/**
-	 * Update plugin settings with validation and sanitization.
-	 * This method is kept for backward compatibility but delegates to Settings API.
-	 *
-	 * @since 0.1.0
-	 * @param array  $new_settings New settings to save.
-	 * @param string $current_tab  Current active tab for context-aware validation.
-	 * @return bool True on success, false on failure.
-	 * @deprecated Use WordPress Settings API instead.
-	 */
-	public static function update_settings( array $new_settings, string $current_tab = '' ): bool {
-		// For backward compatibility, still handle direct calls
-		// but prefer Settings API for new implementations
 
-		// Get existing settings to preserve other tabs' data.
-		$existing_settings = self::get_settings();
-
-		// Merge new settings with existing ones to preserve all data.
-		$merged_settings = self::merge_settings_by_tab( $existing_settings, $new_settings );
-
-		// Validate settings based on current tab.
-		$validation_errors = self::validate_settings( $merged_settings, $current_tab );
-
-		if ( ! empty( $validation_errors ) ) {
-			// Store validation errors for display.
-			self::store_validation_errors( $validation_errors );
-			return false;
-		}
-
-		// Sanitize the merged settings.
-		$sanitized_settings = self::sanitize_settings( $merged_settings );
-
-		// Update the option.
-		$success = update_option( self::OPTION_NAME, $sanitized_settings );
-
-		// update_option returns false if the new value is the same as the existing value.
-		// In this case, we should still consider it a success if no validation errors occurred.
-		if ( ! $success && empty( $validation_errors ) ) {
-			$existing_settings = self::get_settings();
-			$success           = $existing_settings === $sanitized_settings;
-		}
-
-		if ( $success ) {
-			// Clear validation errors on successful save.
-			self::clear_validation_errors();
-		}
-
-		return $success;
-	}
-
-	/**
-	 * Merge settings to prevent data loss between tabs.
-	 *
-	 * @since 0.1.0
-	 * @param array $existing_settings Existing settings from database.
-	 * @param array $new_settings      New settings being submitted.
-	 * @return array Merged settings.
-	 */
-	private static function merge_settings_by_tab( array $existing_settings, array $new_settings ): array {
-		// Simply merge all settings to preserve everything.
-		// This prevents one tab from clearing another's data.
-		return array_merge( $existing_settings, $new_settings );
-	}
-
-	/**
-	 * Validate settings based on current tab context.
-	 *
-	 * @since 0.1.0
-	 * @param array  $settings    Settings to validate.
-	 * @param string $current_tab Current tab for context-aware validation.
-	 * @return array Array of validation errors, empty if no errors.
-	 */
-	private static function validate_settings( array $settings, string $current_tab ): array {
-		$errors = array();
-
-		// General tab validation.
-		if ( 'general' === $current_tab || empty( $current_tab ) ) {
-			$errors = array_merge( $errors, self::validate_general_settings( $settings ) );
-		}
-
-		// Providers tab validation.
-		if ( 'providers' === $current_tab || empty( $current_tab ) ) {
-			$errors = array_merge( $errors, self::validate_provider_settings( $settings ) );
-		}
-
-		return $errors;
-	}
 
 	/**
 	 * Validate general settings fields.
@@ -394,59 +308,4 @@ class Settings_Manager {
 		return $settings;
 	}
 
-	/**
-	 * Store validation errors for display.
-	 *
-	 * @since 0.1.0
-	 * @param array $errors Validation errors.
-	 * @return void
-	 */
-	private static function store_validation_errors( array $errors ): void {
-		set_transient( 'campaignbridge_validation_errors', $errors, 300 ); // 5 minutes
-	}
-
-	/**
-	 * Clear stored validation errors.
-	 *
-	 * @since 0.1.0
-	 * @return void
-	 */
-	private static function clear_validation_errors(): void {
-		delete_transient( 'campaignbridge_validation_errors' );
-	}
-
-	/**
-	 * Get stored validation errors.
-	 *
-	 * @since 0.1.0
-	 * @return array Validation errors or empty array.
-	 */
-	public static function get_validation_errors(): array {
-		return get_transient( 'campaignbridge_validation_errors' ) ?: array();
-	}
-
-	/**
-	 * Display validation errors as admin notices.
-	 *
-	 * @since 0.1.0
-	 * @return void
-	 */
-	public static function display_validation_errors(): void {
-		$errors = self::get_validation_errors();
-
-		if ( empty( $errors ) ) {
-			return;
-		}
-
-		foreach ( $errors as $field => $message ) {
-			add_settings_error(
-				'campaignbridge_validation',
-				"campaignbridge_{$field}",
-				$message,
-				'error'
-			);
-		}
-
-		settings_errors( 'campaignbridge_validation' );
-	}
 }

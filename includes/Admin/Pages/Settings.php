@@ -369,17 +369,15 @@ class Settings extends Admin {
 	}
 
 	/**
-	 * Handle form submission and validation using WordPress Settings API.
+	 * Handle form submission using WordPress Settings API.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
 	public static function handle_form_submission(): void {
 		// WordPress Settings API handles form submission automatically
-		// We just need to handle any custom post-submission logic here
-
+		// Display success message if settings were updated
 		if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) {
-			// Settings were successfully updated
 			add_settings_error(
 				'campaignbridge_settings',
 				'settings_updated',
@@ -483,18 +481,15 @@ class Settings extends Admin {
 		<div class="wrap">
 			<h1><?php echo esc_html( self::get_page_title() ); ?></h1>
 
-			<?php
-			// Display validation errors if any.
-			Settings_Manager::display_validation_errors();
+		<?php
+		// Display success messages.
+		self::display_messages();
 
-			// Display success messages.
-			self::display_messages();
-
-			// Display save error if present.
-			if ( isset( $_GET['settings-error'] ) && 'true' === $_GET['settings-error'] ) {
-				echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Settings could not be saved. Please try again.', 'campaignbridge' ) . '</p></div>';
-			}
-			?>
+		// Display save error if present.
+		if ( isset( $_GET['settings-error'] ) && 'true' === $_GET['settings-error'] ) {
+			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Settings could not be saved. Please try again.', 'campaignbridge' ) . '</p></div>';
+		}
+		?>
 		</div>
 		<?php
 	}

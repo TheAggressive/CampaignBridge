@@ -448,21 +448,16 @@ abstract class Abstract_Settings_Tab {
 	}
 
 	/**
-	 * Display validation errors for a specific field.
+	 * Display validation errors for a specific field using WordPress Settings API.
 	 *
 	 * @since 0.1.0
 	 * @param string $field_name Field name to check for errors.
 	 * @return void
 	 */
 	protected static function display_field_errors( string $field_name ): void {
-		$errors = Settings_Manager::get_validation_errors();
-
-		if ( isset( $errors[ $field_name ] ) ) {
-			printf(
-				'<div class="notice notice-error"><p>%s</p></div>',
-				esc_html( $errors[ $field_name ] )
-			);
-		}
+		// WordPress Settings API handles error display automatically
+		// Individual field errors are shown by the Settings API
+		// This method is kept for backward compatibility but does nothing
 	}
 
 	/**
@@ -475,7 +470,8 @@ abstract class Abstract_Settings_Tab {
 	 * @return void
 	 */
 	protected static function render_field_group( string $field_name, string $field_type = 'text', array $attributes = array() ): void {
-		$has_error = ! empty( Settings_Manager::get_validation_errors()[ $field_name ] );
+		// WordPress Settings API handles error styling automatically
+		$has_error = false;
 		$field_classes = self::get_field_css_classes( $field_type, $has_error );
 
 		printf(
