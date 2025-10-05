@@ -46,6 +46,26 @@ class Post_Types extends Admin {
 	private const SUBMIT_BUTTON_TEXT = 'Save Post Types';
 
 	/**
+	 * Get the option name for storing post types settings.
+	 *
+	 * @since 0.1.0
+	 * @return string The option name.
+	 */
+	public static function get_option_name(): string {
+		return self::SETTINGS_FIELD;
+	}
+
+	/**
+	 * Get the current post types settings.
+	 *
+	 * @since 0.1.0
+	 * @return array The current settings array.
+	 */
+	public static function get_settings(): array {
+		return get_option( self::get_option_name(), array() );
+	}
+
+	/**
 	 * Form field name for included post types.
 	 */
 	private const INCLUDED_POST_TYPES_FIELD = 'included_post_types';
@@ -58,6 +78,51 @@ class Post_Types extends Admin {
 	 */
 	public static function init(): void {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_post_types_assets' ) );
+		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
+	}
+
+	/**
+	 * Register settings for the Post Types page.
+	 *
+	 * @since 0.1.0
+	 * @return void
+	 */
+	public static function register_settings(): void {
+		register_setting(
+			self::SETTINGS_FIELD,
+			self::get_option_name(),
+			array(
+				'type' => 'array',
+				'sanitize_callback' => array( __CLASS__, 'sanitize_settings' ),
+				'default' => array(),
+			)
+		);
+	}
+
+	/**
+	 * Sanitize settings for the Post Types page.
+	 *
+	 * @since 0.1.0
+	 * @param array $settings Raw settings array.
+	 * @return array Sanitized settings array.
+	 */
+	public static function sanitize_settings( array $settings ): array {
+		// Debug: Log what we're receiving
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'CampaignBridge Post_Types sanitize_settings received: ' . print_r( $settings, true ) );
+		}
+
+		$sanitized = array();
+
+		if ( isset( $settings[ self::INCLUDED_POST_TYPES_FIELD ] ) && is_array( $settings[ self::INCLUDED_POST_TYPES_FIELD ] ) ) {
+			$sanitized[ self::INCLUDED_POST_TYPES_FIELD ] = array_map( 'sanitize_key', $settings[ self::INCLUDED_POST_TYPES_FIELD ] );
+		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'CampaignBridge Post_Types sanitize_settings returning: ' . print_r( $sanitized, true ) );
+		}
+
+		return $sanitized;
 	}
 
 	/**
@@ -96,17 +161,17 @@ class Post_Types extends Admin {
 	 * @return array List of post type names that are included.
 	 */
 	private static function get_included_post_types( array $settings ): array {
-		$public_types   = get_post_types( array( 'public' => true ), 'objects' );
-		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] )
-			? array_map( 'sanitize_key', $settings['exclude_post_types'] )
-			: array();
+		$included_types = isset( $settings[ self::INCLUDED_POST_TYPES_FIELD ] ) && is_array( $settings[ self::INCLUDED_POST_TYPES_FIELD ] )
+			? array_map( 'sanitize_key', $settings[ self::INCLUDED_POST_TYPES_FIELD ] )
+			: null; // null means use default (all public post types)
 
-		$included_names = array();
-		foreach ( $public_types as $obj ) {
-			$included_names[] = $obj->name;
+		// If no specific types are configured, include all public post types by default
+		if ( $included_types === null ) {
+			$public_types = get_post_types( array( 'public' => true ), 'names' );
+			$included_types = array_values( $public_types );
 		}
 
-		return array_values( array_diff( $included_names, $excluded_types ) );
+		return $included_types;
 	}
 
 	/**

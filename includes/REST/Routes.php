@@ -324,23 +324,31 @@ class Routes {
 			return $rate_limit;
 		}
 
-		$settings = self::get_safe_settings();
+		// Get Post_Types settings instead of main settings
+		$post_types_settings = get_option( 'campaignbridge_post_types', array() );
 
-		// Sanitize and validate excluded post types with enhanced security.
-		$excluded_types = array();
-		if ( isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ) {
-			foreach ( $settings['exclude_post_types'] as $post_type ) {
+		// Get included post types (default to all public if none specified)
+		$included_types = array();
+		if ( isset( $post_types_settings['included_post_types'] ) && is_array( $post_types_settings['included_post_types'] ) ) {
+			foreach ( $post_types_settings['included_post_types'] as $post_type ) {
 				$sanitized = sanitize_key( $post_type );
 				// Additional validation: ensure post type contains only alphanumeric characters and underscores.
 				if ( preg_match( '/^[a-zA-Z0-9_]+$/', $sanitized ) ) {
-					$excluded_types[] = $sanitized;
+					$included_types[] = $sanitized;
 				}
 			}
 		}
+
+		// If no post types are explicitly included, include all public post types
+		if ( empty( $included_types ) ) {
+			$all_public     = get_post_types( array( 'public' => true ), 'names' );
+			$included_types = array_values( $all_public );
+		}
+
 		$objs  = get_post_types( array( 'public' => true ), 'objects' );
 		$items = array();
 		foreach ( $objs as $obj ) {
-			if ( in_array( $obj->name, $excluded_types, true ) ) {
+			if ( ! in_array( $obj->name, $included_types, true ) ) {
 				continue;
 			}
 			$items[] = array(

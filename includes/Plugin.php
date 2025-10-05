@@ -278,43 +278,6 @@ class Plugin {
 	 * @since 0.1.0
 	 * @return void
 	 */
-	public function register_settings(): void {
-		// Main settings option.
-		register_setting(
-			'campaignbridge',
-			self::OPTION_NAME,
-			array(
-				'type'              => 'array',
-				'autoload'          => false, // [SECURE] Prevent sensitive data from being loaded on every request
-				'sanitize_callback' => array( 'CampaignBridge\Admin\Pages\Settings', 'sanitize_settings' ),
-				'default'           => array(),
-			)
-		);
-
-		// General settings tab.
-		register_setting(
-			'campaignbridge_general',
-			self::OPTION_NAME,
-			array(
-				'type'              => 'array',
-				'autoload'          => false,
-				'sanitize_callback' => array( 'CampaignBridge\Admin\Pages\Settings', 'sanitize_settings' ),
-				'default'           => array(),
-			)
-		);
-
-		// Provider settings tab.
-		register_setting(
-			'campaignbridge_providers',
-			self::OPTION_NAME,
-			array(
-				'type'              => 'array',
-				'autoload'          => false,
-				'sanitize_callback' => array( 'CampaignBridge\Admin\Pages\Settings', 'sanitize_settings' ),
-				'default'           => array(),
-			)
-		);
-	}
 
 
 	/**
@@ -343,7 +306,6 @@ class Plugin {
 	private function init_admin_interface(): void {
 		// Wire admin hooks.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
-		add_action( 'admin_init', array( $this, 'register_settings' ) );
 
 		// Initialize Admin Pages.
 		Status::init();
