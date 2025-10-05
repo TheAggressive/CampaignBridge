@@ -1,7 +1,15 @@
 {
   "core": "WordPress/WordPress",
-  "port": 8090,
-  "plugins": ["."],
+  "plugins": [
+    ".",
+    "https://downloads.wordpress.org/plugin/debug-bar.latest-stable.zip"
+  ],
+  "port": 9001,
+  "env": {
+    "development": {
+      "phpmyadminPort": 9000
+    }
+  },
   "config": {
     "WP_DEBUG": true,
     "SCRIPT_DEBUG": true

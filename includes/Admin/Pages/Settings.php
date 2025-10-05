@@ -128,11 +128,16 @@ class Settings extends Admin {
 			);
 		}
 
-		// Debug: Show current settings
-		$current_settings = Settings_Manager::get_settings();
-		if ( ! empty( $current_settings ) ) {
+		// Debug: Show current settings (only on CampaignBridge settings page)
+		if ( isset( $_GET['page'] ) && 'campaignbridge-settings' === $_GET['page'] && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			$current_settings = Settings_Manager::get_settings();
+			$raw_settings = get_option( Settings_Manager::get_option_name(), array() );
+
+			// Add raw API key to the debug object
+			$current_settings['saved_database_api_key'] = $raw_settings['api_key'] ?? '';
+
 			add_settings_error(
-				'campaignbridge_debug',
+				'campaignbridge_messages', // Use the same group that gets displayed
 				'debug_info',
 				'DEBUG - Current settings: ' . wp_json_encode( $current_settings ),
 				'info'
