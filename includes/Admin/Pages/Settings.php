@@ -385,6 +385,17 @@ class Settings extends Admin {
 				'success'
 			);
 		}
+
+		// Debug: Show current settings
+		$current_settings = Settings_Manager::get_settings();
+		if ( ! empty( $current_settings ) ) {
+			add_settings_error(
+				'campaignbridge_debug',
+				'debug_info',
+				'DEBUG - Current settings: ' . wp_json_encode( $current_settings ),
+				'info'
+			);
+		}
 	}
 
 	/**
@@ -414,24 +425,13 @@ class Settings extends Admin {
 	 * @return void
 	 */
 	private static function register_settings_groups(): void {
-		// General settings group
+		// Register the main settings option once
 		register_setting(
-			'campaignbridge_general',
+			'campaignbridge_settings',
 			Settings_Manager::get_option_name(),
 			array(
 				'type' => 'array',
-				'sanitize_callback' => array( Settings_Manager::class, 'validate_general_settings_callback' ),
-				'default' => array(),
-			)
-		);
-
-		// Providers settings group
-		register_setting(
-			'campaignbridge_providers',
-			Settings_Manager::get_option_name(),
-			array(
-				'type' => 'array',
-				'sanitize_callback' => array( Settings_Manager::class, 'validate_provider_settings_callback' ),
+				'sanitize_callback' => array( Settings_Manager::class, 'sanitize_settings' ),
 				'default' => array(),
 			)
 		);
@@ -503,14 +503,12 @@ class Settings extends Admin {
 	 * @return void
 	 */
 	private static function render_settings_form( string $current_tab, string $nonce_action ): void {
-		// Determine the correct settings group for the current tab
-		$settings_group = 'general' === $current_tab ? 'campaignbridge_general' : 'campaignbridge_providers';
 		?>
 		<div class="wrap">
 			<form method="post" action="options.php">
 				<?php
 				// Output security fields for the registered setting
-				settings_fields( $settings_group );
+				settings_fields( 'campaignbridge_settings' );
 
 				// Render tab navigation.
 				Settings_Tab_Manager::render_navigation();

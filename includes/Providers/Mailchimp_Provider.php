@@ -111,9 +111,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 								placeholder="<?php esc_attr_e( 'Enter new API key', 'campaignbridge' ); ?>"
 								autocomplete="new-password"
 							/>
-							<button type="button" class="button button-primary api-key-save">
-								<?php esc_html_e( 'Save', 'campaignbridge' ); ?>
-							</button>
 							<button type="button" class="button button-secondary api-key-cancel">
 								<?php esc_html_e( 'Cancel', 'campaignbridge' ); ?>
 							</button>

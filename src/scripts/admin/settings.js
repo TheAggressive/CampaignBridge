@@ -61,11 +61,7 @@ class CampaignBridgeSettings {
       this.toggleToEdit(display, edit);
     });
 
-    // Save changes
-    save.addEventListener("click", (e) => {
-      e.preventDefault();
-      this.saveApiKey(container, display, edit, input);
-    });
+    // Save button removed - API key updates in real-time, user clicks Save Settings
 
     // Cancel editing
     cancel.addEventListener("click", (e) => {
@@ -87,57 +83,166 @@ class CampaignBridgeSettings {
   }
 
   /**
-   * Save the API key changes
+   * Update the hidden API key field with the current input value
    *
+   * @param {string} value The API key value
+   */
+  static updateApiKeyField(value) {
+    try {
+      // Remove any existing hidden API key fields to avoid duplicates
+      const existingHiddenFields = document.querySelectorAll(
+        'input[type="hidden"][name="campaignbridge_settings[api_key]"]',
+      );
+      existingHiddenFields.forEach((field) => field.remove());
+
+      // Create a new hidden input field with the correct value
+      const hiddenField = document.createElement("input");
+      hiddenField.type = "hidden";
+      hiddenField.name = "campaignbridge_settings[api_key]";
+      hiddenField.value = value;
+
+      // Find the form and add the hidden field
+      const form = document.querySelector('form[action="options.php"]');
+      if (form) {
+        form.appendChild(hiddenField);
+        console.log("Created hidden API key field with value:", value);
+      } else {
+        console.error("Form not found to add hidden field");
+      }
+
+      // Also try to update any existing visible field
+      const visibleField = document.querySelector(
+        'input[name="campaignbridge_settings[api_key]"]:not([type="hidden"])',
+      );
+      if (visibleField) {
+        visibleField.value = value;
+        console.log("Also updated visible field");
+      }
+    } catch (error) {
+      console.error("Error creating hidden API key field:", error);
+    }
+  }
+
+  /**
+   * Submit the settings form instead of making AJAX call
+   *
+   * @param {string} newValue The new API key value
    * @param {HTMLElement} container The main container
    * @param {HTMLElement} display The display container
    * @param {HTMLElement} edit The edit container
    * @param {HTMLInputElement} input The input field
    */
-  static saveApiKey(container, display, edit, input) {
-    const newValue = input.value.trim();
+  static submitSettingsForm(newValue, container, display, edit, input) {
+    // Find the form - try multiple selectors for reliability
+    let form = document.querySelector('form[action="options.php"]');
 
-    // Basic validation
-    if (!newValue) {
-      this.showError(input, "API key cannot be empty");
+    // Fallback: look for forms with method="post"
+    if (!form) {
+      const forms = document.querySelectorAll('form[method="post"]');
+      for (let i = 0; i < forms.length; i++) {
+        if (forms[i].action && forms[i].action.includes("options.php")) {
+          form = forms[i];
+          break;
+        }
+      }
+    }
+
+    if (!form) {
+      this.showError(input, "Settings form not found");
       return;
     }
 
-    // Validate Mailchimp API key pattern
-    const mailchimpPattern = /^[a-f0-9]{32}-us[0-9]+$/;
-    if (!mailchimpPattern.test(newValue)) {
-      this.showError(
-        input,
-        "Invalid Mailchimp API key format. Please check your Mailchimp API key.",
-      );
-      return;
-    }
-
-    // Show loading state
-    edit.querySelectorAll(".button").forEach((button) => {
-      button.disabled = true;
-    });
-    input.disabled = true;
-
-    // Make AJAX call to save settings
-    this.saveSettingsAjax(newValue)
-      .then((response) => {
-        console.log("CampaignBridgeSettings: AJAX response:", response);
-        this.completeSave(container, display, edit, input, newValue);
-      })
-      .catch((error) => {
-        console.error("CampaignBridgeSettings: AJAX error:", error);
-        this.showError(input, error.message || "Failed to save API key");
-        // Reset loading state
-        edit.querySelectorAll(".button").forEach((button) => {
-          button.disabled = false;
-        });
-        input.disabled = false;
-      });
+    // Wait a bit to ensure the form is fully loaded and interactive
+    setTimeout(() => {
+      this.performFormSubmission(form, newValue, input);
+    }, 100);
   }
 
   /**
-   * Complete the save operation
+   * Perform the actual form submission
+   *
+   * @param {HTMLFormElement} form The form element to submit
+   * @param {string} newValue The API key value to set
+   * @param {HTMLInputElement} input The input field (for error display)
+   */
+  static performFormSubmission(form, newValue, input) {
+    console.log("Performing form submission with API key:", newValue);
+
+    // Validate that we have a form element
+    if (!form || form.tagName !== "FORM") {
+      console.error("Invalid form element:", form);
+      this.showError(input, "Invalid form element found");
+      return;
+    }
+
+    // Set the API key value in the form
+    const apiKeyField = form.querySelector('input[name*="[api_key]"]');
+    if (apiKeyField) {
+      console.log(
+        "Found API key field:",
+        apiKeyField.name,
+        "current value:",
+        apiKeyField.value,
+      );
+      apiKeyField.value = newValue;
+      console.log("Set API key field value to:", apiKeyField.value);
+    } else {
+      console.warn("API key field not found in form");
+      // List all input fields in the form for debugging
+      const allInputs = form.querySelectorAll("input");
+      console.log(
+        "All input fields in form:",
+        Array.from(allInputs).map((input) => `${input.name}: ${input.value}`),
+      );
+    }
+
+    // Try form submission with detailed logging
+    console.log("About to submit form...");
+    console.log("Form action:", form.action);
+    console.log("Form method:", form.method);
+    console.log("Form has submit method:", typeof form.submit === "function");
+
+    // Check if form has preventDefault handlers
+    console.log("Form has submit event listeners");
+
+    try {
+      // Method 1: Try to submit by clicking the actual submit button WordPress created
+      const submitButton = form.querySelector(
+        'input[type="submit"], button[type="submit"]',
+      );
+      console.log("Submit button found:", !!submitButton);
+      if (submitButton) {
+        console.log(
+          "Submit button type:",
+          submitButton.type,
+          "tagName:",
+          submitButton.tagName,
+        );
+        console.log("Clicking submit button...");
+        submitButton.click();
+        console.log("Submit button clicked successfully");
+      } else {
+        console.warn("No submit button found");
+        // Method 2: Try direct form submit
+        if (typeof form.submit === "function") {
+          console.log("Calling form.submit()...");
+          form.submit();
+          console.log("Form.submit() called successfully");
+        } else {
+          throw new Error("Form has no submit method");
+        }
+      }
+    } catch (error) {
+      console.error("Form submission failed:", error);
+      this.showError(
+        input,
+        "Failed to submit form. Please try clicking the Save Settings button manually.",
+      );
+    }
+  }
+
+  /**
+   * Complete the save operation - just switch back to display mode
    *
    * @param {HTMLElement} container The main container
    * @param {HTMLElement} display The display container
@@ -146,7 +251,7 @@ class CampaignBridgeSettings {
    * @param {string} newValue The new API key value
    */
   static completeSave(container, display, edit, input, newValue) {
-    // Update the masked display (simulate getting masked value from server)
+    // Update the masked display
     const maskedValue = this.maskApiKey(newValue);
     display.querySelector(".api-key-masked").value = maskedValue;
 
@@ -161,8 +266,8 @@ class CampaignBridgeSettings {
     });
     input.disabled = false;
 
-    // Show success message
-    this.showSuccess("API key updated successfully");
+    // Show confirmation
+    this.showSuccess("API key updated. Click 'Save Settings' to save changes.");
   }
 
   /**
@@ -224,48 +329,6 @@ class CampaignBridgeSettings {
         notice.remove();
       }, 300);
     }, 3000);
-  }
-
-  /**
-   * Save settings via AJAX to WordPress admin-ajax.php
-   *
-   * @param {string} apiKey The API key to save
-   * @return {Promise} Promise that resolves on success, rejects on error
-   */
-  static saveSettingsAjax(apiKey) {
-    const ajaxUrl = window.campaignbridgeSettings?.ajaxUrl || "";
-    const nonce = window.campaignbridgeSettings?.nonce || "";
-    const action =
-      window.campaignbridgeSettings?.action || "campaignbridge_save_settings";
-
-    return fetch(ajaxUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        action: action,
-        nonce: nonce,
-        api_key: apiKey,
-        tab: "providers",
-      }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (!data.success) {
-          throw new Error(data.data || "Failed to save settings");
-        }
-        return data;
-      })
-      .catch((error) => {
-        console.error("CampaignBridgeSettings: AJAX error:", error);
-        throw error;
-      });
   }
 
   /**

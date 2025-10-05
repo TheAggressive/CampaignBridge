@@ -31,14 +31,14 @@ class Post_Types extends Admin {
 	protected static string $page_slug = 'campaignbridge-post-types';
 
 	/**
-	 * Settings field name.
+	 * Settings field name for WordPress Settings API.
 	 */
-	private const SETTINGS_FIELD = 'campaignbridge';
+	private const SETTINGS_FIELD = 'campaignbridge_post_types';
 
 	/**
-	 * Nonce action name.
+	 * Nonce action name for WordPress Settings API.
 	 */
-	private const NONCE_ACTION = 'campaignbridge-options';
+	private const NONCE_ACTION = 'campaignbridge_post_types-options';
 
 	/**
 	 * Submit button text.

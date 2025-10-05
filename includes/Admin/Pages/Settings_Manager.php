@@ -84,58 +84,17 @@ class Settings_Manager {
 	 * @return array Current settings or empty array if none exist.
 	 */
 	public static function get_settings(): array {
-		return get_option( self::OPTION_NAME, array() );
-	}
+		$raw_settings = get_option( self::OPTION_NAME, array() );
 
-	/**
-	 * Validate general settings for WordPress Settings API.
-	 *
-	 * @since 0.1.0
-	 * @param array $input Input data to validate.
-	 * @return array Validated and sanitized settings.
-	 */
-	public static function validate_general_settings_callback( array $input ): array {
-		$errors = self::validate_general_settings( $input );
-
-		if ( ! empty( $errors ) ) {
-			// Add validation errors using WordPress Settings API
-			foreach ( $errors as $field => $message ) {
-				add_settings_error(
-					'campaignbridge_general',
-					"campaignbridge_{$field}",
-					$message,
-					'error'
-				);
-			}
+		// Temporary debug: Show raw database value
+		if ( current_user_can( 'manage_options' ) && isset( $_GET['debug_raw'] ) ) {
+			echo '<pre>RAW DATABASE VALUE: ' . esc_html( print_r( $raw_settings, true ) ) . '</pre>';
 		}
 
-		return self::sanitize_settings( $input );
+		// Decrypt sensitive fields for display/use
+		return self::decrypt_sensitive_fields( $raw_settings );
 	}
 
-	/**
-	 * Validate provider settings for WordPress Settings API.
-	 *
-	 * @since 0.1.0
-	 * @param array $input Input data to validate.
-	 * @return array Validated and sanitized settings.
-	 */
-	public static function validate_provider_settings_callback( array $input ): array {
-		$errors = self::validate_provider_settings( $input );
-
-		if ( ! empty( $errors ) ) {
-			// Add validation errors using WordPress Settings API
-			foreach ( $errors as $field => $message ) {
-				add_settings_error(
-					'campaignbridge_providers',
-					"campaignbridge_{$field}",
-					$message,
-					'error'
-				);
-			}
-		}
-
-		return self::sanitize_settings( $input );
-	}
 
 
 
@@ -199,55 +158,69 @@ class Settings_Manager {
 	}
 
 	/**
-	 * Sanitize settings input.
+	 * Validate settings and add errors to WordPress Settings API.
 	 *
 	 * @since 0.1.0
-	 * @param array $settings Settings to sanitize.
+	 * @param array $settings Settings to validate.
+	 * @return void
+	 */
+	private static function validate_settings( array $settings ): void {
+		// General tab validation.
+		$general_errors = self::validate_general_settings( $settings );
+		foreach ( $general_errors as $field => $message ) {
+			add_settings_error(
+				'campaignbridge_general',
+				"campaignbridge_{$field}",
+				$message,
+				'error'
+			);
+		}
+
+		// Providers tab validation.
+		$provider_errors = self::validate_provider_settings( $settings );
+		foreach ( $provider_errors as $field => $message ) {
+			add_settings_error(
+				'campaignbridge_providers',
+				"campaignbridge_{$field}",
+				$message,
+				'error'
+			);
+		}
+	}
+
+	/**
+	 * Merge settings to prevent data loss between tabs.
+	 *
+	 * @since 0.1.0
+	 * @param array $existing_settings Existing settings from database.
+	 * @param array $new_settings      New settings being submitted.
+	 * @return array Merged settings.
+	 */
+	private static function merge_settings_by_tab( array $existing_settings, array $new_settings ): array {
+		// Simply merge all settings to preserve everything.
+		// This prevents one tab from clearing another's data.
+		return array_merge( $existing_settings, $new_settings );
+	}
+
+	/**
+	 * Sanitize settings input with validation and error handling.
+	 *
+	 * @since 0.1.0
+	 * @param array $settings Settings to sanitize and validate.
 	 * @return array Sanitized settings.
 	 */
 	public static function sanitize_settings( array $settings ): array {
+		// Get existing settings to preserve other tabs' data
+		$existing_settings = get_option( self::OPTION_NAME, array() );
 
-		$sanitized = array();
+		// Merge new settings with existing ones to preserve all data
+		$merged_settings = array_merge( $existing_settings, $settings );
 
-		// Sanitize general settings.
-		if ( isset( $settings['from_name'] ) ) {
-			$sanitized['from_name'] = sanitize_text_field( $settings['from_name'] );
-		}
+		// Encrypt sensitive fields before saving
+		$merged_settings = self::encrypt_sensitive_fields( $merged_settings );
 
-		if ( isset( $settings['from_email'] ) ) {
-			$sanitized['from_email'] = sanitize_email( $settings['from_email'] );
-		}
-
-		// Sanitize provider settings.
-		if ( isset( $settings['provider'] ) ) {
-			$sanitized['provider'] = sanitize_key( $settings['provider'] );
-		}
-
-		// Sanitize API key field.
-		if ( isset( $settings['api_key'] ) ) {
-			$sanitized['api_key'] = sanitize_text_field( $settings['api_key'] );
-		}
-
-		// Sanitize provider-specific settings.
-		$providers = Admin::get_providers();
-		if ( isset( $settings['provider'] ) && isset( $providers[ $settings['provider'] ] ) ) {
-			$provider          = $providers[ $settings['provider'] ];
-			$provider_settings = $provider->sanitize_settings( $settings );
-			$sanitized         = array_merge( $sanitized, $provider_settings );
-		}
-
-		// Preserve any other existing settings that weren't in the current submission.
-		$existing_settings = self::get_settings();
-		foreach ( $existing_settings as $key => $value ) {
-			if ( ! isset( $sanitized[ $key ] ) ) {
-				$sanitized[ $key ] = $value;
-			}
-		}
-
-		// Encrypt sensitive fields before saving.
-		$sanitized = self::encrypt_sensitive_fields( $sanitized );
-
-		return $sanitized;
+		// Return the complete merged settings for WordPress to save
+		return $merged_settings;
 	}
 
 	/**
@@ -259,13 +232,17 @@ class Settings_Manager {
 	private static function encrypt_sensitive_fields( array $settings ): array {
 		// Only encrypt if the encryption system is available and secure
 		if ( ! class_exists( '\CampaignBridge\Core\Api_Key_Encryption' ) ) {
+			error_log( 'CampaignBridge: Api_Key_Encryption class not found' );
 			return $settings;
 		}
 
 		$security_check = \CampaignBridge\Core\Api_Key_Encryption::security_check();
 		if ( ! $security_check['secure'] ) {
+			error_log( 'CampaignBridge: Security check failed: ' . print_r( $security_check, true ) );
 			return $settings;
 		}
+
+		error_log( 'CampaignBridge: Encryption system available and secure' );
 
 		// Fields that should be encrypted
 		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
@@ -273,21 +250,27 @@ class Settings_Manager {
 		foreach ( $sensitive_fields as $field ) {
 			if ( isset( $settings[ $field ] ) ) {
 				$value = $settings[ $field ];
+				error_log( "CampaignBridge: Processing field '$field' with value: " . substr( $value, 0, 10 ) . '...' );
 
 				// Skip encryption for empty values or masked values (containing •)
 				if ( empty( $value ) || strpos( $value, '•' ) !== false ) {
 					// Clear empty or masked values
 					$settings[ $field ] = '';
+					error_log( "CampaignBridge: Skipped encryption for field '$field' (empty or masked)" );
 					continue;
 				}
 
 				// Check if it's already encrypted
 				if ( ! \CampaignBridge\Core\Api_Key_Encryption::is_encrypted_value( $value ) ) {
 					try {
+						error_log( "CampaignBridge: Encrypting field '$field'" );
 						// Encrypt the value
 						$encrypted_value = \CampaignBridge\Core\Api_Key_Encryption::encrypt( $value );
 						if ( ! empty( $encrypted_value ) ) {
 							$settings[ $field ] = $encrypted_value;
+							error_log( "CampaignBridge: Successfully encrypted field '$field'" );
+						} else {
+							error_log( "CampaignBridge: Encryption returned empty value for field '$field'" );
 						}
 					} catch ( \Throwable $e ) {
 						// Log encryption failure but don't fail the save
@@ -301,6 +284,77 @@ class Settings_Manager {
 							);
 						}
 					}
+				} else {
+					error_log( "CampaignBridge: Field '$field' is already encrypted" );
+				}
+			}
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * Decrypt sensitive fields when retrieving from database.
+	 *
+	 * @param array $settings Settings array to decrypt.
+	 * @return array Settings with sensitive fields decrypted.
+	 */
+	private static function decrypt_sensitive_fields( array $settings ): array {
+		// Only decrypt if the encryption system is available and secure
+		if ( ! class_exists( '\CampaignBridge\Core\Api_Key_Encryption' ) ) {
+			error_log( 'CampaignBridge: Api_Key_Encryption class not found for decryption' );
+			return $settings;
+		}
+
+		$security_check = \CampaignBridge\Core\Api_Key_Encryption::security_check();
+		if ( ! $security_check['secure'] ) {
+			error_log( 'CampaignBridge: Security check failed for decryption: ' . print_r( $security_check, true ) );
+			return $settings;
+		}
+
+		error_log( 'CampaignBridge: Decryption system available and secure' );
+
+		// Fields that should be decrypted
+		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
+
+		foreach ( $sensitive_fields as $field ) {
+			if ( isset( $settings[ $field ] ) ) {
+				$value = $settings[ $field ];
+				error_log( "CampaignBridge: Processing decryption for field '$field' with value: " . substr( $value, 0, 20 ) . '...' );
+
+				// Skip decryption for empty values
+				if ( empty( $value ) ) {
+					error_log( "CampaignBridge: Skipped decryption for field '$field' (empty)" );
+					continue;
+				}
+
+				// Check if it's encrypted
+				if ( \CampaignBridge\Core\Api_Key_Encryption::is_encrypted_value( $value ) ) {
+					try {
+						error_log( "CampaignBridge: Decrypting field '$field'" );
+						// Decrypt the value
+						$decrypted_value = \CampaignBridge\Core\Api_Key_Encryption::decrypt( $value );
+						if ( ! empty( $decrypted_value ) ) {
+							$settings[ $field ] = $decrypted_value;
+							error_log( "CampaignBridge: Successfully decrypted field '$field'" );
+						} else {
+							error_log( "CampaignBridge: Decryption returned empty value for field '$field'" );
+						}
+					} catch ( \Throwable $e ) {
+						// Log decryption failure but don't fail the retrieval
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log(
+								sprintf(
+									'CampaignBridge: Failed to decrypt field "%s": %s',
+									$field,
+									$e->getMessage()
+								)
+							);
+						}
+						// Keep the encrypted value if decryption fails
+					}
+				} else {
+					error_log( "CampaignBridge: Field '$field' is not encrypted" );
 				}
 			}
 		}
