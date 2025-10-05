@@ -200,6 +200,20 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 		$providers = Admin::get_providers();
 		$provider  = self::get_selected_provider( $settings, $providers );
 
+		// Check for view parameter for provider preview (new parameter)
+		// Also check for provider_preview for backward compatibility (old parameter)
+		$preview_provider = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- View parameter, no security risk
+
+		// Fallback to old parameter if new one not set
+		if ( ! $preview_provider && isset( $_GET['provider_preview'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Backward compatibility, no security risk
+			$preview_provider = sanitize_key( wp_unslash( $_GET['provider_preview'] ) );
+		}
+
+		// Validate preview provider exists and is not the example provider
+		if ( $preview_provider && ( ! isset( $providers[ $preview_provider ] ) || 'example' === $preview_provider ) ) {
+			$preview_provider = null; // Reset invalid preview provider
+		}
+
 		$options = array();
 		foreach ( $providers as $slug => $obj ) {
 			// Skip example provider in production dropdown.
@@ -213,10 +227,13 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 		$field_name = Settings_Manager::get_option_name() . '[provider]';
 		$current_value = $settings['provider'] ?? '';
 
+		// Use preview value if available, otherwise use saved value
+		$display_value = $preview_provider ?? $current_value;
+
 		?>
-		<select name="<?php echo esc_attr( $field_name ); ?>" id="<?php echo esc_attr( Settings_Manager::get_option_name() . '_provider' ); ?>" class="regular-text campaignbridge-field campaignbridge-select">
+		<select name="<?php echo esc_attr( $field_name ); ?>" id="<?php echo esc_attr( Settings_Manager::get_option_name() . '_provider' ); ?>" class="regular-text campaignbridge-field campaignbridge-select campaignbridge-provider-select" data-preview-url="<?php echo esc_url( add_query_arg( 'view', '', admin_url( 'admin.php?page=campaignbridge-settings&tab=providers' ) ) ); ?>">
 			<?php foreach ( $options as $option_value => $option_label ) : ?>
-				<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $current_value, $option_value ); ?>>
+				<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $display_value, $option_value ); ?>>
 					<?php echo esc_html( $option_label ); ?>
 				</option>
 			<?php endforeach; ?>
@@ -224,10 +241,24 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 		<p class="description"><?php esc_html_e( 'Choose which email client or export method to use.', 'campaignbridge' ); ?></p>
 		<?php
 
+		// Show preview notice if using preview mode
+		if ( $preview_provider && $preview_provider !== $current_value && isset( $options[ $preview_provider ] ) ) {
+			echo '<p class="description" style="color: #2271b1; font-weight: 500;">';
+			echo '<span class="dashicons dashicons-info" style="vertical-align: middle; margin-right: 4px;"></span>';
+			printf(
+				/* translators: %s: provider name */
+				esc_html__( 'Previewing %s settings. Click "Save Settings" to apply this change.', 'campaignbridge' ),
+				esc_html( $options[ $preview_provider ] )
+			);
+			echo '</p>';
+		}
+
 		// Render provider-specific fields using Settings API
-		if ( isset( $providers[ $provider ] ) ) {
+		// Use preview provider if available, otherwise use selected provider
+		$display_provider = $preview_provider ?? $provider;
+		if ( isset( $providers[ $display_provider ] ) ) {
 			echo '<div class="provider-specific-fields" style="margin-top: 16px;">';
-			$providers[ $provider ]->render_settings_fields( $settings, Settings_Manager::get_option_name() );
+			$providers[ $display_provider ]->render_settings_fields( $settings, Settings_Manager::get_option_name() );
 			echo '</div>';
 		}
 	}

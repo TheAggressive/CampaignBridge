@@ -19,10 +19,87 @@ class CampaignBridgeSettings {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => {
         this.initApiKeyToggles();
+        this.initProviderPreview();
       });
     } else {
       this.initApiKeyToggles();
+      this.initProviderPreview();
     }
+  }
+
+  /**
+   * Initialize provider preview functionality
+   */
+  static initProviderPreview() {
+    const providerSelect = document.querySelector(
+      ".campaignbridge-provider-select",
+    );
+
+    if (!providerSelect) {
+      return;
+    }
+
+    // Prevent rapid changes by debouncing
+    let timeoutId = null;
+
+    // Listen for changes on the provider dropdown
+    providerSelect.addEventListener("change", (event) => {
+      const selectedProvider = event.target.value;
+      const previewUrl = event.target.dataset.previewUrl;
+
+      // Clear any pending preview
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      if (selectedProvider && previewUrl) {
+        try {
+          // Validate URL and provider value
+          new URL(previewUrl); // Will throw if invalid URL
+
+          if (!/^[a-zA-Z0-9_-]+$/.test(selectedProvider)) {
+            console.warn("Invalid provider value:", selectedProvider);
+            return;
+          }
+
+          // Debounce the reload to prevent rapid changes
+          timeoutId = setTimeout(() => {
+            // Reload the page with the view parameter
+            const url = new URL(previewUrl);
+            console.log("Setting view parameter to:", selectedProvider);
+            url.searchParams.set("view", selectedProvider);
+            console.log("URL after setting view:", url.toString());
+
+            // Preserve other URL parameters (excluding old preview parameter)
+            const currentUrl = new URL(window.location);
+            console.log(
+              "Current URL parameters:",
+              Array.from(currentUrl.searchParams.entries()),
+            );
+            currentUrl.searchParams.forEach((value, key) => {
+              if (key !== "view" && key !== "provider_preview") {
+                console.log("Copying parameter:", key, "=", value);
+                url.searchParams.set(key, value);
+              } else {
+                console.log("Skipping parameter:", key);
+              }
+            });
+
+            const finalUrl = url.toString();
+            console.log("Final URL:", finalUrl);
+            // Reload the page with the view parameter
+            window.location.href = finalUrl;
+          }, 300); // 300ms debounce
+        } catch (error) {
+          console.error("Error constructing preview URL:", error);
+          // Fall back to form submission if URL construction fails
+          const form = providerSelect.closest("form");
+          if (form) {
+            form.submit();
+          }
+        }
+      }
+    });
   }
 
   /**
