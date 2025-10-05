@@ -107,19 +107,10 @@ class Post_Types extends Admin {
 	 * @return array Sanitized settings array.
 	 */
 	public static function sanitize_settings( array $settings ): array {
-		// Debug: Log what we're receiving
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'CampaignBridge Post_Types sanitize_settings received: ' . print_r( $settings, true ) );
-		}
-
 		$sanitized = array();
 
 		if ( isset( $settings[ self::INCLUDED_POST_TYPES_FIELD ] ) && is_array( $settings[ self::INCLUDED_POST_TYPES_FIELD ] ) ) {
 			$sanitized[ self::INCLUDED_POST_TYPES_FIELD ] = array_map( 'sanitize_key', $settings[ self::INCLUDED_POST_TYPES_FIELD ] );
-		}
-
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'CampaignBridge Post_Types sanitize_settings returning: ' . print_r( $sanitized, true ) );
 		}
 
 		return $sanitized;

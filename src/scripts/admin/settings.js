@@ -66,29 +66,18 @@ class CampaignBridgeSettings {
           timeoutId = setTimeout(() => {
             // Reload the page with the view parameter
             const url = new URL(previewUrl);
-            console.log("Setting view parameter to:", selectedProvider);
             url.searchParams.set("view", selectedProvider);
-            console.log("URL after setting view:", url.toString());
 
             // Preserve other URL parameters (excluding old preview parameter)
             const currentUrl = new URL(window.location);
-            console.log(
-              "Current URL parameters:",
-              Array.from(currentUrl.searchParams.entries()),
-            );
             currentUrl.searchParams.forEach((value, key) => {
               if (key !== "view" && key !== "provider_preview") {
-                console.log("Copying parameter:", key, "=", value);
                 url.searchParams.set(key, value);
-              } else {
-                console.log("Skipping parameter:", key);
               }
             });
 
-            const finalUrl = url.toString();
-            console.log("Final URL:", finalUrl);
             // Reload the page with the view parameter
-            window.location.href = finalUrl;
+            window.location.href = url.toString();
           }, 300); // 300ms debounce
         } catch (error) {
           console.error("Error constructing preview URL:", error);
