@@ -155,29 +155,6 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 		return null;
 	}
 
-	/**
-	 * Sanitize settings for this tab.
-	 *
-	 * @since 0.1.0
-	 * @param array $settings Settings to sanitize.
-	 * @return array Sanitized settings.
-	 */
-	public static function sanitize_settings( array $settings ): array {
-		$sanitized = array();
-
-		foreach ( static::get_tab_fields() as $field_name ) {
-			$value = $settings[ $field_name ] ?? '';
-			$config = static::get_field_config( $field_name );
-
-			if ( isset( $config['sanitize_callback'] ) && is_callable( $config['sanitize_callback'] ) ) {
-				$sanitized[ $field_name ] = call_user_func( $config['sanitize_callback'], $value );
-			} else {
-				$sanitized[ $field_name ] = sanitize_text_field( $value );
-			}
-		}
-
-		return $sanitized;
-	}
 
 	/**
 	 * Render the provider settings section description.
