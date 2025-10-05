@@ -381,9 +381,9 @@ class Post_Type_Email_Template {
 	 */
 	public static function create_template( array $template_data ) {
 		$post_data = array(
-			'post_title'   => $template_data['title'] ?? '',
-			'post_content' => $template_data['content'] ?? '',
-			'post_excerpt' => $template_data['excerpt'] ?? '',
+			'post_title'   => sanitize_text_field( $template_data['title'] ?? '' ),
+			'post_content' => wp_kses_post( $template_data['content'] ?? '' ),
+			'post_excerpt' => sanitize_text_field( $template_data['excerpt'] ?? '' ),
 			'post_status'  => 'publish',
 			'post_type'    => self::POST_TYPE,
 		);

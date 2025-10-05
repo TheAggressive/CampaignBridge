@@ -116,7 +116,6 @@ campaignbridge/
 │   │   └── Asset_Manager.php     # Asset management
 │   ├── Core/                    # Core functionality
 │   │   ├── Service_Container.php # Dependency injection
-│   │   └── Settings_Handler.php  # Settings management
 │   ├── Post_Types/               # Custom post type classes
 │   │   └── Post_Type_Email_Template.php    # Email template management
 │   ├── Providers/               # Email service providers

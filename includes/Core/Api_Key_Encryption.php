@@ -103,20 +103,16 @@ class Api_Key_Encryption {
 	}
 
 	/**
-	 * Decrypt an API key.
+	 * Decrypt an API key for operational use (API calls, processing).
+	 *
+	 * This method is unrestricted and can be called in any context where
+	 * decrypted API keys are needed for functionality.
 	 *
 	 * @param string $encrypted The encrypted API key from storage.
 	 * @return string The decrypted API key.
 	 * @throws \RuntimeException If decryption fails or data is corrupted.
 	 */
 	public static function decrypt( string $encrypted ): string {
-		// Security: Only allow admin users to decrypt sensitive data
-		if ( ! current_user_can( 'manage_options' ) ) {
-			throw new \RuntimeException(
-				'Unauthorized attempt to decrypt sensitive data. Admin access required.'
-			);
-		}
-
 		self::validate_php_version();
 
 		if ( empty( $encrypted ) ) {
@@ -172,6 +168,27 @@ class Api_Key_Encryption {
 
 			throw new \RuntimeException( 'API key decryption failed' );
 		}
+	}
+
+	/**
+	 * Decrypt an API key for admin display purposes.
+	 *
+	 * This method includes security checks to ensure only administrators
+	 * can view decrypted API keys in forms and interfaces.
+	 *
+	 * @param string $encrypted The encrypted API key from storage.
+	 * @return string The decrypted API key.
+	 * @throws \RuntimeException If decryption fails, data is corrupted, or user lacks permission.
+	 */
+	public static function decrypt_for_display( string $encrypted ): string {
+		// Security: Only allow admin users to view decrypted API keys
+		if ( ! current_user_can( 'manage_options' ) ) {
+			throw new \RuntimeException(
+				'Unauthorized attempt to view decrypted sensitive data. Admin access required.'
+			);
+		}
+
+		return self::decrypt( $encrypted );
 	}
 
 	/**

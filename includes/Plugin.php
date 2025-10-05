@@ -27,7 +27,6 @@ use CampaignBridge\Admin\Pages\Status;
 use CampaignBridge\Admin\Pages\Editor;
 use CampaignBridge\Core\Api_Key_Encryption;
 use CampaignBridge\Core\Service_Container;
-use CampaignBridge\Core\Settings_Handler;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\REST\Routes as RestRoutes;
 
@@ -64,17 +63,7 @@ class Plugin {
 	private const MENU_ICON = 'dashicons-email-alt';
 
 
-	/**
-	 * Cache prefix for Mailchimp data.
-	 */
-	private const CACHE_PREFIX = 'cb_mc_';
 
-	/**
-	 * Option key used to persist plugin settings.
-	 *
-	 * @var string
-	 */
-	private string $option_name = self::OPTION_NAME;
 
 	/**
 	 * Map of provider slug => provider instance.
@@ -90,12 +79,6 @@ class Plugin {
 	 */
 	private Service_Container $service_container;
 
-	/**
-	 * Settings handler instance.
-	 *
-	 * @var Settings_Handler
-	 */
-	private Settings_Handler $settings_handler;
 
 	/**
 	 * Initialize service container and providers.
@@ -111,9 +94,6 @@ class Plugin {
 			// Initialize service container.
 			$this->service_container = new Service_Container();
 			$this->service_container->initialize();
-
-			// Initialize settings handler.
-			$this->settings_handler = new Settings_Handler();
 
 			// Get providers from service container.
 			$this->providers = array(
@@ -184,9 +164,6 @@ class Plugin {
 
 		// Initialize REST API.
 		$this->init_rest_api();
-
-		// Set up cache management.
-		$this->setup_cache_management();
 	}
 
 	/**
@@ -326,28 +303,5 @@ class Plugin {
 
 		// Register REST routes when REST API is initialized.
 		add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
-	}
-
-	/**
-	 * Set up cache management and invalidation hooks.
-	 *
-	 * @since 0.1.0
-	 * @return void
-	 */
-	private function setup_cache_management(): void {
-		// Bust Mailchimp caches if API key changes.
-		add_action(
-			'update_option_' . self::OPTION_NAME,
-			function ( $old, $new ) {
-				$old_key = isset( $old['api_key'] ) ? (string) $old['api_key'] : '';
-				$new_key = isset( $new['api_key'] ) ? (string) $new['api_key'] : '';
-				if ( $old_key !== $new_key && ! empty( $old_key ) ) {
-					delete_transient( self::CACHE_PREFIX . 'audiences_' . md5( $old_key ) );
-					delete_transient( self::CACHE_PREFIX . 'templates_' . md5( $old_key ) );
-				}
-			},
-			10,
-			2
-		);
 	}
 }

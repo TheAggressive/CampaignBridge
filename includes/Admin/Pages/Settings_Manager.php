@@ -86,11 +86,6 @@ class Settings_Manager {
 	public static function get_settings(): array {
 		$raw_settings = get_option( self::OPTION_NAME, array() );
 
-		// Temporary debug: Show raw database value
-		if ( current_user_can( 'manage_options' ) && isset( $_GET['debug_raw'] ) ) {
-			echo '<pre>RAW DATABASE VALUE: ' . esc_html( print_r( $raw_settings, true ) ) . '</pre>';
-		}
-
 		// Decrypt sensitive fields for display/use
 		return self::decrypt_sensitive_fields( $raw_settings );
 	}
@@ -332,8 +327,8 @@ class Settings_Manager {
 				if ( \CampaignBridge\Core\Api_Key_Encryption::is_encrypted_value( $value ) ) {
 					try {
 						error_log( "CampaignBridge: Decrypting field '$field'" );
-						// Decrypt the value
-						$decrypted_value = \CampaignBridge\Core\Api_Key_Encryption::decrypt( $value );
+						// Decrypt the value for display
+						$decrypted_value = \CampaignBridge\Core\Api_Key_Encryption::decrypt_for_display( $value );
 						if ( ! empty( $decrypted_value ) ) {
 							$settings[ $field ] = $decrypted_value;
 							error_log( "CampaignBridge: Successfully decrypted field '$field'" );

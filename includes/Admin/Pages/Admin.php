@@ -135,7 +135,7 @@ abstract class Admin {
 		foreach ( $sensitive_fields as $field ) {
 			if ( isset( $settings[ $field ] ) && ! empty( $settings[ $field ] ) ) {
 				try {
-					$settings[ $field ] = Api_Key_Encryption::decrypt( $settings[ $field ] );
+					$settings[ $field ] = Api_Key_Encryption::decrypt_for_display( $settings[ $field ] );
 				} catch ( \Throwable $e ) {
 					// Log error but don't expose sensitive details.
 					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

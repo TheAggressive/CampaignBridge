@@ -247,10 +247,15 @@ class Routes {
 			return new \WP_Error( 'bad_post_type', 'Invalid post type', array( 'status' => self::HTTP_BAD_REQUEST ) );
 		}
 
-		$settings       = self::get_safe_settings();
-		$excluded_types = isset( $settings['exclude_post_types'] ) && is_array( $settings['exclude_post_types'] ) ? array_map( 'sanitize_key', $settings['exclude_post_types'] ) : array();
-		if ( in_array( $post_type, $excluded_types, true ) ) {
-			return new \WP_Error( 'excluded_post_type', 'Post type excluded', array( 'status' => self::HTTP_BAD_REQUEST ) );
+		// Check if post type is allowed based on Post_Types settings.
+		$post_types_settings = get_option( 'campaignbridge_post_types', array() );
+		$allowed_types       = isset( $post_types_settings['included_post_types'] ) && is_array( $post_types_settings['included_post_types'] )
+			? array_map( 'sanitize_key', $post_types_settings['included_post_types'] )
+			: array(); // If no specific types configured, allow all.
+
+		// If specific types are configured, check if the requested type is allowed.
+		if ( ! empty( $allowed_types ) && ! in_array( $post_type, $allowed_types, true ) ) {
+			return new \WP_Error( 'post_type_not_allowed', 'Post type not allowed for this operation', array( 'status' => self::HTTP_BAD_REQUEST ) );
 		}
 		$post_ids = get_posts( self::get_posts_query_args( $post_type ) );
 		$items    = array();
@@ -324,10 +329,10 @@ class Routes {
 			return $rate_limit;
 		}
 
-		// Get Post_Types settings instead of main settings
+		// Get Post_Types settings instead of main settings.
 		$post_types_settings = get_option( 'campaignbridge_post_types', array() );
 
-		// Get included post types (default to all public if none specified)
+		// Get included post types (default to all public if none specified).
 		$included_types = array();
 		if ( isset( $post_types_settings['included_post_types'] ) && is_array( $post_types_settings['included_post_types'] ) ) {
 			foreach ( $post_types_settings['included_post_types'] as $post_type ) {
@@ -339,7 +344,7 @@ class Routes {
 			}
 		}
 
-		// If no post types are explicitly included, include all public post types
+		// If no post types are explicitly included, include all public post types.
 		if ( empty( $included_types ) ) {
 			$all_public     = get_post_types( array( 'public' => true ), 'names' );
 			$included_types = array_values( $all_public );
