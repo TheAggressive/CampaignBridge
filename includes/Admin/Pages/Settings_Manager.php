@@ -233,11 +233,10 @@ class Settings_Manager {
 
 		$security_check = \CampaignBridge\Core\Api_Key_Encryption::security_check();
 		if ( ! $security_check['secure'] ) {
-			error_log( 'CampaignBridge: Security check failed: ' . print_r( $security_check, true ) );
+			// Log security issue without exposing sensitive details
+			error_log( 'CampaignBridge: Encryption security check failed - system may be compromised' );
 			return $settings;
 		}
-
-		error_log( 'CampaignBridge: Encryption system available and secure' );
 
 		// Fields that should be encrypted
 		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
@@ -303,11 +302,10 @@ class Settings_Manager {
 
 		$security_check = \CampaignBridge\Core\Api_Key_Encryption::security_check();
 		if ( ! $security_check['secure'] ) {
-			error_log( 'CampaignBridge: Security check failed for decryption: ' . print_r( $security_check, true ) );
+			// Log security issue without exposing sensitive details
+			error_log( 'CampaignBridge: Decryption security check failed - system may be compromised' );
 			return $settings;
 		}
-
-		error_log( 'CampaignBridge: Decryption system available and secure' );
 
 		// Fields that should be decrypted
 		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );

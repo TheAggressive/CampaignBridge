@@ -15,7 +15,7 @@ namespace CampaignBridge\Admin\Pages\Tabs;
 
 use CampaignBridge\Admin\Pages\Admin;
 use CampaignBridge\Admin\Pages\Settings_Manager;
-use CampaignBridge\Core\Api_Key_Encryption;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -142,10 +142,10 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 	 *
 	 * @since 0.1.0
 	 * @param string $value Provider value.
-	 * @param string $field_name Field name.
+	 * @param string $field_name Field name (required callback signature).
 	 * @return string|null Error message or null if valid.
 	 */
-	public static function validate_provider_selection( $value, string $field_name ): ?string {
+	public static function validate_provider_selection( $value, string $field_name ): ?string { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required callback signature
 		$available_providers = array_keys( Admin::get_providers() );
 
 		if ( ! in_array( $value, $available_providers, true ) ) {
@@ -202,11 +202,17 @@ class Email_Providers_Settings_Tab extends Abstract_Settings_Tab {
 
 		// Check for view parameter for provider preview (new parameter)
 		// Also check for provider_preview for backward compatibility (old parameter)
-		$preview_provider = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- View parameter, no security risk
+		$preview_provider = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- View parameter, display-only, multi-layer validated
 
 		// Fallback to old parameter if new one not set
-		if ( ! $preview_provider && isset( $_GET['provider_preview'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Backward compatibility, no security risk
+		if ( ! $preview_provider && isset( $_GET['provider_preview'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Backward compatibility, display-only, multi-layer validated
 			$preview_provider = sanitize_key( wp_unslash( $_GET['provider_preview'] ) );
+		}
+
+		// Additional security: Only allow preview on settings page
+		$current_screen = get_current_screen();
+		if ( $preview_provider && ( ! $current_screen || 'campaignbridge_page_campaignbridge-settings' !== $current_screen->id ) ) {
+			$preview_provider = null; // Reset preview provider if not on settings page
 		}
 
 		// Validate preview provider exists and is not the example provider
