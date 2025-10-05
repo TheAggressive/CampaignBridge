@@ -1,0 +1,9 @@
+{
+  "core": "WordPress/WordPress",
+  "port": 8090,
+  "plugins": ["."],
+  "config": {
+    "WP_DEBUG": true,
+    "SCRIPT_DEBUG": true
+  }
+}

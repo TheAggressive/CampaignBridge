@@ -344,14 +344,25 @@ class Routes {
 			}
 		}
 
-		// If no post types are explicitly included, include all public post types.
+		// If no post types are explicitly included, include all public post types (excluding page and attachment).
 		if ( empty( $included_types ) ) {
-			$all_public     = get_post_types( array( 'public' => true ), 'names' );
+			$all_public = get_post_types( array( 'public' => true ), 'names' );
+			// Exclude page and attachment (media) post types
+			$excluded_types = array( 'page', 'attachment' );
+			$all_public     = array_diff( $all_public, $excluded_types );
 			$included_types = array_values( $all_public );
 		}
 
-		$objs  = get_post_types( array( 'public' => true ), 'objects' );
-		$items = array();
+		$objs = get_post_types( array( 'public' => true ), 'objects' );
+		// Filter out excluded post types from the objects array as well
+		$excluded_types = array( 'page', 'attachment' );
+		$objs           = array_filter(
+			$objs,
+			function ( $obj ) use ( $excluded_types ) {
+				return ! in_array( $obj->name, $excluded_types, true );
+			}
+		);
+		$items          = array();
 		foreach ( $objs as $obj ) {
 			if ( ! in_array( $obj->name, $included_types, true ) ) {
 				continue;

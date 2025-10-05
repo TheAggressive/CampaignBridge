@@ -165,9 +165,12 @@ class Post_Types extends Admin {
 			? array_map( 'sanitize_key', $settings[ self::INCLUDED_POST_TYPES_FIELD ] )
 			: null; // null means use default (all public post types)
 
-		// If no specific types are configured, include all public post types by default
+		// If no specific types are configured, include all public post types by default (excluding page and attachment)
 		if ( $included_types === null ) {
 			$public_types = get_post_types( array( 'public' => true ), 'names' );
+			// Exclude page and attachment (media) post types
+			$excluded_types = array( 'page', 'attachment' );
+			$public_types = array_diff( $public_types, $excluded_types );
 			$included_types = array_values( $public_types );
 		}
 
@@ -182,6 +185,14 @@ class Post_Types extends Admin {
 	 */
 	private static function render_post_types_form( array $settings ): void {
 		$public_types   = get_post_types( array( 'public' => true ), 'objects' );
+		// Exclude page and attachment (media) post types from the list
+		$excluded_types = array( 'page', 'attachment' );
+		$public_types   = array_filter(
+			$public_types,
+			function ( $post_type_obj ) use ( $excluded_types ) {
+				return ! in_array( $post_type_obj->name, $excluded_types, true );
+			}
+		);
 		$included_types = self::get_included_post_types( $settings );
 		?>
 		<div class="wrap">
