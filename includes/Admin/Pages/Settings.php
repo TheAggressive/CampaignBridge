@@ -74,7 +74,7 @@ class Settings extends Admin {
 	 */
 	private static function register_hooks(): void {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
-		add_action( 'admin_init', array( __CLASS__, 'handle_form_submission' ) );
+		add_action( 'admin_init', array( __CLASS__, 'add_debug_info' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register_settings_sections' ) );
 	}
 
@@ -111,23 +111,12 @@ class Settings extends Admin {
 	}
 
 	/**
-	 * Handle form submission using WordPress Settings API.
+	 * Add debug information to settings page when WP_DEBUG is enabled.
 	 *
 	 * @since 0.1.0
 	 * @return void
 	 */
-	public static function handle_form_submission(): void {
-		// WordPress Settings API handles form submission automatically
-		// Display success message if settings were updated
-		if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) {
-			add_settings_error(
-				'campaignbridge_settings',
-				'settings_updated',
-				__( 'Settings saved successfully.', 'campaignbridge' ),
-				'success'
-			);
-		}
-
+	public static function add_debug_info(): void {
 		// Debug: Show current settings (only on CampaignBridge settings page)
 		if ( isset( $_GET['page'] ) && 'campaignbridge-settings' === $_GET['page'] && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			$current_settings = Settings_Manager::get_settings();

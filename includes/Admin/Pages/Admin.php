@@ -179,7 +179,7 @@ abstract class Admin {
 	 */
 	protected static function display_messages(): void {
 		if ( isset( $_GET[ self::SETTINGS_UPDATED_PARAM ] ) && 'true' === $_GET[ self::SETTINGS_UPDATED_PARAM ] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			add_settings_error( self::SETTINGS_MESSAGES_GROUP, 'campaignbridge_message', __( 'Settings saved.', 'campaignbridge' ), 'updated' );
+			add_settings_error( self::SETTINGS_MESSAGES_GROUP, 'campaignbridge_message', __( 'Settings saved successfully.', 'campaignbridge' ), 'success' );
 		}
 		settings_errors( self::SETTINGS_MESSAGES_GROUP );
 	}
