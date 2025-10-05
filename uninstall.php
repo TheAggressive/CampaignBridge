@@ -36,7 +36,8 @@ class CampaignBridge_Uninstaller {
 	/**
 	 * Option name constants.
 	 */
-	private const OPTION_SETTINGS = 'campaignbridge_settings';
+	private const OPTION_SETTINGS      = 'campaignbridge_settings';
+	private const OPTION_POST_TYPES    = 'campaignbridge_post_types';
 
 	/**
 	 * Transient prefix patterns.
@@ -146,6 +147,7 @@ class CampaignBridge_Uninstaller {
 	private static function cleanup_options(): int {
 		$options_to_delete = array(
 			self::OPTION_SETTINGS,
+			self::OPTION_POST_TYPES,
 		);
 
 		$deleted = 0;
