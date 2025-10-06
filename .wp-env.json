@@ -2,13 +2,15 @@
   "core": "WordPress/WordPress",
   "plugins": ["."],
   "port": 9000,
-  "phpmyadminPort": 9001,
-  "testsPort": 9002,
+  "phpmyadminPort": 9002,
   "config": {
     "WP_DEBUG": true,
     "SCRIPT_DEBUG": true
   },
-  "lifecycleScripts": {
-    "afterStart": "wp-env run wp plugin activate campaignbridge"
+  "env": {
+    "tests": {
+      "port": 9081,
+      "phpmyadminPort": 9082
+    }
   }
 }
