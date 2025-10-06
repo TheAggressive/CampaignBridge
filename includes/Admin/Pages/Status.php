@@ -154,7 +154,7 @@ class Status extends Admin {
 				</div>
 				<div class="cb-status__card">
 					<h3><?php esc_html_e( 'Plugin Version', 'campaignbridge' ); ?></h3>
-					<p class="cb-status__value"><?php echo esc_html( CB_VERSION ); ?></p>
+					<p class="cb-status__value"><?php echo esc_html( \CampaignBridge_Plugin::VERSION ); ?></p>
 				</div>
 				<div class="cb-status__card">
 					<h3><?php esc_html_e( 'Debug Mode', 'campaignbridge' ); ?></h3>
@@ -182,7 +182,7 @@ class Status extends Admin {
 					<h3><?php esc_html_e( 'Blocks Built', 'campaignbridge' ); ?></h3>
 					<?php if ( Blocks::blocks_available() ) : ?>
 						<p class="cb-status__value cb-status__value--ok">✅ <?php esc_html_e( 'Yes', 'campaignbridge' ); ?></p>
-						<p class="cb-status__detail"><?php echo esc_html( CB_PATH . 'dist/blocks/' ); ?></p>
+						<p class="cb-status__detail"><?php echo esc_html( \CampaignBridge_Plugin::path() . 'dist/blocks/' ); ?></p>
 					<?php else : ?>
 						<p class="cb-status__value cb-status__value--error">❌ <?php esc_html_e( 'No', 'campaignbridge' ); ?></p>
 						<p class="cb-status__detail"><?php esc_html_e( 'Run: pnpm build:blocks', 'campaignbridge' ); ?></p>

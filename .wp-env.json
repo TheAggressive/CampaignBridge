@@ -1,17 +1,14 @@
 {
   "core": "WordPress/WordPress",
-  "plugins": [
-    ".",
-    "https://downloads.wordpress.org/plugin/debug-bar.latest-stable.zip"
-  ],
-  "port": 9001,
-  "env": {
-    "development": {
-      "phpmyadminPort": 9000
-    }
-  },
+  "plugins": ["."],
+  "port": 9000,
+  "phpmyadminPort": 9001,
+  "testsPort": 9002,
   "config": {
     "WP_DEBUG": true,
     "SCRIPT_DEBUG": true
+  },
+  "lifecycleScripts": {
+    "afterStart": "wp-env run wp plugin activate campaignbridge"
   }
 }

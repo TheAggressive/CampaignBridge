@@ -80,7 +80,7 @@ class Page_Utils {
 	 * @return array Debug information about admin page discovery.
 	 */
 	public static function get_admin_page_debug_info(): array {
-		$pages_dir = CB_PATH . self::ADMIN_PAGES_DIR;
+		$pages_dir = \CampaignBridge_Plugin::path() . self::ADMIN_PAGES_DIR;
 		$classes   = self::get_admin_page_classes();
 		$debug     = array(
 			'pages_directory'        => $pages_dir,
@@ -152,7 +152,7 @@ class Page_Utils {
 	 * @return string The directory path.
 	 */
 	private static function get_admin_pages_directory(): string {
-		return CB_PATH . self::ADMIN_PAGES_DIR;
+		return \CampaignBridge_Plugin::path() . self::ADMIN_PAGES_DIR;
 	}
 
 	/**

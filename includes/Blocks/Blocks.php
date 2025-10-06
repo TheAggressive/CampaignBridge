@@ -67,7 +67,7 @@ class Blocks {
 	 * @return string The full path to the blocks build directory.
 	 */
 	private static function get_build_directory(): string {
-		return trailingslashit( CB_PATH ) . self::BUILD_DIR;
+		return trailingslashit( \CampaignBridge_Plugin::path() ) . self::BUILD_DIR;
 	}
 
 	/**

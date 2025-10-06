@@ -118,8 +118,9 @@ class Post_Type_Email_Template {
 	 * @return void
 	 */
 	public static function init(): void {
-		add_action( 'init', array( __CLASS__, 'register_post_type' ) );
-		add_action( 'init', array( __CLASS__, 'register_meta_fields' ) );
+		self::register_post_type();
+		self::register_meta_fields();
+
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_custom_fields_meta_box' ) );
 		add_filter( 'post_updated_messages', array( __CLASS__, 'custom_post_messages' ) );
 	}
@@ -371,7 +372,6 @@ class Post_Type_Email_Template {
 			)
 		);
 	}
-
 
 	/**
 	 * Create a new email template.

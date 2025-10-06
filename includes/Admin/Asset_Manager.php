@@ -91,9 +91,9 @@ class Asset_Manager {
 	public static function register_global_styles(): void {
 		wp_register_style(
 			self::GLOBAL_STYLES_HANDLE,
-			CB_URL . self::GLOBAL_STYLES_PATH,
+			\CampaignBridge_Plugin::url() . self::GLOBAL_STYLES_PATH,
 			array(),
-			CB_VERSION
+			\CampaignBridge_Plugin::VERSION
 		);
 	}
 
@@ -107,9 +107,9 @@ class Asset_Manager {
 		// Register settings page script.
 		wp_register_script(
 			self::SETTINGS_SCRIPT_HANDLE,
-			CB_URL . self::SETTINGS_SCRIPT_PATH,
+			\CampaignBridge_Plugin::url() . self::SETTINGS_SCRIPT_PATH,
 			array(),
-			filemtime( CB_PATH . self::SETTINGS_SCRIPT_PATH ),
+			filemtime( \CampaignBridge_Plugin::path() . self::SETTINGS_SCRIPT_PATH ),
 			true
 		);
 
@@ -137,7 +137,7 @@ class Asset_Manager {
 
 		wp_register_script(
 			$handle,
-			CB_URL . $script_rel_path,
+			\CampaignBridge_Plugin::url() . $script_rel_path,
 			$deps,
 			$asset['version'],
 			$in_footer
@@ -156,7 +156,7 @@ class Asset_Manager {
 	 */
 	private static function get_asset_info( string $script_rel_path ): array {
 		try {
-			$plugin_dir       = CB_PATH;
+			$plugin_dir       = \CampaignBridge_Plugin::path();
 			$script_file_path = $plugin_dir . '/' . $script_rel_path;
 
 			// Validate script file exists.
@@ -171,7 +171,7 @@ class Asset_Manager {
 			$asset_file_path = $plugin_dir . '/' . $asset_rel_path;
 
 			$dependencies = array();
-			$version      = defined( 'CB_VERSION' ) ? CB_VERSION : null;
+			$version      = \CampaignBridge_Plugin::VERSION;
 
 			// Try to load asset metadata file.
 			if ( is_string( $asset_rel_path ) && file_exists( $asset_file_path ) ) {
@@ -242,9 +242,9 @@ class Asset_Manager {
 		try {
 			wp_register_style(
 				self::BLOCK_EDITOR_STYLES_HANDLE,
-				CB_URL . self::BLOCK_EDITOR_STYLES_PATH,
+				\CampaignBridge_Plugin::url() . self::BLOCK_EDITOR_STYLES_PATH,
 				self::BLOCK_EDITOR_STYLE_DEPS,
-				CB_VERSION
+				\CampaignBridge_Plugin::VERSION
 			);
 		} catch ( \Exception $e ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -278,14 +278,14 @@ class Asset_Manager {
 	 */
 	private static function register_style( string $handle, string $path ): void {
 		try {
-			$file_path = CB_URL . $path;
+			$file_path = \CampaignBridge_Plugin::url() . $path;
 
-			if ( ! file_exists( CB_PATH . $path ) ) {
+			if ( ! file_exists( \CampaignBridge_Plugin::path() . $path ) ) {
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					error_log(
 						sprintf(
 							'[CampaignBridge] Style file not found: %s',
-							CB_PATH . $path
+							\CampaignBridge_Plugin::path() . $path
 						)
 					);
 				}
@@ -296,7 +296,7 @@ class Asset_Manager {
 				$handle,
 				$file_path,
 				array(),
-				CB_VERSION
+				\CampaignBridge_Plugin::VERSION
 			);
 		} catch ( \Exception $e ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
