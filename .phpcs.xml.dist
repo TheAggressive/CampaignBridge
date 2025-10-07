@@ -1,11 +1,15 @@
 <?xml version="1.0"?>
-<ruleset name="WordPress Coding Standards based custom ruleset for your plugin">
-	<description>Generally-applicable sniffs for WordPress plugins.</description>
+<ruleset name="CampaignBridge WordPress Coding Standards">
+	<description>WordPress Coding Standards for CampaignBridge plugin.</description>
 
 	<!-- What to scan -->
 	<file>.</file>
 	<exclude-pattern>/vendor/</exclude-pattern>
 	<exclude-pattern>/node_modules/</exclude-pattern>
+	<exclude-pattern>/tests/</exclude-pattern>
+	<exclude-pattern>/assets/</exclude-pattern>
+	<exclude-pattern>*.min.js</exclude-pattern>
+	<exclude-pattern>*.min.css</exclude-pattern>
 
 	<!-- How to scan -->
 	<!-- Usage instructions: https://github.com/squizlabs/PHP_CodeSniffer/wiki/Usage -->
@@ -18,30 +22,76 @@
 
 	<!-- Rules: Check PHP version compatibility -->
 	<!-- https://github.com/PHPCompatibility/PHPCompatibility#sniffing-your-code-for-compatibility-with-specific-php-versions -->
-	<config name="testVersion" value="5.6-"/>
+	<config name="testVersion" value="8.1-"/>
 	<!-- https://github.com/PHPCompatibility/PHPCompatibilityWP -->
 	<rule ref="PHPCompatibilityWP"/>
 
 	<!-- Rules: WordPress Coding Standards -->
 	<!-- https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards -->
 	<!-- https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards/wiki/Customizable-sniff-properties -->
-	<config name="minimum_supported_wp_version" value="4.6"/>
-	<rule ref="WordPress"/>
+	<config name="minimum_supported_wp_version" value="5.0"/>
+	<rule ref="WordPress">
+		<!-- Exclude some rules that conflict with modern PHP practices -->
+		<exclude name="WordPress.PHP.YodaConditions.NotYoda"/>
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
+		<exclude name="WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase"/>
+	</rule>
+
+	<!-- Allow short array syntax for modern PHP -->
+	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+
+	<!-- Prefix rules for CampaignBridge -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<!-- Value: replace the function, class, and variable prefixes used. Separate multiple prefixes with a comma. -->
-			<property name="prefixes" type="array" value="my-plugin"/>
+			<property name="prefixes" type="array" value="campaignbridge,CAMPAIGNBRIDGE"/>
 		</properties>
 	</rule>
+
+	<!-- Text domain for internationalization -->
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<!-- Value: replace the text domain used. -->
-			<property name="text_domain" type="array" value="my-plugin"/>
+			<property name="text_domain" type="array" value="campaignbridge"/>
 		</properties>
 	</rule>
+
+	<!-- Control structure spacing -->
 	<rule ref="WordPress.WhiteSpace.ControlStructureSpacing">
 		<properties>
 			<property name="blank_line_check" value="true"/>
+		</properties>
+	</rule>
+
+	<!-- Inline comment punctuation enforcement -->
+	<rule ref="Squiz.Commenting.InlineComment">
+		<properties>
+			<property name="invalidChar" value=""/>
+		</properties>
+	</rule>
+
+	<!-- Security rules -->
+	<rule ref="WordPress.Security"/>
+
+	<!-- Database rules -->
+	<rule ref="WordPress.DB"/>
+
+	<!-- Performance rules -->
+	<rule ref="WordPress.WP.AlternativeFunctions"/>
+
+	<!-- Modern PHP rules -->
+	<rule ref="PSR12">
+		<!-- Exclude conflicting rules -->
+		<exclude name="PSR12.Files.FileHeader.SpacingAfterBlock"/>
+		<exclude name="PSR12.Files.OpenTag.NotAlone"/>
+	</rule>
+
+	<!-- Strict typing enforcement -->
+	<rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
+		<properties>
+			<property name="linesCountBeforeDeclare" value="1"/>
+			<property name="linesCountAfterDeclare" value="1"/>
+			<property name="spacesCountAroundEqualsSign" value="0"/>
 		</properties>
 	</rule>
 </ruleset>
