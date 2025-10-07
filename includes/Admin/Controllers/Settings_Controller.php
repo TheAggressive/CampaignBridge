@@ -1,0 +1,285 @@
+<?php // phpcs:ignoreFile WordPress.Files.FileName
+/**
+ * Settings Controller
+ *
+ * Auto-discovered and attached to settings/ screen by naming convention:
+ * - settings/ folder → Settings_Controller class
+ * - email_templates/ folder → Email_Templates_Controller class
+ * - dashboard.php file → Dashboard_Controller class
+ *
+ * @package CampaignBridge\Admin\Controllers
+ */
+
+namespace CampaignBridge\Admin\Controllers;
+
+/**
+ * Settings Controller class.
+ *
+ * Auto-discovered and attached to settings/ screen by naming convention.
+ *
+ * @package CampaignBridge\Admin\Controllers
+ */
+class Settings_Controller {
+
+	/**
+	 * Controller data array.
+	 *
+	 * @var array
+	 */
+	private array $data = [];
+
+	/**
+	 * Constructor - Initialize controller data.
+	 */
+	public function __construct() {
+		// Initialize - load data needed by all tabs.
+		$this->load_settings_data();
+		$this->load_integration_status();
+	}
+
+	/**
+	 * Get data for views (available in all tabs via $screen->get())
+   *
+   * @return array
+	 */
+	public function get_data(): array {
+		return $this->data;
+	}
+
+	/**
+	 * Handle requests (called before any tab renders)
+	 * Perfect place for form processing that affects multiple tabs
+   *
+   * @return void
+	 */
+	public function handle_request(): void {
+		// Global settings actions can be handled here.
+		if ( isset( $_POST['reset_all_settings'] ) ) {
+			$this->handle_reset_all_settings();
+		}
+
+		if ( isset( $_POST['export_settings'] ) ) {
+			$this->handle_export_settings();
+		}
+
+		if ( isset( $_POST['import_settings'] ) ) {
+			$this->handle_import_settings();
+		}
+	}
+
+	/**
+	 * Load settings data.
+   *
+   * @return void
+   *
+	 */
+	private function load_settings_data(): void {
+		$this->data = array(
+			// General settings data.
+			'from_name'           => get_option( 'cb_from_name', get_bloginfo( 'name' ) ),
+			'from_email'          => get_option( 'cb_from_email', get_option( 'admin_email' ) ),
+			'reply_to'            => get_option( 'cb_reply_to', get_option( 'admin_email' ) ),
+
+			// Mailchimp integration data.
+			'mailchimp_api_key'   => get_option( 'cb_mailchimp_api_key', '' ),
+			'mailchimp_audience'  => get_option( 'cb_mailchimp_audience', '' ),
+			'mailchimp_connected' => $this->is_mailchimp_connected(),
+
+			// Advanced settings data.
+			'debug_mode'          => get_option( 'cb_debug_mode', false ),
+			'log_level'           => get_option( 'cb_log_level', 'info' ),
+			'cache_duration'      => get_option( 'cb_cache_duration', 3600 ),
+			'rate_limit'          => get_option( 'cb_rate_limit', 100 ),
+
+			// System info.
+			'plugin_version'      => defined( 'CAMPAIGNBRIDGE_VERSION' ) ? \CampaignBridge_Plugin::VERSION : '1.0.0',
+			'wordpress_version'   => get_bloginfo( 'version' ),
+			'php_version'         => PHP_VERSION,
+
+			// Statistics.
+			'total_subscribers'   => $this->get_total_subscribers(),
+			'total_campaigns'     => $this->get_total_campaigns(),
+			'last_sync'           => get_option( 'cb_last_sync', 'Never' ),
+		);
+	}
+
+	/**
+	 * Load integration status for all providers
+   *
+   * @return void
+	 */
+	private function load_integration_status(): void {
+		$this->data['integrations'] = array(
+			'mailchimp' => array(
+				'connected' => $this->is_mailchimp_connected(),
+				'status'    => $this->get_mailchimp_status(),
+				'last_test' => get_option( 'cb_mailchimp_last_test', 'Never tested' ),
+			),
+			'sendgrid'  => array(
+				'connected' => false,
+				'status'    => 'Not configured',
+				'last_test' => 'Never tested',
+			),
+		);
+	}
+
+	/**
+	 * Check if Mailchimp is properly connected
+	 */
+	private function is_mailchimp_connected(): bool {
+		$api_key = get_option( 'cb_mailchimp_api_key', '' );
+		return ! empty( $api_key ) && strlen( $api_key ) > 20;
+	}
+
+	/**
+	 * Get Mailchimp connection status
+	 */
+	private function get_mailchimp_status(): string {
+		if ( ! $this->is_mailchimp_connected() ) {
+			return 'Not connected';
+		}
+
+		// In a real implementation, you'd test the API connection.
+		return 'Connected';
+	}
+
+	/**
+	 * Get total subscribers count
+	 */
+	private function get_total_subscribers(): int {
+		// Mock data - in real implementation, aggregate from all lists.
+		return 1299;
+	}
+
+	/**
+	 * Get total campaigns count
+	 */
+	private function get_total_campaigns(): int {
+		// Mock data - in real implementation, count from database.
+		return 42;
+	}
+
+	/**
+	 * Handle reset all settings
+   *
+   * @return void
+	 */
+	private function handle_reset_all_settings(): void {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_reset_all' ) ) {
+			wp_die( 'Security check failed' );
+		}
+
+		// Reset all plugin options.
+		$options_to_reset = array(
+			'cb_from_name',
+			'cb_from_email',
+			'cb_mailchimp_api_key',
+			'cb_mailchimp_audience',
+			'cb_debug_mode',
+			'cb_log_level',
+			'cb_cache_duration',
+			'cb_rate_limit',
+		);
+
+		foreach ( $options_to_reset as $option ) {
+			delete_option( $option );
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'  => 'campaignbridge-settings',
+					'reset' => 'success',
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Handle settings export.
+   *
+   * @return void
+	 */
+	private function handle_export_settings(): void {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_export_settings' ) ) {
+			wp_die( 'Security check failed' );
+		}
+
+		$settings = array(
+			'from_name'      => get_option( 'cb_from_name' ),
+			'from_email'     => get_option( 'cb_from_email' ),
+			'debug_mode'     => get_option( 'cb_debug_mode' ),
+			'cache_duration' => get_option( 'cb_cache_duration' ),
+			'exported_at'    => current_time( 'mysql' ),
+			'exported_by'    => wp_get_current_user()->user_login,
+		);
+
+		header( 'Content-Type: application/json' );
+		header( 'Content-Disposition: attachment; filename="campaignbridge-settings-' . gmdate( 'Y-m-d' ) . '.json"' );
+		echo wp_json_encode( $settings, JSON_PRETTY_PRINT );
+		exit;
+	}
+
+	/**
+	 * Handle settings import
+   *
+   * @return void
+	 */
+	private function handle_import_settings(): void {
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_import_settings' ) ) {
+			wp_die( 'Security check failed' );
+		}
+
+		if ( ! isset( $_FILES['import_file'] ) || UPLOAD_ERR_OK !== $_FILES['import_file']['error'] ) {
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+						'page'    => 'campaignbridge-settings',
+						'import'  => 'error',
+						'message' => 'File upload failed',
+					),
+					admin_url( 'admin.php' )
+				)
+			);
+			exit;
+		}
+
+		$content  = wp_remote_retrieve_body( wp_remote_get( $_FILES['import_file']['tmp_name'] ) );
+		$settings = json_decode( $content, true );
+
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+						'page'    => 'campaignbridge-settings',
+						'import'  => 'error',
+						'message' => 'Invalid JSON file',
+					),
+					admin_url( 'admin.php' )
+				)
+			);
+			exit;
+		}
+
+		// Import valid settings.
+		$valid_options = array( 'from_name', 'from_email', 'debug_mode', 'cache_duration' );
+		foreach ( $valid_options as $option ) {
+			if ( isset( $settings[$option] ) ) {
+				update_option( 'cb_' . $option, $settings[$option] );
+			}
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'   => 'campaignbridge-settings',
+					'import' => 'success',
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+}

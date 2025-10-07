@@ -176,6 +176,38 @@ Complete REST API for all operations:
 - Comprehensive error handling
 - JSON response formatting
 
+### File-Based Admin System
+
+CampaignBridge uses a modern file-based admin system that auto-discovers screens and provides a clean, maintainable architecture for WordPress admin pages.
+
+**Key Features:**
+- **Zero Configuration**: Just create files, everything works automatically
+- **Auto-Discovery**: Controllers, tabs, and assets auto-detected
+- **Convention Over Configuration**: Naming determines behavior
+- **Progressive Enhancement**: Start simple, add complexity when needed
+
+**Directory Structure:**
+```
+includes/Admin/
+├── Core/                    # System core files
+├── Screens/                 # Auto-discovered admin pages
+│   ├── dashboard.php       # Simple screen
+│   └── settings/           # Tabbed screen
+│       ├── general.php     # Tab 1
+│       └── mailchimp.php   # Tab 2
+├── Controllers/             # Optional business logic
+└── Models/                  # Optional data layer
+```
+
+**For complete developer documentation including:**
+- Screen types and creation
+- Controller auto-discovery
+- Configuration overrides
+- Screen context helper methods
+- Best practices and migration guide
+
+See **[DEV_README.md](DEV_README.md)** for comprehensive technical documentation.
+
 ## 🔒 Security Features
 
 - **Input Sanitization**: All user input is properly sanitized

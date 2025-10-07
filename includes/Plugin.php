@@ -19,12 +19,13 @@ declare(strict_types=1);
 
 namespace CampaignBridge;
 
-use CampaignBridge\Admin\Asset_Manager;
+// TEMPORARILY COMMENTED OUT - Will be replaced by new file-based system
+// use CampaignBridge\Admin\Asset_Manager;
 use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\Admin\Pages\Post_Types;
-use CampaignBridge\Admin\Pages\Settings;
-use CampaignBridge\Admin\Pages\Status;
-use CampaignBridge\Admin\Pages\Editor;
+// use CampaignBridge\Admin\Pages\Post_Types;
+// use CampaignBridge\Admin\Pages\Settings;
+// use CampaignBridge\Admin\Pages\Status;
+// use CampaignBridge\Admin\Pages\Editor;
 use CampaignBridge\Core\Api_Key_Encryption;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
@@ -167,70 +168,20 @@ class Plugin {
 	}
 
 	/**
-	 * Register the complete admin menu structure for CampaignBridge.
+	 * Legacy admin menu method - NO LONGER USED
 	 *
-	 * This method creates the main admin menu and all submenu pages that
-	 * provide access to CampaignBridge functionality. It sets up the menu
-	 * hierarchy, page callbacks, and user capability requirements while
-	 * initializing shared state for all admin pages.
+	 * Menu creation is now handled by the new file-based admin system
+	 * in includes/Admin/Admin.php. This method is kept for reference
+	 * but does nothing to avoid duplicate menus.
 	 *
 	 * @since 0.1.0
+	 * @deprecated Replaced by file-based admin system
 	 * @return void
 	 */
 	public function add_admin_menu(): void {
-		// Initialize shared state for all admin pages.
-		Post_Types::init_shared_state( self::OPTION_NAME, $this->providers );
-		Settings::init_shared_state( self::OPTION_NAME, $this->providers );
-		Status::init_shared_state( self::OPTION_NAME, $this->providers );
-
-		// Add main menu page.
-		add_menu_page(
-			'CampaignBridge',
-			'CampaignBridge',
-			self::ADMIN_CAPABILITY,
-			'campaignbridge',
-			array( Post_Types::class, 'render' ),
-			self::MENU_ICON,
-			self::MENU_POSITION
-		);
-
-		// Add submenu pages.
-		add_submenu_page(
-			'campaignbridge',
-			'Post Types',
-			'Post Types',
-			self::ADMIN_CAPABILITY,
-			Post_Types::get_page_slug(),
-			array( Post_Types::class, 'render' )
-		);
-
-		add_submenu_page(
-			'campaignbridge',
-			'Settings',
-			'Settings',
-			self::ADMIN_CAPABILITY,
-			Settings::get_page_slug(),
-			array( Settings::class, 'render' )
-		);
-
-		// Add Status submenu page.
-		add_submenu_page(
-			'campaignbridge',
-			'Status',
-			'Status',
-			self::ADMIN_CAPABILITY,
-			Status::get_page_slug(),
-			array( Status::class, 'render' )
-		);
-
-		add_submenu_page(
-			'campaignbridge',
-			'Template Editor',
-			'Template Editor',
-			self::ADMIN_CAPABILITY,
-			Editor::get_page_slug(),
-			array( Editor::class, 'render' )
-		);
+		// NO-OP: Menu creation is now handled by the new file-based admin system
+		// The new system auto-discovers screens and creates menus automatically
+		// See includes/Admin/Admin.php for the new implementation
 	}
 
 	/**
@@ -265,7 +216,8 @@ class Plugin {
 	 */
 	private function init_core_systems(): void {
 		// Initialize Asset Manager.
-		Asset_Manager::init();
+		// TEMPORARILY COMMENTED OUT - Old admin system
+		// Asset_Manager::init();
 
 		// Initialize Blocks system.
 		Blocks::init();
@@ -284,11 +236,14 @@ class Plugin {
 		// Wire admin hooks.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 
-		// Initialize Admin Pages.
-		Status::init();
-		Post_Types::init();
-		Settings::init();
-		Editor::init();
+		// Initialize NEW file-based admin system
+		\CampaignBridge\Admin\Admin::get_instance();
+
+		// TEMPORARILY COMMENTED OUT - Old admin pages
+		// Status::init();
+		// Post_Types::init();
+		// Settings::init();
+		// Editor::init();
 	}
 
 	/**

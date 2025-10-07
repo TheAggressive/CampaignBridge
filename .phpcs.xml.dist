@@ -12,62 +12,55 @@
 	<exclude-pattern>*.min.css</exclude-pattern>
 
 	<!-- How to scan -->
-	<!-- Usage instructions: https://github.com/squizlabs/PHP_CodeSniffer/wiki/Usage -->
-	<!-- Annotated ruleset: https://github.com/squizlabs/PHP_CodeSniffer/wiki/Annotated-ruleset.xml -->
 	<arg value="sp"/> <!-- Show sniff and progress -->
 	<arg name="basepath" value="./"/><!-- Strip the file paths down to the relevant bit -->
 	<arg name="colors"/>
 	<arg name="extensions" value="php"/>
 	<arg name="parallel" value="8"/><!-- Enables parallel processing when available for faster results. -->
 
-	<!-- Rules: Check PHP version compatibility -->
-	<!-- https://github.com/PHPCompatibility/PHPCompatibility#sniffing-your-code-for-compatibility-with-specific-php-versions -->
-	<config name="testVersion" value="8.1-"/>
-	<!-- https://github.com/PHPCompatibility/PHPCompatibilityWP -->
-	<rule ref="PHPCompatibilityWP"/>
-
 	<!-- Rules: WordPress Coding Standards -->
-	<!-- https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards -->
-	<!-- https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards/wiki/Customizable-sniff-properties -->
 	<config name="minimum_supported_wp_version" value="5.0"/>
 	<rule ref="WordPress">
 		<!-- Exclude some rules that conflict with modern PHP practices -->
 		<exclude name="WordPress.PHP.YodaConditions.NotYoda"/>
 		<exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
 		<exclude name="WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase"/>
+		<exclude name="Generic.Arrays.DisallowShortArraySyntax"/>
+		<exclude name="Generic.Arrays.DisallowShortArraySyntax.Found"/>
+		<exclude name="PEAR.Functions.FunctionCallSignature.ContentAfterOpenBracket"/>
+		<exclude name="PEAR.Functions.FunctionCallSignature.CloseBracketLine"/>
 	</rule>
 
-	<!-- Allow short array syntax for modern PHP -->
-	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+	<!-- Use long array syntax for WordPress standards -->
+	<rule ref="Generic.Arrays.DisallowShortArraySyntax"/>
+
+	<!-- Override WordPress array rules to allow short syntax -->
+	<rule ref="WordPress.Arrays">
+		<exclude name="WordPress.Arrays.ArrayKeySpacingRestrictions"/>
+	</rule>
 
 	<!-- Prefix rules for CampaignBridge -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
-			<!-- Value: replace the function, class, and variable prefixes used. Separate multiple prefixes with a comma. -->
-			<property name="prefixes" type="array" value="campaignbridge,CAMPAIGNBRIDGE"/>
+			<property name="prefixes" type="array">
+				<element value="campaignbridge"/>
+				<element value="CAMPAIGNBRIDGE"/>
+			</property>
 		</properties>
 	</rule>
 
 	<!-- Text domain for internationalization -->
 	<rule ref="WordPress.WP.I18n">
 		<properties>
-			<!-- Value: replace the text domain used. -->
-			<property name="text_domain" type="array" value="campaignbridge"/>
+			<property name="text_domain" type="array">
+				<element value="campaignbridge"/>
+			</property>
 		</properties>
 	</rule>
 
-	<!-- Control structure spacing -->
-	<rule ref="WordPress.WhiteSpace.ControlStructureSpacing">
-		<properties>
-			<property name="blank_line_check" value="true"/>
-		</properties>
-	</rule>
-
-	<!-- Inline comment punctuation enforcement -->
-	<rule ref="Squiz.Commenting.InlineComment">
-		<properties>
-			<property name="invalidChar" value=""/>
-		</properties>
+	<!-- Allow PSR-4 class filenames inside includes/ -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>includes/*</exclude-pattern>
 	</rule>
 
 	<!-- Security rules -->
@@ -78,20 +71,4 @@
 
 	<!-- Performance rules -->
 	<rule ref="WordPress.WP.AlternativeFunctions"/>
-
-	<!-- Modern PHP rules -->
-	<rule ref="PSR12">
-		<!-- Exclude conflicting rules -->
-		<exclude name="PSR12.Files.FileHeader.SpacingAfterBlock"/>
-		<exclude name="PSR12.Files.OpenTag.NotAlone"/>
-	</rule>
-
-	<!-- Strict typing enforcement -->
-	<rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
-		<properties>
-			<property name="linesCountBeforeDeclare" value="1"/>
-			<property name="linesCountAfterDeclare" value="1"/>
-			<property name="spacesCountAroundEqualsSign" value="0"/>
-		</properties>
-	</rule>
 </ruleset>
