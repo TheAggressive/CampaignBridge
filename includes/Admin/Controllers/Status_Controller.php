@@ -198,6 +198,11 @@ class Status_Controller {
 			wp_die( 'Security check failed' );
 		}
 
+		// Check user capabilities
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'You do not have permission to refresh stats.' );
+		}
+
 		// Clear any cached stats
 		delete_transient( 'cb_dashboard_stats' );
 
@@ -222,6 +227,19 @@ class Status_Controller {
 			wp_die( 'Security check failed' );
 		}
 
+		// Check user capabilities
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'You do not have permission to clear cache.' );
+		}
+
+		// Rate limiting for cache clearing
+		$rate_limit_key = 'clear_cache_' . get_current_user_id();
+		$last_clear = get_transient( $rate_limit_key );
+
+		if ( $last_clear && ( time() - $last_clear ) < 60 ) { // 1 minute
+			wp_die( 'Please wait 1 minute before clearing cache again.' );
+		}
+
 		// Clear plugin caches
 		wp_cache_flush_group( 'campaignbridge' );
 
@@ -229,6 +247,9 @@ class Status_Controller {
 		if ( function_exists( 'wp_cache_flush' ) ) {
 			wp_cache_flush();
 		}
+
+		// Set rate limiting transient
+		set_transient( $rate_limit_key, time(), 60 ); // 1 minute
 
 		wp_redirect(add_query_arg([
 			'page'          => 'campaignbridge-status',

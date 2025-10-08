@@ -169,6 +169,14 @@ class Settings_Controller {
 			wp_die( 'Security check failed' );
 		}
 
+		// Rate limiting for destructive actions
+		$rate_limit_key = 'reset_settings_' . get_current_user_id();
+		$last_reset = get_transient( $rate_limit_key );
+
+		if ( $last_reset && ( time() - $last_reset ) < 300 ) { // 5 minutes
+			wp_die( 'Please wait 5 minutes before resetting settings again.' );
+		}
+
 		// Reset all plugin options.
 		$options_to_reset = array(
 			'cb_from_name',
@@ -184,6 +192,9 @@ class Settings_Controller {
 		foreach ( $options_to_reset as $option ) {
 			delete_option( $option );
 		}
+
+		// Set rate limiting transient
+		set_transient( $rate_limit_key, time(), 300 ); // 5 minutes
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -205,6 +216,11 @@ class Settings_Controller {
 	private function handle_export_settings(): void {
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_export_settings' ) ) {
 			wp_die( 'Security check failed' );
+		}
+
+		// Check user capabilities
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'You do not have permission to export settings.' );
 		}
 
 		$settings = array(
@@ -232,6 +248,11 @@ class Settings_Controller {
 			wp_die( 'Security check failed' );
 		}
 
+		// Check user capabilities
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'You do not have permission to import settings.' );
+		}
+
 		if ( ! isset( $_FILES['import_file'] ) || UPLOAD_ERR_OK !== $_FILES['import_file']['error'] ) {
 			wp_safe_redirect(
 				add_query_arg(
@@ -246,7 +267,50 @@ class Settings_Controller {
 			exit;
 		}
 
-		$content  = wp_remote_retrieve_body( wp_remote_get( $_FILES['import_file']['tmp_name'] ) );
+		// Validate file upload security
+		$allowed_mime_types = array( 'application/json', 'text/plain' );
+		$uploaded_file_type = wp_check_filetype( $_FILES['import_file']['name'] );
+
+		if ( ! in_array( $uploaded_file_type['type'], $allowed_mime_types, true ) ) {
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+						'page'    => 'campaignbridge-settings',
+						'import'  => 'error',
+						'message' => 'Invalid file type. Only JSON files are allowed.',
+					),
+					admin_url( 'admin.php' )
+				)
+			);
+			exit;
+		}
+
+		// Check file size (max 1MB for settings)
+		$max_size = 1024 * 1024; // 1MB
+		if ( $_FILES['import_file']['size'] > $max_size ) {
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+						'page'    => 'campaignbridge-settings',
+						'import'  => 'error',
+						'message' => 'File too large. Maximum size is 1MB.',
+					),
+					admin_url( 'admin.php' )
+				)
+			);
+			exit;
+		}
+
+		// Secure file reading for uploaded files
+		if ( ! is_uploaded_file( $_FILES['import_file']['tmp_name'] ) ) {
+			wp_die( 'Invalid file upload' );
+		}
+
+		$content = file_get_contents( $_FILES['import_file']['tmp_name'] );
+		if ( false === $content ) {
+			wp_die( 'Failed to read uploaded file' );
+		}
+
 		$settings = json_decode( $content, true );
 
 		if ( json_last_error() !== JSON_ERROR_NONE ) {

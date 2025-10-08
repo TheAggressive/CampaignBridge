@@ -7,9 +7,9 @@
  */
 
 // Get data from controller or set defaults
-$system_info  = $screen->get( 'system_info', [] );
-$integrations = $screen->get( 'integrations', [] );
-$stats        = $screen->get( 'stats', [] );
+$cb_system_info  = $screen->get( 'system_info', [] );
+$cb_integrations = $screen->get( 'integrations', [] );
+$cb_stats        = $screen->get( 'stats', [] );
 ?>
 
 <div class="status-screen">
@@ -25,20 +25,20 @@ $stats        = $screen->get( 'stats', [] );
 			<tbody>
 				<tr>
 					<td><strong><?php _e( 'Plugin Version', 'campaignbridge' ); ?></strong></td>
-					<td><?php echo esc_html( $system_info['plugin_version'] ?? 'Unknown' ); ?></td>
+					<td><?php echo esc_html( $cb_system_info['plugin_version'] ?? 'Unknown' ); ?></td>
 				</tr>
 				<tr>
 					<td><strong><?php _e( 'WordPress Version', 'campaignbridge' ); ?></strong></td>
-					<td><?php echo esc_html( $system_info['wordpress_version'] ?? get_bloginfo( 'version' ) ); ?></td>
+					<td><?php echo esc_html( $cb_system_info['wordpress_version'] ?? get_bloginfo( 'version' ) ); ?></td>
 				</tr>
 				<tr>
 					<td><strong><?php _e( 'PHP Version', 'campaignbridge' ); ?></strong></td>
-					<td><?php echo esc_html( $system_info['php_version'] ?? PHP_VERSION ); ?></td>
+					<td><?php echo esc_html( $cb_system_info['php_version'] ?? PHP_VERSION ); ?></td>
 				</tr>
 				<tr>
 					<td><strong><?php _e( 'Debug Mode', 'campaignbridge' ); ?></strong></td>
 					<td>
-						<?php if ( $system_info['debug_mode'] ?? false ) : ?>
+						<?php if ( $cb_system_info['debug_mode'] ?? false ) : ?>
 							<span class="status-enabled"><?php _e( 'Enabled', 'campaignbridge' ); ?></span>
 						<?php else : ?>
 							<span class="status-disabled"><?php _e( 'Disabled', 'campaignbridge' ); ?></span>
@@ -61,7 +61,7 @@ $stats        = $screen->get( 'stats', [] );
 				</tr>
 			</thead>
 			<tbody>
-				<?php foreach ( $integrations as $provider => $info ) : ?>
+				<?php foreach ( $cb_integrations as $provider => $info ) : ?>
 					<tr>
 						<td><strong><?php echo esc_html( ucfirst( $provider ) ); ?></strong></td>
 						<td>
@@ -84,15 +84,15 @@ $stats        = $screen->get( 'stats', [] );
 		<div class="stats-grid">
 			<div class="stat-card">
 				<h4><?php _e( 'Total Campaigns', 'campaignbridge' ); ?></h4>
-				<p class="stat-number"><?php echo number_format( $stats['total_campaigns'] ?? 0 ); ?></p>
+				<p class="stat-number"><?php echo number_format( $cb_stats['total_campaigns'] ?? 0 ); ?></p>
 			</div>
 			<div class="stat-card">
 				<h4><?php _e( 'Total Sent', 'campaignbridge' ); ?></h4>
-				<p class="stat-number"><?php echo number_format( $stats['total_sent'] ?? 0 ); ?></p>
+				<p class="stat-number"><?php echo number_format( $cb_stats['total_sent'] ?? 0 ); ?></p>
 			</div>
 			<div class="stat-card">
 				<h4><?php _e( 'Subscribers', 'campaignbridge' ); ?></h4>
-				<p class="stat-number"><?php echo number_format( $stats['subscribers'] ?? 0 ); ?></p>
+				<p class="stat-number"><?php echo number_format( $cb_stats['subscribers'] ?? 0 ); ?></p>
 			</div>
 		</div>
 	</div>
@@ -100,14 +100,20 @@ $stats        = $screen->get( 'stats', [] );
 	<!-- Actions -->
 	<div class="status-section">
 		<h3><?php _e( 'Actions', 'campaignbridge' ); ?></h3>
-		<p>
-			<button type="button" class="button" id="refresh-status">
-				<?php _e( 'Refresh Status', 'campaignbridge' ); ?>
-			</button>
-			<button type="button" class="button" id="clear-cache">
-				<?php _e( 'Clear Cache', 'campaignbridge' ); ?>
-			</button>
-		</p>
+		<div class="action-buttons">
+			<form method="post" action="" style="display: inline;">
+				<?php $screen->nonce_field( 'refresh_stats' ); ?>
+				<button type="submit" name="refresh_stats" value="1" class="button">
+					<?php _e( 'Refresh Status', 'campaignbridge' ); ?>
+				</button>
+			</form>
+			<form method="post" action="" style="display: inline; margin-left: 10px;">
+				<?php $screen->nonce_field( 'clear_cache' ); ?>
+				<button type="submit" name="clear_cache" value="1" class="button">
+					<?php _e( 'Clear Cache', 'campaignbridge' ); ?>
+				</button>
+			</form>
+		</div>
 	</div>
 </div>
 
@@ -180,17 +186,14 @@ $stats        = $screen->get( 'stats', [] );
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-	// Refresh status functionality
-	document.getElementById('refresh-status').addEventListener('click', function() {
-		location.reload();
-	});
-
-	// Clear cache functionality
-	document.getElementById('clear-cache').addEventListener('click', function() {
-		if (confirm('<?php esc_js( __( 'Are you sure you want to clear the cache?', 'campaignbridge' ) ); ?>')) {
-			// Add cache clearing logic here
-			alert('<?php esc_js( __( 'Cache cleared!', 'campaignbridge' ) ); ?>');
-		}
+	// Add confirmation for destructive actions
+	document.querySelectorAll('button[name="clear_cache"]').forEach(button => {
+		button.addEventListener('click', function(e) {
+			if (!confirm('<?php esc_js( __( 'Are you sure you want to clear the cache?', 'campaignbridge' ) ); ?>')) {
+				e.preventDefault();
+				return false;
+			}
+		});
 	});
 });
 </script>

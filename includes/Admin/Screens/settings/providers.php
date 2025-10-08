@@ -7,10 +7,10 @@
  */
 
 // Get data from controller or options
-$provider           = $screen->get( 'provider', get_option( 'cb_provider', 'html' ) );
-$mailchimp_api_key  = $screen->get( 'mailchimp_api_key', get_option( 'cb_mailchimp_api_key', '' ) );
-$mailchimp_audience = $screen->get( 'mailchimp_audience', get_option( 'cb_mailchimp_audience', '' ) );
-$is_connected       = $screen->get( 'mailchimp_connected', false );
+$cb_provider           = $screen->get( 'provider', get_option( 'cb_provider', 'html' ) );
+$cb_mailchimp_api_key  = $screen->get( 'mailchimp_api_key', get_option( 'cb_mailchimp_api_key', '' ) );
+$cb_mailchimp_audience = $screen->get( 'mailchimp_audience', get_option( 'cb_mailchimp_audience', '' ) );
+$cb_is_connected       = $screen->get( 'mailchimp_connected', false );
 
 // Handle form submission
 if ( $screen->is_post() && $screen->verify_nonce( 'save_providers' ) ) {
@@ -56,10 +56,10 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_providers' ) ) {
 					</th>
 					<td>
 						<select id="provider" name="provider" class="regular-text" required>
-							<option value="html" <?php selected( $provider, 'html' ); ?>>
+							<option value="html" <?php selected( $cb_provider, 'html' ); ?>>
 								<?php _e( 'HTML Email (Default)', 'campaignbridge' ); ?>
 							</option>
-							<option value="mailchimp" <?php selected( $provider, 'mailchimp' ); ?>>
+							<option value="mailchimp" <?php selected( $cb_provider, 'mailchimp' ); ?>>
 								<?php _e( 'Mailchimp', 'campaignbridge' ); ?>
 							</option>
 						</select>
@@ -69,7 +69,7 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_providers' ) ) {
 					</td>
 				</tr>
 
-				<?php if ( $provider === 'mailchimp' ) : ?>
+				<?php if ( $cb_provider === 'mailchimp' ) : ?>
 					<tr class="mailchimp-fields">
 						<th scope="row">
 							<label for="mailchimp_api_key">
@@ -82,7 +82,7 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_providers' ) ) {
 								type="text"
 								id="mailchimp_api_key"
 								name="mailchimp_api_key"
-								value="<?php echo esc_attr( $mailchimp_api_key ); ?>"
+								value="<?php echo esc_attr( $cb_mailchimp_api_key ); ?>"
 								class="regular-text"
 								placeholder="<?php esc_attr_e( 'Enter your Mailchimp API key', 'campaignbridge' ); ?>"
 							>
@@ -108,7 +108,7 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_providers' ) ) {
 								type="text"
 								id="mailchimp_audience"
 								name="mailchimp_audience"
-								value="<?php echo esc_attr( $mailchimp_audience ); ?>"
+								value="<?php echo esc_attr( $cb_mailchimp_audience ); ?>"
 								class="regular-text"
 								placeholder="<?php esc_attr_e( 'Enter audience/list ID', 'campaignbridge' ); ?>"
 							>
@@ -123,7 +123,7 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_providers' ) ) {
 							<?php _e( 'Connection Status', 'campaignbridge' ); ?>
 						</th>
 						<td>
-							<?php if ( $is_connected ) : ?>
+							<?php if ( $cb_is_connected ) : ?>
 								<span class="status-badge connected">
 									<span class="dashicons dashicons-yes-alt"></span>
 									<strong><?php _e( 'Connected', 'campaignbridge' ); ?></strong>

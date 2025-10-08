@@ -7,8 +7,8 @@
  */
 
 // Get data from controller or set defaults
-$templates        = $screen->get( 'templates', [] );
-$recent_templates = $screen->get( 'recent_templates', [] );
+$cb_templates        = $screen->get( 'templates', [] );
+$cb_recent_templates = $screen->get( 'recent_templates', [] );
 ?>
 
 <div class="editor-screen">
@@ -31,11 +31,11 @@ $recent_templates = $screen->get( 'recent_templates', [] );
 	<div class="recent-templates">
 		<h3><?php _e( 'Recent Templates', 'campaignbridge' ); ?></h3>
 
-		<?php if ( empty( $recent_templates ) ) : ?>
+		<?php if ( empty( $cb_recent_templates ) ) : ?>
 			<p><?php _e( 'No templates created yet.', 'campaignbridge' ); ?></p>
 		<?php else : ?>
 			<div class="template-grid">
-				<?php foreach ( $recent_templates as $template ) : ?>
+				<?php foreach ( $cb_recent_templates as $template ) : ?>
 					<div class="template-card">
 						<h4><?php echo esc_html( $template['title'] ); ?></h4>
 						<p class="template-meta">

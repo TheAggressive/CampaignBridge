@@ -7,10 +7,11 @@
  */
 
 // Get data from controller or options
-$from_name  = $screen->get( 'from_name', get_option( 'cb_from_name', get_bloginfo( 'name' ) ) );
-$from_email = $screen->get( 'from_email', get_option( 'cb_from_email', get_option( 'admin_email' ) ) );
-$reply_to   = $screen->get( 'reply_to', get_option( 'cb_reply_to', '' ) );
+$cb_from_name  = $screen->get( 'from_name', get_option( 'cb_from_name', get_bloginfo( 'name' ) ) );
+$cb_from_email = $screen->get( 'from_email', get_option( 'cb_from_email', get_option( 'admin_email' ) ) );
+$cb_reply_to   = $screen->get( 'reply_to', get_option( 'cb_reply_to', '' ) );
 
+$screen->add_message( 'test' );
 // Handle form submission
 if ( $screen->is_post() && $screen->verify_nonce( 'save_general' ) ) {
 	$from_name  = $screen->post( 'from_name' );
@@ -67,7 +68,7 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_general' ) ) {
 							type="text"
 							id="from_name"
 							name="from_name"
-							value="<?php echo esc_attr( $from_name ); ?>"
+							value="<?php echo esc_attr( $cb_from_name ); ?>"
 							class="regular-text"
 							required
 						>
@@ -89,7 +90,7 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_general' ) ) {
 							type="email"
 							id="from_email"
 							name="from_email"
-							value="<?php echo esc_attr( $from_email ); ?>"
+							value="<?php echo esc_attr( $cb_from_email ); ?>"
 							class="regular-text"
 							required
 						>
@@ -110,7 +111,7 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_general' ) ) {
 							type="email"
 							id="reply_to"
 							name="reply_to"
-							value="<?php echo esc_attr( $reply_to ); ?>"
+							value="<?php echo esc_attr( $cb_reply_to ); ?>"
 							class="regular-text"
 						>
 						<p class="description">

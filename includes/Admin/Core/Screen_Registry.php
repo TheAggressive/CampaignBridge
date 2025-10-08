@@ -78,7 +78,7 @@ class Screen_Registry {
 
 		foreach ( scandir( $this->screens_path ) as $item ) {
 			// Skip special files.
-			if ( $item === '.' || $item === '..' || strpos( $item, '_' ) === 0 || strpos( $item, '.' ) === 0 ) {
+			if ( '.' === $item || '..' === $item || strpos( $item, '_' ) === 0 || strpos( $item, '.' ) === 0 ) {
 				continue;
 			}
 

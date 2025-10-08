@@ -82,9 +82,9 @@ class Screen_Context {
 	}
 
 	/**
-	 * Set a value in the data array.
+	 * Stores a value in the screen data array for use in templates.
 	 *
-	 * @param string $key The key to set.
+	 * @param string $key   The key to set.
 	 * @param mixed  $value The value to set.
 	 */
 	public function set( string $key, $value ): void {
@@ -92,27 +92,27 @@ class Screen_Context {
 	}
 
 	/**
-	 * Get a value from the data array.
+	 * Retrieves a value from the screen data array with optional fallback.
 	 *
-	 * @param string $key The key to get.
+	 * @param string $key      The key to get.
 	 * @param mixed  $fallback The default value to return if the key is not set.
-	 * @return mixed The value from the data array.
+	 * @return mixed The value from the data array or the fallback.
 	 */
 	public function get( string $key, $fallback = null ) {
 		return $this->data[ $key ] ?? $fallback;
 	}
 
 	/**
-	 * Get all data from the data array.
+	 * Returns all data from the screen data array.
 	 *
-	 * @return array The data array.
+	 * @return array All stored data for the screen.
 	 */
 	public function get_all(): array {
 		return $this->data;
 	}
 
 	/**
-	 * Check if a key exists in the data array.
+	 * Checks if a key exists in the screen data array.
 	 *
 	 * @param string $key The key to check.
 	 * @return bool True if the key exists, false otherwise.
@@ -122,7 +122,7 @@ class Screen_Context {
 	}
 
 	/**
-	 * Check if the request method is POST.
+	 * Checks if the current request method is POST.
 	 *
 	 * @return bool True if the request method is POST, false otherwise.
 	 */
@@ -131,19 +131,18 @@ class Screen_Context {
 	}
 
 	/**
-	 * Add a nonce field to the form.
+	 * Outputs a nonce field for CSRF protection in forms.
 	 *
-	 * @param string $action The action to add the nonce field for.
-	 * @return void
+	 * @param string $action The action name for the nonce.
 	 */
 	public function nonce_field( string $action ): void {
 		wp_nonce_field( 'cb_' . $action, '_wpnonce', true, true );
 	}
 
 	/**
-	 * Verify a nonce field.
+	 * Verifies a nonce for CSRF protection.
 	 *
-	 * @param string $action The action to verify the nonce field for.
+	 * @param string $action The action name to verify against.
 	 * @return bool True if the nonce is valid, false otherwise.
 	 */
 	public function verify_nonce( string $action ): bool {
@@ -152,11 +151,11 @@ class Screen_Context {
 	}
 
 	/**
-	 * Get a POST value.
+	 * Retrieves and sanitizes a POST value with automatic type-based sanitization.
 	 *
-	 * @param string $key The key to get.
-	 * @param mixed  $fallback The default value to return if the key is not set.
-	 * @return mixed The value from the POST array.
+	 * @param string $key      The POST key to retrieve.
+	 * @param mixed  $fallback The default value if the key is not set.
+	 * @return mixed The sanitized POST value or the fallback.
 	 */
 	public function post( string $key, $fallback = null ) {
 		if ( ! isset( $_POST[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -166,30 +165,101 @@ class Screen_Context {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing -- Input is sanitized immediately below
 		$value = wp_unslash( $_POST[ $key ] );
 
-		// Sanitize based on value type.
+		// Enhanced sanitization based on value type and context.
 		if ( is_string( $value ) ) {
-			return sanitize_text_field( $value );
-		}
-		if ( is_array( $value ) ) {
-			return array_map( 'sanitize_text_field', $value );
-		}
-		if ( is_numeric( $value ) ) {
+			// Use appropriate sanitization based on field name context.
+			if ( strpos( $key, 'email' ) !== false || 'reply_to' === $key ) {
+				return sanitize_email( $value );
+			}
+			if ( strpos( $key, 'url' ) !== false ) {
+				return esc_url_raw( $value );
+			}
+			if ( strpos( $key, 'html' ) !== false || strpos( $key, 'content' ) !== false ) {
+				return wp_kses_post( $value );
+			}
+			// Default text field sanitization.
 			return sanitize_text_field( $value );
 		}
 
+		if ( is_array( $value ) ) {
+			// Recursively sanitize array values.
+			return $this->sanitize_array_input( $value, $key );
+		}
+
+		if ( is_numeric( $value ) ) {
+			// For numeric values, ensure they're properly cast.
+			if ( strpos( $key, 'id' ) !== false || strpos( $key, 'limit' ) !== false ) {
+				return absint( $value );
+			}
+			return sanitize_text_field( $value );
+		}
+
+		if ( is_bool( $value ) ) {
+			return (bool) $value;
+		}
+
 		// For other types, return as-is (already unslashed).
+		// Log potential security concern for unknown types.
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Unhandled input type for field "%s": %s', $key, gettype( $value ) ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		}
+
 		return $value;
 	}
 
 	/**
-	 * Enqueue a style.
+	 * Sanitize array input recursively.
 	 *
-	 * @param string $handle The handle to enqueue.
-	 * @param string $src The source of the style.
-	 * @param array  $deps The dependencies to enqueue.
-	 * @param string $version The version of the style.
+	 * Applies basic WordPress sanitization functions based on data type,
+	 * without domain-specific business logic. For custom sanitization rules,
+	 * use a dedicated sanitizer service.
 	 *
-	 * @return void
+	 * @param array  $input_array The array to sanitize.
+	 * @param string $parent_key  The parent key for context (optional).
+	 * @return array The sanitized array.
+	 */
+	private function sanitize_array_input( array $input_array, string $parent_key = '' ): array {
+		$sanitized = array();
+
+		foreach ( $input_array as $key => $value ) {
+			// Sanitize the key.
+			$sanitized_key = sanitize_key( $key );
+
+			// Recursively sanitize the value based on type.
+			if ( is_array( $value ) ) {
+				$sanitized[ $sanitized_key ] = $this->sanitize_array_input( $value, $parent_key . '[' . $key . ']' );
+			} elseif ( is_string( $value ) ) {
+				$sanitized[ $sanitized_key ] = sanitize_text_field( $value );
+			} elseif ( is_numeric( $value ) ) {
+				$sanitized[ $sanitized_key ] = is_int( $value ) ? absint( $value ) : sanitize_text_field( (string) $value );
+			} elseif ( is_bool( $value ) ) {
+				$sanitized[ $sanitized_key ] = (bool) $value;
+			} elseif ( is_null( $value ) ) {
+				$sanitized[ $sanitized_key ] = null;
+			} else {
+				// For unknown types, convert to string and sanitize, or skip if conversion fails.
+				if ( is_scalar( $value ) || ( is_object( $value ) && method_exists( $value, '__toString' ) ) ) {
+					$sanitized[ $sanitized_key ] = sanitize_text_field( (string) $value );
+				} else {
+					// Log and skip non-convertible types.
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log( sprintf( 'Skipping non-convertible value type for "%s[%s]": %s', $parent_key, $key, gettype( $value ) ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					}
+					continue;
+				}
+			}
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Enqueues a CSS stylesheet for the admin screen.
+	 *
+	 * @param string      $handle  The handle to enqueue.
+	 * @param string      $src     The source path relative to plugin URL.
+	 * @param array       $deps    The dependencies to enqueue.
+	 * @param string|null $version The version of the style.
 	 */
 	public function enqueue_style( string $handle, string $src, array $deps = array(), ?string $version = null ): void {
 		wp_enqueue_style(
@@ -201,15 +271,13 @@ class Screen_Context {
 	}
 
 	/**
-	 * Enqueue a script.
+	 * Enqueues a JavaScript file for the admin screen.
 	 *
-	 * @param string $handle The handle to enqueue.
-	 * @param string $src The source of the script.
-	 * @param array  $deps The dependencies to enqueue.
-	 * @param string $version The version of the script.
-	 * @param bool   $in_footer Whether to enqueue the script in the footer.
-	 *
-	 * @return void
+	 * @param string      $handle    The handle to enqueue.
+	 * @param string      $src       The source path relative to plugin URL.
+	 * @param array       $deps      The dependencies to enqueue.
+	 * @param string|null $version   The version of the script.
+	 * @param bool        $in_footer Whether to enqueue the script in the footer.
 	 */
 	public function enqueue_script( string $handle, string $src, array $deps = array(), ?string $version = null, bool $in_footer = true ): void {
 		wp_enqueue_script(
@@ -222,12 +290,11 @@ class Screen_Context {
 	}
 
 	/**
-	 * Enqueue a built asset style.
+	 * Enqueues a built CSS asset with dependencies from asset.php file.
 	 *
-	 * @param string $handle The handle to enqueue.
-	 * @param string $asset_file_path The path to the asset file.
-	 * @param array  $additional_deps The additional dependencies to enqueue.
-	 *
+	 * @param string $handle           The handle to enqueue.
+	 * @param string $asset_file_path  The path to the asset.php file.
+	 * @param array  $additional_deps  Additional dependencies to enqueue.
 	 * @return bool True if the asset was enqueued, false otherwise.
 	 */
 	public function asset_enqueue_style( string $handle, string $asset_file_path, array $additional_deps = array() ): bool {
@@ -262,13 +329,12 @@ class Screen_Context {
 	}
 
 	/**
-	 * Enqueue a built asset script.
+	 * Enqueues a built JavaScript asset with dependencies from asset.php file.
 	 *
-	 * @param string $handle The handle to enqueue.
-	 * @param string $asset_file_path The path to the asset file.
-	 * @param array  $additional_deps The additional dependencies to enqueue.
-	 * @param bool   $in_footer Whether to enqueue the script in the footer.
-	 *
+	 * @param string $handle           The handle to enqueue.
+	 * @param string $asset_file_path  The path to the asset.php file.
+	 * @param array  $additional_deps  Additional dependencies to enqueue.
+	 * @param bool   $in_footer        Whether to enqueue the script in the footer.
 	 * @return bool True if the asset was enqueued, false otherwise.
 	 */
 	public function asset_enqueue_script( string $handle, string $asset_file_path, array $additional_deps = [], bool $in_footer = true ): bool {
@@ -304,14 +370,13 @@ class Screen_Context {
 	}
 
 	/**
-	 * Enqueue a built asset.
+	 * Enqueues both CSS and JS assets from the same asset.php file.
 	 *
-	 * @param string $handle The handle to enqueue.
-	 * @param string $asset_file_path The path to the asset file.
-	 * @param bool   $enqueue_style Whether to enqueue the style.
-	 * @param bool   $enqueue_script Whether to enqueue the script.
-	 *
-	 * @return array The asset was enqueued, false otherwise.
+	 * @param string $handle           The handle to enqueue.
+	 * @param string $asset_file_path  The path to the asset.php file.
+	 * @param bool   $enqueue_style    Whether to enqueue the style.
+	 * @param bool   $enqueue_script   Whether to enqueue the script.
+	 * @return array Array with 'style' and 'script' boolean results.
 	 */
 	public function asset_enqueue( string $handle, string $asset_file_path, bool $enqueue_style = true, bool $enqueue_script = true ): array {
 		return array(
@@ -321,24 +386,20 @@ class Screen_Context {
 	}
 
 	/**
-	 * Localize a script.
+	 * Localizes a script with PHP data for use in JavaScript.
 	 *
-	 * @param string $handle The handle to localize.
-	 * @param string $object_name The name of the object to localize.
-	 * @param array  $data The data to localize.
-	 *
-	 * @return void
+	 * @param string $handle      The script handle to localize.
+	 * @param string $object_name The JavaScript object name.
+	 * @param array  $data        The data to pass to JavaScript.
 	 */
 	public function localize_script( string $handle, string $object_name, array $data ): void {
 		wp_localize_script( 'cb-' . $handle, $object_name, $data );
 	}
 
 	/**
-	 * Add a message.
+	 * Queues a success message for display in admin notices.
 	 *
-	 * @param string $message The message to add.
-	 *
-	 * @return void
+	 * @param string $message The success message to display.
 	 */
 	public function add_message( string $message ): void {
 		$this->messages[] = $message;
@@ -346,11 +407,9 @@ class Screen_Context {
 	}
 
 	/**
-	 * Add an error.
+	 * Queues an error message for display in admin notices.
 	 *
-	 * @param string $error The error to add.
-	 *
-	 * @return void
+	 * @param string $error The error message to display.
 	 */
 	public function add_error( string $error ): void {
 		$this->errors[] = $error;
@@ -358,31 +417,25 @@ class Screen_Context {
 	}
 
 	/**
-	 * Add a warning.
+	 * Displays a warning message in admin notices.
 	 *
-	 * @param string $warning The warning to add.
-	 *
-	 * @return void
+	 * @param string $warning The warning message to display.
 	 */
 	public function add_warning( string $warning ): void {
 		add_action( 'admin_notices', fn() => printf( '<div class="notice notice-warning"><p>%s</p></div>', esc_html( $warning ) ) );
 	}
 
 	/**
-	 * Add an info.
+	 * Displays an info message in admin notices.
 	 *
-	 * @param string $info The info to add.
-	 *
-	 * @return void
+	 * @param string $info The info message to display.
 	 */
 	public function add_info( string $info ): void {
 		add_action( 'admin_notices', fn() => printf( '<div class="notice notice-info"><p>%s</p></div>', esc_html( $info ) ) );
 	}
 
 	/**
-	 * Display messages.
-	 *
-	 * @return void
+	 * Outputs queued success and error messages as admin notices.
 	 */
 	public function display_messages(): void {
 		foreach ( $this->messages as $message ) {
@@ -394,9 +447,9 @@ class Screen_Context {
 	}
 
 	/**
-	 * Get the screen info.
+	 * Returns information about the current screen.
 	 *
-	 * @return array The screen info.
+	 * @return array Array containing screen name, type, and current tab.
 	 */
 	public function get_screen_info(): array {
 		return array(
@@ -407,31 +460,29 @@ class Screen_Context {
 	}
 
 	/**
-	 * Check if the current tab is the given tab.
+	 * Checks if the given tab is currently active.
 	 *
 	 * @param string $tab_name The name of the tab to check.
-	 *
-	 * @return bool True if the current tab is the given tab, false otherwise.
+	 * @return bool True if the current tab matches the given tab.
 	 */
 	public function is_tab( string $tab_name ): bool {
 		return $this->current_tab === $tab_name;
 	}
 
 	/**
-	 * Get the tab URL.
+	 * Generates a URL for switching to the specified tab.
 	 *
-	 * @param string $tab_name The name of the tab to get the URL for.
-	 *
-	 * @return string The tab URL.
+	 * @param string $tab_name The name of the tab to generate URL for.
+	 * @return string The URL with tab parameter added.
 	 */
 	public function get_tab_url( string $tab_name ): string {
 		return add_query_arg( 'tab', $tab_name );
 	}
 
 	/**
-	 * Get the controller.
+	 * Returns the controller instance associated with this screen.
 	 *
-	 * @return mixed The controller.
+	 * @return mixed The controller instance or null if none set.
 	 */
 	public function get_controller() {
 		return $this->controller;

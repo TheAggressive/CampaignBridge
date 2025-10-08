@@ -43,7 +43,7 @@ class Admin {
 	}
 
 	/**
-	 * Private constructor for singleton.
+	 * Private constructor - initializes admin system only when in admin area.
 	 */
 	private function __construct() {
 		if ( ! is_admin() ) {
@@ -91,7 +91,7 @@ class Admin {
 	 */
 	public function enqueue_global_assets( string $hook ): void {
 		// Only on CampaignBridge pages.
-		if ( strpos( $hook, 'campaignbridge' ) === false ) {
+		if ( false === strpos( $hook, 'campaignbridge' ) ) {
 			return;
 		}
 
