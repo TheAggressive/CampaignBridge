@@ -30,7 +30,7 @@ $campaignbridge_enabled_types = $screen->get( 'enabled_types', array() );
 			</div>
 
 			<form method="post" action="" class="campaignbridge-post-types__form">
-        <?php $screen->nonce_field( 'campaignbridge_post_types-options' ); ?>
+		<?php $screen->nonce_field( 'campaignbridge_post_types-options' ); ?>
 
 				<div class="campaignbridge-post-types__switches-box">
 					<div class="campaignbridge-post-types__switches-group">

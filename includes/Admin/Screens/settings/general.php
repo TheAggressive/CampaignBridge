@@ -1,46 +1,79 @@
 <?php
 /**
- * General Settings Tab
+ * General Settings Tab - Form System Demo
  *
+ * Demonstrates the modern fluent API for form creation
  * Auto-discovered as part of Settings screen
  * Controller: Settings_Controller (auto-discovered)
  */
 
-// Get data from controller or options
-$cb_from_name  = $screen->get( 'from_name', get_option( 'cb_from_name', get_bloginfo( 'name' ) ) );
-$cb_from_email = $screen->get( 'from_email', get_option( 'cb_from_email', get_option( 'admin_email' ) ) );
-$cb_reply_to   = $screen->get( 'reply_to', get_option( 'cb_reply_to', '' ) );
+// Include the Form system
+require_once __DIR__ . '/../../Core/Form.php';
 
-$screen->add_message( 'test' );
-// Handle form submission
-if ( $screen->is_post() && $screen->verify_nonce( 'save_general' ) ) {
-	$from_name  = $screen->post( 'from_name' );
-	$from_email = $screen->post( 'from_email' );
-	$reply_to   = $screen->post( 'reply_to' );
+// Create the general settings form using the fluent API
+$form = \CampaignBridge\Admin\Core\Form::settings( 'general_settings' )
+	->options( 'cb_' ) // Save to options with prefix
+	->text( 'from_name', 'From Name' )
+		->default( get_bloginfo( 'name' ) )
+		->required()
+		->description( 'The name that appears in the "From" field of emails.' )
+		->class( 'regular-text' )
+		->autocomplete( 'organization' )
+		->end()
 
-	// Validate
-	$errors = [];
-	if ( empty( $from_name ) ) {
-		$errors[] = __( 'From Name is required', 'campaignbridge' );
-	}
-	if ( ! is_email( $from_email ) ) {
-		$errors[] = __( 'Valid From Email is required', 'campaignbridge' );
-	}
-	if ( ! empty( $reply_to ) && ! is_email( $reply_to ) ) {
-		$errors[] = __( 'Reply-To must be a valid email', 'campaignbridge' );
-	}
+	->email( 'from_email', 'From Email' )
+		->default( get_option( 'admin_email' ) )
+		->required()
+		->description( 'The email address that appears in the "From" field.' )
+		->class( 'regular-text' )
+		->autocomplete( 'email' )
+		->end()
 
-	if ( empty( $errors ) ) {
-		// Save
-		update_option( 'cb_from_name', $from_name );
-		update_option( 'cb_from_email', $from_email );
-		update_option( 'cb_reply_to', $reply_to );
+	->email( 'reply_to', 'Reply-To Email' )
+		->default( get_option( 'admin_email' ) )
+		->description( 'Optional. Email address where replies should be sent.' )
+		->class( 'regular-text' )
+		->autocomplete( 'email' )
+		->end()
 
-		$screen->add_message( __( 'General settings saved successfully!', 'campaignbridge' ) );
-	} else {
-		foreach ( $errors as $error ) {
-			$screen->add_error( $error );
+	->beforeValidate(function ( $data ) {
+		// Ensure from_email is different from reply_to
+		if ( ! empty( $data['reply_to'] ) && $data['from_email'] === $data['reply_to'] ) {
+			throw new Exception( __( 'From Email and Reply-To Email should be different.', 'campaignbridge' ) );
 		}
+		return $data;
+	})
+	->afterValidate(function ( $data, $errors ) {
+		if ( ! empty( $errors ) ) {
+			error_log( 'General settings validation failed: ' . print_r( $errors, true ) );
+		}
+	})
+	->beforeSave(function ( $data ) {
+		$data['updated_at'] = current_time( 'mysql' );
+		$data['updated_by'] = get_current_user_id();
+		return $data;
+	})
+	->afterSave(function ( $data, $result ) {
+		if ( $result ) {
+			wp_cache_delete( 'campaignbridge_email_config', 'campaignbridge' );
+			error_log(sprintf(
+				'General email settings updated by user %d: %s -> %s',
+				get_current_user_id(),
+				$data['from_name'],
+				$data['from_email']
+			));
+			do_action( 'campaignbridge_general_settings_saved', $data );
+		} else {
+			error_log( 'Failed to save general settings' );
+		}
+	});
+
+// Integrate with Screen Context for messages
+if ( $form->submitted() && $form->valid() ) {
+	$screen->add_message( 'General email settings saved successfully!' );
+} elseif ( $form->submitted() ) {
+	foreach ( $form->errors() as $error ) {
+		$screen->add_error( $error );
 	}
 }
 ?>
@@ -51,92 +84,58 @@ if ( $screen->is_post() && $screen->verify_nonce( 'save_general' ) ) {
 		<?php _e( 'Configure the default sender information for your email campaigns.', 'campaignbridge' ); ?>
 	</p>
 
-	<form method="post" action="">
-		<?php $screen->nonce_field( 'save_general' ); ?>
+	<?php $form->render(); ?>
 
-		<table class="form-table" role="presentation">
-			<tbody>
-				<tr>
-					<th scope="row">
-						<label for="from_name">
-							<?php _e( 'From Name', 'campaignbridge' ); ?>
-							<span class="required">*</span>
-						</label>
-					</th>
-					<td>
-						<input
-							type="text"
-							id="from_name"
-							name="from_name"
-							value="<?php echo esc_attr( $cb_from_name ); ?>"
-							class="regular-text"
-							required
-						>
-						<p class="description">
-							<?php _e( 'The name that appears in the "From" field of emails.', 'campaignbridge' ); ?>
-						</p>
-					</td>
-				</tr>
-
-				<tr>
-					<th scope="row">
-						<label for="from_email">
-							<?php _e( 'From Email', 'campaignbridge' ); ?>
-							<span class="required">*</span>
-						</label>
-					</th>
-					<td>
-						<input
-							type="email"
-							id="from_email"
-							name="from_email"
-							value="<?php echo esc_attr( $cb_from_email ); ?>"
-							class="regular-text"
-							required
-						>
-						<p class="description">
-							<?php _e( 'The email address that appears in the "From" field.', 'campaignbridge' ); ?>
-						</p>
-					</td>
-				</tr>
-
-				<tr>
-					<th scope="row">
-						<label for="reply_to">
-							<?php _e( 'Reply-To Email', 'campaignbridge' ); ?>
-						</label>
-					</th>
-					<td>
-						<input
-							type="email"
-							id="reply_to"
-							name="reply_to"
-							value="<?php echo esc_attr( $cb_reply_to ); ?>"
-							class="regular-text"
-						>
-						<p class="description">
-							<?php _e( 'Optional. Email address where replies should be sent.', 'campaignbridge' ); ?>
-						</p>
-					</td>
-				</tr>
-			</tbody>
-		</table>
-
-		<?php submit_button( __( 'Save General Settings', 'campaignbridge' ) ); ?>
-	</form>
-
+	<div class="form-builder-info">
+		<h3><?php _e( '✨ Form Builder Benefits', 'campaignbridge' ); ?></h3>
+		<ul>
+			<li><?php _e( '✅ Automatic security (nonces, sanitization, validation)', 'campaignbridge' ); ?></li>
+			<li><?php _e( '✅ Accessibility compliant (ARIA labels, keyboard navigation)', 'campaignbridge' ); ?></li>
+			<li><?php _e( '✅ Lifecycle hooks for extensibility', 'campaignbridge' ); ?></li>
+			<li><?php _e( '✅ Automatic data loading and saving', 'campaignbridge' ); ?></li>
+			<li><?php _e( '✅ Built-in error handling and user feedback', 'campaignbridge' ); ?></li>
+		</ul>
+		<p><strong><?php _e( 'Before:', 'campaignbridge' ); ?></strong> <?php _e( '~100 lines of manual form handling code', 'campaignbridge' ); ?></p>
+		<p><strong><?php _e( 'After:', 'campaignbridge' ); ?></strong> <?php _e( '~50 lines of declarative configuration', 'campaignbridge' ); ?></p>
+	</div>
 </div>
 
 <style>
-	.general-settings-tab {
-		background: white;
-		padding: 20px;
-		margin-top: 20px;
-		border: 1px solid #ddd;
-	}
+.general-settings-tab {
+	background: white;
+	padding: 20px;
+	margin-top: 20px;
+	border: 1px solid #ddd;
+}
 
-	.required {
-		color: #d63638;
-		font-weight: bold;
-	}
+.form-builder-info {
+	background: #f8f9fa;
+	padding: 20px;
+	margin-top: 30px;
+	border: 1px solid #dee2e6;
+	border-radius: 4px;
+}
+
+.form-builder-info h3 {
+	margin-top: 0;
+	color: #007cba;
+}
+
+.form-builder-info ul {
+	margin: 15px 0;
+	padding-left: 20px;
+}
+
+.form-builder-info li {
+	margin-bottom: 5px;
+}
+
+.form-builder-info p {
+	margin: 10px 0;
+	font-size: 14px;
+}
+
+.form-builder-info strong {
+	color: #007cba;
+}
 </style>
