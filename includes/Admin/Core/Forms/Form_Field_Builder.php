@@ -203,7 +203,7 @@ class Form_Field_Builder {
 			[
 				'min' => $min,
 				'max' => $max,
-		] );
+        ] );
 		return $this;
 	}
 
