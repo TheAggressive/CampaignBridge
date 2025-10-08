@@ -36,37 +36,48 @@ $form = \CampaignBridge\Admin\Core\Form::settings( 'general_settings' )
 		->autocomplete( 'email' )
 		->end()
 
-	->beforeValidate(function ( $data ) {
-		// Ensure from_email is different from reply_to
-		if ( ! empty( $data['reply_to'] ) && $data['from_email'] === $data['reply_to'] ) {
-			throw new Exception( __( 'From Email and Reply-To Email should be different.', 'campaignbridge' ) );
+	->before_validate(
+		function ( $data ) {
+			// Ensure from_email is different from reply_to
+			if ( ! empty( $data['reply_to'] ) && $data['from_email'] === $data['reply_to'] ) {
+				throw new Exception( __( 'From Email and Reply-To Email should be different.', 'campaignbridge' ) );
+			}
+			return $data;
 		}
-		return $data;
-	})
-	->afterValidate(function ( $data, $errors ) {
-		if ( ! empty( $errors ) ) {
-			error_log( 'General settings validation failed: ' . print_r( $errors, true ) );
+	)
+	->after_validate(
+		function ( $data, $errors ) {
+			if ( ! empty( $errors ) ) {
+				error_log( 'General settings validation failed: ' . print_r( $errors, true ) );
+			}
 		}
-	})
-	->beforeSave(function ( $data ) {
-		$data['updated_at'] = current_time( 'mysql' );
-		$data['updated_by'] = get_current_user_id();
-		return $data;
-	})
-	->afterSave(function ( $data, $result ) {
-		if ( $result ) {
-			wp_cache_delete( 'campaignbridge_email_config', 'campaignbridge' );
-			error_log(sprintf(
-				'General email settings updated by user %d: %s -> %s',
-				get_current_user_id(),
-				$data['from_name'],
-				$data['from_email']
-			));
-			do_action( 'campaignbridge_general_settings_saved', $data );
-		} else {
-			error_log( 'Failed to save general settings' );
+	)
+	->before_save(
+		function ( $data ) {
+			$data['updated_at'] = current_time( 'mysql' );
+			$data['updated_by'] = get_current_user_id();
+			return $data;
 		}
-	});
+	)
+	->after_save(
+		function ( $data, $result ) {
+			if ( $result ) {
+				die();
+				wp_cache_delete( 'campaignbridge_email_config', 'campaignbridge' );
+				error_log(
+					sprintf(
+						'General email settings updated by user %d: %s -> %s',
+						get_current_user_id(),
+						$data['from_name'],
+						$data['from_email']
+					)
+				);
+				do_action( 'campaignbridge_general_settings_saved', $data );
+			} else {
+				error_log( 'Failed to save general settings' );
+			}
+		}
+	);
 
 // Integrate with Screen Context for messages
 if ( $form->submitted() && $form->valid() ) {

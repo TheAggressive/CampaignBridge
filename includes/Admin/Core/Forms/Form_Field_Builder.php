@@ -230,6 +230,17 @@ class Form_Field_Builder {
 	}
 
 	/**
+	 * Set autocomplete attribute
+	 *
+	 * @param string $value Autocomplete value (e.g., 'email', 'name', 'organization').
+	 * @return Form_Field_Builder
+	 */
+	public function autocomplete( string $value ): self {
+		$this->form_builder->get_config()->update_field( $this->field_name, [ 'autocomplete' => $value ] );
+		return $this;
+	}
+
+	/**
 	 * Add custom field attributes
 	 *
 	 * @param array $attributes Custom attributes.
