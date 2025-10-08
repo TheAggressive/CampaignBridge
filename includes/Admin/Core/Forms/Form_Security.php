@@ -33,6 +33,16 @@ class Form_Security {
 	}
 
 	/**
+	 * Set form ID
+	 *
+	 * @param string $form_id Form identifier.
+	 * @return void
+	 */
+	public function set_form_id( string $form_id ): void {
+		$this->form_id = $form_id;
+	}
+
+	/**
 	 * Verify security for form submission
 	 *
 	 * @return bool True if security checks pass, false otherwise.
@@ -40,7 +50,8 @@ class Form_Security {
 	public function verify_request(): bool {
 		// Verify nonce
 		$nonce_action = 'campaignbridge_form_' . $this->form_id;
-		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \wp_unslash( $_POST['_wpnonce'] ), $nonce_action ) ) {
+		$nonce_name   = $this->form_id . '_wpnonce';
+		if ( ! isset( $_POST[ $nonce_name ] ) || ! \wp_verify_nonce( \wp_unslash( $_POST[ $nonce_name ] ), $nonce_action ) ) {
 			return false;
 		}
 
@@ -70,18 +81,21 @@ class Form_Security {
 	 */
 	public function render_security_fields(): void {
 		$nonce_action = 'campaignbridge_form_' . $this->form_id;
+		$nonce_name   = $this->form_id . '_wpnonce';
 
-		\wp_nonce_field( $nonce_action );
+		\wp_nonce_field( $nonce_action, $nonce_name );
 
 		// Add additional security fields
 		printf(
-			'<input type="hidden" name="campaignbridge_form_id" value="%s" />',
+			'<input type="hidden" name="%s[form_id]" value="%s" />',
+			\esc_attr( $this->form_id ),
 			\esc_attr( $this->form_id )
 		);
 
 		// Add timestamp for additional verification
 		printf(
-			'<input type="hidden" name="campaignbridge_timestamp" value="%s" />',
+			'<input type="hidden" name="%s[timestamp]" value="%s" />',
+			\esc_attr( $this->form_id ),
 			\esc_attr( time() )
 		);
 	}

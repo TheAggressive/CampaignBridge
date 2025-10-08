@@ -165,18 +165,21 @@ class Form_Handler {
 	 * @return array
 	 */
 	private function get_submitted_data(): array {
-		$data   = [];
-		$method = strtoupper( $this->config['method'] );
+		$data    = [];
+		$method  = strtoupper( $this->config['method'] );
+		$form_id = $this->config['form_id'] ?? 'form';
 
+		// Get form data from the namespaced array
+		$form_data = [];
+		if ( $method === 'POST' ) {
+			$form_data = \wp_unslash( $_POST[ $form_id ] ?? [] );
+		} elseif ( $method === 'GET' ) {
+			$form_data = \wp_unslash( $_GET[ $form_id ] ?? [] );
+		}
+
+		// Extract field values
 		foreach ( $this->fields as $field_id => $field_config ) {
-			$field_name = $this->config['prefix'] . $field_id . $this->config['suffix'];
-			$value      = null;
-
-			if ( $method === 'POST' ) {
-				$value = \wp_unslash( $_POST[ $field_name ] ?? null );
-			} elseif ( $method === 'GET' ) {
-				$value = \wp_unslash( $_GET[ $field_name ] ?? null );
-			}
+			$value = $form_data[ $field_id ] ?? null;
 
 			if ( $value !== null ) {
 				$data[ $field_id ] = $this->sanitize_field_value( $value, $field_config );

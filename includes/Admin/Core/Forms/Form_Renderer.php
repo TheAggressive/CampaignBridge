@@ -322,10 +322,13 @@ class Form_Renderer {
 	private function create_field_renderer( string $field_name, array $field_config, $value ): Form_Field_Interface {
 		$type = $field_config['type'] ?? 'text';
 
+		// Get form ID for namespacing field names and IDs
+		$form_id = $this->config['form_id'] ?? 'form';
+
 		// Prepare config with field name and value
 		$config          = $field_config;
-		$config['name']  = $field_name;
-		$config['id']    = $field_name;
+		$config['name']  = $form_id . '[' . $field_name . ']';
+		$config['id']    = $form_id . '_' . $field_name;
 		$config['value'] = $value;
 
 		// Map field types to renderer classes
@@ -643,6 +646,7 @@ class Form_Renderer {
 	 * Render submit button
 	 */
 	public function render_submit_button(): void {
+		$form_id       = $this->config['form_id'] ?? 'form';
 		$button_config = $this->config['submit_button'];
 		$text          = $button_config['text'] ?? \__( 'Save Changes', 'campaignbridge' );
 		$type          = $button_config['type'] ?? 'primary';
@@ -653,7 +657,10 @@ class Form_Renderer {
 			$attr_string .= sprintf( ' %s="%s"', \esc_attr( $key ), \esc_attr( $value ) );
 		}
 
-		printf( '<p class="submit"><input type="submit" name="submit" id="submit" class="button button-%s" value="%s"%s /></p>', \esc_attr( $type ), \esc_attr( $text ), $attr_string );
+		$submit_id   = $form_id . '_submit';
+		$submit_name = $form_id . '[submit]';
+
+		printf( '<p class="submit"><input type="submit" name="%s" id="%s" class="button button-%s" value="%s"%s /></p>', \esc_attr( $submit_name ), \esc_attr( $submit_id ), \esc_attr( $type ), \esc_attr( $text ), $attr_string );
 	}
 
 	/**

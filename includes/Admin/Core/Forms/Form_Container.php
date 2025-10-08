@@ -126,12 +126,12 @@ class Form_Container {
 				return new Form_Config();
         } );
 
-		// Form_Security factory (shared).
+		// Form_Security factory (not shared - each form needs its own).
 		$this->register( 'form_security',
 			function ( $container ) {
 				return new Form_Security( 'default' ); // Will be set by form.
 			},
-		true );
+		false );
 
 		// Form_Validator factory (shared).
 		$this->register( 'form_validator',
@@ -197,9 +197,9 @@ class Form_Container {
 		\CampaignBridge\Admin\Core\Form $form,
 		Form_Config $config,
 		array $fields,
-		Form_Security $security,
 		Form_Validator $validator
 	): Form_Handler {
+		$security = new Form_Security( $config->get( 'form_id', 'form' ) );
 		return new Form_Handler( $form, $config->all(), $fields, $security, $validator );
 	}
 
@@ -235,9 +235,9 @@ class Form_Container {
 		Form_Config $config,
 		array $fields,
 		array $data,
-		Form_Handler $handler,
-		Form_Security $security
+		Form_Handler $handler
 	): Form_Renderer {
+		$security = new Form_Security( $config->get( 'form_id', 'form' ) );
 		return new Form_Renderer( $form, $config->all(), $fields, $data, $handler, $security );
 	}
 }

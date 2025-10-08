@@ -111,7 +111,7 @@ class Form {
 						\wp_mail( \get_option( 'admin_email' ), $data['subject'] ?? 'Contact Form', $data['message'] );
 					},
 				),
-		));
+			));
 	}
 
 	/**
@@ -152,7 +152,7 @@ class Form {
 						}
 					},
 				),
-		));
+			));
 	}
 
 	/**
@@ -201,7 +201,7 @@ class Form {
 
 		// Get security instance configured for this form.
 		$security = $this->container->get( 'form_security' );
-		$security = new \CampaignBridge\Admin\Core\Forms\Form_Security( $form_id );
+		$security->set_form_id( $form_id );
 
 		// Get validator instance.
 		$validator = $this->container->get( 'form_validator' );
@@ -217,7 +217,6 @@ class Form {
 			$this,
 			$this->config,
 			$fields,
-			$security,
 			$validator
 		);
 	}
@@ -257,8 +256,7 @@ class Form {
 				$this->config,
 				$this->config->get_fields(),
 				$this->data_manager->get_data(),
-				$this->handler,
-				$this->container->get( 'form_security' )
+				$this->handler
 			);
 		}
 

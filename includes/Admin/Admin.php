@@ -98,7 +98,7 @@ class Admin {
 		// Global admin CSS.
 		wp_enqueue_style(
 			'cb-admin-global',
-			\CampaignBridge_Plugin::url() . 'assets/css/admin/global.css',
+			\CampaignBridge_Plugin::url() . 'dist/styles/styles.css',
 			array(),
 			\CampaignBridge_Plugin::VERSION
 		);
@@ -106,7 +106,7 @@ class Admin {
 		// Global admin JS.
 		wp_enqueue_script(
 			'cb-admin-global',
-			\CampaignBridge_Plugin::url() . 'assets/js/admin/global.js',
+			\CampaignBridge_Plugin::url() . 'dist/scripts/admin/settings.js',
 			array(),
 			\CampaignBridge_Plugin::VERSION,
 			true
