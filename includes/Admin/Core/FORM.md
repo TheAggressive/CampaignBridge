@@ -41,19 +41,17 @@ $form = Form::settings('my_settings')
     ->error('Please correct the errors and try again.')
     ->submit('Save Settings');
 
-// In your admin page callback (automatic Screen_Context integration)
+// In your admin page callback (universal notice system)
 function render_settings_page() {
     global $form;
 
-    // ✨ Success/error messages are displayed automatically via Screen_Context!
-    // When you configure ->success() or ->error(), they automatically trigger
-    // Screen_Context notices when the form is submitted. No extra code needed!
+    // ✨ Success/error messages are displayed automatically everywhere!
+    // When you configure ->success() or ->error(), they automatically appear
+    // as WordPress admin notices when the form is submitted. No extra code needed!
     $form->render();
 }
 
-// 🎉 Automatic Integration: The form system now directly triggers Screen_Context
-// notices when success() or error() messages are configured. Messages appear
-// as proper WordPress admin notices with consistent styling and accessibility.
+// 🎉 Universal Compatibility: The form system works in any WordPress context
 ```
 
 ### Pre-configured Forms
@@ -161,27 +159,27 @@ if ($form->submitted()) {
 $form->render();
 ```
 
-## Screen Context Integration
+## Universal Notice System
 
 ### Automatic Message Handling
 
-The forms system integrates seamlessly with `Screen_Context` for consistent admin notices:
+The forms system provides universal, self-contained notice handling that works in any WordPress context:
 
 ```php
-// In screen files where $screen is available
+// Works everywhere - admin screens, frontend, standalone pages
 $form = Form::make('my_form')
     ->text('field1', 'Field 1')->required()
     ->success('Data saved successfully!')
     ->error('Please check your input.')
     ->submit('Save');
 
-// ✨ Fully automatic - no manual integration needed!
+// ✨ Fully automatic - no external dependencies needed!
 $form->render(); // Success/error messages appear automatically as WordPress admin notices
 ```
 
-### Universal Automatic Notices
+### Self-Contained Notice Implementation
 
-Form notices work automatically everywhere - no special handling needed:
+Form notices work automatically everywhere - no special handling or external dependencies needed:
 
 ```php
 $form = Form::make('any_form')
@@ -190,15 +188,15 @@ $form = Form::make('any_form')
     ->error('Please correct the errors.')
     ->submit('Save');
 
-// Works in any context - admin screens, standalone pages, etc.
+// Works in any context - admin screens, frontend, standalone pages, custom contexts
 $form->render(); // Success/error messages display automatically as WordPress admin notices
 ```
 
-**Note**: The form system handles notices independently through WordPress admin_notices action.
+**Implementation**: The form system uses `Form_Notice_Handler` to display notices directly through WordPress's `admin_notices` action hook.
 
 ### Benefits of Self-Contained Notice System
 
-- **Complete Independence**: Form system owns messaging end-to-end - no Screen_Context dependency
+- **Complete Independence**: Form system owns messaging end-to-end with no external dependencies
 - **Universal Compatibility**: Works identically in admin, frontend, or standalone contexts
 - **Standard WordPress UI**: Uses official admin notice styling and dismissible behavior
 - **Zero Configuration**: Just set `->success()` and `->error()` - notices appear automatically
@@ -1198,16 +1196,16 @@ $form->after_validate(function($data) {
 $form->success('Your changes have been saved!')
      ->error('Please correct the errors below.');
 
-// Check 2: Screen_Context integration is automatic - ensure $screen global exists
+// Check 2: Notice system works automatically in all contexts
 
 // Check 3: Verify form has save method configured
 $form->options('my_prefix_'); // or ->meta($post_id) for post meta
 
 // Check 4: Ensure form submission is handled
 if ($form->submitted() && $form->valid()) {
-    // Success message appears automatically via Screen_Context
+    // Success message appears automatically as WordPress admin notice
 } elseif ($form->submitted()) {
-    // Error message appears automatically via Screen_Context
+    // Error message appears automatically as WordPress admin notice
 }
 ```
 
