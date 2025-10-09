@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Example Provider Implementation for CampaignBridge.
  *
@@ -44,7 +44,7 @@ class ExampleProvider extends Abstract_Provider {
 		);
 
 		// Set custom API key pattern for this provider.
-		$this->api_key_pattern = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern for example
+		$this->api_key_pattern = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern for example provider.
 	}
 
 	/**
@@ -66,16 +66,16 @@ class ExampleProvider extends Abstract_Provider {
 	 * @return void Outputs HTML directly to the page.
 	 */
 	public function render_settings_fields( array $settings, string $option_name ): void {
-		$api_key  = $settings['api_key'] ?? '';
-		$endpoint = $settings['endpoint'] ?? '';
-		$has_api_key = !empty($api_key);
+		$api_key     = $settings['api_key'] ?? '';
+		$endpoint    = $settings['endpoint'] ?? '';
+		$has_api_key = ! empty( $api_key );
 
 		?>
 		<tr>
 			<th scope="row"><?php echo esc_html__( 'API Key', 'campaignbridge' ); ?></th>
 			<td>
 				<div class="campaignbridge-api-key-field" data-has-key="<?php echo esc_attr( $has_api_key ? 'true' : 'false' ); ?>">
-					<?php if ($has_api_key) : ?>
+					<?php if ( $has_api_key ) : ?>
 						<!-- Show masked API key when configured -->
 						<div class="api-key-display">
 							<input

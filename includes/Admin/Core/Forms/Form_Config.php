@@ -41,14 +41,15 @@ class Form_Config {
 			'text' => 'Save Changes',
 			'type' => 'primary',
 		),
-		'layout'          => 'table', // table, div, custom
-		'prefix'          => '', // Field name prefix
-		'suffix'          => '', // Field name suffix
-		'data_source'     => 'options', // options, post_meta, custom
-		'post_id'         => 0, // For post_meta data source
-		'save_method'     => 'options', // options, post_meta, custom
-		'success_message' => '',
-		'error_message'   => '',
+		'layout'          => 'table', // table, div, custom.
+		'description'     => '',
+		'prefix'          => '', // Field name prefix.
+		'suffix'          => '', // Field name suffix.
+		'data_source'     => 'options', // options, post_meta, custom.
+		'post_id'         => 0, // For post_meta data source.
+		'save_method'     => 'options', // options, post_meta, custom.
+		'success_message' => 'Saved successfully!',
+		'error_message'   => 'Error occurred.',
 	);
 
 	/**
@@ -63,12 +64,12 @@ class Form_Config {
 	/**
 	 * Get a configuration value
 	 *
-	 * @param string $key     Configuration key.
-	 * @param mixed  $default Default value if key doesn't exist.
+	 * @param string $key      Configuration key.
+	 * @param mixed  $fallback Fallback value if key doesn't exist.
 	 * @return mixed Configuration value.
 	 */
-	public function get( string $key, $default = null ) {
-		return $this->config[ $key ] ?? $default;
+	public function get( string $key, $fallback = null ) {
+		return $this->config[ $key ] ?? $fallback;
 	}
 
 	/**
@@ -224,6 +225,16 @@ class Form_Config {
 	}
 
 	/**
+	 * Set form description
+	 *
+	 * @param string $description Form description.
+	 * @return self
+	 */
+	public function set_description( string $description ): self {
+		return $this->set( 'description', $description );
+	}
+
+	/**
 	 * Set submit button configuration
 	 *
 	 * @param string $text Button text.
@@ -231,11 +242,13 @@ class Form_Config {
 	 * @return self
 	 */
 	public function set_submit_button( string $text = 'Save', string $type = 'primary' ): self {
-		return $this->set( 'submit_button',
+		return $this->set(
+			'submit_button',
 			array(
 				'text' => $text,
 				'type' => $type,
-		) );
+			)
+		);
 	}
 
 	/**

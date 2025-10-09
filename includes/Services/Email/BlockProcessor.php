@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Block Processor for CampaignBridge Email Generation.
  *
@@ -43,8 +43,8 @@ class BlockProcessor {
 		$first_block = $blocks[0];
 		$block_name  = $first_block['blockName'] ?? '';
 
-		// Check if first block is a container
-		if ( $block_name !== 'campaignbridge/container' ) {
+		// Check if first block is a container.
+		if ( 'campaignbridge/container' !== $block_name ) {
 			return null;
 		}
 
@@ -53,7 +53,7 @@ class BlockProcessor {
 		$color_style = $style['color'] ?? array();
 		$background  = $color_style['background'] ?? null;
 
-		return $background ?: null;
+		return $background ? $background : null;
 	}
 
 	/**
@@ -91,7 +91,7 @@ class BlockProcessor {
 		$inner_content = $block['innerContent'] ?? array();
 		$inner_blocks  = $block['innerBlocks'] ?? array();
 
-		// Route to appropriate converter based on block namespace
+		// Route to appropriate converter based on block namespace.
 		if ( str_starts_with( $block_name, self::CAMPAIGNBRIDGE_BLOCK_PREFIX ) ) {
 			return $this->convert_campaignbridge_block( $block_name, $attributes, $inner_content, $inner_blocks, $options );
 		} elseif ( str_starts_with( $block_name, self::CORE_BLOCK_PREFIX ) ) {
@@ -162,9 +162,9 @@ class BlockProcessor {
 	 */
 	private function convert_container_block( array $attributes, array $inner_content, array $inner_blocks ): string {
 		$bg_color = $attributes['backgroundColor'] ?? '#ffffff';
-		$content = '';
+		$content  = '';
 
-		// Process inner blocks
+		// Process inner blocks.
 		foreach ( $inner_blocks as $inner_block ) {
 			$content .= $this->convert_block_to_html( $inner_block, array() );
 		}
@@ -190,7 +190,7 @@ class BlockProcessor {
 	 * @return string Block HTML.
 	 */
 	private function convert_paragraph_block( array $attributes, array $inner_content ): string {
-		$align = $attributes['align'] ?? 'left';
+		$align   = $attributes['align'] ?? 'left';
 		$content = implode( '', $inner_content );
 
 		return sprintf(
@@ -208,8 +208,8 @@ class BlockProcessor {
 	 * @return string Block HTML.
 	 */
 	private function convert_heading_block( array $attributes, array $inner_content ): string {
-		$level = $attributes['level'] ?? 2;
-		$align = $attributes['align'] ?? 'left';
+		$level   = $attributes['level'] ?? 2;
+		$align   = $attributes['align'] ?? 'left';
 		$content = implode( '', $inner_content );
 
 		$font_size = match ( $level ) {
@@ -240,9 +240,9 @@ class BlockProcessor {
 	 * @return string Block HTML.
 	 */
 	private function convert_image_block( array $attributes ): string {
-		$url = $attributes['url'] ?? '';
-		$alt = $attributes['alt'] ?? '';
-		$width = $attributes['width'] ?? '';
+		$url    = $attributes['url'] ?? '';
+		$alt    = $attributes['alt'] ?? '';
+		$width  = $attributes['width'] ?? '';
 		$height = $attributes['height'] ?? '';
 
 		if ( empty( $url ) ) {
@@ -273,7 +273,7 @@ class BlockProcessor {
 	 * @return string Block HTML.
 	 */
 	private function convert_buttons_block( array $attributes, array $inner_blocks ): string {
-		$layout = $attributes['layout'] ?? array();
+		$layout      = $attributes['layout'] ?? array();
 		$orientation = $layout['orientation'] ?? 'horizontal';
 
 		$buttons_html = '';
@@ -283,7 +283,7 @@ class BlockProcessor {
 			}
 		}
 
-		if ( $orientation === 'vertical' ) {
+		if ( 'vertical' === $orientation ) {
 			return sprintf(
 				'<table width="100%%" cellspacing="0" cellpadding="0" border="0">
 					<tr>
@@ -304,17 +304,17 @@ class BlockProcessor {
 	 * @return string Block HTML.
 	 */
 	private function convert_button_block( array $attributes ): string {
-		$text = $attributes['text'] ?? '';
-		$url = $attributes['url'] ?? '';
+		$text             = $attributes['text'] ?? '';
+		$url              = $attributes['url'] ?? '';
 		$background_color = $attributes['backgroundColor'] ?? '#0073aa';
-		$text_color = $attributes['textColor'] ?? '#ffffff';
-		$width = $attributes['width'] ?? 100;
+		$text_color       = $attributes['textColor'] ?? '#ffffff';
+		$width            = $attributes['width'] ?? 100;
 
 		if ( empty( $text ) || empty( $url ) ) {
 			return '';
 		}
 
-		// VML fallback for Outlook
+		// VML fallback for Outlook.
 		$vml_fallback = sprintf(
 			'<!--[if mso]>
 			<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="%s" style="height:40px;v-text-anchor:middle;width:%dpx;" arcsize="10%%" stroke="f" fillcolor="%s">
@@ -365,7 +365,7 @@ class BlockProcessor {
 					$inner_html .= $this->convert_block_to_html( $inner_block, $options );
 				}
 
-				$width = $column_count > 0 ? round( 100 / $column_count ) : 100;
+				$width         = $column_count > 0 ? round( 100 / $column_count ) : 100;
 				$columns_html .= sprintf(
 					'<td width="%d%%" valign="top" style="padding: 0 10px;">%s</td>',
 					$width,
@@ -391,7 +391,7 @@ class BlockProcessor {
 	 */
 	private function convert_group_block( array $attributes, array $inner_blocks ): string {
 		$bg_color = $attributes['backgroundColor'] ?? 'transparent';
-		$content = '';
+		$content  = '';
 
 		foreach ( $inner_blocks as $inner_block ) {
 			$content .= $this->convert_block_to_html( $inner_block, array() );
@@ -454,8 +454,8 @@ class BlockProcessor {
 	 * @param array $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
-	private function convert_post_card_block( array $attributes ): string {
-		// This would integrate with WordPress posts - simplified for now
+	private function convert_post_card_block( array $attributes ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+		// This would integrate with WordPress posts - simplified for now.
 		return '<table width="100%" cellspacing="0" cellpadding="0" border="0">
 			<tr>
 				<td style="padding: 20px; border: 1px solid #ddd;">
@@ -475,7 +475,7 @@ class BlockProcessor {
 	 */
 	private function convert_post_title_block( array $attributes ): string {
 		$level = $attributes['level'] ?? 2;
-		$tag = "h{$level}";
+		$tag   = "h{$level}";
 
 		return sprintf(
 			'<%1$s style="margin: 0 0 16px 0; font-size: 24px; font-weight: bold; line-height: 1.2;">{post_title}</%1$s>',
@@ -520,9 +520,9 @@ class BlockProcessor {
 	 * @return string Block HTML.
 	 */
 	private function convert_post_button_block( array $attributes ): string {
-		$text = $attributes['text'] ?? 'Read More';
+		$text             = $attributes['text'] ?? 'Read More';
 		$background_color = $attributes['backgroundColor'] ?? '#0073aa';
-		$text_color = $attributes['textColor'] ?? '#ffffff';
+		$text_color       = $attributes['textColor'] ?? '#ffffff';
 
 		return sprintf(
 			'<table width="100" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse;">
@@ -545,11 +545,12 @@ class BlockProcessor {
 	 * @param array $options Generation options.
 	 * @return string Block HTML.
 	 */
-	private function convert_unknown_block( array $block, array $options ): string {
+	private function convert_unknown_block( array $block, array $options ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
 		$block_name = $block['blockName'] ?? 'unknown';
 
-		// Log unknown block for debugging
+		// Log unknown block for debugging.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Logging only.
 			error_log( sprintf( 'CampaignBridge: Unknown block type: %s', $block_name ) );
 		}
 

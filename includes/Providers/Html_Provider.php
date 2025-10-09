@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * HTML Export Provider for CampaignBridge.
  *
@@ -250,11 +250,16 @@ class Html_Provider extends Abstract_Provider {
 		}
 
 		// Generate unique filename.
-		$filename  = 'campaign-export-' . date( 'Y-m-d-H-i-s' ) . '.html';
+		$filename  = 'campaign-export-' . gmdate( 'Y-m-d-H-i-s' ) . '.html';
 		$file_path = $export_dir . $filename;
 
 		// Write file.
-		$result = file_put_contents( $file_path, $content );
+		global $wp_filesystem;
+		if ( empty( $wp_filesystem ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+		$result = $wp_filesystem->put_contents( $file_path, $content );
 
 		if ( false === $result ) {
 			return $this->create_error(

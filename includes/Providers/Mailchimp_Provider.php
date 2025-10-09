@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Mailchimp Provider Implementation for CampaignBridge.
  *
@@ -46,7 +46,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	public function __construct() {
 		parent::__construct( 'mailchimp', __( 'Mailchimp', 'campaignbridge' ) );
 
-		// Configure Mailchimp-specific capabilities
+		// Configure Mailchimp-specific capabilities.
 		$this->capabilities = array(
 			'audiences'  => true,
 			'templates'  => true,
@@ -55,14 +55,14 @@ class Mailchimp_Provider extends Abstract_Provider {
 			'analytics'  => true,
 		);
 
-		// Mailchimp API key pattern
+		// Mailchimp API key pattern.
 		$this->api_key_pattern = '/^[a-f0-9]{32}-us[0-9]+$/';
 	}
 
 	/**
-	 * Check if provider is properly configured
+	 * Check if provider is properly configured.
 	 *
-	 * @param array $settings Plugin settings
+	 * @param array $settings Plugin settings.
 	 * @return bool
 	 */
 	public function is_configured( array $settings ): bool {
@@ -71,22 +71,22 @@ class Mailchimp_Provider extends Abstract_Provider {
 	}
 
 	/**
-	 * Render Mailchimp-specific settings fields
+	 * Render Mailchimp-specific settings fields.
 	 *
-	 * @param array  $settings    Current settings
-	 * @param string $option_name Option name prefix
+	 * @param array  $settings    Current settings.
+	 * @param string $option_name Option name prefix.
 	 * @return void
 	 */
 	public function render_settings_fields( array $settings, string $option_name ): void {
-		$api_key = $settings['api_key'] ?? '';
-		$has_api_key = !empty($api_key);
+		$api_key     = $settings['api_key'] ?? '';
+		$has_api_key = ! empty( $api_key );
 
 		?>
 		<tr>
 			<th scope="row"><?php esc_html_e( 'API Key', 'campaignbridge' ); ?></th>
 			<td>
 				<div class="campaignbridge-api-key-field" data-has-key="<?php echo esc_attr( $has_api_key ? 'true' : 'false' ); ?>">
-					<?php if ($has_api_key) : ?>
+					<?php if ( $has_api_key ) : ?>
 						<!-- Show masked API key when configured -->
 						<div class="api-key-display">
 							<input
@@ -139,15 +139,15 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Send campaign to Mailchimp
 	 *
-	 * @param array $blocks   Content blocks
-	 * @param array $settings Plugin settings
+	 * @param array $blocks   Content blocks.
+	 * @param array $settings Plugin settings.
 	 * @return bool|WP_Error
 	 */
 	public function send_campaign( array $blocks, array $settings ) {
 		$this->log( 'Sending campaign to Mailchimp', array( 'block_count' => count( $blocks ) ) );
 
 		try {
-			// Validate configuration
+			// Validate configuration.
 			if ( ! $this->is_configured( $settings ) ) {
 				return $this->create_error(
 					'configuration_error',
@@ -157,17 +157,17 @@ class Mailchimp_Provider extends Abstract_Provider {
 
 			$api_key = $settings['api_key'];
 
-			// Create campaign data
+			// Create campaign data.
 			$campaign_data = $this->prepare_campaign_data( $blocks, $settings );
 
-			// Create campaign via Mailchimp API
+			// Create campaign via Mailchimp API.
 			$campaign_response = $this->create_mailchimp_campaign( $campaign_data, $api_key );
 
 			if ( is_wp_error( $campaign_response ) ) {
 				return $campaign_response;
 			}
 
-			// Send the campaign
+			// Send the campaign.
 			$send_response = $this->send_mailchimp_campaign( $campaign_response['id'], $api_key );
 
 			if ( is_wp_error( $send_response ) ) {
@@ -184,10 +184,10 @@ class Mailchimp_Provider extends Abstract_Provider {
 	}
 
 	/**
-	 * Get available template section keys
+	 * Get available template section keys.
 	 *
-	 * @param array $settings Plugin settings
-	 * @param bool  $refresh  Force refresh
+	 * @param array $settings Plugin settings.
+	 * @param bool  $refresh  Force refresh.
 	 * @return array|WP_Error
 	 */
 	public function get_section_keys( array $settings, bool $refresh = false ) {
@@ -198,14 +198,14 @@ class Mailchimp_Provider extends Abstract_Provider {
 
 			$api_key = $settings['api_key'];
 
-			// Get Mailchimp templates
+			// Get Mailchimp templates.
 			$templates = $this->get_mailchimp_templates( $api_key );
 
 			if ( is_wp_error( $templates ) ) {
 				return $templates;
 			}
 
-			// Extract section keys from templates
+			// Extract section keys from templates.
 			$section_keys = array();
 			foreach ( $templates as $template ) {
 				if ( isset( $template['sections'] ) ) {
@@ -221,7 +221,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	}
 
 	/**
-	 * Get settings schema for validation
+	 * Get settings schema for validation.
 	 *
 	 * @return array
 	 */
@@ -240,15 +240,15 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Prepare campaign data for Mailchimp API
 	 *
-	 * @param array $blocks   Content blocks
-	 * @param array $settings Plugin settings
+	 * @param array $blocks   Content blocks.
+	 * @param array $settings Plugin settings.
 	 * @return array
 	 */
 	private function prepare_campaign_data( array $blocks, array $settings ): array {
 		$subject   = $settings['subject'] ?? '';
 		$preheader = $settings['preheader'] ?? '';
 
-		// Combine all blocks into HTML content
+		// Combine all blocks into HTML content.
 		$content_html = $this->combine_blocks_to_html( $blocks );
 
 		$campaign_data = array(
@@ -261,7 +261,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 			),
 		);
 
-		// Only add recipients if audience_id is available
+		// Only add recipients if audience_id is available.
 		if ( ! empty( $settings['audience_id'] ) ) {
 			$campaign_data['recipients'] = array(
 				'list_id' => $settings['audience_id'],
@@ -272,9 +272,9 @@ class Mailchimp_Provider extends Abstract_Provider {
 	}
 
 	/**
-	 * Combine blocks into HTML content
+	 * Combine blocks into HTML content.
 	 *
-	 * @param array $blocks Content blocks
+	 * @param array $blocks Content blocks.
 	 * @return string
 	 */
 	private function combine_blocks_to_html( array $blocks ): string {
@@ -289,10 +289,10 @@ class Mailchimp_Provider extends Abstract_Provider {
 	}
 
 	/**
-	 * Create campaign via Mailchimp API
+	 * Create campaign via Mailchimp API.
 	 *
-	 * @param array  $campaign_data Campaign data
-	 * @param string $api_key       API key
+	 * @param array  $campaign_data Campaign data.
+	 * @param string $api_key       API key.
 	 * @return array|WP_Error
 	 */
 	private function create_mailchimp_campaign( array $campaign_data, string $api_key ) {
@@ -326,10 +326,10 @@ class Mailchimp_Provider extends Abstract_Provider {
 	}
 
 	/**
-	 * Send campaign via Mailchimp API
+	 * Send campaign via Mailchimp API.
 	 *
-	 * @param string $campaign_id Campaign ID
-	 * @param string $api_key     API key
+	 * @param string $campaign_id Campaign ID.
+	 * @param string $api_key     API key.
 	 * @return bool|WP_Error
 	 */
 	private function send_mailchimp_campaign( string $campaign_id, string $api_key ) {
@@ -366,9 +366,9 @@ class Mailchimp_Provider extends Abstract_Provider {
 	}
 
 	/**
-	 * Get Mailchimp templates
+	 * Get Mailchimp templates.
 	 *
-	 * @param string $api_key API key
+	 * @param string $api_key API key.
 	 * @return array|WP_Error
 	 */
 	private function get_mailchimp_templates( string $api_key ) {
@@ -402,7 +402,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Get masked API key for display
 	 *
-	 * @param string $api_key API key
+	 * @param string $api_key API key.
 	 * @return string
 	 */
 	private function get_masked_api_key( string $api_key ): string {

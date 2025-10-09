@@ -42,7 +42,7 @@ class Form_Data_Manager {
 	 *
 	 * @var array
 	 */
-	private array $data = [];
+	private array $data = array();
 
 	/**
 	 * Constructor
@@ -61,7 +61,7 @@ class Form_Data_Manager {
 	 * Load form data for editing
 	 */
 	public function load_form_data(): void {
-		// Load from options, post meta, or custom source
+		// Load from options, post meta, or custom source.
 		$data_source = $this->config['data_source'] ?? 'options';
 
 		switch ( $data_source ) {
@@ -143,7 +143,7 @@ class Form_Data_Manager {
 	 * Clear form data
 	 */
 	public function clear_data(): void {
-		$this->data = [];
+		$this->data = array();
 	}
 
 	/**

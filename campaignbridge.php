@@ -1,4 +1,4 @@
-<?php // phpcs:disable WordPress.Files.FileName
+<?php
 /**
  * Plugin Name: CampaignBridge
  * Description: A comprehensive WordPress plugin for creating and managing email campaigns with dynamic content from multiple post types. Features include Mailchimp integration, custom email templates, block-based email design, and automated campaign generation. Perfect for newsletters, promotional emails, and content marketing automation.
@@ -275,7 +275,7 @@ class CampaignBridge_Plugin {
 
 		// Log deactivation (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'CampaignBridge plugin deactivated.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+			error_log( __( 'CampaignBridge plugin deactivated.', 'campaignbridge' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 		}
 	}
 
@@ -289,7 +289,9 @@ class CampaignBridge_Plugin {
 	private static function deactivate_and_die( string $message ): void {
 		deactivate_plugins( self::basename() );
 		wp_die(
-			esc_html__( $message, 'campaignbridge' ),
+			esc_html(
+				$message,
+			),
 			'Plugin Activation Error',
 			array( 'back_link' => true )
 		);

@@ -19,6 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function campaignbridge_autoloader( $class_name ) {
 	// Debug logging for troubleshooting.
 	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		error_log( "CampaignBridge Autoloader: Attempting to load class: $class_name" );
 	}
 

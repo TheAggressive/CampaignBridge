@@ -1,4 +1,4 @@
-<?php // phpcs:disable WordPress.Files.FileName
+<?php
 /**
  * Plugin bootstrap and orchestrator for CampaignBridge.
  *
@@ -181,7 +181,7 @@ class Plugin {
 	public function add_admin_menu(): void {
 		// NO-OP: Menu creation is now handled by the new file-based admin system
 		// The new system auto-discovers screens and creates menus automatically
-		// See includes/Admin/Admin.php for the new implementation
+		// See includes/Admin/Admin.php for the new implementation.
 	}
 
 	/**
@@ -236,7 +236,7 @@ class Plugin {
 		// Wire admin hooks.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 
-		// Initialize NEW file-based admin system
+		// Initialize NEW file-based admin system.
 		\CampaignBridge\Admin\Admin::get_instance();
 
 		// TEMPORARILY COMMENTED OUT - Old admin pages

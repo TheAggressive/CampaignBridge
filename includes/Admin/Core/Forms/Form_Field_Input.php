@@ -23,8 +23,8 @@ class Form_Field_Input extends Form_Field_Base {
 		$value = $this->get_value();
 		$type  = $this->config['type'];
 
-		// Ensure valid input type
-		$valid_types = [
+		// Ensure valid input type.
+		$valid_types = array(
 			'text',
 			'email',
 			'url',
@@ -39,7 +39,7 @@ class Form_Field_Input extends Form_Field_Base {
 			'time',
 			'color',
 			'range',
-		];
+		);
 
 		if ( ! in_array( $type, $valid_types, true ) ) {
 			$type = 'text';
@@ -51,7 +51,7 @@ class Form_Field_Input extends Form_Field_Base {
 			'<input type="%s" value="%s" %s />',
 			esc_attr( $type ),
 			esc_attr( $value ),
-			$attributes
+			$attributes // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		);
 	}
 }

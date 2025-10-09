@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Email Generation Service for CampaignBridge.
  *
@@ -53,12 +53,12 @@ class Email_Generator {
 	public static function generate_email_html( array $blocks, array $options = array() ): string {
 		$options = wp_parse_args( $options, self::DEFAULT_OPTIONS );
 
-		// Use specialized classes for email generation
+		// Use specialized classes for email generation logic.
 		$email_structure = new EmailStructure();
 		$block_processor = new BlockProcessor();
-		$css_processor = new CssProcessor();
+		$css_processor   = new CssProcessor();
 
-		// Check if first block is a container and extract its background for global email background
+		// Check if first block is a container and extract its background for global email background.
 		$container_bg = $block_processor->extract_container_background( $blocks );
 
 		// Start building the email HTML with container background if available.

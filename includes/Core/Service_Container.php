@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Service Container for CampaignBridge Dependency Injection System.
  *

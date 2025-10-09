@@ -1,27 +1,31 @@
 <?php
 /**
- * SIMPLEST Form Example - Copy-Paste Ready
+ * Simple Form Example - Working Form with Proper Submission Handling
  *
- * This shows the absolute simplest way to use the Form system.
- * Just copy-paste this code into any screen file and it works!
+ * This shows how to create a working form with proper submission handling,
+ * validation, and success messages. Copy-paste this code into any screen file!
  */
+
+// File loaded successfully
 
 // Step 1: Include the Form system
 require_once __DIR__ . '/../Core/Form.php';
 
-// Step 2: Create your form (just 4 lines!)
+// Step 2: Create your form
 $form = \CampaignBridge\Admin\Core\Form::make( 'simple_example' )
+	->options() // Save to WordPress options
+	->description( 'This is a simple form example.' )
 	->text( 'your_name', 'Your Name' )->required()->end()
 	->email( 'your_email', 'Your Email' )->required()->end()
+	// ->success('Custom success message') // Optional - defaults provided
+	// ->error('Custom error message')     // Optional - defaults provided
 	->submit( 'Submit Form' );
 
-// Step 3: Handle success (optional)
-if ( $form->submitted() && $form->valid() ) {
-	echo '<div class="notice notice-success"><p>Thank you! Form submitted successfully.</p></div>';
-}
-
-// Step 4: Render the form (that's it!)
+// Step 4: Render the form
 $form->render();
+
+// 🎉 Success/error messages now automatically appear as WordPress admin notices!
+// No manual use_screen_notices() calls needed - happens automatically during form processing.
 
 echo '<hr><h3>How to customize this:</h3>';
 echo '<ul>';

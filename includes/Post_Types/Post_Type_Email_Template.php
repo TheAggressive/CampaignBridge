@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Email Template Custom Post Type Manager for CampaignBridge.
  *
@@ -364,8 +364,12 @@ class Post_Type_Email_Template {
 			array(
 				'post_type'      => self::POST_TYPE,
 				'post_status'    => 'publish',
-				'meta_key'       => 'cb_template_category',
-				'meta_value'     => $category,
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => 'cb_template_category',
+						'value' => $category,
+					),
+				),
 				'posts_per_page' => -1,
 				'orderby'        => 'title',
 				'order'          => 'ASC',

@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php // phpcs:ignore WordPress.Files.FileName
 /**
  * Settings Controller
  *
@@ -26,7 +26,7 @@ class Settings_Controller {
 	 *
 	 * @var array
 	 */
-	private array $data = [];
+	private array $data = array();
 
 	/**
 	 * Constructor - Initialize controller data.
@@ -39,8 +39,8 @@ class Settings_Controller {
 
 	/**
 	 * Get data for views (available in all tabs via $screen->get())
-   *
-   * @return array
+	 *
+	 * @return array
 	 */
 	public function get_data(): array {
 		return $this->data;
@@ -49,8 +49,8 @@ class Settings_Controller {
 	/**
 	 * Handle requests (called before any tab renders)
 	 * Perfect place for form processing that affects multiple tabs
-   *
-   * @return void
+	 *
+	 * @return void
 	 */
 	public function handle_request(): void {
 		// Global settings actions can be handled here.
@@ -69,9 +69,8 @@ class Settings_Controller {
 
 	/**
 	 * Load settings data.
-   *
-   * @return void
-   *
+	 *
+	 * @return void
 	 */
 	private function load_settings_data(): void {
 		$this->data = array(
@@ -105,8 +104,8 @@ class Settings_Controller {
 
 	/**
 	 * Load integration status for all providers
-   *
-   * @return void
+	 *
+	 * @return void
 	 */
 	private function load_integration_status(): void {
 		$this->data['integrations'] = array(
@@ -161,8 +160,8 @@ class Settings_Controller {
 
 	/**
 	 * Handle reset all settings
-   *
-   * @return void
+	 *
+	 * @return void
 	 */
 	private function handle_reset_all_settings(): void {
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_reset_all' ) ) {
@@ -171,7 +170,7 @@ class Settings_Controller {
 
 		// Rate limiting for destructive actions
 		$rate_limit_key = 'reset_settings_' . get_current_user_id();
-		$last_reset = get_transient( $rate_limit_key );
+		$last_reset     = get_transient( $rate_limit_key );
 
 		if ( $last_reset && ( time() - $last_reset ) < 300 ) { // 5 minutes
 			wp_die( 'Please wait 5 minutes before resetting settings again.' );
@@ -210,8 +209,8 @@ class Settings_Controller {
 
 	/**
 	 * Handle settings export.
-   *
-   * @return void
+	 *
+	 * @return void
 	 */
 	private function handle_export_settings(): void {
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_export_settings' ) ) {
@@ -240,8 +239,8 @@ class Settings_Controller {
 
 	/**
 	 * Handle settings import
-   *
-   * @return void
+	 *
+	 * @return void
 	 */
 	private function handle_import_settings(): void {
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_import_settings' ) ) {
@@ -330,8 +329,8 @@ class Settings_Controller {
 		// Import valid settings.
 		$valid_options = array( 'from_name', 'from_email', 'debug_mode', 'cache_duration' );
 		foreach ( $valid_options as $option ) {
-			if ( isset( $settings[$option] ) ) {
-				update_option( 'cb_' . $option, $settings[$option] );
+			if ( isset( $settings[ $option ] ) ) {
+				update_option( 'cb_' . $option, $settings[ $option ] );
 			}
 		}
 

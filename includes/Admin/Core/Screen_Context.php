@@ -1,4 +1,4 @@
-<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Screen Context
+<?php
 /**
  * Screen Context - Available in all screen files as $screen
  *
@@ -10,8 +10,8 @@ namespace CampaignBridge\Admin\Core;
 /**
  * Screen Context class - Available in all screen files as $screen.
  *
- * Provides helper methods for form handling, asset loading, messages,
- * and data management within screen files.
+ * Provides helper methods for asset loading, data management, and
+ * screen information within admin screen files.
  *
  * @package CampaignBridge\Admin\Core
  */
@@ -52,19 +52,6 @@ class Screen_Context {
 	 */
 	private array $data = array();
 
-	/**
-	 * Array of success messages to display.
-	 *
-	 * @var array
-	 */
-	private array $messages = array();
-
-	/**
-	 * Array of error messages to display.
-	 *
-	 * @var array
-	 */
-	private array $errors = array();
 
 	/**
 	 * Constructor - Initialize screen context.
@@ -396,55 +383,6 @@ class Screen_Context {
 		wp_localize_script( 'cb-' . $handle, $object_name, $data );
 	}
 
-	/**
-	 * Queues a success message for display in admin notices.
-	 *
-	 * @param string $message The success message to display.
-	 */
-	public function add_message( string $message ): void {
-		$this->messages[] = $message;
-		add_action( 'admin_notices', array( $this, 'display_messages' ) );
-	}
-
-	/**
-	 * Queues an error message for display in admin notices.
-	 *
-	 * @param string $error The error message to display.
-	 */
-	public function add_error( string $error ): void {
-		$this->errors[] = $error;
-		add_action( 'admin_notices', array( $this, 'display_messages' ) );
-	}
-
-	/**
-	 * Displays a warning message in admin notices.
-	 *
-	 * @param string $warning The warning message to display.
-	 */
-	public function add_warning( string $warning ): void {
-		add_action( 'admin_notices', fn() => printf( '<div class="notice notice-warning"><p>%s</p></div>', esc_html( $warning ) ) );
-	}
-
-	/**
-	 * Displays an info message in admin notices.
-	 *
-	 * @param string $info The info message to display.
-	 */
-	public function add_info( string $info ): void {
-		add_action( 'admin_notices', fn() => printf( '<div class="notice notice-info"><p>%s</p></div>', esc_html( $info ) ) );
-	}
-
-	/**
-	 * Outputs queued success and error messages as admin notices.
-	 */
-	public function display_messages(): void {
-		foreach ( $this->messages as $message ) {
-			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
-		}
-		foreach ( $this->errors as $error ) {
-			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html( $error ) . '</p></div>';
-		}
-	}
 
 	/**
 	 * Returns information about the current screen.

@@ -19,16 +19,16 @@ class Form_Handler {
 	/**
 	 * Parent form instance
 	 *
-	 * @var Form
+	 * @var Form|null
 	 */
-	private Form $form;
+	private ?Form $form;
 
 	/**
 	 * Form configuration
 	 *
-	 * @var array
+	 * @var Form_Config
 	 */
-	private array $config;
+	private Form_Config $config;
 
 	/**
 	 * Form fields configuration
@@ -52,6 +52,13 @@ class Form_Handler {
 	private Form_Validator $validator;
 
 	/**
+	 * Notice handler
+	 *
+	 * @var Form_Notice_Handler
+	 */
+	private Form_Notice_Handler $notice_handler;
+
+	/**
 	 * Whether form was submitted
 	 *
 	 * @var bool
@@ -70,63 +77,66 @@ class Form_Handler {
 	 *
 	 * @var array
 	 */
-	private array $errors = [];
+	public array $errors = array();
 
 	/**
 	 * Form messages
 	 *
 	 * @var array
 	 */
-	private array $messages = [];
+	public array $messages = array();
 
 	/**
 	 * Constructor
 	 *
-	 * @param Form           $form     Parent form instance.
-	 * @param array          $config   Form configuration.
-	 * @param array          $fields   Form fields.
-	 * @param Form_Security  $security Security instance.
-	 * @param Form_Validator $validator Validator instance.
+	 * @param Form|null           $form           Parent form instance.
+	 * @param Form_Config         $config         Form configuration.
+	 * @param array               $fields         Form fields.
+	 * @param Form_Security       $security       Security instance.
+	 * @param Form_Validator      $validator      Validator instance.
+	 * @param Form_Notice_Handler $notice_handler Notice handler instance.
 	 */
 	public function __construct(
-		Form $form,
-		array $config,
+		?Form $form,
+		Form_Config $config,
 		array $fields,
 		Form_Security $security,
-		Form_Validator $validator
+		Form_Validator $validator,
+		Form_Notice_Handler $notice_handler
 	) {
-		$this->form      = $form;
-		$this->config    = $config;
-		$this->fields    = $fields;
-		$this->security  = $security;
-		$this->validator = $validator;
+		$this->form           = $form;
+		$this->config         = $config;
+		$this->fields         = $fields;
+		$this->security       = $security;
+		$this->validator      = $validator;
+		$this->notice_handler = $notice_handler;
 	}
 
 	/**
 	 * Handle form submission
 	 */
 	public function handle_submission(): void {
-		$method = strtoupper( $this->config['method'] );
+		$method = strtoupper( $this->config->get( 'method', 'POST' ) );
 
-		if ( $method !== $_SERVER['REQUEST_METHOD'] ) {
+		if ( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) !== $method ) {
 			return;
 		}
 
 		$this->is_submitted = true;
 
-		// Verify security
+		// Verify security.
 		if ( ! $this->security->verify_request() ) {
 			$this->errors[] = \__( 'Security check failed. Please try again.', 'campaignbridge' );
 			return;
 		}
 
-		// Get submitted data
+		// Get submitted data.
 		$form_data = $this->get_submitted_data();
 
-		// Run before validation hook
+		// Run before validation hook.
 		$this->run_hook( 'before_validate', $form_data );
 
-		// Validate
+		// Validate.
 		$validation_result = $this->validator->validate( $form_data, $this->fields );
 
 		if ( ! $validation_result['valid'] ) {
@@ -137,24 +147,32 @@ class Form_Handler {
 
 		$this->is_valid = true;
 
-		// Run before save hook
+		// Run before save hook.
 		$this->run_hook( 'before_save', $form_data );
 
-		// Save data
+		// Save data.
 		$save_result = $this->save_data( $form_data );
 
-		// Run after save hook
+		// Run after save hook.
 		$this->run_hook( 'after_save', $form_data, $save_result );
 
 		if ( $save_result ) {
-			$this->messages[] = $this->config['success_message'] ?? \__( 'Settings saved successfully!', 'campaignbridge' );
+			$success_message  = \__( $this->config->get( 'success_message' ), 'campaignbridge' );
+			$this->messages[] = $success_message;
 
-			// Run success hook
+			// Auto-trigger Screen_Context notice.
+			$this->notice_handler->trigger_success( $this->config, $form_data );
+
+			// Run success hook.
 			$this->run_hook( 'on_success', $form_data );
 		} else {
-			$this->errors[] = $this->config['error_message'] ?? \__( 'Failed to save settings.', 'campaignbridge' );
+			$error_message  = \__( $this->config->get( 'error_message' ), 'campaignbridge' );
+			$this->errors[] = $error_message;
 
-			// Run error hook
+			// Auto-trigger Screen_Context notice.
+			$this->notice_handler->trigger_error( $this->config, $form_data );
+
+			// Run error hook.
 			$this->run_hook( 'on_error', $form_data );
 		}
 	}
@@ -166,8 +184,8 @@ class Form_Handler {
 	 */
 	private function get_submitted_data(): array {
 		$data    = [];
-		$method  = strtoupper( $this->config['method'] );
-		$form_id = $this->config['form_id'] ?? 'form';
+		$method  = strtoupper( $this->config->get( 'method', 'POST' ) );
+		$form_id = $this->config->get( 'form_id', 'form' );
 
 		// Get form data from the namespaced array
 		$form_data = [];
@@ -223,7 +241,7 @@ class Form_Handler {
 	 * @return bool Success status.
 	 */
 	private function save_data( array $data ): bool {
-		$save_method = $this->config['save_method'] ?? 'options';
+		$save_method = $this->config->get( 'save_method', 'options' );
 
 		switch ( $save_method ) {
 			case 'options':
@@ -245,7 +263,7 @@ class Form_Handler {
 	 */
 	private function save_to_options( array $data ): bool {
 		foreach ( $data as $field_id => $value ) {
-			$option_key = $this->config['prefix'] . $field_id . $this->config['suffix'];
+			$option_key = $this->config->get( 'prefix', '' ) . $field_id . $this->config->get( 'suffix', '' );
 			\update_option( $option_key, $value );
 		}
 		return true;
@@ -258,7 +276,7 @@ class Form_Handler {
 	 * @return bool Success.
 	 */
 	private function save_to_post_meta( array $data ): bool {
-		$post_id = $this->config['post_id'] ?? \get_the_ID();
+		$post_id = $this->config->get( 'post_id', \get_the_ID() );
 
 		foreach ( $data as $field_id => $value ) {
 			\update_post_meta( $post_id, $field_id, $value );
@@ -273,11 +291,13 @@ class Form_Handler {
 	 * @return bool Success.
 	 */
 	private function save_to_custom( array $data ): bool {
-		if ( isset( $this->config['hooks']['save_data'] ) && is_callable( $this->config['hooks']['save_data'] ) ) {
-			return (bool) call_user_func( $this->config['hooks']['save_data'], $data );
+		$hooks = $this->config->get( 'hooks', [] );
+		if ( isset( $hooks['save_data'] ) && is_callable( $hooks['save_data'] ) ) {
+			return (bool) call_user_func( $hooks['save_data'], $data );
 		}
 		return false;
 	}
+
 
 	/**
 	 * Run a hook if it exists
@@ -286,8 +306,9 @@ class Form_Handler {
 	 * @param mixed  ...$args   Arguments to pass to hook.
 	 */
 	private function run_hook( string $hook_name, ...$args ): void {
-		if ( isset( $this->config['hooks'][ $hook_name ] ) && is_callable( $this->config['hooks'][ $hook_name ] ) ) {
-			call_user_func( $this->config['hooks'][ $hook_name ], ...$args );
+		$hooks = $this->config->get( 'hooks', [] );
+		if ( isset( $hooks[ $hook_name ] ) && is_callable( $hooks[ $hook_name ] ) ) {
+			call_user_func( $hooks[ $hook_name ], ...$args );
 		}
 	}
 

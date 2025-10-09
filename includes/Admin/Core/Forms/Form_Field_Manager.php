@@ -50,24 +50,24 @@ class Form_Field_Manager {
 	 * @param array  $config Additional field configuration.
 	 * @return Form_Field_Builder
 	 */
-	public function add_field( string $name, string $type, string $label = '', array $config = [] ): Form_Field_Builder {
-		// Merge type into config
+	public function add_field( string $name, string $type, string $label = '', array $config = array() ): Form_Field_Builder {
+		// Merge type into config.
 		$config['type'] = $type;
 
-		// Set label if provided
+		// Set label if provided.
 		if ( $label ) {
 			$config['label'] = $label;
 		}
 
 		$this->config->add_field( $name, $config );
 
-		// For custom layouts, also add to render sequence
+		// For custom layouts, also add to render sequence.
 		if ( $this->config->get( 'layout' ) === 'custom' ) {
-			$render_sequence   = $this->config->get( 'render_sequence', [] );
-			$render_sequence[] = [
+			$render_sequence   = $this->config->get( 'render_sequence', array() );
+			$render_sequence[] = array(
 				'type' => 'field',
 				'name' => $name,
-			];
+			);
 			$this->config->set( 'render_sequence', $render_sequence );
 		}
 
@@ -87,12 +87,14 @@ class Form_Field_Manager {
 
 		$this->config->remove_field( $name );
 
-		// Also remove from render sequence if it exists
-		$render_sequence = $this->config->get( 'render_sequence', [] );
-		$render_sequence = array_filter( $render_sequence,
+		// Also remove from render sequence if it exists.
+		$render_sequence = $this->config->get( 'render_sequence', array() );
+		$render_sequence = array_filter(
+			$render_sequence,
 			function ( $item ) use ( $name ) {
-				return ! ( isset( $item['type'] ) && $item['type'] === 'field' && isset( $item['name'] ) && $item['name'] === $name );
-        } );
+				return ! ( isset( $item['type'] ) && 'field' === $item['type'] && isset( $item['name'] ) && $name === $item['name'] );
+			}
+		);
 		$this->config->set( 'render_sequence', array_values( $render_sequence ) );
 
 		return true;
@@ -151,10 +153,12 @@ class Form_Field_Manager {
 	 */
 	public function get_fields_by_type( string $type ): array {
 		$fields = $this->get_fields();
-		return array_filter( $fields,
+		return array_filter(
+			$fields,
 			function ( $config ) use ( $type ) {
 				return isset( $config['type'] ) && $config['type'] === $type;
-        } );
+			}
+		);
 	}
 
 	/**
@@ -164,10 +168,12 @@ class Form_Field_Manager {
 	 */
 	public function get_required_fields(): array {
 		$fields = $this->get_fields();
-		return array_filter( $fields,
+		return array_filter(
+			$fields,
 			function ( $config ) {
 				return isset( $config['required'] ) && $config['required'];
-        } );
+			}
+		);
 	}
 
 	/**
@@ -177,10 +183,12 @@ class Form_Field_Manager {
 	 */
 	public function get_validated_fields(): array {
 		$fields = $this->get_fields();
-		return array_filter( $fields,
+		return array_filter(
+			$fields,
 			function ( $config ) {
 				return isset( $config['validation'] ) && ! empty( $config['validation'] );
-        } );
+			}
+		);
 	}
 
 	/**
@@ -244,17 +252,17 @@ class Form_Field_Manager {
 	 * @return bool True if valid.
 	 */
 	public function validate_field_config( string $name, array $config ): bool {
-		// Check required fields
+		// Check required fields.
 		if ( empty( $name ) ) {
 			return false;
 		}
 
-		// Check type is valid
+		// Check type is valid.
 		if ( ! isset( $config['type'] ) || ! is_string( $config['type'] ) ) {
 			return false;
 		}
 
-		// Check label if provided
+		// Check label if provided.
 		if ( isset( $config['label'] ) && ! is_string( $config['label'] ) ) {
 			return false;
 		}

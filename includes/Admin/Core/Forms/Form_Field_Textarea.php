@@ -23,7 +23,7 @@ class Form_Field_Textarea extends Form_Field_Base {
 		$value      = $this->get_value();
 		$attributes = $this->render_common_attributes();
 
-		// Add textarea-specific attributes
+		// Add textarea-specific attributes.
 		$rows = intval( $this->config['rows'] ?? 5 );
 		$cols = intval( $this->config['cols'] ?? 50 );
 
@@ -31,7 +31,7 @@ class Form_Field_Textarea extends Form_Field_Base {
 
 		printf(
 			'<textarea %s>%s</textarea>',
-			$attributes,
+			$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			esc_textarea( $value )
 		);
 	}

@@ -22,7 +22,7 @@ class Form_Field_File extends Form_Field_Base {
 	public function render_input(): void {
 		$attributes = $this->render_common_attributes();
 
-		// Add file-specific attributes
+		// Add file-specific attributes.
 		$accept = $this->config['accept'] ?? '';
 		if ( $accept ) {
 			$attributes .= sprintf( ' accept="%s"', esc_attr( $accept ) );
@@ -33,15 +33,16 @@ class Form_Field_File extends Form_Field_Base {
 			$attributes .= ' multiple';
 		}
 
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		printf( '<input type="file" %s />', $attributes );
 
-		// Show current file if editing
+		// Show current file if editing.
 		$current_value = $this->get_value();
 		if ( $current_value ) {
 			$this->render_current_file_display( $current_value );
 		}
 
-		// Add file requirements info
+		// Add file requirements info.
 		$this->render_file_requirements();
 	}
 
@@ -69,11 +70,11 @@ class Form_Field_File extends Form_Field_Base {
 	 */
 	private function render_single_file_display( $file ): void {
 		if ( is_numeric( $file ) ) {
-			// WordPress attachment ID
+			// WordPress attachment ID.
 			$file_url  = wp_get_attachment_url( $file );
 			$file_name = basename( get_attached_file( $file ) );
 		} elseif ( is_string( $file ) ) {
-			// File URL or path
+			// File URL or path.
 			$file_url  = $file;
 			$file_name = basename( $file );
 		} else {
@@ -99,9 +100,9 @@ class Form_Field_File extends Form_Field_Base {
 	 * Render file requirements information
 	 */
 	private function render_file_requirements(): void {
-		$requirements = [];
+		$requirements = array();
 
-		// Max file size
+		// Max file size.
 		$max_size       = $this->config['max_size'] ?? wp_max_upload_size();
 		$requirements[] = sprintf(
 			/* translators: %s: maximum file size */
@@ -109,8 +110,8 @@ class Form_Field_File extends Form_Field_Base {
 			size_format( $max_size )
 		);
 
-		// Allowed types
-		$allowed_types = $this->config['allowed_types'] ?? [];
+		// Allowed types.
+		$allowed_types = $this->config['allowed_types'] ?? array();
 		if ( ! empty( $allowed_types ) ) {
 			$types_list     = implode( ', ', array_map( 'strtoupper', $allowed_types ) );
 			$requirements[] = sprintf(
@@ -120,7 +121,7 @@ class Form_Field_File extends Form_Field_Base {
 			);
 		}
 
-		// Multiple files
+		// Multiple files.
 		if ( $this->config['multiple'] ?? false ) {
 			$requirements[] = __( 'Multiple files allowed', 'campaignbridge' );
 		}
@@ -141,30 +142,31 @@ class Form_Field_File extends Form_Field_Base {
 	 * @return bool|\WP_Error True if valid, \WP_Error if invalid.
 	 */
 	public function validate( $value ) {
-		// First run parent validation
+		// First run parent validation.
 		$parent_validation = parent::validate( $value );
 		if ( is_wp_error( $parent_validation ) ) {
 			return $parent_validation;
 		}
 
-		// File-specific validation
+		// File-specific validation.
+		// phpcs:ignore WordPress.Security.NonceVerification
 		if ( isset( $_FILES[ $this->config['name'] ] ) ) {
-			$file_data = $_FILES[ $this->config['name'] ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			$file_data = $_FILES[ $this->config['name'] ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput,WordPress.Security.NonceVerification
 
-			// Handle multiple files
+			// Handle multiple files.
 			if ( is_array( $file_data['name'] ) ) {
 				foreach ( $file_data['name'] as $index => $file_name ) {
 					if ( empty( $file_name ) ) {
 						continue;
 					}
 
-					$single_file = [
+					$single_file = array(
 						'name'     => $file_data['name'][ $index ],
 						'type'     => $file_data['type'][ $index ],
 						'tmp_name' => $file_data['tmp_name'][ $index ],
 						'error'    => $file_data['error'][ $index ],
 						'size'     => $file_data['size'][ $index ],
-					];
+					);
 
 					$file_validation = $this->validate_single_file( $single_file );
 					if ( is_wp_error( $file_validation ) ) {
@@ -172,7 +174,7 @@ class Form_Field_File extends Form_Field_Base {
 					}
 				}
 			} else {
-				// Single file
+				// Single file.
 				$file_validation = $this->validate_single_file( $file_data );
 				if ( is_wp_error( $file_validation ) ) {
 					return $file_validation;

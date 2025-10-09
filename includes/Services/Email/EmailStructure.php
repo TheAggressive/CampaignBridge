@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Email Structure Builder for CampaignBridge.
  *
@@ -93,7 +93,7 @@ class EmailStructure {
 	 * @param array $options Generation options.
 	 * @return string Email footer HTML.
 	 */
-	public function build_footer( array $options ): string {
+	public function build_footer( array $options ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
 		return '
 						</td>
 					</tr>

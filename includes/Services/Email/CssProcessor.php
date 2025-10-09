@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * CSS Processor for CampaignBridge Email Generation.
  *
@@ -31,45 +31,45 @@ class CssProcessor {
 	 */
 	public function inline_css( string $html ): string {
 		// Simple CSS inlining - move styles from <style> tags to inline attributes
-		// For a production system, consider using a dedicated CSS inliner library
+		// For a production system, consider using a dedicated CSS inliner library.
 
-		// Remove <style> tags and extract CSS
-		preg_match_all('/<style[^>]*>(.*?)<\/style>/is', $html, $style_matches);
+		// Remove <style> tags and extract CSS.
+		preg_match_all( '/<style[^>]*>(.*?)<\/style>/is', $html, $style_matches );
 		$css_rules = '';
 
 		foreach ( $style_matches[1] as $css ) {
 			$css_rules .= $css;
 		}
 
-		// Remove style tags from HTML
-		$html = preg_replace('/<style[^>]*>.*?<\/style>/is', '', $html);
+		// Remove style tags from HTML.
+		$html = preg_replace( '/<style[^>]*>.*?<\/style>/is', '', $html );
 
-		// Basic CSS inlining for common email styles
+		// Basic CSS inlining for common email styles.
 		$inline_styles = array(
-			'color' => '/color:\s*([^;]+);/i',
-			'font-size' => '/font-size:\s*([^;]+);/i',
-			'font-family' => '/font-family:\s*([^;]+);/i',
-			'font-weight' => '/font-weight:\s*([^;]+);/i',
-			'text-align' => '/text-align:\s*([^;]+);/i',
-			'padding' => '/padding:\s*([^;]+);/i',
-			'margin' => '/margin:\s*([^;]+);/i',
+			'color'            => '/color:\s*([^;]+);/i',
+			'font-size'        => '/font-size:\s*([^;]+);/i',
+			'font-family'      => '/font-family:\s*([^;]+);/i',
+			'font-weight'      => '/font-weight:\s*([^;]+);/i',
+			'text-align'       => '/text-align:\s*([^;]+);/i',
+			'padding'          => '/padding:\s*([^;]+);/i',
+			'margin'           => '/margin:\s*([^;]+);/i',
 			'background-color' => '/background-color:\s*([^;]+);/i',
-			'border' => '/border:\s*([^;]+);/i',
-			'width' => '/width:\s*([^;]+);/i',
-			'height' => '/height:\s*([^;]+);/i',
+			'border'           => '/border:\s*([^;]+);/i',
+			'width'            => '/width:\s*([^;]+);/i',
+			'height'           => '/height:\s*([^;]+);/i',
 		);
 
-		// Apply inline styles to common elements
+		// Apply inline styles to common elements.
 		foreach ( $inline_styles as $property => $pattern ) {
 			if ( preg_match_all( $pattern, $css_rules, $matches ) ) {
 				foreach ( $matches[1] as $value ) {
-					// This is a simplified approach - a full CSS inliner would be more complex
+					// This is a simplified approach - a full CSS inliner would be more complex.
 					$inline_attr = sprintf( '%s: %s;', $property, trim( $value ) );
-					$html = preg_replace(
+					$html        = preg_replace(
 						'/<([a-zA-Z][^>]*)>/',
 						'<$1 style="' . $inline_attr . '">',
 						$html,
-						1 // Only replace the first occurrence per element type
+						1 // Only replace the first occurrence per element type.
 					);
 				}
 			}
@@ -98,7 +98,7 @@ class CssProcessor {
 			);
 		}
 
-		// Add responsive CSS for email containers
+		// Add responsive CSS for email containers.
 		if ( strpos( $html, '@media only screen and (max-width:' ) === false ) {
 			$responsive_css = sprintf(
 				'
@@ -113,7 +113,7 @@ class CssProcessor {
 				$width
 			);
 
-			// Insert responsive CSS before closing head tag
+			// Insert responsive CSS before closing head tag.
 			$html = str_replace( '</head>', $responsive_css . '</head>', $html );
 		}
 

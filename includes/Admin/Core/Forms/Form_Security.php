@@ -48,24 +48,24 @@ class Form_Security {
 	 * @return bool True if security checks pass, false otherwise.
 	 */
 	public function verify_request(): bool {
-		// Verify nonce
+		// Verify nonce.
 		$nonce_action = 'campaignbridge_form_' . $this->form_id;
 		$nonce_name   = $this->form_id . '_wpnonce';
-		if ( ! isset( $_POST[ $nonce_name ] ) || ! \wp_verify_nonce( \wp_unslash( $_POST[ $nonce_name ] ), $nonce_action ) ) {
+		if ( ! isset( $_POST[ $nonce_name ] ) || ! \wp_verify_nonce( sanitize_text_field( \wp_unslash( $_POST[ $nonce_name ] ) ), $nonce_action ) ) {
 			return false;
 		}
 
-		// Check user capabilities
+		// Check user capabilities.
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return false;
 		}
 
-		// Check if request is coming from admin area
+		// Check if request is coming from admin area.
 		if ( ! is_admin() ) {
 			return false;
 		}
 
-		// Check referer
+		// Check referer.
 		$admin_url = admin_url();
 		$referer   = \wp_get_referer();
 
@@ -85,14 +85,14 @@ class Form_Security {
 
 		\wp_nonce_field( $nonce_action, $nonce_name );
 
-		// Add additional security fields
+		// Add additional security fields.
 		printf(
 			'<input type="hidden" name="%s[form_id]" value="%s" />',
 			\esc_attr( $this->form_id ),
 			\esc_attr( $this->form_id )
 		);
 
-		// Add timestamp for additional verification
+		// Add timestamp for additional verification.
 		printf(
 			'<input type="hidden" name="%s[timestamp]" value="%s" />',
 			\esc_attr( $this->form_id ),
@@ -101,7 +101,7 @@ class Form_Security {
 	}
 
 	/**
-	 * Sanitize input based on field configuration
+	 * Sanitize input based on field configuration.
 	 *
 	 * @param mixed $value       Raw input value.
 	 * @param array $field_config Field configuration.
@@ -130,7 +130,7 @@ class Form_Security {
 				return \wp_kses_post( $value );
 
 			case 'checkbox':
-				// Handle checkbox arrays (multiple selections)
+				// Handle checkbox arrays (multiple selections).
 				if ( is_array( $value ) ) {
 					return array_map( 'sanitize_text_field', $value );
 				}
@@ -140,10 +140,10 @@ class Form_Security {
 				if ( is_array( $value ) ) {
 					return array_map( 'sanitize_text_field', $value );
 				}
-				return [];
+				return array();
 
 			case 'file':
-				// File inputs are handled separately
+				// File inputs are handled separately.
 				return $value;
 
 			default:
@@ -152,22 +152,22 @@ class Form_Security {
 	}
 
 	/**
-	 * Validate file upload security
+	 * Validate file upload security.
 	 *
 	 * @param array $file     File data from $_FILES.
 	 * @param array $field_config Field configuration.
 	 * @return bool|\WP_Error True if valid, \WP_Error if invalid.
 	 */
 	public function validate_file_upload( array $file, array $field_config ) {
-		// Check for upload errors
-		if ( $file['error'] !== UPLOAD_ERR_OK ) {
+		// Check for upload errors.
+		if ( UPLOAD_ERR_OK !== $file['error'] ) {
 			return new \WP_Error(
 				'upload_error',
 				$this->get_upload_error_message( $file['error'] )
 			);
 		}
 
-		// Verify file is actually uploaded
+		// Verify file is actually uploaded.
 		if ( ! is_uploaded_file( $file['tmp_name'] ) ) {
 			return new \WP_Error(
 				'upload_error',
@@ -175,7 +175,7 @@ class Form_Security {
 			);
 		}
 
-		// Check file size
+		// Check file size.
 		$max_size = $field_config['max_size'] ?? \wp_max_upload_size();
 		if ( $file['size'] > $max_size ) {
 			return new \WP_Error(
@@ -188,8 +188,8 @@ class Form_Security {
 			);
 		}
 
-		// Check MIME type
-		$allowed_types = $field_config['allowed_types'] ?? [];
+		// Check MIME type.
+		$allowed_types = $field_config['allowed_types'] ?? array();
 		if ( ! empty( $allowed_types ) ) {
 			$filetype = \wp_check_filetype( $file['name'] );
 			if ( ! in_array( $filetype['type'], $allowed_types, true ) ) {
@@ -200,7 +200,7 @@ class Form_Security {
 			}
 		}
 
-		// Basic malware scan (check for PHP content in uploaded files)
+		// Basic malware scan (check for PHP content in uploaded files).
 		if ( $this->contains_malicious_content( $file['tmp_name'] ) ) {
 			return new \WP_Error(
 				'malicious_content',
@@ -212,7 +212,7 @@ class Form_Security {
 	}
 
 	/**
-	 * Get upload error message
+	 * Get upload error message.
 	 *
 	 * @param int $error_code Upload error code.
 	 * @return string Error message.
@@ -239,29 +239,29 @@ class Form_Security {
 	}
 
 	/**
-	 * Check if file contains malicious content
+	 * Check if file contains malicious content.
 	 *
 	 * @param string $file_path Path to uploaded file.
 	 * @return bool True if malicious content detected.
 	 */
 	private function contains_malicious_content( string $file_path ): bool {
-		$content = file_get_contents( $file_path, false, null, 0, 1024 );
+		$content = file_get_contents( $file_path, false, null, 0, 1024 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 
 		if ( false === $content ) {
-			return true; // Can't read file, assume malicious
+			return true; // Can't read file, assume malicious.
 		}
 
-		// Check for PHP code
+		// Check for PHP code.
 		if ( preg_match( '/<\?php|<\?=|\$\w+\s*=/i', $content ) ) {
 			return true;
 		}
 
-		// Check for script tags
+		// Check for script tags.
 		if ( preg_match( '/<script[^>]*>.*?<\/script>/is', $content ) ) {
 			return true;
 		}
 
-		// Check for suspicious file extensions in content
+		// Check for suspicious file extensions in content.
 		if ( preg_match( '/\.(php|phtml|php3|php4|php5|exe|bat|cmd|com|scr)\b/i', $content ) ) {
 			return true;
 		}
@@ -287,7 +287,7 @@ class Form_Security {
 		}
 
 		if ( $attempts >= $max_attempts ) {
-			return false; // Rate limited
+			return false; // Rate limited.
 		}
 
 		\set_transient( $transient_key, $attempts + 1, $time_window );
@@ -300,18 +300,20 @@ class Form_Security {
 	 * @param string $event     Event type.
 	 * @param array  $context   Additional context.
 	 */
-	public function log_security_event( string $event, array $context = [] ): void {
-		$log_data = array_merge( $context,
-			[
+	public function log_security_event( string $event, array $context = array() ): void {
+		$log_data = array_merge(
+			$context,
+			array(
 				'event'      => $event,
 				'form_id'    => $this->form_id,
 				'user_id'    => \get_current_user_id(),
 				'user_ip'    => $this->get_client_ip(),
-				'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+				'user_agent' => sanitize_text_field( \wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ),
 				'timestamp'  => current_time( 'mysql' ),
-		] );
+			)
+		);
 
-		error_log(
+		error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			sprintf(
 				'[SECURITY] %s: %s',
 				$event,
@@ -326,7 +328,7 @@ class Form_Security {
 	 * @return string Client IP address.
 	 */
 	private function get_client_ip(): string {
-		$headers = [
+		$headers = array(
 			'HTTP_CF_CONNECTING_IP',
 			'HTTP_CLIENT_IP',
 			'HTTP_X_FORWARDED_FOR',
@@ -335,13 +337,13 @@ class Form_Security {
 			'HTTP_FORWARDED_FOR',
 			'HTTP_FORWARDED',
 			'REMOTE_ADDR',
-		];
+		);
 
 		foreach ( $headers as $header ) {
 			if ( isset( $_SERVER[ $header ] ) ) {
-				$ip = trim( $_SERVER[ $header ] );
+				$ip = trim( sanitize_text_field( \wp_unslash( $_SERVER[ $header ] ) ) );
 
-				// Handle comma-separated IPs (like X-Forwarded-For)
+				// Handle comma-separated IPs (like X-Forwarded-For).
 				if ( strpos( $ip, ',' ) !== false ) {
 					$ip = trim( explode( ',', $ip )[0] );
 				}
@@ -352,6 +354,6 @@ class Form_Security {
 			}
 		}
 
-		return '127.0.0.1'; // Fallback
+		return '127.0.0.1'; // Fallback.
 	}
 }

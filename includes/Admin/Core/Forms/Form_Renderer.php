@@ -81,10 +81,10 @@ class Form_Renderer {
 	 * Render switch styles
 	 */
 	public function render_switch_styles(): void {
-		// Only output styles if we have switch fields
+		// Only output styles if we have switch fields.
 		$has_switch = false;
 		foreach ( $this->fields as $field_config ) {
-			if ( isset( $field_config['type'] ) && in_array( $field_config['type'], [ 'switch', 'toggle' ], true ) ) {
+			if ( isset( $field_config['type'] ) && in_array( $field_config['type'], array( 'switch', 'toggle' ), true ) ) {
 				$has_switch = true;
 				break;
 			}
@@ -175,14 +175,14 @@ class Form_Renderer {
 	public function render_fields(): void {
 		$layout = $this->config['layout'];
 
-		if ( $layout === 'custom' ) {
+		if ( 'custom' === $layout ) {
 			$this->render_custom_layout();
 			return;
 		}
 
-		if ( $layout === 'table' ) {
+		if ( 'table' === $layout ) {
 			echo '<table class="form-table">';
-		} elseif ( $layout === 'div' ) {
+		} elseif ( 'div' === $layout ) {
 			echo '<div class="campaignbridge-form-fields">';
 		}
 
@@ -190,9 +190,9 @@ class Form_Renderer {
 			$this->render_field( $field_id, $field_config );
 		}
 
-		if ( $layout === 'table' ) {
+		if ( 'table' === $layout ) {
 			echo '</table>';
-		} elseif ( $layout === 'div' ) {
+		} elseif ( 'div' === $layout ) {
 			echo '</div>';
 		}
 	}
@@ -206,21 +206,21 @@ class Form_Renderer {
 	private function render_field( string $field_id, array $field_config ): void {
 		$layout = $this->config['layout'];
 
-		// If using render_sequence for custom layouts, render the field normally
-		if ( $layout === 'custom' && isset( $this->config['render_sequence'] ) ) {
+		// If using render_sequence for custom layouts, render the field normally.
+		if ( 'custom' === $layout && isset( $this->config['render_sequence'] ) ) {
 			$this->render_div_field( $field_id, $field_config );
 			return;
 		}
 
-		// Legacy custom layout behavior (no render_sequence)
-		if ( $layout === 'custom' ) {
+		// Legacy custom layout behavior (no render_sequence).
+		if ( 'custom' === $layout ) {
 			$this->run_hook( 'render_layout', $field_id, $field_config );
 			return;
 		}
 
-		if ( $layout === 'table' ) {
+		if ( 'table' === $layout ) {
 			$this->render_table_field( $field_id, $field_config );
-		} elseif ( $layout === 'div' ) {
+		} elseif ( 'div' === $layout ) {
 			$this->render_div_field( $field_id, $field_config );
 		}
 	}
@@ -275,17 +275,17 @@ class Form_Renderer {
 	 * Render custom layout
 	 */
 	private function render_custom_layout(): void {
-		// Execute render sequence (custom HTML mixed with fields)
+		// Execute render sequence (custom HTML mixed with fields).
 		if ( isset( $this->config['render_sequence'] ) && is_array( $this->config['render_sequence'] ) ) {
 			foreach ( $this->config['render_sequence'] as $item ) {
-				if ( $item['type'] === 'custom' && is_callable( $item['renderer'] ) ) {
+				if ( 'custom' === $item['type'] && is_callable( $item['renderer'] ) ) {
 					call_user_func( $item['renderer'] );
-				} elseif ( $item['type'] === 'field' && isset( $this->fields[ $item['name'] ] ) ) {
+				} elseif ( 'field' === $item['type'] && isset( $this->fields[ $item['name'] ] ) ) {
 					$this->render_field( $item['name'], $this->fields[ $item['name'] ] );
 				}
 			}
 		} else {
-			// Fallback: execute all custom renderers if no sequence exists
+			// Fallback: execute all custom renderers if no sequence exists.
 			if ( isset( $this->config['custom_renderers'] ) && is_array( $this->config['custom_renderers'] ) ) {
 				foreach ( $this->config['custom_renderers'] as $renderer ) {
 					if ( is_callable( $renderer ) ) {
@@ -294,7 +294,7 @@ class Form_Renderer {
 				}
 			}
 
-			// Also run the legacy render_layout hook for backward compatibility
+			// Also run the legacy render_layout hook for backward compatibility.
 			$this->run_hook( 'render_layout' );
 		}
 	}
@@ -322,17 +322,17 @@ class Form_Renderer {
 	private function create_field_renderer( string $field_name, array $field_config, $value ): Form_Field_Interface {
 		$type = $field_config['type'] ?? 'text';
 
-		// Get form ID for namespacing field names and IDs
+		// Get form ID for namespacing field names and IDs.
 		$form_id = $this->config['form_id'] ?? 'form';
 
-		// Prepare config with field name and value
+		// Prepare config with field name and value.
 		$config          = $field_config;
 		$config['name']  = $form_id . '[' . $field_name . ']';
 		$config['id']    = $form_id . '_' . $field_name;
 		$config['value'] = $value;
 
-		// Map field types to renderer classes
-		$type_map = [
+		// Map field types to renderer classes.
+		$type_map = array(
 			'text'           => Form_Field_Input::class,
 			'email'          => Form_Field_Input::class,
 			'url'            => Form_Field_Input::class,
@@ -353,264 +353,11 @@ class Form_Renderer {
 			'wysiwyg'        => Form_Field_Wysiwyg::class,
 			'switch'         => Form_Field_Switch::class,
 			'toggle'         => Form_Field_Switch::class,
-		];
+		);
 
 		$renderer_class = $type_map[ $type ] ?? Form_Field_Input::class;
 
 		return new $renderer_class( $config );
-	}
-
-	/**
-	 * Render input field
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 */
-	private function render_input_field( string $field_name, array $field_config, $value ): void {
-		$type        = $field_config['type'] ?? 'text';
-		$attributes  = $this->build_field_attributes( $field_name, $field_config, $value );
-		$attr_string = $this->build_attribute_string( $attributes );
-
-		printf( '<input type="%s"%s />', \esc_attr( $type ), $attr_string );
-	}
-
-	/**
-	 * Render textarea field
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 */
-	private function render_textarea_field( string $field_name, array $field_config, $value ): void {
-		$attributes  = $this->build_field_attributes( $field_name, $field_config, $value );
-		$attr_string = $this->build_attribute_string( $attributes );
-		$rows        = $field_config['rows'] ?? 4;
-
-		printf( '<textarea rows="%d"%s>%s</textarea>', (int) $rows, $attr_string, \esc_textarea( (string) $value ) );
-	}
-
-	/**
-	 * Render select field
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 */
-	private function render_select_field( string $field_name, array $field_config, $value ): void {
-		$attributes  = $this->build_field_attributes( $field_name, $field_config, $value, false );
-		$attr_string = $this->build_attribute_string( $attributes );
-		$options     = $field_config['options'] ?? [];
-
-		printf( '<select%s>', $attr_string );
-
-		foreach ( $options as $option_value => $option_label ) {
-			$selected = (string) $value === (string) $option_value ? ' selected="selected"' : '';
-			printf( '<option value="%s"%s>%s</option>', \esc_attr( $option_value ), $selected, \esc_html( $option_label ) );
-		}
-
-		echo '</select>';
-	}
-
-	/**
-	 * Render radio field
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 */
-	private function render_radio_field( string $field_name, array $field_config, $value ): void {
-		$options = $field_config['options'] ?? [];
-		$id_base = $field_name;
-
-		echo '<div class="campaignbridge-radio-group">';
-
-		foreach ( $options as $option_value => $option_label ) {
-			$id          = $id_base . '_' . $option_value;
-			$checked     = (string) $value === (string) $option_value ? ' checked="checked"' : '';
-			$attributes  = $this->build_field_attributes( $field_name, $field_config, $option_value, false );
-			$attr_string = $this->build_attribute_string( $attributes );
-
-			// Override id and value for radio buttons
-			$attr_string = preg_replace( '/ id="[^"]*"/', ' id="' . \esc_attr( $id ) . '"', $attr_string );
-			$attr_string = preg_replace( '/ value="[^"]*"/', ' value="' . \esc_attr( $option_value ) . '"', $attr_string );
-
-			printf( '<label class="campaignbridge-radio-label"><input type="radio"%s%s /> %s</label>', $attr_string, $checked, \esc_html( $option_label ) );
-		}
-
-		echo '</div>';
-	}
-
-	/**
-	 * Render checkbox field
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 */
-	private function render_checkbox_field( string $field_name, array $field_config, $value ): void {
-		$options = $field_config['options'] ?? [];
-
-		if ( empty( $options ) ) {
-			// Single checkbox
-			$checked     = (bool) $value ? ' checked="checked"' : '';
-			$attributes  = $this->build_field_attributes( $field_name, $field_config, '1' );
-			$attr_string = $this->build_attribute_string( $attributes );
-
-			printf( '<input type="checkbox"%s%s />', $attr_string, $checked );
-		} else {
-			// Multiple checkboxes
-			echo '<div class="campaignbridge-checkbox-group">';
-
-			foreach ( $options as $option_value => $option_label ) {
-				$id          = $field_name . '_' . $option_value;
-				$checked     = is_array( $value ) && in_array( $option_value, $value, true ) ? ' checked="checked"' : '';
-				$attributes  = $this->build_field_attributes( $field_name . '[]', $field_config, $option_value, false );
-				$attr_string = $this->build_attribute_string( $attributes );
-
-				// Override id and value for checkboxes
-				$attr_string = preg_replace( '/ id="[^"]*"/', ' id="' . \esc_attr( $id ) . '"', $attr_string );
-				$attr_string = preg_replace( '/ value="[^"]*"/', ' value="' . \esc_attr( $option_value ) . '"', $attr_string );
-
-				printf( '<label class="campaignbridge-checkbox-label"><input type="checkbox"%s%s /> %s</label>', $attr_string, $checked, \esc_html( $option_label ) );
-			}
-
-			echo '</div>';
-		}
-	}
-
-	/**
-	 * Render file field
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 */
-	private function render_file_field( string $field_name, array $field_config, $value ): void {
-		$attributes  = $this->build_field_attributes( $field_name, $field_config, $value );
-		$attr_string = $this->build_attribute_string( $attributes );
-		$accept      = $field_config['accept'] ?? '';
-
-		if ( $accept ) {
-			$attr_string = str_replace( ' />', ' accept="' . \esc_attr( $accept ) . '" />', $attr_string );
-		}
-
-		printf( '<input type="file"%s />', $attr_string );
-
-		// Show current file if exists
-		if ( ! empty( $value ) && is_string( $value ) ) {
-			$this->render_current_file( $value, $field_name );
-		}
-	}
-
-	/**
-	 * Render WYSIWYG field
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 */
-	private function render_wysiwyg_field( string $field_name, array $field_config, $value ): void {
-		$editor_id = $field_name . '_editor';
-		$settings  = $field_config['editor_settings'] ?? [];
-
-		\wp_editor( $value, $editor_id, $settings );
-	}
-
-	/**
-	 * Render switch field
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 */
-	private function render_switch_field( string $field_name, array $field_config, $value ): void {
-		$checked     = (bool) $value ? ' checked="checked"' : '';
-		$attributes  = $this->build_field_attributes( $field_name, $field_config, '1' );
-		$attr_string = $this->build_attribute_string( $attributes );
-
-		printf( '<label class="campaignbridge-switch"><input type="checkbox"%s%s /><span class="slider"></span></label>', $attr_string, $checked );
-	}
-
-	/**
-	 * Build field attributes array
-	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
-	 * @param bool   $include_value Whether to include value attribute.
-	 * @return array Attributes array.
-	 */
-	private function build_field_attributes( string $field_name, array $field_config, $value, bool $include_value = true ): array {
-		$attributes = [
-			'name'  => $field_name,
-			'id'    => $field_name,
-			'class' => $field_config['class'] ?? '',
-		];
-
-		if ( $include_value ) {
-			$attributes['value'] = $value;
-		}
-
-		if ( isset( $field_config['required'] ) && $field_config['required'] ) {
-			$attributes['required'] = 'required';
-		}
-
-		if ( isset( $field_config['placeholder'] ) ) {
-			$attributes['placeholder'] = $field_config['placeholder'];
-		}
-
-		if ( isset( $field_config['autocomplete'] ) ) {
-			$attributes['autocomplete'] = $field_config['autocomplete'];
-		}
-
-		if ( isset( $field_config['min'] ) ) {
-			$attributes['min'] = $field_config['min'];
-		}
-
-		if ( isset( $field_config['max'] ) ) {
-			$attributes['max'] = $field_config['max'];
-		}
-
-		if ( isset( $field_config['step'] ) ) {
-			$attributes['step'] = $field_config['step'];
-		}
-
-		return $attributes;
-	}
-
-	/**
-	 * Build attribute string from array
-	 *
-	 * @param array $attributes Attributes array.
-	 * @return string Attribute string.
-	 */
-	private function build_attribute_string( array $attributes ): string {
-		$attr_string = '';
-
-		foreach ( $attributes as $key => $value ) {
-			if ( $value !== '' && $value !== null ) {
-				$attr_string .= sprintf( ' %s="%s"', \esc_attr( $key ), \esc_attr( $value ) );
-			}
-		}
-
-		return $attr_string;
-	}
-
-	/**
-	 * Render current file display
-	 *
-	 * @param string $file_url  File URL.
-	 * @param string $field_name Field name.
-	 */
-	private function render_current_file( string $file_url, string $field_name ): void {
-		$file_name = basename( $file_url );
-
-		echo '<div class="current-files">';
-		echo '<div class="current-file">';
-		printf( '<strong>%s:</strong> <a href="%s" target="_blank">%s</a>', \esc_html\__( 'Current file', 'campaignbridge' ), \esc_url( $file_url ), \esc_html( $file_name ) );
-		echo '</div>';
-		echo '</div>';
 	}
 
 	/**
@@ -632,25 +379,31 @@ class Form_Renderer {
 		printf(
 			'<form method="%s" action="%s" enctype="%s" class="%s"%s>',
 			\esc_attr( $method ),
-			$action,
+			$action, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			\esc_attr( $enctype ),
 			\esc_attr( $classes ),
-			$attr_string
+			$attr_string // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		);
 
-		// Add security nonce
+		// Add security nonce.
 		$this->security->render_security_fields();
+
+		// Render form description if set.
+		$description = $this->config['description'] ?? '';
+		if ( ! empty( $description ) ) {
+			printf( '<p class="description">%s</p>', \esc_html( $description ) );
+		}
 	}
 
 	/**
-	 * Render submit button
+	 * Render submit button.
 	 */
 	public function render_submit_button(): void {
 		$form_id       = $this->config['form_id'] ?? 'form';
 		$button_config = $this->config['submit_button'];
 		$text          = $button_config['text'] ?? \__( 'Save Changes', 'campaignbridge' );
 		$type          = $button_config['type'] ?? 'primary';
-		$attributes    = $button_config['attributes'] ?? [];
+		$attributes    = $button_config['attributes'] ?? array();
 
 		$attr_string = '';
 		foreach ( $attributes as $key => $value ) {
@@ -660,7 +413,7 @@ class Form_Renderer {
 		$submit_id   = $form_id . '_submit';
 		$submit_name = $form_id . '[submit]';
 
-		printf( '<p class="submit"><input type="submit" name="%s" id="%s" class="button button-%s" value="%s"%s /></p>', \esc_attr( $submit_name ), \esc_attr( $submit_id ), \esc_attr( $type ), \esc_attr( $text ), $attr_string );
+		printf( '<p class="submit"><input type="submit" name="%s" id="%s" class="button button-%s" value="%s"%s /></p>', \esc_attr( $submit_name ), \esc_attr( $submit_id ), \esc_attr( $type ), \esc_attr( $text ), $attr_string ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**

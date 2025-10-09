@@ -27,7 +27,7 @@ class Form_Field_Switch extends Form_Field_Base {
 
 		$attributes = $this->render_common_attributes();
 
-		// Switch/toggle styling
+		// Switch/toggle styling.
 		$switch_classes = 'campaignbridge-switch';
 		if ( isset( $this->config['class'] ) ) {
 			$switch_classes .= ' ' . $this->config['class'];
@@ -43,8 +43,8 @@ class Form_Field_Switch extends Form_Field_Base {
 			esc_attr( $switch_classes ),
 			esc_attr( $field_id ),
 			esc_attr( $field_name ),
-			$checked,
-			$attributes,
+			$checked, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			esc_attr( $field_id )
 		);
 	}

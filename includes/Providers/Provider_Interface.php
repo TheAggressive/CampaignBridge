@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Provider Interface for CampaignBridge Email Service Providers.
  *
@@ -113,7 +113,7 @@ interface Provider_Interface {
 	 * content to the specified format.
 	 *
 	 * @param array $blocks   Associative array mapping section keys to HTML content.
-	 *                       Format: ['header' => '<html>...</html>', 'body' => '<html>...</html>']
+	 *                       Format: ['header' => '<html>...</html>', 'body' => '<html>...</html>'].
 	 * @param array $settings Plugin settings array with provider configuration.
 	 * @return bool|\WP_Error True on success, WP_Error on failure with details.
 	 */

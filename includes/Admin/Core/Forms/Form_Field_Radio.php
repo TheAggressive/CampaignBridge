@@ -21,7 +21,7 @@ class Form_Field_Radio extends Form_Field_Base {
 	 */
 	public function render_input(): void {
 		$value   = $this->get_value();
-		$options = $this->config['options'] ?? [];
+		$options = $this->config['options'] ?? array();
 
 		if ( empty( $options ) ) {
 			printf(
@@ -38,7 +38,7 @@ class Form_Field_Radio extends Form_Field_Base {
 			$checked    = (string) $option_value === (string) $value ? ' checked' : '';
 			$attributes = $this->render_common_attributes();
 
-			// Remove ID and name from attributes as we set them specifically
+			// Remove ID and name from attributes as we set them specifically.
 			$attributes = preg_replace( '/\bid="[^"]*"/', '', $attributes );
 			$attributes = preg_replace( '/\bname="[^"]*"/', '', $attributes );
 
@@ -51,8 +51,8 @@ class Form_Field_Radio extends Form_Field_Base {
 				esc_attr( $radio_id ),
 				esc_attr( $this->config['name'] ),
 				esc_attr( $option_value ),
-				$attributes,
-				$checked,
+				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$checked, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				esc_html( $option_label )
 			);
 		}

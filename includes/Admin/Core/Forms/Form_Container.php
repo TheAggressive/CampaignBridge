@@ -110,6 +110,7 @@ class Form_Container {
 	 *
 	 * @param Form_Config                     $config Form configuration.
 	 * @param \CampaignBridge\Admin\Core\Form $form   Parent form instance.
+	 *
 	 * @return Form_Builder
 	 */
 	public function create_form_builder( Form_Config $config, \CampaignBridge\Admin\Core\Form $form ): Form_Builder {
@@ -121,66 +122,54 @@ class Form_Container {
 	 */
 	private function register_default_services(): void {
 		// Form_Config factory.
-		$this->register( 'form_config',
+		$this->register(
+			'form_config',
 			function () {
 				return new Form_Config();
-        } );
+			}
+		);
 
 		// Form_Security factory (not shared - each form needs its own).
-		$this->register( 'form_security',
+		$this->register(
+			'form_security',
 			function ( $container ) {
 				return new Form_Security( 'default' ); // Will be set by form.
 			},
-		false );
+			false
+		);
 
 		// Form_Validator factory (shared).
-		$this->register( 'form_validator',
+		$this->register(
+			'form_validator',
 			function () {
 				return new Form_Validator();
 			},
-		true );
+			true
+		);
 
 		// Form_Field_Factory factory (shared).
-		$this->register( 'form_field_factory',
+		$this->register(
+			'form_field_factory',
 			function () {
 				return new Form_Field_Factory();
 			},
-		true );
+			true
+		);
 
 		// Form_Handler factory.
-		$this->register( 'form_handler',
+		$this->register(
+			'form_handler',
 			function ( $container ) {
 				return new Form_Handler(
 					null, // Will be set by form.
 					new Form_Config(), // Will be set by form.
 					array(), // Will be set by form.
 					$container->get( 'form_security' ),
-					$container->get( 'form_validator' )
+					$container->get( 'form_validator' ),
+					new Form_Notice_Handler()
 				);
-        } );
-
-		// Form_Data_Manager factory.
-		$this->register( 'form_data_manager',
-			function ( $container ) {
-				return new Form_Data_Manager(
-					null, // Will be set by form.
-					new Form_Config(), // Will be set by form.
-					array() // Will be set by form.
-				);
-        } );
-
-		// Form_Renderer factory.
-		$this->register( 'form_renderer',
-			function ( $container ) {
-				return new Form_Renderer(
-					null, // Will be set by form.
-					new Form_Config(), // Will be set by form.
-					array(), // Will be set by form.
-					array(), // Will be set by form.
-					$container->get( 'form_handler' ),
-					$container->get( 'form_security' )
-				);
-        } );
+			}
+		);
 	}
 
 	/**
@@ -189,8 +178,8 @@ class Form_Container {
 	 * @param \CampaignBridge\Admin\Core\Form $form    Form instance.
 	 * @param Form_Config                     $config  Form configuration.
 	 * @param array                           $fields  Form fields.
-	 * @param Form_Security                   $security Security instance.
 	 * @param Form_Validator                  $validator Validator instance.
+	 *
 	 * @return Form_Handler
 	 */
 	public function create_form_handler(
@@ -199,8 +188,9 @@ class Form_Container {
 		array $fields,
 		Form_Validator $validator
 	): Form_Handler {
-		$security = new Form_Security( $config->get( 'form_id', 'form' ) );
-		return new Form_Handler( $form, $config->all(), $fields, $security, $validator );
+		$security       = new Form_Security( $config->get( 'form_id', 'form' ) );
+		$notice_handler = new Form_Notice_Handler();
+		return new Form_Handler( $form, $config, $fields, $security, $validator, $notice_handler );
 	}
 
 	/**
@@ -227,7 +217,6 @@ class Form_Container {
 	 * @param array                           $fields  Form fields.
 	 * @param array                           $data    Form data.
 	 * @param Form_Handler                    $handler Form handler.
-	 * @param Form_Security                   $security Security instance.
 	 * @return Form_Renderer
 	 */
 	public function create_form_renderer(

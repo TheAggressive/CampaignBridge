@@ -24,13 +24,13 @@ class Form_Validator {
 	 * @return array Validation result with 'valid' boolean and 'errors' array.
 	 */
 	public function validate( array $data, array $fields ): array {
-		$errors   = [];
+		$errors   = array();
 		$is_valid = true;
 
 		foreach ( $fields as $field_id => $field_config ) {
 			$value = $data[ $field_id ] ?? '';
 
-			// Create field instance for validation
+			// Create field instance for validation.
 			$field_factory = new Form_Field_Factory();
 			$field         = $field_factory->create_field( $field_id, $field_config, $value );
 
@@ -42,10 +42,10 @@ class Form_Validator {
 			}
 		}
 
-		return [
+		return array(
 			'valid'  => $is_valid,
 			'errors' => $errors,
-		];
+		);
 	}
 
 	/**
@@ -57,15 +57,15 @@ class Form_Validator {
 	 */
 	public function validate_field( $value, array $field_config ) {
 		$field_type       = $field_config['type'] ?? 'text';
-		$validation_rules = $field_config['validation'] ?? [];
+		$validation_rules = $field_config['validation'] ?? array();
 
-		// Type-specific validation
+		// Type-specific validation.
 		$type_validation = $this->validate_field_type( $value, $field_type, $field_config );
 		if ( is_wp_error( $type_validation ) ) {
 			return $type_validation;
 		}
 
-		// Custom validation rules
+		// Custom validation rules.
 		foreach ( $validation_rules as $rule => $rule_config ) {
 			$rule_validation = $this->validate_rule( $rule, $value, $rule_config, $field_config );
 			if ( is_wp_error( $rule_validation ) ) {
@@ -85,7 +85,7 @@ class Form_Validator {
 	 * @return bool|WP_Error
 	 */
 	private function validate_field_type( $value, string $field_type, array $field_config ) {
-		// Required field validation
+		// Required field validation.
 		if ( ( $field_config['required'] ?? false ) && $this->is_empty_value( $value ) ) {
 			return new \WP_Error(
 				'field_required',
@@ -97,12 +97,12 @@ class Form_Validator {
 			);
 		}
 
-		// Skip further validation if empty and not required
+		// Skip further validation if empty and not required.
 		if ( $this->is_empty_value( $value ) && ! ( $field_config['required'] ?? false ) ) {
 			return true;
 		}
 
-		// Type-specific validation
+		// Type-specific validation.
 		switch ( $field_type ) {
 			case 'email':
 				if ( ! is_email( $value ) ) {
@@ -132,7 +132,7 @@ class Form_Validator {
 
 				$value = floatval( $value );
 
-				// Min/Max validation for numbers
+				// Min/Max validation for numbers.
 				if ( isset( $field_config['min'] ) && $value < $field_config['min'] ) {
 					return new \WP_Error(
 						'number_too_small',
@@ -166,7 +166,7 @@ class Form_Validator {
 				break;
 
 			case 'file':
-				// File validation would be handled separately during upload
+				// File validation would be handled separately during upload.
 				break;
 		}
 
@@ -232,7 +232,7 @@ class Form_Validator {
 				if ( is_callable( $rule_config ) ) {
 					$result = call_user_func( $rule_config, $value, $field_config );
 
-					if ( $result !== true ) {
+					if ( true !== $result ) {
 						$message = is_string( $result ) ? $result : __( 'Custom validation failed.', 'campaignbridge' );
 						return new \WP_Error( 'custom_validation', $message );
 					}
@@ -250,7 +250,7 @@ class Form_Validator {
 	 * @return bool True if empty, false otherwise.
 	 */
 	private function is_empty_value( $value ): bool {
-		if ( $value === null || $value === '' ) {
+		if ( null === $value || '' === $value ) {
 			return true;
 		}
 
@@ -269,7 +269,7 @@ class Form_Validator {
 	 */
 	private function is_valid_date( string $date ): bool {
 		$timestamp = strtotime( $date );
-		return $timestamp !== false && date( 'Y-m-d', $timestamp ) === $date;
+		return false !== $timestamp && gmdate( 'Y-m-d', $timestamp ) === $date;
 	}
 
 	/**

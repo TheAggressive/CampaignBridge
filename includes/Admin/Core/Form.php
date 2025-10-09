@@ -44,6 +44,13 @@ class Form {
 	private Form_Container $container;
 
 	/**
+	 * Whether the form has been initialized
+	 *
+	 * @var bool
+	 */
+	private bool $initialized = false;
+
+	/**
 	 * Form data manager
 	 *
 	 * @var \CampaignBridge\Admin\Core\Forms\Form_Data_Manager
@@ -71,7 +78,7 @@ class Form {
 	 * @param array  $config  Optional initial configuration.
 	 * @return Form
 	 */
-	public static function make( string $form_id, array $config = [] ): self {
+	public static function make( string $form_id, array $config = array() ): self {
 		return new self( $form_id, $config );
 	}
 
@@ -82,7 +89,8 @@ class Form {
 	 * @return Form
 	 */
 	public static function contact( string $form_id = 'contact' ): self {
-		return self::make($form_id,
+		return self::make(
+			$form_id,
 			array(
 				'fields' => array(
 					'name'    => array(
@@ -111,7 +119,8 @@ class Form {
 						\wp_mail( \get_option( 'admin_email' ), $data['subject'] ?? 'Contact Form', $data['message'] );
 					},
 				),
-			));
+			)
+		);
 	}
 
 	/**
@@ -121,7 +130,8 @@ class Form {
 	 * @return Form
 	 */
 	public static function register( string $form_id = 'register' ): self {
-		return self::make($form_id,
+		return self::make(
+			$form_id,
 			array(
 				'fields' => array(
 					'username'         => array(
@@ -152,7 +162,8 @@ class Form {
 						}
 					},
 				),
-			));
+			)
+		);
 	}
 
 	/**
@@ -176,7 +187,7 @@ class Form {
 	 * @param array          $config    Initial config.
 	 * @param Form_Container $container Dependency injection container.
 	 */
-	private function __construct( string $form_id, array $config = [], ?Form_Container $container = null ) {
+	private function __construct( string $form_id, array $config = array(), ?Form_Container $container = null ) {
 		$this->container = $container ?? new Form_Container();
 
 		// Initialize configuration.
@@ -188,8 +199,16 @@ class Form {
 
 		// Initialize services.
 		$this->initialize_services();
+	}
 
-		$this->init();
+	/**
+	 * Ensure the form is initialized (lazy initialization)
+	 */
+	private function ensure_initialized(): void {
+		if ( ! $this->initialized ) {
+			$this->init();
+			$this->initialized = true;
+		}
 	}
 
 	/**
@@ -225,9 +244,9 @@ class Form {
 	 * Initialize the form
 	 */
 	private function init(): void {
-		// Ensure services are initialized
-		assert( $this->data_manager !== null, 'Data manager must be initialized' );
-		assert( $this->handler !== null, 'Handler must be initialized' );
+		// Ensure services are initialized.
+		assert( null !== $this->data_manager, 'Data manager must be initialized' );
+		assert( null !== $this->handler, 'Handler must be initialized' );
 
 		// Load form data if editing.
 		$this->data_manager->load_form_data();
@@ -239,15 +258,18 @@ class Form {
 
 
 
+
 	/**
 	 * Render the form HTML.
 	 *
+	 * @param bool $include_messages Whether to include messages in the output (deprecated - messages now auto-display via Screen_Context).
 	 * @return void
 	 */
-	public function render(): void {
-		// Ensure services are initialized
-		assert( $this->data_manager !== null, 'Data manager must be initialized' );
-		assert( $this->handler !== null, 'Handler must be initialized' );
+	public function render( bool $include_messages = true ): void {
+		$this->ensure_initialized();
+		// Ensure services are initialized.
+		assert( null !== $this->data_manager, 'Data manager must be initialized' );
+		assert( null !== $this->handler, 'Handler must be initialized' );
 
 		// Create renderer lazily with current data.
 		if ( ! $this->renderer ) {
@@ -262,7 +284,12 @@ class Form {
 
 		$this->renderer->render_form_open();
 		$this->renderer->render_switch_styles();
-		$this->renderer->render_messages();
+
+		// Only render messages if explicitly requested (for backward compatibility).
+		if ( $include_messages ) {
+			$this->renderer->render_messages();
+		}
+
 		$this->renderer->render_fields();
 		$this->renderer->render_submit_button();
 		$this->renderer->render_form_close();
@@ -274,7 +301,8 @@ class Form {
 	 * @return bool
 	 */
 	public function submitted(): bool {
-		assert( $this->handler !== null, 'Handler must be initialized' );
+		$this->ensure_initialized();
+		assert( null !== $this->handler, 'Handler must be initialized' );
 		return $this->handler->is_submitted();
 	}
 
@@ -284,7 +312,8 @@ class Form {
 	 * @return bool
 	 */
 	public function valid(): bool {
-		assert( $this->handler !== null, 'Handler must be initialized' );
+		$this->ensure_initialized();
+		assert( null !== $this->handler, 'Handler must be initialized' );
 		return $this->handler->is_valid();
 	}
 
@@ -294,7 +323,7 @@ class Form {
 	 * @return array
 	 */
 	public function errors(): array {
-		assert( $this->handler !== null, 'Handler must be initialized' );
+		assert( null !== $this->handler, 'Handler must be initialized' );
 		return $this->handler->get_errors();
 	}
 
@@ -304,7 +333,7 @@ class Form {
 	 * @return array
 	 */
 	public function messages(): array {
-		assert( $this->handler !== null, 'Handler must be initialized' );
+		assert( null !== $this->handler, 'Handler must be initialized' );
 		return $this->handler->get_messages();
 	}
 
@@ -474,6 +503,28 @@ class Form {
 	}
 
 	/**
+	 * Add on success hook
+	 *
+	 * @param callable $callback Hook callback.
+	 * @return Form
+	 */
+	public function on_success( callable $callback ): self {
+		$this->builder->on_success( $callback );
+		return $this;
+	}
+
+	/**
+	 * Add on error hook
+	 *
+	 * @param callable $callback Hook callback.
+	 * @return Form
+	 */
+	public function on_error( callable $callback ): self {
+		$this->builder->on_error( $callback );
+		return $this;
+	}
+
+	/**
 	 * Set form enctype for file uploads
 	 *
 	 * @return Form
@@ -490,8 +541,21 @@ class Form {
 	 * @return mixed
 	 */
 	public function data( string $key = '' ) {
-		assert( $this->data_manager !== null, 'Data manager must be initialized' );
+		assert( null !== $this->data_manager, 'Data manager must be initialized' );
 		return $key ? $this->data_manager->get_data( $key ) : $this->data_manager->get_data();
+	}
+
+	/**
+	 * Set form data
+	 *
+	 * @param string $key   Data key.
+	 * @param mixed  $value Data value.
+	 * @return Form
+	 */
+	public function set_data( string $key, $value ): self {
+		assert( null !== $this->data_manager, 'Data manager must be initialized' );
+		$this->data_manager->set_data( $key, $value );
+		return $this;
 	}
 
 	/**
@@ -499,15 +563,16 @@ class Form {
 	 *
 	 * @param string $method Method name.
 	 * @param array  $args   Method arguments.
+	 * @throws \BadMethodCallException If method does not exist.
 	 * @return mixed
 	 */
 	public function __call( string $method, array $args ) {
-		// Delegate to builder if method exists
+		// Delegate to builder if method exists.
 		if ( method_exists( $this->builder, $method ) ) {
 			return $this->builder->{$method}( ...$args );
 		}
 
-		// Method not found
-		throw new \BadMethodCallException( "Method '{$method}' does not exist on " . __CLASS__ );
+		// Method not found.
+		throw new \BadMethodCallException( "Method '{$method}' does not exist on " . __CLASS__ ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 	}
 }

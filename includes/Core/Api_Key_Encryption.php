@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Ultra-secure API Key Encryption for CampaignBridge.
  *
@@ -119,9 +119,9 @@ class Api_Key_Encryption {
 			return '';
 		}
 
-		// Check if the data appears to be encrypted (base64 encoded)
+		// Check if the data appears to be encrypted (base64 encoded).
 		if ( ! self::is_encrypted_value( $encrypted ) ) {
-			// Data is not encrypted, return as-is (plain text)
+			// Data is not encrypted, return as-is (plain text).
 			return $encrypted;
 		}
 
@@ -181,7 +181,7 @@ class Api_Key_Encryption {
 	 * @throws \RuntimeException If decryption fails, data is corrupted, or user lacks permission.
 	 */
 	public static function decrypt_for_display( string $encrypted ): string {
-		// Security: Only allow admin users to view decrypted API keys
+		// Only allow admin users to view decrypted API keys.
 		if ( ! current_user_can( 'manage_options' ) ) {
 			throw new \RuntimeException(
 				'Unauthorized attempt to view decrypted sensitive data. Admin access required.'
@@ -258,7 +258,8 @@ class Api_Key_Encryption {
 			);
 			add_option( self::KEY_META_OPTION, $metadata, '', 'no' );
 
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log( 'CampaignBridge master encryption key generated' );
 			}
 		}
@@ -353,7 +354,7 @@ class Api_Key_Encryption {
 	 * @return bool True if value appears to be encrypted.
 	 */
 	public static function is_encrypted_value( string $value ): bool {
-		// Basic security: only accept reasonable length values
+		// Basic security: only accept reasonable length values.
 		if ( strlen( $value ) < 20 || strlen( $value ) > 1000 ) {
 			return false;
 		}
@@ -369,22 +370,23 @@ class Api_Key_Encryption {
 			return false;
 		}
 
-		// Must be at least IV (12) + tag (16) + minimal ciphertext (8) = 36 bytes
+		// Must be at least IV (12) + tag (16) + minimal ciphertext (8) = 36 bytes.
 		if ( strlen( $decoded ) < 36 ) {
 			return false;
 		}
 
 		// Additional validation: check that decoded data looks like binary (not just valid base64)
-		// Valid encrypted data should have high entropy (not just printable characters)
+		// Valid encrypted data should have high entropy (not just printable characters).
 		$printable_chars = 0;
-		$total_chars = strlen( $decoded );
-		for ( $i = 0; $i < min( $total_chars, 100 ); $i++ ) {
+		$total_chars     = strlen( $decoded );
+		$check_length    = min( $total_chars, 100 );
+		for ( $i = 0; $i < $check_length; $i++ ) {
 			if ( ctype_print( $decoded[ $i ] ) ) {
-				$printable_chars++;
+				++$printable_chars;
 			}
 		}
 
-		// If more than 80% of the data is printable, it's likely not encrypted binary data
+		// If more than 80% of the data is printable, it's likely not encrypted binary data.
 		return ( $printable_chars / min( $total_chars, 100 ) ) < 0.8;
 	}
 

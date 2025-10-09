@@ -22,19 +22,19 @@ class Form_Field_Checkbox extends Form_Field_Base {
 	public function render_input(): void {
 		$value      = $this->get_value();
 		$attributes = $this->render_common_attributes();
-		$options    = $this->config['options'] ?? [];
+		$options    = $this->config['options'] ?? array();
 
-		// Single checkbox
+		// Single checkbox.
 		if ( empty( $options ) ) {
 			$checked = ! empty( $value ) ? ' checked' : '';
 
 			printf(
 				'<input type="checkbox" value="1" %s%s />',
-				$attributes,
-				$checked
+				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$checked // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			);
 
-			// Add hidden input to ensure value is submitted when unchecked
+			// Add hidden input to ensure value is submitted when unchecked.
 			printf(
 				'<input type="hidden" name="%s" value="0" />',
 				esc_attr( $this->config['name'] )
@@ -43,8 +43,8 @@ class Form_Field_Checkbox extends Form_Field_Base {
 			return;
 		}
 
-		// Multiple checkboxes
-		$current_values = is_array( $value ) ? $value : ( ! empty( $value ) ? [ $value ] : [] );
+		// Multiple checkboxes.
+		$current_values = is_array( $value ) ? $value : ( ! empty( $value ) ? array( $value ) : array() );
 
 		echo '<div class="campaignbridge-checkbox-group">';
 
@@ -62,8 +62,8 @@ class Form_Field_Checkbox extends Form_Field_Base {
 				esc_attr( $checkbox_id ),
 				esc_attr( $checkbox_name ),
 				esc_attr( $option_value ),
-				$attributes,
-				$checked,
+				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$checked, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				esc_html( $option_label )
 			);
 		}
@@ -75,9 +75,9 @@ class Form_Field_Checkbox extends Form_Field_Base {
 	 * Render field label (override for single checkbox)
 	 */
 	protected function render_label(): void {
-		$options = $this->config['options'] ?? [];
+		$options = $this->config['options'] ?? array();
 
-		// For single checkbox, don't render separate label
+		// For single checkbox, don't render separate label.
 		if ( empty( $options ) ) {
 			return;
 		}
@@ -89,13 +89,13 @@ class Form_Field_Checkbox extends Form_Field_Base {
 	 * Render the field in table layout (override for single checkbox)
 	 */
 	public function render_table_row(): void {
-		$options = $this->config['options'] ?? [];
+		$options = $this->config['options'] ?? array();
 
-		// For single checkbox, different layout
+		// For single checkbox, different layout.
 		if ( empty( $options ) ) {
 			$wrapper_class = $this->config['wrapper_class'] ? ' class="' . esc_attr( $this->config['wrapper_class'] ) . '"' : '';
 
-			printf( '<tr%s>', $wrapper_class );
+			printf( '<tr%s>', esc_attr( $wrapper_class ) );
 
 			echo '<th scope="row">';
 			$this->render_label();

@@ -48,7 +48,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function label( string $label ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'label' => $label ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'label' => $label ) );
 		return $this;
 	}
 
@@ -58,7 +58,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function required(): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'required' => true ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'required' => true ) );
 		return $this;
 	}
 
@@ -69,7 +69,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function description( string $description ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'description' => $description ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'description' => $description ) );
 		return $this;
 	}
 
@@ -80,18 +80,18 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function placeholder( string $placeholder ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'placeholder' => $placeholder ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'placeholder' => $placeholder ) );
 		return $this;
 	}
 
 	/**
 	 * Set field default value
 	 *
-	 * @param mixed $default Default value.
+	 * @param mixed $value Default value.
 	 * @return Form_Field_Builder
 	 */
-	public function default( $default ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'default' => $default ] );
+	public function default( $value ): self {
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'default' => $value ) );
 		return $this;
 	}
 
@@ -102,18 +102,18 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function options( array $options ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'options' => $options ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'options' => $options ) );
 		return $this;
 	}
 
 	/**
 	 * Set field class
 	 *
-	 * @param string $class CSS class.
+	 * @param string $class_name CSS class.
 	 * @return Form_Field_Builder
 	 */
-	public function class( string $class ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'class' => $class ] );
+	public function class( string $class_name ): self {
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'class' => $class_name ) );
 		return $this;
 	}
 
@@ -124,9 +124,9 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function rules( array $rules ): self {
-		$field_config               = $this->form_builder->get_config()->get_field( $this->field_name ) ?? [];
+		$field_config               = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
 		$field_config['validation'] = $rules;
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'validation' => $rules ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'validation' => $rules ) );
 		return $this;
 	}
 
@@ -137,10 +137,10 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function min_length( int $length ): self {
-		$field_config             = $this->form_builder->get_config()->get_field( $this->field_name ) ?? [];
-		$validation               = $field_config['validation'] ?? [];
+		$field_config             = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
+		$validation               = $field_config['validation'] ?? array();
 		$validation['min_length'] = $length;
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'validation' => $validation ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'validation' => $validation ) );
 		return $this;
 	}
 
@@ -151,10 +151,10 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function max_length( int $length ): self {
-		$field_config             = $this->form_builder->get_config()->get_field( $this->field_name ) ?? [];
-		$validation               = $field_config['validation'] ?? [];
+		$field_config             = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
+		$validation               = $field_config['validation'] ?? array();
 		$validation['max_length'] = $length;
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'validation' => $validation ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'validation' => $validation ) );
 		return $this;
 	}
 
@@ -165,7 +165,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function min( int $min ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'min' => $min ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'min' => $min ) );
 		return $this;
 	}
 
@@ -176,7 +176,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function max( int $max ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'max' => $max ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'max' => $max ) );
 		return $this;
 	}
 
@@ -187,7 +187,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function step( int $step ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'step' => $step ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'step' => $step ) );
 		return $this;
 	}
 
@@ -199,11 +199,13 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function range( int $min, int $max ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name,
-			[
+		$this->form_builder->get_config()->update_field(
+			$this->field_name,
+			array(
 				'min' => $min,
 				'max' => $max,
-        ] );
+			)
+		);
 		return $this;
 	}
 
@@ -214,7 +216,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function rows( int $rows ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'rows' => $rows ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'rows' => $rows ) );
 		return $this;
 	}
 
@@ -225,7 +227,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function accept( string $accept ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'accept' => $accept ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'accept' => $accept ) );
 		return $this;
 	}
 
@@ -236,7 +238,7 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function autocomplete( string $value ): self {
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'autocomplete' => $value ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'autocomplete' => $value ) );
 		return $this;
 	}
 
@@ -247,10 +249,10 @@ class Form_Field_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function attributes( array $attributes ): self {
-		$field_config     = $this->form_builder->get_config()->get_field( $this->field_name ) ?? [];
-		$field_attributes = $field_config['attributes'] ?? [];
+		$field_config     = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
+		$field_attributes = $field_config['attributes'] ?? array();
 		$field_attributes = array_merge( $field_attributes, $attributes );
-		$this->form_builder->get_config()->update_field( $this->field_name, [ 'attributes' => $field_attributes ] );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'attributes' => $field_attributes ) );
 		return $this;
 	}
 

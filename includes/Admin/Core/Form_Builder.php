@@ -261,6 +261,37 @@ class Form_Builder {
 	}
 
 	/**
+	 * Add on success hook
+	 *
+	 * @param callable $callback Hook callback.
+	 * @return self
+	 */
+	public function on_success( callable $callback ): self {
+		return $this->on( 'on_success', $callback );
+	}
+
+	/**
+	 * Add on error hook
+	 *
+	 * @param callable $callback Hook callback.
+	 * @return self
+	 */
+	public function on_error( callable $callback ): self {
+		return $this->on( 'on_error', $callback );
+	}
+
+	/**
+	 * Set form description
+	 *
+	 * @param string $description Form description text.
+	 * @return self
+	 */
+	public function description( string $description ): self {
+		$this->config->set_description( $description );
+		return $this;
+	}
+
+	/**
 	 * Set form enctype for file uploads
 	 *
 	 * @return self
@@ -588,6 +619,7 @@ class Form_Builder {
 	public function get_config(): Form_Config {
 		return $this->config;
 	}
+
 
 	/**
 	 * Get the parent form instance

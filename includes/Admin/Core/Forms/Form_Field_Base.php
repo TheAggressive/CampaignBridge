@@ -74,7 +74,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	 * @return array
 	 */
 	public function get_validation_rules(): array {
-		return $this->config['validation'] ?? [];
+		return $this->config['validation'] ?? array();
 	}
 
 	/**
@@ -86,7 +86,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	public function validate( $value ) {
 		$rules = $this->get_validation_rules();
 
-		// Check required
+		// Check required.
 		if ( $this->is_required() && empty( $value ) ) {
 			return new \WP_Error(
 				'field_required',
@@ -98,7 +98,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			);
 		}
 
-		// Apply custom validation rules
+		// Apply custom validation rules.
 		foreach ( $rules as $rule => $rule_config ) {
 			$validation_result = $this->validate_rule( $rule, $value, $rule_config );
 
@@ -218,9 +218,9 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	 * @return string
 	 */
 	protected function render_common_attributes(): string {
-		$attributes = [];
+		$attributes = array();
 
-		// Basic attributes
+		// Basic attributes.
 		$attributes[] = sprintf( 'id="%s"', esc_attr( $this->config['id'] ) );
 		$attributes[] = sprintf( 'name="%s"', esc_attr( $this->config['name'] ) );
 
@@ -244,7 +244,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			$attributes[] = 'readonly';
 		}
 
-		// HTML5 attributes
+		// HTML5 attributes.
 		if ( ! empty( $this->config['min'] ) ) {
 			$attributes[] = sprintf( 'min="%s"', esc_attr( $this->config['min'] ) );
 		}
@@ -265,7 +265,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			$attributes[] = sprintf( 'autocomplete="%s"', esc_attr( $this->config['autocomplete'] ) );
 		}
 
-		// ARIA attributes for accessibility
+		// ARIA attributes for accessibility.
 		if ( ! empty( $this->config['aria-describedby'] ) ) {
 			$attributes[] = sprintf( 'aria-describedby="%s"', esc_attr( $this->config['aria-describedby'] ) );
 		}
@@ -274,7 +274,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			$attributes[] = 'aria-required="true"';
 		}
 
-		// Additional custom attributes
+		// Additional custom attributes.
 		if ( ! empty( $this->config['attributes'] ) ) {
 			foreach ( $this->config['attributes'] as $key => $value ) {
 				$attributes[] = sprintf( '%s="%s"', esc_attr( $key ), esc_attr( $value ) );
@@ -297,7 +297,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 				wp_kses_post( $this->config['description'] )
 			);
 
-			// Add aria-describedby if not already set
+			// Add aria-describedby if not already set.
 			if ( empty( $this->config['aria-describedby'] ) ) {
 				$this->config['aria-describedby'] = $describedby_id;
 			}
@@ -321,14 +321,14 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	public function render_table_row(): void {
 		$wrapper_class = $this->config['wrapper_class'] ? ' class="' . esc_attr( $this->config['wrapper_class'] ) . '"' : '';
 
-		printf( '<tr%s>', $wrapper_class );
+		printf( '<tr%s>', $wrapper_class ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		// Label column
+		// Label column.
 		echo '<th scope="row">';
 		$this->render_label();
 		echo '</th>';
 
-		// Field column
+		// Field column.
 		echo '<td>';
 		$this->render_html( 'before' );
 		$this->render_input();
@@ -374,9 +374,9 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 
 		printf(
 			'<label%s>%s%s</label>',
-			$for_attr,
+			$for_attr, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			esc_html( $label ),
-			$required_mark
+			$required_mark // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		);
 	}
 

@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Performance Optimizer for CampaignBridge.
  *
@@ -115,7 +115,7 @@ class Performance_Optimizer {
 	 * @return bool
 	 */
 	public function batch_update_post_meta( array $post_meta_updates ): bool {
-		// Security: Only allow admin users to perform bulk database operations
+		// Security: Only allow admin users to perform bulk database operations.
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return false;
 		}
@@ -143,7 +143,7 @@ class Performance_Optimizer {
 				VALUES " . implode( ', ', $placeholders ) . '
 				ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)';
 
-		return (bool) $wpdb->query(
+		return (bool) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare( $sql, $values ) // phpcs:ignore WordPress.DB.PreparedSQL
 		);
 	}
@@ -166,7 +166,7 @@ class Performance_Optimizer {
 	public function clear_plugin_transients(): void {
 		global $wpdb;
 
-		$wpdb->query(
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"DELETE FROM {$wpdb->options}
 				 WHERE option_name LIKE %s",

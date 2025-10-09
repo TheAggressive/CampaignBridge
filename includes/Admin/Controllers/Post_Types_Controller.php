@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Post Types Controller
  *
@@ -24,7 +24,7 @@ class Post_Types_Controller {
 	 *
 	 * @var array
 	 */
-	private array $data = [];
+	private array $data = array();
 
 	/**
 	 * Constructor - Initialize controller data.
@@ -50,15 +50,15 @@ class Post_Types_Controller {
 	 * @return void
 	 */
 	private function load_post_types_data(): void {
-		$post_types = get_post_types( [ 'public' => true ], 'objects' );
+		$post_types = get_post_types( array( 'public' => true ), 'objects' );
 
-		$this->data['post_types'] = [];
+		$this->data['post_types'] = array();
 
 		foreach ( $post_types as $post_type ) {
-			// Only load the label since that's all the template uses
-			$this->data['post_types'][ $post_type->name ] = [
-				'label' => $post_type->label ?: $post_type->name,
-			];
+			// Only load the label since that's all the template uses.
+			$this->data['post_types'][ $post_type->name ] = array(
+				'label' => $post_type->label ? $post_type->label : $post_type->name,
+			);
 		}
 	}
 
@@ -68,12 +68,12 @@ class Post_Types_Controller {
 	 * @return void
 	 */
 	private function load_enabled_types(): void {
-		$settings = get_option( 'campaignbridge_post_types', [] );
-		$enabled_types = $settings['included_post_types'] ?? [];
+		$settings      = get_option( 'campaignbridge_post_types', array() );
+		$enabled_types = $settings['included_post_types'] ?? array();
 
-		// Ensure enabled types is an array
+		// Ensure enabled types is an array.
 		if ( ! is_array( $enabled_types ) ) {
-			$enabled_types = [];
+			$enabled_types = array();
 		}
 
 		$this->data['enabled_types'] = $enabled_types;

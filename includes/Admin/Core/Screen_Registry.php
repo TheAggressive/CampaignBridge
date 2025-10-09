@@ -1,4 +1,4 @@
-<?php // phpcs:disable Generic.Arrays.DisallowShortArraySyntax.Found
+<?php
 /**
  * Screen Registry - Auto-discovers and registers screens with full tabs support
  *

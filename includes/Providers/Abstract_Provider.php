@@ -1,4 +1,4 @@
-<?php // phpcs:ignoreFile WordPress.Files.FileName
+<?php
 /**
  * Abstract Base Provider Class for CampaignBridge.
  *
@@ -91,7 +91,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 			'automation' => false,
 			'analytics'  => false,
 		);
-		$this->api_key_pattern     = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern by default
+		$this->api_key_pattern     = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern by default.
 	}
 
 	/**
@@ -258,15 +258,15 @@ abstract class Abstract_Provider implements Provider_Interface {
 		foreach ( $schema as $field_name => $field_schema ) {
 			$value = $settings[ $field_name ] ?? null;
 
-			// Skip fields that aren't in the input
+			// Skip fields that aren't in the input.
 			if ( ! array_key_exists( $field_name, $settings ) ) {
 				continue;
 			}
 
-			// Apply sanitization based on field type
+			// Apply sanitization based on field type.
 			$sanitized_value = $this->sanitize_field_value( $value, $field_schema );
 
-			// Only include non-null values or use default if specified
+			// Only include non-null values or use default if specified.
 			if ( null !== $sanitized_value || isset( $field_schema['default'] ) ) {
 				$sanitized[ $field_name ] = $sanitized_value ?? $field_schema['default'];
 			}
@@ -302,7 +302,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 				return $this->sanitize_url_field( $value );
 
 			default:
-				// For unknown types, return as-is but log a warning
+				// For unknown types, return as-is but log a warning.
 				$this->log( "Unknown field type '{$type}' for field", array( 'field' => array_keys( $field_schema ) ) );
 				return $value;
 		}
@@ -322,7 +322,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 
 		$value = (string) $value;
 
-		// Check length constraints
+		// Check length constraints.
 		$min_length = $field_schema['min_length'] ?? 0;
 		$max_length = $field_schema['max_length'] ?? 1000;
 
@@ -330,7 +330,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 			return null;
 		}
 
-		// Apply pattern validation if specified
+		// Apply pattern validation if specified.
 		if ( isset( $field_schema['pattern'] ) ) {
 			if ( ! preg_match( $field_schema['pattern'], $value ) ) {
 				return null;
@@ -382,7 +382,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 
 		$value = (int) $value;
 
-		// Check range constraints
+		// Check range constraints.
 		$min = $field_schema['min'] ?? PHP_INT_MIN;
 		$max = $field_schema['max'] ?? PHP_INT_MAX;
 

@@ -79,14 +79,8 @@ $form = \CampaignBridge\Admin\Core\Form::settings( 'general_settings' )
 		}
 	);
 
-// Integrate with Screen Context for messages
-if ( $form->submitted() && $form->valid() ) {
-	$screen->add_message( 'General email settings saved successfully!' );
-} elseif ( $form->submitted() ) {
-	foreach ( $form->errors() as $error ) {
-		$screen->add_error( $error );
-	}
-}
+// Use Screen Context for displaying form messages (automatic)
+$form->use_screen_notices( $screen );
 ?>
 
 <div class="general-settings-tab">
