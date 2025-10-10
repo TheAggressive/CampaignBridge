@@ -27,16 +27,30 @@ A comprehensive, developer-friendly forms system for WordPress admin interfaces.
 <?php
 use CampaignBridge\Admin\Core\Form;
 
-// Create a simple settings form
+// Create a simple settings form with seamless chaining
 $form = Form::settings('my_settings')
-    ->text('site_name', 'Site Name')->required()
-    ->email('admin_email', 'Admin Email')->required()
-    ->textarea('description', 'Site Description')->rows(3)
-    ->select('theme', 'Theme')->options([
-        'light' => 'Light Theme',
-        'dark' => 'Dark Theme',
-        'auto' => 'Auto Theme'
-    ])
+    ->text('site_name', 'Site Name')
+        ->required()
+        ->placeholder('My Awesome Site')
+
+    ->email('admin_email', 'Admin Email')
+        ->required()
+        ->placeholder('admin@example.com')
+
+    ->textarea('description', 'Site Description')
+        ->rows(3)
+        ->placeholder('Describe your site...')
+
+    ->select('theme', 'Theme')
+        ->fieldOptions([
+            'light' => 'Light Theme',
+            'dark' => 'Dark Theme',
+            'auto' => 'Auto Theme'
+        ])
+        ->default('light')
+
+    ->end() // Return to Form_Builder for configuration methods
+
     ->success('Settings saved successfully!')
     ->error('Please correct the errors and try again.')
     ->submit('Save Settings');
@@ -69,6 +83,22 @@ $settings_form = Form::settings('plugin_settings');
 
 ## Basic Usage
 
+### Method Naming Convention
+
+All Form API methods use **snake_case** naming (e.g., `before_save`, `after_validate`, `on_success`). This follows WordPress PHP coding standards.
+
+```php
+// ✅ Correct - snake_case
+$form->before_save($callback);
+$form->after_validate($callback);
+$form->on_success($callback);
+
+// ❌ Incorrect - camelCase
+$form->beforeSave($callback);      // Wrong!
+$form->afterValidate($callback);   // Wrong!
+$form->onSuccess($callback);       // Wrong!
+```
+
 ### Creating Forms
 
 #### Method 1: Static Factory Methods
@@ -91,38 +121,57 @@ $form = Form::make('contact_form')
     ->error('Please correct the errors below.');
 ```
 
-### Adding Fields
+### Fluent API Chaining
+
+The Form API supports **seamless chaining** with a two-level context system:
+
+#### Field-Level Chaining
+You can call field creation methods directly from field configuration contexts:
 
 ```php
 $form = Form::make('user_profile')
-    // Text input
-    ->text('first_name', 'First Name')->required()
+    // ✅ Seamless chaining within field configuration
+    ->text('first_name', 'First Name')
+        ->required()
+        ->placeholder('Enter your first name')
 
-    // Email with validation
-    ->email('email', 'Email Address')
+    ->email('email', 'Email Address')  // ← Can call field methods directly
         ->required()
         ->placeholder('your@email.com')
 
-    // Textarea with custom rows
     ->textarea('bio', 'Biography')
         ->rows(4)
         ->description('Tell us about yourself')
 
-    // Select dropdown
     ->select('country', 'Country')
-        ->options([
+        ->fieldOptions([
             'us' => 'United States',
             'ca' => 'Canada',
             'uk' => 'United Kingdom'
         ])
         ->default('us')
 
+    ->switch('notifications', 'Enable Notifications')
+        ->default(true)
+
+    ->end() // ← Return to Form_Builder for configuration methods
+
+    // ✅ Now you can call form configuration methods
+    ->success('Profile saved successfully!')
+    ->error('Please correct the errors below.')
+    ->submit('Save Profile');
+```
+
+**How it works:** Field configuration methods (`->required()`, `->placeholder()`, etc.) automatically enable calling field creation methods (`->email()`, `->text()`, etc.) without needing `->end()`.
+
+### Adding Fields
+
     // Checkbox
     ->checkbox('newsletter', 'Subscribe to newsletter')
 
     // Radio buttons
     ->radio('gender', 'Gender')
-        ->options([
+        ->fieldOptions([
             'male' => 'Male',
             'female' => 'Female',
             'other' => 'Other'
@@ -271,7 +320,7 @@ $form->datetime('event_datetime', 'Event Date & Time');
 #### Select Dropdown
 ```php
 $form->select('country', 'Country')
-    ->options([
+    ->fieldOptions([
         'us' => 'United States',
         'ca' => 'Canada',
         'uk' => 'United Kingdom',
@@ -284,7 +333,7 @@ $form->select('country', 'Country')
 #### Radio Buttons
 ```php
 $form->radio('subscription', 'Subscription Plan')
-    ->options([
+    ->fieldOptions([
         'free' => 'Free Plan',
         'pro' => 'Pro Plan ($9.99/month)',
         'enterprise' => 'Enterprise Plan ($29.99/month)'
@@ -297,6 +346,76 @@ $form->radio('subscription', 'Subscription Plan')
 $form->checkbox('terms_agreed', 'I agree to the terms and conditions')
     ->required()
     ->description('You must agree to continue');
+```
+
+#### Multiple Fields (Same Type)
+For multiple fields of the same type (like checkboxes, switches, or radios), use the `multiple()` method for cleaner code:
+
+```php
+$form = \Form::make('preferences');
+
+// Method 1: Using multiple() - Recommended for cleaner DX
+$form->multiple('preferences', 'switch', [
+    'newsletter' => 'Subscribe to newsletter',
+    'updates'    => 'Receive product updates',
+    'promotions' => 'Receive promotional offers'
+], $user_preferences); // Array of default selected values
+
+// Real-world example: Post types selection
+$form->multiple('post_types', 'switch', [
+    'post' => 'Posts',
+    'page' => 'Pages',
+    'product' => 'Products'
+], $enabled_post_types);
+
+// Method 2: Manual approach (more verbose)
+foreach ($options as $key => $label) {
+    $form->switch("preferences[{$key}]", $label)
+        ->default(isset($user_preferences[$key]));
+}
+
+// Handle in before_save (same for both methods)
+$form->before_save(function($data) {
+    $preferences = [];
+    if (isset($data['preferences']) && is_array($data['preferences'])) {
+        foreach ($data['preferences'] as $key => $value) {
+            if ($value) {
+                $preferences[] = $key;
+            }
+        }
+    }
+    update_option('user_preferences', $preferences);
+    return $data;
+});
+```
+
+**Multiple Method Parameters:**
+- `$base_name`: Base field name (becomes array key)
+- `$type`: Field type (`'checkbox'`, `'switch'`, `'radio'`, `'text'`, `'email'`, `'password'`, `'textarea'`, `'select'`)
+- `$options`: Array of `[value => label]` pairs
+- `$defaults`: Array of values that should be checked/selected by default
+
+**Error Handling:**
+The `multiple()` method includes comprehensive validation and will throw `\InvalidArgumentException` for:
+
+- Empty base name
+- Unsupported field type (not in the list above)
+- Empty options array
+- Invalid option labels (not string/numeric)
+- Non-array defaults parameter
+
+```php
+// ❌ Will throw exception: Empty base name
+$form->multiple('', 'switch', $options, $defaults);
+
+// ❌ Will throw exception: Unsupported field type
+$form->multiple('field', 'invalid_type', $options, $defaults);
+
+// ❌ Will throw exception: Empty options
+$form->multiple('field', 'switch', [], $defaults);
+
+// ❌ Will throw exception: Invalid option label
+$form->multiple('field', 'switch', ['key' => ['invalid', 'array']], $defaults);
 ```
 
 #### Switch/Toggle (Styled Checkbox)
@@ -637,7 +756,7 @@ $form = Form::make('advanced_form')
 ```php
 $form = Form::make('product_form')
     ->select('product_type', 'Product Type')
-        ->options([
+        ->fieldOptions([
             'physical' => 'Physical Product',
             'digital' => 'Digital Product'
         ])
@@ -652,7 +771,7 @@ $form = Form::make('product_form')
 ```php
 $form = Form::make('dynamic_form')
     ->select('category', 'Category')
-        ->options(function() {
+        ->fieldOptions(function() {
             // Load categories dynamically
             $categories = get_categories(['hide_empty' => false]);
             $options = [];
@@ -662,7 +781,7 @@ $form = Form::make('dynamic_form')
             return $options;
         })
     ->select('post', 'Post')
-        ->options(function($form_data) {
+        ->fieldOptions(function($form_data) {
             // Load posts based on selected category
             $category_id = $form_data['category'] ?? 0;
             $posts = get_posts([
@@ -1268,7 +1387,7 @@ class UserManagementForms {
             ->text('username', 'Username')->required()
             ->email('email', 'Email')->required()
             ->password('password', 'Password')->required()
-            ->select('role', 'Role')->options([
+            ->select('role', 'Role')->fieldOptions([
                 'subscriber' => 'Subscriber',
                 'editor' => 'Editor',
                 'administrator' => 'Administrator'
