@@ -95,7 +95,10 @@ class Form_Test extends Test_Case {
 		$container_property->setValue( $form, $this->container );
 
 		// Force initialization to trigger validation by calling render
+		// Capture output to prevent PHPUnit strict mode issues
+		ob_start();
 		$form->render();
+		ob_end_clean();
 	}
 
 	/**
@@ -137,7 +140,10 @@ class Form_Test extends Test_Case {
 		$container_property->setValue( $form, $this->container );
 
 		// Force initialization to trigger validation by calling render
+		// Capture output to prevent PHPUnit strict mode issues
+		ob_start();
 		$form->render();
+		ob_end_clean();
 	}
 
 	/**
@@ -176,7 +182,10 @@ class Form_Test extends Test_Case {
 			$container_property->setValue( $form, $this->container );
 
 			// Force initialization to trigger validation by calling render
+			// Capture output to prevent PHPUnit strict mode issues
+			ob_start();
 			$form->render();
+			ob_end_clean();
 		}
 	}
 }
