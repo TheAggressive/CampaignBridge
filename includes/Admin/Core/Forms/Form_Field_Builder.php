@@ -287,23 +287,25 @@ class Form_Field_Builder {
 	 * @param string $method Method name.
 	 * @param array  $args   Method arguments.
 	 * @return mixed Result of the method call.
+	 *
+	 * @throws \BadMethodCallException If method does not exist.
 	 */
 	public function __call( string $method, array $args ) {
-		// First, check if this method exists on the parent Form_Builder
+		// First, check if this method exists on the parent Form_Builder.
 		if ( method_exists( $this->form_builder, $method ) ) {
-			// Proxy to Form_Builder for seamless chaining
+			// Proxy to Form_Builder for seamless chaining.
 			return $this->form_builder->{$method}( ...$args );
 		}
 
-		// Check if this method exists on Form_Field_Builder itself
+		// Check if this method exists on Form_Field_Builder itself.
 		if ( method_exists( $this, $method ) ) {
-			// Call the local method
+			// Call the local method.
 			return $this->{$method}( ...$args );
 		}
 
-		// Method not found anywhere
+		// Method not found anywhere.
 		throw new \BadMethodCallException(
-			"Method '{$method}' does not exist on " . __CLASS__ . ' or ' . get_class( $this->form_builder )
+			esc_html( "Method '{$method}' does not exist on " . __CLASS__ . ' or ' . get_class( $this->form_builder ) )
 		);
 	}
 }
