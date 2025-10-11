@@ -283,11 +283,14 @@ class Screen_Registry {
 	private function render_tabbed_screen( string $screen_name, $controller, array $config = array() ): void {
 		$screen_folder = $this->screens_path . $screen_name;
 
-		// Auto-discover tabs.
-		$tabs = $this->discover_tabs( $screen_folder );
+		// Auto-discover tabs with configuration support.
+		$tabs = $this->discover_tabs( $screen_folder, $config );
+
+		// Filter tabs based on user capabilities
+		$tabs = $this->filter_tabs_by_capability( $tabs );
 
 		if ( empty( $tabs ) ) {
-			echo '<div class="notice notice-error"><p>No tabs found in: ' . esc_html( $screen_name ) . '/</p></div>';
+			echo '<div class="notice notice-error"><p>No accessible tabs found in: ' . esc_html( $screen_name ) . '/</p></div>';
 			return;
 		}
 
@@ -295,7 +298,7 @@ class Screen_Registry {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- GET parameter for tab navigation, not form processing.
 		$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : array_key_first( $tabs );
 
-		// Validate tab exists.
+		// Validate tab exists and user has access.
 		if ( ! isset( $tabs[ $active_tab ] ) ) {
 			$active_tab = array_key_first( $tabs );
 		}
@@ -306,10 +309,14 @@ class Screen_Registry {
 			$active_class = $active_tab === $tab_slug ? ' nav-tab-active' : '';
 			$url          = add_query_arg( 'tab', $tab_slug );
 
+			// Add description as tooltip if available
+			$title_attr = isset( $tab_info['description'] ) ? ' title="' . esc_attr( $tab_info['description'] ) . '"' : '';
+
 			printf(
-				'<a href="%s" class="nav-tab%s">%s</a>',
+				'<a href="%s" class="nav-tab%s"%s>%s</a>',
 				esc_url( $url ),
 				esc_attr( $active_class ),
+				$title_attr,
 				esc_html( $tab_info['title'] )
 			);
 		}
@@ -319,15 +326,14 @@ class Screen_Registry {
 		if ( isset( $tabs[ $active_tab ] ) ) {
 			echo '<div class="tab-content">';
 
-			// Create $screen context for tab.
-			$screen = new Screen_Context( $screen_name, 'tabbed', $active_tab, $controller );
+			// Determine which controller to use for this tab
+			$tab_controller = $this->get_tab_controller( $tabs[ $active_tab ], $controller );
 
-			// Load data from controller.
-			if ( $controller && method_exists( $controller, 'get_data' ) ) {
-				foreach ( $controller->get_data() as $key => $value ) {
-					$screen->set( $key, $value );
-				}
-			}
+			// Create $screen context for tab.
+			$screen = new Screen_Context( $screen_name, 'tabbed', $active_tab, $tab_controller );
+
+			// Load data from tab controller first, then screen controller
+			$this->load_tab_data( $tab_controller, $controller, $screen );
 
 			// Load custom data from _config.php.
 			if ( isset( $config['data'] ) && is_array( $config['data'] ) ) {
@@ -344,17 +350,21 @@ class Screen_Registry {
 	}
 
 	/**
-	 * Auto-discover tabs from folder.
+	 * Auto-discover tabs from folder with configuration support.
 	 *
 	 * @param string $folder_path The path to the folder.
+	 * @param array  $config      The configuration array.
 	 * @return array The tabs.
 	 */
-	private function discover_tabs( string $folder_path ): array {
+	private function discover_tabs( string $folder_path, array $config = array() ): array {
 		$tabs = array();
 
 		if ( ! is_dir( $folder_path ) ) {
 			return $tabs;
 		}
+
+		// Get tab configuration if available
+		$tab_config = isset( $config['tabs'] ) && is_array( $config['tabs'] ) ? $config['tabs'] : array();
 
 		foreach ( glob( $folder_path . '/*.php' ) as $file ) {
 			$filename = basename( $file );
@@ -366,15 +376,128 @@ class Screen_Registry {
 
 			$tab_name = pathinfo( $filename, PATHINFO_FILENAME );
 
-			$tabs[ $tab_name ] = array(
-				'name'  => $tab_name,
-				'title' => $this->generate_title( $tab_name ),
-				'slug'  => $this->generate_slug( $tab_name ),
-				'file'  => $file,
+			// Start with auto-generated defaults
+			$tab_info = array(
+				'name'       => $tab_name,
+				'title'      => $this->generate_title( $tab_name ),
+				'slug'       => $this->generate_slug( $tab_name ),
+				'file'       => $file,
+				'capability' => isset( $config['capability'] ) ? $config['capability'] : 'manage_options',
+				'order'      => 10, // Default order
+				'controller' => null, // Will be set from config or auto-discovery
 			);
+
+			// Merge with custom configuration if available
+			if ( isset( $tab_config[ $tab_name ] ) && is_array( $tab_config[ $tab_name ] ) ) {
+				$custom_config = $tab_config[ $tab_name ];
+
+				// Override with custom settings
+				if ( isset( $custom_config['label'] ) ) {
+					$tab_info['title'] = $custom_config['label'];
+				}
+				if ( isset( $custom_config['capability'] ) ) {
+					$tab_info['capability'] = $custom_config['capability'];
+				}
+				if ( isset( $custom_config['order'] ) ) {
+					$tab_info['order'] = intval( $custom_config['order'] );
+				}
+				if ( isset( $custom_config['description'] ) ) {
+					$tab_info['description'] = $custom_config['description'];
+				}
+				if ( isset( $custom_config['controller'] ) ) {
+					$tab_info['controller'] = $custom_config['controller'];
+				}
+			}
+
+			$tabs[ $tab_name ] = $tab_info;
 		}
 
+		// Sort tabs by order
+		uasort(
+			$tabs,
+			function ( $a, $b ) {
+				return $a['order'] <=> $b['order'];
+			}
+		);
+
 		return $tabs;
+	}
+
+	/**
+	 * Filter tabs based on user capabilities.
+	 *
+	 * @param array $tabs The tabs array.
+	 * @return array Filtered tabs that user has access to.
+	 */
+	private function filter_tabs_by_capability( array $tabs ): array {
+		return array_filter(
+			$tabs,
+			function ( $tab_info ) {
+				$capability = $tab_info['capability'] ?? 'manage_options';
+
+				// Allow false to explicitly hide tabs
+				if ( $capability === false ) {
+					return false;
+				}
+
+				// Check if user has required capability
+				return current_user_can( $capability );
+			}
+		);
+	}
+
+	/**
+	 * Get the appropriate controller for a tab.
+	 *
+	 * @param array $tab_info The tab information.
+	 * @param mixed $screen_controller The screen controller.
+	 * @return mixed The controller to use for this tab.
+	 */
+	private function get_tab_controller( array $tab_info, $screen_controller ) {
+		// Check if tab has its own controller
+		if ( ! empty( $tab_info['controller'] ) ) {
+			$controller_class = $tab_info['controller'];
+
+			if ( class_exists( $controller_class ) ) {
+				$tab_controller = new $controller_class();
+
+				// Inject screen controller reference if the tab controller supports it
+				if ( property_exists( $tab_controller, 'screen_controller' ) ) {
+					$tab_controller->screen_controller = $screen_controller;
+				}
+
+				return $tab_controller;
+			}
+		}
+
+		// Fallback to screen controller
+		return $screen_controller;
+	}
+
+	/**
+	 * Load data from controllers into screen context.
+	 *
+	 * @param mixed          $tab_controller The tab controller.
+	 * @param mixed          $screen_controller The screen controller.
+	 * @param Screen_Context $screen The screen context.
+	 */
+	private function load_tab_data( $tab_controller, $screen_controller, Screen_Context $screen ): void {
+		// Load data from tab controller first (higher priority)
+		if ( $tab_controller && method_exists( $tab_controller, 'get_data' ) ) {
+			foreach ( $tab_controller->get_data() as $key => $value ) {
+				$screen->set( $key, $value );
+			}
+		}
+
+		// Then load data from screen controller (lower priority, won't override tab data)
+		if ( $screen_controller && $screen_controller !== $tab_controller && method_exists( $screen_controller, 'get_data' ) ) {
+			foreach ( $screen_controller->get_data() as $key => $value ) {
+				// Only set if not already set by tab controller
+				if ( ! $screen->has( $key ) ) {
+					$screen->set( $key, $value );
+				}
+			}
+		}
 	}
 
 	/**

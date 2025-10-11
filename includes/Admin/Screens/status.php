@@ -1,15 +1,46 @@
 <?php
 /**
- * Status Screen - System status and debugging information
+ * Status Screen - System status and debugging information.
  *
  * This is a simple screen with no tabs.
- * Controller auto-discovered: Status_Controller (if exists)
+ * Controller auto-discovered: Status_Controller (if exists).
+ *
+ * @package CampaignBridge\Admin\Screens
  */
 
-// Get data from controller or set defaults
-$cb_system_info  = $screen->get( 'system_info', [] );
-$cb_integrations = $screen->get( 'integrations', [] );
-$cb_stats        = $screen->get( 'stats', [] );
+// Include the Form API.
+require_once __DIR__ . '/../Core/Form.php';
+
+// Get data from controller or set defaults.
+$cb_system_info  = $screen->get( 'system_info', array() );
+$cb_integrations = $screen->get( 'integrations', array() );
+$cb_stats        = $screen->get( 'stats', array() );
+
+// Create action forms.
+$refresh_form = \CampaignBridge\Admin\Core\Form::make( 'refresh_stats' )
+	->hidden( 'refresh_stats', '1' )
+	->before_save(
+		function ( $data ) {
+			// Trigger stats refresh (handled by controller).
+			do_action( 'campaignbridge_refresh_stats' );
+			return $data;
+		}
+	)
+	->success( 'System status refreshed successfully!' )
+	->submit( 'Refresh Status', 'button' );
+
+$clear_cache_form = \CampaignBridge\Admin\Core\Form::make( 'clear_cache' )
+	->hidden( 'clear_cache', '1' )
+	->before_save(
+		function ( $data ) {
+			// Clear plugin caches.
+			wp_cache_flush();
+			delete_transient( 'campaignbridge_stats' );
+			return $data;
+		}
+	)
+	->success( 'Cache cleared successfully!' )
+	->submit( 'Clear Cache', 'button' );
 ?>
 
 <div class="status-screen">
@@ -101,18 +132,15 @@ $cb_stats        = $screen->get( 'stats', [] );
 	<div class="status-section">
 		<h3><?php _e( 'Actions', 'campaignbridge' ); ?></h3>
 		<div class="action-buttons">
-			<form method="post" action="" style="display: inline;">
-				<?php $screen->nonce_field( 'refresh_stats' ); ?>
-				<button type="submit" name="refresh_stats" value="1" class="button">
-					<?php _e( 'Refresh Status', 'campaignbridge' ); ?>
-				</button>
-			</form>
-			<form method="post" action="" style="display: inline; margin-left: 10px;">
-				<?php $screen->nonce_field( 'clear_cache' ); ?>
-				<button type="submit" name="clear_cache" value="1" class="button">
-					<?php _e( 'Clear Cache', 'campaignbridge' ); ?>
-				</button>
-			</form>
+	<?php
+	// Render refresh form.
+	$refresh_form->render();
+	?>
+
+			<?php
+			// Render clear cache form.
+			$clear_cache_form->render();
+			?>
 		</div>
 	</div>
 </div>

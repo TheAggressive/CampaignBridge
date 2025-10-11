@@ -221,8 +221,8 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 		$attributes = array();
 
 		// Basic attributes.
-		$attributes[] = sprintf( 'id="%s"', esc_attr( $this->config['id'] ) );
-		$attributes[] = sprintf( 'name="%s"', esc_attr( $this->config['name'] ) );
+		$attributes[] = sprintf( 'id="%s"', esc_attr( $this->config['id'] ?? '' ) );
+		$attributes[] = sprintf( 'name="%s"', esc_attr( $this->config['name'] ?? '' ) );
 
 		if ( ! empty( $this->config['class'] ) ) {
 			$attributes[] = sprintf( 'class="%s"', esc_attr( $this->config['class'] ) );
@@ -236,11 +236,11 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			$attributes[] = 'required';
 		}
 
-		if ( $this->config['disabled'] ) {
+		if ( ! empty( $this->config['disabled'] ) ) {
 			$attributes[] = 'disabled';
 		}
 
-		if ( $this->config['readonly'] ) {
+		if ( ! empty( $this->config['readonly'] ) ) {
 			$attributes[] = 'readonly';
 		}
 
@@ -289,7 +289,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	 */
 	protected function render_description(): void {
 		if ( ! empty( $this->config['description'] ) ) {
-			$describedby_id = $this->config['id'] . '_description';
+			$describedby_id = ( $this->config['id'] ?? '' ) . '_description';
 
 			printf(
 				'<p class="description" id="%s">%s</p>',
@@ -319,7 +319,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	 * Render the field in table layout
 	 */
 	public function render_table_row(): void {
-		$wrapper_class = $this->config['wrapper_class'] ? ' class="' . esc_attr( $this->config['wrapper_class'] ) . '"' : '';
+		$wrapper_class = ( $this->config['wrapper_class'] ?? '' ) ? ' class="' . esc_attr( $this->config['wrapper_class'] ) . '"' : '';
 
 		printf( '<tr%s>', $wrapper_class ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
@@ -344,7 +344,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	 */
 	public function render_div_field(): void {
 		$wrapper_class = 'campaignbridge-field-wrapper';
-		if ( $this->config['wrapper_class'] ) {
+		if ( ! empty( $this->config['wrapper_class'] ) ) {
 			$wrapper_class .= ' ' . $this->config['wrapper_class'];
 		}
 
@@ -363,14 +363,14 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	 * Render field label
 	 */
 	protected function render_label(): void {
-		$label = $this->config['label'];
+		$label = $this->config['label'] ?? '';
 
 		if ( empty( $label ) ) {
 			return;
 		}
 
 		$required_mark = $this->is_required() ? ' <span class="required">*</span>' : '';
-		$for_attr      = sprintf( ' for="%s"', esc_attr( $this->config['id'] ) );
+		$for_attr      = sprintf( ' for="%s"', esc_attr( $this->config['id'] ?? '' ) );
 
 		printf(
 			'<label%s>%s%s</label>',

@@ -174,10 +174,25 @@ class Form {
 	 */
 	public static function settings( string $form_id = 'settings' ): self {
 		return self::make( $form_id )
-			->options() // Save to options.
+			->save_to_options() // Save to options.
 			->table() // Table layout.
 			->success( 'Settings saved successfully!' )
 			->prefix( 'my_plugin_' );
+	}
+
+	/**
+	 * Create a WordPress Settings API form
+	 *
+	 * @param string $form_id        Form ID.
+	 * @param string $settings_group Settings group name.
+	 * @return Form
+	 */
+	public static function settings_api( string $form_id = 'settings', string $settings_group = '' ): self {
+		$group = $settings_group ?: $form_id;
+		return self::make( $form_id )
+			->save_to_settings_api( $group ) // Use Settings API.
+			->table() // Table layout.
+			->success( 'Settings saved successfully!' );
 	}
 
 	/**
@@ -197,8 +212,8 @@ class Form {
 		// Initialize form builder.
 		$this->builder = new Form_Builder( $this->config, $this );
 
-		// Initialize services.
-		$this->initialize_services();
+		// Services will be initialized lazily to capture all fields.
+		// DO NOT call initialize_services() here - fields are added after construction!
 	}
 
 	/**
@@ -206,7 +221,12 @@ class Form {
 	 */
 	private function ensure_initialized(): void {
 		if ( ! $this->initialized ) {
+			// Initialize services FIRST to capture all fields that were added.
+			$this->initialize_services();
+
+			// Then run user init hooks.
 			$this->init();
+
 			$this->initialized = true;
 		}
 	}
@@ -238,6 +258,34 @@ class Form {
 			$fields,
 			$validator
 		);
+
+		// Validate form configuration for potential issues
+		$this->validate_configuration();
+	}
+
+	/**
+	 * Validate form configuration and show warnings for potential issues
+	 */
+	private function validate_configuration(): void {
+		$save_method = $this->config->get( 'save_method' );
+
+		// Check if custom saving is configured but no callback is provided
+		if ( 'custom' === $save_method ) {
+			$hooks = $this->config->get( 'hooks', array() );
+			if ( ! isset( $hooks['save_data'] ) || ! is_callable( $hooks['save_data'] ) ) {
+				// Get notice handler and show warning
+				$notice_handler = $this->container->get( 'form_notice_handler' );
+				$form_id        = $this->config->get( 'form_id', 'form' );
+
+				$notice_handler->trigger_warning(
+					sprintf(
+						/* translators: %s: Form ID */
+						__( 'Form "%s" is configured to use custom saving but no save callback is provided. Data will not be persisted. Please provide a callback to the save_to_custom() method.', 'campaignbridge' ),
+						$form_id
+					)
+				);
+			}
+		}
 	}
 
 	/**
@@ -355,7 +403,7 @@ class Form {
 	 * @return Form
 	 */
 	public function meta( int $post_id = 0 ): self {
-		$this->builder->meta( $post_id );
+		$this->builder->save_to_post_meta( $post_id );
 		return $this;
 	}
 
@@ -386,7 +434,7 @@ class Form {
 	 * @return Form
 	 */
 	public function custom( callable $renderer ): self {
-		$this->builder->custom( $renderer );
+		$this->builder->render_custom( $renderer );
 		return $this;
 	}
 
@@ -555,6 +603,17 @@ class Form {
 	public function set_data( string $key, $value ): self {
 		assert( null !== $this->data_manager, 'Data manager must be initialized' );
 		$this->data_manager->set_data( $key, $value );
+		return $this;
+	}
+
+	/**
+	 * Reload form data from source (clears cache and reloads)
+	 *
+	 * @return self
+	 */
+	public function reload_data(): self {
+		assert( null !== $this->data_manager, 'Data manager must be initialized' );
+		$this->data_manager->reload();
 		return $this;
 	}
 

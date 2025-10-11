@@ -590,7 +590,7 @@ $form = \CampaignBridge\Admin\Core\Form::make('general_settings')
     ->email('reply_to', __('Reply-To Email', 'campaignbridge'))
         ->default($reply_to)
         ->description(__('Optional. Email address where replies should be sent.', 'campaignbridge'))
-    ->beforeSave(function($data) {
+    ->before_save(function($data) {
         update_option('cb_from_name', $data['from_name']);
         update_option('cb_from_email', $data['from_email']);
         update_option('cb_reply_to', $data['reply_to']);
@@ -630,7 +630,7 @@ $form = \CampaignBridge\Admin\Core\Form::make('api_settings')
     ->checkbox('debug_mode', __('Enable Debug Mode', 'campaignbridge'))
         ->default($debug_mode)
         ->description(__('Log API requests and responses for debugging.', 'campaignbridge'))
-    ->beforeSave(function($data) {
+    ->before_save(function($data) {
         update_option('cb_api_key', $data['api_key']);
         update_option('cb_api_endpoint', $data['api_endpoint']);
         update_option('cb_debug_mode', $data['debug_mode'] ?? false);

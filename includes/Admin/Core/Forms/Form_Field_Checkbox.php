@@ -35,10 +35,13 @@ class Form_Field_Checkbox extends Form_Field_Base {
 			);
 
 			// Add hidden input to ensure value is submitted when unchecked.
-			printf(
-				'<input type="hidden" name="%s" value="0" />',
-				esc_attr( $this->config['name'] )
-			);
+			// Skip for repeater fields (they handle unchecked state differently).
+			if ( ! isset( $this->config['skip_hidden_field'] ) || ! $this->config['skip_hidden_field'] ) {
+				printf(
+					'<input type="hidden" name="%s" value="0" />',
+					esc_attr( $this->config['name'] )
+				);
+			}
 
 			return;
 		}

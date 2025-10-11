@@ -232,7 +232,8 @@ class Form_Renderer {
 	 * @param array  $field_config Field configuration.
 	 */
 	private function render_table_field( string $field_id, array $field_config ): void {
-		$field_name = $this->config['prefix'] . $field_id . $this->config['suffix'];
+		// Note: prefix/suffix are for options storage, not HTML field names.
+		$field_name = $field_id;
 		$value      = $this->data[ $field_id ] ?? $field_config['default'] ?? '';
 		$label      = $field_config['label'] ?? ucfirst( str_replace( '_', ' ', $field_id ) );
 		$required   = $field_config['required'] ?? false;
@@ -255,7 +256,8 @@ class Form_Renderer {
 	 * @param array  $field_config Field configuration.
 	 */
 	private function render_div_field( string $field_id, array $field_config ): void {
-		$field_name = $this->config['prefix'] . $field_id . $this->config['suffix'];
+		// Note: prefix/suffix are for options storage, not HTML field names.
+		$field_name = $field_id;
 		$value      = $this->data[ $field_id ] ?? $field_config['default'] ?? '';
 		$label      = $field_config['label'] ?? ucfirst( str_replace( '_', ' ', $field_id ) );
 		$required   = $field_config['required'] ?? false;

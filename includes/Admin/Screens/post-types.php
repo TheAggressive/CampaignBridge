@@ -8,9 +8,30 @@
  * @package CampaignBridge\Admin\Screens
  */
 
+// Include the Form API.
+use CampaignBridge\Admin\Core\Form;
+
 // Get data from controller.
 $campaignbridge_post_types    = $screen->get( 'post_types', array() );
 $campaignbridge_enabled_types = $screen->get( 'enabled_types', array() );
+
+// Create checkboxes for each post type.
+$checkboxes = array();
+foreach ( $campaignbridge_post_types as $post_type_key => $info ) {
+	$checkboxes[ $post_type_key ] = $info['label'];
+}
+
+// Available post types and enabled types are loaded by the controller
+// Create the form using the Form API.
+$form = Form::make( 'post_types' )
+	->description( 'Select which public post types can be used in CampaignBridge.' )
+	->repeater( 'included_post_types', $checkboxes, $campaignbridge_enabled_types )->switch()
+
+	// Save to options table - the Form API now handles multiple fields reliably.
+	->save_to_options( 'campaignbridge_' )
+
+	->success( 'Post types configuration saved successfully!' )
+	->submit( 'Save Post Types' );
 ?>
 
 <div class="campaignbridge-post-types">
@@ -29,38 +50,16 @@ $campaignbridge_enabled_types = $screen->get( 'enabled_types', array() );
 				</p>
 			</div>
 
-			<form method="post" action="" class="campaignbridge-post-types__form">
-		<?php $screen->nonce_field( 'campaignbridge_post_types-options' ); ?>
-
-				<div class="campaignbridge-post-types__switches-box">
-					<div class="campaignbridge-post-types__switches-group">
-						<div class="campaignbridge-post-types__switches-grid">
-							<?php foreach ( $campaignbridge_post_types as $campaignbridge_post_type => $campaignbridge_info ) : ?>
-								<?php $campaignbridge_checked = in_array( $campaignbridge_post_type, $campaignbridge_enabled_types, true ); ?>
-								<label class="campaignbridge-post-types__switch">
-									<input
-										type="checkbox"
-										name="campaignbridge_post_types[included_post_types][]"
-										value="<?php echo esc_attr( $campaignbridge_post_type ); ?>"
-										class="campaignbridge-post-types__checkbox"
-										<?php checked( $campaignbridge_checked ); ?>
-									/>
-									<span class="campaignbridge-post-types__slider" aria-hidden="true"></span>
-									<span class="campaignbridge-post-types__switch-label">
-										<?php echo esc_html( $campaignbridge_info['label'] ); ?>
-									</span>
-								</label>
-							<?php endforeach; ?>
-						</div>
-					</div>
-				</div>
+			<div class="campaignbridge-post-types__form">
+				<?php
+				// Render the form - handles all form logic, validation, and submission.
+				$form->render();
+				?>
 
 				<p class="campaignbridge-post-types__help-text">
 					<?php esc_html_e( 'Unchecked types will be unavailable when selecting posts.', 'campaignbridge' ); ?>
 				</p>
-
-				<?php submit_button( __( 'Save Post Types', 'campaignbridge' ) ); ?>
-			</form>
+			</div>
 		</div>
 
 		<!-- Usage Information Section -->

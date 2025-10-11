@@ -122,6 +122,16 @@ class Form_Handler {
 			return;
 		}
 
+		// Check if this specific form was submitted by checking for its nonce field.
+		$form_id    = $this->config->get( 'form_id', 'form' );
+		$nonce_name = $form_id . '_wpnonce';
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified immediately after this check.
+		if ( ! isset( $_POST[ $nonce_name ] ) ) {
+			// This form was not submitted, skip processing.
+			return;
+		}
+
 		$this->is_submitted = true;
 
 		// Verify security.
@@ -157,7 +167,12 @@ class Form_Handler {
 		$this->run_hook( 'after_save', $form_data, $save_result );
 
 		if ( $save_result ) {
-			$success_message  = \__( $this->config->get( 'success_message' ), 'campaignbridge' );
+			// Reload form data to reflect saved changes immediately.
+			if ( $this->form ) {
+				$this->form->reload_data();
+			}
+
+			$success_message  = $this->config->get( 'success_message', \__( 'Saved successfully!', 'campaignbridge' ) );
 			$this->messages[] = $success_message;
 
 			// Auto-trigger Screen_Context notice.
@@ -166,7 +181,7 @@ class Form_Handler {
 			// Run success hook.
 			$this->run_hook( 'on_success', $form_data );
 		} else {
-			$error_message  = \__( $this->config->get( 'error_message' ), 'campaignbridge' );
+			$error_message  = $this->config->get( 'error_message', \__( 'An error occurred.', 'campaignbridge' ) );
 			$this->errors[] = $error_message;
 
 			// Auto-trigger Screen_Context notice.
@@ -183,28 +198,68 @@ class Form_Handler {
 	 * @return array
 	 */
 	private function get_submitted_data(): array {
-		$data    = [];
+		$data    = array();
 		$method  = strtoupper( $this->config->get( 'method', 'POST' ) );
 		$form_id = $this->config->get( 'form_id', 'form' );
 
-		// Get form data from the namespaced array
-		$form_data = [];
-		if ( $method === 'POST' ) {
-			$form_data = \wp_unslash( $_POST[ $form_id ] ?? [] );
-		} elseif ( $method === 'GET' ) {
-			$form_data = \wp_unslash( $_GET[ $form_id ] ?? [] );
+		// Get form data from the namespaced array.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce already verified in handle_submission(), data sanitized per field via sanitize_field_value().
+		$form_data = array();
+		if ( 'POST' === $method ) {
+			$form_data = \wp_unslash( $_POST[ $form_id ] ?? array() );
+		} elseif ( 'GET' === $method ) {
+			$form_data = \wp_unslash( $_GET[ $form_id ] ?? array() );
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
-		// Extract field values
+		// Extract field values, handling array-style field names.
+		$data = array();
+
 		foreach ( $this->fields as $field_id => $field_config ) {
 			$value = $form_data[ $field_id ] ?? null;
 
-			if ( $value !== null ) {
-				$data[ $field_id ] = $this->sanitize_field_value( $value, $field_config );
+			if ( null !== $value ) {
+				// Handle repeater field names with ___ separator (field_id___key).
+				if ( strpos( $field_id, '___' ) !== false ) {
+					list( $base_name, $key ) = explode( '___', $field_id, 2 );
+
+					// Initialize array if not exists.
+					if ( ! isset( $data[ $base_name ] ) ) {
+						$data[ $base_name ] = array();
+					}
+
+					// For multiple selections, only include checked values.
+					if ( $this->is_multiple_field_checked( $value, $field_config ) ) {
+						// For multiple fields, store the key (e.g., 'post') not the value ('1').
+						$data[ $base_name ][] = sanitize_key( $key );
+					}
+				} else {
+					// Regular field.
+					$data[ $field_id ] = $this->sanitize_field_value( $value, $field_config );
+				}
 			}
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Check if a multiple field value should be included.
+	 *
+	 * @param mixed $value       Field value.
+	 * @param array $field_config Field configuration.
+	 * @return bool Whether to include this value.
+	 */
+	private function is_multiple_field_checked( $value, array $field_config ): bool {
+		$type = $field_config['type'] ?? 'text';
+
+		// For switches and checkboxes, only include if checked.
+		if ( in_array( $type, array( 'switch', 'checkbox' ), true ) ) {
+			return '1' === $value || 1 === $value || true === $value;
+		}
+
+		// For other types, include if not empty.
+		return ! empty( $value );
 	}
 
 	/**
@@ -248,6 +303,8 @@ class Form_Handler {
 				return $this->save_to_options( $data );
 			case 'post_meta':
 				return $this->save_to_post_meta( $data );
+			case 'settings':
+				return $this->save_to_settings( $data );
 			case 'custom':
 				return $this->save_to_custom( $data );
 			default:
@@ -265,8 +322,64 @@ class Form_Handler {
 		foreach ( $data as $field_id => $value ) {
 			$option_key = $this->config->get( 'prefix', '' ) . $field_id . $this->config->get( 'suffix', '' );
 			\update_option( $option_key, $value );
+
+			// Clear cache for this specific option.
+			\wp_cache_delete( $option_key, 'options' );
 		}
+
 		return true;
+	}
+
+	/**
+	 * Save using WordPress Settings API
+	 *
+	 * @param array $data Data to save.
+	 * @return bool Success.
+	 */
+	private function save_to_settings( array $data ): bool {
+		$settings_group = $this->config->get( 'settings_group', $this->config->get( 'form_id', 'settings' ) );
+
+		// Register the setting if not already registered.
+		if ( ! get_registered_settings()[ $settings_group ] ) {
+			\register_setting(
+				$settings_group,
+				$settings_group,
+				array(
+					'type'              => 'array',
+					'sanitize_callback' => array( $this, 'sanitize_settings_data' ),
+					'default'           => array(),
+				)
+			);
+		}
+
+		// For Settings API, we save the entire data array as one option.
+		// This mimics how WordPress Settings API typically works.
+		$result = \update_option( $settings_group, $data );
+
+		// Clear cache for this settings group.
+		\wp_cache_delete( $settings_group, 'options' );
+
+		return $result;
+	}
+
+	/**
+	 * Sanitize settings data for WordPress Settings API
+	 *
+	 * @param mixed $data Raw data to sanitize.
+	 * @return array Sanitized data.
+	 */
+	public function sanitize_settings_data( $data ): array {
+		if ( ! is_array( $data ) ) {
+			return array();
+		}
+
+		$sanitized = array();
+		foreach ( $data as $key => $value ) {
+			$field_config      = $this->fields[ $key ] ?? array();
+			$sanitized[ $key ] = $this->sanitize_field_value( $value, $field_config );
+		}
+
+		return $sanitized;
 	}
 
 	/**
@@ -280,6 +393,9 @@ class Form_Handler {
 
 		foreach ( $data as $field_id => $value ) {
 			\update_post_meta( $post_id, $field_id, $value );
+
+			// Clear cache for this post meta.
+			\wp_cache_delete( $post_id, 'post_meta' );
 		}
 		return true;
 	}
@@ -291,7 +407,7 @@ class Form_Handler {
 	 * @return bool Success.
 	 */
 	private function save_to_custom( array $data ): bool {
-		$hooks = $this->config->get( 'hooks', [] );
+		$hooks = $this->config->get( 'hooks', array() );
 		if ( isset( $hooks['save_data'] ) && is_callable( $hooks['save_data'] ) ) {
 			return (bool) call_user_func( $hooks['save_data'], $data );
 		}
@@ -306,7 +422,7 @@ class Form_Handler {
 	 * @param mixed  ...$args   Arguments to pass to hook.
 	 */
 	private function run_hook( string $hook_name, ...$args ): void {
-		$hooks = $this->config->get( 'hooks', [] );
+		$hooks = $this->config->get( 'hooks', array() );
 		if ( isset( $hooks[ $hook_name ] ) && is_callable( $hooks[ $hook_name ] ) ) {
 			call_user_func( $hooks[ $hook_name ], ...$args );
 		}

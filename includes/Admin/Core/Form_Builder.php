@@ -90,7 +90,13 @@ class Form_Builder {
 	 * @param string $prefix Option prefix.
 	 * @return self
 	 */
-	public function options( string $prefix = '' ): self {
+	/**
+	 * Save form data to WordPress Options API
+	 *
+	 * @param string $prefix Optional prefix for option keys to prevent naming conflicts.
+	 * @return self
+	 */
+	public function save_to_options( string $prefix = '' ): self {
 		$this->config->set_save_method( 'options' );
 		if ( $prefix ) {
 			$this->config->set_prefix( $prefix );
@@ -98,19 +104,62 @@ class Form_Builder {
 		return $this;
 	}
 
+
 	/**
 	 * Save to post meta
 	 *
 	 * @param int $post_id Post ID.
 	 * @return self
 	 */
-	public function meta( int $post_id = 0 ): self {
+	/**
+	 * Save form data to post meta
+	 *
+	 * @param int $post_id Optional post ID. Uses current post if not specified.
+	 * @return self
+	 */
+	public function save_to_post_meta( int $post_id = 0 ): self {
 		$this->config->set_save_method( 'post_meta' );
 		if ( $post_id ) {
 			$this->config->set_post_id( $post_id );
 		}
 		return $this;
 	}
+
+
+	/**
+	 * Save form data to WordPress Settings API
+	 *
+	 * @param string $settings_group Settings group name for registering settings.
+	 * @return self
+	 */
+	public function save_to_settings_api( string $settings_group = '' ): self {
+		$this->config->set_save_method( 'settings' );
+		$this->config->set( 'data_source', 'settings' );
+
+		if ( $settings_group ) {
+			$this->config->set( 'settings_group', $settings_group );
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Save form data using custom callback function
+	 *
+	 * The callback receives sanitized and validated form data and should return boolean success.
+	 * Use this for external APIs, custom databases, or any non-standard storage.
+	 *
+	 * @param callable $callback Function that receives (array $data): bool.
+	 * @return self
+	 */
+	public function save_to_custom( callable $callback ): self {
+		$this->config->set_save_method( 'custom' );
+		$this->config->add_hook( 'save_data', $callback );
+
+		return $this;
+	}
+
+
 
 	/**
 	 * Set table layout
@@ -138,7 +187,13 @@ class Form_Builder {
 	 * @param callable $renderer Custom render function.
 	 * @return self
 	 */
-	public function custom( callable $renderer ): self {
+	/**
+	 * Add custom rendering callback for advanced layouts
+	 *
+	 * @param callable $renderer Custom rendering function.
+	 * @return self
+	 */
+	public function render_custom( callable $renderer ): self {
 		$this->config->set_layout( 'custom' );
 
 		// Store render sequence for custom layouts.
@@ -151,6 +206,7 @@ class Form_Builder {
 
 		return $this;
 	}
+
 
 	/**
 	 * Set success message
@@ -542,6 +598,19 @@ class Form_Builder {
 	 */
 	public function add( string $name, string $type, string $label = '' ): Form_Field_Builder {
 		return $this->add_field( $name, $type, $label );
+	}
+
+	/**
+	 * Create multiple fields with smart state management (repeater pattern)
+	 *
+	 * @param string $field_id             Base field name.
+	 * @param array  $populate_all_choices All possible options [key => label].
+	 * @param mixed  $persistent_data      Current state data (string, array, or null).
+	 * @return Forms\Form_Field_Repeater
+	 * @throws \InvalidArgumentException When validation fails.
+	 */
+	public function repeater( string $field_id, array $populate_all_choices, $persistent_data = null ): Forms\Form_Field_Repeater {
+		return new Forms\Form_Field_Repeater( $this, $field_id, $populate_all_choices, $persistent_data );
 	}
 
 	/**

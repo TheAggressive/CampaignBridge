@@ -13,11 +13,11 @@ require_once __DIR__ . '/../Core/Form.php';
 
 // Step 2: Create your form
 $form = \CampaignBridge\Admin\Core\Form::make( 'simple_example' )
-	->options() // Save to WordPress options
+	->save_to_options() // Save to WordPress options
 	->description( 'This is a simple form example.' )
 	->text( 'your_name', 'Your Name' )->required()->end()
 	->email( 'your_email', 'Your Email' )->required()->end()
-	// ->success('Custom success message') // Optional - defaults provided
+	->success( 'Custom success message' ) // Optional - defaults provided
 	// ->error('Custom error message')     // Optional - defaults provided
 	->submit( 'Submit Form' );
 

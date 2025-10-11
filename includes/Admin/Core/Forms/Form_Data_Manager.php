@@ -71,6 +71,9 @@ class Form_Data_Manager {
 			case 'post_meta':
 				$this->load_from_post_meta();
 				break;
+			case 'settings':
+				$this->load_from_settings();
+				break;
 			default:
 				$this->load_custom_data();
 				break;
@@ -78,12 +81,55 @@ class Form_Data_Manager {
 	}
 
 	/**
+	 * Reload form data (clears cache and reloads from source)
+	 */
+	public function reload(): void {
+		// Clear existing data.
+		$this->data = array();
+
+		// Reload from source.
+		$this->load_form_data();
+	}
+
+	/**
 	 * Load data from WordPress options
 	 */
 	private function load_from_options(): void {
+		// Track which base names we've already loaded to avoid duplicate queries.
+		$loaded_base_names = array();
+
 		foreach ( $this->fields as $field_id => $field_config ) {
-			$option_key              = $this->config['prefix'] . $field_id . $this->config['suffix'];
-			$this->data[ $field_id ] = \get_option( $option_key, $field_config['default'] ?? '' );
+			// Handle repeater fields with ___ separator.
+			if ( strpos( $field_id, '___' ) !== false ) {
+				list( $base_name, $key ) = explode( '___', $field_id, 2 );
+
+				// Only load the base option once for all repeater fields.
+				if ( ! isset( $loaded_base_names[ $base_name ] ) ) {
+					$option_key                      = $this->config['prefix'] . $base_name . $this->config['suffix'];
+					$loaded_base_names[ $base_name ] = \get_option( $option_key, array() );
+				}
+
+				// Check if this specific key is in the saved array.
+				$saved_array             = $loaded_base_names[ $base_name ];
+				$this->data[ $field_id ] = is_array( $saved_array ) && in_array( $key, $saved_array, true );
+			} else {
+				// Regular field - load normally.
+				$option_key              = $this->config['prefix'] . $field_id . $this->config['suffix'];
+				$this->data[ $field_id ] = \get_option( $option_key, $field_config['default'] ?? '' );
+			}
+		}
+	}
+
+	/**
+	 * Load data from WordPress Settings API
+	 */
+	private function load_from_settings(): void {
+		$settings_group = $this->config['settings_group'] ?? $this->config['form_id'] ?? 'settings';
+		$settings_data  = \get_option( $settings_group, array() );
+
+		// Load individual field values from the settings array.
+		foreach ( $this->fields as $field_id => $field_config ) {
+			$this->data[ $field_id ] = $settings_data[ $field_id ] ?? $field_config['default'] ?? '';
 		}
 	}
 

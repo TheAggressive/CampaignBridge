@@ -40,6 +40,15 @@ class Form_Notice_Handler {
 	}
 
 	/**
+	 * Trigger a warning notice
+	 *
+	 * @param string $message The warning message to display.
+	 */
+	public function trigger_warning( string $message ): void {
+		$this->display_notice( $message, 'warning' );
+	}
+
+	/**
 	 * Display form notice directly via WordPress admin_notices
 	 *
 	 * @param string $message The message to display.
@@ -50,7 +59,14 @@ class Form_Notice_Handler {
 		add_action(
 			'admin_notices',
 			function () use ( $message, $type ) {
-				$class = 'success' === $type ? 'notice-success' : 'notice-error';
+				$classes = array(
+					'success' => 'notice-success',
+					'error'   => 'notice-error',
+					'warning' => 'notice-warning',
+					'info'    => 'notice-info',
+				);
+				$class   = $classes[ $type ] ?? 'notice-info';
+
 				echo '<div class="notice ' . esc_attr( $class ) . ' is-dismissible">';
 				echo '<p>' . esc_html( $message ) . '</p>';
 				echo '<button type="button" class="notice-dismiss">';

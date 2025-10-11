@@ -108,137 +108,6 @@ class Screen_Context {
 		return isset( $this->data[ $key ] );
 	}
 
-	/**
-	 * Checks if the current request method is POST.
-	 *
-	 * @return bool True if the request method is POST, false otherwise.
-	 */
-	public function is_post(): bool {
-		return ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) === 'POST'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-	}
-
-	/**
-	 * Outputs a nonce field for CSRF protection in forms.
-	 *
-	 * @param string $action The action name for the nonce.
-	 */
-	public function nonce_field( string $action ): void {
-		wp_nonce_field( 'cb_' . $action, '_wpnonce', true, true );
-	}
-
-	/**
-	 * Verifies a nonce for CSRF protection.
-	 *
-	 * @param string $action The action name to verify against.
-	 * @return bool True if the nonce is valid, false otherwise.
-	 */
-	public function verify_nonce( string $action ): bool {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce is handled by wp_verify_nonce()
-		return isset( $_POST['_wpnonce'] ) && wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_' . $action );
-	}
-
-	/**
-	 * Retrieves and sanitizes a POST value with automatic type-based sanitization.
-	 *
-	 * @param string $key      The POST key to retrieve.
-	 * @param mixed  $fallback The default value if the key is not set.
-	 * @return mixed The sanitized POST value or the fallback.
-	 */
-	public function post( string $key, $fallback = null ) {
-		if ( ! isset( $_POST[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-			return $fallback;
-		}
-
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing -- Input is sanitized immediately below
-		$value = wp_unslash( $_POST[ $key ] );
-
-		// Enhanced sanitization based on value type and context.
-		if ( is_string( $value ) ) {
-			// Use appropriate sanitization based on field name context.
-			if ( strpos( $key, 'email' ) !== false || 'reply_to' === $key ) {
-				return sanitize_email( $value );
-			}
-			if ( strpos( $key, 'url' ) !== false ) {
-				return esc_url_raw( $value );
-			}
-			if ( strpos( $key, 'html' ) !== false || strpos( $key, 'content' ) !== false ) {
-				return wp_kses_post( $value );
-			}
-			// Default text field sanitization.
-			return sanitize_text_field( $value );
-		}
-
-		if ( is_array( $value ) ) {
-			// Recursively sanitize array values.
-			return $this->sanitize_array_input( $value, $key );
-		}
-
-		if ( is_numeric( $value ) ) {
-			// For numeric values, ensure they're properly cast.
-			if ( strpos( $key, 'id' ) !== false || strpos( $key, 'limit' ) !== false ) {
-				return absint( $value );
-			}
-			return sanitize_text_field( $value );
-		}
-
-		if ( is_bool( $value ) ) {
-			return (bool) $value;
-		}
-
-		// For other types, return as-is (already unslashed).
-		// Log potential security concern for unknown types.
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf( 'Unhandled input type for field "%s": %s', $key, gettype( $value ) ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		}
-
-		return $value;
-	}
-
-	/**
-	 * Sanitize array input recursively.
-	 *
-	 * Applies basic WordPress sanitization functions based on data type,
-	 * without domain-specific business logic. For custom sanitization rules,
-	 * use a dedicated sanitizer service.
-	 *
-	 * @param array  $input_array The array to sanitize.
-	 * @param string $parent_key  The parent key for context (optional).
-	 * @return array The sanitized array.
-	 */
-	private function sanitize_array_input( array $input_array, string $parent_key = '' ): array {
-		$sanitized = array();
-
-		foreach ( $input_array as $key => $value ) {
-			// Sanitize the key.
-			$sanitized_key = sanitize_key( $key );
-
-			// Recursively sanitize the value based on type.
-			if ( is_array( $value ) ) {
-				$sanitized[ $sanitized_key ] = $this->sanitize_array_input( $value, $parent_key . '[' . $key . ']' );
-			} elseif ( is_string( $value ) ) {
-				$sanitized[ $sanitized_key ] = sanitize_text_field( $value );
-			} elseif ( is_numeric( $value ) ) {
-				$sanitized[ $sanitized_key ] = is_int( $value ) ? absint( $value ) : sanitize_text_field( (string) $value );
-			} elseif ( is_bool( $value ) ) {
-				$sanitized[ $sanitized_key ] = (bool) $value;
-			} elseif ( is_null( $value ) ) {
-				$sanitized[ $sanitized_key ] = null;
-			} else {
-				// For unknown types, convert to string and sanitize, or skip if conversion fails.
-				if ( is_scalar( $value ) || ( is_object( $value ) && method_exists( $value, '__toString' ) ) ) {
-					$sanitized[ $sanitized_key ] = sanitize_text_field( (string) $value );
-				} else {
-					// Log and skip non-convertible types.
-					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( sprintf( 'Skipping non-convertible value type for "%s[%s]": %s', $parent_key, $key, gettype( $value ) ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-					}
-					continue;
-				}
-			}
-		}
-
-		return $sanitized;
-	}
 
 	/**
 	 * Enqueues a CSS stylesheet for the admin screen.
@@ -324,7 +193,7 @@ class Screen_Context {
 	 * @param bool   $in_footer        Whether to enqueue the script in the footer.
 	 * @return bool True if the asset was enqueued, false otherwise.
 	 */
-	public function asset_enqueue_script( string $handle, string $asset_file_path, array $additional_deps = [], bool $in_footer = true ): bool {
+	public function asset_enqueue_script( string $handle, string $asset_file_path, array $additional_deps = array(), bool $in_footer = true ): bool {
 		$asset_file = \CampaignBridge_Plugin::path() . $asset_file_path;
 		if ( ! file_exists( $asset_file ) ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

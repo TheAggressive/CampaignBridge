@@ -348,75 +348,158 @@ $form->checkbox('terms_agreed', 'I agree to the terms and conditions')
     ->description('You must agree to continue');
 ```
 
-#### Multiple Fields (Same Type)
-For multiple fields of the same type (like checkboxes, switches, or radios), use the `multiple()` method for cleaner code:
+#### Repeater Fields (Multiple Fields with Smart State Management)
 
+The `repeater()` method creates multiple fields of the same type with smart state management. It automatically compares current state with persistent data and intelligently sets defaults.
+
+**Basic Usage (Stateless Mode - 2 arguments):**
 ```php
-$form = \Form::make('preferences');
-
-// Method 1: Using multiple() - Recommended for cleaner DX
-$form->multiple('preferences', 'switch', [
+// All fields start unchecked
+$form->repeater('preferences', [
     'newsletter' => 'Subscribe to newsletter',
     'updates'    => 'Receive product updates',
     'promotions' => 'Receive promotional offers'
-], $user_preferences); // Array of default selected values
-
-// Real-world example: Post types selection
-$form->multiple('post_types', 'switch', [
-    'post' => 'Posts',
-    'page' => 'Pages',
-    'product' => 'Products'
-], $enabled_post_types);
-
-// Method 2: Manual approach (more verbose)
-foreach ($options as $key => $label) {
-    $form->switch("preferences[{$key}]", $label)
-        ->default(isset($user_preferences[$key]));
-}
-
-// Handle in before_save (same for both methods)
-$form->before_save(function($data) {
-    $preferences = [];
-    if (isset($data['preferences']) && is_array($data['preferences'])) {
-        foreach ($data['preferences'] as $key => $value) {
-            if ($value) {
-                $preferences[] = $key;
-            }
-        }
-    }
-    update_option('user_preferences', $preferences);
-    return $data;
-});
+])->switch();
 ```
 
-**Multiple Method Parameters:**
-- `$base_name`: Base field name (becomes array key)
-- `$type`: Field type (`'checkbox'`, `'switch'`, `'radio'`, `'text'`, `'email'`, `'password'`, `'textarea'`, `'select'`)
-- `$options`: Array of `[value => label]` pairs
-- `$defaults`: Array of values that should be checked/selected by default
+**State-Based Mode (3 arguments):**
+```php
+// Automatically checks fields that exist in persistent data
+$enabled_post_types = get_option('campaignbridge_post_types', []);
+$form->repeater('post_types', [
+    'post'    => 'Posts',
+    'page'    => 'Pages',
+    'product' => 'Products'
+], $enabled_post_types)->switch();
+```
 
-**Error Handling:**
-The `multiple()` method includes comprehensive validation and will throw `\InvalidArgumentException` for:
+**With Default Checked:**
+```php
+// Specify a specific choice to be checked by default (stateless mode)
+$form->repeater('features', [
+    'feature_1' => 'Feature 1',
+    'feature_2' => 'Feature 2'
+])->default('feature_1')->switch();
+```
 
-- Empty base name
-- Unsupported field type (not in the list above)
-- Empty options array
-- Invalid option labels (not string/numeric)
-- Non-array defaults parameter
+**Real-World Example:**
+```php
+// Post types configuration screen
+$all_post_types = [
+    'post'    => 'Posts',
+    'page'    => 'Pages',
+    'product' => 'Products'
+];
+$enabled_types = get_option('campaignbridge_included_post_types', []);
+
+$form = Form::make('post_types')
+    ->save_to_options('campaignbridge_')
+    ->repeater('included_post_types', $all_post_types, $enabled_types)->switch()
+    ->submit('Save Post Types');
+```
+
+**Supported Field Types:**
+
+The repeater supports multiple field types through chainable methods:
 
 ```php
-// ❌ Will throw exception: Empty base name
-$form->multiple('', 'switch', $options, $defaults);
+// Switch/toggle fields (recommended for on/off choices)
+// Creates multiple independent switches, one per choice
+->repeater('field', $choices, $persistent)->switch()
 
-// ❌ Will throw exception: Unsupported field type
-$form->multiple('field', 'invalid_type', $options, $defaults);
+// Checkbox fields
+// Creates multiple independent checkboxes, one per choice
+->repeater('field', $choices, $persistent)->checkbox()
 
-// ❌ Will throw exception: Empty options
-$form->multiple('field', 'switch', [], $defaults);
+// Radio button fields (single selection)
+// Creates ONE radio group with all choices as options
+->repeater('field', $choices, $persistent)->radio()
 
-// ❌ Will throw exception: Invalid option label
-$form->multiple('field', 'switch', ['key' => ['invalid', 'array']], $defaults);
+// Select dropdown fields (single selection)
+// Creates ONE select dropdown with all choices as options
+->repeater('field', $choices, $persistent)->select()
 ```
+
+**Important:** Switch and checkbox types create **multiple independent fields** (one per choice), allowing multiple selections. Radio and select types create **one field with options**, allowing only one selection.
+
+**Method Parameters:**
+- `$field_id`: Base field name (e.g., 'post_types')
+- `$populate_all_choices`: Array of all possible options `['key' => 'label']`
+- `$persistent_data`: (Optional) Array of currently selected/checked keys
+
+**State Management:**
+
+The repeater intelligently handles state:
+
+1. **With persistent data**: Compares persistent data with all choices and checks matching ones
+2. **With default()**: Sets a specific choice as checked (only if no persistent data)
+3. **Stateless**: All choices start unchecked
+
+**Stale Data Handling:**
+
+If persistent data contains keys not in choices (e.g., removed post types), they are silently ignored and automatically cleaned on next save.
+
+```php
+$choices = ['post' => 'Posts', 'page' => 'Pages'];
+$persistent = ['post', 'product']; // 'product' was removed
+
+$form->repeater('types', $choices, $persistent)->switch();
+// Only 'post' and 'page' fields are rendered
+// 'post' is checked, 'page' is unchecked
+// On save, only 'post' will be persisted (stale 'product' is cleaned)
+```
+
+**Output Format:**
+
+Form submits as an array of checked keys:
+```php
+// $_POST['form_id']['field_name'] => ['key1', 'key2', 'key3']
+```
+
+**Error Handling:**
+
+The repeater includes comprehensive validation and throws `\InvalidArgumentException` for:
+
+- Empty field ID
+- Empty choices array
+- Invalid choice keys (must be string/numeric)
+- Invalid choice labels (must be string/numeric)
+- Invalid persistent data type (PHP type hint throws `TypeError`)
+
+```php
+// ❌ Will throw exception: Empty field ID
+$form->repeater('', $choices)->switch();
+
+// ❌ Will throw exception: Empty choices
+$form->repeater('field', [])->switch();
+
+// ❌ Will throw TypeError: Invalid persistent data
+$form->repeater('field', $choices, 'not_an_array')->switch();
+
+// ❌ Will throw exception: Invalid choice label
+$form->repeater('field', ['key' => ['invalid', 'array']])->switch();
+```
+
+**Migration from multiple():**
+
+The legacy `multiple()` method is deprecated. Here's how to migrate:
+
+```php
+// OLD (deprecated)
+$form->multiple('field', 'switch', $choices, $defaults)
+
+// NEW
+$form->repeater('field', $choices, $defaults)->switch()
+```
+
+**Benefits over multiple():**
+- Clearer intent and more intuitive API
+- Flexible field type chaining
+- Smart state management with persistent data comparison
+- Support for default() modifier
+- Better error messages
+- More consistent with builder pattern
+- Easier to extend with custom field types
 
 #### Switch/Toggle (Styled Checkbox)
 ```php
@@ -493,7 +576,7 @@ $form = Form::make('contact')
 #### Custom Layout
 ```php
 $form = Form::make('custom')
-    ->custom(function($form) {
+    ->render_custom(function($form) {
         echo '<div class="my-custom-form">';
         foreach ($form->get_config()->get_fields() as $field_id => $field_config) {
             echo '<div class="field-wrapper">';
@@ -548,7 +631,7 @@ $form = Form::make('settings')
 
 ```php
 $form = Form::make('plugin_settings')
-    ->options('my_plugin_') // Save to wp_options with prefix
+    ->save_to_options('my_plugin_') // Save to wp_options with prefix
     ->text('api_key', 'API Key')
     ->text('timeout', 'Timeout (seconds)')
     ->submit('Save Settings');
@@ -562,7 +645,7 @@ $form = Form::make('plugin_settings')
 
 ```php
 $form = Form::make('post_settings')
-    ->meta($post_id) // Save to post meta for specific post
+    ->save_to_post_meta($post_id) // Save to post meta for specific post
     ->text('custom_title', 'Custom Title')
     ->textarea('summary', 'Summary')
     ->submit('Save Post Settings');
@@ -572,20 +655,69 @@ $form = Form::make('post_settings')
 
 ### Custom Storage
 
+For complete control over data storage (APIs, external databases, etc.), use `save_to_custom()`:
+
 ```php
-$form = Form::make('custom_data')
-    ->source('custom') // Use custom data source
-    ->text('field1', 'Field 1')
-    ->text('field2', 'Field 2')
-    ->before_save(function($data) {
-        // Custom save logic
-        update_option('my_custom_data', $data);
+$form = Form::make('api_settings')
+    ->save_to_custom(function($data) {
+        // Data is already sanitized and validated
+        // Return boolean success/failure
+
+        try {
+            // Send to external API
+            $response = wp_remote_post('https://api.example.com/settings', [
+                'body' => wp_json_encode($data),
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $data['api_token'],
+                    'Content-Type' => 'application/json'
+                ]
+            ]);
+
+            if (is_wp_error($response)) {
+                return false;
+            }
+
+            $response_code = wp_remote_retrieve_response_code($response);
+            return $response_code >= 200 && $response_code < 300;
+
+        } catch (Exception $e) {
+            error_log('API save failed: ' . $e->getMessage());
+            return false;
+        }
     })
+    ->text('api_token', 'API Token')
+    ->text('endpoint_url', 'API Endpoint')
+    ->submit('Save API Settings');
+
+// The callback receives sanitized data:
+// $data = [
+//     'api_token' => 'sanitized_token',
+//     'endpoint_url' => 'https://api.example.com'
+// ]
+```
+
+**Custom saving features:**
+- ✅ Data is **fully sanitized and validated** before callback
+- ✅ Callback receives clean, safe data
+- ✅ Return `true` for success, `false` for failure
+- ✅ Perfect for external APIs, custom databases, cloud storage
+- ✅ Full error handling control
+
+**Alternative: Use hooks with standard storage:**
+
+```php
+$form = Form::make('enhanced_settings')
+    ->save_to_options('my_plugin_') // Still save to options
+    ->text('setting1')
+    ->text('setting2')
     ->after_save(function($data) {
-        // Post-save actions
+        // Additional actions after standard save
         wp_cache_flush();
+        do_action('my_plugin_settings_saved', $data);
     });
 ```
+
+**Note:** For custom saving logic (APIs, external services), use `->save_to_custom($callback)`. For custom rendering layouts, use `->render_custom($renderer)`.
 
 ### Loading Data
 
@@ -594,7 +726,7 @@ $form = Form::make('custom_data')
 $form = Form::settings('my_settings'); // Automatically loads from wp_options
 
 // Auto-load from post meta
-$form = Form::make('post_form')->meta($post_id); // Loads post meta
+$form = Form::make('post_form')->save_to_post_meta($post_id); // Loads post meta
 
 // Manual data loading
 $form = Form::make('custom_form')
@@ -1265,7 +1397,7 @@ if ($form->submitted()) {
 
 // Check 2: Verify data source configuration
 $form = Form::make('test_form')
-    ->options('test_') // Ensure correct prefix
+    ->save_to_options('test_') // Ensure correct prefix
     ->text('field1', 'Field 1');
 
 // Check 3: Add debugging
@@ -1318,7 +1450,7 @@ $form->success('Your changes have been saved!')
 // Check 2: Notice system works automatically in all contexts
 
 // Check 3: Verify form has save method configured
-$form->options('my_prefix_'); // or ->meta($post_id) for post meta
+$form->save_to_options('my_prefix_'); // or ->save_to_post_meta($post_id) for post meta
 
 // Check 4: Ensure form submission is handled
 if ($form->submitted() && $form->valid()) {
