@@ -28,7 +28,7 @@ A comprehensive, developer-friendly forms system for WordPress admin interfaces.
 use CampaignBridge\Admin\Core\Form;
 
 // Create a simple settings form with seamless chaining
-$form = Form::settings('my_settings')
+$form = Form::settings_api('my_settings')
     ->text('site_name', 'Site Name')
         ->required()
         ->placeholder('My Awesome Site')
@@ -521,11 +521,22 @@ $form->textarea('description', 'Description')
 
 #### File Upload
 ```php
+// Method 1: Set accept in field configuration
 $form->file('profile_image', 'Profile Image')
     ->accept('image/jpeg,image/png,image/gif')
     ->description('Upload a JPG, PNG, or GIF image (max 2MB)');
 
-$form->multipart(); // Required for file uploads
+// Method 2: Set accept directly in file() method
+$form->file('document', 'Document', '.pdf,.doc,.docx')
+    ->description('Upload a PDF or Word document');
+
+// Multiple file uploads
+$form->file('gallery_images', 'Gallery Images')
+    ->accept('image/jpeg,image/png,image/gif')
+    ->multiple_files() // Allow multiple files
+    ->description('Upload multiple images for the gallery');
+
+$form->enable_file_uploads(); // Required for file uploads
 ```
 
 #### WYSIWYG Editor
@@ -594,7 +605,7 @@ $form = Form::make('custom')
 $form = Form::make('my_form')
     ->method('POST') // GET or POST
     ->action(admin_url('admin-post.php')) // Custom action URL
-    ->multipart(); // For file uploads
+    ->enable_file_uploads(); // For file uploads
 ```
 
 ### Success/Error Messages
@@ -723,7 +734,7 @@ $form = Form::make('enhanced_settings')
 
 ```php
 // Auto-load from options
-$form = Form::settings('my_settings'); // Automatically loads from wp_options
+$form = Form::settings_api('my_settings'); // Automatically loads from wp_options
 
 // Auto-load from post meta
 $form = Form::make('post_form')->save_to_post_meta($post_id); // Loads post meta
@@ -859,7 +870,7 @@ $form = Form::make('admin_only')
 
 ```php
 $form = Form::make('file_upload')
-    ->multipart()
+    ->enable_file_uploads()
     ->file('document', 'Document')
         ->accept('.pdf,.doc,.docx')
         ->rules([
