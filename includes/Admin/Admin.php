@@ -64,10 +64,12 @@ class Admin {
 
 		// Add parent menu.
 		add_action( 'admin_menu', array( $this, 'add_parent_menu' ), 9 );
+		add_action( 'admin_menu', array( $this, 'remove_parent_from_submenu' ), 10 );
 
 		// Enqueue global assets.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_global_assets' ) );
 	}
+
 
 	/**
 	 * Add the main CampaignBridge menu page.
@@ -78,10 +80,49 @@ class Admin {
 			__( 'CampaignBridge', 'campaignbridge' ),
 			'manage_options',
 			'campaignbridge',
-			null,
+			array( $this, 'redirect_to_first_submenu' ),
 			'dashicons-email-alt',
 			30
 		);
+	}
+
+	/**
+	 * Remove the parent menu item from the submenu to avoid duplication.
+	 */
+	public function remove_parent_from_submenu(): void {
+		global $submenu;
+
+		// Remove the parent menu item from submenu array to prevent duplication.
+		if ( isset( $submenu['campaignbridge'] ) ) {
+			foreach ( $submenu['campaignbridge'] as $key => $item ) {
+				if ( isset( $item[2] ) && 'campaignbridge' === $item[2] ) {
+					unset( $submenu['campaignbridge'][ $key ] );
+					break;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Redirect parent menu clicks to the first available submenu.
+	 */
+	public function redirect_to_first_submenu(): void {
+		// Get the first submenu under our parent menu.
+		global $submenu;
+
+		if ( isset( $submenu['campaignbridge'] ) && is_array( $submenu['campaignbridge'] ) ) {
+			$first_submenu = reset( $submenu['campaignbridge'] );
+
+			if ( isset( $first_submenu[2] ) ) {
+				// Redirect to the first submenu.
+				wp_safe_redirect( admin_url( 'admin.php?page=' . $first_submenu[2] ) );
+				exit;
+			}
+		}
+
+		// Fallback: redirect to dashboard if no submenus found.
+		wp_safe_redirect( admin_url() );
+		exit;
 	}
 
 	/**
