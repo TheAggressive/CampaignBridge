@@ -162,7 +162,7 @@ class CampaignBridge_Plugin {
 	 * @return bool True if autoloader loaded successfully, false otherwise.
 	 */
 	private static function load_autoloader(): bool {
-		$autoloader_path = __DIR__ . '/includes/autoload.php';
+		$autoloader_path = __DIR__ . '/includes/Autoloader.php';
 
 		if ( file_exists( $autoloader_path ) ) {
 			require_once $autoloader_path;
