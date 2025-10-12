@@ -34,12 +34,12 @@ require_once __DIR__ . '/../Core/Forms/Form_Field_Switch.php';
 if ( ! function_exists( 'wp_parse_args' ) ) {
 	// Provide fallback implementations for WordPress functions when not in WP context
 	if ( ! function_exists( 'wp_parse_args' ) ) {
-		function wp_parse_args( $args, $defaults = [] ) {
+		function wp_parse_args( $args, $defaults = array() ) {
 			if ( is_object( $args ) ) {
 				$args = get_object_vars( $args );
 			}
 			if ( ! is_array( $args ) ) {
-				$args = [];
+				$args = array();
 			}
 			return array_merge( $defaults, $args );
 		}
@@ -58,7 +58,7 @@ if ( ! function_exists( 'wp_parse_args' ) ) {
 	}
 
 	if ( ! function_exists( 'wp_editor' ) ) {
-		function wp_editor( $content, $editor_id, $settings = [] ) {
+		function wp_editor( $content, $editor_id, $settings = array() ) {
 			echo '<textarea id="' . esc_attr( $editor_id ) . '" name="' . esc_attr( $editor_id ) . '">' . esc_textarea( $content ) . '</textarea>';
 		}
 	}
@@ -133,13 +133,13 @@ if ( ! function_exists( 'wp_parse_args' ) ) {
 
 	if ( ! function_exists( 'get_bloginfo' ) ) {
 		function get_bloginfo( $show = '' ) {
-			$defaults = [
+			$defaults = array(
 				'name'        => 'Demo Site',
 				'description' => 'Demo site description',
 				'url'         => 'https://example.com',
 				'admin_email' => 'admin@example.com',
-			];
-			return $defaults[$show] ?? 'Demo Value';
+			);
+			return $defaults[ $show ] ?? 'Demo Value';
 		}
 	}
 
@@ -151,10 +151,10 @@ if ( ! function_exists( 'wp_parse_args' ) ) {
 
 	if ( ! function_exists( 'get_option' ) ) {
 		function get_option( $option, $default = false ) {
-			$defaults = [
+			$defaults = array(
 				'admin_email' => 'admin@example.com',
-			];
-			return $defaults[$option] ?? $default;
+			);
+			return $defaults[ $option ] ?? $default;
 		}
 	}
 
@@ -175,16 +175,18 @@ if ( ! function_exists( 'wp_parse_args' ) ) {
 // ============================================================================
 // DEMO 1: FLUENT API - Contact Form (Super Simple)
 // ============================================================================
-$contact_form = \CampaignBridge\Admin\Core\Form::contact( 'contact_demo' )
-	->after_save(function ( $data ) {
-		// Simulate sending email
-		error_log( 'Contact form submitted: ' . $data['name'] . ' <' . $data['email'] . '>' );
-	});
+$contact_form = \CampaignBridge\Admin\Core\Form_Factory::contact( 'contact_demo' )
+	->after_save(
+		function ( $data ) {
+			// Simulate sending email
+			error_log( 'Contact form submitted: ' . $data['name'] . ' <' . $data['email'] . '>' );
+		}
+	);
 
 // ============================================================================
 // DEMO 2: FLUENT API - Settings Form (All Field Types)
 // ============================================================================
-$settings_form = \CampaignBridge\Admin\Core\Form::settings( 'comprehensive_settings' )
+$settings_form = \CampaignBridge\Admin\Core\Form_Factory::settings_api( 'comprehensive_settings' )
 	// Basic inputs
 	->text( 'site_name', 'Site Name' )
 		->default( get_bloginfo( 'name' ) )
@@ -248,41 +250,41 @@ $settings_form = \CampaignBridge\Admin\Core\Form::settings( 'comprehensive_setti
 	->color( 'theme_color', 'Theme Color' )
 		->description( 'Primary theme color' )
 		->default( '#007cba' )
-		->end()
 
 	->date( 'launch_date', 'Launch Date' )
 		->description( 'Product launch date' )
 		->required()
-		->end()
 
 	->time( 'daily_backup', 'Daily Backup Time' )
 		->description( 'When to run daily backups' )
 		->default( '02:00' )
-		->end()
 
 	->datetime( 'maintenance_window', 'Maintenance Window' )
 		->description( 'Scheduled maintenance period' )
-		->end()
 
 	// Choice fields
 	->select( 'theme', 'Theme' )
-		->options([
-			'light'  => 'Light Theme',
-			'dark'   => 'Dark Theme',
-			'auto'   => 'Auto (System)',
-			'custom' => 'Custom Theme',
-		])
+		->options(
+			array(
+				'light'  => 'Light Theme',
+				'dark'   => 'Dark Theme',
+				'auto'   => 'Auto (System)',
+				'custom' => 'Custom Theme',
+			)
+		)
 		->default( 'light' )
 		->description( 'Choose your theme' )
 		->end()
 
 	->radio( 'notification_freq', 'Notification Frequency' )
-		->options([
-			'realtime' => 'Real-time',
-			'daily'    => 'Daily Digest',
-			'weekly'   => 'Weekly Summary',
-			'never'    => 'Never',
-		])
+		->options(
+			array(
+				'realtime' => 'Real-time',
+				'daily'    => 'Daily Digest',
+				'weekly'   => 'Weekly Summary',
+				'never'    => 'Never',
+			)
+		)
 		->default( 'daily' )
 		->description( 'How often to receive notifications' )
 		->end()
@@ -293,14 +295,16 @@ $settings_form = \CampaignBridge\Admin\Core\Form::settings( 'comprehensive_setti
 		->end()
 
 	->checkbox( 'enabled_features', 'Enabled Features' )
-		->options([
-			'analytics'     => 'Analytics Tracking',
-			'logging'       => 'Error Logging',
-			'backups'       => 'Auto Backups',
-			'notifications' => 'Email Notifications',
-			'reports'       => 'Usage Reports',
-		])
-		->default( [ 'logging', 'notifications', 'backups' ] )
+		->options(
+			array(
+				'analytics'     => 'Analytics Tracking',
+				'logging'       => 'Error Logging',
+				'backups'       => 'Auto Backups',
+				'notifications' => 'Email Notifications',
+				'reports'       => 'Usage Reports',
+			)
+		)
+		->default( array( 'logging', 'notifications', 'backups' ) )
 		->description( 'Select which features to enable' )
 		->end()
 
@@ -332,56 +336,70 @@ $settings_form = \CampaignBridge\Admin\Core\Form::settings( 'comprehensive_setti
 // ============================================================================
 // DEMO 3: FLUENT API - User Registration Form
 // ============================================================================
-$register_form = \CampaignBridge\Admin\Core\Form::register( 'user_registration_demo' )
-	->before_validate(function ( $data ) {
-		if ( $data['password'] !== $data['password_confirm'] ) {
-			throw new Exception( 'Passwords do not match!' );
+$register_form = \CampaignBridge\Admin\Core\Form_Factory::register( 'user_registration_demo' )
+	->before_validate(
+		function ( $data ) {
+			if ( $data['password'] !== $data['password_confirm'] ) {
+				throw new Exception( 'Passwords do not match!' );
+			}
+			return $data;
 		}
-		return $data;
-	})
-	->after_save(function ( $data, $result ) {
-		if ( $result ) {
-			error_log( 'New user registered: ' . $data['username'] );
+	)
+	->after_save(
+		function ( $data, $result ) {
+			if ( $result ) {
+				error_log( 'New user registered: ' . $data['username'] );
+			}
 		}
-	});
+	);
 
 // ============================================================================
 // DEMO 4: FLUENT API - Custom Form with Custom Layout
 // ============================================================================
 $custom_form = \CampaignBridge\Admin\Core\Form::make( 'custom_layout_demo' )
 	->method( 'POST' )
-	->custom(function () {
-		// Custom layout renderer
-		echo '<div class="custom-form-layout">';
-		echo '<div class="form-section">';
-	})
+	->render_custom(
+		function () {
+			// Custom layout renderer
+			echo '<div class="custom-form-layout">';
+			echo '<div class="form-section">';
+		}
+	)
 	->text( 'first_name', 'First Name' )->required()->end()
 	->text( 'last_name', 'Last Name' )->required()->end()
-	->custom(function () {
-		// Close first section, start second
-		echo '</div><div class="form-section">';
-	})
+	->render_custom(
+		function () {
+			// Close first section, start second
+			echo '</div><div class="form-section">';
+		}
+	)
 	->email( 'email', 'Email' )->required()->end()
 	->tel( 'phone', 'Phone' )->end()
-	->custom(function () {
-		// Close second section, start third
-		echo '</div><div class="form-section">';
-	})
+	->render_custom(
+		function () {
+			// Close second section, start third
+			echo '</div><div class="form-section">';
+		}
+	)
 	->select( 'department', 'Department' )
-		->options([
-			'engineering' => 'Engineering',
-			'marketing'   => 'Marketing',
-			'sales'       => 'Sales',
-			'support'     => 'Support',
-		])
+		->options(
+			array(
+				'engineering' => 'Engineering',
+				'marketing'   => 'Marketing',
+				'sales'       => 'Sales',
+				'support'     => 'Support',
+			)
+		)
 		->end()
 	->checkbox( 'subscribe_newsletter', 'Subscribe to Newsletter' )
 		->default( true )
 		->end()
-	->custom(function () {
-		// Close layout
-		echo '</div></div>';
-	})
+	->render_custom(
+		function () {
+			// Close layout
+			echo '</div></div>';
+		}
+	)
 	->submit( 'Submit Custom Form' );
 
 
@@ -429,10 +447,10 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 	<div class="demo-section">
 		<div class="demo-header">
 			<h2>📧 Demo 1: Simple Contact Form</h2>
-			<p>Ultra-simple contact form using the pre-built Form::contact() method</p>
+			<p>Ultra-simple contact form using the pre-built Form_Factory::contact() method</p>
 		</div>
 		<div class="demo-code">
-			<pre><code>$contact_form = Form::contact('contact_demo')
+			<pre><code>$contact_form = Form_Factory::contact('contact_demo')
 	->after_save(function($data) {
 		error_log('Contact: ' . $data['name']);
 	});</code></pre>
@@ -490,7 +508,7 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 			<p>Pre-built registration form with password confirmation validation</p>
 		</div>
 		<div class="demo-code">
-			<pre><code>$register_form = Form::register('user_registration_demo')
+			<pre><code>$register_form = Form_Factory::register('user_registration_demo')
 	->before_validate(function($data) {
 		if ($data['password'] !== $data['password_confirm']) {
 			throw new Exception('Passwords do not match!');
@@ -518,9 +536,9 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 		</div>
 		<div class="demo-code">
 			<pre><code>$custom_form = Form::make('custom_layout_demo')
-	->custom(function() { echo '<div class="sections">'; })
+	->render_custom(function() { echo '<div class="sections">'; })
 	->text('first_name')->required()->end()
-	->custom(function() { echo '</div><div class="sections">'; })
+	->render_custom(function() { echo '</div><div class="sections">'; })
 	->email('email')->required()->end()
 	->submit('Submit');</code></pre>
 		</div>
@@ -577,14 +595,14 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 
 			<div class="comparison-row">
 				<div class="approach">🚀 Pre-built Forms</div>
-				<div class="code">$form = Form::contact('id')->after_save($fn);</div>
+				<div class="code">$form = Form_Factory::contact('id')->after_save($fn);</div>
 				<div class="pros">Ultra-fast setup</div>
 				<div class="cons">Less customization</div>
 			</div>
 
 			<div class="comparison-row">
 				<div class="approach">🎨 Custom Layouts</div>
-				<div class="code">$form->custom($fn)->text('name')->end();</div>
+				<div class="code">$form->render_custom($fn)->text('name')->end();</div>
 				<div class="pros">Full control</div>
 				<div class="cons">More complex</div>
 			</div>

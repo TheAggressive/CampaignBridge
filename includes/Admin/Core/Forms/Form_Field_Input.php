@@ -39,6 +39,7 @@ class Form_Field_Input extends Form_Field_Base {
 			'time',
 			'color',
 			'range',
+			'hidden',
 		);
 
 		if ( ! in_array( $type, $valid_types, true ) ) {

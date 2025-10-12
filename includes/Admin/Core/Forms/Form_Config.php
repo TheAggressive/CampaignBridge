@@ -363,8 +363,31 @@ class Form_Config {
 	 *
 	 * @return self
 	 */
-	public function set_multipart(): self {
+	public function set_multipart_encoding(): self {
 		return $this->set( 'enctype', 'multipart/form-data' );
+	}
+
+	/**
+	 * Auto-detect if multipart encoding is needed based on field types
+	 *
+	 * @return self
+	 */
+	public function auto_detect_multipart_encoding(): self {
+		$has_file_fields = false;
+		$fields          = $this->get( 'fields', array() );
+
+		foreach ( $fields as $field_config ) {
+			if ( isset( $field_config['type'] ) && 'file' === $field_config['type'] ) {
+				$has_file_fields = true;
+				break;
+			}
+		}
+
+		if ( $has_file_fields ) {
+			$this->set_multipart_encoding();
+		}
+
+		return $this;
 	}
 
 	/**

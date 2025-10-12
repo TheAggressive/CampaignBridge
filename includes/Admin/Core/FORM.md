@@ -72,13 +72,13 @@ function render_settings_page() {
 
 ```php
 // Contact form
-$contact_form = Form::contact('contact_form');
+$contact_form = Form_Factory::contact('contact_form');
 
 // User registration form
-$register_form = Form::register('user_register');
+$register_form = Form_Factory::register('user_register');
 
 // Settings form (table layout)
-$settings_form = Form::settings('plugin_settings');
+$settings_form = Form_Factory::settings_api('plugin_settings');
 ```
 
 ## Basic Usage

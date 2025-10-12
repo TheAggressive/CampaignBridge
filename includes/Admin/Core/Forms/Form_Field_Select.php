@@ -33,7 +33,7 @@ class Form_Field_Select extends Form_Field_Base {
 			return;
 		}
 
-		$multiple = $this->config['multiple'] ?? false;
+		$multiple = $this->config['multiple_files'] ?? false;
 		if ( $multiple ) {
 			$attributes           .= ' multiple';
 			$this->config['name'] .= '[]'; // Handle array values for multiple select.

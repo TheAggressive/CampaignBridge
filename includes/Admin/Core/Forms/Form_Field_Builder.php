@@ -210,6 +210,19 @@ class Form_Field_Builder {
 	}
 
 	/**
+	 * Set maximum file size (for file inputs)
+	 *
+	 * @param int $bytes Maximum file size in bytes.
+	 * @return Form_Field_Builder
+	 * @throws \InvalidArgumentException If called on non-file field types.
+	 */
+	public function max_size( int $bytes ): self {
+		$this->validate_file_field_method( 'max_size()' );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'max_size' => $bytes ) );
+		return $this;
+	}
+
+	/**
 	 * Set textarea rows
 	 *
 	 * @param int $rows Number of rows.
@@ -221,13 +234,48 @@ class Form_Field_Builder {
 	}
 
 	/**
+	 * Validate that a method can only be called on file fields
+	 *
+	 * @param string $method_name Method name for error message.
+	 * @throws \InvalidArgumentException If called on non-file field types.
+	 */
+	private function validate_file_field_method( string $method_name ): void {
+		$field_config = $this->form_builder->get_config()->get_field( $this->field_name );
+
+		if ( ! $field_config || $field_config['type'] !== 'file' ) {
+			throw new \InvalidArgumentException(
+				sprintf(
+					'The %s method can only be used with file fields. Field "%s" is of type "%s".',
+					$method_name,
+					$this->field_name,
+					$field_config['type'] ?? 'unknown'
+				)
+			);
+		}
+	}
+
+	/**
 	 * Set file accept types
 	 *
 	 * @param string $accept Accept attribute value.
 	 * @return Form_Field_Builder
+	 * @throws \InvalidArgumentException If called on non-file field types.
 	 */
 	public function accept( string $accept ): self {
+		$this->validate_file_field_method( 'accept()' );
 		$this->form_builder->get_config()->update_field( $this->field_name, array( 'accept' => $accept ) );
+		return $this;
+	}
+
+	/**
+	 * Enable multiple file selection
+	 *
+	 * @return Form_Field_Builder
+	 * @throws \InvalidArgumentException If called on non-file field types.
+	 */
+	public function multiple_files(): self {
+		$this->validate_file_field_method( 'multiple_files()' );
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'multiple_files' => true ) );
 		return $this;
 	}
 

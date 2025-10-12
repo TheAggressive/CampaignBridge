@@ -166,7 +166,49 @@ class Form_Validator {
 				break;
 
 			case 'file':
-				// File validation would be handled separately during upload.
+				// File validation for processed upload data
+				if ( is_array( $value ) ) {
+					$required_keys = array( 'file', 'url', 'filename' );
+					foreach ( $required_keys as $key ) {
+						if ( ! isset( $value[ $key ] ) ) {
+							return new \WP_Error(
+								'invalid_file_data',
+								__( 'Invalid file data structure.', 'campaignbridge' )
+							);
+						}
+					}
+
+					// Validate file actually exists
+					if ( ! file_exists( $value['file'] ) ) {
+						return new \WP_Error(
+							'file_not_found',
+							__( 'Uploaded file could not be found.', 'campaignbridge' )
+						);
+					}
+
+					// Validate file size if specified
+					if ( isset( $field_config['max_size'] ) ) {
+						$file_size = filesize( $value['file'] );
+						if ( $file_size > $field_config['max_size'] ) {
+							return new \WP_Error(
+								'file_too_large',
+								sprintf(
+									/* translators: %s: maximum file size */
+									__( 'File size exceeds maximum allowed size of %s.', 'campaignbridge' ),
+									size_format( $field_config['max_size'] )
+								)
+							);
+						}
+					}
+				} elseif ( is_string( $value ) && ! empty( $value ) ) {
+					// Allow string values (URLs or attachment IDs) for existing files
+					break;
+				} elseif ( $field_config['required'] ?? false ) {
+					return new \WP_Error(
+						'file_required',
+						__( 'Please select a file to upload.', 'campaignbridge' )
+					);
+				}
 				break;
 		}
 

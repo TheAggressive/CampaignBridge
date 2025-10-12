@@ -159,8 +159,6 @@ class Form_Builder {
 		return $this;
 	}
 
-
-
 	/**
 	 * Set table layout
 	 *
@@ -206,7 +204,6 @@ class Form_Builder {
 
 		return $this;
 	}
-
 
 	/**
 	 * Set success message
@@ -348,14 +345,15 @@ class Form_Builder {
 	}
 
 	/**
-	 * Set form enctype for file uploads
+	 * Enable file uploads by setting multipart form encoding
 	 *
 	 * @return self
 	 */
-	public function multipart(): self {
-		$this->config->set_multipart();
+	public function enable_file_uploads(): self {
+		$this->config->set_multipart_encoding();
 		return $this;
 	}
+
 
 	/**
 	 * Add a text field
@@ -459,12 +457,22 @@ class Form_Builder {
 	/**
 	 * Add a file field
 	 *
-	 * @param string $name Field name.
-	 * @param string $label Field label.
+	 * @param string      $name Field name.
+	 * @param string      $label Field label.
+	 * @param string|null $accept Optional accept attribute for file types.
 	 * @return Form_Field_Builder
 	 */
-	public function file( string $name, string $label = '' ): Form_Field_Builder {
-		return $this->add_field( $name, 'file', $label );
+	public function file( string $name, string $label = '', ?string $accept = null ): Form_Field_Builder {
+		// Automatically enable file uploads (multipart encoding) when file fields are added
+		$this->enable_file_uploads();
+		$field_builder = $this->add_field( $name, 'file', $label );
+
+		// If accept parameter provided, set it automatically for convenience
+		if ( $accept !== null ) {
+			$field_builder->accept( $accept );
+		}
+
+		return $field_builder;
 	}
 
 	/**
@@ -589,6 +597,17 @@ class Form_Builder {
 	}
 
 	/**
+	 * Add a hidden field
+	 *
+	 * @param string $name  Field name.
+	 * @param string $value Field value.
+	 * @return Form_Field_Builder
+	 */
+	public function hidden( string $name, string $value = '' ): Form_Field_Builder {
+		return $this->add_field( $name, 'hidden', '' )->default( $value );
+	}
+
+	/**
 	 * Add a field with custom type
 	 *
 	 * @param string $name Field name.
@@ -677,6 +696,9 @@ class Form_Builder {
 	 * @return void
 	 */
 	public function render(): void {
+		// Auto-detect multipart encoding based on field types
+		$this->config->auto_detect_multipart_encoding();
+
 		$this->form->render();
 	}
 

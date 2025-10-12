@@ -8,6 +8,7 @@
 namespace CampaignBridge\Admin\Core\Forms;
 
 use CampaignBridge\Admin\Core\Form;
+use CampaignBridge\Admin\Core\Forms\Form_Field_File;
 
 /**
  * Form Handler - Handles form submission logic
@@ -116,14 +117,15 @@ class Form_Handler {
 	 * Handle form submission
 	 */
 	public function handle_submission(): void {
-		$method = strtoupper( $this->config->get( 'method', 'POST' ) );
+		$form_id        = $this->config->get( 'form_id', 'form' );
+		$method         = strtoupper( $this->config->get( 'method', 'POST' ) );
+		$request_method = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) );
 
-		if ( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) !== $method ) {
+		if ( $request_method !== $method ) {
 			return;
 		}
 
 		// Check if this specific form was submitted by checking for its nonce field.
-		$form_id    = $this->config->get( 'form_id', 'form' );
 		$nonce_name = $form_id . '_wpnonce';
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified immediately after this check.
@@ -218,7 +220,16 @@ class Form_Handler {
 		foreach ( $this->fields as $field_id => $field_config ) {
 			$value = $form_data[ $field_id ] ?? null;
 
-			if ( null !== $value ) {
+			// Handle file uploads first (they don't have POST values, but may have form data)
+			$field_type = $field_config['type'] ?? 'text';
+			if ( 'file' === $field_type ) {
+				$value = $this->process_file_upload( $field_id, $field_config );
+
+				// Store the processed file value
+				if ( isset( $value ) ) {
+					$data[ $field_id ] = $value;
+				}
+			} elseif ( null !== $value ) {
 				// Handle repeater field names with ___ separator (field_id___key).
 				if ( strpos( $field_id, '___' ) !== false ) {
 					list( $base_name, $key ) = explode( '___', $field_id, 2 );
@@ -241,6 +252,95 @@ class Form_Handler {
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Process file upload for a field
+	 *
+	 * @param string $field_id     Field ID.
+	 * @param array  $field_config Field configuration.
+	 * @return mixed Processed file data or null.
+	 */
+	private function process_file_upload( string $field_id, array $field_config ) {
+
+		// Get form ID to handle nested $_FILES structure
+		$form_id = $this->config->get( 'form_id', 'form' );
+
+		// Strip [] from field name for $_FILES lookup
+		$files_field_id = rtrim( $field_id, '[]' );
+
+		$file_data = null;
+
+		// Handle nested $_FILES structure (form_id[field_name])
+		if ( isset( $_FILES[ $form_id ] ) && isset( $_FILES[ $form_id ]['name'][ $files_field_id ] ) ) {
+			// Extract the nested file data
+			$nested_data = $_FILES[ $form_id ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			$file_data   = array(
+				'name'     => $nested_data['name'][ $files_field_id ] ?? '',
+				'type'     => $nested_data['type'][ $files_field_id ] ?? '',
+				'tmp_name' => $nested_data['tmp_name'][ $files_field_id ] ?? '',
+				'error'    => $nested_data['error'][ $files_field_id ] ?? UPLOAD_ERR_NO_FILE,
+				'size'     => $nested_data['size'][ $files_field_id ] ?? 0,
+			);
+		}
+		// Handle flat $_FILES structure (direct field name)
+		elseif ( isset( $_FILES[ $files_field_id ] ) ) {
+			$file_data = $_FILES[ $files_field_id ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		} else {
+			return null;
+		}
+
+		// Check if files were uploaded
+		if ( empty( $file_data ) || empty( $file_data['name'] ) || $file_data['error'] === UPLOAD_ERR_NO_FILE ) {
+			return null;
+		}
+
+		// Handle multiple files
+		if ( is_array( $file_data['name'] ) ) {
+			$file_uploader = new File_Uploader();
+			$upload_result = $file_uploader->process_multiple_uploads( $file_data, $field_config );
+
+			if ( is_wp_error( $upload_result ) ) {
+				$this->errors[] = $upload_result->get_error_message();
+				return null;
+			}
+
+			return $upload_result;
+		} else {
+			// Single file
+			$file_uploader = new File_Uploader();
+			$upload_result = $file_uploader->process_upload( $file_data, $field_config );
+
+			if ( is_wp_error( $upload_result ) ) {
+				$this->errors[] = $upload_result->get_error_message();
+				return null;
+			}
+
+			// Store upload data in field for later access
+			$field_instance = $this->create_field_instance( $field_id, $field_config, $upload_result );
+			if ( $field_instance instanceof Form_Field_File ) {
+				$field_instance->set_upload_data( $upload_result );
+			}
+
+			return $upload_result;
+		}
+	}
+
+	/**
+	 * Create field instance for processing
+	 *
+	 * @param string $field_id     Field ID.
+	 * @param array  $field_config Field configuration.
+	 * @param mixed  $value        Field value.
+	 * @return Form_Field_Interface|null Field instance.
+	 */
+	private function create_field_instance( string $field_id, array $field_config, $value ): ?Form_Field_Interface {
+		try {
+			$factory = new Form_Field_Factory();
+			return $factory->create_field( $field_id, $field_config, $value );
+		} catch ( \Exception $e ) {
+			return null;
+		}
 	}
 
 	/**

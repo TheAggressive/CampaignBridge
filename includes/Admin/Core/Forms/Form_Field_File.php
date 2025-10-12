@@ -17,6 +17,13 @@ namespace CampaignBridge\Admin\Core\Forms;
 class Form_Field_File extends Form_Field_Base {
 
 	/**
+	 * Processed upload data
+	 *
+	 * @var mixed
+	 */
+	private $upload_data;
+
+	/**
 	 * Render the input element
 	 */
 	public function render_input(): void {
@@ -28,9 +35,11 @@ class Form_Field_File extends Form_Field_Base {
 			$attributes .= sprintf( ' accept="%s"', esc_attr( $accept ) );
 		}
 
-		$multiple = $this->config['multiple'] ?? false;
+		$multiple = $this->config['multiple_files'] ?? false;
 		if ( $multiple ) {
 			$attributes .= ' multiple';
+			// Ensure the field name ends with [] for multiple files
+			$attributes = preg_replace( '/name="([^"]*)"/', 'name="$1[]"', $attributes );
 		}
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -61,6 +70,36 @@ class Form_Field_File extends Form_Field_Base {
 		} else {
 			$this->render_single_file_display( $current_value );
 		}
+	}
+
+	/**
+	 * Set processed upload data
+	 *
+	 * @param mixed $upload_data Processed upload data.
+	 * @return void
+	 */
+	public function set_upload_data( $upload_data ): void {
+		$this->upload_data = $upload_data;
+
+		// Update field value based on upload data
+		if ( is_array( $upload_data ) ) {
+			if ( isset( $upload_data['attachment_id'] ) ) {
+				$this->set_value( $upload_data['attachment_id'] );
+			} elseif ( isset( $upload_data['url'] ) ) {
+				$this->set_value( $upload_data['url'] );
+			} else {
+				$this->set_value( $upload_data );
+			}
+		}
+	}
+
+	/**
+	 * Get processed upload data
+	 *
+	 * @return mixed Upload data.
+	 */
+	public function get_upload_data() {
+		return $this->upload_data ?? null;
 	}
 
 	/**
@@ -122,7 +161,7 @@ class Form_Field_File extends Form_Field_Base {
 		}
 
 		// Multiple files.
-		if ( $this->config['multiple'] ?? false ) {
+		if ( $this->config['multiple_files'] ?? false ) {
 			$requirements[] = __( 'Multiple files allowed', 'campaignbridge' );
 		}
 

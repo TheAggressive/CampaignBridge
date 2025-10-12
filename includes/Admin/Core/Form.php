@@ -82,118 +82,6 @@ class Form {
 		return new self( $form_id, $config );
 	}
 
-	/**
-	 * Create a contact form (pre-configured)
-	 *
-	 * @param string $form_id Form ID.
-	 * @return Form
-	 */
-	public static function contact( string $form_id = 'contact' ): self {
-		return self::make(
-			$form_id,
-			array(
-				'fields' => array(
-					'name'    => array(
-						'type'     => 'text',
-						'label'    => 'Name',
-						'required' => true,
-					),
-					'email'   => array(
-						'type'     => 'email',
-						'label'    => 'Email',
-						'required' => true,
-					),
-					'subject' => array(
-						'type'  => 'text',
-						'label' => 'Subject',
-					),
-					'message' => array(
-						'type'     => 'textarea',
-						'label'    => 'Message',
-						'required' => true,
-						'rows'     => 5,
-					),
-				),
-				'hooks'  => array(
-					'after_save' => function ( $data ) {
-						\wp_mail( \get_option( 'admin_email' ), $data['subject'] ?? 'Contact Form', $data['message'] );
-					},
-				),
-			)
-		);
-	}
-
-	/**
-	 * Create a user registration form
-	 *
-	 * @param string $form_id Form ID.
-	 * @return Form
-	 */
-	public static function register( string $form_id = 'register' ): self {
-		return self::make(
-			$form_id,
-			array(
-				'fields' => array(
-					'username'         => array(
-						'type'     => 'text',
-						'label'    => 'Username',
-						'required' => true,
-					),
-					'email'            => array(
-						'type'     => 'email',
-						'label'    => 'Email',
-						'required' => true,
-					),
-					'password'         => array(
-						'type'     => 'password',
-						'label'    => 'Password',
-						'required' => true,
-					),
-					'password_confirm' => array(
-						'type'     => 'password',
-						'label'    => 'Confirm Password',
-						'required' => true,
-					),
-				),
-				'hooks'  => array(
-					'before_validate' => function ( $data ) {
-						if ( $data['password'] !== $data['password_confirm'] ) {
-							throw new \Exception( 'Passwords do not match' );
-						}
-					},
-				),
-			)
-		);
-	}
-
-	/**
-	 * Create a settings form
-	 *
-	 * @param string $form_id Form ID.
-	 * @return Form
-	 */
-	public static function settings( string $form_id = 'settings' ): self {
-		return self::make( $form_id )
-			->save_to_options() // Save to options.
-			->table() // Table layout.
-			->success( 'Settings saved successfully!' )
-			->prefix( 'my_plugin_' );
-	}
-
-	/**
-	 * Create a WordPress Settings API form
-	 *
-	 * @param string $form_id        Form ID.
-	 * @param string $settings_group Settings group name.
-	 * @return Form
-	 */
-	public static function settings_api( string $form_id = 'settings', string $settings_group = '' ): self {
-		$group = $settings_group ?: $form_id;
-		return self::make( $form_id )
-			->save_to_settings_api( $group ) // Use Settings API.
-			->table() // Table layout.
-			->success( 'Settings saved successfully!' );
-	}
 
 	/**
 	 * Constructor
@@ -303,10 +191,6 @@ class Form {
 		$this->handler->handle_submission();
 	}
 
-
-
-
-
 	/**
 	 * Render the form HTML.
 	 *
@@ -328,6 +212,11 @@ class Form {
 				$this->data_manager->get_data(),
 				$this->handler
 			);
+		}
+
+		// Handle form submission if this is a POST request and form hasn't been submitted yet
+		if ( 'POST' === strtoupper( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && ! $this->handler->is_submitted() ) {
+			$this->handler->handle_submission();
 		}
 
 		$this->renderer->render_form_open();
@@ -386,13 +275,17 @@ class Form {
 	}
 
 	/**
+	 * Configure data persistence methods
+	 */
+
+	/**
 	 * Save to WordPress options
 	 *
 	 * @param string $prefix Option prefix.
 	 * @return Form
 	 */
-	public function options( string $prefix = '' ): self {
-		$this->builder->options( $prefix );
+	public function save_to_options( string $prefix = '' ): self {
+		$this->builder->save_to_options( $prefix );
 		return $this;
 	}
 
@@ -402,10 +295,37 @@ class Form {
 	 * @param int $post_id Post ID.
 	 * @return Form
 	 */
-	public function meta( int $post_id = 0 ): self {
+	public function save_to_post_meta( int $post_id = 0 ): self {
 		$this->builder->save_to_post_meta( $post_id );
 		return $this;
 	}
+
+	/**
+	 * Save to WordPress Settings API
+	 *
+	 * @param string $group Settings group.
+	 * @return Form
+	 */
+	public function save_to_settings_api( string $group = '' ): self {
+		$this->builder->save_to_settings_api( $group );
+		return $this;
+	}
+
+	/**
+	 * Save to custom callback
+	 *
+	 * @param callable $callback Save callback.
+	 * @return Form
+	 */
+	public function save_to_custom( callable $callback ): self {
+		$this->builder->save_to_custom( $callback );
+		return $this;
+	}
+
+
+	/**
+	 * Configure form layout and appearance
+	 */
 
 	/**
 	 * Set table layout
@@ -428,15 +348,19 @@ class Form {
 	}
 
 	/**
-	 * Set custom layout
+	 * Set custom layout renderer
 	 *
 	 * @param callable $renderer Custom render function.
 	 * @return Form
 	 */
-	public function custom( callable $renderer ): self {
+	public function render_custom( callable $renderer ): self {
 		$this->builder->render_custom( $renderer );
 		return $this;
 	}
+
+	/**
+	 * Configure messages
+	 */
 
 	/**
 	 * Set success message
@@ -461,7 +385,11 @@ class Form {
 	}
 
 	/**
-	 * Set option prefix
+	 * Configure field naming and submit button
+	 */
+
+	/**
+	 * Set option prefix for field keys
 	 *
 	 * @param string $prefix Prefix for option keys.
 	 * @return Form
@@ -472,7 +400,7 @@ class Form {
 	}
 
 	/**
-	 * Set option suffix
+	 * Set option suffix for field keys
 	 *
 	 * @param string $suffix Suffix for option keys.
 	 * @return Form
@@ -483,7 +411,7 @@ class Form {
 	}
 
 	/**
-	 * Set submit button
+	 * Set submit button configuration
 	 *
 	 * @param string $text Button text.
 	 * @param string $type Button type (primary, secondary).
@@ -495,7 +423,11 @@ class Form {
 	}
 
 	/**
-	 * Add a lifecycle hook
+	 * Configure lifecycle hooks and callbacks
+	 */
+
+	/**
+	 * Add a generic lifecycle hook
 	 *
 	 * @param string   $hook     Hook name.
 	 * @param callable $callback Hook callback.
@@ -572,15 +504,10 @@ class Form {
 		return $this;
 	}
 
+
 	/**
-	 * Set form enctype for file uploads
-	 *
-	 * @return Form
+	 * Data access and manipulation methods
 	 */
-	public function multipart(): self {
-		$this->builder->multipart();
-		return $this;
-	}
 
 	/**
 	 * Get form data
@@ -609,13 +536,14 @@ class Form {
 	/**
 	 * Reload form data from source (clears cache and reloads)
 	 *
-	 * @return self
+	 * @return Form
 	 */
 	public function reload_data(): self {
 		assert( null !== $this->data_manager, 'Data manager must be initialized' );
 		$this->data_manager->reload();
 		return $this;
 	}
+
 
 	/**
 	 * Delegate method calls to the builder for fluent API

@@ -152,7 +152,9 @@ class Form_Renderer {
 		$messages = $this->handler->get_messages();
 		$errors   = $this->handler->get_errors();
 
-		if ( ! empty( $messages ) ) {
+		// Only show success messages if there are no errors
+		// This prevents confusing UX where both success and error messages appear
+		if ( ! empty( $messages ) && empty( $errors ) ) {
 			echo '<div class="notice notice-success is-dismissible">';
 			foreach ( $messages as $message ) {
 				printf( '<p>%s</p>', \esc_html( $message ) );
