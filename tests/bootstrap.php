@@ -66,6 +66,10 @@ class Bootstrap {
 	 * Load Composer dependencies.
 	 */
 	private function load_composer_dependencies(): void {
+		// Load main Composer autoloader first (required for PSR-4 autoloading).
+		require_once $this->plugin_dir . '/vendor/autoload.php';
+
+		// Load PHPUnit polyfills for WordPress test compatibility.
 		require_once $this->plugin_dir . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php';
 	}
 
@@ -87,7 +91,7 @@ class Bootstrap {
 	private function validate_tests_directory(): void {
 		if ( ! file_exists( "{$this->tests_dir}/includes/functions.php" ) ) {
 			throw new \Exception(
-				"Could not find {$this->tests_dir}/includes/functions.php, have you run bin/install-wp-tests.sh ?"
+				'Could not find ' . esc_html( $this->tests_dir ) . '/includes/functions.php, have you run bin/install-wp-tests.sh ?'
 			);
 		}
 	}
@@ -134,7 +138,7 @@ class Bootstrap {
 	}
 }
 
-// Initialize and run the bootstrap
+// Initialize and run the bootstrap.
 try {
 	$bootstrap = new Bootstrap();
 	$bootstrap->init();
@@ -142,4 +146,3 @@ try {
 	echo 'Bootstrap Error: ' . $e->getMessage() . PHP_EOL; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	exit( 1 );
 }
-
