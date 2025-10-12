@@ -38,7 +38,7 @@ class Form_Field_File extends Form_Field_Base {
 		$multiple = $this->config['multiple_files'] ?? false;
 		if ( $multiple ) {
 			$attributes .= ' multiple';
-			// Ensure the field name ends with [] for multiple files
+			// Ensure the field name ends with [] for multiple files.
 			$attributes = preg_replace( '/name="([^"]*)"/', 'name="$1[]"', $attributes );
 		}
 
@@ -81,7 +81,7 @@ class Form_Field_File extends Form_Field_Base {
 	public function set_upload_data( $upload_data ): void {
 		$this->upload_data = $upload_data;
 
-		// Update field value based on upload data
+		// Update field value based on upload data.
 		if ( is_array( $upload_data ) ) {
 			if ( isset( $upload_data['attachment_id'] ) ) {
 				$this->set_value( $upload_data['attachment_id'] );

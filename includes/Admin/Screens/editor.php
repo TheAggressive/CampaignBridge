@@ -7,8 +7,8 @@
  */
 
 // Get data from controller or set defaults
-$cb_templates        = $screen->get( 'templates', [] );
-$cb_recent_templates = $screen->get( 'recent_templates', [] );
+$cb_templates        = $screen->get( 'templates', array() );
+$cb_recent_templates = $screen->get( 'recent_templates', array() );
 ?>
 
 <div class="editor-screen">

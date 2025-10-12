@@ -147,7 +147,7 @@ class Form {
 			$validator
 		);
 
-		// Validate form configuration for potential issues
+		// Validate form configuration for potential issues.
 		$this->validate_configuration();
 	}
 
@@ -157,11 +157,11 @@ class Form {
 	private function validate_configuration(): void {
 		$save_method = $this->config->get( 'save_method' );
 
-		// Check if custom saving is configured but no callback is provided
+		// Check if custom saving is configured but no callback is provided.
 		if ( 'custom' === $save_method ) {
 			$hooks = $this->config->get( 'hooks', array() );
 			if ( ! isset( $hooks['save_data'] ) || ! is_callable( $hooks['save_data'] ) ) {
-				// Get notice handler and show warning
+				// Get notice handler and show warning.
 				$notice_handler = $this->container->get( 'form_notice_handler' );
 				$form_id        = $this->config->get( 'form_id', 'form' );
 
@@ -214,8 +214,8 @@ class Form {
 			);
 		}
 
-		// Handle form submission if this is a POST request and form hasn't been submitted yet
-		if ( 'POST' === strtoupper( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && ! $this->handler->is_submitted() ) {
+		// Handle form submission if this is a POST request and form hasn't been submitted yet.
+		if ( 'POST' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) ) && ! $this->handler->is_submitted() ) {
 			$this->handler->handle_submission();
 		}
 

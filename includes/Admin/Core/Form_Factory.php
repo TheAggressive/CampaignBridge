@@ -105,7 +105,7 @@ class Form_Factory {
 	 * @return Form
 	 */
 	public static function settings_api( string $form_id = 'settings', string $settings_group = '' ): Form {
-		$group = $settings_group ?: $form_id;
+		$group = $settings_group ? $settings_group : $form_id;
 		return Form::make( $form_id )
 			->save_to_settings_api( $group )
 			->table()

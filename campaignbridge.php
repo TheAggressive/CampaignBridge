@@ -178,7 +178,7 @@ class CampaignBridge_Plugin {
 					'CampaignBridge: Autoloader not found. Please reinstall the plugin.',
 					'campaignbridge'
 				);
-				printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), $message );
+				printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
 			}
 		);
 
@@ -204,7 +204,7 @@ class CampaignBridge_Plugin {
 					esc_html( $e->getMessage() ),
 					esc_html__( 'Check the error logs for more details.', 'campaignbridge' )
 				);
-				printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), $message );
+				printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
 			}
 		);
 

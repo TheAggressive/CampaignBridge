@@ -42,19 +42,19 @@ class Form_File_Uploader {
 	 * @return array|\WP_Error Upload result or error.
 	 */
 	public function process_upload( array $file, array $config = array() ): array|\WP_Error {
-		// Pre-validate file with our security checks
+		// Pre-validate file with our security checks.
 		$validation = $this->validate_file( $file, $config );
 		if ( is_wp_error( $validation ) ) {
 			return $validation;
 		}
 
-		// Use WordPress's built-in upload handling
+		// Use WordPress's built-in upload handling.
 		$upload_overrides = array(
-			'test_form'            => false, // We're not testing
+			'test_form'            => false, // We're not testing.
 			'upload_error_handler' => array( $this, 'handle_upload_error' ),
 		);
 
-		// Apply any additional overrides from config
+		// Apply any additional overrides from config.
 		if ( ! empty( $config['upload_overrides'] ) ) {
 			$upload_overrides = array_merge( $upload_overrides, $config['upload_overrides'] );
 		}
@@ -67,16 +67,16 @@ class Form_File_Uploader {
 			return new \WP_Error( 'upload_failed', $upload_result['error'] );
 		}
 
-		// Add additional metadata
+		// Add additional metadata.
 		$upload_result['filename'] = basename( $upload_result['file'] );
 		$upload_result['size']     = $file['size'];
 		$upload_result['type']     = $upload_result['type'] ?? $file['type'];
 
-		// Create WordPress attachment if requested
+		// Create WordPress attachment if requested.
 		if ( ! empty( $config['create_attachment'] ) ) {
 			$attachment_id = $this->create_attachment( $upload_result );
 			if ( is_wp_error( $attachment_id ) ) {
-				// Clean up uploaded file on attachment creation failure
+				// Clean up uploaded file on attachment creation failure.
 				$this->cleanup_file( $upload_result['file'] );
 				return $attachment_id;
 			}
@@ -97,7 +97,7 @@ class Form_File_Uploader {
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
 	public function validate_file( array $file, array $config = array() ): bool|\WP_Error {
-		// Use comprehensive Form_Security validation for all security checks
+		// Use comprehensive Form_Security validation for all security checks.
 		return $this->security->validate_file_upload( $file, $config );
 	}
 
@@ -143,7 +143,7 @@ class Form_File_Uploader {
 			return $attachment_id;
 		}
 
-		// Generate attachment metadata
+		// Generate attachment metadata.
 		$attachment_data = wp_generate_attachment_metadata( $attachment_id, $upload_result['file'] );
 		wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
@@ -163,17 +163,17 @@ class Form_File_Uploader {
 	public function process_multiple_uploads( array $files, array $config = array() ): array|\WP_Error {
 		$results = array();
 
-		// Reorganize files array for easier processing
+		// Reorganize files array for easier processing.
 		$reorganized_files = $this->reorganize_files_array( $files );
 
 		foreach ( $reorganized_files as $index => $file ) {
 			if ( empty( $file['name'] ) ) {
-				continue; // Skip empty file slots
+				continue; // Skip empty file slots.
 			}
 
 			$result = $this->process_upload( $file, $config );
 			if ( is_wp_error( $result ) ) {
-				// Clean up any successfully uploaded files on error
+				// Clean up any successfully uploaded files on error.
 				foreach ( $results as $previous_result ) {
 					if ( isset( $previous_result['file'] ) ) {
 						$this->cleanup_file( $previous_result['file'] );
@@ -194,9 +194,8 @@ class Form_File_Uploader {
 	 * @param string $file_path File path to clean up.
 	 */
 	private function cleanup_file( string $file_path ): void {
-		if ( file_exists( $file_path ) && is_writable( $file_path ) ) {
-			unlink( $file_path );
-		}
+		// wp_delete_file handles permission checks internally and fails gracefully.
+		wp_delete_file( $file_path );
 	}
 
 	/**

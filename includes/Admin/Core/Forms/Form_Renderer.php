@@ -153,7 +153,7 @@ class Form_Renderer {
 		$errors   = $this->handler->get_errors();
 
 		// Only show success messages if there are no errors
-		// This prevents confusing UX where both success and error messages appear
+		// This prevents confusing UX where both success and error messages appear.
 		if ( ! empty( $messages ) && empty( $errors ) ) {
 			echo '<div class="notice notice-success is-dismissible">';
 			foreach ( $messages as $message ) {
@@ -369,7 +369,7 @@ class Form_Renderer {
 	 */
 	public function render_form_open(): void {
 		$method  = strtolower( $this->config['method'] );
-		$action  = \esc_url( $this->config['action'] ?: '' );
+		$action  = \esc_url( $this->config['action'] ?? '' );
 		$enctype = $this->config['enctype'];
 		$classes = implode( ' ', $this->config['classes'] );
 
@@ -417,7 +417,7 @@ class Form_Renderer {
 		$submit_id   = $form_id . '_submit';
 		$submit_name = $form_id . '[submit]';
 
-		printf( '<p class="submit"><input type="submit" name="%s" id="%s" class="button button-%s" value="%s"%s /></p>', \esc_attr( $submit_name ), \esc_attr( $submit_id ), \esc_attr( $type ), \esc_attr( $text ), $attr_string ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<p class="submit"><input type="submit" name="%s" id="%s" class="button button-%s" value="%s" /></p>', \esc_attr( $submit_name ), \esc_attr( $submit_id ), \esc_attr( $type ), \esc_attr( $text ) );
 	}
 
 	/**

@@ -166,7 +166,7 @@ class Form_Validator {
 				break;
 
 			case 'file':
-				// File validation for processed upload data
+				// File validation for processed upload data.
 				if ( is_array( $value ) ) {
 					$required_keys = array( 'file', 'url', 'filename' );
 					foreach ( $required_keys as $key ) {
@@ -178,7 +178,7 @@ class Form_Validator {
 						}
 					}
 
-					// Validate file actually exists
+					// Validate file actually exists.
 					if ( ! file_exists( $value['file'] ) ) {
 						return new \WP_Error(
 							'file_not_found',
@@ -186,7 +186,7 @@ class Form_Validator {
 						);
 					}
 
-					// Validate file size if specified
+					// Validate file size if specified.
 					if ( isset( $field_config['max_size'] ) ) {
 						$file_size = filesize( $value['file'] );
 						if ( $file_size > $field_config['max_size'] ) {
@@ -201,7 +201,7 @@ class Form_Validator {
 						}
 					}
 				} elseif ( is_string( $value ) && ! empty( $value ) ) {
-					// Allow string values (URLs or attachment IDs) for existing files
+					// Allow string values (URLs or attachment IDs) for existing files.
 					break;
 				} elseif ( $field_config['required'] ?? false ) {
 					return new \WP_Error(

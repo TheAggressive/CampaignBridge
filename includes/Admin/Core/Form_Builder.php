@@ -463,12 +463,12 @@ class Form_Builder {
 	 * @return Form_Field_Builder
 	 */
 	public function file( string $name, string $label = '', ?string $accept = null ): Form_Field_Builder {
-		// Automatically enable file uploads (multipart encoding) when file fields are added
+		// Automatically enable file uploads (multipart encoding) when file fields are added.
 		$this->enable_file_uploads();
 		$field_builder = $this->add_field( $name, 'file', $label );
 
-		// If accept parameter provided, set it automatically for convenience
-		if ( $accept !== null ) {
+		// If accept parameter provided, set it automatically for convenience.
+		if ( null !== $accept ) {
 			$field_builder->accept( $accept );
 		}
 
@@ -696,7 +696,7 @@ class Form_Builder {
 	 * @return void
 	 */
 	public function render(): void {
-		// Auto-detect multipart encoding based on field types
+		// Auto-detect multipart encoding based on field types.
 		$this->config->auto_detect_multipart_encoding();
 
 		$this->form->render();

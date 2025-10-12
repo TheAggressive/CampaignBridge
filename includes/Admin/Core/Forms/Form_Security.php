@@ -161,7 +161,7 @@ class Form_Security {
 	public function validate_file_upload( array $file, array $field_config ) {
 		// Check for upload errors.
 		if ( UPLOAD_ERR_OK !== $file['error'] ) {
-			// Log security-relevant upload errors (excluding benign cases like no file selected)
+			// Log security-relevant upload errors (excluding benign cases like no file selected).
 			if ( UPLOAD_ERR_NO_FILE !== $file['error'] ) {
 				$this->log_security_event(
 					'file_upload_error',
@@ -241,7 +241,7 @@ class Form_Security {
 		}
 
 		// Check file size is not zero (empty file).
-		if ( $file['size'] === 0 ) {
+		if ( 0 === $file['size'] ) {
 			return new \WP_Error(
 				'empty_file',
 				\__( 'Uploaded file is empty.', 'campaignbridge' )

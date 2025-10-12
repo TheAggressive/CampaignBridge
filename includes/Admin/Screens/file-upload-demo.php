@@ -5,28 +5,30 @@
  * This screen demonstrates the secure file upload functionality
  * including single file uploads, multiple file uploads, and
  * various validation scenarios.
+ *
+ * @package CampaignBridge\Admin\Screens
  */
 
-// Include the Form API
+// Include the Form API.
 use CampaignBridge\Admin\Core\Form;
 
 ?>
 
 <div class="wrap">
-	<h1><?php _e( 'File Upload Demo - Test Secure Uploads', 'campaignbridge' ); ?></h1>
+	<h1>File Upload Demo - Test Secure Uploads</h1>
 
 	<div class="notice notice-info">
-		<p><?php _e( 'This page demonstrates the secure file upload functionality. Upload files to test validation, security checks, and WordPress integration.', 'campaignbridge' ); ?></p>
+		<p>This page demonstrates the secure file upload functionality. Upload files to test validation, security checks, and WordPress integration.</p>
 	</div>
 
 	<div class="upload-demo-section">
-		<h2><?php _e( '🖼️ Single Image Upload', 'campaignbridge' ); ?></h2>
-		<p><?php _e( 'Upload a single image file. Only JPEG, PNG, GIF, and WebP formats are allowed.', 'campaignbridge' ); ?></p>
-		<p><small><em><?php _e( 'Both syntaxes work: ->file(name, label, accept) OR ->file(name, label)->accept(accept)', 'campaignbridge' ); ?></em></small></p>
+		<h2>🖼️ Single Image Upload</h2>
+		<p>Upload a single image file. Only JPEG, PNG, GIF, and WebP formats are allowed.</p>
+		<p><small><em>Both syntaxes work: ->file(name, label, accept) OR ->file(name, label)->accept(accept)</em></small></p>
 
 		<?php
 		Form::make( 'single_image_upload' )
-				->file( 'profile_image', 'Profile Image', 'image/*' ) // Convenient: accept parameter built-in
+				->file( 'profile_image', 'Profile Image', 'image/*' ) // Convenient: accept parameter built-in.
 				->description( 'Upload a profile image (max 2MB)' )
 				->max_size( 2097152 ) // 2MB
 				->save_to_options( 'file_upload_demo_' )
@@ -36,12 +38,12 @@ use CampaignBridge\Admin\Core\Form;
 	</div>
 
 	<div class="upload-demo-section">
-		<h2><?php _e( '📄 Document Upload with Validation', 'campaignbridge' ); ?></h2>
-		<p><?php _e( 'Upload a document. Only PDF, DOC, DOCX, and TXT files are allowed with size limits.', 'campaignbridge' ); ?></p>
+		<h2>📄 Document Upload with Validation</h2>
+		<p>'Upload a document. Only PDF, DOC, DOCX, and TXT files are allowed with size limits.</p>
 
 		<?php
 		Form::make( 'document_upload' )
-			->file( 'document', 'Document File', '.pdf,.doc,.docx,.txt' ) // Convenient: accept parameter built-in
+			->file( 'document', 'Document File', '.pdf,.doc,.docx,.txt' ) // Convenient: accept parameter built-in.
 			->description( 'Upload a document (max 5MB, PDF/DOC/TXT only)' )
 			->max_size( 5242880 ) // 5MB
 			->required()
@@ -52,8 +54,8 @@ use CampaignBridge\Admin\Core\Form;
 	</div>
 
 	<div class="upload-demo-section">
-		<h2><?php _e( '📎 Multiple File Upload', 'campaignbridge' ); ?></h2>
-		<p><?php _e( 'Upload multiple files at once. Maximum 3 files, various formats allowed.', 'campaignbridge' ); ?></p>
+		<h2>📎 Multiple File Upload</h2>
+		<p>Upload multiple files at once. Maximum 3 files, various formats allowed.</p>
 
 		<?php
 		Form::make( 'multiple_files_upload' )
@@ -61,7 +63,7 @@ use CampaignBridge\Admin\Core\Form;
 			->accept( 'image/*,.pdf,.txt' )
 			->description( 'Upload multiple files (max 3 files, 1MB each)' )
 			->max_size( 1048576 ) // 1MB per file
-			->multiple_files() // Clearer naming than multiple()
+			->multiple_files() // Clearer naming than multiple().
 			->save_to_options( 'file_upload_demo_' )
 			->success( 'Files uploaded successfully!' )
 			->render();
@@ -69,8 +71,8 @@ use CampaignBridge\Admin\Core\Form;
 	</div>
 
 	<div class="upload-demo-section">
-		<h2><?php _e( '🛡️ Security Test - Dangerous Files', 'campaignbridge' ); ?></h2>
-		<p><?php _e( 'Test security by trying to upload potentially dangerous files (PHP, executable files, etc.). These should be rejected.', 'campaignbridge' ); ?></p>
+		<h2>🛡️ Security Test - Dangerous Files</h2>
+		<p>Test security by trying to upload potentially dangerous files (PHP, executable files, etc.). These should be rejected.</p>
 
 		<?php
 		Form::make( 'security_test_upload' )
@@ -82,7 +84,7 @@ use CampaignBridge\Admin\Core\Form;
 	</div>
 
 	<div class="upload-demo-section">
-		<h2><?php _e( '📊 Upload Statistics', 'campaignbridge' ); ?></h2>
+		<h2>📊 Upload Statistics</h2>
 		<div class="upload-stats">
 			<?php
 			$uploaded_files = get_option( 'file_upload_demo_profile_image', array() );
@@ -92,31 +94,31 @@ use CampaignBridge\Admin\Core\Form;
 			?>
 
 			<div class="stat-card">
-				<h4><?php _e( 'Profile Images', 'campaignbridge' ); ?></h4>
+				<h4>Profile Images</h4>
 				<?php if ( ! empty( $uploaded_files ) && isset( $uploaded_files['url'] ) ) : ?>
-					<p><strong><?php _e( 'File:', 'campaignbridge' ); ?></strong> <?php echo esc_html( $uploaded_files['filename'] ?? 'Unknown' ); ?></p>
-					<p><strong><?php _e( 'URL:', 'campaignbridge' ); ?></strong> <a href="<?php echo esc_url( $uploaded_files['url'] ); ?>" target="_blank"><?php echo esc_html( $uploaded_files['url'] ); ?></a></p>
-					<p><strong><?php _e( 'Size:', 'campaignbridge' ); ?></strong>
+					<p><strong>File:</strong> <?php echo esc_html( $uploaded_files['filename'] ?? 'Unknown' ); ?></p>
+					<p><strong>URL:</strong> <a href="<?php echo esc_url( $uploaded_files['url'] ); ?>" target="_blank"><?php echo esc_html( $uploaded_files['url'] ); ?></a></p>
+					<p><strong>Size:</strong>
 					<?php
 						$file_path = $uploaded_files['file'] ?? '';
 					if ( ! empty( $file_path ) && file_exists( $file_path ) ) {
 						echo esc_html( size_format( filesize( $file_path ) ) );
 					} else {
-						_e( 'File not found', 'campaignbridge' );
+						'File not found';
 					}
 					?>
 					</p>
 				<?php else : ?>
-					<p><?php _e( 'No profile image uploaded yet.', 'campaignbridge' ); ?></p>
+					<p>No profile image uploaded yet.</p>
 				<?php endif; ?>
 			</div>
 
 			<div class="stat-card">
-				<h4><?php _e( 'Documents', 'campaignbridge' ); ?></h4>
+				<h4>Documents</h4>
 				<?php if ( ! empty( $document_files ) && isset( $document_files['url'] ) ) : ?>
-					<p><strong><?php _e( 'File:', 'campaignbridge' ); ?></strong> <?php echo esc_html( $document_files['filename'] ?? 'Unknown' ); ?></p>
-					<p><strong><?php _e( 'URL:', 'campaignbridge' ); ?></strong> <a href="<?php echo esc_url( $document_files['url'] ); ?>" target="_blank"><?php echo esc_html( $document_files['url'] ); ?></a></p>
-					<p><strong><?php _e( 'Size:', 'campaignbridge' ); ?></strong>
+					<p><strong>File:</strong> <?php echo esc_html( $document_files['filename'] ?? 'Unknown' ); ?></p>
+					<p><strong>URL:</strong> <a href="<?php echo esc_url( $document_files['url'] ); ?>" target="_blank"><?php echo esc_html( $document_files['url'] ); ?></a></p>
+					<p><strong>Size:</strong>
 					<?php
 						$file_path = $document_files['file'] ?? '';
 					if ( ! empty( $file_path ) && file_exists( $file_path ) ) {
