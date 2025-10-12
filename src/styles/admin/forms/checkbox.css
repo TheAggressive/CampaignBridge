@@ -1,0 +1,174 @@
+/**
+ * CampaignBridge Checkbox Component
+ *
+ * Styled checkbox component for form fields.
+ * Follows BEM CSS class naming conventions.
+ */
+
+.campaignbridge-checkbox {
+  /* Checkbox group container */
+  &-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Individual checkbox option wrapper */
+  &-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* Checkbox input styling */
+  &-input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    appearance: none;
+    border: 2px solid #d1d5db; /* gray-300 */
+    border-radius: 0.25rem;
+    background-color: #ffffff;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+
+    /* Custom checkmark */
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border: solid #ffffff;
+      border-width: 0 0 2px 2px;
+      transform: translate(-50%, -50%) rotate(45deg) scale(0);
+      transition: transform 0.15s ease-in-out;
+    }
+
+    /* Checked state */
+    &:checked {
+      border-color: #2563eb; /* blue-600 */
+      background-color: #2563eb;
+
+      &::before {
+        transform: translate(-50%, -50%) rotate(45deg) scale(0.8);
+      }
+    }
+
+    /* Indeterminate state (for partial selections) */
+    &:indeterminate {
+      border-color: #2563eb; /* blue-600 */
+      background-color: #2563eb;
+
+      &::before {
+        border-width: 0 0 2px 0;
+        width: 8px;
+        height: 2px;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    /* Focus state */
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Hover state */
+    &:hover:not(:checked):not(:indeterminate) {
+      border-color: #9ca3af; /* gray-400 */
+    }
+
+    /* Disabled state */
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      border-color: #d1d5db;
+
+      &:checked,
+      &:indeterminate {
+        background-color: #9ca3af; /* gray-400 */
+      }
+    }
+  }
+
+  /* Checkbox label */
+  &-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #374151; /* gray-700 */
+    line-height: 1.25rem;
+    margin-bottom: 0;
+    flex: 1;
+
+    /* Hover state for the label */
+    &:hover .campaignbridge-checkbox-input:not(:checked):not(:indeterminate) {
+      border-color: #9ca3af; /* gray-400 */
+    }
+  }
+
+  /* Checkbox text content */
+  &-text {
+    flex: 1;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  /* Field wrapper for checkboxes */
+  &-field-wrapper {
+    .campaignbridge-checkbox-group {
+      margin-top: 0.5rem;
+    }
+  }
+}
+
+/* Layout variants */
+.campaignbridge-checkbox {
+  /* Horizontal layout */
+  &-group--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+
+    .campaignbridge-checkbox-option {
+      flex-direction: row;
+      align-items: flex-start;
+      margin-bottom: 0;
+    }
+
+    .campaignbridge-checkbox-input {
+      margin-top: 0.125rem;
+    }
+  }
+
+  /* Compact layout */
+  &-group--compact {
+    gap: 0.5rem;
+
+    .campaignbridge-checkbox-option {
+      gap: 0.5rem;
+    }
+
+    .campaignbridge-checkbox-text {
+      font-size: 0.8125rem;
+    }
+  }
+
+  /* Inline layout (no bullets, side by side) */
+  &-group--inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    .campaignbridge-checkbox-option {
+      margin-bottom: 0;
+    }
+  }
+}

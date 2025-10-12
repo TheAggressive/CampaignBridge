@@ -136,26 +136,13 @@ class Admin {
 			return;
 		}
 
-		// Global admin CSS.
-		wp_enqueue_style(
-			'cb-admin-global',
-			\CampaignBridge_Plugin::url() . 'dist/styles/styles.css',
-			array(),
-			\CampaignBridge_Plugin::VERSION
-		);
-
-		// Global admin JS.
-		wp_enqueue_script(
-			'cb-admin-global',
-			\CampaignBridge_Plugin::url() . 'dist/scripts/admin/settings.js',
-			array(),
-			\CampaignBridge_Plugin::VERSION,
-			true
-		);
+		// Global admin assets using Asset_Manager.
+		Asset_Manager::enqueue_asset( 'cb-admin-global-styles', 'dist/styles/styles.asset.php' );
+		Asset_Manager::enqueue_asset( 'cb-admin-global-scripts', 'dist/scripts/admin/settings.asset.php' );
 
 		// Localize global data.
 		wp_localize_script(
-			'cb-admin-global',
+			'cb-admin-global-scripts',
 			'campaignBridge',
 			array(
 				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),

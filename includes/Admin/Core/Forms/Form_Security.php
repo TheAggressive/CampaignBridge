@@ -308,7 +308,7 @@ class Form_Security {
 	 * @param array $field_config Field configuration.
 	 * @return bool|\WP_Error True if valid, \WP_Error if invalid.
 	 */
-	public function validate_file_upload( array $file, array $field_config ) {
+	public function validate_file_upload( array $file, array $field_config, bool $skip_upload_check = false ) {
 		// Check for upload errors.
 		if ( UPLOAD_ERR_OK !== $file['error'] ) {
 			// Log security-relevant upload errors (excluding benign cases like no file selected).
@@ -328,8 +328,8 @@ class Form_Security {
 			);
 		}
 
-		// Verify file is actually uploaded via HTTP POST.
-		if ( ! is_uploaded_file( $file['tmp_name'] ) ) {
+		// Verify file is actually uploaded via HTTP POST (can be skipped for testing).
+		if ( ! $skip_upload_check && ! is_uploaded_file( $file['tmp_name'] ) ) {
 			$this->log_security_event(
 				'invalid_upload_method',
 				array(

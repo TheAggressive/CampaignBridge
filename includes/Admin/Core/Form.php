@@ -259,8 +259,8 @@ class Form {
 			$this->handler->handle_submission();
 		}
 
+		$this->renderer->enqueue_form_styles();
 		$this->renderer->render_form_open();
-		$this->renderer->render_switch_styles();
 
 		// Only render messages if explicitly requested (for backward compatibility).
 		if ( $include_messages ) {

@@ -118,12 +118,17 @@ class Screen_Context {
 	 * @param string|null $version The version of the style.
 	 */
 	public function enqueue_style( string $handle, string $src, array $deps = array(), ?string $version = null ): void {
-		wp_enqueue_style(
-			'cb-' . $handle,
-			\CampaignBridge_Plugin::url() . $src,
-			array_merge( array( 'cb-admin-global' ), $deps ),
-			$version ?? \CampaignBridge_Plugin::VERSION
+		// Convert relative src to full asset path for Asset_Manager.
+		$asset_path = str_replace( \CampaignBridge_Plugin::url(), '', $src );
+
+		// For traditional assets without .asset.php files, we need to create a mock asset data.
+		$asset_data = array(
+			'dependencies' => array_merge( array( 'cb-admin-global-styles' ), $deps ),
+			'version'      => $version ?? \CampaignBridge_Plugin::VERSION,
 		);
+
+		// Use Asset_Manager behind the scenes.
+		\CampaignBridge\Admin\Asset_Manager::enqueue_asset_style( 'cb-' . $handle, $asset_path, $asset_data );
 	}
 
 	/**
@@ -136,13 +141,56 @@ class Screen_Context {
 	 * @param bool        $in_footer Whether to enqueue the script in the footer.
 	 */
 	public function enqueue_script( string $handle, string $src, array $deps = array(), ?string $version = null, bool $in_footer = true ): void {
-		wp_enqueue_script(
-			'cb-' . $handle,
-			\CampaignBridge_Plugin::url() . $src,
-			$deps,
-			$version ?? \CampaignBridge_Plugin::VERSION,
-			$in_footer
+		// Convert relative src to full asset path for Asset_Manager.
+		$asset_path = str_replace( \CampaignBridge_Plugin::url(), '', $src );
+
+		// For traditional assets without .asset.php files, we need to create a mock asset data.
+		$asset_data = array(
+			'dependencies' => $deps,
+			'version'      => $version ?? \CampaignBridge_Plugin::VERSION,
+			'in_footer'    => $in_footer,
 		);
+
+		// Use Asset_Manager behind the scenes.
+		\CampaignBridge\Admin\Asset_Manager::enqueue_asset_script( 'cb-' . $handle, $asset_path, $asset_data );
+	}
+
+	/**
+	 * Prepare asset data by loading from .asset.php file or creating defaults.
+	 *
+	 * @param string $asset_file_path Asset file path.
+	 * @param array  $additional_deps Additional dependencies.
+	 * @param array  $default_deps    Default dependencies if no .asset.php file.
+	 * @param bool   $in_footer       Whether to load script in footer (scripts only).
+	 * @return array Asset data array.
+	 */
+	private function prepare_asset_data( string $asset_file_path, array $additional_deps, array $default_deps = array(), bool $in_footer = true ): array {
+		// Try to load asset data from corresponding .asset.php file.
+		$asset_php_path = str_replace( array( '.js', '.css' ), '.asset.php', $asset_file_path );
+		$asset_data     = \CampaignBridge\Admin\Asset_Manager::load_asset_data_static( $asset_php_path );
+
+		if ( $asset_data ) {
+			// Merge dependencies for .asset.php files.
+			$asset_data['dependencies'] = array_merge( $default_deps, $asset_data['dependencies'], $additional_deps );
+
+			// Set footer option for scripts.
+			if ( str_ends_with( $asset_file_path, '.js' ) ) {
+				$asset_data['in_footer'] = $in_footer;
+			}
+		} else {
+			// No .asset.php file found - create default asset data for direct file paths.
+			$asset_data = array(
+				'dependencies' => array_merge( $default_deps, $additional_deps ),
+				'version'      => \CampaignBridge_Plugin::VERSION,
+			);
+
+			// Set footer option for scripts.
+			if ( str_ends_with( $asset_file_path, '.js' ) ) {
+				$asset_data['in_footer'] = $in_footer;
+			}
+		}
+
+		return $asset_data;
 	}
 
 	/**
@@ -154,32 +202,10 @@ class Screen_Context {
 	 * @return bool True if the asset was enqueued, false otherwise.
 	 */
 	public function asset_enqueue_style( string $handle, string $asset_file_path, array $additional_deps = array() ): bool {
-		$asset_file = \CampaignBridge_Plugin::path() . $asset_file_path;
-		if ( ! file_exists( $asset_file ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( "CampaignBridge: Asset file not found: {$asset_file}" );
-			}
-			return false;
-		}
+		$asset_data = $this->prepare_asset_data( $asset_file_path, $additional_deps, array( 'cb-admin-global-styles' ) );
 
-		$asset    = require $asset_file;
-		$css_file = str_replace( '.asset.php', '.css', $asset_file_path );
-
-		if ( ! file_exists( \CampaignBridge_Plugin::path() . $css_file ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( "CampaignBridge: CSS file not found: {$css_file}" );
-			}
-			return false;
-		}
-
-		wp_enqueue_style(
-			'cb-' . $handle,
-			\CampaignBridge_Plugin::url() . $css_file,
-			array_merge( array( 'cb-admin-global' ), $asset['dependencies'] ?? array(), $additional_deps ),
-			$asset['version'] ?? \CampaignBridge_Plugin::VERSION
-		);
+		// Use Asset_Manager to enqueue.
+		\CampaignBridge\Admin\Asset_Manager::enqueue_asset_style( 'cb-' . $handle, $asset_file_path, $asset_data );
 
 		return true;
 	}
@@ -194,33 +220,10 @@ class Screen_Context {
 	 * @return bool True if the asset was enqueued, false otherwise.
 	 */
 	public function asset_enqueue_script( string $handle, string $asset_file_path, array $additional_deps = array(), bool $in_footer = true ): bool {
-		$asset_file = \CampaignBridge_Plugin::path() . $asset_file_path;
-		if ( ! file_exists( $asset_file ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( "CampaignBridge: Asset file not found: {$asset_file}" );
-			}
-			return false;
-		}
+		$asset_data = $this->prepare_asset_data( $asset_file_path, $additional_deps, array( 'jquery' ), $in_footer );
 
-		$asset   = require $asset_file;
-		$js_file = str_replace( '.asset.php', '.js', $asset_file_path );
-
-		if ( ! file_exists( \CampaignBridge_Plugin::path() . $js_file ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( "CampaignBridge: JS file not found: {$js_file}" );
-			}
-			return false;
-		}
-
-		wp_enqueue_script(
-			'cb-' . $handle,
-			\CampaignBridge_Plugin::url() . $js_file,
-			array_merge( $asset['dependencies'] ?? array(), $additional_deps ),
-			$asset['version'] ?? \CampaignBridge_Plugin::VERSION,
-			$in_footer
-		);
+		// Use Asset_Manager to enqueue.
+		\CampaignBridge\Admin\Asset_Manager::enqueue_asset_script( 'cb-' . $handle, $asset_file_path, $asset_data );
 
 		return true;
 	}

@@ -141,21 +141,31 @@ class File_Upload_Security_Test extends Test_Case {
 		);
 
 		foreach ( $dangerous_filenames as $filename ) {
+			// Create a temporary file that actually exists for the test
+			$temp_file = tempnam( sys_get_temp_dir(), 'upload_test' );
+			file_put_contents( $temp_file, 'test content' );
+
 			$mock_file = array(
 				'name'     => $filename,
 				'type'     => 'text/plain',
-				'tmp_name' => '/tmp/test',
+				'tmp_name' => $temp_file,
 				'error'    => UPLOAD_ERR_OK,
 				'size'     => 100,
 			);
 
-			$result = $form_security->validate_file_upload( $mock_file, array() );
+			// Mock is_uploaded_file specifically for this test
+			Monkey\Functions\when( 'is_uploaded_file' )->justReturn( true );
+
+			$result = $form_security->validate_file_upload( $mock_file, array(), true );
 
 			$this->assertWPError(
 				$result,
 				"Filename '{$filename}' should be detected as dangerous"
 			);
 			$this->assertEquals( 'invalid_filename', $result->get_error_code() );
+
+			// Clean up
+			unlink( $temp_file );
 		}
 	}
 
@@ -165,14 +175,18 @@ class File_Upload_Security_Test extends Test_Case {
 	public function test_content_mime_validation(): void {
 		$form_security = new Form_Security( 'test' );
 
-		// Mock is_uploaded_file to return true for testing
+		// Create a temporary file that actually exists for the test
+		$temp_file = tempnam( sys_get_temp_dir(), 'upload_test' );
+		file_put_contents( $temp_file, 'test content' );
+
+		// Mock is_uploaded_file specifically for this test
 		Monkey\Functions\when( 'is_uploaded_file' )->justReturn( true );
 
 		// Test MIME type validation through validate_file_upload method
 		$valid_file = array(
 			'name'     => 'test.jpg',
 			'type'     => 'image/jpeg',
-			'tmp_name' => '/tmp/test',
+			'tmp_name' => $temp_file,
 			'error'    => UPLOAD_ERR_OK,
 			'size'     => 1000,
 		);
@@ -183,15 +197,18 @@ class File_Upload_Security_Test extends Test_Case {
 		);
 
 		// Test that allowed MIME types pass validation
-		$result = $form_security->validate_file_upload( $valid_file, $config );
+		$result = $form_security->validate_file_upload( $valid_file, $config, true );
 		$this->assertTrue( $result, 'File with allowed MIME type should pass validation' );
 
 		// Test that disallowed MIME types are rejected
 		$invalid_file = array_merge( $valid_file, array( 'type' => 'application/octet-stream' ) );
-		$result       = $form_security->validate_file_upload( $invalid_file, $config );
+		$result       = $form_security->validate_file_upload( $invalid_file, $config, true );
 		$this->assertWPError( $result, 'File with disallowed MIME type should be rejected' );
 		// Accept any error code as long as the file is rejected for security reasons
 		$this->assertContains( $result->get_error_code(), array( 'upload_error', 'invalid_file_type', 'invalid_filename' ) );
+
+		// Clean up
+		unlink( $temp_file );
 	}
 
 	/**
@@ -214,7 +231,7 @@ class File_Upload_Security_Test extends Test_Case {
 				'size'     => 100,
 			);
 
-			$result = $form_security->validate_file_upload( $mock_file, array() );
+			$result = $form_security->validate_file_upload( $mock_file, array(), true );
 
 			$this->assertWPError(
 				$result,

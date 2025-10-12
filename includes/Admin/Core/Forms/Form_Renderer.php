@@ -78,71 +78,11 @@ class Form_Renderer {
 	}
 
 	/**
-	 * Render switch styles
+	 * Enqueue form styles using asset files for proper dependency and version management
 	 */
-	public function render_switch_styles(): void {
-		// Only output styles if we have switch fields.
-		$has_switch = false;
-		foreach ( $this->fields as $field_config ) {
-			if ( isset( $field_config['type'] ) && in_array( $field_config['type'], array( 'switch', 'toggle' ), true ) ) {
-				$has_switch = true;
-				break;
-			}
-		}
-
-		if ( ! $has_switch ) {
-			return;
-		}
-
-		echo '<style>
-		.campaignbridge-switch {
-			position: relative;
-			display: inline-block;
-			width: 50px;
-			height: 24px;
-		}
-		.campaignbridge-switch input {
-			opacity: 0;
-			width: 0;
-			height: 0;
-		}
-		.campaignbridge-switch__label {
-			position: absolute;
-			cursor: pointer;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
-		}
-		.campaignbridge-switch__slider {
-			position: absolute;
-			cursor: pointer;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			background-color: #ccc;
-			transition: .4s;
-			border-radius: 24px;
-		}
-		.campaignbridge-switch__slider:before {
-			position: absolute;
-			content: "";
-			height: 18px;
-			width: 18px;
-			left: 3px;
-			bottom: 3px;
-			background-color: white;
-			transition: .4s;
-			border-radius: 50%;
-		}
-		input:checked + .campaignbridge-switch__label .campaignbridge-switch__slider {
-			background-color: #007cba;
-		}
-		input:checked + .campaignbridge-switch__label .campaignbridge-switch__slider:before {
-			transform: translateX(26px);
-		}
-		</style>';
+	public function enqueue_form_styles(): void {
+		// Use Asset_Manager to enqueue all form component styles.
+		\CampaignBridge\Admin\Asset_Manager::enqueue_assets( 'dist/styles/admin/forms' );
 	}
 
 	/**

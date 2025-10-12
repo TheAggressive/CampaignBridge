@@ -1,0 +1,151 @@
+/**
+ * CampaignBridge Radio Button Component
+ *
+ * Styled radio button component for form fields.
+ * Follows BEM CSS class naming conventions.
+ */
+
+.campaignbridge-radio {
+  /* Radio group container */
+  &-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Legend for the radio group */
+  &-legend {
+    font-weight: 600;
+    color: #374151; /* gray-700 */
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Individual radio option wrapper */
+  &-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Radio input styling */
+  &-input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    appearance: none;
+    border: 2px solid #d1d5db; /* gray-300 */
+    border-radius: 50%;
+    background-color: #ffffff;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+    /* Custom radio button dot */
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #ffffff;
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.15s ease-in-out;
+    }
+
+    /* Checked state */
+    &:checked {
+      border-color: #2563eb; /* blue-600 */
+      background-color: #2563eb;
+
+      &::before {
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    /* Focus state */
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Hover state */
+    &:hover:not(:checked) {
+      border-color: #9ca3af; /* gray-400 */
+    }
+
+    /* Disabled state */
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      border-color: #d1d5db;
+
+      &:checked {
+        background-color: #9ca3af; /* gray-400 */
+      }
+    }
+  }
+
+  /* Radio label */
+  &-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #374151; /* gray-700 */
+    line-height: 1.25rem;
+    margin-bottom: 0;
+    flex: 1;
+
+    /* Hover state for the label */
+    &:hover .campaignbridge-radio-input:not(:checked) {
+      border-color: #9ca3af; /* gray-400 */
+    }
+  }
+
+  /* Radio text content */
+  &-text {
+    flex: 1;
+    margin: 0;
+  }
+
+  /* Field wrapper for radio buttons */
+  &-field-wrapper {
+    .campaignbridge-radio-group {
+      margin-top: 0.5rem;
+    }
+  }
+}
+
+/* Layout variants */
+.campaignbridge-radio {
+  /* Horizontal layout */
+  &-group--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+
+    .campaignbridge-radio-option {
+      flex-direction: row;
+      align-items: center;
+      margin-bottom: 0;
+    }
+  }
+
+  /* Compact layout */
+  &-group--compact {
+    gap: 0.5rem;
+
+    .campaignbridge-radio-option {
+      gap: 0.5rem;
+    }
+
+    .campaignbridge-radio-text {
+      font-size: 0.8125rem;
+    }
+  }
+}
