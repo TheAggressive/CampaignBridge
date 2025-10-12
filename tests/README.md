@@ -8,7 +8,7 @@ This directory contains the PHPUnit test suite for the CampaignBridge WordPress 
 
 ```
 tests/
-├── bootstrap.php           # PHPUnit bootstrap with Test_Bootstrap class
+├── Bootstrap.php           # PHPUnit bootstrap with Bootstrap class
 ├── helpers/                # Test utility classes
 │   ├── test_case.php      # Base test class (Test_Case)
 │   └── test_factory.php   # Test data factory (Test_Factory)
@@ -124,7 +124,7 @@ class My_Integration_Test extends Test_Case {
 
 ## Environment Setup
 
-The test environment is automatically configured by `bootstrap.php`:
+The test environment is automatically configured by `Bootstrap.php`:
 
 1. **WordPress Test Suite**: Loads WordPress testing framework
 2. **Plugin Loading**: Automatically loads CampaignBridge plugin
