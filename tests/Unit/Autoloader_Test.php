@@ -148,7 +148,7 @@ class Autoloader_Test extends WP_UnitTestCase {
 		}
 
 		// Use a class that should work and not be pre-loaded
-		$test_class = 'CampaignBridge\Notices';
+		$test_class = 'CampaignBridge\Admin\Controllers\Settings_Controller';
 		$was_loaded = class_exists( $test_class, false );
 
 		// If not pre-loaded, trigger loading
@@ -165,7 +165,7 @@ class Autoloader_Test extends WP_UnitTestCase {
 
 			$cached_path = $map_after_load[ $test_class ];
 			$this->assertFileExists( $cached_path, 'Cached file path should exist' );
-			$this->assertStringEndsWith( 'Notices.php', $cached_path, 'Cached path should point to correct file' );
+			$this->assertStringEndsWith( 'Settings_Controller.php', $cached_path, 'Cached path should point to correct file' );
 		} else {
 			// If already loaded by bootstrap or some other mechanism, just verify cache exists
 			$this->assertIsArray( $map_after_load, 'Class map should be an array' );
