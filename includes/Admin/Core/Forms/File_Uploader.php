@@ -58,6 +58,9 @@ class File_Uploader {
 		}
 
 		$upload_result = wp_handle_upload( $file, $upload_overrides );
+		if ( is_wp_error( $upload_result ) ) {
+			return $upload_result;
+		}
 		if ( isset( $upload_result['error'] ) ) {
 			return new \WP_Error( 'upload_failed', $upload_result['error'] );
 		}
