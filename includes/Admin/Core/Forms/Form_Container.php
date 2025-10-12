@@ -228,7 +228,52 @@ class Form_Container {
 		array $data,
 		Form_Handler $handler
 	): Form_Renderer {
-		$security = new Form_Security( $config->get( 'form_id', 'form' ) );
+		// Use service container for security to enable proper dependency injection.
+		$form_id = $config->get( 'form_id', 'form' );
+		if ( ! $this->has( "security_{$form_id}" ) ) {
+			$this->register( "security_{$form_id}", fn() => new Form_Security( $form_id ), false );
+		}
+
+		$security = $this->get( "security_{$form_id}" );
 		return new Form_Renderer( $form, $config->all(), $fields, $data, $handler, $security );
+	}
+
+	/**
+	 * Create a form cache service for performance optimization.
+	 *
+	 * @return Form_Cache
+	 */
+	public function create_form_cache(): Form_Cache {
+		if ( ! $this->has( Form_Cache::class ) ) {
+			$this->register( Form_Cache::class, fn() => new Form_Cache(), true );
+		}
+
+		return $this->get( Form_Cache::class );
+	}
+
+	/**
+	 * Create a form query optimizer for database performance.
+	 *
+	 * @return Form_Query_Optimizer
+	 */
+	public function create_query_optimizer(): Form_Query_Optimizer {
+		if ( ! $this->has( Form_Query_Optimizer::class ) ) {
+			$this->register( Form_Query_Optimizer::class, fn() => new Form_Query_Optimizer(), true );
+		}
+
+		return $this->get( Form_Query_Optimizer::class );
+	}
+
+	/**
+	 * Create a form asset optimizer for loading performance.
+	 *
+	 * @return Form_Asset_Optimizer
+	 */
+	public function create_asset_optimizer(): Form_Asset_Optimizer {
+		if ( ! $this->has( Form_Asset_Optimizer::class ) ) {
+			$this->register( Form_Asset_Optimizer::class, fn() => new Form_Asset_Optimizer(), true );
+		}
+
+		return $this->get( Form_Asset_Optimizer::class );
 	}
 }

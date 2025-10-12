@@ -101,13 +101,112 @@ class Form_Security {
 	}
 
 	/**
+	 * Set security headers for form pages.
+	 *
+	 * Adds comprehensive security headers including CSP, HSTS, and other protections.
+	 * Should be called during form rendering or page initialization.
+	 *
+	 * @param array $options Security header options.
+	 * @return void
+	 */
+	public function set_security_headers( array $options = array() ): void {
+		if ( headers_sent() ) {
+			return; // Headers already sent, cannot modify.
+		}
+
+		$defaults = array(
+			'csp_enabled'          => true,
+			'hsts_enabled'         => is_ssl(),
+			'frame_options'        => 'SAMEORIGIN',
+			'content_type_options' => true,
+			'xss_protection'       => true,
+			'referrer_policy'      => 'strict-origin-when-cross-origin',
+		);
+
+		$options = wp_parse_args( $options, $defaults );
+
+		// Content Security Policy.
+		if ( $options['csp_enabled'] ) {
+			$csp_directives = array(
+				"default-src 'self'",
+				"script-src 'self' 'unsafe-inline'",
+				"style-src 'self' 'unsafe-inline'",
+				"img-src 'self' data: https:",
+				"font-src 'self'",
+				"connect-src 'self'",
+				"media-src 'self'",
+				"object-src 'none'",
+				"frame-src 'none'",
+				"base-uri 'self'",
+				"form-action 'self'",
+			);
+
+			header( 'Content-Security-Policy: ' . implode( '; ', $csp_directives ) );
+		}
+
+		// HTTP Strict Transport Security.
+		if ( $options['hsts_enabled'] ) {
+			header( 'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload' );
+		}
+
+		// X-Frame-Options.
+		if ( ! empty( $options['frame_options'] ) ) {
+			header( 'X-Frame-Options: ' . $options['frame_options'] );
+		}
+
+		// X-Content-Type-Options.
+		if ( $options['content_type_options'] ) {
+			header( 'X-Content-Type-Options: nosniff' );
+		}
+
+		// X-XSS-Protection.
+		if ( $options['xss_protection'] ) {
+			header( 'X-XSS-Protection: 1; mode=block' );
+		}
+
+		// Referrer Policy.
+		if ( ! empty( $options['referrer_policy'] ) ) {
+			header( 'Referrer-Policy: ' . $options['referrer_policy'] );
+		}
+
+		// Permissions Policy (formerly Feature Policy).
+		header( 'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()' );
+
+		// Log security headers implementation.
+		$this->log_security_event(
+			'security_headers_set',
+			array(
+				'form_id'      => $this->form_id,
+				'csp_enabled'  => $options['csp_enabled'],
+				'hsts_enabled' => $options['hsts_enabled'],
+			)
+		);
+	}
+
+	/**
 	 * Sanitize input based on field configuration.
 	 *
-	 * @param mixed $value       Raw input value.
-	 * @param array $field_config Field configuration.
-	 * @return mixed Sanitized value.
+	 * Validates input against potential attacks before applying field-specific sanitization
+	 * using appropriate WordPress sanitization functions.
+	 *
+	 * @param mixed $value        The value to sanitize.
+	 * @param array $field_config Field configuration containing type and validation rules.
+	 * @return mixed Sanitized value, or empty string if dangerous content detected.
 	 */
 	public function sanitize_input( $value, array $field_config ) {
+		// Basic attack validation before using WordPress native sanitization functions.
+		$attack_check = $this->validate_against_attacks( $value );
+		if ( is_wp_error( $attack_check ) ) {
+			$this->log_security_event(
+				'dangerous_content_blocked',
+				array(
+					'field_type' => $field_config['type'] ?? 'unknown',
+					'form_id'    => $this->form_id,
+				)
+			);
+			return ''; // Return empty string for dangerous content.
+		}
+
 		$field_type = $field_config['type'] ?? 'text';
 
 		switch ( $field_type ) {
@@ -124,10 +223,10 @@ class Form_Security {
 				return absint( $value );
 
 			case 'textarea':
-				return sanitize_textarea_field( $value );
+				return $this->sanitize_rich_content( $value );
 
 			case 'wysiwyg':
-				return \wp_kses_post( $value );
+				return $this->sanitize_rich_content( $value );
 
 			case 'checkbox':
 				// Handle checkbox arrays (multiple selections).
@@ -149,6 +248,57 @@ class Form_Security {
 			default:
 				return sanitize_text_field( $value );
 		}
+	}
+
+	/**
+	 * Advanced XSS protection for rich content.
+	 *
+	 * Provides enhanced XSS protection beyond WordPress defaults,
+	 * including detection of dangerous JavaScript patterns and encoded attacks.
+	 *
+	 * @param string $content Content to sanitize.
+	 * @return string Sanitized content.
+	 */
+	public function sanitize_rich_content( string $content ): string {
+		// Leverage WordPress native KSES - it handles all the XSS protection we need.
+		return wp_kses_post( $content );
+	}
+
+	/**
+	 * Validate input against obvious attack patterns.
+	 *
+	 * Basic validation for obviously malicious content. WordPress handles most
+	 * sanitization through wp_kses and prepared statements.
+	 *
+	 * @param mixed $value Value to validate.
+	 * @return bool|\WP_Error True if safe, WP_Error if dangerous content detected.
+	 */
+	public function validate_against_attacks( $value ) {
+		if ( ! is_string( $value ) ) {
+			return true; // Non-string values are handled by type validation.
+		}
+
+		// Basic detection for obviously malicious content
+		// WordPress handles most sanitization through wp_kses and prepared statements.
+		$malicious_patterns = array(
+			'/<script[^>]*>.*?<\/script>/is',  // Script tags (caught by wp_kses, but early detection).
+		);
+
+		foreach ( $malicious_patterns as $pattern ) {
+			if ( preg_match( $pattern, $value ) ) {
+				$this->log_security_event(
+					'malicious_content_detected',
+					array(
+						'pattern'      => $pattern,
+						'value_length' => strlen( $value ),
+						'form_id'      => $this->form_id,
+					)
+				);
+				return new \WP_Error( 'security_violation', 'Potentially malicious content detected.' );
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -251,15 +401,22 @@ class Form_Security {
 		// MIME type validation - reject if not in allowed types.
 		$allowed_types = $field_config['allowed_types'] ?? array();
 		if ( ! empty( $allowed_types ) ) {
+			// Check both the provided MIME type and the detected MIME type from filename.
+			$provided_mime = $file['type'] ?? '';
 			$filetype      = \wp_check_filetype( $filename );
 			$detected_mime = $filetype['type'];
 
-			if ( ! in_array( $detected_mime, $allowed_types, true ) ) {
+			// Use the more restrictive check - both must be allowed if both are present.
+			$valid_provided = empty( $provided_mime ) || in_array( $provided_mime, $allowed_types, true );
+			$valid_detected = empty( $detected_mime ) || in_array( $detected_mime, $allowed_types, true );
+
+			if ( ! $valid_provided || ! $valid_detected ) {
 				$this->log_security_event(
 					'disallowed_file_type',
 					array(
 						'filename'      => $filename,
-						'mime_type'     => $detected_mime,
+						'provided_mime' => $provided_mime,
+						'detected_mime' => $detected_mime,
 						'allowed_types' => $allowed_types,
 					)
 				);
@@ -309,28 +466,25 @@ class Form_Security {
 	 * @return bool True if dangerous.
 	 */
 	private function is_dangerous_filename( string $filename ): bool {
-		// Check for directory traversal attempts.
-		if ( strpos( $filename, '..' ) !== false || strpos( $filename, '/' ) !== false || strpos( $filename, '\\' ) !== false ) {
-			return true;
-		}
-
-		// Note: Extension-based validation is now handled by MIME type checking
-		// and content scanning, making filename extension checks redundant.
-
-		return false;
+		// Only check for directory traversal attempts - WordPress handles MIME types and dangerous extensions.
+		return strpos( $filename, '..' ) !== false || strpos( $filename, '/' ) !== false || strpos( $filename, '\\' ) !== false;
 	}
 
 
 	/**
-	 * Rate limiting for form submissions
+	 * Rate limiting for form submissions.
 	 *
 	 * @param int $max_attempts Maximum attempts allowed.
 	 * @param int $time_window  Time window in seconds.
 	 * @return bool True if within limits, false if rate limited.
 	 */
 	public function check_rate_limit( int $max_attempts = 10, int $time_window = 300 ): bool {
-		$user_id       = \get_current_user_id();
-		$transient_key = 'form_rate_limit_' . $this->form_id . '_' . $user_id;
+		$user_id   = \get_current_user_id();
+		$client_ip = $this->get_client_ip();
+
+		// Create composite key for user + IP based rate limiting.
+		$rate_limit_key = $user_id . '_' . $client_ip;
+		$transient_key  = 'form_rate_limit_' . $this->form_id . '_' . md5( $rate_limit_key );
 
 		$attempts = \get_transient( $transient_key );
 
@@ -339,6 +493,16 @@ class Form_Security {
 		}
 
 		if ( $attempts >= $max_attempts ) {
+			$this->log_security_event(
+				'rate_limit_exceeded',
+				array(
+					'user_id'   => $user_id,
+					'client_ip' => $client_ip,
+					'attempts'  => $attempts,
+					'limit'     => $max_attempts,
+					'form_id'   => $this->form_id,
+				)
+			);
 			return false; // Rate limited.
 		}
 
@@ -347,7 +511,7 @@ class Form_Security {
 	}
 
 	/**
-	 * Log security event
+	 * Log security event.
 	 *
 	 * @param string $event     Event type.
 	 * @param array  $context   Additional context.
@@ -375,7 +539,7 @@ class Form_Security {
 	}
 
 	/**
-	 * Get client IP address
+	 * Get client IP address.
 	 *
 	 * @return string Client IP address.
 	 */

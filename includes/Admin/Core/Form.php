@@ -13,6 +13,10 @@ namespace CampaignBridge\Admin\Core;
 use CampaignBridge\Admin\Core\Form_Builder;
 use CampaignBridge\Admin\Core\Forms\Form_Config;
 use CampaignBridge\Admin\Core\Forms\Form_Container;
+use CampaignBridge\Admin\Core\Forms\Form_Cache;
+use CampaignBridge\Admin\Core\Forms\Form_Query_Optimizer;
+use CampaignBridge\Admin\Core\Forms\Form_Asset_Optimizer;
+use CampaignBridge\Admin\Core\Forms\Form_Security;
 
 /**
  * Form Facade - The most developer friendly form API
@@ -41,6 +45,34 @@ class Form {
 	 * @var Form_Container
 	 */
 	private Form_Container $container;
+
+	/**
+	 * Form cache for performance optimization
+	 *
+	 * @var Form_Cache
+	 */
+	private Form_Cache $cache;
+
+	/**
+	 * Query optimizer for database performance
+	 *
+	 * @var Form_Query_Optimizer
+	 */
+	private Form_Query_Optimizer $query_optimizer;
+
+	/**
+	 * Asset optimizer for loading performance
+	 *
+	 * @var Form_Asset_Optimizer
+	 */
+	private Form_Asset_Optimizer $asset_optimizer;
+
+	/**
+	 * Security handler for form validation and protection
+	 *
+	 * @var Form_Security
+	 */
+	private Form_Security $security;
 
 	/**
 	 * Whether the form has been initialized
@@ -99,6 +131,15 @@ class Form {
 		// Initialize form builder.
 		$this->builder = new Form_Builder( $this->config, $this );
 
+		// Initialize cache for performance optimization.
+		$this->cache = $this->container->create_form_cache();
+
+		// Initialize query optimizer for database performance.
+		$this->query_optimizer = $this->container->create_query_optimizer();
+
+		// Initialize asset optimizer for loading performance.
+		$this->asset_optimizer = $this->container->create_asset_optimizer();
+
 		// Services will be initialized lazily to capture all fields.
 		// DO NOT call initialize_services() here - fields are added after construction!
 	}
@@ -126,8 +167,8 @@ class Form {
 		$fields  = $this->config->get_fields();
 
 		// Get security instance configured for this form.
-		$security = $this->container->get( 'form_security' );
-		$security->set_form_id( $form_id );
+		$this->security = $this->container->get( 'form_security' );
+		$this->security->set_form_id( $form_id );
 
 		// Get validator instance.
 		$validator = $this->container->get( 'form_validator' );
@@ -560,5 +601,147 @@ class Form {
 
 		// Method not found.
 		throw new \BadMethodCallException( "Method '{$method}' does not exist on " . __CLASS__ ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+	}
+
+	/**
+	 * Get the form cache instance for performance optimization.
+	 *
+	 * @return Form_Cache Form cache instance.
+	 */
+	public function get_cache(): Form_Cache {
+		return $this->cache;
+	}
+
+	/**
+	 * Cache the current form configuration.
+	 *
+	 * @param int $expiry Cache expiry time in seconds (default: 1 hour).
+	 * @return bool True on success, false on failure.
+	 */
+	public function cache_config( int $expiry = HOUR_IN_SECONDS ): bool {
+		$form_id          = $this->config->get( 'form_id' );
+		$config_cache_key = "config_{$form_id}";
+
+		return $this->cache->set_form_config( $config_cache_key, $this->config->all(), $expiry );
+	}
+
+	/**
+	 * Cache the current form fields.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public function cache_fields(): bool {
+		$form_id = $this->config->get( 'form_id' );
+		$fields  = $this->config->get_fields();
+
+		return $this->cache->set_form_fields( $form_id, $fields );
+	}
+
+	/**
+	 * Clear all cache entries for this form.
+	 *
+	 * @return void
+	 */
+	public function clear_cache(): void {
+		$form_id = $this->config->get( 'form_id' );
+		$this->cache->invalidate_form_cache( $form_id );
+	}
+
+	/**
+	 * Get the query optimizer instance for database performance.
+	 *
+	 * @return Form_Query_Optimizer Query optimizer instance.
+	 */
+	public function get_query_optimizer(): Form_Query_Optimizer {
+		return $this->query_optimizer;
+	}
+
+	/**
+	 * Monitor performance of a form operation.
+	 *
+	 * @param string   $operation_name Name of the operation.
+	 * @param callable $operation      The operation to monitor.
+	 * @return mixed The result of the operation.
+	 */
+	public function monitor_performance( string $operation_name, callable $operation ) {
+		return $this->query_optimizer->monitor_query_performance( $operation_name, $operation );
+	}
+
+	/**
+	 * Get database performance recommendations.
+	 *
+	 * @return array Array of performance recommendations.
+	 */
+	public function get_performance_recommendations(): array {
+		return $this->query_optimizer->get_performance_recommendations();
+	}
+
+	/**
+	 * Get the asset optimizer instance for loading performance.
+	 *
+	 * @return Form_Asset_Optimizer Asset optimizer instance.
+	 */
+	public function get_asset_optimizer(): Form_Asset_Optimizer {
+		return $this->asset_optimizer;
+	}
+
+	/**
+	 * Enqueue optimized script for this form.
+	 *
+	 * @param string $handle    Script handle.
+	 * @param string $src       Script source URL.
+	 * @param array  $deps      Dependencies.
+	 * @param string $version   Version string.
+	 * @param bool   $in_footer Whether to load in footer.
+	 * @return void
+	 */
+	public function enqueue_script( string $handle, string $src, array $deps = array(), string $version = '', bool $in_footer = true ): void {
+		$this->asset_optimizer->enqueue_script( $handle, $src, $deps, $version, $in_footer );
+	}
+
+	/**
+	 * Enqueue optimized style for this form.
+	 *
+	 * @param string $handle  Style handle.
+	 * @param string $src     Style source URL.
+	 * @param array  $deps    Dependencies.
+	 * @param string $version Version string.
+	 * @param string $media   Media type.
+	 * @return void
+	 */
+	public function enqueue_style( string $handle, string $src, array $deps = array(), string $version = '', string $media = 'all' ): void {
+		$this->asset_optimizer->enqueue_style( $handle, $src, $deps, $version, $media );
+	}
+
+	/**
+	 * Add conditional asset loading rule.
+	 *
+	 * @param string   $asset_handle Asset handle.
+	 * @param callable $condition   Condition function.
+	 * @param string   $type        Asset type ('script' or 'style').
+	 * @return void
+	 */
+	public function add_asset_condition( string $asset_handle, callable $condition, string $type = 'script' ): void {
+		$this->asset_optimizer->add_conditional_rule( $asset_handle, $condition, $type );
+	}
+
+	/**
+	 * Enable security headers for this form.
+	 *
+	 * Adds comprehensive security headers including CSP, HSTS, and other protections
+	 * to enhance security when the form is rendered.
+	 *
+	 * @param array $options Security header options.
+	 * @return self
+	 */
+	public function enable_security_headers( array $options = array() ): self {
+		$this->on(
+			'before_render',
+			function () use ( $options ) {
+				$this->security->set_security_headers( $options );
+			}
+		);
+
+		return $this;
 	}
 }
