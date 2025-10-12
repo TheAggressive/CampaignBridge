@@ -90,11 +90,11 @@ class Form_Handler {
 	/**
 	 * Constructor
 	 *
-	 * @param Form|null           $form      Parent form instance.
-	 * @param Form_Config         $config    Form configuration.
-	 * @param array               $fields    Form fields configuration.
-	 * @param Form_Security       $security  Security handler.
-	 * @param Form_Validator      $validator Form validator.
+	 * @param Form|null           $form           Parent form instance.
+	 * @param Form_Config         $config         Form configuration.
+	 * @param array               $fields         Form fields configuration.
+	 * @param Form_Security       $security       Security handler.
+	 * @param Form_Validator      $validator      Form validator.
 	 * @param Form_Notice_Handler $notice_handler Notice handler.
 	 */
 	public function __construct(
@@ -223,12 +223,12 @@ class Form_Handler {
 		foreach ( $this->fields as $field_id => $field_config ) {
 			$value = $form_data[ $field_id ] ?? null;
 
-			// Handle file uploads first (they don't have POST values, but may have form data)
+			// Handle file uploads first (they don't have POST values, but may have form data).
 			$field_type = $field_config['type'] ?? 'text';
 			if ( 'file' === $field_type ) {
 				$value = $this->process_file_upload( $field_id, $field_config );
 
-				// Store the processed file value
+				// Store the processed file value.
 				if ( isset( $value ) ) {
 					$data[ $field_id ] = $value;
 				}
@@ -265,19 +265,24 @@ class Form_Handler {
 	 * @return mixed Processed file data or null.
 	 */
 	private function process_file_upload( string $field_id, array $field_config ) {
+		// Security: This method should only be called after nonce verification in handle_submission().
+		if ( ! $this->is_submitted ) {
+			return null;
+		}
 
-		// Get form ID to handle nested $_FILES structure
+		// Get form ID to handle nested $_FILES structure.
 		$form_id = $this->config->get( 'form_id', 'form' );
 
-		// Strip [] from field name for $_FILES lookup
+		// Strip [] from field name for $_FILES lookup.
 		$files_field_id = rtrim( $field_id, '[]' );
 
 		$file_data = null;
 
-		// Handle nested $_FILES structure (form_id[field_name])
-		if ( isset( $_FILES[ $form_id ] ) && isset( $_FILES[ $form_id ]['name'][ $files_field_id ] ) ) {
-			// Extract the nested file data
-			$nested_data = $_FILES[ $form_id ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		// Handle nested $_FILES structure (form_id[field_name]).
+		if ( isset( $_FILES[ $form_id ] ) && isset( $_FILES[ $form_id ]['name'][ $files_field_id ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_submission() before calling this method
+
+			// Extract the nested file data.
+			$nested_data = $_FILES[ $form_id ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput,WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_submission() before calling this method
 			$file_data   = array(
 				'name'     => $nested_data['name'][ $files_field_id ] ?? '',
 				'type'     => $nested_data['type'][ $files_field_id ] ?? '',
@@ -285,20 +290,18 @@ class Form_Handler {
 				'error'    => $nested_data['error'][ $files_field_id ] ?? UPLOAD_ERR_NO_FILE,
 				'size'     => $nested_data['size'][ $files_field_id ] ?? 0,
 			);
-		}
-		// Handle flat $_FILES structure (direct field name)
-		elseif ( isset( $_FILES[ $files_field_id ] ) ) {
-			$file_data = $_FILES[ $files_field_id ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		} elseif ( isset( $_FILES[ $files_field_id ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_submission() before calling this method
+			$file_data = $_FILES[ $files_field_id ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput,WordPress.Security.NonceVerification.Missing -- Nonce verified in handle_submission() before calling this method
 		} else {
 			return null;
 		}
 
-		// Check if files were uploaded
-		if ( empty( $file_data ) || empty( $file_data['name'] ) || $file_data['error'] === UPLOAD_ERR_NO_FILE ) {
+		// Check if files were uploaded.
+		if ( UPLOAD_ERR_NO_FILE === empty( $file_data ) || empty( $file_data['name'] ) || $file_data['error'] ) {
 			return null;
 		}
 
-		// Handle multiple files
+		// Handle multiple files.
 		if ( is_array( $file_data['name'] ) ) {
 			$file_uploader = new Form_File_Uploader();
 			$upload_result = $file_uploader->process_multiple_uploads( $file_data, $field_config );
@@ -310,7 +313,7 @@ class Form_Handler {
 
 			return $upload_result;
 		} else {
-			// Single file
+			// Single file.
 			$file_uploader = new Form_File_Uploader();
 			$upload_result = $file_uploader->process_upload( $file_data, $field_config );
 
@@ -319,7 +322,7 @@ class Form_Handler {
 				return null;
 			}
 
-			// Store upload data in field for later access
+			// Store upload data in field for later access.
 			$field_instance = $this->create_field_instance( $field_id, $field_config, $upload_result );
 			if ( $field_instance instanceof Form_Field_File ) {
 				$field_instance->set_upload_data( $upload_result );
@@ -466,10 +469,10 @@ class Form_Handler {
 	}
 
 	/**
-	 * Sanitize settings data for WordPress Settings API
+	 * Sanitize settings data
 	 *
-	 * @param mixed $data Raw data to sanitize.
-	 * @return array Sanitized data.
+	 * @param mixed $data Raw settings data.
+	 * @return array Sanitized settings data.
 	 */
 	public function sanitize_settings_data( $data ): array {
 		if ( ! is_array( $data ) ) {

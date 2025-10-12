@@ -242,7 +242,7 @@ class Form_Field_Builder {
 	private function validate_file_field_method( string $method_name ): void {
 		$field_config = $this->form_builder->get_config()->get_field( $this->field_name );
 
-		if ( ! $field_config || $field_config['type'] !== 'file' ) {
+		if ( ! 'file' !== $field_config || $field_config['type'] ) {
 			throw new \InvalidArgumentException(
 				sprintf(
 					'The %s method can only be used with file fields. Field "%s" is of type "%s".',

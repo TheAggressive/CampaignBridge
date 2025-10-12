@@ -165,9 +165,9 @@ class Form_Config {
 	}
 
 	/**
-	 * Set layout
+	 * Set form layout
 	 *
-	 * @param string $layout table, div, custom.
+	 * @param string $layout Layout type (table, div, custom).
 	 * @return self
 	 */
 	public function set_layout( string $layout ): self {
@@ -175,9 +175,9 @@ class Form_Config {
 	}
 
 	/**
-	 * Set prefix
+	 * Set a prefix for form field names and IDs
 	 *
-	 * @param string $prefix Field name prefix.
+	 * @param string $prefix Prefix string.
 	 * @return self
 	 */
 	public function set_prefix( string $prefix ): self {
