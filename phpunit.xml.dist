@@ -23,6 +23,9 @@
 		<testsuite name="security">
 			<directory suffix="Test.php">tests/Security</directory>
 		</testsuite>
+		<testsuite name="performance">
+			<directory suffix="Test.php">tests/Performance</directory>
+		</testsuite>
 	</testsuites>
 
 
