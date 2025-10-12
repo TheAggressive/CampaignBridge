@@ -2,6 +2,11 @@
 /**
  * Plugin Name: CampaignBridge
  * Description: A comprehensive WordPress plugin for creating and managing email campaigns with dynamic content from multiple post types. Features include Mailchimp integration, custom email templates, block-based email design, and automated campaign generation. Perfect for newsletters, promotional emails, and content marketing automation.
+ *
+ * Version: 0.3.2
+ *
+ * @note This version is automatically synced from package.json via pnpm version:sync
+ *
  * Requires at least: 6.5.0
  * Tested up to: 6.8.2
  * Requires PHP: 8.2
@@ -42,10 +47,13 @@ class CampaignBridge_Plugin {
 	/**
 	 * Plugin version.
 	 *
+	 * This constant is automatically synced from package.json via pnpm version:sync
+	 * Do not edit this value manually - update package.json version instead.
+	 *
 	 * @since 0.1.0
 	 * @var string
 	 */
-	public const VERSION = '0.3.0';
+	public const VERSION = '0.3.2';
 
 	/**
 	 * Minimum PHP version required.

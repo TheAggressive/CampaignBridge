@@ -407,7 +407,7 @@ $custom_form = \CampaignBridge\Admin\Core\Form::make( 'custom_layout_demo' )
 // DEMO 6: FLUENT API - Div Layout (Modern Alternative to Table)
 // ============================================================================
 $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
-	->div() // Use div layout instead of table
+	->div() // Use div layout instead of table.
 	->text( 'name', 'Name' )->required()->placeholder( 'Your name' )->end()
 	->email( 'email', 'Email' )->required()->placeholder( 'your@email.com' )->end()
 	->textarea( 'message', 'Message' )->rows( 4 )->placeholder( 'Your message...' )->end()
@@ -416,10 +416,10 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 ?>
 
 <div class="wrap">
-	<h1><?php _e( 'Complete Form System Demo - All Forms, All Approaches', 'campaignbridge' ); ?></h1>
+	<h1>Complete Form System Demo - All Forms, All Approaches</h1>
 
 	<div class="demo-intro">
-		<p><?php _e( '🎯 This comprehensive demo shows EVERY way to use the form system. From simple contact forms to complex settings panels with advanced input types.', 'campaignbridge' ); ?></p>
+		<p>🎯 This comprehensive demo shows EVERY way to use the form system. From simple contact forms to complex settings panels with advanced input types</p>
 
 		<div class="demo-stats">
 			<div class="stat">
@@ -475,16 +475,16 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 		</div>
 		<div class="demo-code">
 			<pre><code>$form = Form::settings('comprehensive_settings')
-	->text('site_name')->required()->end()
-	->email('admin_email')->required()->end()
-	->switch('enable_feature')->default(false)->end()
+	->text('site_name')->required()
+	->email('admin_email')->required()
+	->switch('enable_feature')->default(false)
 	->range('volume')->min(0)->max(100)->end()
-	->color('theme_color')->default('#007cba')->end()
-	->date('launch_date')->required()->end()
-	->select('theme')->options([...])->end()
-	->checkbox('features')->options([...])->end()
-	->textarea('description')->rows(4)->end()
-	->file('logo')->accept('image/*')->end()
+	->color('theme_color')->default('#007cba')
+	->date('launch_date')->required()
+	->select('theme')->options([...])
+	->checkbox('features')->options([...])
+	->textarea('description')->rows(4)
+	->file('logo')->accept('image/*')
 	->submit('Save All Settings');</code></pre>
 		</div>
 		<div class="demo-form">
@@ -537,9 +537,9 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 		<div class="demo-code">
 			<pre><code>$custom_form = Form::make('custom_layout_demo')
 	->render_custom(function() { echo '<div class="sections">'; })
-	->text('first_name')->required()->end()
+	->text('first_name')->required()
 	->render_custom(function() { echo '</div><div class="sections">'; })
-	->email('email')->required()->end()
+	->email('email')->required()
 	->submit('Submit');</code></pre>
 		</div>
 		<div class="demo-form">

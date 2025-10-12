@@ -31,7 +31,13 @@ class Form_Field_Radio extends Form_Field_Base {
 			return;
 		}
 
-		echo '<div class="campaignbridge-radio-group">';
+		$field_label = $this->config['label'] ?? '';
+
+		// Use fieldset and legend for proper accessibility grouping.
+		echo '<fieldset class="campaignbridge-radio-group">';
+		if ( ! empty( $field_label ) ) {
+			echo '<legend class="campaignbridge-radio-legend">' . esc_html( $field_label ) . '</legend>';
+		}
 
 		foreach ( $options as $option_value => $option_label ) {
 			$radio_id   = $this->config['id'] . '_' . sanitize_key( $option_value );
@@ -57,6 +63,53 @@ class Form_Field_Radio extends Form_Field_Base {
 			);
 		}
 
+		echo '</fieldset>';
+	}
+
+	/**
+	 * Render the field in div layout
+	 * Radio fields use fieldset/legend instead of external labels
+	 */
+	public function render_div_field(): void {
+		$wrapper_class = 'campaignbridge-field-wrapper campaignbridge-radio-field-wrapper';
+		if ( ! empty( $this->config['wrapper_class'] ) ) {
+			$wrapper_class .= ' ' . $this->config['wrapper_class'];
+		}
+
+		printf( '<div class="%s">', esc_attr( $wrapper_class ) );
+
+		$this->render_html( 'before' );
+		$this->render_input();
+		$this->render_errors();
+		$this->render_description();
+		$this->render_html( 'after' );
+
 		echo '</div>';
+	}
+
+	/**
+	 * Render the field in table layout
+	 * Radio fields use fieldset/legend instead of external labels
+	 */
+	public function render_table_row(): void {
+		$wrapper_class = 'campaignbridge-radio-field-wrapper';
+		if ( ! empty( $this->config['wrapper_class'] ) ) {
+			$wrapper_class .= ' ' . $this->config['wrapper_class'];
+		}
+
+		printf( '<tr%s>', $wrapper_class ? ' class="' . esc_attr( $wrapper_class ) . '"' : '' );
+
+		// Empty th for radio fields since label is in fieldset.
+		echo '<th scope="row"></th>';
+
+		echo '<td>';
+		$this->render_html( 'before' );
+		$this->render_input();
+		$this->render_errors();
+		$this->render_description();
+		$this->render_html( 'after' );
+		echo '</td>';
+
+		echo '</tr>';
 	}
 }

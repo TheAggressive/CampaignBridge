@@ -81,6 +81,13 @@ class Form_Handler {
 	public array $errors = array();
 
 	/**
+	 * Field-specific errors
+	 *
+	 * @var array
+	 */
+	private array $field_errors = array();
+
+	/**
 	 * Form messages
 	 *
 	 * @var array
@@ -155,7 +162,8 @@ class Form_Handler {
 		$validation_result = $this->validator->validate( $form_data, $this->fields );
 
 		if ( ! $validation_result['valid'] ) {
-			$this->errors = array_merge( $this->errors, $validation_result['errors'] );
+			$this->errors       = array_merge( $this->errors, $validation_result['errors'] );
+			$this->field_errors = $validation_result['errors']; // Field-specific errors keyed by field ID.
 			$this->run_hook( 'after_validate', $form_data, $validation_result['errors'] );
 			return;
 		}
@@ -559,6 +567,15 @@ class Form_Handler {
 	 */
 	public function get_errors(): array {
 		return $this->errors;
+	}
+
+	/**
+	 * Get field-specific errors
+	 *
+	 * @return array Array of field-specific errors.
+	 */
+	public function get_field_errors(): array {
+		return $this->field_errors;
 	}
 
 	/**

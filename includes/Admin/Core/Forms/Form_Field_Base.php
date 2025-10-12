@@ -69,6 +69,16 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	}
 
 	/**
+	 * Check if field has validation errors
+	 *
+	 * @return bool
+	 */
+	public function has_errors(): bool {
+		$errors = $this->config['errors'] ?? array();
+		return ! empty( $errors );
+	}
+
+	/**
 	 * Get field validation rules
 	 *
 	 * @return array
@@ -274,6 +284,13 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			$attributes[] = 'aria-required="true"';
 		}
 
+		// Add error state attributes if field has errors.
+		if ( $this->has_errors() ) {
+			$attributes[] = 'aria-invalid="true"';
+			$error_id     = ( $this->config['id'] ?? '' ) . '_error';
+			$attributes[] = sprintf( 'aria-errormessage="%s"', esc_attr( $error_id ) );
+		}
+
 		// Additional custom attributes.
 		if ( ! empty( $this->config['attributes'] ) ) {
 			foreach ( $this->config['attributes'] as $key => $value ) {
@@ -378,6 +395,24 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			esc_html( $label ),
 			$required_mark // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		);
+	}
+
+	/**
+	 * Render field error messages
+	 */
+	protected function render_errors(): void {
+		if ( ! $this->has_errors() ) {
+			return;
+		}
+
+		$errors   = $this->config['errors'] ?? array();
+		$error_id = ( $this->config['id'] ?? '' ) . '_error';
+
+		echo '<div class="field-errors" id="' . esc_attr( $error_id ) . '" role="alert" aria-live="polite">';
+		foreach ( $errors as $error ) {
+			echo '<span class="field-error">' . esc_html( $error ) . '</span>';
+		}
+		echo '</div>';
 	}
 
 	/**

@@ -155,7 +155,7 @@ class Form_Renderer {
 		// Only show success messages if there are no errors
 		// This prevents confusing UX where both success and error messages appear.
 		if ( ! empty( $messages ) && empty( $errors ) ) {
-			echo '<div class="notice notice-success is-dismissible">';
+			echo '<div class="notice notice-success is-dismissible" role="status" aria-live="polite" aria-atomic="true">';
 			foreach ( $messages as $message ) {
 				printf( '<p>%s</p>', \esc_html( $message ) );
 			}
@@ -163,7 +163,7 @@ class Form_Renderer {
 		}
 
 		if ( ! empty( $errors ) ) {
-			echo '<div class="notice notice-error is-dismissible">';
+			echo '<div class="notice notice-error is-dismissible" role="alert" aria-live="assertive" aria-atomic="true">';
 			foreach ( $errors as $error ) {
 				printf( '<p>%s</p>', \esc_html( $error ) );
 			}
@@ -240,9 +240,23 @@ class Form_Renderer {
 		$label      = $field_config['label'] ?? ucfirst( str_replace( '_', ' ', $field_id ) );
 		$required   = $field_config['required'] ?? false;
 
-		printf( '<tr><th scope="row"><label for="%s">%s%s</label></th><td>', \esc_attr( $field_name ), \esc_html( $label ), $required ? ' <span class="required">*</span>' : '' );
+		// Get form ID for namespacing the field ID to match the input element.
+		$form_id       = $this->config['form_id'] ?? 'form';
+		$field_id_attr = $form_id . '_' . $field_name;
+
+		printf( '<tr><th scope="row"><label for="%s">%s%s</label></th><td>', \esc_attr( $field_id_attr ), \esc_html( $label ), $required ? ' <span class="required">*</span>' : '' );
 
 		$this->render_field_input( $field_name, $field_config, $value );
+
+		// Render field-specific errors if any.
+		if ( isset( $field_config['errors'] ) && ! empty( $field_config['errors'] ) ) {
+			$error_id = $field_id_attr . '_error';
+			echo '<div class="field-errors" id="' . esc_attr( $error_id ) . '" role="alert" aria-live="polite">';
+			foreach ( $field_config['errors'] as $error ) {
+				echo '<span class="field-error">' . esc_html( $error ) . '</span>';
+			}
+			echo '</div>';
+		}
 
 		if ( isset( $field_config['description'] ) ) {
 			printf( '<p class="description">%s</p>', \esc_html( $field_config['description'] ) );
@@ -264,9 +278,23 @@ class Form_Renderer {
 		$label      = $field_config['label'] ?? ucfirst( str_replace( '_', ' ', $field_id ) );
 		$required   = $field_config['required'] ?? false;
 
-		printf( '<div class="campaignbridge-form-field"><label for="%s">%s%s</label>', \esc_attr( $field_name ), \esc_html( $label ), $required ? ' <span class="required">*</span>' : '' );
+		// Get form ID for namespacing the field ID to match the input element.
+		$form_id       = $this->config['form_id'] ?? 'form';
+		$field_id_attr = $form_id . '_' . $field_name;
+
+		printf( '<div class="campaignbridge-form-field"><label for="%s">%s%s</label>', \esc_attr( $field_id_attr ), \esc_html( $label ), $required ? ' <span class="required">*</span>' : '' );
 
 		$this->render_field_input( $field_name, $field_config, $value );
+
+		// Render field-specific errors if any.
+		if ( isset( $field_config['errors'] ) && ! empty( $field_config['errors'] ) ) {
+			$error_id = $field_id_attr . '_error';
+			echo '<div class="field-errors" id="' . esc_attr( $error_id ) . '" role="alert" aria-live="polite">';
+			foreach ( $field_config['errors'] as $error ) {
+				echo '<span class="field-error">' . esc_html( $error ) . '</span>';
+			}
+			echo '</div>';
+		}
 
 		if ( isset( $field_config['description'] ) ) {
 			printf( '<p class="description">%s</p>', \esc_html( $field_config['description'] ) );
@@ -334,6 +362,12 @@ class Form_Renderer {
 		$config['name']  = $form_id . '[' . $field_name . ']';
 		$config['id']    = $form_id . '_' . $field_name;
 		$config['value'] = $value;
+
+		// Add field-specific errors if any exist.
+		$field_errors = $this->handler->get_field_errors();
+		if ( isset( $field_errors[ $field_name ] ) ) {
+			$config['errors'] = array( $field_errors[ $field_name ] );
+		}
 
 		// Map field types to renderer classes.
 		$type_map = array(

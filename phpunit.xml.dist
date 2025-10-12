@@ -26,6 +26,9 @@
 		<testsuite name="performance">
 			<directory suffix="Test.php">tests/Performance</directory>
 		</testsuite>
+		<testsuite name="accessibility">
+			<directory suffix="Test.php">tests/Accessibility</directory>
+		</testsuite>
 	</testsuites>
 
 

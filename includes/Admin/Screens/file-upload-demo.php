@@ -29,6 +29,8 @@ use CampaignBridge\Admin\Core\Form;
 		<?php
 		Form::make( 'single_image_upload' )
 				->file( 'profile_image', 'Profile Image', 'image/*' ) // Convenient: accept parameter built-in.
+				->required()
+				->attributes( array( 'required' => 'required' ) )
 				->description( 'Upload a profile image (max 2MB)' )
 				->max_size( 2097152 ) // 2MB
 				->save_to_options( 'file_upload_demo_' )

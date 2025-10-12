@@ -120,8 +120,10 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'Blocks are not built. Run npm run build to generate blocks.' );
 		}
 
-		// Register blocks for this test
-		Blocks::register();
+		// Register blocks for this test (skip if already registered)
+		if ( ! Blocks::is_block_registered( 'campaignbridge/container' ) ) {
+			Blocks::register();
+		}
 
 		$registered_blocks = Blocks::get_registered_blocks();
 
@@ -145,8 +147,10 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'Blocks are not built. Run npm run build to generate blocks.' );
 		}
 
-		// Register blocks for this test
-		Blocks::register();
+		// Register blocks for this test (skip if already registered)
+		if ( ! Blocks::is_block_registered( 'campaignbridge/container' ) ) {
+			Blocks::register();
+		}
 
 		$registry = \WP_Block_Type_Registry::get_instance();
 
@@ -170,8 +174,10 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'Blocks are not built. Run npm run build to generate blocks.' );
 		}
 
-		// Register blocks for this test
-		Blocks::register();
+		// Register blocks for this test (skip if already registered)
+		if ( ! Blocks::is_block_registered( 'campaignbridge/container' ) ) {
+			Blocks::register();
+		}
 
 		$registry        = \WP_Block_Type_Registry::get_instance();
 		$container_block = $registry->get_registered( 'campaignbridge/container' );
@@ -200,8 +206,10 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'Blocks are not built. Run npm run build to generate blocks.' );
 		}
 
-		// Register blocks for this test
-		Blocks::register();
+		// Register blocks for this test (skip if already registered)
+		if ( ! Blocks::is_block_registered( 'campaignbridge/container' ) ) {
+			Blocks::register();
+		}
 
 		$post_blocks = array(
 			'campaignbridge/post-card',
@@ -228,8 +236,10 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'Blocks are not built. Run npm run build to generate blocks.' );
 		}
 
-		// Register blocks for this test
-		Blocks::register();
+		// Register blocks for this test (skip if already registered)
+		if ( ! Blocks::is_block_registered( 'campaignbridge/container' ) ) {
+			Blocks::register();
+		}
 
 		$registry = \WP_Block_Type_Registry::get_instance();
 
@@ -297,8 +307,10 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'Blocks are not built. Run npm run build to generate blocks.' );
 		}
 
-		// Register blocks for this test
-		Blocks::register();
+		// Register blocks for this test (skip if already registered)
+		if ( ! Blocks::is_block_registered( 'campaignbridge/container' ) ) {
+			Blocks::register();
+		}
 
 		// Test that blocks are available in the inserter
 		$available_blocks = get_dynamic_block_names();
