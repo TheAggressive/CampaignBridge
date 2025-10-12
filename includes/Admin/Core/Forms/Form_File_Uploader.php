@@ -16,7 +16,7 @@ namespace CampaignBridge\Admin\Core\Forms;
  *
  * @package CampaignBridge\Admin\Core\Forms
  */
-class File_Uploader {
+class Form_File_Uploader {
 
 	/**
 	 * Security handler instance.
@@ -27,6 +27,8 @@ class File_Uploader {
 
 	/**
 	 * Constructor
+	 *
+	 * Initializes the file uploader with security handler.
 	 */
 	public function __construct() {
 		$this->security = new Form_Security( 'file_upload' );
@@ -88,6 +90,8 @@ class File_Uploader {
 	/**
 	 * Validate uploaded file
 	 *
+	 * Performs comprehensive security validation on uploaded files.
+	 *
 	 * @param array $file   File data from $_FILES.
 	 * @param array $config Field configuration.
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
@@ -100,9 +104,11 @@ class File_Uploader {
 	/**
 	 * Handle upload errors from wp_handle_upload
 	 *
+	 * Logs security events for upload errors and returns WP_Error.
+	 *
 	 * @param array  $file    File array.
 	 * @param string $message Error message.
-	 * @return \WP_Error
+	 * @return \WP_Error Error object.
 	 */
 	public function handle_upload_error( array $file, string $message ): \WP_Error {
 		$this->security->log_security_event(
@@ -147,9 +153,12 @@ class File_Uploader {
 	/**
 	 * Process multiple file uploads
 	 *
+	 * Handles multiple file uploads from HTML multiple file inputs.
+	 * Reorganizes the $_FILES array and processes each file individually.
+	 *
 	 * @param array $files  Files data from $_FILES.
 	 * @param array $config Field configuration.
-	 * @return array|\WP_Error Upload results or error.
+	 * @return array|\WP_Error Array of upload results or error.
 	 */
 	public function process_multiple_uploads( array $files, array $config = array() ): array|\WP_Error {
 		$results = array();

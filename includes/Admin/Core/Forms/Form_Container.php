@@ -65,6 +65,8 @@ class Form_Container {
 	 *
 	 * @param string $key Service key.
 	 * @return mixed Service instance.
+	 *
+	 * @throws \InvalidArgumentException If service not found.
 	 */
 	public function get( string $key ) {
 		if ( isset( $this->shared[ $key ] ) && $this->shared[ $key ] && isset( $this->instances[ $key ] ) ) {
@@ -72,7 +74,7 @@ class Form_Container {
 		}
 
 		if ( ! isset( $this->services[ $key ] ) ) {
-			throw new \InvalidArgumentException( esc_html__( "Service '{$key}' not registered", 'campaignbridge' ) );
+			throw new \InvalidArgumentException( sprintf( esc_html__( "Service '%s' not registered", 'campaignbridge' ), esc_html( $key ) ) );
 		}
 
 		$instance = $this->services[ $key ]( $this );
@@ -132,7 +134,7 @@ class Form_Container {
 		// Form_Security factory (not shared - each form needs its own).
 		$this->register(
 			'form_security',
-			function ( $container ) {
+			function ( $_container ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Required for consistent factory signature
 				return new Form_Security( 'default' ); // Will be set by form.
 			},
 			false

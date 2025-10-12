@@ -10,7 +10,7 @@
 namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Admin\Core\Form;
-use CampaignBridge\Admin\Core\Forms\File_Uploader;
+use CampaignBridge\Admin\Core\Forms\Form_File_Uploader;
 use CampaignBridge\Admin\Core\Forms\Form_Validator;
 use CampaignBridge\Tests\Helpers\Test_Case;
 

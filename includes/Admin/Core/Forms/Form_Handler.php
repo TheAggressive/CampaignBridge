@@ -90,12 +90,12 @@ class Form_Handler {
 	/**
 	 * Constructor
 	 *
-	 * @param Form|null           $form           Parent form instance.
-	 * @param Form_Config         $config         Form configuration.
-	 * @param array               $fields         Form fields.
-	 * @param Form_Security       $security       Security instance.
-	 * @param Form_Validator      $validator      Validator instance.
-	 * @param Form_Notice_Handler $notice_handler Notice handler instance.
+	 * @param Form|null           $form      Parent form instance.
+	 * @param Form_Config         $config    Form configuration.
+	 * @param array               $fields    Form fields configuration.
+	 * @param Form_Security       $security  Security handler.
+	 * @param Form_Validator      $validator Form validator.
+	 * @param Form_Notice_Handler $notice_handler Notice handler.
 	 */
 	public function __construct(
 		?Form $form,
@@ -115,6 +115,9 @@ class Form_Handler {
 
 	/**
 	 * Handle form submission
+	 *
+	 * Processes form submission, validates data, and saves if valid.
+	 * Only processes if the correct form was submitted via the expected method.
 	 */
 	public function handle_submission(): void {
 		$form_id        = $this->config->get( 'form_id', 'form' );
@@ -297,7 +300,7 @@ class Form_Handler {
 
 		// Handle multiple files
 		if ( is_array( $file_data['name'] ) ) {
-			$file_uploader = new File_Uploader();
+			$file_uploader = new Form_File_Uploader();
 			$upload_result = $file_uploader->process_multiple_uploads( $file_data, $field_config );
 
 			if ( is_wp_error( $upload_result ) ) {
@@ -308,7 +311,7 @@ class Form_Handler {
 			return $upload_result;
 		} else {
 			// Single file
-			$file_uploader = new File_Uploader();
+			$file_uploader = new Form_File_Uploader();
 			$upload_result = $file_uploader->process_upload( $file_data, $field_config );
 
 			if ( is_wp_error( $upload_result ) ) {
@@ -531,7 +534,7 @@ class Form_Handler {
 	/**
 	 * Check if form was submitted
 	 *
-	 * @return bool
+	 * @return bool True if form was submitted.
 	 */
 	public function is_submitted(): bool {
 		return $this->is_submitted;
@@ -540,7 +543,7 @@ class Form_Handler {
 	/**
 	 * Check if form is valid
 	 *
-	 * @return bool
+	 * @return bool True if form validation passed.
 	 */
 	public function is_valid(): bool {
 		return $this->is_valid;
@@ -549,7 +552,7 @@ class Form_Handler {
 	/**
 	 * Get form errors
 	 *
-	 * @return array
+	 * @return array Array of validation errors.
 	 */
 	public function get_errors(): array {
 		return $this->errors;
@@ -558,7 +561,7 @@ class Form_Handler {
 	/**
 	 * Get form success messages
 	 *
-	 * @return array
+	 * @return array Array of success messages.
 	 */
 	public function get_messages(): array {
 		return $this->messages;

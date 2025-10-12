@@ -55,7 +55,7 @@ class Form_Config {
 	/**
 	 * Constructor
 	 *
-	 * @param array $config Initial configuration.
+	 * @param array $config Initial configuration array.
 	 */
 	public function __construct( array $config = array() ) {
 		$this->config = $this->normalize_config( $config );
@@ -66,7 +66,7 @@ class Form_Config {
 	 *
 	 * @param string $key      Configuration key.
 	 * @param mixed  $fallback Fallback value if key doesn't exist.
-	 * @return mixed Configuration value.
+	 * @return mixed Configuration value or fallback.
 	 */
 	public function get( string $key, $fallback = null ) {
 		return $this->config[ $key ] ?? $fallback;
@@ -125,9 +125,9 @@ class Form_Config {
 	}
 
 	/**
-	 * Set form method
+	 * Set form submission method
 	 *
-	 * @param string $method POST or GET.
+	 * @param string $method HTTP method (GET, POST, etc.).
 	 * @return self
 	 */
 	public function set_method( string $method ): self {
@@ -252,7 +252,7 @@ class Form_Config {
 	}
 
 	/**
-	 * Add a field to the configuration
+	 * Add a form field
 	 *
 	 * @param string $name   Field name.
 	 * @param array  $config Field configuration.
