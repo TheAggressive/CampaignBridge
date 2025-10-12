@@ -5,120 +5,136 @@ All notable changes to CampaignBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - Testing & Architecture Overhaul
+## [0.3.2] - File Upload System & API Enhancements
 
 ### Added
-- **Class-Based Autoloader**: Complete refactor from procedural to object-oriented autoloader
-  - Enhanced security with directory traversal prevention
-  - Performance optimizations with class map caching
-  - Better error handling and logging
-  - PSR-4 compliant namespace mapping
-  - File path validation and security checks
+- **Complete File Upload System**: Full WordPress file upload integration
+  - Secure file processing with `wp_handle_upload()` and WordPress media library
+  - Automatic WordPress attachment creation with metadata
+  - Comprehensive security validation (MIME types, file size, malicious content detection)
+  - Multiple file upload support with `multiple_files()` method
+  - File type restrictions with `accept()` parameter and method chaining
 
-- **Comprehensive Testing Suite**: Enterprise-grade test coverage across multiple dimensions
-  - **Unit Tests**: 4 test classes covering autoloader, form API, and core components
-  - **Integration Tests**: 5 test classes for form submissions, REST API, admin screens, settings persistence, and block registration
-  - **Security Tests**: Dedicated security test suite with API key encryption, authentication, authorization, input validation, and access control
-  - **Performance Tests**: Performance benchmarks with budgets for email generation, REST API calls, form processing, and block registration
+- **Form Field Enhancements**: Improved developer experience for form fields
+  - Direct `accept` parameter in `file()` method: `->file('field', 'Label', 'image/*')`
+  - Enhanced file validation with configurable rules
+  - Better error messages for file upload failures
+  - Field-specific error handling and display
 
-- **Test Organization & Documentation**: Professional test structure with comprehensive documentation
-  - Separate test directories: `tests/Unit/`, `tests/Integration/`, `tests/Security/`, `tests/Performance/`
-  - Detailed README files for each test suite explaining purpose, organization, and usage
-  - Test helpers and factories for consistent test data generation
-  - CI/CD-ready test configuration with PHPUnit suites
+- **Version Sync System**: Automated version management
+  - `pnpm version:sync` script automatically updates plugin header and PHP constant
+  - Single source of truth in `package.json`
+  - Prevents manual version update mistakes
+  - Integrates with npm/pnpm version commands
 
-- **Security Testing Framework**: Built-in security validation for all critical operations
-  - API key encryption/decryption access control (admin-only)
-  - REST API endpoint authentication and authorization
-  - Form submission nonce validation and security checks
-  - Input sanitization and XSS prevention validation
-  - Admin screen capability requirements
-  - User data isolation and access control
-  - Error message security (no sensitive data leakage)
+- **Form Factory Pattern**: Extracted static factory methods
+  - `Form_Factory::contact()`, `Form_Factory::register()`, `Form_Factory::settings_api()`
+  - Cleaner separation of concerns from main Form class
+  - Consistent API for common form patterns
 
-- **Performance Monitoring**: Automated performance testing and monitoring
-  - Performance budgets for critical operations (<2s email generation, <100ms form processing)
-  - Memory usage tracking and leak detection
-  - Execution time monitoring with thresholds
-  - Caching behavior validation
-  - Scalability testing for large datasets
+- **Enhanced Security**: Built-in security checks throughout the codebase
+  - Admin-only access to sensitive operations (API key decryption, file uploads)
+  - Comprehensive input validation and sanitization
+  - Nonce verification for all form submissions
+  - File upload security with MIME type validation and malicious content detection
 
-- **New `repeater()` method** for Form API with smart state management
-  - Creates multiple fields of the same type with intuitive fluent interface
-  - Supports stateless mode (2 arguments) and state-based mode (3 arguments)
-  - Automatically compares persistent data with available choices
-  - Intelligently handles stale data (removed options)
-  - Supports `->default('key')` modifier for setting default checked choice
-  - Selection-based field types: `->switch()`, `->checkbox()`, `->radio()`, `->select()`
-  - Comprehensive input validation with helpful error messages
-  - Full PHPUnit test coverage (20 tests, 69 assertions)
+- **Accessibility Improvements**: WCAG 2.1 AA compliance enhancements
+  - ARIA attributes for form fields and error states
+  - Proper `<fieldset>` and `<legend>` for radio button groups
+  - Screen reader compatible error messages
+  - Keyboard navigation support
+  - Unique IDs for form elements
 
 ### Changed
-- **Autoloader Architecture**: Converted from procedural functions to `CampaignBridge_Autoloader` class
-  - Renamed `includes/autoload.php` → `includes/Autoload.php`
-  - Added static methods for registration, unregistration, and cache management
-  - Enhanced security validation and path checking
-  - Improved error logging and debugging capabilities
+- **Method Naming Standardization**: Improved API consistency and clarity
+  - `multipart()` → `enable_file_uploads()` (more descriptive)
+  - `multiple()` → `multiple_files()` (file-specific context)
+  - `options('prefix')` → `save_to_options('prefix')` (consistent with other save methods)
+  - `meta($post_id)` → `save_to_post_meta($post_id)` (consistent naming)
+  - `settings('group')` → `save_to_settings_api('group')` (clearer intent)
+  - `custom($renderer)` → `render_custom($renderer)` (consistent with save methods)
 
-- **Test Infrastructure**: Complete overhaul of testing approach
-  - Migrated from basic unit tests to comprehensive multi-suite testing
-  - Added test organization with dedicated directories and documentation
-  - Implemented test helpers and factories for better test maintainability
-  - Added performance and security testing frameworks
+- **Form Architecture Refactoring**: Better separation of concerns
+  - Extracted factory methods into dedicated `Form_Factory` class
+  - Improved error handling and validation flow
+  - Enhanced form submission processing
+  - Better field-specific error handling
 
-- Migrated post-types.php screen from `multiple()` to `repeater()` method
-- Updated FORM.md documentation with comprehensive repeater examples
-- Repeater fields use `field___key` naming convention instead of `field[key]` to avoid PHP array parsing issues
-- **Improved method naming for data storage:**
-  - `->options('prefix')` → `->save_to_options('prefix')` (more descriptive)
-  - `->meta($post_id)` → `->save_to_post_meta($post_id)` (more descriptive)
-  - `->settings('group')` → `->save_to_settings_api('group')` (more descriptive)
-  - **New:** `->save_to_custom($callback)` for external APIs and custom storage
-  - **New:** `->render_custom($renderer)` for advanced custom layouts (renamed from `custom()`)
+- **File Upload Processing**: Leveraged WordPress native functions
+  - Replaced custom upload logic with `wp_handle_upload()`
+  - Integrated with WordPress media library via `wp_insert_attachment()`
+  - Proper cleanup with `wp_delete_file()` instead of direct filesystem operations
 
-### Removed
-- **Procedural Autoloader**: Replaced with class-based implementation
-  - Removed `campaignbridge_autoloader()` function
-  - Removed `campaignbridge_validate_class_path()` function
-  - Removed `campaignbridge_validate_file_path()` function
-  - Removed `campaignbridge_log_autoload_error()` function
-
-- **`multiple()` method** has been completely removed from Form_Builder
-  - **BREAKING CHANGE**: All code using `multiple()` must migrate to `repeater()`
-  - Migration: `->multiple('field', 'switch', $choices, $defaults)` becomes `->repeater('field', $choices, $defaults)->switch()`
-- **Deprecated method aliases** have been removed after full migration:
-  - `->options('prefix')` - replaced with `->save_to_options('prefix')`
-  - `->meta($post_id)` - replaced with `->save_to_post_meta($post_id)`
-  - `->settings('group')` - replaced with `->save_to_settings_api('group')`
-  - `->custom($renderer)` - replaced with `->render_custom($renderer)`
-  - Legacy `field[key]` naming support removed from Form_Handler
-- Text-based input types removed from repeater (text, email, password, textarea)
-  - Repeater is now focused on selection-only fields (switch, checkbox, radio, select)
+- **Testing Framework Enhancements**: Improved test coverage and organization
+  - Added dedicated accessibility test suite
+  - Enhanced security testing with file upload scenarios
+  - Better Brain Monkey integration for mocking WordPress functions
+  - Improved test data management and cleanup
 
 ### Fixed
-- **Radio and select repeater fields** now correctly create ONE field with options instead of multiple individual fields
-  - Radio fields: Create a single radio group where one option can be selected
-  - Select fields: Create a single dropdown where one option can be selected
-  - Fixes "No options configured" error when using `->radio()` or `->select()` in repeaters
+- **Plugin Version Display**: Version now correctly shows in WordPress admin
+  - Added missing `Version:` header in plugin file
+  - Implemented automatic version sync system
+
+- **Form Error Handling**: Better user experience for validation errors
+  - Success messages no longer show when errors are present
+  - Field-specific error messages with proper ARIA attributes
+  - Improved error message accessibility
+
+- **File Upload Issues**: Resolved multiple file upload problems
+  - Fixed nested `$_FILES` array processing
+  - Proper handling of single vs multiple file uploads
+  - Better error reporting for upload failures
+
+- **Accessibility Compliance**: Fixed WCAG 2.1 AA violations
+  - Proper `for` attributes on labels matching input IDs
+  - Correct `fieldset` and `legend` usage for radio groups
+  - ARIA attributes for error states and required fields
 
 ### Security
-- **Enhanced Security Testing**: Comprehensive security validation framework
-- **API Key Protection**: Admin-only access to encryption/decryption operations
-- **Input Validation**: XSS prevention and sanitization testing
-- **Access Control**: Capability-based security testing for all operations
-- **Data Isolation**: User data isolation and access control validation
+- **Enhanced File Upload Security**: Comprehensive validation for uploaded files
+  - MIME type verification against WordPress allowed types
+  - File size limits and malicious content detection
+  - Proper file permission handling
+  - Admin-only access to sensitive file operations
+
+- **Input Validation**: Improved sanitization throughout the application
+  - All user inputs properly sanitized
+  - SQL injection prevention with prepared statements
+  - XSS prevention with output escaping
+
+- **Access Control**: Strengthened permission checks
+  - Admin-only access to sensitive operations
+  - Proper capability verification
+  - Secure nonce handling
 
 ### Performance
-- **Performance Testing Framework**: Automated performance monitoring with budgets
-- **Caching Validation**: Cache behavior testing and optimization
-- **Memory Usage Monitoring**: Memory leak detection and optimization
-- **Execution Time Tracking**: Performance regression detection
+- **Optimized File Processing**: Efficient file upload handling
+  - WordPress native upload functions for better performance
+  - Proper cleanup and resource management
+  - Reduced memory usage for large file operations
+
+### Documentation
+- **Updated FORM.md**: Complete documentation refresh
+  - All new method names and examples
+  - File upload documentation with both syntax options
+  - Enhanced examples and best practices
+
+- **Developer Guidance**: Added comments and warnings
+  - Version sync documentation in plugin header
+  - Clear instructions for manual vs automatic version updates
+  - Security best practices and warnings
 
 ### Testing
-- **Test Coverage**: Added 50+ tests across unit, integration, security, and performance suites
-- **Test Organization**: Structured test directories with comprehensive documentation
-- **CI/CD Ready**: PHPUnit configuration with test suites and coverage reporting
-- **Test Helpers**: Reusable test utilities and data factories
+- **File Upload Testing**: Comprehensive test coverage
+  - Security validation testing for file uploads
+  - Integration tests for complete upload workflows
+  - Accessibility testing for file input fields
+
+- **Enhanced Test Suites**: Improved test organization
+  - Dedicated accessibility test class
+  - Better mocking with Brain Monkey
+  - Improved test data management
 
 ## [Unreleased]
 
