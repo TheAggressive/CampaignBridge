@@ -371,53 +371,117 @@ $form->save_to_custom([API_Integration_Helper::class, 'save_to_mailchimp']);
 
 **Impact**: Forms look basic, hard to match site branding.
 
-**Solution**:
+**Solution**: Use CSS custom properties (variables) for theming instead of PHP.
+
+**File Structure**:
+```
+src/styles/admin/forms/
+├── variables.css          # Base theme variables
+├── themes/
+│   ├── default.css       # Default theme overrides
+│   ├── modern.css        # Modern theme overrides
+│   └── minimal.css       # Minimal theme overrides
+└── index.css             # Main import file
+```
+
+**variables.css**:
+```css
+/* Base theme variables - defines default theme */
+:root {
+  /* Colors */
+  --form-primary-color: #0073aa;
+  --form-secondary-color: #f1f1f1;
+  --form-accent-color: #46b450;
+  --form-error-color: #dc2626;
+  --form-warning-color: #d97706;
+  --form-success-color: #16a34a;
+
+  /* Text colors */
+  --form-text-primary: #374151;
+  --form-text-secondary: #6b7280;
+  --form-text-muted: #9ca3af;
+
+  /* Backgrounds */
+  --form-bg-primary: #ffffff;
+  --form-bg-secondary: #f9fafb;
+  --form-bg-accent: #f3f4f6;
+
+  /* Borders */
+  --form-border-color: #d1d5db;
+  --form-border-radius: 4px;
+
+  /* Typography */
+  --form-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  --form-font-size-base: 0.875rem;
+  --form-font-size-small: 0.75rem;
+
+  /* Spacing */
+  --form-spacing-xs: 0.25rem;
+  --form-spacing-sm: 0.5rem;
+  --form-spacing-md: 0.75rem;
+  --form-spacing-lg: 1rem;
+  --form-spacing-xl: 1.5rem;
+
+  /* Shadows */
+  --form-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --form-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --form-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+```
+
+**themes/modern.css**:
+```css
+[data-theme="modern"] {
+  --form-primary-color: #6366f1;
+  --form-secondary-color: #f8fafc;
+  --form-border-radius: 8px;
+  --form-font-family: 'Inter', sans-serif;
+  --form-shadow-md: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
+}
+```
+
+**Simple PHP Theme Application**:
 ```php
 class Form_Theme_Manager {
-    private static array $themes = [
-        'default' => [
-            'primary_color' => '#0073aa',
-            'secondary_color' => '#f1f1f1',
-            'border_radius' => '4px',
-            'font_family' => '-apple-system, BlinkMacSystemFont, sans-serif'
-        ],
-        'modern' => [
-            'primary_color' => '#6366f1',
-            'secondary_color' => '#f8fafc',
-            'border_radius' => '8px',
-            'font_family' => 'Inter, sans-serif'
-        ],
-        'minimal' => [
-            'primary_color' => '#000000',
-            'secondary_color' => '#ffffff',
-            'border_radius' => '0px',
-            'font_family' => 'Helvetica, Arial, sans-serif'
-        ]
+    private static array $available_themes = [
+        'default', 'modern', 'minimal'
     ];
 
-    public static function apply_theme(string $theme_name): void {
-        if (!isset(self::$themes[$theme_name])) {
+    public static function enqueue_theme(string $theme_name): void {
+        if (!in_array($theme_name, self::$available_themes)) {
             $theme_name = 'default';
         }
 
-        $theme = self::$themes[$theme_name];
-        $css_vars = '';
+        // Enqueue base variables
+        wp_enqueue_style(
+            'campaignbridge-forms-variables',
+            CAMPAIGNBRIDGE_URL . 'assets/css/admin/forms/variables.css',
+            [],
+            CAMPAIGNBRIDGE_VERSION
+        );
 
-        foreach ($theme as $property => $value) {
-            $css_var = str_replace('_', '-', $property);
-            $css_vars .= "--form-{$css_var}: {$value}; ";
-        }
+        // Enqueue theme-specific overrides
+        wp_enqueue_style(
+            "campaignbridge-forms-theme-{$theme_name}",
+            CAMPAIGNBRIDGE_URL . "assets/css/admin/forms/themes/{$theme_name}.css",
+            ['campaignbridge-forms-variables'],
+            CAMPAIGNBRIDGE_VERSION
+        );
 
-        wp_add_inline_style('campaignbridge-forms', "
-            .campaignbridge-form[data-theme='{$theme_name}'] {
-                {$css_vars}
-            }
-        ");
+        // Add theme data attribute to body
+        add_filter('admin_body_class', function($classes) use ($theme_name) {
+            return $classes . " campaignbridge-theme-{$theme_name}";
+        });
     }
 }
+```
 
-// Usage
-$form->theme('modern');
+**Usage in Form Builder**:
+```php
+$form = Form::make('my-form')
+    ->theme('modern') // Applies data-theme="modern" to form
+    ->text('field1')
+    ->submit();
 ```
 
 ### 9. Form Analytics 🟢
