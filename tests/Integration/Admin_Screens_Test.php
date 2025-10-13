@@ -145,15 +145,6 @@ class Admin_Screens_Test extends Test_Case {
 	}
 
 	/**
-	 * Test that settings screen loads with tabbed interface.
-	 *
-	 * @todo Fix Form::settings() return type issue before enabling this test
-	 */
-	public function test_settings_screen_loads_with_tabs(): void {
-		$this->markTestSkipped( 'Form::settings() has return type mismatch - returns Form_Builder instead of Form' );
-	}
-
-	/**
 	 * Test that editor screen initializes correctly.
 	 */
 	public function test_editor_screen_initializes_correctly(): void {
