@@ -474,7 +474,10 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 			<p>Shows ALL field types including advanced inputs like switches, sliders, color pickers, and date/time controls</p>
 		</div>
 		<div class="demo-code">
-			<pre><code>$form = Form::settings('comprehensive_settings')
+			<pre><code>$form = Form::make('comprehensive_settings')
+	->save_to_settings_api('comprehensive_settings')
+	->table()
+	->success('Settings saved successfully!')
 	->text('site_name')->required()
 	->email('admin_email')->required()
 	->switch('enable_feature')->default(false)
@@ -588,7 +591,7 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 		<div class="comparison-table">
 			<div class="comparison-row">
 				<div class="approach">✅ Fluent API</div>
-				<div class="code">$form = Form::settings('id')->text('name')->required()->end();</div>
+				<div class="code">$form = Form::make('id')->save_to_settings_api('id')->table()->text('name')->required()->end();</div>
 				<div class="pros">Readable, chainable, modern</div>
 				<div class="cons">Learning curve</div>
 			</div>
@@ -620,7 +623,10 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 
 			<div class="step">
 				<h3>2. Create Your Form</h3>
-				<pre><code>$form = \CampaignBridge\Admin\Core\Form::settings('my_form')
+				<pre><code>$form = \CampaignBridge\Admin\Core\Form::make('my_form')
+	->save_to_settings_api('my_form')
+	->table()
+	->success('Settings saved successfully!')
 	->text('name')->required()->end()
 	->email('email')->required()->end()
 	->submit('Save');</code></pre>

@@ -11,7 +11,9 @@
 require_once __DIR__ . '/../../Core/Form.php';
 
 // Create the general settings form using the fluent API
-$form = \CampaignBridge\Admin\Core\Form::settings( 'general_settings' )
+$form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
+	->table()
+	->success( 'Settings saved successfully!' )
 	->save_to_options( 'cb_' ) // Save to options with prefix
 	->text( 'from_name', 'From Name' )
 		->default( get_bloginfo( 'name' ) )

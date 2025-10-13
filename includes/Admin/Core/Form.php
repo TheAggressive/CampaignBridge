@@ -315,6 +315,28 @@ class Form {
 	}
 
 	/**
+	 * Get form fields (for testing/debugging)
+	 *
+	 * @return array
+	 */
+	public function get_fields(): array {
+		return $this->config->get_fields();
+	}
+
+
+	/**
+	 * Add a hidden field to the form
+	 *
+	 * @param string $name  Field name.
+	 * @param string $value Field value.
+	 * @return Form
+	 */
+	public function hidden( string $name, string $value = '' ): self {
+		$this->builder->hidden( $name, $value );
+		return $this;
+	}
+
+	/**
 	 * Configure data persistence methods
 	 */
 
