@@ -1,0 +1,19 @@
+parameters:
+  level: 7
+  paths:
+    - includes/
+    - campaignbridge.php
+  excludePaths:
+    - includes/Admin_Legacy/
+    - tests/
+  bootstrapFiles:
+    - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+  scanFiles:
+    - campaignbridge.php
+  ignoreErrors:
+    # WordPress globals that PHPStan doesn't understand
+    - '#Undefined variable: \$wpdb#'
+    - '#Undefined variable: \$wp_version#'
+    - '#Undefined variable: \$table_prefix#'
+  reportUnmatchedIgnoredErrors: false
+  treatPhpDocTypesAsCertain: false

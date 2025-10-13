@@ -55,7 +55,13 @@ class Bootstrap {
 	private function get_wp_tests_dir(): string {
 		$tests_dir = getenv( 'WP_TESTS_DIR' );
 
+		// In wp-env, try the default location first
 		if ( ! $tests_dir ) {
+			$tests_dir = '/wordpress-phpunit';
+		}
+
+		// Fallback to temp directory
+		if ( ! file_exists( $tests_dir ) ) {
 			$tests_dir = rtrim( sys_get_temp_dir(), '/\\' ) . '/wordpress-tests-lib';
 		}
 

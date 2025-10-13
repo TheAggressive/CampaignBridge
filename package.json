@@ -33,7 +33,7 @@
     "test:setup": "bash bin/install-wp-tests.sh wordpress_test root '' 127.0.0.1:9002 latest",
     "test:install": "pnpm test:setup && composer install --dev",
     "test": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit'",
-    "test:unit": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit --testsuite=unit --verbose'",
+    "test:unit": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit --testsuite=unit'",
     "test:integration": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit --testsuite=integration --verbose'",
     "test:coverage": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit --coverage-html=coverage --coverage-text --verbose'",
     "test:security": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit --testsuite=security --verbose'",
@@ -43,7 +43,7 @@
     "test:any": "wp-env run tests-cli bash -lc 'export XDEBUG_MODE=off; cd /var/www/html/wp-content/plugins/campaignbridge && ./vendor/bin/phpunit'",
     "lint:php": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpcs --standard=phpcs.xml.dist includes/ src/'",
     "lint:php:fix": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpcbf --standard=phpcs.xml.dist'",
-    "phpstan": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpstan analyse --verbose'",
+    "phpstan": "wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && XDEBUG_MODE=off ./vendor/bin/phpstan analyse --verbose'",
     "qa": "pnpm lint:php && pnpm phpstan && pnpm test"
   },
   "keywords": [],
