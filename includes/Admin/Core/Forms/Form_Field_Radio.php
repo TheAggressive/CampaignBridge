@@ -50,7 +50,7 @@ class Form_Field_Radio extends Form_Field_Base {
 
 			printf(
 				'<label for="%s" class="campaignbridge-radio-label">
-					<input type="radio" id="%s" name="%s" value="%s"%s %s />
+					<input type="radio" id="%s" name="%s" value="%s" class="campaignbridge-radio-input"%s %s />
 					<span class="campaignbridge-radio-text">%s</span>
 				</label>',
 				esc_attr( $radio_id ),

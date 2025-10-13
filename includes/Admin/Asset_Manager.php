@@ -36,11 +36,17 @@ class Asset_Manager {
 			return;
 		}
 
-		// Find all .asset.php files in the directory.
+		// Find all .asset.php files in the directory (exclude RTL versions).
 		$asset_files = glob( $full_dir . '/*.asset.php' );
 
 		foreach ( $asset_files as $asset_file ) {
 			$asset_name = basename( $asset_file, '.asset.php' );
+
+			// Skip RTL versions - WordPress loads them automatically when needed.
+			if ( strpos( $asset_name, '-rtl' ) !== false ) {
+				continue;
+			}
+
 			$asset_path = $directory_path . '/' . $asset_name . '.asset.php';
 
 			// Determine if it's a style or script based on directory path.
@@ -182,10 +188,9 @@ class Asset_Manager {
 
 		// Check if this is a direct file path.
 		if ( strpos( $asset_path, $file_extension ) !== false ) {
-			$default_deps = ( '.css' === $file_extension ) ? array() : array( 'jquery' );
 			return array(
 				'url'              => $plugin_url . $asset_path,
-				'dependencies'     => $default_deps,
+				'dependencies'     => array(),
 				'version'          => \CampaignBridge_Plugin::VERSION,
 				'in_footer'        => ( '.js' === $file_extension ) ? true : null,
 				'enqueue_function' => $enqueue_function,

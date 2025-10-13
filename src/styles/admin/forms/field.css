@@ -1,0 +1,430 @@
+/**
+ * CampaignBridge Form Fields
+ *
+ * Field wrapper and input component styles.
+ * Follows BEM CSS class naming conventions.
+ */
+
+@reference "tailwindcss";
+
+/* ===== FIELD WRAPPER ===== */
+.campaignbridge-field {
+  @apply relative;
+
+  /* Field label */
+  &__label {
+    @apply mb-2 block text-sm font-medium;
+    color: var(--color-foreground);
+    font-size: var(--form-font-size-label);
+    font-weight: var(--form-font-weight-label);
+  }
+
+  /* Required field indicator */
+  &__required {
+    @apply ml-1 text-red-500;
+  }
+
+  /* Field description/help text */
+  &__description {
+    @apply mt-1 text-xs;
+    color: var(--color-muted);
+    font-size: var(--form-font-size-help);
+  }
+
+  /* Error states */
+  &--error {
+    .campaignbridge-field__input,
+    .campaignbridge-field__textarea,
+    .campaignbridge-field__select {
+      @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+    }
+  }
+
+  /* Success states */
+  &--success {
+    .campaignbridge-field__input,
+    .campaignbridge-field__textarea,
+    .campaignbridge-field__select {
+      @apply border-green-500 focus:border-green-500 focus:ring-green-500/20;
+    }
+  }
+
+  /* Base input styles */
+  &__input,
+  &__textarea,
+  &__select {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Size variants */
+    &--sm {
+      @apply px-2 py-1 text-xs;
+    }
+
+    &--lg {
+      @apply px-4 py-3 text-base;
+    }
+  }
+
+  &__textarea {
+    @apply min-h-20 resize-y;
+  }
+
+  &__select {
+    @apply appearance-none bg-no-repeat;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-size: 1.5rem 1.5rem;
+    @apply pr-10;
+  }
+
+  /* ===== SPECIALIZED INPUT TYPES ===== */
+
+  /* Text input styling */
+  &__text {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* Email input styling */
+  &__email {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* URL input styling */
+  &__url {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* Password input styling */
+  &__password {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* Search input styling */
+  &__search {
+    @apply w-full rounded-md border px-3 py-2 pl-8 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* Number input styling */
+  &__number {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* Telephone input styling */
+  &__tel {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* Date input styling */
+  &__date,
+  &__datetime-local {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* Time input styling */
+  &__time {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+  }
+
+  /* File input styling */
+  &__file {
+    @apply w-full rounded-md border px-3 py-2 text-sm;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    color: var(--color-foreground);
+    transition: color 0.15s ease-in-out;
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+  }
+
+  /* Color input styling */
+  &__color {
+    @apply w-full rounded-md border px-3 py-2;
+    background-color: var(--color-background);
+    border-color: var(--color-input);
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    border-radius: var(--form-radius);
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+  }
+
+  /* Range input styling */
+  &__range {
+    @apply w-full;
+    background-color: var(--color-background);
+    @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+    transition: var(--form-transition);
+
+    &:focus {
+      --tw-ring-color: var(--form-focus-ring-color);
+      --tw-ring-offset-width: var(--form-focus-ring-offset);
+    }
+
+    &:disabled {
+      @apply cursor-not-allowed opacity-50;
+    }
+  }
+
+  /* WYSIWYG editor styling */
+  &__wysiwyg {
+    .wp-editor-container {
+      border: 1px solid var(--color-border);
+      border-radius: var(--form-radius);
+
+      &:focus-within {
+        border-color: var(--color-ring);
+        box-shadow:
+          0 0 0 var(--form-focus-ring-offset) var(--color-background),
+          0 0 0
+            calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+            var(--form-focus-ring-color);
+      }
+    }
+
+    .wp-editor-tabs {
+      background-color: var(--color-muted);
+      border-color: var(--color-border);
+      @apply border-b;
+    }
+
+    .wp-switch-editor {
+      &:hover {
+        background-color: var(--color-accent);
+      }
+    }
+
+    .wp-editor-tools {
+      background-color: var(--color-muted);
+      border-color: var(--color-border);
+      @apply border-b;
+    }
+
+    .wp-editor-area {
+      background-color: var(--color-background);
+      color: var(--color-foreground);
+      border-color: var(--color-border);
+    }
+  }
+}

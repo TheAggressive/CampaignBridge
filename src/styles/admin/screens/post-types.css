@@ -1,3 +1,4 @@
+/* Import global design tokens */
 @import "tailwindcss";
 
 @layer components {

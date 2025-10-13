@@ -1,0 +1,50 @@
+/**
+ * CampaignBridge Form Design Tokens
+ *
+ * Form-specific design tokens that extend global tokens.
+ * Inherits from global variables.css and adds form-specific overrides.
+ */
+
+@layer base {
+  :root {
+    /* ===== FORM-SPECIFIC TOKENS ===== */
+    /* Form inherits global design tokens but can override for form-specific needs */
+
+    /* Form-specific spacing refinements */
+    --form-spacing-field-gap: var(--spacing-sm);
+    --form-spacing-section-gap: var(--spacing-2xl);
+
+    /* Form-specific typography */
+    --form-font-size-label: var(--font-size-sm);
+    --form-font-size-help: var(--font-size-xs);
+    --form-font-weight-label: var(--font-weight-medium);
+
+    /* Form-specific dimensions */
+    --form-field-height: 2.5rem; /* 40px - input height */
+    --form-field-padding-x: var(--spacing-md);
+    --form-field-padding-y: var(--spacing-sm);
+
+    /* Form-specific focus styles */
+    --form-focus-ring-width: var(--focus-ring-width);
+    --form-focus-ring-color: var(--focus-ring-color);
+    --form-focus-ring-offset: var(--focus-ring-offset);
+
+    /* Form-specific transitions */
+    --form-transition: var(--transition-normal);
+
+    /* Form-specific radius (can be different from global) */
+    --form-radius: var(--border-radius-md);
+
+    /* Status colors using global brand colors */
+    --form-success: var(--color-success);
+    --form-warning: var(--color-warning);
+    --form-error: var(--color-error);
+    --form-info: var(--color-info);
+
+    /* Background variants using global colors */
+    --form-bg-success: var(--color-success-light);
+    --form-bg-warning: var(--color-warning-light);
+    --form-bg-error: var(--color-error-light);
+    --form-bg-info: var(--color-info-light);
+  }
+}

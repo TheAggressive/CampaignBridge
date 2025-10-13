@@ -1,0 +1,29 @@
+/**
+ * CampaignBridge Form Container
+ *
+ * Form layout and structure components.
+ * Follows BEM CSS class naming conventions.
+ */
+
+@reference "tailwindcss";
+
+/* ===== FORM CONTAINER ===== */
+.campaignbridge-form {
+  @apply space-y-6;
+
+  /* Form sections */
+  &__section {
+    @apply space-y-4;
+  }
+
+  /* Form fields container */
+  &__fields {
+    @apply space-y-4;
+  }
+
+  /* Form actions (buttons) */
+  &__actions {
+    @apply flex flex-wrap gap-3 border-t pt-4;
+    border-color: var(--color-border);
+  }
+}

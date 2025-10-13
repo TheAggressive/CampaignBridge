@@ -81,8 +81,8 @@ class Form_Renderer {
 	 * Enqueue form styles using asset files for proper dependency and version management
 	 */
 	public function enqueue_form_styles(): void {
-		// Use Asset_Manager to enqueue all form component styles.
-		\CampaignBridge\Admin\Asset_Manager::enqueue_assets( 'dist/styles/admin/forms' );
+		// Load the compiled form styles (includes all components in single optimized file).
+		\CampaignBridge\Admin\Asset_Manager::enqueue_asset( 'campaignbridge-forms', 'dist/styles/admin/forms/forms.asset.php' );
 	}
 
 	/**

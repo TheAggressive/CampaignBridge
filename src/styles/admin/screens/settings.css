@@ -5,6 +5,8 @@
  * Follows BEM CSS class naming and styling conventions with proper nested structure.
  */
 
+/* Import global design tokens */
+
 .campaignbridge-settings {
   /* Verify status indicator */
   &__verify-status {

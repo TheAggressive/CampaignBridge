@@ -1,19 +1,24 @@
+/* ===== GLOBAL IMPORTS ===== */
 @import "tailwindcss";
 
+/* Global design tokens - must be imported first */
+@import "./variables";
+
+/* ===== THEME CONFIGURATION ===== */
 @theme {
-  /* Custom brand colors - using Tailwind naming conventions */
-  --color-brand-primary: #10b981; /* emerald-500 */
-  --color-brand-secondary: #059669; /* emerald-600 */
+  /* Brand colors using our global tokens */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
 
   /* WordPress admin integration colors */
   --color-wp-border: #dcdcde;
 
-  /* Component-specific tokens using Tailwind scale */
-  --cb-max-width: theme(maxWidth.2xl); /* 672px */
-  --cb-iframe-width: theme(width.96); /* 384px scaled up to 600px */
-  --cb-iframe-height: theme(height.screen);
+  /* Component-specific tokens using global variables */
+  --cb-max-width: var(--container-2xl);
+  --cb-iframe-width: 600px; /* Scaled up from 384px */
+  --cb-iframe-height: 100vh;
   --cb-codebox-height: 70vh;
-  --cb-switches-max-height: theme(height.72); /* 288px */
+  --cb-switches-max-height: var(--container-sm);
 }
 
 @layer components {

@@ -6,6 +6,7 @@
  * @package CampaignBridge
  */
 
+/* Global design tokens are imported in styles.css */
 @import "tailwindcss";
 
 @layer components {

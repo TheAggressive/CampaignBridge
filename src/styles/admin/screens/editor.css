@@ -1,7 +1,9 @@
+/* Global design tokens are imported in styles.css */
 @import "tailwindcss";
 
+/* Editor-specific variables */
 :root {
-  --cb-sidebar-width: 280px;
+  --cb-sidebar-width: var(--container-sm);
 }
 
 /* Editor Shell wrapper (outside InterfaceSkeleton) */

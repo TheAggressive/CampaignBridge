@@ -887,6 +887,12 @@ $form->render();</code></pre>
 	margin-top: 5px;
 }
 
+/* Use native browser styling for radio buttons and checkboxes */
+.campaignbridge-radio-input,
+.campaignbridge-checkbox-input {
+	accent-color: #22c55e; /* Green accent color - let browser handle the rest */
+}
+
 .campaignbridge-radio-label,
 .campaignbridge-checkbox-label {
 	display: flex;
