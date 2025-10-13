@@ -27,8 +27,8 @@ class Form_Field_File extends Form_Field_Base {
 	 * Render the input element
 	 */
 	public function render_input(): void {
-		// Ensure we have the correct class for styling
-		if ( empty( $this->config['class'] ) || $this->config['class'] === 'regular-text' ) {
+		// Ensure we have the correct class for styling.
+		if ( empty( $this->config['class'] ) || 'regular-text' === $this->config['class'] ) {
 			$this->config['class'] = 'campaignbridge-field__file';
 		}
 
