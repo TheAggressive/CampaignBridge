@@ -9,11 +9,10 @@ import { setParamAndReload } from "../utils/url";
  * UI (modal) stays presentational; this hook handles open/close, title, busy,
  * and the create + navigate flow.
  *
- * @param {Object}   [options]
- * @param {Function} [options.onError] Optional error handler (receives message)
- * @return {Object} API { open, title, busy, openModal, closeModal, setTitle, confirmCreate }
  */
-export function useNewTemplate(options = {}) {
+export function useNewTemplate(
+  options: { onError?: (message: string) => void } = {},
+) {
   const { onError } = options;
 
   const [open, setOpen] = useState(false);
@@ -35,7 +34,10 @@ export function useNewTemplate(options = {}) {
       const created = await createDraft(title);
       setBusy(false);
       setOpen(false);
-      setParamAndReload("post_id", created?.id || created);
+      setParamAndReload(
+        "post_id",
+        (created as { id?: number | string })?.id || created,
+      );
     } catch (e) {
       setBusy(false);
       setOpen(false);

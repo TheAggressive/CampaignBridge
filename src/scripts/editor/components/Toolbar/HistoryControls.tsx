@@ -32,7 +32,7 @@ export default function HistoryControls() {
 
   // Get current blocks for history tracking
   const { currentBlocks } = useSelect(
-    (select) => {
+    (select: any) => {
       const blockEditor = select("core/block-editor");
       const blocks = blockEditor?.getBlocks ? blockEditor.getBlocks() : [];
       return { currentBlocks: blocks };

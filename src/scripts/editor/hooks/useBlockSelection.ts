@@ -39,20 +39,28 @@
 
 import { useSelect } from "@wordpress/data";
 
-export function useBlockSelection(clientId, { deep = true } = {}) {
+type WordPressBlockEditor = {
+  getBlock?: (clientId: string) => { innerBlocks?: unknown[] } | undefined;
+  getBlocks?: () => unknown[];
+  isBlockSelected?: (clientId: string) => boolean;
+  hasSelectedInnerBlock?: (clientId: string, deep?: boolean) => boolean;
+  getSelectedBlockClientId?: () => string | null;
+};
+
+export function useBlockSelection(clientId: string, { deep = true } = {}) {
   return useSelect(
     (select) => {
-      const be = select("core/block-editor");
+      const be = select("core/block-editor") as WordPressBlockEditor;
 
-      const block = be.getBlock(clientId);
+      const block = be.getBlock?.(clientId);
       const hasInnerBlocks = !!block?.innerBlocks?.length;
 
-      const isSelfSelected = be.isBlockSelected(clientId);
+      const isSelfSelected = be.isBlockSelected?.(clientId) ?? false;
       const hasSelectedDescendant = deep
-        ? be.hasSelectedInnerBlock(clientId, true)
+        ? (be.hasSelectedInnerBlock?.(clientId, true) ?? false)
         : false;
 
-      const selectedClientId = be.getSelectedBlockClientId() || null;
+      const selectedClientId = be.getSelectedBlockClientId?.() ?? null;
 
       return {
         isSelected: !!(isSelfSelected || hasSelectedDescendant),

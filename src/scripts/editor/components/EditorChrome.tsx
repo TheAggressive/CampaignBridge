@@ -36,17 +36,6 @@ import { SidebarContent, SidebarHeader } from "./Sidebars/Sidebar";
  * - Centralized constants for maintainability
  * - Simplified JSX with reusable components
  *
- * @param {Object} props - Component props
- * @param {Array} props.list - Array of available templates for the header dropdown
- * @param {number|null} props.currentId - ID of the currently selected template
- * @param {boolean} props.loading - Whether templates are currently loading
- * @param {function} props.onSelect - Callback fired when a template is selected
- * @param {function} props.onNew - Callback fired when creating a new template
- * @param {string} props.postType - Post type for editor settings (default: 'post')
- * @param {number} props.postId - The ID of the post/template to load and edit
- * @param {function} [props.onBlocksChange] - Optional callback fired when blocks change
- * @returns {JSX.Element} The complete editor interface with all necessary providers
- *
  * @example
  * ```jsx
  * <EditorChrome
@@ -67,7 +56,7 @@ export default function EditorChrome({
   onSelect,
   onNew,
   postId,
-  onBlocksChange,
+  onBlocksChange = () => {},
   postType = "post",
 }) {
   // Use custom hooks to manage complex state
@@ -105,9 +94,14 @@ export default function EditorChrome({
 
   const isFullscreen = useSelect(
     (select) =>
-      select("core/preferences").get(
+      (
+        select("core/preferences") as {
+          get: (scope: string, key: string) => unknown;
+        }
+      ).get(
         SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE,
-      ),
+        "isFullscreen",
+      ) as boolean,
     [],
   );
 
@@ -225,7 +219,10 @@ export default function EditorChrome({
 
         <Popover.Slot />
         <div className={LAYOUT_CONSTANTS.CSS_CLASSES.EDITOR_SNACKBAR}>
-          <SnackbarList notices={snackbarNotices} onRemove={removeNotice} />
+          <SnackbarList
+            notices={snackbarNotices as any}
+            onRemove={removeNotice}
+          />
         </div>
       </SlotFillProvider>
     </ShortcutProvider>

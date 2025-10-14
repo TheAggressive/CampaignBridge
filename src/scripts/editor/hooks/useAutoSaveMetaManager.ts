@@ -47,7 +47,9 @@ export function useAutoSaveMetaManager({
   const ready = useSelect(
     (select) => {
       try {
-        return !!select("core").getPostType(postType);
+        return !!(
+          select("core") as { getPostType?: (slug: string) => unknown }
+        ).getPostType?.(postType);
       } catch {
         return false;
       }

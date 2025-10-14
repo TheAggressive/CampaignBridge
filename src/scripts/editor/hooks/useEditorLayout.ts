@@ -3,6 +3,14 @@ import { useEffect, useState } from "@wordpress/element";
 import { store as noticesStore } from "@wordpress/notices";
 import { SIDEBAR_CONSTANTS } from "./useSidebarState";
 
+type WordPressInterface = {
+  getActiveComplementaryArea?: (scope: string) => string | undefined;
+};
+
+type WordPressBlockEditor = {
+  getSelectedBlock?: () => { id?: string } | null;
+};
+
 // Layout-specific constants (exported for reuse if needed)
 export const LAYOUT_CONSTANTS = {
   MODIFIERS: {
@@ -32,25 +40,27 @@ export function useEditorLayout() {
   // Track active complementary areas
   const activePrimary = useSelect(
     (select) =>
-      select("core/interface").getActiveComplementaryArea(
-        SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
-      ),
+      (
+        select("core/interface") as WordPressInterface
+      ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.PRIMARY),
     [SIDEBAR_CONSTANTS.SCOPES.PRIMARY],
   );
 
   const activeSecondary = useSelect(
     (select) =>
-      select("core/interface").getActiveComplementaryArea(
-        SIDEBAR_CONSTANTS.SCOPES.SECONDARY,
-      ),
+      (
+        select("core/interface") as WordPressInterface
+      ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.SECONDARY),
     [SIDEBAR_CONSTANTS.SCOPES.SECONDARY],
   );
 
   // Detect block selection for auto-switching
   const selectedBlock = useSelect((select) => {
     try {
-      const { getSelectedBlock } = select("core/block-editor");
-      return getSelectedBlock();
+      const { getSelectedBlock } = select(
+        "core/block-editor",
+      ) as WordPressBlockEditor;
+      return getSelectedBlock?.();
     } catch (error) {
       console.warn(
         "useEditorLayout: Error accessing block editor state:",

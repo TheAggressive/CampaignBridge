@@ -1,11 +1,6 @@
 import { createSlotFill } from "@wordpress/components";
 import { useSelect } from "@wordpress/data";
-import React, {
-  memo,
-  useCallback,
-  useEffect,
-  useState,
-} from "@wordpress/element";
+import { memo, useCallback, useEffect, useState } from "@wordpress/element";
 import { __ } from "@wordpress/i18n";
 import Inspector from "./Inspector";
 import TemplateSettings from "./TemplateSettings";
@@ -101,7 +96,7 @@ export function SidebarHeader({ activeTab, onTabChange }) {
         aria-selected={activeTab === TABS.TEMPLATE}
         aria-controls="sidebar-content"
         id="tab-document"
-        style={{ "marginLeft": "-16px" }}
+        style={{ marginLeft: "-16px" }}
         tabIndex={activeTab === TABS.TEMPLATE ? 0 : -1}
       >
         {__("Document", "campaignbridge")}
@@ -188,9 +183,7 @@ export function SidebarContent({ activeTab, postType, postId }) {
  * - Comprehensive accessibility features with proper ARIA labels
  * - Error handling and loading states
  * - Performance optimized with React.memo
- *
- * @since 1.0.0
- * @returns {JSX.Element} The sidebar with tabbed content and extensibility slots
+
  *
  * @example
  * ```jsx
@@ -201,14 +194,24 @@ export function SidebarContent({ activeTab, postType, postId }) {
  * <Sidebar initialTab={TABS.INSPECTOR} />
  * ```
  */
-function Sidebar({ initialTab = DEFAULT_PROPS.ACTIVE_TAB }) {
+function Sidebar({
+  initialTab = DEFAULT_PROPS.ACTIVE_TAB,
+  postType,
+  postId,
+}: {
+  initialTab?: string;
+  postType?: string;
+  postId?: number;
+}) {
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Detect when a block is selected in the editor
   const selectedBlock = useSelect((select) => {
     try {
-      const { getSelectedBlock } = select("core/block-editor");
-      return getSelectedBlock();
+      const { getSelectedBlock } = select("core/block-editor") as {
+        getSelectedBlock?: () => unknown;
+      };
+      return getSelectedBlock?.();
     } catch (error) {
       console.warn("Sidebar: Error accessing block editor state:", error);
       return null;

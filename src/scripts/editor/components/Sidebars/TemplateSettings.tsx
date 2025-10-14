@@ -26,28 +26,25 @@ import { useNotices } from "../../hooks/useNotices";
  */
 export default function TemplateSettings({ postType, postId }) {
   const { success, error } = useNotices();
-  const { values, update, saveStatus, isLoading } = useAutoSaveMetaManager({
+  const {
+    values: rawValues,
+    update,
+    saveStatus,
+  } = useAutoSaveMetaManager({
     postType,
     postId,
     keys: [
+      "cb_template_category",
       "cb_subject",
       "cb_preheader",
-      "cb_sender_name",
-      "cb_sender_email",
-      "cb_view_online_url",
-      "cb_unsubscribe_url",
-      "cb_utm_template",
       "cb_audience_tags",
-      "cb_footer_pattern",
-      "cb_view_online_enabled",
-      "cb_utm_enabled",
-      "cb_footer_enabled",
-      "cb_address_html",
-      "cb_template_category",
     ],
     onSuccess: success,
     onError: error,
   });
+
+  const values: Record<string, string | undefined> = rawValues || {};
+  const isLoading = saveStatus === "saving";
 
   // Show loading state
   if (isLoading) {
@@ -82,7 +79,6 @@ export default function TemplateSettings({ postType, postId }) {
             value={values.cb_template_category || "general"}
             options={categoryOptions}
             onChange={(value) => update("cb_template_category", value)}
-            __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
 
@@ -91,7 +87,6 @@ export default function TemplateSettings({ postType, postId }) {
             value={values.cb_subject || ""}
             onChange={(value) => update("cb_subject", value)}
             placeholder={__("Enter email subject...", "campaignbridge")}
-            __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
 
@@ -101,7 +96,6 @@ export default function TemplateSettings({ postType, postId }) {
             onChange={(value) => update("cb_preheader", value)}
             placeholder={__("Hidden preview text...", "campaignbridge")}
             help={__("Shown in email client previews", "campaignbridge")}
-            __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
 
@@ -111,7 +105,6 @@ export default function TemplateSettings({ postType, postId }) {
             onChange={(value) => update("cb_audience_tags", value)}
             placeholder={__("tag1, tag2, tag3", "campaignbridge")}
             help={__("Comma-separated list of audience tags", "campaignbridge")}
-            __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
         </PanelBody>
@@ -128,7 +121,6 @@ export default function TemplateSettings({ postType, postId }) {
             value={values.cb_sender_name || ""}
             onChange={(value) => update("cb_sender_name", value)}
             placeholder={__("Your Name", "campaignbridge")}
-            __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
 
@@ -138,31 +130,25 @@ export default function TemplateSettings({ postType, postId }) {
             onChange={(value) => update("cb_sender_email", value)}
             type="email"
             placeholder={__("sender@domain.com", "campaignbridge")}
-            __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
 
           <ToggleControl
             label={__("Enable View Online Link", "campaignbridge")}
-            checked={
-              values.cb_view_online_enabled === "1" ||
-              values.cb_view_online_enabled === true
-            }
+            checked={values.cb_view_online_enabled === "1"}
             onChange={(checked) =>
               update("cb_view_online_enabled", checked ? "1" : "0")
             }
             __nextHasNoMarginBottom
           />
 
-          {(values.cb_view_online_enabled === "1" ||
-            values.cb_view_online_enabled === true) && (
+          {values.cb_view_online_enabled === "1" && (
             <TextControl
               label={__("View Online URL", "campaignbridge")}
               value={values.cb_view_online_url || ""}
               onChange={(value) => update("cb_view_online_url", value)}
               type="url"
               placeholder={__("https://...", "campaignbridge")}
-              __next40pxDefaultSize
               __nextHasNoMarginBottom
             />
           )}
@@ -177,7 +163,6 @@ export default function TemplateSettings({ postType, postId }) {
               "Can use merge tags like {unsubscribe_url}",
               "campaignbridge",
             )}
-            __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
         </PanelBody>
@@ -199,30 +184,25 @@ export default function TemplateSettings({ postType, postId }) {
             )}
             help={__("HTML allowed for formatting", "campaignbridge")}
             rows={3}
-            __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
 
           <ToggleControl
             label={__("Enable UTM Tracking", "campaignbridge")}
-            checked={
-              values.cb_utm_enabled === "1" || values.cb_utm_enabled === true
-            }
+            checked={values.cb_utm_enabled === "1"}
             onChange={(checked) =>
               update("cb_utm_enabled", checked ? "1" : "0")
             }
             __nextHasNoMarginBottom
           />
 
-          {(values.cb_utm_enabled === "1" ||
-            values.cb_utm_enabled === true) && (
+          {(values.cb_utm_enabled === "1" || values.cb_utm_enabled === "1") && (
             <TextControl
               label={__("UTM Template", "campaignbridge")}
               value={values.cb_utm_template || ""}
               onChange={(value) => update("cb_utm_template", value)}
               placeholder={"utm_source=newsletter&utm_campaign={post_slug}"}
               help={__("Template for UTM query parameters", "campaignbridge")}
-              __next40pxDefaultSize
               __nextHasNoMarginBottom
             />
           )}
@@ -231,7 +211,7 @@ export default function TemplateSettings({ postType, postId }) {
             label={__("Enable Default Footer", "campaignbridge")}
             checked={
               values.cb_footer_enabled === "1" ||
-              values.cb_footer_enabled === true
+              values.cb_footer_enabled === "1"
             }
             onChange={(checked) =>
               update("cb_footer_enabled", checked ? "1" : "0")
@@ -240,13 +220,12 @@ export default function TemplateSettings({ postType, postId }) {
           />
 
           {(values.cb_footer_enabled === "1" ||
-            values.cb_footer_enabled === true) && (
+            values.cb_footer_enabled === "1") && (
             <TextControl
               label={__("Footer Pattern", "campaignbridge")}
               value={values.cb_footer_pattern || ""}
               onChange={(value) => update("cb_footer_pattern", value)}
               placeholder={__("Footer template slug", "campaignbridge")}
-              __next40pxDefaultSize
               __nextHasNoMarginBottom
             />
           )}

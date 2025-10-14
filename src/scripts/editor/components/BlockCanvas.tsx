@@ -1,6 +1,5 @@
 import {
   BlockList,
-  BlockTools,
   Inserter,
   ObserveTyping,
   WritingFlow,
@@ -31,13 +30,13 @@ export default function BlockCanvas() {
         <Inserter rootClientId={null} />
         <HistoryControls />
       </div>
-      <BlockTools>
+      <div className="block-tools">
         <WritingFlow>
           <ObserveTyping>
             <BlockList />
           </ObserveTyping>
         </WritingFlow>
-      </BlockTools>
+      </div>
     </div>
   );
 }

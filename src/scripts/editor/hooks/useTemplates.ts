@@ -90,7 +90,13 @@ const TEMPLATE_ERROR_MESSAGES = TEMPLATES_CONSTANTS.ERROR_MESSAGES;
  * );
  * ```
  */
-export function useTemplates(options = {}) {
+export function useTemplates(
+  options: {
+    includeDrafts?: boolean;
+    onError?: (error: string) => void;
+    disableCache?: boolean;
+  } = {},
+) {
   const { includeDrafts = true, onError, disableCache = false } = options;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -154,7 +160,7 @@ export function useTemplates(options = {}) {
         if (isRetryable && retryCount < TEMPLATES_CONSTANTS.RETRY.MAX_RETRIES) {
           const delayMs =
             TEMPLATES_CONSTANTS.RETRY.DELAY_MS * Math.pow(2, retryCount);
-          if (process.env.NODE_ENV === "development") {
+          if ((globalThis as any).process?.env?.NODE_ENV === "development") {
             console.warn(
               `useTemplates: Retrying templates fetch (attempt ${retryCount + 1}/${TEMPLATES_CONSTANTS.RETRY.MAX_RETRIES}):`,
               e,
@@ -173,7 +179,7 @@ export function useTemplates(options = {}) {
         setItems([]); // Provide empty array as fallback
         if (typeof onError === "function") onError(msg);
 
-        if (process.env.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
           console.error(
             "useTemplates: Failed to load templates after all retries:",
             e,

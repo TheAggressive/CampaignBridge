@@ -59,7 +59,7 @@ export function useTemplateRouting() {
 
       const parsed = Number(raw);
       if (isNaN(parsed) || parsed <= 0) {
-        if (process.env.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
           console.warn(
             `useTemplateRouting: Invalid ${ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID} parameter: ${raw}`,
           );
@@ -69,7 +69,7 @@ export function useTemplateRouting() {
 
       return parsed;
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
+      if ((globalThis as any).process?.env?.NODE_ENV === "development") {
         console.error("useTemplateRouting: Error parsing template ID:", error);
       }
       return null;
@@ -85,7 +85,7 @@ export function useTemplateRouting() {
   const selectTemplate = useCallback((id) => {
     try {
       if (!id) {
-        if (process.env.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
           console.warn(
             "useTemplateRouting: Attempted to select invalid template ID:",
             id,
@@ -96,7 +96,7 @@ export function useTemplateRouting() {
 
       const numericId = Number(id);
       if (isNaN(numericId) || numericId <= 0 || !Number.isInteger(numericId)) {
-        if (process.env.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
           console.warn(`useTemplateRouting: Invalid template ID: ${id}`);
         }
         return;
@@ -104,7 +104,7 @@ export function useTemplateRouting() {
 
       setParamAndReload(ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID, numericId);
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
+      if ((globalThis as any).process?.env?.NODE_ENV === "development") {
         console.error("useTemplateRouting: Error selecting template:", error);
       }
     }
@@ -115,14 +115,14 @@ export function useTemplateRouting() {
     const handleUrlChange = () => {
       try {
         // Force page reload when URL changes via browser navigation
-        if (process.env.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
           console.log(
             "useTemplateRouting: URL changed via browser navigation, reloading...",
           );
         }
         window.location.reload();
       } catch (error) {
-        if (process.env.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
           console.error(
             "useTemplateRouting: Error handling URL change:",
             error,

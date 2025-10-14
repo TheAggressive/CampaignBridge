@@ -50,7 +50,59 @@
  */
 
 // Use webpack's require.context to dynamically discover all block modules
-const blockContext = require.context("../../../blocks", true, /index\.js$/);
+const blockContext = (globalThis as any).require?.context?.(
+  "../../../blocks",
+  true,
+  /index\.js$/,
+);
+
+type RegistrationResult =
+  | { success: true; skipped: true }
+  | { success: true }
+  | { success: false; error: Error };
+
+interface BlockModule {
+  init: () => void;
+}
+
+interface DiscoveredBlock {
+  name: string;
+  path: string;
+  module: BlockModule;
+}
+
+interface RegistrationStats {
+  discovered: number;
+  registered: number;
+  skipped: number;
+  failed: number;
+}
+
+interface BlockRegistry {
+  isRegistered: (blockName: string) => boolean;
+  markRegistered: (blockName: string) => void;
+  cacheDiscoveredBlock: (blockName: string, module: BlockModule) => void;
+}
+
+interface BlockDiscovery {
+  getBlockPaths: () => string[];
+  loadBlockModule: (blockPath: string) => BlockModule | null;
+  extractBlockName: (blockPath: string) => string;
+  createFullBlockName: (blockName: string) => string;
+  discoverAllBlocks: () => DiscoveredBlock[];
+}
+
+interface BlockRegistration {
+  validateBlockModule: (blockModule: BlockModule, blockName: string) => boolean;
+  registerBlock: (
+    blockName: string,
+    blockModule: BlockModule,
+  ) => RegistrationResult;
+  registerBlockIfNeeded: (
+    blockName: string,
+    blockModule: BlockModule,
+  ) => RegistrationResult;
+}
 
 /**
  * Configuration constants
@@ -69,11 +121,6 @@ const BLOCK_PATTERN = /^\.\/.*\/index\.js$/;
  * Provides a functional interface for managing the lifecycle of block registrations,
  * including caching discovered blocks and tracking registration status.
  *
- * @returns {Object} Block registry interface with methods for block management
- * @returns {Function} returns.isRegistered - Checks if a block is already registered
- * @returns {Function} returns.markRegistered - Marks a block as registered
- * @returns {Function} returns.cacheDiscoveredBlock - Caches a discovered block module
- *
  * @example
  * ```javascript
  * const registry = createBlockRegistry();
@@ -81,14 +128,14 @@ const BLOCK_PATTERN = /^\.\/.*\/index\.js$/;
  * console.log(registry.isRegistered('campaignbridge/hero')); // true
  * ```
  */
-const createBlockRegistry = () => {
+const createBlockRegistry = (): BlockRegistry => {
   const registeredBlocks = new Set();
   const discoveredBlocks = new Map();
 
   return {
-    isRegistered: (blockName) => registeredBlocks.has(blockName),
-    markRegistered: (blockName) => registeredBlocks.add(blockName),
-    cacheDiscoveredBlock: (blockName, module) =>
+    isRegistered: (blockName: string) => registeredBlocks.has(blockName),
+    markRegistered: (blockName: string) => registeredBlocks.add(blockName),
+    cacheDiscoveredBlock: (blockName: string, module: BlockModule) =>
       discoveredBlocks.set(blockName, module),
   };
 };
@@ -102,13 +149,6 @@ const blockRegistry = createBlockRegistry();
  * blocks directory using webpack's require.context, validate them, and
  * prepare them for registration.
  *
- * @returns {Object} Block discovery interface with methods for block discovery
- * @returns {Function} returns.getBlockPaths - Gets all block file paths matching the pattern
- * @returns {Function} returns.loadBlockModule - Loads a block module from a given path
- * @returns {Function} returns.extractBlockName - Extracts block name from file path
- * @returns {Function} returns.createFullBlockName - Creates full block name with namespace
- * @returns {Function} returns.discoverAllBlocks - Discovers and loads all available blocks
- *
  * @example
  * ```javascript
  * const discovery = createBlockDiscovery();
@@ -116,27 +156,22 @@ const blockRegistry = createBlockRegistry();
  * console.log(`Found ${blocks.length} blocks`);
  * ```
  */
-const createBlockDiscovery = () => {
+const createBlockDiscovery = (): BlockDiscovery => {
   /**
    * Gets all block file paths that match the expected pattern
    *
    * Filters webpack context keys to find all index.js files within the blocks directory.
-   *
-   * @returns {string[]} Array of block file paths relative to the blocks directory
    */
-  const getBlockPaths = () =>
-    blockContext.keys().filter((path) => BLOCK_PATTERN.test(path));
+  const getBlockPaths = (): string[] =>
+    blockContext.keys().filter((path: string) => BLOCK_PATTERN.test(path));
 
   /**
    * Loads a block module from the specified file path
    *
    * Attempts to load the block module using webpack's require.context.
    * Logs any loading errors and returns null if loading fails.
-   *
-   * @param {string} blockPath - The relative path to the block module file
-   * @returns {Object|null} The loaded block module or null if loading failed
    */
-  const loadBlockModule = (blockPath) => {
+  const loadBlockModule = (blockPath: string): BlockModule | null => {
     try {
       return blockContext(blockPath);
     } catch (error) {
@@ -150,12 +185,10 @@ const createBlockDiscovery = () => {
    * Removes the leading "./" and trailing "/index.js" from the path
    * to get the clean block name.
    *
-   * @param {string} blockPath - The file path to extract name from
-   * @returns {string} The extracted block name
    * @example
    * extractBlockName('./hero/index.js') // returns 'hero'
    */
-  const extractBlockName = (blockPath) =>
+  const extractBlockName = (blockPath: string): string =>
     blockPath.replace("./", "").replace("/index.js", "");
 
   /**
@@ -164,12 +197,11 @@ const createBlockDiscovery = () => {
    * Combines the block namespace with the block name to create
    * the complete block identifier used in WordPress.
    *
-   * @param {string} blockName - The base block name
-   * @returns {string} The full block name with namespace
    * @example
    * createFullBlockName('hero') // returns 'campaignbridge/hero'
    */
-  const createFullBlockName = (blockName) => `${BLOCK_NAMESPACE}/${blockName}`;
+  const createFullBlockName = (blockName: string): string =>
+    `${BLOCK_NAMESPACE}/${blockName}`;
 
   /**
    * Discovers and loads all available block modules
@@ -177,11 +209,6 @@ const createBlockDiscovery = () => {
    * Scans the blocks directory for all index.js files, loads each module,
    * validates them, and caches successful discoveries. Failed loads are
    * handled gracefully and don't stop the discovery process.
-   *
-   * @returns {Array<Object>} Array of discovered block objects
-   * @returns {string} returns[].name - Full block name with namespace
-   * @returns {string} returns[].path - Original file path
-   * @returns {Object} returns[].module - Loaded block module
    *
    * @example
    * ```javascript
@@ -192,7 +219,7 @@ const createBlockDiscovery = () => {
    * // ]
    * ```
    */
-  const discoverAllBlocks = () => {
+  const discoverAllBlocks = (): DiscoveredBlock[] => {
     const blockPaths = getBlockPaths();
     const discoveredBlocks = [];
 
@@ -232,11 +259,6 @@ const blockDiscovery = createBlockDiscovery();
  * and handle registration errors gracefully. Ensures blocks are only registered
  * once and provides detailed feedback on registration outcomes.
  *
- * @returns {Object} Block registration interface with validation and registration methods
- * @returns {Function} returns.validateBlockModule - Validates a block module structure
- * @returns {Function} returns.registerBlock - Registers a single block with WordPress
- * @returns {Function} returns.registerBlockIfNeeded - Registers block only if not already registered
- *
  * @example
  * ```javascript
  * const registration = createBlockRegistration();
@@ -246,19 +268,19 @@ const blockDiscovery = createBlockDiscovery();
  * }
  * ```
  */
-const createBlockRegistration = () => {
+const createBlockRegistration = (): BlockRegistration => {
   /**
    * Validates a block module structure and requirements
    *
    * Ensures the block module exists and has the required init function
    * that will be called during registration.
    *
-   * @param {Object} blockModule - The block module to validate
-   * @param {string} blockName - The name of the block for error messages
-   * @returns {boolean} Returns true if validation passes
    * @throws {Error} Throws if block module is missing or invalid
    */
-  const validateBlockModule = (blockModule, blockName) => {
+  const validateBlockModule = (
+    blockModule: BlockModule,
+    blockName: string,
+  ): boolean => {
     if (!blockModule) {
       throw new Error(`Block module not found for "${blockName}"`);
     }
@@ -275,14 +297,11 @@ const createBlockRegistration = () => {
    *
    * Validates the block module, calls its init function to register with WordPress,
    * and marks it as registered in the registry.
-   *
-   * @param {string} blockName - The full block name with namespace
-   * @param {Object} blockModule - The block module containing init function
-   * @returns {Object} Registration result object
-   * @returns {boolean} returns.success - Whether registration was successful
-   * @returns {Error} [returns.error] - Error object if registration failed
    */
-  const registerBlock = (blockName, blockModule) => {
+  const registerBlock = (
+    blockName: string,
+    blockModule: BlockModule,
+  ): RegistrationResult => {
     try {
       validateBlockModule(blockModule, blockName);
       blockModule.init();
@@ -298,15 +317,11 @@ const createBlockRegistration = () => {
    *
    * Checks if the block is already registered and skips registration if so.
    * Otherwise, proceeds with normal registration process.
-   *
-   * @param {string} blockName - The full block name with namespace
-   * @param {Object} blockModule - The block module containing init function
-   * @returns {Object} Registration result object
-   * @returns {boolean} returns.success - Whether the operation was successful
-   * @returns {boolean} [returns.skipped] - Whether registration was skipped (already registered)
-   * @returns {Error} [returns.error] - Error object if registration failed
    */
-  const registerBlockIfNeeded = (blockName, blockModule) => {
+  const registerBlockIfNeeded = (
+    blockName: string,
+    blockModule: BlockModule,
+  ): RegistrationResult => {
     if (blockRegistry.isRegistered(blockName)) {
       return { success: true, skipped: true };
     }
@@ -335,12 +350,6 @@ const blockRegistration = createBlockRegistration();
  * validates each module, and registers any blocks that haven't been registered yet.
  * The process is resilient to individual block failures and provides detailed results.
  *
- * @returns {Object} Registration statistics and results
- * @returns {number} returns.discovered - Total number of block modules discovered
- * @returns {number} returns.registered - Number of blocks successfully registered
- * @returns {number} returns.skipped - Number of blocks skipped (already registered)
- * @returns {number} returns.failed - Number of blocks that failed to register
- *
  * @example
  * ```javascript
  * import { registerCampaignBridgeBlocks } from './registerCustomBlocks';
@@ -358,7 +367,7 @@ const blockRegistration = createBlockRegistration();
  * // }
  * ```
  */
-export const registerCampaignBridgeBlocks = () => {
+export const registerCampaignBridgeBlocks = (): RegistrationStats => {
   const discoveredBlocks = blockDiscovery.discoverAllBlocks();
 
   const results = {
@@ -375,7 +384,7 @@ export const registerCampaignBridgeBlocks = () => {
     );
 
     if (result.success) {
-      if (result.skipped) {
+      if ("skipped" in result && result.skipped) {
         results.skipped++;
       } else {
         results.registered++;

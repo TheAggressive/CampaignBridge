@@ -19,13 +19,17 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
   const lastNoticeAtRef = useRef(0);
 
   const performSave = useCallback(
-    async (blocksToSave, { signal } = {}) => {
+    async (blocksToSave, { signal }: { signal?: AbortSignal } = {}) => {
       try {
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVING);
 
         const result = await savePostContent(
           postId,
-          { content: serializeSafe(blocksToSave) },
+          {
+            content: serializeSafe(blocksToSave),
+            status: "publish",
+            title: "",
+          },
           signal,
         );
 

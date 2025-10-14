@@ -185,7 +185,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
         // Save preference for persistence
         setPreference(preferencePath, preferenceKey, newState);
       } catch (error) {
-        if (process.env.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
           console.warn("useSidebarState: Error toggling sidebar:", error);
         }
       }
@@ -213,7 +213,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
         setPreference(preferencePath, preferenceKey, true);
       }
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
+      if ((globalThis as any).process?.env?.NODE_ENV === "development") {
         console.warn("useSidebarState: Error toggling sidebar:", error);
       }
     }
@@ -221,7 +221,11 @@ export function useSidebarState(primaryScope, secondaryScope) {
   // Get saved preferences for sidebar states
   const savedPrimaryOpen = useSelect(
     (select) =>
-      select("core/preferences").get(
+      (
+        select("core/preferences") as {
+          get: (scope: string, key: string) => unknown;
+        }
+      ).get(
         SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
         SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
       ),
@@ -229,7 +233,11 @@ export function useSidebarState(primaryScope, secondaryScope) {
   );
   const savedSecondaryOpen = useSelect(
     (select) =>
-      select("core/preferences").get(
+      (
+        select("core/preferences") as {
+          get: (scope: string, key: string) => unknown;
+        }
+      ).get(
         SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
         SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
       ),
@@ -239,13 +247,13 @@ export function useSidebarState(primaryScope, secondaryScope) {
   // Sync local state with saved preferences on mount
   useEffect(() => {
     if (savedPrimaryOpen !== undefined) {
-      setPrimaryOpen(savedPrimaryOpen);
+      setPrimaryOpen(!!savedPrimaryOpen);
     }
   }, [savedPrimaryOpen]);
 
   useEffect(() => {
     if (savedSecondaryOpen !== undefined) {
-      setSecondaryOpen(savedSecondaryOpen);
+      setSecondaryOpen(!!savedSecondaryOpen);
     }
   }, [savedSecondaryOpen]);
 

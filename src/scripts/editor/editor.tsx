@@ -2,6 +2,7 @@ import { registerCoreBlocks } from "@wordpress/block-library";
 import { Button, Icon, Notice, Spinner } from "@wordpress/components";
 import domReady from "@wordpress/dom-ready";
 import { createRoot, useState } from "@wordpress/element";
+import React from "react";
 import "@wordpress/format-library";
 import { __ } from "@wordpress/i18n";
 import { layout, plus } from "@wordpress/icons";
@@ -16,6 +17,20 @@ import { registerCampaignBridgeBlocks } from "./utils/registerCampaignBridgeBloc
 
 export const POST_TYPE = "cb_email_template";
 
+// Type definitions
+interface TemplateItem {
+  id: number;
+  title: string;
+  [key: string]: any;
+}
+
+interface EmptyStateProps {
+  list: TemplateItem[];
+  loading: boolean;
+  onSelect: (id: number | null) => void;
+  onNew: () => void;
+}
+
 /**
  * Main application component for the CampaignBridge Template Editor.
  *
@@ -23,10 +38,8 @@ export const POST_TYPE = "cb_email_template";
  * - Loading and displaying list of available templates
  * - Handling template selection and creation
  * - Rendering the appropriate UI based on current state
- *
- * @return {JSX.Element} The main editor application
  */
-export default function CampaignBridgeBlockEditor() {
+export default function CampaignBridgeBlockEditor(): JSX.Element {
   const [error, setError] = useState("");
   const {
     items: list,
@@ -50,9 +63,12 @@ export default function CampaignBridgeBlockEditor() {
 
   /**
    * Handles template selection by updating the URL parameter and reloading the page.
-   * @param {number|null} id - The ID of the selected template, or null to deselect
    */
-  const onSelect = (id) => (id ? selectTemplate(id) : null);
+  const onSelect = (id: number | null): void => {
+    if (id) {
+      selectTemplate(id);
+    }
+  };
 
   /**
    * Opens the naming modal for creating a new template.
@@ -105,13 +121,6 @@ export default function CampaignBridgeBlockEditor() {
  *
  * Shows instructions to the user to either select an existing template
  * or create a new one.
- *
- * @param {Object} props - Component props
- * @param {Array} props.list - Array of available templates
- * @param {boolean} props.loading - Whether templates are currently loading
- * @param {function} props.onSelect - Callback fired when a template is selected
- * @param {function} props.onNew - Callback fired when creating a new template
- * @return {JSX.Element} The empty state UI
  */
 function EmptyState({ list, loading, onSelect, onNew }) {
   return (
