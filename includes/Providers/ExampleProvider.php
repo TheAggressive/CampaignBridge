@@ -50,7 +50,7 @@ class ExampleProvider extends Abstract_Provider {
 	/**
 	 * Check if the provider has sufficient settings to operate.
 	 *
-	 * @param array $settings Plugin settings array containing provider configuration.
+	 * @param array<string, mixed> $settings Plugin settings array containing provider configuration.
 	 * @return bool True if provider is ready to send campaigns.
 	 */
 	public function is_configured( array $settings ): bool {
@@ -61,8 +61,8 @@ class ExampleProvider extends Abstract_Provider {
 	/**
 	 * Render provider-specific settings fields in the admin interface.
 	 *
-	 * @param array  $settings    Current plugin settings array.
-	 * @param string $option_name Root option name for form field namespacing.
+	 * @param array<string, mixed> $settings    Current plugin settings array.
+	 * @param string               $option_name Root option name for form field namespacing.
 	 * @return void Outputs HTML directly to the page.
 	 */
 	public function render_settings_fields( array $settings, string $option_name ): void {
@@ -141,8 +141,8 @@ class ExampleProvider extends Abstract_Provider {
 	/**
 	 * Send campaign or export content based on provider type.
 	 *
-	 * @param array $blocks   Associative array mapping section keys to HTML content.
-	 * @param array $settings Plugin settings array with provider configuration.
+	 * @param array<string, mixed> $blocks   Associative array mapping section keys to HTML content.
+	 * @param array<string, mixed> $settings Plugin settings array with provider configuration.
 	 * @return bool|\WP_Error True on success, WP_Error on failure with details.
 	 */
 	public function send_campaign( array $blocks, array $settings ) {
@@ -164,6 +164,11 @@ class ExampleProvider extends Abstract_Provider {
 				'recipients' => array( 'all' => true ),
 			);
 
+			$json_body = wp_json_encode( $campaign_data );
+			if ( false === $json_body ) {
+				return $this->create_error( 'json_encode_error', __( 'Failed to encode campaign data.', 'campaignbridge' ) );
+			}
+
 			$response = wp_remote_post(
 				$endpoint . '/campaigns',
 				array(
@@ -171,7 +176,7 @@ class ExampleProvider extends Abstract_Provider {
 						'Authorization' => 'Bearer ' . $api_key,
 						'Content-Type'  => 'application/json',
 					),
-					'body'    => wp_json_encode( $campaign_data ),
+					'body'    => $json_body,
 					'timeout' => 30,
 				)
 			);
@@ -181,15 +186,16 @@ class ExampleProvider extends Abstract_Provider {
 			}
 
 			$status_code = wp_remote_retrieve_response_code( $response );
-			if ( $status_code < 200 || $status_code >= 300 ) {
+			if ( ! is_int( $status_code ) || $status_code < 200 || $status_code >= 300 ) {
+				$safe_status = is_int( $status_code ) ? $status_code : 500;
 				return $this->create_error(
 					'api_error',
 					sprintf(
 						/* translators: %d: HTTP status code */
 						__( 'API request failed with status %d.', 'campaignbridge' ),
-						$status_code
+						$safe_status
 					),
-					$status_code
+					$safe_status
 				);
 			}
 
@@ -205,9 +211,9 @@ class ExampleProvider extends Abstract_Provider {
 	/**
 	 * Get available template section keys for content mapping.
 	 *
-	 * @param array $settings Plugin settings array (for provider-specific logic).
-	 * @param bool  $refresh  Force refresh of cached data.
-	 * @return array|\WP_Error Array of section key strings, or WP_Error if unsupported/unavailable.
+	 * @param array<string, mixed> $settings Plugin settings array (for provider-specific logic).
+	 * @param bool                 $refresh  Force refresh of cached data.
+	 * @return array<string>|\WP_Error Array of section key strings, or WP_Error if unsupported/unavailable.
 	 */
 	public function get_section_keys( array $settings, bool $refresh = false ) {
 		// Example: Return supported template sections.
@@ -217,7 +223,7 @@ class ExampleProvider extends Abstract_Provider {
 	/**
 	 * Get settings schema for validation and redaction.
 	 *
-	 * @return array Schema array with field definitions.
+	 * @return array<string, mixed> Schema array with field definitions.
 	 */
 	public function settings_schema(): array {
 		return array(
@@ -241,7 +247,7 @@ class ExampleProvider extends Abstract_Provider {
 	/**
 	 * Prepare campaign content from blocks.
 	 *
-	 * @param array $blocks Content blocks.
+	 * @param array<string, string> $blocks Content blocks.
 	 * @return string Prepared content.
 	 */
 	private function prepare_campaign_content( array $blocks ): string {

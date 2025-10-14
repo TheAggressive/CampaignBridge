@@ -44,9 +44,9 @@ class Form_Cache {
 	 * Stores form configuration data in WordPress object cache for improved performance.
 	 * Useful for caching form definitions that don't change frequently.
 	 *
-	 * @param string $cache_key Unique cache key for the form (should be prefixed with form ID).
-	 * @param array  $config    Complete form configuration array including fields, settings, and metadata.
-	 * @param int    $expiry    Cache expiry time in seconds. Default: 1 hour (HOUR_IN_SECONDS).
+	 * @param string               $cache_key Unique cache key for the form (should be prefixed with form ID).
+	 * @param array<string, mixed> $config    Complete form configuration array including fields, settings, and metadata.
+	 * @param int                  $expiry    Cache expiry time in seconds. Default: 1 hour (HOUR_IN_SECONDS).
 	 * @return bool True on successful cache storage, false on failure or if caching is disabled.
 	 *
 	 * @example
@@ -66,7 +66,7 @@ class Form_Cache {
 	 * Returns null if the cache key doesn't exist or has expired.
 	 *
 	 * @param string $cache_key Unique cache key for the form (should match the key used in set_form_config).
-	 * @return array|null Complete form configuration array if found in cache, null otherwise.
+	 * @return array<string, mixed>|null Complete form configuration array if found in cache, null otherwise.
 	 *
 	 * @example
 	 * ```php
@@ -88,8 +88,8 @@ class Form_Cache {
 	/**
 	 * Cache field definitions for a form.
 	 *
-	 * @param string $form_id Form identifier.
-	 * @param array  $fields  Field definitions array.
+	 * @param string               $form_id Form identifier.
+	 * @param array<string, mixed> $fields  Field definitions array.
 	 * @return bool True on success, false on failure.
 	 */
 	public function set_form_fields( string $form_id, array $fields ): bool {
@@ -101,7 +101,7 @@ class Form_Cache {
 	 * Get cached field definitions for a form.
 	 *
 	 * @param string $form_id Form identifier.
-	 * @return array|null Cached fields or null if not found.
+	 * @return array<string, mixed>|null Cached fields or null if not found.
 	 */
 	public function get_form_fields( string $form_id ): ?array {
 		$cache_key = "fields_{$form_id}";
@@ -111,26 +111,30 @@ class Form_Cache {
 	/**
 	 * Cache rendered form HTML (use with caution - only for static forms).
 	 *
-	 * @param string $form_id    Form identifier.
-	 * @param string $html       Rendered HTML.
-	 * @param array  $conditions Array of conditions that must match for cache hit.
+	 * @param string               $form_id    Form identifier.
+	 * @param string               $html       Rendered HTML.
+	 * @param array<string, mixed> $conditions Array of conditions that must match for cache hit.
 	 * @return bool True on success, false on failure.
 	 */
 	public function set_rendered_form( string $form_id, string $html, array $conditions = array() ): bool {
-		$cache_key = "rendered_{$form_id}_" . md5( wp_json_encode( $conditions ) );
+		$conditions_json = wp_json_encode( $conditions );
+		$conditions_hash = $conditions_json ? md5( $conditions_json ) : 'empty';
+		$cache_key       = "rendered_{$form_id}_{$conditions_hash}";
 		return wp_cache_set( $cache_key, $html, self::CACHE_GROUP, self::CACHE_EXPIRY / 4 ); // Shorter cache for HTML.
 	}
 
 	/**
 	 * Get cached rendered form HTML.
 	 *
-	 * @param string $form_id    Form identifier.
-	 * @param array  $conditions Array of conditions that must match for cache hit.
+	 * @param string               $form_id    Form identifier.
+	 * @param array<string, mixed> $conditions Array of conditions that must match for cache hit.
 	 * @return string|null Cached HTML or null if not found.
 	 */
 	public function get_rendered_form( string $form_id, array $conditions = array() ): ?string {
-		$cache_key = "rendered_{$form_id}_" . md5( wp_json_encode( $conditions ) );
-		$cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+		$conditions_json = wp_json_encode( $conditions );
+		$conditions_hash = $conditions_json ? md5( $conditions_json ) : 'empty';
+		$cache_key       = "rendered_{$form_id}_{$conditions_hash}";
+		$cached          = wp_cache_get( $cache_key, self::CACHE_GROUP );
 
 		return false !== $cached ? $cached : null;
 	}
@@ -138,8 +142,8 @@ class Form_Cache {
 	/**
 	 * Cache validation rules for performance.
 	 *
-	 * @param string $form_id Form identifier.
-	 * @param array  $rules   Validation rules array.
+	 * @param string               $form_id Form identifier.
+	 * @param array<string, mixed> $rules   Validation rules array.
 	 * @return bool True on success, false on failure.
 	 */
 	public function set_validation_rules( string $form_id, array $rules ): bool {
@@ -151,7 +155,7 @@ class Form_Cache {
 	 * Get cached validation rules.
 	 *
 	 * @param string $form_id Form identifier.
-	 * @return array|null Cached validation rules or null if not found.
+	 * @return array<string, mixed>|null Cached validation rules or null if not found.
 	 */
 	public function get_validation_rules( string $form_id ): ?array {
 		$cache_key = "validation_{$form_id}";
@@ -197,7 +201,7 @@ class Form_Cache {
 	/**
 	 * Get cache statistics for monitoring.
 	 *
-	 * @return array Cache statistics.
+	 * @return array<string, mixed> Cache statistics.
 	 */
 	public function get_cache_stats(): array {
 		return array(
@@ -216,6 +220,11 @@ class Form_Cache {
 	private function sanitize_cache_key( string $key ): string {
 		// Replace spaces and special characters with underscores.
 		$sanitized = preg_replace( '/[^a-zA-Z0-9_-]/', '_', $key );
+
+		// Handle preg_replace failure
+		if ( null === $sanitized ) {
+			$sanitized = $key;
+		}
 
 		// Ensure key is not too long (WordPress has limits).
 		if ( strlen( $sanitized ) > 172 ) {

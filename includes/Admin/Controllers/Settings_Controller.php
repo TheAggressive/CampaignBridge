@@ -24,7 +24,7 @@ class Settings_Controller {
 	/**
 	 * Controller data array.
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $data = array();
 
@@ -40,7 +40,7 @@ class Settings_Controller {
 	/**
 	 * Get data for views (available in all tabs via $screen->get())
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function get_data(): array {
 		return $this->data;

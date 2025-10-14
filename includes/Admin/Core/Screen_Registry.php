@@ -32,12 +32,6 @@ class Screen_Registry {
 	 */
 	private string $parent_slug;
 
-	/**
-	 * Array of registered screens.
-	 *
-	 * @var array
-	 */
-	private array $registered_screens = array();
 
 	/**
 	 * Constructor - Initialize screen registry.
@@ -101,9 +95,7 @@ class Screen_Registry {
 		$config = array();
 
 		// Auto-discover controller.
-		if ( ! isset( $config['controller'] ) ) {
-			$config['controller'] = $this->discover_controller( $screen_name );
-		}
+		$config['controller'] = $this->discover_controller( $screen_name );
 
 		// Merge with defaults.
 		$config = array_merge(
@@ -153,10 +145,10 @@ class Screen_Registry {
 	/**
 	 * Register screen with WordPress.
 	 *
-	 * @param string $screen_name The name of the screen.
-	 * @param string $slug The screen slug.
-	 * @param array  $config The screen configuration.
-	 * @param string $type The screen type (single or tabbed).
+	 * @param string               $screen_name The name of the screen.
+	 * @param string               $slug The screen slug.
+	 * @param array<string, mixed> $config The screen configuration.
+	 * @param string               $type The screen type (single or tabbed).
 	 * @return void
 	 */
 	private function register_screen( string $screen_name, string $slug, array $config, string $type ): void {
@@ -179,15 +171,7 @@ class Screen_Registry {
 			$config['position'] ?? null
 		);
 
-		// Store for reference.
-		$this->registered_screens[ $full_slug ] = array(
-			'name'       => $screen_name,
-			'slug'       => $full_slug,
-			'type'       => $type,
-			'hook'       => $hook,
-			'config'     => $config,
-			'controller' => $controller,
-		);
+		// Screen registered successfully.
 
 		// Hook: on page load (for form handling).
 		\add_action(
@@ -213,10 +197,10 @@ class Screen_Registry {
 	/**
 	 * Render screen (simple or tabbed).
 	 *
-	 * @param string $screen_name The name of the screen.
-	 * @param string $type The type of screen.
-	 * @param mixed  $controller The controller instance.
-	 * @param array  $config The configuration array.
+	 * @param string               $screen_name The name of the screen.
+	 * @param string               $type The type of screen.
+	 * @param mixed                $controller The controller instance.
+	 * @param array<string, mixed> $config The configuration array.
 	 * @return void
 	 */
 	private function render_screen( string $screen_name, string $type, $controller, array $config ): void {
@@ -252,10 +236,11 @@ class Screen_Registry {
 		}
 
 		// Create $screen context.
+		global $screen;
 		$screen = new Screen_Context( $screen_name, 'single', null, $controller );
 
 		// Load data from controller.
-		if ( $controller && method_exists( $controller, 'get_data' ) ) {
+		if ( $controller && is_object( $controller ) && method_exists( $controller, 'get_data' ) ) {
 			foreach ( $controller->get_data() as $key => $value ) {
 				$screen->set( $key, $value );
 			}
@@ -268,9 +253,9 @@ class Screen_Registry {
 	/**
 	 * Render tabbed screen.
 	 *
-	 * @param string $screen_name The name of the screen.
-	 * @param mixed  $controller The controller instance.
-	 * @param array  $config The configuration array.
+	 * @param string               $screen_name The name of the screen.
+	 * @param mixed                $controller The controller instance.
+	 * @param array<string, mixed> $config The configuration array.
 	 * @return void
 	 */
 	private function render_tabbed_screen( string $screen_name, $controller, array $config = array() ): void {
@@ -323,6 +308,7 @@ class Screen_Registry {
 			$tab_controller = $this->get_tab_controller( $tabs[ $active_tab ], $controller );
 
 			// Create $screen context for tab.
+			global $screen;
 			$screen = new Screen_Context( $screen_name, 'tabbed', $active_tab, $tab_controller );
 
 			// Load data from tab controller first, then screen controller.
@@ -345,9 +331,9 @@ class Screen_Registry {
 	/**
 	 * Auto-discover tabs from folder with configuration support.
 	 *
-	 * @param string $folder_path The path to the folder.
-	 * @param array  $config      The configuration array.
-	 * @return array The tabs.
+	 * @param string               $folder_path The path to the folder.
+	 * @param array<string, mixed> $config      The configuration array.
+	 * @return array<string, mixed> The tabs.
 	 */
 	private function discover_tabs( string $folder_path, array $config = array() ): array {
 		$tabs = array();
@@ -359,7 +345,12 @@ class Screen_Registry {
 		// Get tab configuration if available.
 		$tab_config = isset( $config['tabs'] ) && is_array( $config['tabs'] ) ? $config['tabs'] : array();
 
-		foreach ( glob( $folder_path . '/*.php' ) as $file ) {
+		$files = glob( $folder_path . '/*.php' );
+		if ( ! is_array( $files ) ) {
+			return $tabs;
+		}
+
+		foreach ( $files as $file ) {
 			$filename = basename( $file );
 
 			// Skip files starting with _ (like _config.php).
@@ -419,8 +410,8 @@ class Screen_Registry {
 	/**
 	 * Filter tabs based on user capabilities.
 	 *
-	 * @param array $tabs The tabs array.
-	 * @return array Filtered tabs that user has access to.
+	 * @param array<string, mixed> $tabs The tabs array.
+	 * @return array<string, mixed> Filtered tabs that user has access to.
 	 */
 	private function filter_tabs_by_capability( array $tabs ): array {
 		return array_filter(
@@ -442,8 +433,8 @@ class Screen_Registry {
 	/**
 	 * Get the appropriate controller for a tab.
 	 *
-	 * @param array $tab_info The tab information.
-	 * @param mixed $screen_controller The screen controller.
+	 * @param array<string, mixed> $tab_info The tab information.
+	 * @param mixed                $screen_controller The screen controller.
 	 * @return mixed The controller to use for this tab.
 	 */
 	private function get_tab_controller( array $tab_info, $screen_controller ) {
@@ -476,14 +467,14 @@ class Screen_Registry {
 	 */
 	private function load_tab_data( $tab_controller, $screen_controller, Screen_Context $screen ): void {
 		// Load data from tab controller first (higher priority).
-		if ( $tab_controller && method_exists( $tab_controller, 'get_data' ) ) {
+		if ( $tab_controller && is_object( $tab_controller ) && method_exists( $tab_controller, 'get_data' ) ) {
 			foreach ( $tab_controller->get_data() as $key => $value ) {
 				$screen->set( $key, $value );
 			}
 		}
 
 		// Then load data from screen controller (lower priority, won't override tab data).
-		if ( $screen_controller && $screen_controller !== $tab_controller && method_exists( $screen_controller, 'get_data' ) ) {
+		if ( $screen_controller && $screen_controller !== $tab_controller && is_object( $screen_controller ) && method_exists( $screen_controller, 'get_data' ) ) {
 			foreach ( $screen_controller->get_data() as $key => $value ) {
 				// Only set if not already set by tab controller.
 				if ( ! $screen->has( $key ) ) {
@@ -537,12 +528,13 @@ class Screen_Registry {
 	/**
 	 * Enqueue screen-specific assets.
 	 *
-	 * @param string $screen_name The name of the screen.
-	 * @param string $type The type of screen.
-	 * @param array  $config The configuration array.
+	 * @param string               $screen_name The name of the screen.
+	 * @param string               $type The type of screen.
+	 * @param array<string, mixed> $config The configuration array.
 	 * @return void
 	 */
 	private function enqueue_screen_assets( string $screen_name, string $type, array $config ): void {
+		global $screen;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- GET parameter for tab navigation, not form processing.
 		$screen = new Screen_Context( $screen_name, $type, isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : null, null );
 

@@ -26,35 +26,44 @@ class Form_Data_Manager {
 	/**
 	 * Form configuration
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $config;
 
 	/**
 	 * Form fields configuration
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $fields;
 
 	/**
 	 * Form data storage
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $data = array();
 
 	/**
 	 * Constructor
 	 *
-	 * @param Form  $form   Parent form instance.
-	 * @param array $config Form configuration.
-	 * @param array $fields Form fields.
+	 * @param Form                 $form   Parent form instance.
+	 * @param array<string, mixed> $config Form configuration.
+	 * @param array<string, mixed> $fields Form fields.
 	 */
 	public function __construct( Form $form, array $config, array $fields ) {
 		$this->form   = $form;
 		$this->config = $config;
 		$this->fields = $fields;
+	}
+
+	/**
+	 * Get the parent form instance
+	 *
+	 * @return Form Parent form instance.
+	 */
+	public function get_form(): Form {
+		return $this->form;
 	}
 
 	/**
@@ -179,7 +188,7 @@ class Form_Data_Manager {
 	/**
 	 * Update form data from array
 	 *
-	 * @param array $data Data to update.
+	 * @param array<string, mixed> $data Data to update.
 	 */
 	public function update_data( array $data ): void {
 		$this->data = array_merge( $this->data, $data );

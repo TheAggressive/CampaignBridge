@@ -115,8 +115,10 @@ class Form_Field_File extends Form_Field_Base {
 	private function render_single_file_display( $file ): void {
 		if ( is_numeric( $file ) ) {
 			// WordPress attachment ID.
-			$file_url  = wp_get_attachment_url( $file );
-			$file_name = basename( get_attached_file( $file ) );
+			$attachment_id = (int) $file;
+			$file_url      = wp_get_attachment_url( $attachment_id );
+			$attached_file = get_attached_file( $attachment_id );
+			$file_name     = $attached_file ? basename( $attached_file ) : '';
 		} elseif ( is_string( $file ) ) {
 			// File URL or path.
 			$file_url  = $file;
@@ -135,7 +137,7 @@ class Form_Field_File extends Form_Field_Base {
 				esc_url( $file_url ),
 				esc_html( $file_name ),
 				esc_attr( $this->config['name'] . '_current' ),
-				esc_attr( is_numeric( $file ) ? $file : $file_url )
+				esc_attr( (string) (is_numeric( $file ) ? $file : $file_url) )
 			);
 		}
 	}
@@ -170,13 +172,11 @@ class Form_Field_File extends Form_Field_Base {
 			$requirements[] = __( 'Multiple files allowed', 'campaignbridge' );
 		}
 
-		if ( ! empty( $requirements ) ) {
-			echo '<div class="file-requirements">';
-			foreach ( $requirements as $requirement ) {
-				printf( '<p class="description">%s</p>', esc_html( $requirement ) );
-			}
-			echo '</div>';
+		echo '<div class="file-requirements">';
+		foreach ( $requirements as $requirement ) {
+			printf( '<p class="description">%s</p>', esc_html( $requirement ) );
 		}
+		echo '</div>';
 	}
 
 	/**
@@ -232,8 +232,8 @@ class Form_Field_File extends Form_Field_Base {
 	/**
 	 * Validate a single file
 	 *
-	 * @param array $file File data.
-	 * @return bool|WP_Error
+	 * @param array<string, mixed> $file File data.
+	 * @return bool|\WP_Error
 	 */
 	private function validate_single_file( array $file ) {
 		$security = new Form_Security( $this->config['id'] );

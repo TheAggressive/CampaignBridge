@@ -21,21 +21,21 @@ class Form_Container {
 	/**
 	 * Service definitions
 	 *
-	 * @var array
+	 * @var array<string, callable>
 	 */
 	private array $services = array();
 
 	/**
 	 * Shared service instances
 	 *
-	 * @var array
+	 * @var array<string, bool>
 	 */
 	private array $shared = array();
 
 	/**
 	 * Shared service instances storage
 	 *
-	 * @var array
+	 * @var array<string, object>
 	 */
 	private array $instances = array();
 
@@ -99,12 +99,12 @@ class Form_Container {
 	/**
 	 * Create a Form instance
 	 *
-	 * @param string $form_id Form ID.
-	 * @param array  $config  Initial configuration.
+	 * @param string               $form_id Form ID.
+	 * @param array<string, mixed> $config  Initial configuration.
 	 * @return \CampaignBridge\Admin\Core\Form
 	 */
 	public function create_form( string $form_id, array $config = array() ): \CampaignBridge\Admin\Core\Form {
-		return new \CampaignBridge\Admin\Core\Form( $form_id, $config, $this );
+		return \CampaignBridge\Admin\Core\Form::make( $form_id, $config );
 	}
 
 	/**
@@ -179,7 +179,7 @@ class Form_Container {
 	 *
 	 * @param \CampaignBridge\Admin\Core\Form $form    Form instance.
 	 * @param Form_Config                     $config  Form configuration.
-	 * @param array                           $fields  Form fields.
+	 * @param array<string, mixed>            $fields  Form fields.
 	 * @param Form_Validator                  $validator Validator instance.
 	 *
 	 * @return Form_Handler
@@ -200,7 +200,7 @@ class Form_Container {
 	 *
 	 * @param \CampaignBridge\Admin\Core\Form $form   Form instance.
 	 * @param Form_Config                     $config Form configuration.
-	 * @param array                           $fields Form fields.
+	 * @param array<string, mixed>            $fields Form fields.
 	 * @return Form_Data_Manager
 	 */
 	public function create_form_data_manager(
@@ -216,8 +216,8 @@ class Form_Container {
 	 *
 	 * @param \CampaignBridge\Admin\Core\Form $form    Form instance.
 	 * @param Form_Config                     $config  Form configuration.
-	 * @param array                           $fields  Form fields.
-	 * @param array                           $data    Form data.
+	 * @param array<string, mixed>            $fields  Form fields.
+	 * @param array<string, mixed>            $data    Form data.
 	 * @param Form_Handler                    $handler Form handler.
 	 * @return Form_Renderer
 	 */
@@ -235,7 +235,7 @@ class Form_Container {
 		}
 
 		$security = $this->get( "security_{$form_id}" );
-		return new Form_Renderer( $form, $config->all(), $fields, $data, $handler, $security );
+		return new Form_Renderer( $config->all(), $fields, $data, $handler, $security );
 	}
 
 	/**

@@ -45,8 +45,8 @@ class Form_Field_Radio extends Form_Field_Base {
 			$attributes = $this->render_common_attributes();
 
 			// Remove ID and name from attributes as we set them specifically.
-			$attributes = preg_replace( '/\bid="[^"]*"/', '', $attributes );
-			$attributes = preg_replace( '/\bname="[^"]*"/', '', $attributes );
+			$attributes = preg_replace( '/\bid="[^"]*"/', '', $attributes ) ?? $attributes;
+			$attributes = preg_replace( '/\bname="[^"]*"/', '', $attributes ) ?? $attributes;
 
 			printf(
 				'<label for="%s" class="campaignbridge-radio-label">
@@ -97,7 +97,7 @@ class Form_Field_Radio extends Form_Field_Base {
 			$wrapper_class .= ' ' . $this->config['wrapper_class'];
 		}
 
-		printf( '<tr%s>', $wrapper_class ? ' class="' . esc_attr( $wrapper_class ) . '"' : '' );
+		printf( '<tr class="%s">', esc_attr( $wrapper_class ) );
 
 		// Empty th for radio fields since label is in fieldset.
 		echo '<th scope="row"></th>';

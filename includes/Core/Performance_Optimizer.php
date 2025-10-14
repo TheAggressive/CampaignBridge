@@ -22,23 +22,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Performance_Optimizer {
 	/**
-	 * Cache namespace for this plugin
-	 */
-	private const CACHE_NAMESPACE = 'campaignbridge';
-
-	/**
 	 * Cache TTL constants
 	 */
-	private const CACHE_SHORT  = 300;   // 5 minutes
 	private const CACHE_MEDIUM = 1800;  // 30 minutes
 	private const CACHE_LONG   = 7200;  // 2 hours
 
 	/**
 	 * Cache groups for organization
 	 */
-	private const CACHE_GROUP_TRANSIENTS = 'transients';
-	private const CACHE_GROUP_QUERIES    = 'queries';
-	private const CACHE_GROUP_API        = 'api';
+	private const CACHE_GROUP_QUERIES = 'queries';
 
 	/**
 	 * Get cached data with fallback
@@ -87,7 +79,7 @@ class Performance_Optimizer {
 	/**
 	 * Optimized WP_Query for posts
 	 *
-	 * @param array $args Query arguments.
+	 * @param array<string, mixed> $args Query arguments.
 	 * @return \WP_Query
 	 */
 	public function get_optimized_posts_query( array $args = array() ): \WP_Query {
@@ -111,7 +103,7 @@ class Performance_Optimizer {
 	/**
 	 * Batch update post meta with performance optimization
 	 *
-	 * @param array $post_meta_updates Array of post_id => meta_data pairs.
+	 * @param array<int, array<string, mixed>> $post_meta_updates Array of post_id => meta_data pairs.
 	 * @return bool
 	 */
 	public function batch_update_post_meta( array $post_meta_updates ): bool {
@@ -173,16 +165,6 @@ class Performance_Optimizer {
 				'%_transient_campaignbridge_%'
 			)
 		);
-	}
-
-	/**
-	 * Generate cache key with namespace
-	 *
-	 * @param string $key Base key.
-	 * @return string Namespaced key
-	 */
-	private function get_cache_key( string $key ): string {
-		return self::CACHE_NAMESPACE . '_' . $key;
 	}
 
 	/**

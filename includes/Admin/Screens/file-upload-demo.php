@@ -104,9 +104,10 @@ use CampaignBridge\Admin\Core\Form;
 					<?php
 						$file_path = $uploaded_files['file'] ?? '';
 					if ( ! empty( $file_path ) && file_exists( $file_path ) ) {
-						echo esc_html( size_format( filesize( $file_path ) ) );
+						$file_size = filesize( $file_path );
+						echo esc_html( $file_size ? size_format( $file_size ) : 'Unknown size' );
 					} else {
-						'File not found';
+						echo 'File not found';
 					}
 					?>
 					</p>
@@ -124,7 +125,8 @@ use CampaignBridge\Admin\Core\Form;
 					<?php
 						$file_path = $document_files['file'] ?? '';
 					if ( ! empty( $file_path ) && file_exists( $file_path ) ) {
-						echo esc_html( size_format( filesize( $file_path ) ) );
+						$file_size = filesize( $file_path );
+						echo esc_html( $file_size ? size_format( $file_size ) : 'Unknown size' );
 					} else {
 						_e( 'File not found', 'campaignbridge' );
 					}

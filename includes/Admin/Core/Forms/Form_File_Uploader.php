@@ -37,9 +37,9 @@ class Form_File_Uploader {
 	/**
 	 * Process file upload
 	 *
-	 * @param array $file     File data from $_FILES.
-	 * @param array $config   Field configuration.
-	 * @return array|\WP_Error Upload result or error.
+	 * @param array<string, mixed> $file     File data from $_FILES.
+	 * @param array<string, mixed> $config   Field configuration.
+	 * @return array<string, mixed>|\WP_Error Upload result or error.
 	 */
 	public function process_upload( array $file, array $config = array() ): array|\WP_Error {
 		// Pre-validate file with our security checks.
@@ -69,8 +69,8 @@ class Form_File_Uploader {
 
 		// Add additional metadata.
 		$upload_result['filename'] = basename( $upload_result['file'] );
-		$upload_result['size']     = $file['size'];
-		$upload_result['type']     = $upload_result['type'] ?? $file['type'];
+		$upload_result['size']     = $file['size'] ?? 0;
+		$upload_result['type']     = $upload_result['type'] ?? ( $file['type'] ?? '' );
 
 		// Create WordPress attachment if requested.
 		if ( ! empty( $config['create_attachment'] ) ) {
@@ -92,8 +92,8 @@ class Form_File_Uploader {
 	 *
 	 * Performs comprehensive security validation on uploaded files.
 	 *
-	 * @param array $file   File data from $_FILES.
-	 * @param array $config Field configuration.
+	 * @param array<string, mixed> $file   File data from $_FILES.
+	 * @param array<string, mixed> $config Field configuration.
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
 	public function validate_file( array $file, array $config = array() ): bool|\WP_Error {
@@ -106,8 +106,8 @@ class Form_File_Uploader {
 	 *
 	 * Logs security events for upload errors and returns WP_Error.
 	 *
-	 * @param array  $file    File array.
-	 * @param string $message Error message.
+	 * @param array<string, mixed> $file File array.
+	 * @param string               $message Error message.
 	 * @return \WP_Error Error object.
 	 */
 	public function handle_upload_error( array $file, string $message ): \WP_Error {
@@ -125,7 +125,7 @@ class Form_File_Uploader {
 	/**
 	 * Create WordPress attachment
 	 *
-	 * @param array $upload_result Upload result data.
+	 * @param array<string, mixed> $upload_result Upload result data.
 	 * @return int|\WP_Error Attachment ID or error.
 	 */
 	private function create_attachment( array $upload_result ): int|\WP_Error {
@@ -156,9 +156,9 @@ class Form_File_Uploader {
 	 * Handles multiple file uploads from HTML multiple file inputs.
 	 * Reorganizes the $_FILES array and processes each file individually.
 	 *
-	 * @param array $files  Files data from $_FILES.
-	 * @param array $config Field configuration.
-	 * @return array|\WP_Error Array of upload results or error.
+	 * @param array<string, mixed> $files  Files data from $_FILES.
+	 * @param array<string, mixed> $config Field configuration.
+	 * @return array<int, array<string, mixed>>|\WP_Error Array of upload results or error.
 	 */
 	public function process_multiple_uploads( array $files, array $config = array() ): array|\WP_Error {
 		$results = array();
@@ -201,8 +201,8 @@ class Form_File_Uploader {
 	/**
 	 * Reorganize files array for multiple uploads
 	 *
-	 * @param array $files Files array from $_FILES.
-	 * @return array Reorganized files array.
+	 * @param array<string, mixed> $files Files array from $_FILES.
+	 * @return array<int, array<string, mixed>> Reorganized files array.
 	 */
 	private function reorganize_files_array( array $files ): array {
 		$reorganized = array();

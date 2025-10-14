@@ -15,7 +15,6 @@
   "require-dev": {
     "brain/monkey": "^2.6",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-    "mockery/mockery": "^1.6",
     "php-stubs/wordpress-stubs": "^6.6.2",
     "phpstan/extension-installer": "^1.4",
     "phpstan/phpstan": "^2",

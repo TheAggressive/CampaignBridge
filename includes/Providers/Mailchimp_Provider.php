@@ -62,7 +62,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Check if provider is properly configured.
 	 *
-	 * @param array $settings Plugin settings.
+	 * @param array<string, mixed> $settings Plugin settings.
 	 * @return bool
 	 */
 	public function is_configured( array $settings ): bool {
@@ -73,8 +73,8 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Render Mailchimp-specific settings fields.
 	 *
-	 * @param array  $settings    Current settings.
-	 * @param string $option_name Option name prefix.
+	 * @param array<string, mixed> $settings    Current settings.
+	 * @param string               $option_name Option name prefix.
 	 * @return void
 	 */
 	public function render_settings_fields( array $settings, string $option_name ): void {
@@ -139,8 +139,8 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Send campaign to Mailchimp
 	 *
-	 * @param array $blocks   Content blocks.
-	 * @param array $settings Plugin settings.
+	 * @param array<string, mixed> $blocks   Content blocks.
+	 * @param array<string, mixed> $settings Plugin settings.
 	 * @return bool|WP_Error
 	 */
 	public function send_campaign( array $blocks, array $settings ) {
@@ -183,13 +183,13 @@ class Mailchimp_Provider extends Abstract_Provider {
 		}
 	}
 
-	/**
-	 * Get available template section keys.
-	 *
-	 * @param array $settings Plugin settings.
-	 * @param bool  $refresh  Force refresh.
-	 * @return array|WP_Error
-	 */
+		/**
+		 * Get available template section keys.
+		 *
+		 * @param array<string, mixed> $settings Plugin settings.
+		 * @param bool                 $refresh  Force refresh.
+		 * @return array<string>|WP_Error
+		 */
 	public function get_section_keys( array $settings, bool $refresh = false ) {
 		try {
 			if ( ! $this->is_configured( $settings ) ) {
@@ -213,7 +213,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 				}
 			}
 
-			return array_unique( $section_keys );
+			return array_map( 'strval', array_unique( $section_keys ) );
 
 		} catch ( \Exception $e ) {
 			return $this->create_error( 'section_keys_error', $e->getMessage() );
@@ -223,7 +223,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Get settings schema for validation.
 	 *
-	 * @return array
+	 * @return array<string, array<string, mixed>>
 	 */
 	public function settings_schema(): array {
 		return array(
@@ -240,9 +240,9 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Prepare campaign data for Mailchimp API
 	 *
-	 * @param array $blocks   Content blocks.
-	 * @param array $settings Plugin settings.
-	 * @return array
+	 * @param array<string, mixed> $blocks   Content blocks.
+	 * @param array<string, mixed> $settings Plugin settings.
+	 * @return array<string, mixed>
 	 */
 	private function prepare_campaign_data( array $blocks, array $settings ): array {
 		$subject   = $settings['subject'] ?? '';
@@ -274,7 +274,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Combine blocks into HTML content.
 	 *
-	 * @param array $blocks Content blocks.
+	 * @param array<string, mixed> $blocks Content blocks.
 	 * @return string
 	 */
 	private function combine_blocks_to_html( array $blocks ): string {
@@ -291,11 +291,16 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Create campaign via Mailchimp API.
 	 *
-	 * @param array  $campaign_data Campaign data.
-	 * @param string $api_key       API key.
-	 * @return array|WP_Error
+	 * @param array<string, mixed> $campaign_data Campaign data.
+	 * @param string               $api_key       API key.
+	 * @return array<string, mixed>|WP_Error
 	 */
 	private function create_mailchimp_campaign( array $campaign_data, string $api_key ) {
+		$json_body = wp_json_encode( $campaign_data );
+		if ( false === $json_body ) {
+			return $this->create_error( 'json_encode_error', __( 'Failed to encode campaign data.', 'campaignbridge' ) );
+		}
+
 		$response = wp_remote_post(
 			self::API_BASE_URL . self::ENDPOINT_CAMPAIGNS,
 			array(
@@ -303,7 +308,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 					'Authorization' => 'Bearer ' . $api_key,
 					'Content-Type'  => 'application/json',
 				),
-				'body'    => wp_json_encode( $campaign_data ),
+				'body'    => $json_body,
 				'timeout' => 30,
 			)
 		);
@@ -316,10 +321,11 @@ class Mailchimp_Provider extends Abstract_Provider {
 		$body        = wp_remote_retrieve_body( $response );
 
 		if ( $status_code < 200 || $status_code >= 300 ) {
-			$error_data = json_decode( $body, true );
-			$error_msg  = $error_data['detail'] ?? sprintf( 'API request failed with status %d', $status_code );
+			$error_data  = json_decode( $body, true );
+			$error_msg   = $error_data['detail'] ?? sprintf( 'API request failed with status %d', $status_code );
+			$safe_status = is_int( $status_code ) ? $status_code : 500;
 
-			return $this->create_error( 'mailchimp_api_error', $error_msg, $status_code );
+			return $this->create_error( 'mailchimp_api_error', $error_msg, $safe_status );
 		}
 
 		return json_decode( $body, true );
@@ -335,6 +341,11 @@ class Mailchimp_Provider extends Abstract_Provider {
 	private function send_mailchimp_campaign( string $campaign_id, string $api_key ) {
 		$send_data = array( 'send' => true );
 
+		$json_body = wp_json_encode( $send_data );
+		if ( false === $json_body ) {
+			return $this->create_error( 'json_encode_error', __( 'Failed to encode send data.', 'campaignbridge' ) );
+		}
+
 		$response = wp_remote_request(
 			self::API_BASE_URL . self::ENDPOINT_CAMPAIGNS . '/' . $campaign_id . '/actions/send',
 			array(
@@ -343,7 +354,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 					'Authorization' => 'Bearer ' . $api_key,
 					'Content-Type'  => 'application/json',
 				),
-				'body'    => wp_json_encode( $send_data ),
+				'body'    => $json_body,
 				'timeout' => 30,
 			)
 		);
@@ -355,11 +366,12 @@ class Mailchimp_Provider extends Abstract_Provider {
 		$status_code = wp_remote_retrieve_response_code( $response );
 
 		if ( $status_code < 200 || $status_code >= 300 ) {
-			$body       = wp_remote_retrieve_body( $response );
-			$error_data = json_decode( $body, true );
-			$error_msg  = $error_data['detail'] ?? sprintf( 'Failed to send campaign with status %d', $status_code );
+			$body        = wp_remote_retrieve_body( $response );
+			$error_data  = json_decode( $body, true );
+			$error_msg   = $error_data['detail'] ?? sprintf( 'Failed to send campaign with status %d', $status_code );
+			$safe_status = is_int( $status_code ) ? $status_code : 500;
 
-			return $this->create_error( 'mailchimp_send_error', $error_msg, $status_code );
+			return $this->create_error( 'mailchimp_send_error', $error_msg, $safe_status );
 		}
 
 		return true;
@@ -369,7 +381,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * Get Mailchimp templates.
 	 *
 	 * @param string $api_key API key.
-	 * @return array|WP_Error
+	 * @return array<string, mixed>|WP_Error
 	 */
 	private function get_mailchimp_templates( string $api_key ) {
 		$response = wp_remote_get(
@@ -390,10 +402,11 @@ class Mailchimp_Provider extends Abstract_Provider {
 		$body        = wp_remote_retrieve_body( $response );
 
 		if ( $status_code < 200 || $status_code >= 300 ) {
-			$error_data = json_decode( $body, true );
-			$error_msg  = $error_data['detail'] ?? sprintf( 'Failed to fetch templates with status %d', $status_code );
+			$error_data  = json_decode( $body, true );
+			$error_msg   = $error_data['detail'] ?? sprintf( 'Failed to fetch templates with status %d', $status_code );
+			$safe_status = is_int( $status_code ) ? $status_code : 500;
 
-			return $this->create_error( 'mailchimp_templates_error', $error_msg, $status_code );
+			return $this->create_error( 'mailchimp_templates_error', $error_msg, $safe_status );
 		}
 
 		return json_decode( $body, true )['templates'] ?? array();

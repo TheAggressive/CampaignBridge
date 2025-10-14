@@ -5,7 +5,17 @@ All notable changes to CampaignBridge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.2] - File Upload System & API Enhancements
+## Version Management Guide
+
+- **Unreleased**: Changes for upcoming releases go here
+- **Version Numbers**: Use semantic versioning (MAJOR.MINOR.PATCH)
+- **Release Process**:
+  1. Move `[Unreleased]` section to `[new.version] - Release Date`
+  2. Add new empty `[Unreleased]` section at top
+  3. Update version in `package.json` and plugin header
+  4. Create git tag and GitHub release
+
+## [Unreleased]
 
 ### Added
 - **Complete File Upload System**: Full WordPress file upload integration
@@ -45,6 +55,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Keyboard navigation support
   - Unique IDs for form elements
 
+- **Complete Form Styling System**: Professional, consistent styling for all form components
+  - CSS variables-based design system with Tailwind CSS v4 integration
+  - Global design tokens in `variables.css` for consistent theming
+  - Modular component styling with separate CSS files for maintainability
+  - BEM CSS class naming conventions throughout
+
+- **Comprehensive Form Component Styling**:
+  - **Text inputs**: Professional styling with focus states and validation
+  - **Buttons**: Multiple variants (default, primary, outline, ghost, destructive)
+  - **Radio buttons**: Native browser styling with accent-color theming
+  - **Checkboxes**: Native browser styling with accent-color theming
+  - **Switches/Toggles**: Custom styled toggle switches with smooth animations
+  - **File inputs**: Button-like styling with file selection feedback
+  - **Select dropdowns**: Enhanced styling with custom arrow icons
+  - **Textareas**: Proper sizing and focus states
+  - **Date/Time inputs**: Consistent styling across browsers
+
+- **Design System Features**:
+  - **Color theming**: Primary/secondary colors, semantic colors (success/warning/error)
+  - **Spacing system**: Consistent spacing using CSS variables
+  - **Typography**: Standardized font sizes, weights, and line heights
+  - **Shadows**: Multiple shadow levels for depth
+  - **Border radius**: Consistent corner rounding
+  - **Focus states**: Accessible focus rings and keyboard navigation
+
+- **Advanced Asset Optimization System**: Performance-enhancing asset loading optimizations
+  - **Critical Resource Preloading**: Automatic preload link generation for critical CSS/JS
+  - **Dynamic Path Discovery**: Intelligent multi-path search for critical resources
+  - **HTTP Header Preloading**: Server-side preload headers for optimal loading priority
+  - **Configurable Search Paths**: Customizable asset location discovery with `set_critical_paths()`
+  - **WordPress Filter Integration**: `campaignbridge_critical_css_paths` and `campaignbridge_critical_js_paths` filters
+  - **Fallback Support**: Multiple fallback locations (dist/, assets/) for maximum compatibility
+
+- **Performance Optimizations**:
+  - Single compiled CSS file instead of multiple individual files
+  - Optimized CSS loading with proper dependencies
+  - Removed hardcoded jQuery dependencies for better performance
+  - Critical Resource Preloading: Faster page loads with automatic preload headers
+  - Asset Loading Optimization: Intelligent dependency management and conditional loading
+
+- **Accessibility Enhancements**:
+  - Proper focus indicators for keyboard navigation
+  - High contrast support with `prefers-contrast: high` media queries
+  - Reduced motion support with `prefers-reduced-motion` queries
+  - ARIA-compatible color schemes and focus states
+
 ### Changed
 - **Method Naming Standardization**: Improved API consistency and clarity
   - `multipart()` → `enable_file_uploads()` (more descriptive)
@@ -71,6 +127,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Better Brain Monkey integration for mocking WordPress functions
   - Improved test data management and cleanup
 
+- **CSS Architecture**: Complete refactor from monolithic styles to modular, maintainable system
+  - Split `components.css` into individual component files
+  - Implemented nested BEM structure for better organization
+  - Added `@reference "tailwindcss"` for proper utility access
+
+- **Asset Management**: Optimized CSS enqueuing system
+  - Consolidated multiple CSS files into single compiled output
+  - Removed jQuery dependency from asset manager
+  - Better dependency management with `.asset.php` files
+  - Enhanced Form_Asset_Optimizer with dynamic critical resource preloading
+
 ### Fixed
 - **Plugin Version Display**: Version now correctly shows in WordPress admin
   - Added missing `Version:` header in plugin file
@@ -90,6 +157,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Proper `for` attributes on labels matching input IDs
   - Correct `fieldset` and `legend` usage for radio groups
   - ARIA attributes for error states and required fields
+
+- **Switch Styling**: Fixed background colors by properly importing global variables
+- **File Input Appearance**: Transformed ugly browser inputs into professional buttons
+- **Form Consistency**: All form elements now follow unified design language
+- **Color Theming**: Fixed issues with accent colors and semantic color usage
 
 ### Security
 - **Enhanced File Upload Security**: Comprehensive validation for uploaded files
@@ -114,6 +186,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Proper cleanup and resource management
   - Reduced memory usage for large file operations
 
+- **CSS Optimization**: Single compiled stylesheet reduces HTTP requests
+- **Build Process**: Efficient asset compilation with PostCSS and Tailwind
+- **Bundle Size**: Optimized CSS output with only used styles included
+- **Critical Resource Preloading**: Faster page loads with automatic preload headers
+- **Asset Loading Optimization**: Intelligent dependency management and conditional loading
+
 ### Documentation
 - **Updated FORM.md**: Complete documentation refresh
   - All new method names and examples
@@ -125,6 +203,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Clear instructions for manual vs automatic version updates
   - Security best practices and warnings
 
+- **Styling Guidelines**: Comprehensive CSS structure and naming conventions
+- **Component Documentation**: Individual component styling and usage
+- **Design Tokens**: Complete design system documentation
+
 ### Testing
 - **File Upload Testing**: Comprehensive test coverage
   - Security validation testing for file uploads
@@ -135,78 +217,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dedicated accessibility test class
   - Better mocking with Brain Monkey
   - Improved test data management
-
-## [Unreleased]
-
-### Added
-- **Complete Form Styling System**: Professional, consistent styling for all form components
-  - CSS variables-based design system with Tailwind CSS v4 integration
-  - Global design tokens in `variables.css` for consistent theming
-  - Modular component styling with separate CSS files for maintainability
-  - BEM CSS class naming conventions throughout
-
-- **Comprehensive Form Component Styling**:
-  - **Text inputs**: Professional styling with focus states and validation
-  - **Buttons**: Multiple variants (default, primary, outline, ghost, destructive)
-  - **Radio buttons**: Native browser styling with accent-color theming
-  - **Checkboxes**: Native browser styling with accent-color theming
-  - **Switches/Toggles**: Custom styled toggle switches with smooth animations
-  - **File inputs**: Button-like styling with file selection feedback
-  - **Select dropdowns**: Enhanced styling with custom arrow icons
-  - **Textareas**: Proper sizing and focus states
-  - **Date/Time inputs**: Consistent styling across browsers
-
-- **Design System Features**:
-  - **Color theming**: Primary/secondary colors, semantic colors (success/warning/error)
-  - **Spacing system**: Consistent spacing using CSS variables
-  - **Typography**: Standardized font sizes, weights, and line heights
-  - **Shadows**: Multiple shadow levels for depth
-  - **Border radius**: Consistent corner rounding
-  - **Focus states**: Accessible focus rings and keyboard navigation
-
-- **Performance Optimizations**:
-  - Single compiled CSS file instead of multiple individual files
-  - Optimized CSS loading with proper dependencies
-  - Removed hardcoded jQuery dependencies for better performance
-
-- **Accessibility Enhancements**:
-  - Proper focus indicators for keyboard navigation
-  - High contrast support with `prefers-contrast: high` media queries
-  - Reduced motion support with `prefers-reduced-motion` queries
-  - ARIA-compatible color schemes and focus states
-
-### Changed
-- **CSS Architecture**: Complete refactor from monolithic styles to modular, maintainable system
-  - Split `components.css` into individual component files
-  - Implemented nested BEM structure for better organization
-  - Added `@reference "tailwindcss"` for proper utility access
-
-- **Asset Management**: Optimized CSS enqueuing system
-  - Consolidated multiple CSS files into single compiled output
-  - Removed jQuery dependency from asset manager
-  - Better dependency management with `.asset.php` files
-
-### Fixed
-- **Switch Styling**: Fixed background colors by properly importing global variables
-- **File Input Appearance**: Transformed ugly browser inputs into professional buttons
-- **Form Consistency**: All form elements now follow unified design language
-- **Color Theming**: Fixed issues with accent colors and semantic color usage
-
-### Performance
-- **CSS Optimization**: Single compiled stylesheet reduces HTTP requests
-- **Build Process**: Efficient asset compilation with PostCSS and Tailwind
-- **Bundle Size**: Optimized CSS output with only used styles included
-
-### Added
-- Initial release of CampaignBridge plugin
-- Form API with builder pattern
-- Admin screens and controllers
-- Post types integration
-- Settings management
-
-### Documentation
-- **Styling Guidelines**: Comprehensive CSS structure and naming conventions
-- **Component Documentation**: Individual component styling and usage
-- **Design Tokens**: Complete design system documentation
 
 ---

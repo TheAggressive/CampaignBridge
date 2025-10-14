@@ -44,10 +44,10 @@ class Form_Field_Manager {
 	/**
 	 * Add a field to the form
 	 *
-	 * @param string $name   Field name.
-	 * @param string $type   Field type.
-	 * @param string $label  Field label.
-	 * @param array  $config Additional field configuration.
+	 * @param string               $name   Field name.
+	 * @param string               $type   Field type.
+	 * @param string               $label  Field label.
+	 * @param array<string, mixed> $config Additional field configuration.
 	 * @return Form_Field_Builder
 	 */
 	public function add_field( string $name, string $type, string $label = '', array $config = array() ): Form_Field_Builder {
@@ -114,7 +114,7 @@ class Form_Field_Manager {
 	 * Get a field's configuration
 	 *
 	 * @param string $name Field name.
-	 * @return array|null Field configuration or null if not found.
+	 * @return array<string, mixed>|null Field configuration or null if not found.
 	 */
 	public function get_field( string $name ): ?array {
 		return $this->config->get_field( $name );
@@ -123,7 +123,7 @@ class Form_Field_Manager {
 	/**
 	 * Get all fields
 	 *
-	 * @return array All fields configuration.
+	 * @return array<string, mixed> All fields configuration.
 	 */
 	public function get_fields(): array {
 		return $this->config->get_fields();
@@ -132,8 +132,8 @@ class Form_Field_Manager {
 	/**
 	 * Update a field's configuration
 	 *
-	 * @param string $name   Field name.
-	 * @param array  $config New field configuration.
+	 * @param string               $name   Field name.
+	 * @param array<string, mixed> $config New field configuration.
 	 * @return bool True if field was updated, false if not found.
 	 */
 	public function update_field( string $name, array $config ): bool {
@@ -149,7 +149,7 @@ class Form_Field_Manager {
 	 * Get fields by type
 	 *
 	 * @param string $type Field type.
-	 * @return array Fields of the specified type.
+	 * @return array<string, mixed> Fields of the specified type.
 	 */
 	public function get_fields_by_type( string $type ): array {
 		$fields = $this->get_fields();
@@ -164,7 +164,7 @@ class Form_Field_Manager {
 	/**
 	 * Get required fields
 	 *
-	 * @return array Required fields.
+	 * @return array<string, mixed> Required fields.
 	 */
 	public function get_required_fields(): array {
 		$fields = $this->get_fields();
@@ -179,7 +179,7 @@ class Form_Field_Manager {
 	/**
 	 * Get fields with validation rules
 	 *
-	 * @return array Fields with validation rules.
+	 * @return array<string, mixed> Fields with validation rules.
 	 */
 	public function get_validated_fields(): array {
 		$fields = $this->get_fields();
@@ -194,7 +194,7 @@ class Form_Field_Manager {
 	/**
 	 * Get field names
 	 *
-	 * @return array List of field names.
+	 * @return array<string> List of field names.
 	 */
 	public function get_field_names(): array {
 		return array_keys( $this->get_fields() );
@@ -225,7 +225,7 @@ class Form_Field_Manager {
 	/**
 	 * Import fields from array
 	 *
-	 * @param array $fields Fields configuration array.
+	 * @param array<string, mixed> $fields Fields configuration array.
 	 * @return self
 	 */
 	public function import_fields( array $fields ): self {
@@ -238,7 +238,7 @@ class Form_Field_Manager {
 	/**
 	 * Export fields to array
 	 *
-	 * @return array Fields configuration array.
+	 * @return array<string, mixed> Fields configuration array.
 	 */
 	public function export_fields(): array {
 		return $this->get_fields();
@@ -247,8 +247,8 @@ class Form_Field_Manager {
 	/**
 	 * Validate field configuration
 	 *
-	 * @param string $name   Field name.
-	 * @param array  $config Field configuration.
+	 * @param string               $name   Field name.
+	 * @param array<string, mixed> $config Field configuration.
 	 * @return bool True if valid.
 	 */
 	public function validate_field_config( string $name, array $config ): bool {

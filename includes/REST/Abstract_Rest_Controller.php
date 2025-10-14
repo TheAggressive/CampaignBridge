@@ -106,9 +106,9 @@ abstract class Abstract_Rest_Controller {
 	 * Ensure response is properly formatted.
 	 *
 	 * @param mixed $data Response data.
-	 * @return WP_REST_Response|WP_Error Properly formatted response.
+	 * @return WP_REST_Response|\WP_Error Properly formatted response.
 	 */
-	protected static function ensure_response( $data ): WP_REST_Response|WP_Error {
+	protected static function ensure_response( $data ): WP_REST_Response|\WP_Error {
 		return rest_ensure_response( $data );
 	}
 
@@ -118,9 +118,9 @@ abstract class Abstract_Rest_Controller {
 	 * @param string $code    Error code.
 	 * @param string $message Error message.
 	 * @param int    $status  HTTP status code.
-	 * @return WP_Error Error object.
+	 * @return \WP_Error Error object.
 	 */
-	protected static function create_error( string $code, string $message, int $status = Rest_Constants::HTTP_BAD_REQUEST ): WP_Error {
+	protected static function create_error( string $code, string $message, int $status = Rest_Constants::HTTP_BAD_REQUEST ): \WP_Error {
 		return new WP_Error( $code, $message, array( 'status' => $status ) );
 	}
 }

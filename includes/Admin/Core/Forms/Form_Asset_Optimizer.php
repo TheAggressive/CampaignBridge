@@ -31,23 +31,30 @@ class Form_Asset_Optimizer {
 	/**
 	 * Enqueued assets for deduplication.
 	 *
-	 * @var array
+	 * @var array<int, string>
 	 */
 	private array $enqueued_scripts = array();
 
 	/**
 	 * Enqueued styles for deduplication.
 	 *
-	 * @var array
+	 * @var array<int, string>
 	 */
 	private array $enqueued_styles = array();
 
 	/**
 	 * Conditional asset rules.
 	 *
-	 * @var array
+	 * @var array<string, array<string, mixed>>
 	 */
 	private array $conditional_rules = array();
+
+	/**
+	 * Custom critical resource search paths.
+	 *
+	 * @var array<string, array<int, string>>
+	 */
+	private array $critical_paths = array();
 
 	/**
 	 * Register a conditional asset rule.
@@ -77,13 +84,36 @@ class Form_Asset_Optimizer {
 	}
 
 	/**
+	 * Set custom search paths for critical resources.
+	 *
+	 * Allows customization of where to look for critical CSS and JS files.
+	 * Useful for themes or plugins that organize assets differently.
+	 *
+	 * @param string        $type   Resource type: 'css' or 'js'.
+	 * @param array<string> $paths  Array of relative paths to search (in order of preference).
+	 * @return void
+	 *
+	 * @example
+	 * ```php
+	 * $optimizer->set_critical_paths('css', [
+	 *     'dist/styles/critical.min.css',
+	 *     'assets/critical/critical.min.css',
+	 *     'public/css/critical.min.css'
+	 * ]);
+	 * ```
+	 */
+	public function set_critical_paths( string $type, array $paths ): void {
+		$this->critical_paths[ $type ] = $paths;
+	}
+
+	/**
 	 * Enqueue script with optimization.
 	 *
-	 * @param string $handle    Script handle.
-	 * @param string $src       Script source URL.
-	 * @param array  $deps      Dependencies.
-	 * @param string $version   Version string.
-	 * @param bool   $in_footer Whether to load in footer.
+	 * @param string        $handle    Script handle.
+	 * @param string        $src       Script source URL.
+	 * @param array<string> $deps      Dependencies.
+	 * @param string        $version   Version string.
+	 * @param bool          $in_footer Whether to load in footer.
 	 * @return void
 	 */
 	public function enqueue_script( string $handle, string $src, array $deps = array(), string $version = '', bool $in_footer = true ): void {
@@ -117,11 +147,11 @@ class Form_Asset_Optimizer {
 	/**
 	 * Enqueue style with optimization.
 	 *
-	 * @param string $handle  Style handle.
-	 * @param string $src     Style source URL.
-	 * @param array  $deps    Dependencies.
-	 * @param string $version Version string.
-	 * @param string $media   Media type.
+	 * @param string        $handle  Style handle.
+	 * @param string        $src     Style source URL.
+	 * @param array<string> $deps    Dependencies.
+	 * @param string        $version Version string.
+	 * @param string        $media   Media type.
 	 * @return void
 	 */
 	public function enqueue_style( string $handle, string $src, array $deps = array(), string $version = '', string $media = 'all' ): void {
@@ -155,9 +185,9 @@ class Form_Asset_Optimizer {
 	/**
 	 * Optimize dependencies by removing redundant ones.
 	 *
-	 * @param array  $deps  Original dependencies.
-	 * @param string $type  Asset type ('script' or 'style').
-	 * @return array Optimized dependencies.
+	 * @param array<string> $deps  Original dependencies.
+	 * @param string        $type  Asset type ('script' or 'style').
+	 * @return array<string> Optimized dependencies.
 	 */
 	private function optimize_dependencies( array $deps, string $type ): array {
 		if ( empty( $deps ) ) {
@@ -280,7 +310,6 @@ class Form_Asset_Optimizer {
 		// Define critical scripts that should load immediately.
 		$critical_scripts = array(
 			'campaignbridge-core',
-			'jquery', // Usually needed immediately.
 		);
 
 		// Skip if this is a critical script.
@@ -297,6 +326,165 @@ class Form_Asset_Optimizer {
 	}
 
 	/**
+	 * Preload critical CSS resources for better performance.
+	 *
+	 * Adds preload link tags in the document head for critical CSS files
+	 * that are essential for the initial page render. This improves the
+	 * loading priority of critical styles.
+	 *
+	 * @param array<string> $css_handles Array of critical CSS handles to preload.
+	 * @return void
+	 */
+	public function preload_critical_css( array $css_handles = array() ): void {
+		if ( is_admin() || wp_doing_ajax() ) {
+			return;
+		}
+
+		// Default critical CSS handles if none specified.
+		if ( empty( $css_handles ) ) {
+			$css_handles = array(
+				'campaignbridge-core',
+				'campaignbridge-forms',
+				'wp-components',
+			);
+		}
+
+		$added_preloads = array();
+
+		foreach ( $css_handles as $handle ) {
+			// Check if style is registered.
+			if ( ! wp_style_is( $handle, 'registered' ) ) {
+				continue;
+			}
+
+			// Get style source URL.
+			$src = wp_styles()->registered[ $handle ]->src;
+
+			if ( ! $src ) {
+				continue;
+			}
+
+			// Convert relative URLs to absolute.
+			if ( ! wp_parse_url( $src, PHP_URL_HOST ) ) {
+				$src = site_url( $src );
+			}
+
+			// Add preload link if not already added.
+			if ( ! in_array( $src, $added_preloads, true ) ) {
+				$this->add_preload_link( $src, 'style', 'high' );
+				$added_preloads[] = $src;
+			}
+		}
+	}
+
+	/**
+	 * Preload critical JavaScript resources for better performance.
+	 *
+	 * Adds preload link tags in the document head for critical JavaScript files
+	 * that are essential for the initial page functionality. This improves the
+	 * loading priority of critical scripts.
+	 *
+	 * @param array<string> $js_handles Array of critical JS handles to preload.
+	 * @return void
+	 */
+	public function preload_critical_js( array $js_handles = array() ): void {
+		if ( is_admin() || wp_doing_ajax() ) {
+			return;
+		}
+
+		// Default critical JS handles if none specified.
+		if ( empty( $js_handles ) ) {
+			$js_handles = array(
+				'campaignbridge-core',
+				'campaignbridge-forms',
+				'wp-api-fetch',
+				'wp-i18n',
+			);
+		}
+
+		$added_preloads = array();
+
+		foreach ( $js_handles as $handle ) {
+			// Check if script is registered.
+			if ( ! wp_script_is( $handle, 'registered' ) ) {
+				continue;
+			}
+
+			// Get script source URL.
+			$src = wp_scripts()->registered[ $handle ]->src;
+
+			if ( ! $src ) {
+				continue;
+			}
+
+			// Convert relative URLs to absolute.
+			if ( ! wp_parse_url( $src, PHP_URL_HOST ) ) {
+				$src = site_url( $src );
+			}
+
+			// Add preload link if not already added.
+			if ( ! in_array( $src, $added_preloads, true ) ) {
+				$this->add_preload_link( $src, 'script', 'high' );
+				$added_preloads[] = $src;
+			}
+		}
+	}
+
+	/**
+	 * Add preload link tag to document head.
+	 *
+	 * @param string $url    Resource URL to preload.
+	 * @param string $resource_type Resource type ('style', 'script', etc.).
+	 * @param string $priority Priority level ('high', 'low').
+	 * @return void
+	 */
+	private function add_preload_link( string $url, string $resource_type, string $priority = 'high' ): void {
+		$crossorigin = $this->is_cross_origin( $url ) ? ' crossorigin' : '';
+		$importance  = 'high' === $priority ? ' importance="high"' : '';
+
+		$link_tag = sprintf(
+			'<link rel="preload" href="%s" as="%s"%s%s>',
+			esc_url( $url ),
+			esc_attr( $resource_type ),
+			$importance,
+			$crossorigin
+		);
+
+		// Add to wp_head action.
+		add_action(
+			'wp_head',
+			function () use ( $link_tag ) {
+				echo wp_kses(
+					$link_tag . "\n",
+					array(
+						'link' => array(
+							'rel'         => array(),
+							'href'        => array(),
+							'as'          => array(),
+							'importance'  => array(),
+							'crossorigin' => array(),
+						),
+					)
+				);
+			},
+			1
+		);
+	}
+
+	/**
+	 * Check if URL is cross-origin.
+	 *
+	 * @param string $url URL to check.
+	 * @return bool True if cross-origin.
+	 */
+	private function is_cross_origin( string $url ): bool {
+		$url_host  = wp_parse_url( $url, PHP_URL_HOST );
+		$site_host = wp_parse_url( get_site_url(), PHP_URL_HOST );
+
+		return $url_host && $site_host && $url_host !== $site_host;
+	}
+
+	/**
 	 * Add preload headers for critical assets.
 	 *
 	 * @return void
@@ -306,45 +494,115 @@ class Form_Asset_Optimizer {
 			return;
 		}
 
-		// Preload critical CSS.
-		$critical_css = $this->get_critical_css_url();
-		if ( $critical_css ) {
-			header( "Link: <{$critical_css}>; rel=preload; as=style", false );
+		// Preload critical CSS via HTTP headers.
+		$critical_css_url = $this->get_critical_css_url();
+		if ( $critical_css_url ) {
+			header( sprintf( 'Link: <%s>; rel=preload; as=style', esc_url( $critical_css_url ) ), false );
 		}
 
-		// Preload critical JS.
-		$critical_js = $this->get_critical_js_url();
-		if ( $critical_js ) {
-			header( "Link: <{$critical_js}>; rel=preload; as=script", false );
+		// Preload critical JS via HTTP headers.
+		$critical_js_url = $this->get_critical_js_url();
+		if ( $critical_js_url ) {
+			header( sprintf( 'Link: <%s>; rel=preload; as=script', esc_url( $critical_js_url ) ), false );
 		}
 	}
 
 	/**
 	 * Get critical CSS URL.
 	 *
-	 * @return string|null Critical CSS URL or null.
+	 * Returns the URL of the critical CSS file if it exists.
+	 * Critical CSS contains styles essential for above-the-fold content.
+	 *
+	 * Checks multiple possible locations in order of preference:
+	 * 1. Custom paths set via set_critical_paths()
+	 * 2. Default paths: dist/critical/ (production), assets/css/ (fallback)
+	 *
+	 * @return string|null Critical CSS URL or null if file doesn't exist.
 	 */
 	private function get_critical_css_url(): ?string {
-		// This would be implemented to return the URL of critical CSS
-		// For now, return null.
+		$plugin_dir = \CampaignBridge_Plugin::path();
+		$plugin_url = \CampaignBridge_Plugin::url();
+
+		// Get search paths (custom or default).
+		$possible_paths = $this->critical_paths['css'] ?? $this->get_default_critical_css_paths();
+
+		// Allow developers to filter the search paths.
+		$possible_paths = apply_filters( 'campaignbridge_critical_css_paths', $possible_paths, $this );
+
+		foreach ( $possible_paths as $relative_path ) {
+			$full_path = $plugin_dir . $relative_path;
+
+			if ( file_exists( $full_path ) && is_readable( $full_path ) ) {
+				$version  = filemtime( $full_path );
+				$url_path = str_replace( $plugin_dir, '', $full_path );
+				return $plugin_url . $url_path . '?ver=' . $version;
+			}
+		}
+
 		return null;
+	}
+
+	/**
+	 * Get default critical CSS search paths.
+	 *
+	 * @return array<string> Default paths to search for critical CSS.
+	 */
+	private function get_default_critical_css_paths(): array {
+		return array(
+			'dist/critical/styles/critical.css',    // Production build.
+		);
 	}
 
 	/**
 	 * Get critical JS URL.
 	 *
-	 * @return string|null Critical JS URL or null.
+	 * Returns the URL of the critical JavaScript file if it exists.
+	 * Critical JS contains scripts essential for initial page functionality.
+	 *
+	 * Checks multiple possible locations in order of preference:
+	 * 1. Custom paths set via set_critical_paths()
+	 * 2. Default paths: dist/critical/ (production), assets/js/ (fallback)
+	 *
+	 * @return string|null Critical JS URL or null if file doesn't exist.
 	 */
 	private function get_critical_js_url(): ?string {
-		// This would be implemented to return the URL of critical JS
-		// For now, return null.
+		$plugin_dir = \CampaignBridge_Plugin::path();
+		$plugin_url = \CampaignBridge_Plugin::url();
+
+		// Get search paths (custom or default).
+		$possible_paths = $this->critical_paths['js'] ?? $this->get_default_critical_js_paths();
+
+		// Allow developers to filter the search paths.
+		$possible_paths = apply_filters( 'campaignbridge_critical_js_paths', $possible_paths, $this );
+
+		foreach ( $possible_paths as $relative_path ) {
+			$full_path = $plugin_dir . $relative_path;
+
+			if ( file_exists( $full_path ) && is_readable( $full_path ) ) {
+				$version  = filemtime( $full_path );
+				$url_path = str_replace( $plugin_dir, '', $full_path );
+				return $plugin_url . $url_path . '?ver=' . $version;
+			}
+		}
+
 		return null;
+	}
+
+	/**
+	 * Get default critical JS search paths.
+	 *
+	 * @return array<string> Default paths to search for critical JS.
+	 */
+	private function get_default_critical_js_paths(): array {
+		return array(
+			'dist/critical/scripts/critical.js',     // Production build.
+		);
 	}
 
 	/**
 	 * Get asset loading statistics.
 	 *
-	 * @return array Asset loading statistics.
+	 * @return array<string, mixed> Asset loading statistics.
 	 */
 	public function get_asset_stats(): array {
 		return array(

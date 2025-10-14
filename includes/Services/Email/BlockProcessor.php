@@ -32,11 +32,11 @@ class BlockProcessor {
 	/**
 	 * Extract container background color from first block if it's a container.
 	 *
-	 * @param array $blocks Array of block data.
+	 * @param array<string, mixed> $blocks Array of block data.
 	 * @return string|null Container background color or null if not applicable.
 	 */
 	public function extract_container_background( array $blocks ): ?string {
-		if ( empty( $blocks ) ) {
+		if ( empty( $blocks ) || ! isset( $blocks[0] ) || ! is_array( $blocks[0] ) ) {
 			return null;
 		}
 
@@ -48,19 +48,31 @@ class BlockProcessor {
 			return null;
 		}
 
-		$attributes  = $first_block['attrs'] ?? array();
-		$style       = $attributes['style'] ?? array();
-		$color_style = $style['color'] ?? array();
-		$background  = $color_style['background'] ?? null;
+		$attributes = $first_block['attrs'] ?? array();
+		if ( ! is_array( $attributes ) ) {
+			return null;
+		}
 
-		return $background ? $background : null;
+		$style = $attributes['style'] ?? array();
+		if ( ! is_array( $style ) ) {
+			return null;
+		}
+
+		$color_style = $style['color'] ?? array();
+		if ( ! is_array( $color_style ) ) {
+			return null;
+		}
+
+		$background = $color_style['background'] ?? null;
+
+		return is_string( $background ) ? $background : null;
 	}
 
 	/**
 	 * Convert WordPress blocks to HTML.
 	 *
-	 * @param array $blocks Array of block data.
-	 * @param array $options Generation options.
+	 * @param array<string, mixed> $blocks Array of block data.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Converted HTML.
 	 */
 	public function convert_blocks_to_html( array $blocks, array $options ): string {
@@ -76,8 +88,8 @@ class BlockProcessor {
 	/**
 	 * Convert a single block to HTML.
 	 *
-	 * @param array $block Block data.
-	 * @param array $options Generation options.
+	 * @param array<string, mixed> $block Block data.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Block HTML.
 	 */
 	public function convert_block_to_html( array $block, array $options ): string {
@@ -104,11 +116,11 @@ class BlockProcessor {
 	/**
 	 * Convert core WordPress blocks to HTML.
 	 *
-	 * @param string $block_type Block type.
-	 * @param array  $attributes Block attributes.
-	 * @param array  $inner_content Inner content.
-	 * @param array  $inner_blocks Inner blocks.
-	 * @param array  $options Generation options.
+	 * @param string               $block_type Block type.
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param array<string>        $inner_content Inner content.
+	 * @param array<string, mixed> $inner_blocks Inner blocks.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Block HTML.
 	 */
 	public function convert_core_block( string $block_type, array $attributes, array $inner_content, array $inner_blocks, array $options ): string {
@@ -131,11 +143,11 @@ class BlockProcessor {
 	/**
 	 * Convert CampaignBridge blocks to HTML.
 	 *
-	 * @param string $block_name Block name.
-	 * @param array  $attributes Block attributes.
-	 * @param array  $inner_content Inner content.
-	 * @param array  $inner_blocks Inner blocks.
-	 * @param array  $options Generation options.
+	 * @param string               $block_name Block name.
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param array<string>        $inner_content Inner content.
+	 * @param array<string, mixed> $inner_blocks Inner blocks.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Block HTML.
 	 */
 	public function convert_campaignbridge_block( string $block_name, array $attributes, array $inner_content, array $inner_blocks, array $options ): string {
@@ -155,9 +167,9 @@ class BlockProcessor {
 	/**
 	 * Convert container block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
-	 * @param array $inner_content Inner content.
-	 * @param array $inner_blocks Inner blocks.
+	 * @param array<string, mixed> $attributes    Block attributes.
+	 * @param array<int, string>   $inner_content Inner content.
+	 * @param array<string, mixed> $inner_blocks Inner blocks.
 	 * @return string Block HTML.
 	 */
 	private function convert_container_block( array $attributes, array $inner_content, array $inner_blocks ): string {
@@ -185,8 +197,8 @@ class BlockProcessor {
 	/**
 	 * Convert paragraph block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
-	 * @param array $inner_content Inner content.
+	 * @param array<string, mixed> $attributes    Block attributes.
+	 * @param array<int, string>   $inner_content Inner content.
 	 * @return string Block HTML.
 	 */
 	private function convert_paragraph_block( array $attributes, array $inner_content ): string {
@@ -203,8 +215,8 @@ class BlockProcessor {
 	/**
 	 * Convert heading block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
-	 * @param array $inner_content Inner content.
+	 * @param array<string, mixed> $attributes    Block attributes.
+	 * @param array<int, string>   $inner_content Inner content.
 	 * @return string Block HTML.
 	 */
 	private function convert_heading_block( array $attributes, array $inner_content ): string {
@@ -236,7 +248,7 @@ class BlockProcessor {
 	/**
 	 * Convert image block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_image_block( array $attributes ): string {
@@ -268,8 +280,8 @@ class BlockProcessor {
 	/**
 	 * Convert buttons block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
-	 * @param array $inner_blocks Inner blocks.
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param array<string, mixed> $inner_blocks Inner blocks.
 	 * @return string Block HTML.
 	 */
 	private function convert_buttons_block( array $attributes, array $inner_blocks ): string {
@@ -300,7 +312,7 @@ class BlockProcessor {
 	/**
 	 * Convert button block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_button_block( array $attributes ): string {
@@ -350,8 +362,8 @@ class BlockProcessor {
 	/**
 	 * Convert columns block to HTML.
 	 *
-	 * @param array $inner_blocks Inner blocks.
-	 * @param array $options Generation options.
+	 * @param array<string, mixed> $inner_blocks Inner blocks.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Block HTML.
 	 */
 	private function convert_columns_block( array $inner_blocks, array $options ): string {
@@ -385,8 +397,8 @@ class BlockProcessor {
 	/**
 	 * Convert group block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
-	 * @param array $inner_blocks Inner blocks.
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param array<string, mixed> $inner_blocks Inner blocks.
 	 * @return string Block HTML.
 	 */
 	private function convert_group_block( array $attributes, array $inner_blocks ): string {
@@ -411,7 +423,7 @@ class BlockProcessor {
 	/**
 	 * Convert spacer block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_spacer_block( array $attributes ): string {
@@ -430,7 +442,7 @@ class BlockProcessor {
 	/**
 	 * Convert separator block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_separator_block( array $attributes ): string {
@@ -451,7 +463,7 @@ class BlockProcessor {
 	/**
 	 * Convert post card block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_post_card_block( array $attributes ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
@@ -470,7 +482,7 @@ class BlockProcessor {
 	/**
 	 * Convert post title block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_post_title_block( array $attributes ): string {
@@ -486,7 +498,7 @@ class BlockProcessor {
 	/**
 	 * Convert post excerpt block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_post_excerpt_block( array $attributes ): string {
@@ -501,7 +513,7 @@ class BlockProcessor {
 	/**
 	 * Convert post image block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_post_image_block( array $attributes ): string {
@@ -516,7 +528,7 @@ class BlockProcessor {
 	/**
 	 * Convert post button block to HTML.
 	 *
-	 * @param array $attributes Block attributes.
+	 * @param array<string, mixed> $attributes Block attributes.
 	 * @return string Block HTML.
 	 */
 	private function convert_post_button_block( array $attributes ): string {
@@ -541,8 +553,8 @@ class BlockProcessor {
 	/**
 	 * Convert unknown block to HTML.
 	 *
-	 * @param array $block Block data.
-	 * @param array $options Generation options.
+	 * @param array<string, mixed> $block Block data.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Block HTML.
 	 */
 	private function convert_unknown_block( array $block, array $options ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter

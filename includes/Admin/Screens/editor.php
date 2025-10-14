@@ -7,8 +7,13 @@
  */
 
 // Get data from controller or set defaults
-$cb_templates        = $screen->get( 'templates', array() );
-$cb_recent_templates = $screen->get( 'recent_templates', array() );
+global $screen;
+if ( ! isset( $screen ) ) {
+	$screen = null; // Fallback for PHPStan
+}
+$cb_templates        = $screen ? $screen->get( 'templates', array() ) : array();
+$cb_recent_templates = $screen ? $screen->get( 'recent_templates', array() ) : array();
+$templateId          = 0; // Placeholder for template ID
 ?>
 
 <div class="editor-screen">

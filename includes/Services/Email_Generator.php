@@ -46,8 +46,8 @@ class Email_Generator {
 	/**
 	 * Convert blocks to email-safe HTML.
 	 *
-	 * @param array $blocks Array of block data.
-	 * @param array $options Generation options.
+	 * @param array<string, mixed> $blocks Array of block data.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Email-safe HTML.
 	 */
 	public static function generate_email_html( array $blocks, array $options = array() ): string {

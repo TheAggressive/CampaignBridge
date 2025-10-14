@@ -19,14 +19,14 @@ class Form_Config {
 	/**
 	 * Form configuration data
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $config = array();
 
 	/**
 	 * Default configuration values
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $defaults = array(
 		'method'          => 'POST',
@@ -55,7 +55,7 @@ class Form_Config {
 	/**
 	 * Constructor
 	 *
-	 * @param array $config Initial configuration array.
+	 * @param array<string, mixed> $config Initial configuration array.
 	 */
 	public function __construct( array $config = array() ) {
 		$this->config = $this->normalize_config( $config );
@@ -97,7 +97,7 @@ class Form_Config {
 	/**
 	 * Get all configuration
 	 *
-	 * @return array All configuration data.
+	 * @return array<string, mixed> All configuration data.
 	 */
 	public function all(): array {
 		return $this->config;
@@ -106,7 +106,7 @@ class Form_Config {
 	/**
 	 * Merge configuration with existing config
 	 *
-	 * @param array $config Configuration to merge.
+	 * @param array<string, mixed> $config Configuration to merge.
 	 * @return self
 	 */
 	public function merge( array $config ): self {
@@ -254,8 +254,8 @@ class Form_Config {
 	/**
 	 * Add a form field
 	 *
-	 * @param string $name   Field name.
-	 * @param array  $config Field configuration.
+	 * @param string               $name   Field name.
+	 * @param array<string, mixed> $config Field configuration.
 	 * @return self
 	 */
 	public function add_field( string $name, array $config ): self {
@@ -268,7 +268,7 @@ class Form_Config {
 	 * Get a field configuration
 	 *
 	 * @param string $name Field name.
-	 * @return array|null Field configuration or null if not found.
+	 * @return array<string, mixed>|null Field configuration or null if not found.
 	 */
 	public function get_field( string $name ): ?array {
 		$fields = $this->get( 'fields', array() );
@@ -278,8 +278,8 @@ class Form_Config {
 	/**
 	 * Update a field configuration
 	 *
-	 * @param string $name   Field name.
-	 * @param array  $config Field configuration updates.
+	 * @param string               $name   Field name.
+	 * @param array<string, mixed> $config Field configuration updates.
 	 * @return self
 	 */
 	public function update_field( string $name, array $config ): self {
@@ -306,7 +306,7 @@ class Form_Config {
 	/**
 	 * Get all fields
 	 *
-	 * @return array All fields configuration.
+	 * @return array<string, mixed> All fields configuration.
 	 */
 	public function get_fields(): array {
 		return $this->get( 'fields', array() );
@@ -339,7 +339,7 @@ class Form_Config {
 	/**
 	 * Get all hooks
 	 *
-	 * @return array All hooks.
+	 * @return array<string, mixed> All hooks.
 	 */
 	public function get_hooks(): array {
 		return $this->get( 'hooks', array() );
@@ -348,7 +348,7 @@ class Form_Config {
 	/**
 	 * Add classes to the form
 	 *
-	 * @param string|array $classes CSS classes to add.
+	 * @param string|array<string> $classes CSS classes to add.
 	 * @return self
 	 */
 	public function add_classes( $classes ): self {
@@ -393,8 +393,8 @@ class Form_Config {
 	/**
 	 * Normalize configuration array
 	 *
-	 * @param array $config Raw configuration.
-	 * @return array Normalized configuration.
+	 * @param array<string, mixed> $config Raw configuration.
+	 * @return array<string, mixed> Normalized configuration.
 	 */
 	private function normalize_config( array $config ): array {
 		return \wp_parse_args( $config, $this->defaults );

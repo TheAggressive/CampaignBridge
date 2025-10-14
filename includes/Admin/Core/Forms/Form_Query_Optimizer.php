@@ -31,8 +31,8 @@ class Form_Query_Optimizer {
 	/**
 	 * Get optimized query arguments for form posts.
 	 *
-	 * @param array $args Additional query arguments.
-	 * @return array Optimized WP_Query arguments.
+	 * @param array<string, mixed> $args Additional query arguments.
+	 * @return array<string, mixed> Optimized WP_Query arguments.
 	 */
 	public function get_optimized_post_query( array $args = array() ): array {
 		$defaults = array(
@@ -56,9 +56,9 @@ class Form_Query_Optimizer {
 	/**
 	 * Get optimized query for form-related posts with meta queries.
 	 *
-	 * @param array $meta_conditions Meta query conditions.
-	 * @param array $args            Additional query arguments.
-	 * @return array Optimized query arguments.
+	 * @param array<string, mixed> $meta_conditions Meta query conditions.
+	 * @param array<string, mixed> $args            Additional query arguments.
+	 * @return array<string, mixed> Optimized query arguments.
 	 */
 	public function get_optimized_meta_query( array $meta_conditions, array $args = array() ): array {
 		$defaults = $this->get_optimized_post_query(
@@ -73,8 +73,8 @@ class Form_Query_Optimizer {
 	/**
 	 * Batch update post meta with optimized queries.
 	 *
-	 * @param int   $post_id Post ID.
-	 * @param array $meta_data Array of meta key => value pairs.
+	 * @param int                  $post_id Post ID.
+	 * @param array<string, mixed> $meta_data Array of meta key => value pairs.
 	 * @return bool True on success, false on failure.
 	 */
 	public function batch_update_post_meta( int $post_id, array $meta_data ): bool {
@@ -99,9 +99,9 @@ class Form_Query_Optimizer {
 	/**
 	 * Get posts with optimized meta loading.
 	 *
-	 * @param array $post_ids Array of post IDs.
-	 * @param array $meta_keys Array of meta keys to load (optional).
-	 * @return array Array of post data with optimized meta loading.
+	 * @param array<int>    $post_ids Array of post IDs.
+	 * @param array<string> $meta_keys Array of meta keys to load (optional).
+	 * @return array<int, array<string, mixed>> Array of post data with optimized meta loading.
 	 */
 	public function get_posts_with_meta( array $post_ids, array $meta_keys = array() ): array {
 		if ( empty( $post_ids ) ) {
@@ -149,7 +149,7 @@ class Form_Query_Optimizer {
 	/**
 	 * Get database performance recommendations.
 	 *
-	 * @return array Array of database optimization recommendations.
+	 * @return array<int, array<string, string>> Array of database optimization recommendations.
 	 */
 	public function get_performance_recommendations(): array {
 		// Return static performance recommendations to avoid direct database queries.

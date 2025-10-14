@@ -47,10 +47,10 @@ class Dispatcher {
 	/**
 	 * Generate email blocks and send via provider.
 	 *
-	 * @param int[] $post_ids    Selected post IDs.
-	 * @param array $settings    Plugin settings (should contain decrypted API keys for provider use).
-	 * @param array $sections_map Optional section mapping for Mailchimp.
-	 * @param array $providers   Provider instances.
+	 * @param int[]                $post_ids    Selected post IDs.
+	 * @param array<string, mixed> $settings    Plugin settings (should contain decrypted API keys for provider use).
+	 * @param array<string, int>   $sections_map Optional section mapping for Mailchimp.
+	 * @param array<string, mixed> $providers   Provider instances.
 	 * @return bool True on success.
 	 */
 	public static function generate_and_send_campaign( array $post_ids, array $settings, array $sections_map, array $providers ): bool {
@@ -69,9 +69,9 @@ class Dispatcher {
 	/**
 	 * Process Mailchimp sections and dispatch to provider.
 	 *
-	 * @param array $sections_map section_key => post_id mapping.
-	 * @param array $settings     Plugin settings.
-	 * @param array $providers    Provider instances.
+	 * @param array<string, int>   $sections_map section_key => post_id mapping.
+	 * @param array<string, mixed> $settings     Plugin settings.
+	 * @param array<string, mixed> $providers    Provider instances.
 	 * @return bool True on success.
 	 */
 	private static function process_sections_and_dispatch( array $sections_map, array $settings, array $providers ): bool {
@@ -87,9 +87,9 @@ class Dispatcher {
 	/**
 	 * Process regular posts and dispatch to provider.
 	 *
-	 * @param int[] $post_ids  Post IDs to process.
-	 * @param array $settings  Plugin settings.
-	 * @param array $providers Provider instances.
+	 * @param int[]                $post_ids  Post IDs to process.
+	 * @param array<string, mixed> $settings  Plugin settings.
+	 * @param array<string, mixed> $providers Provider instances.
 	 * @return bool True on success.
 	 */
 	private static function process_posts_and_dispatch( array $post_ids, array $settings, array $providers ): bool {
@@ -114,14 +114,15 @@ class Dispatcher {
 			return '';
 		}
 
-		$img           = get_the_post_thumbnail_url( $post_id, self::THUMBNAIL_SIZE );
+		$img           = get_the_post_thumbnail_url( $post_id, self::THUMBNAIL_SIZE ) ? get_the_post_thumbnail_url( $post_id, self::THUMBNAIL_SIZE ) : null;
 		$content_html  = apply_filters( 'the_content', $post->post_content );
 		$link          = get_permalink( $post_id );
-		$title_raw     = (string) get_post_field( 'post_title', $post_id );
-		$title_decoded = html_entity_decode( $title_raw, ENT_QUOTES, 'UTF-8' );
-		$title_clean   = preg_replace( self::TITLE_DIMENSION_PATTERN, '', $title_decoded );
+		$title_raw     = get_post_field( 'post_title', $post_id );
+		$title_raw     = $title_raw ? $title_raw : '';
+		$title_decoded = html_entity_decode( (string) $title_raw, ENT_QUOTES, 'UTF-8' );
+		$title_clean   = preg_replace( self::TITLE_DIMENSION_PATTERN, '', $title_decoded ) ? preg_replace( self::TITLE_DIMENSION_PATTERN, '', $title_decoded ) : '';
 
-		return self::generate_post_html_block( $img, $title_clean, $content_html, $link );
+		return self::generate_post_html_block( $img, $title_clean, $content_html, $link ? $link : '' );
 	}
 
 	/**
@@ -146,9 +147,9 @@ class Dispatcher {
 	/**
 	 * Dispatch the prepared blocks to the selected provider.
 	 *
-	 * @param array $blocks    section_key => HTML string.
-	 * @param array $settings  Plugin settings with decrypted API keys.
-	 * @param array $providers Providers map.
+	 * @param array<string, string> $blocks               section_key => HTML string.
+	 * @param array<string, mixed>  $settings             Plugin settings with decrypted API keys.
+	 * @param array<string, mixed>  $providers            Providers map.
 	 * @return bool
 	 */
 	public static function dispatch_to_provider( array $blocks, array $settings, array $providers ): bool {
@@ -170,8 +171,8 @@ class Dispatcher {
 	 * This method checks if sensitive fields in settings are encrypted and decrypts them
 	 * if necessary. This ensures providers receive usable API keys for external API calls.
 	 *
-	 * @param array $settings Raw settings that may contain encrypted sensitive data.
-	 * @return array Settings with decrypted sensitive fields.
+	 * @param array<string, mixed> $settings Raw settings that may contain encrypted sensitive data.
+	 * @return array<string, mixed> Settings with decrypted sensitive fields.
 	 */
 	private static function ensure_decrypted_settings( array $settings ): array {
 		$decrypted_settings = $settings;
@@ -188,7 +189,7 @@ class Dispatcher {
 					} catch ( \Throwable $e ) {
 						// Log error but don't expose details.
 						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-							error_log(
+							error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging only.
 								sprintf(
 									'CampaignBridge Dispatcher: Failed to decrypt sensitive field "%s": %s',
 									$field,

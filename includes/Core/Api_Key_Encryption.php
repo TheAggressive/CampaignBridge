@@ -157,8 +157,8 @@ class Api_Key_Encryption {
 
 		} catch ( \Throwable $e ) {
 			// Log the error for debugging but don't expose details.
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-				error_log(
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 					sprintf(
 						'CampaignBridge API key decryption failed: %s',
 						$e->getMessage()
@@ -225,8 +225,8 @@ class Api_Key_Encryption {
 			update_option( self::KEY_META_OPTION, $metadata, false );
 
 			// Log the rotation (without exposing the key).
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-				error_log(
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
 					sprintf(
 						'CampaignBridge master encryption key rotated. New version: %d',
 						$metadata['version']
@@ -249,14 +249,14 @@ class Api_Key_Encryption {
 		if ( ! $stored_key ) {
 			// Generate and store new master key.
 			$stored_key = self::generate_master_key();
-			add_option( self::MASTER_KEY_OPTION, $stored_key, '', 'no' );
+			add_option( self::MASTER_KEY_OPTION, $stored_key, '', false );
 
 			// Initialize metadata.
 			$metadata = array(
 				'created' => time(),
 				'version' => 1,
 			);
-			add_option( self::KEY_META_OPTION, $metadata, '', 'no' );
+			add_option( self::KEY_META_OPTION, $metadata, '', false );
 
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
@@ -280,7 +280,7 @@ class Api_Key_Encryption {
 	/**
 	 * Get key rotation metadata.
 	 *
-	 * @return array Key metadata including creation time and version.
+	 * @return array<string, mixed> Key metadata including creation time and version.
 	 */
 	private static function get_key_metadata(): array {
 		return get_option( self::KEY_META_OPTION, array() );
@@ -302,7 +302,7 @@ class Api_Key_Encryption {
 	/**
 	 * Check if the current encryption setup is secure.
 	 *
-	 * @return array Array with 'secure' boolean and 'issues' array.
+	 * @return array<string, mixed> Array with 'secure' boolean and 'issues' array.
 	 */
 	public static function security_check(): array {
 		$issues = array();

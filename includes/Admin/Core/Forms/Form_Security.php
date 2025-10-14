@@ -96,7 +96,7 @@ class Form_Security {
 		printf(
 			'<input type="hidden" name="%s[timestamp]" value="%s" />',
 			\esc_attr( $this->form_id ),
-			\esc_attr( time() )
+			\esc_attr( (string) time() )
 		);
 	}
 
@@ -106,7 +106,7 @@ class Form_Security {
 	 * Adds comprehensive security headers including CSP, HSTS, and other protections.
 	 * Should be called during form rendering or page initialization.
 	 *
-	 * @param array $options Security header options.
+	 * @param array<string, mixed> $options Security header options.
 	 * @return void
 	 */
 	public function set_security_headers( array $options = array() ): void {
@@ -189,8 +189,8 @@ class Form_Security {
 	 * Validates input against potential attacks before applying field-specific sanitization
 	 * using appropriate WordPress sanitization functions.
 	 *
-	 * @param mixed $value        The value to sanitize.
-	 * @param array $field_config Field configuration containing type and validation rules.
+	 * @param mixed                $value        The value to sanitize.
+	 * @param array<string, mixed> $field_config Field configuration containing type and validation rules.
 	 * @return mixed Sanitized value, or empty string if dangerous content detected.
 	 */
 	public function sanitize_input( $value, array $field_config ) {
@@ -302,10 +302,12 @@ class Form_Security {
 	}
 
 	/**
+	 *
 	 * Validate file upload security.
 	 *
-	 * @param array $file     File data from $_FILES.
-	 * @param array $field_config Field configuration.
+	 * @param array<string, mixed> $file     File data from $_FILES.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param bool                 $skip_upload_check Skip upload check.
 	 * @return bool|\WP_Error True if valid, \WP_Error if invalid.
 	 */
 	public function validate_file_upload( array $file, array $field_config, bool $skip_upload_check = false ) {
@@ -458,7 +460,6 @@ class Form_Security {
 		}
 	}
 
-
 	/**
 	 * Check if filename contains dangerous patterns.
 	 *
@@ -469,7 +470,6 @@ class Form_Security {
 		// Only check for directory traversal attempts - WordPress handles MIME types and dangerous extensions.
 		return strpos( $filename, '..' ) !== false || strpos( $filename, '/' ) !== false || strpos( $filename, '\\' ) !== false;
 	}
-
 
 	/**
 	 * Rate limiting for form submissions.
@@ -513,8 +513,8 @@ class Form_Security {
 	/**
 	 * Log security event.
 	 *
-	 * @param string $event     Event type.
-	 * @param array  $context   Additional context.
+	 * @param string               $event     Event type.
+	 * @param array<string, mixed> $context   Additional context.
 	 */
 	public function log_security_event( string $event, array $context = array() ): void {
 		$log_data = array_merge(

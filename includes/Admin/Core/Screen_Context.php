@@ -48,7 +48,7 @@ class Screen_Context {
 	/**
 	 * Array of data available to screen templates.
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $data = array();
 
@@ -92,7 +92,7 @@ class Screen_Context {
 	/**
 	 * Returns all data from the screen data array.
 	 *
-	 * @return array All stored data for the screen.
+	 * @return array<string, mixed> All stored data for the screen.
 	 */
 	public function get_all(): array {
 		return $this->data;
@@ -112,10 +112,10 @@ class Screen_Context {
 	/**
 	 * Enqueues a CSS stylesheet for the admin screen.
 	 *
-	 * @param string      $handle  The handle to enqueue.
-	 * @param string      $src     The source path relative to plugin URL.
-	 * @param array       $deps    The dependencies to enqueue.
-	 * @param string|null $version The version of the style.
+	 * @param string        $handle  The handle to enqueue.
+	 * @param string        $src     The source path relative to plugin URL.
+	 * @param array<string> $deps    The dependencies to enqueue.
+	 * @param string|null   $version The version of the style.
 	 */
 	public function enqueue_style( string $handle, string $src, array $deps = array(), ?string $version = null ): void {
 		// Convert relative src to full asset path for Asset_Manager.
@@ -134,11 +134,11 @@ class Screen_Context {
 	/**
 	 * Enqueues a JavaScript file for the admin screen.
 	 *
-	 * @param string      $handle    The handle to enqueue.
-	 * @param string      $src       The source path relative to plugin URL.
-	 * @param array       $deps      The dependencies to enqueue.
-	 * @param string|null $version   The version of the script.
-	 * @param bool        $in_footer Whether to enqueue the script in the footer.
+	 * @param string        $handle    The handle to enqueue.
+	 * @param string        $src       The source path relative to plugin URL.
+	 * @param array<string> $deps      The dependencies to enqueue.
+	 * @param string|null   $version   The version of the script.
+	 * @param bool          $in_footer Whether to enqueue the script in the footer.
 	 */
 	public function enqueue_script( string $handle, string $src, array $deps = array(), ?string $version = null, bool $in_footer = true ): void {
 		// Convert relative src to full asset path for Asset_Manager.
@@ -158,11 +158,11 @@ class Screen_Context {
 	/**
 	 * Prepare asset data by loading from .asset.php file or creating defaults.
 	 *
-	 * @param string $asset_file_path Asset file path.
-	 * @param array  $additional_deps Additional dependencies.
-	 * @param array  $default_deps    Default dependencies if no .asset.php file.
-	 * @param bool   $in_footer       Whether to load script in footer (scripts only).
-	 * @return array Asset data array.
+	 * @param string        $asset_file_path Asset file path.
+	 * @param array<string> $additional_deps Additional dependencies.
+	 * @param array<string> $default_deps    Default dependencies if no .asset.php file.
+	 * @param bool          $in_footer       Whether to load script in footer (scripts only).
+	 * @return array<string, mixed> Asset data array.
 	 */
 	private function prepare_asset_data( string $asset_file_path, array $additional_deps, array $default_deps = array(), bool $in_footer = true ): array {
 		// Try to load asset data from corresponding .asset.php file.
@@ -196,9 +196,9 @@ class Screen_Context {
 	/**
 	 * Enqueues a built CSS asset with dependencies from asset.php file.
 	 *
-	 * @param string $handle           The handle to enqueue.
-	 * @param string $asset_file_path  The path to the asset.php file.
-	 * @param array  $additional_deps  Additional dependencies to enqueue.
+	 * @param string        $handle           The handle to enqueue.
+	 * @param string        $asset_file_path  The path to the asset.php file.
+	 * @param array<string> $additional_deps Additional dependencies to enqueue.
 	 * @return bool True if the asset was enqueued, false otherwise.
 	 */
 	public function asset_enqueue_style( string $handle, string $asset_file_path, array $additional_deps = array() ): bool {
@@ -213,10 +213,10 @@ class Screen_Context {
 	/**
 	 * Enqueues a built JavaScript asset with dependencies from asset.php file.
 	 *
-	 * @param string $handle           The handle to enqueue.
-	 * @param string $asset_file_path  The path to the asset.php file.
-	 * @param array  $additional_deps  Additional dependencies to enqueue.
-	 * @param bool   $in_footer        Whether to enqueue the script in the footer.
+	 * @param string        $handle           The handle to enqueue.
+	 * @param string        $asset_file_path  The path to the asset.php file.
+	 * @param array<string> $additional_deps Additional dependencies to enqueue.
+	 * @param bool          $in_footer        Whether to enqueue the script in the footer.
 	 * @return bool True if the asset was enqueued, false otherwise.
 	 */
 	public function asset_enqueue_script( string $handle, string $asset_file_path, array $additional_deps = array(), bool $in_footer = true ): bool {
@@ -235,7 +235,7 @@ class Screen_Context {
 	 * @param string $asset_file_path  The path to the asset.php file.
 	 * @param bool   $enqueue_style    Whether to enqueue the style.
 	 * @param bool   $enqueue_script   Whether to enqueue the script.
-	 * @return array Array with 'style' and 'script' boolean results.
+	 * @return array<string, bool> Array with 'style' and 'script' boolean results.
 	 */
 	public function asset_enqueue( string $handle, string $asset_file_path, bool $enqueue_style = true, bool $enqueue_script = true ): array {
 		return array(
@@ -247,9 +247,9 @@ class Screen_Context {
 	/**
 	 * Localizes a script with PHP data for use in JavaScript.
 	 *
-	 * @param string $handle      The script handle to localize.
-	 * @param string $object_name The JavaScript object name.
-	 * @param array  $data        The data to pass to JavaScript.
+	 * @param string               $handle      The script handle to localize.
+	 * @param string               $object_name The JavaScript object name.
+	 * @param array<string, mixed> $data The data to pass to JavaScript.
 	 */
 	public function localize_script( string $handle, string $object_name, array $data ): void {
 		wp_localize_script( 'cb-' . $handle, $object_name, $data );
@@ -259,7 +259,7 @@ class Screen_Context {
 	/**
 	 * Returns information about the current screen.
 	 *
-	 * @return array Array containing screen name, type, and current tab.
+	 * @return array<string, string|null> Array containing screen name, type, and current tab.
 	 */
 	public function get_screen_info(): array {
 		return array(

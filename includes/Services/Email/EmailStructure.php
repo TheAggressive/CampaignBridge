@@ -26,7 +26,7 @@ class EmailStructure {
 	/**
 	 * Build email header with proper DOCTYPE and meta tags.
 	 *
-	 * @param array $options Generation options.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Email header HTML.
 	 */
 	public function build_header( array $options ): string {
@@ -90,7 +90,7 @@ class EmailStructure {
 	/**
 	 * Build email footer to close HTML structure.
 	 *
-	 * @param array $options Generation options.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Email footer HTML.
 	 */
 	public function build_footer( array $options ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter

@@ -119,7 +119,7 @@ class Blocks {
 	/**
 	 * Get all registered CampaignBridge blocks.
 	 *
-	 * @return array Array of registered block names.
+	 * @return array<string> Array of registered block names.
 	 */
 	public static function get_registered_blocks(): array {
 		$blocks   = array();

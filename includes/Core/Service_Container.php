@@ -178,7 +178,8 @@ class Service_Container {
 					'mailchimp' => $container->get( 'mailchimp_provider' ),
 					'html'      => $container->get( 'html_provider' ),
 				);
-				return new \CampaignBridge\REST\Routes( $providers );
+				\CampaignBridge\REST\Routes::init( 'campaignbridge_settings', $providers );
+				return \CampaignBridge\REST\Routes::class;
 			}
 		);
 	}

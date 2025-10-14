@@ -17,30 +17,23 @@ use CampaignBridge\Admin\Core\Form;
 class Form_Renderer {
 
 	/**
-	 * Parent form instance
-	 *
-	 * @var Form
-	 */
-	private Form $form;
-
-	/**
 	 * Form configuration
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $config;
 
 	/**
 	 * Form fields configuration
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $fields;
 
 	/**
 	 * Form data
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $data;
 
@@ -61,15 +54,13 @@ class Form_Renderer {
 	/**
 	 * Constructor
 	 *
-	 * @param Form          $form     Parent form instance.
-	 * @param array         $config   Form configuration.
-	 * @param array         $fields   Form fields.
-	 * @param array         $data     Form data.
-	 * @param Form_Handler  $handler  Form handler instance.
-	 * @param Form_Security $security Security instance.
+	 * @param array<string, mixed> $config   Form configuration.
+	 * @param array<string, mixed> $fields   Form fields.
+	 * @param array<string, mixed> $data     Form data.
+	 * @param Form_Handler         $handler  Form handler instance.
+	 * @param Form_Security        $security Security instance.
 	 */
-	public function __construct( Form $form, array $config, array $fields, array $data, Form_Handler $handler, Form_Security $security ) {
-		$this->form     = $form;
+	public function __construct( array $config, array $fields, array $data, Form_Handler $handler, Form_Security $security ) {
 		$this->config   = $config;
 		$this->fields   = $fields;
 		$this->data     = $data;
@@ -142,8 +133,8 @@ class Form_Renderer {
 	/**
 	 * Render a single field
 	 *
-	 * @param string $field_id     Field ID.
-	 * @param array  $field_config Field configuration.
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Field configuration.
 	 */
 	private function render_field( string $field_id, array $field_config ): void {
 		$layout = $this->config['layout'];
@@ -170,8 +161,8 @@ class Form_Renderer {
 	/**
 	 * Render field in table layout
 	 *
-	 * @param string $field_id     Field ID.
-	 * @param array  $field_config Field configuration.
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Field configuration.
 	 */
 	private function render_table_field( string $field_id, array $field_config ): void {
 		// Note: prefix/suffix are for options storage, not HTML field names.
@@ -208,8 +199,8 @@ class Form_Renderer {
 	/**
 	 * Render field in div layout
 	 *
-	 * @param string $field_id     Field ID.
-	 * @param array  $field_config Field configuration.
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Field configuration.
 	 */
 	private function render_div_field( string $field_id, array $field_config ): void {
 		// Note: prefix/suffix are for options storage, not HTML field names.
@@ -274,9 +265,9 @@ class Form_Renderer {
 	/**
 	 * Render field input element
 	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
+	 * @param string               $field_name   Field name.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param mixed                $value        Field value.
 	 */
 	private function render_field_input( string $field_name, array $field_config, $value ): void {
 		$field_renderer = $this->create_field_renderer( $field_name, $field_config, $value );
@@ -286,9 +277,9 @@ class Form_Renderer {
 	/**
 	 * Create field renderer instance
 	 *
-	 * @param string $field_name   Field name.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
+	 * @param string               $field_name   Field name.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param mixed                $value        Field value.
 	 * @return Form_Field_Interface Field renderer instance.
 	 */
 	private function create_field_renderer( string $field_name, array $field_config, $value ): Form_Field_Interface {

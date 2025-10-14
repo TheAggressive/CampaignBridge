@@ -64,25 +64,28 @@ class CssProcessor {
 			if ( preg_match_all( $pattern, $css_rules, $matches ) ) {
 				foreach ( $matches[1] as $value ) {
 					// This is a simplified approach - a full CSS inliner would be more complex.
-					$inline_attr = sprintf( '%s: %s;', $property, trim( $value ) );
-					$html        = preg_replace(
-						'/<([a-zA-Z][^>]*)>/',
-						'<$1 style="' . $inline_attr . '">',
-						$html,
+					$inline_attr    = sprintf( '%s: %s;', $property, trim( $value ) );
+					$search_pattern = '/<([a-zA-Z][^>]*)>/';
+					$replace_string = '<$1 style="' . esc_attr( $inline_attr ) . '">';
+					$replacement    = preg_replace(
+						$search_pattern,
+						$replace_string,
+						(string) $html,
 						1 // Only replace the first occurrence per element type.
 					);
+					$html           = is_string( $replacement ) ? $replacement : $html;
 				}
 			}
 		}
 
-		return $html;
+		return $html ? $html : '';
 	}
 
 	/**
 	 * Make HTML responsive for mobile devices.
 	 *
-	 * @param string $html HTML content.
-	 * @param array  $options Generation options.
+	 * @param string               $html HTML content.
+	 * @param array<string, mixed> $options Generation options.
 	 * @return string Responsive HTML.
 	 */
 	public function make_responsive( string $html, array $options ): string {

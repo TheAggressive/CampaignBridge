@@ -12,9 +12,14 @@
 require_once __DIR__ . '/../Core/Form.php';
 
 // Get data from controller or set defaults.
-$cb_system_info  = $screen->get( 'system_info', array() );
-$cb_integrations = $screen->get( 'integrations', array() );
-$cb_stats        = $screen->get( 'stats', array() );
+/** @var \CampaignBridge\Admin\Core\Screen_Context|null $screen */
+global $screen;
+if ( ! isset( $screen ) ) {
+	$screen = null; // Fallback for PHPStan.
+}
+$cb_system_info  = $screen ? $screen->get( 'system_info', array() ) : array();
+$cb_integrations = $screen ? $screen->get( 'integrations', array() ) : array();
+$cb_stats        = $screen ? $screen->get( 'stats', array() ) : array();
 
 // Create action forms.
 $refresh_form = \CampaignBridge\Admin\Core\Form::make( 'refresh_stats' )
@@ -44,35 +49,35 @@ $clear_cache_form = \CampaignBridge\Admin\Core\Form::make( 'clear_cache' )
 ?>
 
 <div class="status-screen">
-	<h2><?php _e( 'System Status', 'campaignbridge' ); ?></h2>
+	<h2><?php esc_html_e( 'System Status', 'campaignbridge' ); ?></h2>
 	<p class="description">
-		<?php _e( 'Comprehensive system information and debugging data for CampaignBridge.', 'campaignbridge' ); ?>
+		<?php esc_html_e( 'Comprehensive system information and debugging data for CampaignBridge.', 'campaignbridge' ); ?>
 	</p>
 
 	<!-- System Information -->
 	<div class="status-section">
-		<h3><?php _e( 'System Information', 'campaignbridge' ); ?></h3>
+		<h3><?php esc_html_e( 'System Information', 'campaignbridge' ); ?></h3>
 		<table class="wp-list-table widefat fixed striped">
 			<tbody>
 				<tr>
-					<td><strong><?php _e( 'Plugin Version', 'campaignbridge' ); ?></strong></td>
+					<td><strong><?php esc_html_e( 'Plugin Version', 'campaignbridge' ); ?></strong></td>
 					<td><?php echo esc_html( $cb_system_info['plugin_version'] ?? 'Unknown' ); ?></td>
 				</tr>
 				<tr>
-					<td><strong><?php _e( 'WordPress Version', 'campaignbridge' ); ?></strong></td>
+					<td><strong><?php esc_html_e( 'WordPress Version', 'campaignbridge' ); ?></strong></td>
 					<td><?php echo esc_html( $cb_system_info['wordpress_version'] ?? get_bloginfo( 'version' ) ); ?></td>
 				</tr>
 				<tr>
-					<td><strong><?php _e( 'PHP Version', 'campaignbridge' ); ?></strong></td>
+					<td><strong><?php esc_html_e( 'PHP Version', 'campaignbridge' ); ?></strong></td>
 					<td><?php echo esc_html( $cb_system_info['php_version'] ?? PHP_VERSION ); ?></td>
 				</tr>
 				<tr>
-					<td><strong><?php _e( 'Debug Mode', 'campaignbridge' ); ?></strong></td>
+					<td><strong><?php esc_html_e( 'Debug Mode', 'campaignbridge' ); ?></strong></td>
 					<td>
 						<?php if ( $cb_system_info['debug_mode'] ?? false ) : ?>
-							<span class="status-enabled"><?php _e( 'Enabled', 'campaignbridge' ); ?></span>
+							<span class="status-enabled"><?php esc_html_e( 'Enabled', 'campaignbridge' ); ?></span>
 						<?php else : ?>
-							<span class="status-disabled"><?php _e( 'Disabled', 'campaignbridge' ); ?></span>
+							<span class="status-disabled"><?php esc_html_e( 'Disabled', 'campaignbridge' ); ?></span>
 						<?php endif; ?>
 					</td>
 				</tr>

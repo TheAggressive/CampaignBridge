@@ -52,14 +52,14 @@ abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Default rate limiting policy.
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	protected array $rate_limit_policy;
 
 	/**
 	 * Provider capabilities.
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	protected array $capabilities;
 
@@ -124,7 +124,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Get rate limiting policy for this provider.
 	 *
-	 * @return array Array with 'bucket' and 'max_per_minute' keys.
+	 * @return array<string, mixed> Array with 'bucket' and 'max_per_minute' keys.
 	 */
 	public function rate_limit_policy(): array {
 		return $this->rate_limit_policy;
@@ -133,7 +133,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Get provider capabilities and supported features.
 	 *
-	 * @return array Array of supported features.
+	 * @return array<string, mixed> Array of supported features.
 	 */
 	public function get_capabilities(): array {
 		return $this->capabilities;
@@ -153,7 +153,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 	 *
 	 * Override in subclasses to provide provider-specific validation.
 	 *
-	 * @return array Schema array with field definitions.
+	 * @return array<string, array<string, mixed>> Schema array with field definitions.
 	 */
 	public function settings_schema(): array {
 		return array(
@@ -172,8 +172,8 @@ abstract class Abstract_Provider implements Provider_Interface {
 	 *
 	 * Override in subclasses for provider-specific redaction logic.
 	 *
-	 * @param array $settings Raw settings array.
-	 * @return array Redacted settings array.
+	 * @param array<string, mixed> $settings Raw settings array.
+	 * @return array<string, mixed> Redacted settings array.
 	 */
 	public function redact_settings( array $settings ): array {
 		$redacted = $settings;
@@ -199,8 +199,8 @@ abstract class Abstract_Provider implements Provider_Interface {
 	 *
 	 * Only logs when WP_DEBUG is enabled.
 	 *
-	 * @param string $message Log message.
-	 * @param array  $context Additional context data.
+	 * @param string               $message Log message.
+	 * @param array<string, mixed> $context Additional context data.
 	 * @return void
 	 */
 	protected function log( string $message, array $context = array() ): void {
@@ -229,8 +229,8 @@ abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Validate required settings fields.
 	 *
-	 * @param array $settings Plugin settings array.
-	 * @param array $required Array of required field names.
+	 * @param array<string, mixed> $settings Plugin settings array.
+	 * @param array<string>        $required Array of required field names.
 	 * @return bool True if all required fields are present and non-empty.
 	 */
 	protected function validate_required_settings( array $settings, array $required ): bool {
@@ -248,8 +248,8 @@ abstract class Abstract_Provider implements Provider_Interface {
 	 * Validates and sanitizes settings according to the provider's schema definition.
 	 * This ensures that only valid, properly formatted settings are stored and used.
 	 *
-	 * @param array $settings Raw settings array to sanitize.
-	 * @return array Sanitized settings array.
+	 * @param array<string, mixed> $settings Raw settings array to sanitize.
+	 * @return array<string, mixed> Sanitized settings array.
 	 */
 	public function sanitize_settings( array $settings ): array {
 		$schema    = $this->settings_schema();
@@ -278,8 +278,8 @@ abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Sanitize a single field value based on its schema.
 	 *
-	 * @param mixed $value        Raw field value.
-	 * @param array $field_schema Field schema definition.
+	 * @param mixed                $value        Raw field value.
+	 * @param array<string, mixed> $field_schema Field schema definition.
 	 * @return mixed Sanitized field value.
 	 */
 	private function sanitize_field_value( $value, array $field_schema ) {
@@ -311,8 +311,8 @@ abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Sanitize string field value.
 	 *
-	 * @param mixed $value        Raw field value.
-	 * @param array $field_schema Field schema definition.
+	 * @param mixed                $value        Raw field value.
+	 * @param array<string, mixed> $field_schema Field schema definition.
 	 * @return string|null Sanitized string value.
 	 */
 	private function sanitize_string_field( $value, array $field_schema ): ?string {
@@ -371,8 +371,8 @@ abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Sanitize integer field value.
 	 *
-	 * @param mixed $value        Raw field value.
-	 * @param array $field_schema Field schema definition.
+	 * @param mixed                $value        Raw field value.
+	 * @param array<string, mixed> $field_schema Field schema definition.
 	 * @return int|null Sanitized integer value.
 	 */
 	private function sanitize_integer_field( $value, array $field_schema ): ?int {

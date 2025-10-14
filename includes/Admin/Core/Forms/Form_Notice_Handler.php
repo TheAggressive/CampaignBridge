@@ -20,8 +20,8 @@ class Form_Notice_Handler {
 	/**
 	 * Trigger a success notice
 	 *
-	 * @param Form_Config $config Form configuration.
-	 * @param array       $data   Form data.
+	 * @param Form_Config          $config Form configuration.
+	 * @param array<string, mixed> $data   Form data.
 	 */
 	public function trigger_success( Form_Config $config, array $data ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
 		$message = $config->get( 'success_message' );
@@ -31,8 +31,8 @@ class Form_Notice_Handler {
 	/**
 	 * Trigger an error notice
 	 *
-	 * @param Form_Config $config Form configuration.
-	 * @param array       $data   Form data.
+	 * @param Form_Config          $config Form configuration.
+	 * @param array<string, mixed> $data   Form data.
 	 */
 	public function trigger_error( Form_Config $config, array $data ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
 		$message = $config->get( 'error_message' );

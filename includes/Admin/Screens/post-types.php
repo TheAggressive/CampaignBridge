@@ -12,10 +12,16 @@
 use CampaignBridge\Admin\Core\Form;
 
 // Get data from controller.
-$campaignbridge_post_types    = $screen->get( 'post_types', array() );
-$campaignbridge_enabled_types = $screen->get( 'enabled_types', array() );
-$screen->asset_enqueue_style( 'campaignbridge-post-types', 'dist/styles/admin/post-types.asset.php' );
-$editor = $screen->asset_enqueue_script( 'campaignbridge-post-types', 'dist/scripts/editor/editor.js' );
+global $screen;
+if ( ! isset( $screen ) ) {
+	$screen = null; // Fallback for PHPStan
+}
+$campaignbridge_post_types    = $screen ? $screen->get( 'post_types', array() ) : array();
+$campaignbridge_enabled_types = $screen ? $screen->get( 'enabled_types', array() ) : array();
+if ( $screen ) {
+	$screen->asset_enqueue_style( 'campaignbridge-post-types', 'dist/styles/admin/post-types.asset.php' );
+	$editor = $screen->asset_enqueue_script( 'campaignbridge-post-types', 'dist/scripts/editor/editor.js' );
+}
 
 // Create checkboxes for each post type.
 $checkboxes = array();

@@ -11,7 +11,11 @@
 use CampaignBridge\Admin\Core\Form;
 
 // Get test data from controller.
-$test_data = $screen->get( 'test_data', array() );
+global $screen;
+if ( ! isset( $screen ) ) {
+	$screen = null; // Fallback for PHPStan
+}
+$test_data = $screen ? $screen->get( 'test_data', array() ) : array();
 
 // Example 1: Stateless Mode (no persistent data).
 $preferences = array(
@@ -190,10 +194,10 @@ $form5 = Form::make( 'repeater_radio' )
 		<div class="campaignbridge-repeater-test__summary">
 			<h2><?php esc_html_e( 'Test Results Summary', 'campaignbridge' ); ?></h2>
 
-			<?php if ( isset( $_POST ) && ! empty( $_POST ) && current_user_can( 'manage_options' ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Test/debug output only ?>
+			<?php if ( ! empty( $_POST ) && current_user_can( 'manage_options' ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Test/debug output only ?>
 				<div class="campaignbridge-repeater-test__debug">
 					<h3>Debug: Last POST Data</h3>
-					<code><?php echo esc_html( wp_json_encode( $_POST, JSON_PRETTY_PRINT ) ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( $_POST, JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 			<?php endif; ?>
 
@@ -209,7 +213,7 @@ $form5 = Form::make( 'repeater_radio' )
 						'campaignbridge_test_user_permissions' => get_option( 'campaignbridge_test_user_permissions', 'NOT SET' ),
 						'campaignbridge_test_theme_preference' => get_option( 'campaignbridge_test_theme_preference', 'NOT SET' ),
 					);
-					echo esc_html( wp_json_encode( $db_values, JSON_PRETTY_PRINT ) );
+					echo esc_html( wp_json_encode( $db_values, JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' );
 					?>
 				</code>
 			</div>
@@ -217,23 +221,23 @@ $form5 = Form::make( 'repeater_radio' )
 			<div class="campaignbridge-repeater-test__results">
 				<div class="campaignbridge-repeater-test__result">
 					<strong>Stateless Preferences:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_preferences', array() ), JSON_PRETTY_PRINT ) ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_preferences', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 				<div class="campaignbridge-repeater-test__result">
 					<strong>Enabled Features:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_enabled_features', array() ), JSON_PRETTY_PRINT ) ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_enabled_features', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 				<div class="campaignbridge-repeater-test__result">
 					<strong>Notification Types:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_notification_types', array() ), JSON_PRETTY_PRINT ) ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_notification_types', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 				<div class="campaignbridge-repeater-test__result">
 					<strong>User Permissions:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_user_permissions', array() ), JSON_PRETTY_PRINT ) ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_user_permissions', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 				<div class="campaignbridge-repeater-test__result">
 					<strong>Theme Preference:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_theme_preference', array() ), JSON_PRETTY_PRINT ) ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_theme_preference', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 			</div>
 		</div>

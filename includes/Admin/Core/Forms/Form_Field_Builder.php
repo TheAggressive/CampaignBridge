@@ -98,7 +98,7 @@ class Form_Field_Builder {
 	/**
 	 * Set field options (for select, radio, checkbox)
 	 *
-	 * @param array $options Field options.
+	 * @param array<string, mixed> $options Field options.
 	 * @return Form_Field_Builder
 	 */
 	public function options( array $options ): self {
@@ -120,7 +120,7 @@ class Form_Field_Builder {
 	/**
 	 * Set field validation rules
 	 *
-	 * @param array $rules Validation rules.
+	 * @param array<string, mixed> $rules Validation rules.
 	 * @return Form_Field_Builder
 	 */
 	public function rules( array $rules ): self {
@@ -293,7 +293,7 @@ class Form_Field_Builder {
 	/**
 	 * Add custom field attributes
 	 *
-	 * @param array $attributes Custom attributes.
+	 * @param array<string, mixed> $attributes Custom attributes.
 	 * @return Form_Field_Builder
 	 */
 	public function attributes( array $attributes ): self {
@@ -332,8 +332,8 @@ class Form_Field_Builder {
 	 * without needing to call ->end() explicitly. Any method that exists on
 	 * Form_Builder will be proxied automatically.
 	 *
-	 * @param string $method Method name.
-	 * @param array  $args   Method arguments.
+	 * @param string       $method Method name.
+	 * @param array<mixed> $args   Method arguments.
 	 * @return mixed Result of the method call.
 	 *
 	 * @throws \BadMethodCallException If method does not exist.

@@ -55,8 +55,8 @@ class Routes extends Abstract_Rest_Controller {
 	/**
 	 * Initialize shared state.
 	 *
-	 * @param string $option_name Options key used by the plugin.
-	 * @param array  $providers   Registered providers map.
+	 * @param string               $option_name Options key used by the plugin.
+	 * @param array<string, mixed> $providers   Registered providers map.
 	 * @return void
 	 */
 	public static function init( string $option_name, array $providers ): void {
@@ -136,7 +136,7 @@ class Routes extends Abstract_Rest_Controller {
 	 * GET /posts endpoint.
 	 *
 	 * @param WP_REST_Request $req Request object.
-	 * @return WP_REST_Response|WP_Error
+	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public static function r_posts( WP_REST_Request $req ) {
 		// Rate limiting check.
@@ -163,7 +163,15 @@ class Routes extends Abstract_Rest_Controller {
 
 		// Get and format posts.
 		$post_ids = get_posts( self::get_posts_query_args( $post_type ) );
-		$items    = Response_Formatter::format_posts_response( $post_ids );
+		// Since we use 'fields' => 'ids' in query args, all values should be integers.
+
+		/**
+		 * Post IDs from the query.
+		 *
+		 * @var array<int> $post_ids
+		 */
+		$int_post_ids = array_map( 'intval', $post_ids );
+		$items        = Response_Formatter::format_posts_response( $int_post_ids );
 
 		return self::ensure_response( array( 'items' => $items ) );
 	}
@@ -173,7 +181,7 @@ class Routes extends Abstract_Rest_Controller {
 	 * Get query arguments for posts endpoint.
 	 *
 	 * @param string $post_type Post type to query.
-	 * @return array Query arguments array.
+	 * @return array<string, mixed> Query arguments array.
 	 */
 	private static function get_posts_query_args( string $post_type ): array {
 		return array(
@@ -200,7 +208,7 @@ class Routes extends Abstract_Rest_Controller {
 	/**
 	 * GET /post-types endpoint.
 	 *
-	 * @return WP_REST_Response|WP_Error
+	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public static function r_post_types() {
 		// Rate limiting check.

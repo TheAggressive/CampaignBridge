@@ -39,6 +39,10 @@ class Asset_Manager {
 		// Find all .asset.php files in the directory (exclude RTL versions).
 		$asset_files = glob( $full_dir . '/*.asset.php' );
 
+		if ( ! is_array( $asset_files ) ) {
+			return;
+		}
+
 		foreach ( $asset_files as $asset_file ) {
 			$asset_name = basename( $asset_file, '.asset.php' );
 
@@ -77,9 +81,9 @@ class Asset_Manager {
 	/**
 	 * Enqueue a style asset (public wrapper for private method).
 	 *
-	 * @param string $handle     Asset handle.
-	 * @param string $asset_path Asset path.
-	 * @param array  $asset_data Asset data override.
+	 * @param string               $handle     Asset handle.
+	 * @param string               $asset_path Asset path.
+	 * @param array<string, mixed> $asset_data Asset data override.
 	 * @return void
 	 */
 	public static function enqueue_asset_style( string $handle, string $asset_path, array $asset_data = array() ): void {
@@ -89,9 +93,9 @@ class Asset_Manager {
 	/**
 	 * Enqueue a script asset (public wrapper for private method).
 	 *
-	 * @param string $handle     Asset handle.
-	 * @param string $asset_path Asset path.
-	 * @param array  $asset_data Asset data override.
+	 * @param string               $handle     Asset handle.
+	 * @param string               $asset_path Asset path.
+	 * @param array<string, mixed> $asset_data Asset data override.
 	 * @return void
 	 */
 	public static function enqueue_asset_script( string $handle, string $asset_path, array $asset_data = array() ): void {
@@ -101,7 +105,7 @@ class Asset_Manager {
 	/**
 	 * Enqueue assets from a configuration array.
 	 *
-	 * @param array $config Configuration array with 'styles' and 'scripts' keys.
+	 * @param array<string, mixed> $config Configuration array with 'styles' and 'scripts' keys.
 	 * @return void
 	 */
 	public static function enqueue_from_config( array $config ): void {
@@ -124,9 +128,9 @@ class Asset_Manager {
 	/**
 	 * Enqueue a style asset with dependency and version management (internal method).
 	 *
-	 * @param string $handle     Asset handle.
-	 * @param string $asset_path Relative path to asset file or .asset.php file.
-	 * @param array  $asset_data Optional asset data override.
+	 * @param string               $handle     Asset handle.
+	 * @param string               $asset_path Relative path to asset file or .asset.php file.
+	 * @param array<string, mixed> $asset_data Optional asset data override.
 	 * @return void
 	 */
 	private static function enqueue_asset_style_internal( string $handle, string $asset_path, array $asset_data = array() ): void {
@@ -144,9 +148,9 @@ class Asset_Manager {
 	/**
 	 * Enqueue a script asset with dependency and version management (internal method).
 	 *
-	 * @param string $handle     Asset handle.
-	 * @param string $asset_path Relative path to asset file or .asset.php file.
-	 * @param array  $asset_data Optional asset data override.
+	 * @param string               $handle     Asset handle.
+	 * @param string               $asset_path Relative path to asset file or .asset.php file.
+	 * @param array<string, mixed> $asset_data Optional asset data override.
 	 * @return void
 	 */
 	private static function enqueue_asset_script_internal( string $handle, string $asset_path, array $asset_data = array() ): void {
@@ -165,11 +169,11 @@ class Asset_Manager {
 	/**
 	 * Prepare asset information for enqueuing (shared logic for styles and scripts).
 	 *
-	 * @param string $asset_path      Asset path.
-	 * @param array  $asset_data      Optional asset data override.
-	 * @param string $file_extension  File extension (.css or .js).
-	 * @param string $enqueue_function WordPress enqueue function name.
-	 * @return array Prepared asset information.
+	 * @param string               $asset_path      Asset path.
+	 * @param array<string, mixed> $asset_data      Optional asset data override.
+	 * @param string               $file_extension  File extension (.css or .js).
+	 * @param string               $enqueue_function WordPress enqueue function name.
+	 * @return array<string, mixed> Prepared asset information.
 	 */
 	private static function prepare_asset_enqueue( string $asset_path, array $asset_data, string $file_extension, string $enqueue_function ): array {
 		$plugin_url = \CampaignBridge_Plugin::url();
@@ -214,7 +218,7 @@ class Asset_Manager {
 	 * Load asset data from .asset.php file with fallback (public static version).
 	 *
 	 * @param string $asset_path Relative path to .asset.php file.
-	 * @return array|null Asset data with 'dependencies' and 'version' keys, or null if file doesn't exist.
+	 * @return array<string, mixed>|null Asset data with 'dependencies' and 'version' keys, or null if file doesn't exist.
 	 */
 	public static function load_asset_data_static( string $asset_path ): ?array {
 		// Only load .asset.php files to avoid including non-PHP files.
@@ -240,7 +244,7 @@ class Asset_Manager {
 	 * Load asset data from .asset.php file with fallback.
 	 *
 	 * @param string $asset_path Relative path to .asset.php file.
-	 * @return array Asset data with 'dependencies' and 'version' keys.
+	 * @return array<string, mixed> Asset data with 'dependencies' and 'version' keys.
 	 */
 	private static function load_asset_data( string $asset_path ): array {
 		$asset_data = self::load_asset_data_static( $asset_path );

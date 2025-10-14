@@ -19,14 +19,14 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	/**
 	 * Field configuration
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	protected array $config;
 
 	/**
 	 * Constructor
 	 *
-	 * @param array $config Field configuration.
+	 * @param array<string, mixed> $config Field configuration.
 	 */
 	public function __construct( array $config ) {
 		$this->config = $config;
@@ -35,7 +35,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	/**
 	 * Get field configuration
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function get_config(): array {
 		return $this->config;
@@ -81,7 +81,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	/**
 	 * Get field validation rules
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function get_validation_rules(): array {
 		return $this->config['validation'] ?? array();
@@ -126,7 +126,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	 * @param string $rule        Rule name.
 	 * @param mixed  $value       Value to validate.
 	 * @param mixed  $rule_config Rule configuration.
-	 * @return bool|WP_Error
+	 * @return bool|\WP_Error
 	 */
 	protected function validate_rule( string $rule, $value, $rule_config ) {
 		switch ( $rule ) {

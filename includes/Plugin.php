@@ -19,13 +19,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge;
 
-// TEMPORARILY COMMENTED OUT - Will be replaced by new file-based system
-// use CampaignBridge\Admin\Asset_Manager;
 use CampaignBridge\Blocks\Blocks;
-// use CampaignBridge\Admin\Pages\Post_Types;
-// use CampaignBridge\Admin\Pages\Settings;
-// use CampaignBridge\Admin\Pages\Status;
-// use CampaignBridge\Admin\Pages\Editor;
 use CampaignBridge\Core\Api_Key_Encryption;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
@@ -48,20 +42,6 @@ class Plugin {
 	 */
 	private const OPTION_NAME = 'campaignbridge_settings';
 
-	/**
-	 * Required capability for admin access.
-	 */
-	private const ADMIN_CAPABILITY = 'manage_options';
-
-	/**
-	 * Menu position in WordPress admin.
-	 */
-	private const MENU_POSITION = 30;
-
-	/**
-	 * Admin menu icon.
-	 */
-	private const MENU_ICON = 'dashicons-email-alt';
 
 
 
@@ -215,9 +195,6 @@ class Plugin {
 	 * @return void
 	 */
 	private function init_core_systems(): void {
-		// Initialize Asset Manager.
-		// TEMPORARILY COMMENTED OUT - Old admin system
-		// Asset_Manager::init();
 
 		// Initialize Blocks system.
 		Blocks::init();
@@ -238,12 +215,6 @@ class Plugin {
 
 		// Initialize NEW file-based admin system.
 		\CampaignBridge\Admin\Admin::get_instance();
-
-		// TEMPORARILY COMMENTED OUT - Old admin pages
-		// Status::init();
-		// Post_Types::init();
-		// Settings::init();
-		// Editor::init();
 	}
 
 	/**

@@ -99,8 +99,8 @@ class Error_Handler {
 	/**
 	 * Debug level logging
 	 *
-	 * @param string $message Log message.
-	 * @param array  $context Additional context.
+	 * @param string               $message Log message.
+	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
 	public function debug( string $message, array $context = array() ): void {
@@ -110,8 +110,8 @@ class Error_Handler {
 	/**
 	 * Info level logging
 	 *
-	 * @param string $message Log message.
-	 * @param array  $context Additional context.
+	 * @param string               $message Log message.
+	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
 	public function info( string $message, array $context = array() ): void {
@@ -121,8 +121,8 @@ class Error_Handler {
 	/**
 	 * Warning level logging
 	 *
-	 * @param string $message Log message.
-	 * @param array  $context Additional context.
+	 * @param string               $message Log message.
+	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
 	public function warning( string $message, array $context = array() ): void {
@@ -132,8 +132,8 @@ class Error_Handler {
 	/**
 	 * Error level logging
 	 *
-	 * @param string $message Log message.
-	 * @param array  $context Additional context.
+	 * @param string               $message Log message.
+	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
 	public function error( string $message, array $context = array() ): void {
@@ -143,9 +143,9 @@ class Error_Handler {
 	/**
 	 * Core logging method
 	 *
-	 * @param int    $level   Log level.
-	 * @param string $message Log message.
-	 * @param array  $context Additional context.
+	 * @param int                  $level   Log level.
+	 * @param string               $message Log message.
+	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
 	private function log( int $level, string $message, array $context = array() ): void {
@@ -235,8 +235,8 @@ class Error_Handler {
 	/**
 	 * Handle WordPress PHP errors
 	 *
-	 * @param array  $error Error details.
-	 * @param string $message Error message.
+	 * @param array<string, mixed> $error Error details.
+	 * @param string               $message Error message.
 	 * @return void
 	 */
 	public function handle_wp_php_error( array $error, string $message ): void {

@@ -22,7 +22,7 @@ class Status_Controller {
 	/**
 	 * Controller data array.
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $data = [];
 
@@ -38,8 +38,8 @@ class Status_Controller {
 
 	/**
 	 * Get data for views (available via $screen->get())
-   *
-   * @return array
+	 *
+	 * @return array<string, mixed>
 	 */
 	public function get_data(): array {
 		return $this->data;

@@ -34,7 +34,7 @@ interface Form_Field_Interface {
 	/**
 	 * Get field configuration
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function get_config(): array;
 
@@ -62,7 +62,7 @@ interface Form_Field_Interface {
 	/**
 	 * Get field validation rules
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function get_validation_rules(): array;
 

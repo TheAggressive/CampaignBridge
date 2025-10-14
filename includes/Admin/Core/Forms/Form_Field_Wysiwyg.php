@@ -56,8 +56,8 @@ class Form_Field_Wysiwyg extends Form_Field_Base {
 	/**
 	 * Enqueue editor scripts and initialize
 	 *
-	 * @param string $editor_id      Editor ID.
-	 * @param array  $editor_settings Editor settings.
+	 * @param string               $editor_id      Editor ID.
+	 * @param array<string, mixed> $editor_settings Editor settings.
 	 */
 	private function enqueue_editor_scripts( string $editor_id, array $editor_settings ): void {
 		// Ensure WordPress editor scripts are loaded.

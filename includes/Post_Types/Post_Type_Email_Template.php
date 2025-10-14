@@ -128,7 +128,7 @@ class Post_Type_Email_Template {
 	/**
 	 * Get post type labels.
 	 *
-	 * @return array Post type labels array.
+	 * @return array<string, string> Post type labels array.
 	 */
 	private static function get_post_type_labels(): array {
 		return array(
@@ -223,11 +223,6 @@ class Post_Type_Email_Template {
 		foreach ( self::META_FIELD_CONFIG as $field_key => $config ) {
 			$sanitize_callback = $config['sanitize'];
 
-			// Handle callable sanitization functions.
-			if ( is_array( $sanitize_callback ) && is_callable( $sanitize_callback ) ) {
-				$sanitize_callback = $sanitize_callback;
-			}
-
 			register_post_meta(
 				self::POST_TYPE,
 				$field_key,
@@ -259,8 +254,8 @@ class Post_Type_Email_Template {
 	/**
 	 * Get post type arguments.
 	 *
-	 * @param array $labels Post type labels.
-	 * @return array Post type arguments array.
+	 * @param array<string, string> $labels Post type labels.
+	 * @return array<string, mixed> Post type arguments array.
 	 */
 	private static function get_post_type_args( array $labels ): array {
 		return array(
@@ -296,14 +291,14 @@ class Post_Type_Email_Template {
 		/**
 		 * Customize post update messages.
 		 *
-		 * @param array $messages The existing messages.
-		 * @return array
+		 * @param array<string, mixed> $messages The existing messages.
+		 * @return array<string, mixed> The updated messages array.
 		 */
 	public static function custom_post_messages( array $messages ): array {
 		$post      = get_post();
 		$post_type = get_post_type( $post );
 
-		if ( self::POST_TYPE !== $post_type ) {
+		if ( ! $post || self::POST_TYPE !== $post_type ) {
 			return $messages;
 		}
 
@@ -339,7 +334,7 @@ class Post_Type_Email_Template {
 		/**
 		 * Get all email templates.
 		 *
-		 * @return array Array of template posts.
+		 * @return array<int, \WP_Post> Array of template posts.
 		 */
 	public static function get_templates(): array {
 		return get_posts(
@@ -357,7 +352,7 @@ class Post_Type_Email_Template {
 		 * Get templates by category.
 		 *
 		 * @param string $category The template category.
-		 * @return array Array of template posts.
+		 * @return array<int, \WP_Post> Array of template posts.
 		 */
 	public static function get_templates_by_category( string $category ): array {
 		return get_posts(
@@ -380,10 +375,10 @@ class Post_Type_Email_Template {
 	/**
 	 * Create a new email template.
 	 *
-	 * @param array $template_data Template data.
-	 * @return int|WP_Error Template ID on success, WP_Error on failure.
+	 * @param array<string, mixed> $template_data Template data.
+	 * @return int|\WP_Error Template ID on success, WP_Error on failure.
 	 */
-	public static function create_template( array $template_data ) {
+	public static function create_template( array $template_data ): int|\WP_Error {
 		$post_data = array(
 			'post_title'   => sanitize_text_field( $template_data['title'] ?? '' ),
 			'post_content' => wp_kses_post( $template_data['content'] ?? '' ),
@@ -399,9 +394,9 @@ class Post_Type_Email_Template {
 	 * Duplicate an existing template.
 	 *
 	 * @param int $template_id The template ID to duplicate.
-	 * @return int|WP_Error New template ID on success, WP_Error on failure.
+	 * @return int|\WP_Error New template ID on success, WP_Error on failure.
 	 */
-	public static function duplicate_template( int $template_id ) {
+	public static function duplicate_template( int $template_id ): int|\WP_Error {
 		$original = get_post( $template_id );
 		if ( ! $original || self::POST_TYPE !== $original->post_type ) {
 			return new \WP_Error( 'template_not_found', __( 'Template not found.', 'campaignbridge' ) );
@@ -419,7 +414,7 @@ class Post_Type_Email_Template {
 		/**
 		 * Get template categories.
 		 *
-		 * @return array Array of category labels.
+		 * @return array<string, string> Array of category labels keyed by category slug.
 		 */
 	public static function get_template_categories(): array {
 		$category_config = self::get_meta_field_config( 'cb_template_category' );
@@ -450,7 +445,7 @@ class Post_Type_Email_Template {
 	/**
 	 * Get all available meta field keys for block binding.
 	 *
-	 * @return array Array of meta field keys.
+	 * @return array<int, string> Array of meta field keys.
 	 */
 	public static function get_meta_field_keys(): array {
 		return array_keys( self::META_FIELD_CONFIG );
@@ -460,7 +455,7 @@ class Post_Type_Email_Template {
 	 * Get meta field configuration.
 	 *
 	 * @param string|null $field_key Optional field key to get specific config.
-	 * @return array|array|null Configuration for specific field or all fields.
+	 * @return array<string, mixed> Configuration for specific field or all fields.
 	 */
 	public static function get_meta_field_config( ?string $field_key = null ): array {
 		if ( null === $field_key ) {

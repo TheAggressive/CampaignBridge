@@ -12,10 +12,14 @@
 require_once __DIR__ . '/../../Core/Form.php';
 
 // Get current values.
-$cb_provider           = $screen->get( 'provider', get_option( 'cb_provider', 'html' ) );
-$cb_mailchimp_api_key  = $screen->get( 'mailchimp_api_key', get_option( 'cb_mailchimp_api_key', '' ) );
-$cb_mailchimp_audience = $screen->get( 'mailchimp_audience', get_option( 'cb_mailchimp_audience', '' ) );
-$cb_is_connected       = $screen->get( 'mailchimp_connected', false );
+global $screen;
+if ( ! isset( $screen ) ) {
+	$screen = null; // Fallback for PHPStan
+}
+$cb_provider           = $screen ? $screen->get( 'provider', get_option( 'cb_provider', 'html' ) ) : get_option( 'cb_provider', 'html' );
+$cb_mailchimp_api_key  = $screen ? $screen->get( 'mailchimp_api_key', get_option( 'cb_mailchimp_api_key', '' ) ) : get_option( 'cb_mailchimp_api_key', '' );
+$cb_mailchimp_audience = $screen ? $screen->get( 'mailchimp_audience', get_option( 'cb_mailchimp_audience', '' ) ) : get_option( 'cb_mailchimp_audience', '' );
+$cb_is_connected       = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
 
 // Create the form using the Form API.
 $form = \CampaignBridge\Admin\Core\Form::make( 'providers' )

@@ -27,8 +27,8 @@ class Response_Formatter {
 	/**
 	 * Format posts response data.
 	 *
-	 * @param array $post_ids Array of post IDs.
-	 * @return array Formatted posts data.
+	 * @param array<int, int> $post_ids Array of post IDs keyed by index.
+	 * @return list<array{id: int, label: string}> Formatted posts data.
 	 */
 	public static function format_posts_response( array $post_ids ): array {
 		$items = array();
@@ -47,8 +47,8 @@ class Response_Formatter {
 	/**
 	 * Filter sensitive data from settings.
 	 *
-	 * @param array $settings Raw settings array.
-	 * @return array Filtered settings with sensitive data redacted.
+	 * @param array<string, mixed> $settings Raw settings array.
+	 * @return array<string, mixed> Filtered settings with sensitive data redacted.
 	 */
 	public static function filter_sensitive_settings( array $settings ): array {
 		// Redact sensitive fields for REST API responses.
@@ -66,8 +66,8 @@ class Response_Formatter {
 	/**
 	 * Filter sensitive keys from editor settings.
 	 *
-	 * @param array $settings Raw editor settings.
-	 * @return array Filtered settings.
+	 * @param array<string, mixed> $settings Raw editor settings.
+	 * @return array<string, mixed> Filtered settings.
 	 */
 	public static function filter_editor_settings( array $settings ): array {
 		$sensitive_keys = self::get_sensitive_editor_keys();
@@ -82,7 +82,7 @@ class Response_Formatter {
 	/**
 	 * Get sensitive keys that should be removed from editor settings.
 	 *
-	 * @return array List of sensitive keys to filter out.
+	 * @return array<string> List of sensitive keys to filter out.
 	 */
 	private static function get_sensitive_editor_keys(): array {
 		return array(

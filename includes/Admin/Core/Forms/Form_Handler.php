@@ -34,7 +34,7 @@ class Form_Handler {
 	/**
 	 * Form fields configuration
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	private array $fields;
 
@@ -76,33 +76,33 @@ class Form_Handler {
 	/**
 	 * Form errors
 	 *
-	 * @var array
+	 * @var array<int|string, mixed>
 	 */
 	public array $errors = array();
 
 	/**
 	 * Field-specific errors
 	 *
-	 * @var array
+	 * @var array<int|string, mixed>
 	 */
 	private array $field_errors = array();
 
 	/**
 	 * Form messages
 	 *
-	 * @var array
+	 * @var array<int|string, mixed>
 	 */
 	public array $messages = array();
 
 	/**
 	 * Constructor
 	 *
-	 * @param Form|null           $form           Parent form instance.
-	 * @param Form_Config         $config         Form configuration.
-	 * @param array               $fields         Form fields configuration.
-	 * @param Form_Security       $security       Security handler.
-	 * @param Form_Validator      $validator      Form validator.
-	 * @param Form_Notice_Handler $notice_handler Notice handler.
+	 * @param Form|null            $form           Parent form instance.
+	 * @param Form_Config          $config         Form configuration.
+	 * @param array<string, mixed> $fields Form fields configuration.
+	 * @param Form_Security        $security       Security handler.
+	 * @param Form_Validator       $validator      Form validator.
+	 * @param Form_Notice_Handler  $notice_handler Notice handler.
 	 */
 	public function __construct(
 		?Form $form,
@@ -208,7 +208,7 @@ class Form_Handler {
 	/**
 	 * Get submitted form data
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	private function get_submitted_data(): array {
 		$data    = array();
@@ -216,14 +216,14 @@ class Form_Handler {
 		$form_id = $this->config->get( 'form_id', 'form' );
 
 		// Get form data from the namespaced array.
-		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce already verified in handle_submission(), data sanitized per field via sanitize_field_value().
+
+    // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce already verified in handle_submission(), data sanitized per field via sanitize_field_value().
 		$form_data = array();
 		if ( 'POST' === $method ) {
 			$form_data = \wp_unslash( $_POST[ $form_id ] ?? array() );
 		} elseif ( 'GET' === $method ) {
 			$form_data = \wp_unslash( $_GET[ $form_id ] ?? array() );
 		}
-		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		// Extract field values, handling array-style field names.
 		$data = array();
@@ -268,8 +268,8 @@ class Form_Handler {
 	/**
 	 * Process file upload for a field
 	 *
-	 * @param string $field_id     Field ID.
-	 * @param array  $field_config Field configuration.
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Field configuration.
 	 * @return mixed Processed file data or null.
 	 */
 	private function process_file_upload( string $field_id, array $field_config ) {
@@ -305,7 +305,7 @@ class Form_Handler {
 		}
 
 		// Check if files were uploaded.
-		if ( UPLOAD_ERR_NO_FILE === empty( $file_data ) || empty( $file_data['name'] ) || $file_data['error'] ) {
+		if ( empty( $file_data ) || empty( $file_data['name'] ) || UPLOAD_ERR_NO_FILE === $file_data['error'] ) {
 			return null;
 		}
 
@@ -343,9 +343,9 @@ class Form_Handler {
 	/**
 	 * Create field instance for processing
 	 *
-	 * @param string $field_id     Field ID.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param mixed                $value        Field value.
 	 * @return Form_Field_Interface|null Field instance.
 	 */
 	private function create_field_instance( string $field_id, array $field_config, $value ): ?Form_Field_Interface {
@@ -360,8 +360,8 @@ class Form_Handler {
 	/**
 	 * Check if a multiple field value should be included.
 	 *
-	 * @param mixed $value       Field value.
-	 * @param array $field_config Field configuration.
+	 * @param mixed                $value       Field value.
+	 * @param array<string, mixed> $field_config Field configuration.
 	 * @return bool Whether to include this value.
 	 */
 	private function is_multiple_field_checked( $value, array $field_config ): bool {
@@ -379,8 +379,8 @@ class Form_Handler {
 	/**
 	 * Sanitize field value based on type
 	 *
-	 * @param mixed $value       Raw value.
-	 * @param array $field_config Field configuration.
+	 * @param mixed                $value       Raw value.
+	 * @param array<string, mixed> $field_config Field configuration.
 	 * @return mixed Sanitized value.
 	 */
 	private function sanitize_field_value( $value, array $field_config ) {
@@ -406,7 +406,7 @@ class Form_Handler {
 	/**
 	 * Save form data
 	 *
-	 * @param array $data Form data to save.
+	 * @param array<string, mixed> $data Form data to save.
 	 * @return bool Success status.
 	 */
 	private function save_data( array $data ): bool {
@@ -429,7 +429,7 @@ class Form_Handler {
 	/**
 	 * Save to WordPress options
 	 *
-	 * @param array $data Data to save.
+	 * @param array<string, mixed> $data Data to save.
 	 * @return bool Success.
 	 */
 	private function save_to_options( array $data ): bool {
@@ -447,7 +447,7 @@ class Form_Handler {
 	/**
 	 * Save using WordPress Settings API
 	 *
-	 * @param array $data Data to save.
+	 * @param array<string, mixed> $data Data to save.
 	 * @return bool Success.
 	 */
 	private function save_to_settings( array $data ): bool {
@@ -479,13 +479,10 @@ class Form_Handler {
 	/**
 	 * Sanitize settings data
 	 *
-	 * @param mixed $data Raw settings data.
-	 * @return array Sanitized settings data.
+	 * @param array<string, mixed> $data Raw settings data.
+	 * @return array<string, mixed> Sanitized settings data.
 	 */
-	public function sanitize_settings_data( $data ): array {
-		if ( ! is_array( $data ) ) {
-			return array();
-		}
+	public function sanitize_settings_data( array $data ): array {
 
 		$sanitized = array();
 		foreach ( $data as $key => $value ) {
@@ -499,7 +496,7 @@ class Form_Handler {
 	/**
 	 * Save to post meta
 	 *
-	 * @param array $data Data to save.
+	 * @param array<string, mixed> $data Data to save.
 	 * @return bool Success.
 	 */
 	private function save_to_post_meta( array $data ): bool {
@@ -517,7 +514,7 @@ class Form_Handler {
 	/**
 	 * Save to custom handler
 	 *
-	 * @param array $data Data to save.
+	 * @param array<string, mixed> $data Data to save.
 	 * @return bool Success.
 	 */
 	private function save_to_custom( array $data ): bool {
@@ -527,7 +524,6 @@ class Form_Handler {
 		}
 		return false;
 	}
-
 
 	/**
 	 * Run a hook if it exists
@@ -563,7 +559,7 @@ class Form_Handler {
 	/**
 	 * Get form errors
 	 *
-	 * @return array Array of validation errors.
+	 * @return array<int|string, mixed> Array of validation errors.
 	 */
 	public function get_errors(): array {
 		return $this->errors;
@@ -572,7 +568,7 @@ class Form_Handler {
 	/**
 	 * Get field-specific errors
 	 *
-	 * @return array Array of field-specific errors.
+	 * @return array<int|string, mixed> Array of field-specific errors.
 	 */
 	public function get_field_errors(): array {
 		return $this->field_errors;
@@ -581,7 +577,7 @@ class Form_Handler {
 	/**
 	 * Get form success messages
 	 *
-	 * @return array Array of success messages.
+	 * @return array<int|string, mixed> Array of success messages.
 	 */
 	public function get_messages(): array {
 		return $this->messages;

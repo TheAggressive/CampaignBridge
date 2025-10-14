@@ -105,21 +105,20 @@ class Form {
 	/**
 	 * Create a new form instance
 	 *
-	 * @param string $form_id Unique form identifier.
-	 * @param array  $config  Optional initial configuration.
+	 * @param string               $form_id Unique form identifier.
+	 * @param array<string, mixed> $config  Optional initial configuration.
 	 * @return Form
 	 */
 	public static function make( string $form_id, array $config = array() ): self {
 		return new self( $form_id, $config );
 	}
 
-
 	/**
 	 * Constructor
 	 *
-	 * @param string         $form_id   Form ID.
-	 * @param array          $config    Initial config.
-	 * @param Form_Container $container Dependency injection container.
+	 * @param string               $form_id   Form ID.
+	 * @param array<string, mixed> $config    Initial config.
+	 * @param Form_Container       $container Dependency injection container.
 	 */
 	private function __construct( string $form_id, array $config = array(), ?Form_Container $container = null ) {
 		$this->container = $container ?? new Form_Container();
@@ -297,7 +296,7 @@ class Form {
 	/**
 	 * Get form errors
 	 *
-	 * @return array
+	 * @return array<int|string, mixed>
 	 */
 	public function errors(): array {
 		assert( null !== $this->handler, 'Handler must be initialized' );
@@ -307,7 +306,7 @@ class Form {
 	/**
 	 * Get form success messages
 	 *
-	 * @return array
+	 * @return array<int|string, mixed>
 	 */
 	public function messages(): array {
 		assert( null !== $this->handler, 'Handler must be initialized' );
@@ -317,12 +316,11 @@ class Form {
 	/**
 	 * Get form fields (for testing/debugging)
 	 *
-	 * @return array
+	 * @return array<int|string, mixed>
 	 */
 	public function get_fields(): array {
 		return $this->config->get_fields();
 	}
-
 
 	/**
 	 * Add a hidden field to the form
@@ -335,10 +333,6 @@ class Form {
 		$this->builder->hidden( $name, $value );
 		return $this;
 	}
-
-	/**
-	 * Configure data persistence methods
-	 */
 
 	/**
 	 * Save to WordPress options
@@ -384,11 +378,6 @@ class Form {
 		return $this;
 	}
 
-
-	/**
-	 * Configure form layout and appearance
-	 */
-
 	/**
 	 * Set table layout
 	 *
@@ -421,10 +410,6 @@ class Form {
 	}
 
 	/**
-	 * Configure messages
-	 */
-
-	/**
 	 * Set success message
 	 *
 	 * @param string $message Success message.
@@ -445,10 +430,6 @@ class Form {
 		$this->builder->error( $message );
 		return $this;
 	}
-
-	/**
-	 * Configure field naming and submit button
-	 */
 
 	/**
 	 * Set option prefix for field keys
@@ -483,10 +464,6 @@ class Form {
 		$this->builder->submit( $text, $type );
 		return $this;
 	}
-
-	/**
-	 * Configure lifecycle hooks and callbacks
-	 */
 
 	/**
 	 * Add a generic lifecycle hook
@@ -566,10 +543,27 @@ class Form {
 		return $this;
 	}
 
+	/**
+	 * Add a file field to the form.
+	 *
+	 * @param string      $name   Field name.
+	 * @param string      $label  Field label.
+	 * @param string|null $accept Accepted file types.
+	 * @return \CampaignBridge\Admin\Core\Forms\Form_Field_Builder
+	 */
+	public function file( string $name, string $label = '', ?string $accept = null ): \CampaignBridge\Admin\Core\Forms\Form_Field_Builder {
+		return $this->builder->file( $name, $label, $accept );
+	}
 
 	/**
-	 * Data access and manipulation methods
+	 * Set the form description.
+	 *
+	 * @param string $description Form description.
+	 * @return \CampaignBridge\Admin\Core\Form_Builder
 	 */
+	public function description( string $description ): \CampaignBridge\Admin\Core\Form_Builder {
+		return $this->builder->description( $description );
+	}
 
 	/**
 	 * Get form data
@@ -606,12 +600,11 @@ class Form {
 		return $this;
 	}
 
-
 	/**
 	 * Delegate method calls to the builder for fluent API
 	 *
-	 * @param string $method Method name.
-	 * @param array  $args   Method arguments.
+	 * @param string       $method Method name.
+	 * @param array<mixed> $args   Method arguments.
 	 * @throws \BadMethodCallException If method does not exist.
 	 * @return mixed
 	 */
@@ -692,7 +685,7 @@ class Form {
 	/**
 	 * Get database performance recommendations.
 	 *
-	 * @return array Array of performance recommendations.
+	 * @return array<int|string, mixed> Array of performance recommendations.
 	 */
 	public function get_performance_recommendations(): array {
 		return $this->query_optimizer->get_performance_recommendations();
@@ -710,11 +703,11 @@ class Form {
 	/**
 	 * Enqueue optimized script for this form.
 	 *
-	 * @param string $handle    Script handle.
-	 * @param string $src       Script source URL.
-	 * @param array  $deps      Dependencies.
-	 * @param string $version   Version string.
-	 * @param bool   $in_footer Whether to load in footer.
+	 * @param string        $handle    Script handle.
+	 * @param string        $src       Script source URL.
+	 * @param array<string> $deps      Dependencies.
+	 * @param string        $version   Version string.
+	 * @param bool          $in_footer Whether to load in footer.
 	 * @return void
 	 */
 	public function enqueue_script( string $handle, string $src, array $deps = array(), string $version = '', bool $in_footer = true ): void {
@@ -724,11 +717,11 @@ class Form {
 	/**
 	 * Enqueue optimized style for this form.
 	 *
-	 * @param string $handle  Style handle.
-	 * @param string $src     Style source URL.
-	 * @param array  $deps    Dependencies.
-	 * @param string $version Version string.
-	 * @param string $media   Media type.
+	 * @param string        $handle  Style handle.
+	 * @param string        $src     Style source URL.
+	 * @param array<string> $deps    Dependencies.
+	 * @param string        $version Version string.
+	 * @param string        $media   Media type.
 	 * @return void
 	 */
 	public function enqueue_style( string $handle, string $src, array $deps = array(), string $version = '', string $media = 'all' ): void {
@@ -753,7 +746,7 @@ class Form {
 	 * Adds comprehensive security headers including CSP, HSTS, and other protections
 	 * to enhance security when the form is rendered.
 	 *
-	 * @param array $options Security header options.
+	 * @param array<string, mixed> $options Security header options.
 	 * @return self
 	 */
 	public function enable_security_headers( array $options = array() ): self {

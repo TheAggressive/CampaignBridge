@@ -36,14 +36,14 @@ class Form_Field_Repeater {
 	/**
 	 * All possible choice options
 	 *
-	 * @var array
+	 * @var array<string, string>
 	 */
 	private array $populate_all_choices;
 
 	/**
 	 * Current state/persistent data
 	 *
-	 * @var array
+	 * @var array<int|string, mixed>
 	 */
 	private array $persistent_data;
 
@@ -57,10 +57,10 @@ class Form_Field_Repeater {
 	/**
 	 * Constructor
 	 *
-	 * @param Form_Builder $form_builder         Parent form builder.
-	 * @param string       $field_id             Base field name.
-	 * @param array        $populate_all_choices All possible options.
-	 * @param mixed        $persistent_data      Current state data (normalized to array).
+	 * @param Form_Builder          $form_builder         Parent form builder.
+	 * @param string                $field_id             Base field name.
+	 * @param array<string, string> $populate_all_choices All possible options.
+	 * @param mixed                 $persistent_data      Current state data (normalized to array).
 	 *
 	 * @throws \InvalidArgumentException If validation fails.
 	 */
@@ -82,10 +82,10 @@ class Form_Field_Repeater {
 
 		// Validate populate_all_choices structure.
 		foreach ( $populate_all_choices as $key => $label ) {
-			if ( ! is_string( $key ) && ! is_numeric( $key ) ) {
+			if ( ! is_string( $key ) ) {
 				throw new \InvalidArgumentException(
 					sprintf(
-						'Choice key must be a string or number in repeater() method. Got: %s',
+						'Choice key must be a string in repeater() method. Got: %s',
 						// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_gettype, WordPress.Security.EscapeOutput.ExceptionNotEscaped
 						gettype( $key )
 					)
@@ -119,7 +119,7 @@ class Form_Field_Repeater {
 	 * - array → array (unchanged)
 	 *
 	 * @param mixed $data Raw persistent data.
-	 * @return array Normalized array format.
+	 * @return array<int|string, mixed> Normalized array format.
 	 */
 	private function normalize_persistent_data( $data ): array {
 		if ( is_array( $data ) ) {

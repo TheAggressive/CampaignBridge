@@ -42,7 +42,7 @@ class Html_Provider extends Abstract_Provider {
 	 *
 	 * HTML export doesn't require any configuration, so it's always ready.
 	 *
-	 * @param array $settings Plugin settings array.
+	 * @param array<string, mixed> $settings Plugin settings array.
 	 * @return bool Always true for HTML export.
 	 */
 	public function is_configured( array $settings ): bool {
@@ -55,8 +55,8 @@ class Html_Provider extends Abstract_Provider {
 	 * HTML export doesn't require any settings, so this renders a simple
 	 * informational message.
 	 *
-	 * @param array  $settings    Current plugin settings array.
-	 * @param string $option_name Root option name for form field namespacing.
+	 * @param array<string, mixed> $settings    Current plugin settings array.
+	 * @param string               $option_name Root option name for form field namespacing.
 	 * @return void Outputs HTML directly to the page.
 	 */
 	public function render_settings_fields( array $settings, string $option_name ): void {
@@ -88,8 +88,8 @@ class Html_Provider extends Abstract_Provider {
 	 * This method creates downloadable HTML files that can be used
 	 * with any email service provider.
 	 *
-	 * @param array $blocks   Associative array mapping section keys to HTML content.
-	 * @param array $settings Plugin settings array with provider configuration.
+	 * @param array<string, mixed> $blocks   Associative array mapping section keys to HTML content.
+	 * @param array<string, mixed> $settings Plugin settings array with provider configuration.
 	 * @return bool|\WP_Error True on success, WP_Error on failure with details.
 	 */
 	public function send_campaign( array $blocks, array $settings ) {
@@ -138,9 +138,9 @@ class Html_Provider extends Abstract_Provider {
 	 *
 	 * HTML export supports all standard email template sections.
 	 *
-	 * @param array $settings Plugin settings array (unused for HTML export).
-	 * @param bool  $refresh  Force refresh of cached data (unused for HTML export).
-	 * @return array Array of section key strings.
+	 * @param array<string, mixed> $settings Plugin settings array (unused for HTML export).
+	 * @param bool                 $refresh  Force refresh of cached data (unused for HTML export).
+	 * @return array<string> Array of section key strings.
 	 */
 	public function get_section_keys( array $settings, bool $refresh = false ): array {
 		return array(
@@ -155,7 +155,7 @@ class Html_Provider extends Abstract_Provider {
 	/**
 	 * Get settings schema for validation and redaction.
 	 *
-	 * @return array Schema array with field definitions.
+	 * @return array<string, mixed> Schema array with field definitions.
 	 */
 	public function settings_schema(): array {
 		return array(
@@ -177,8 +177,8 @@ class Html_Provider extends Abstract_Provider {
 	 *
 	 * HTML export doesn't have sensitive settings, so returns as-is.
 	 *
-	 * @param array $settings Raw settings array.
-	 * @return array Redacted settings array.
+	 * @param array<string, mixed> $settings Raw settings array.
+	 * @return array<string, mixed> Redacted settings array.
 	 */
 	public function redact_settings( array $settings ): array {
 		// HTML export has no sensitive data to redact.
@@ -188,7 +188,7 @@ class Html_Provider extends Abstract_Provider {
 	/**
 	 * Get provider capabilities and supported features.
 	 *
-	 * @return array Array of supported features.
+	 * @return array<string, mixed> Array of supported features.
 	 */
 	public function get_capabilities(): array {
 		return array(
@@ -204,8 +204,8 @@ class Html_Provider extends Abstract_Provider {
 	/**
 	 * Generate HTML content from blocks.
 	 *
-	 * @param array $blocks   Content blocks to convert to HTML.
-	 * @param array $settings Plugin settings.
+	 * @param array<string, mixed> $blocks   Content blocks to convert to HTML.
+	 * @param array<string, mixed> $settings Plugin settings.
 	 * @return string Generated HTML content.
 	 */
 	private function generate_html_content( array $blocks, array $settings ): string {

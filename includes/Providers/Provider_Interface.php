@@ -85,7 +85,7 @@ interface Provider_Interface {
 	 * This method should check for API keys, endpoints, and other
 	 * provider-specific requirements.
 	 *
-	 * @param array $settings Plugin settings array containing provider configuration.
+	 * @param array<string, mixed> $settings Plugin settings array containing provider configuration.
 	 * @return bool True if provider is ready to send campaigns.
 	 */
 	public function is_configured( array $settings ): bool;
@@ -97,8 +97,8 @@ interface Provider_Interface {
 	 * Should include all necessary inputs for provider setup including
 	 * API keys, audience selection, and other provider-specific options.
 	 *
-	 * @param array  $settings    Current plugin settings array.
-	 * @param string $option_name Root option name for form field namespacing.
+	 * @param array<string, mixed> $settings    Current plugin settings array.
+	 * @param string               $option_name Root option name for form field namespacing.
 	 * @return void Outputs HTML directly to the page.
 	 */
 	public function render_settings_fields( array $settings, string $option_name ): void;
@@ -112,9 +112,9 @@ interface Provider_Interface {
 	 * For export providers (HTML): Generates static HTML files or exports
 	 * content to the specified format.
 	 *
-	 * @param array $blocks   Associative array mapping section keys to HTML content.
+	 * @param array<string, mixed> $blocks   Associative array mapping section keys to HTML content.
 	 *                       Format: ['header' => '<html>...</html>', 'body' => '<html>...</html>'].
-	 * @param array $settings Plugin settings array with provider configuration.
+	 * @param array<string, mixed> $settings Plugin settings array with provider configuration.
 	 * @return bool|\WP_Error True on success, WP_Error on failure with details.
 	 */
 	public function send_campaign( array $blocks, array $settings );
@@ -128,9 +128,9 @@ interface Provider_Interface {
 	 *
 	 * Examples: ['header', 'body', 'footer'] or ['content', 'sidebar']
 	 *
-	 * @param array $settings Plugin settings array (for provider-specific logic).
-	 * @param bool  $refresh  Force refresh of cached data.
-	 * @return array|\WP_Error Array of section key strings, or WP_Error if unsupported/unavailable.
+	 * @param array<string, mixed> $settings Plugin settings array (for provider-specific logic).
+	 * @param bool                 $refresh  Force refresh of cached data.
+	 * @return array<string>|\WP_Error Array of section key strings, or WP_Error if unsupported/unavailable.
 	 */
 	public function get_section_keys( array $settings, bool $refresh = false );
 
@@ -144,22 +144,22 @@ interface Provider_Interface {
 	/**
 	 * Get rate limiting policy for this provider.
 	 *
-	 * @return array Array with 'bucket' and 'max_per_minute' keys.
+	 * @return array<string, mixed> Array with 'bucket' and 'max_per_minute' keys.
 	 */
 	public function rate_limit_policy(): array;
 
 	/**
 	 * Get settings schema for validation and redaction.
 	 *
-	 * @return array Schema array with field definitions.
+	 * @return array<string, mixed> Schema array with field definitions.
 	 */
 	public function settings_schema(): array;
 
 	/**
 	 * Redact sensitive settings for display/logging.
 	 *
-	 * @param array $settings Raw settings array.
-	 * @return array Redacted settings array.
+	 * @param array<string, mixed> $settings Raw settings array.
+	 * @return array<string, mixed> Redacted settings array.
 	 */
 	public function redact_settings( array $settings ): array;
 
@@ -169,7 +169,7 @@ interface Provider_Interface {
 	 * Returns an array of features this provider supports, which can be used
 	 * to conditionally show/hide UI elements or functionality.
 	 *
-	 * @return array Array of supported features. Examples:
+	 * @return array<string, mixed> Array of supported features. Examples:
 	 *               ['audiences' => true, 'templates' => true, 'scheduling' => false]
 	 */
 	public function get_capabilities(): array;
@@ -191,8 +191,8 @@ interface Provider_Interface {
 	 * Validates and sanitizes settings according to the provider's schema definition.
 	 * This ensures that only valid, properly formatted settings are stored and used.
 	 *
-	 * @param array $settings Raw settings array to sanitize.
-	 * @return array Sanitized settings array.
+	 * @param array<string, mixed> $settings Raw settings array to sanitize.
+	 * @return array<string, mixed> Sanitized settings array.
 	 */
 	public function sanitize_settings( array $settings ): array;
 }

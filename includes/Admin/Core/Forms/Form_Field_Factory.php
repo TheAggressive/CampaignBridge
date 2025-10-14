@@ -19,9 +19,9 @@ class Form_Field_Factory {
 	/**
 	 * Create a form field instance
 	 *
-	 * @param string $field_id     Field ID.
-	 * @param array  $field_config Field configuration.
-	 * @param mixed  $value        Field value.
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param mixed                $value        Field value.
 	 * @return Form_Field_Interface
 	 */
 	public function create_field( string $field_id, array $field_config, $value ): Form_Field_Interface {
@@ -88,10 +88,10 @@ class Form_Field_Factory {
 	/**
 	 * Normalize field configuration
 	 *
-	 * @param string $field_id     Field ID.
-	 * @param array  $field_config Raw field configuration.
-	 * @param mixed  $value        Field value.
-	 * @return array Normalized configuration.
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Raw field configuration.
+	 * @param mixed                $value        Field value.
+	 * @return array<string, mixed> Normalized configuration.
 	 */
 	private function normalize_field_config( string $field_id, array $field_config, $value ): array {
 		return wp_parse_args(

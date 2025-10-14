@@ -19,9 +19,9 @@ class Form_Validator {
 	/**
 	 * Validate form data against field configurations
 	 *
-	 * @param array $data   Form data to validate.
-	 * @param array $fields Field configurations.
-	 * @return array Validation result with 'valid' boolean and 'errors' array.
+	 * @param array<string, mixed> $data   Form data to validate.
+	 * @param array<string, mixed> $fields Field configurations.
+	 * @return array<string, mixed> Validation result with 'valid' boolean and 'errors' array.
 	 */
 	public function validate( array $data, array $fields ): array {
 		$errors   = array();
@@ -51,11 +51,11 @@ class Form_Validator {
 	/**
 	 * Validate a single field
 	 *
-	 * @param mixed $value       Field value.
-	 * @param array $field_config Field configuration.
-	 * @return bool|\WP_Error True if valid, \WP_Error if invalid.
+	 * @param mixed                $value       Field value.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
-	public function validate_field( $value, array $field_config ) {
+	public function validate_field( $value, array $field_config ): bool|\WP_Error {
 		$field_type       = $field_config['type'] ?? 'text';
 		$validation_rules = $field_config['validation'] ?? array();
 
@@ -79,12 +79,12 @@ class Form_Validator {
 	/**
 	 * Validate field type
 	 *
-	 * @param mixed  $value       Field value.
-	 * @param string $field_type  Field type.
-	 * @param array  $field_config Field configuration.
-	 * @return bool|WP_Error
+	 * @param mixed                $value       Field value.
+	 * @param string               $field_type  Field type.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @return bool|\WP_Error
 	 */
-	private function validate_field_type( $value, string $field_type, array $field_config ) {
+	private function validate_field_type( $value, string $field_type, array $field_config ): bool|\WP_Error {
 		// Required field validation.
 		if ( ( $field_config['required'] ?? false ) && $this->is_empty_value( $value ) ) {
 			return new \WP_Error(
@@ -218,11 +218,11 @@ class Form_Validator {
 	/**
 	 * Validate a specific rule
 	 *
-	 * @param string $rule        Rule name.
-	 * @param mixed  $value       Value to validate.
-	 * @param mixed  $rule_config Rule configuration.
-	 * @param array  $field_config Field configuration.
-	 * @return bool|WP_Error
+	 * @param string               $rule        Rule name.
+	 * @param mixed                $value       Value to validate.
+	 * @param mixed                $rule_config Rule configuration.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @return bool|\WP_Error
 	 */
 	private function validate_rule( string $rule, $value, $rule_config, array $field_config ) {
 		switch ( $rule ) {
@@ -317,8 +317,8 @@ class Form_Validator {
 	/**
 	 * Sanitize field value based on type
 	 *
-	 * @param mixed $value       Raw value.
-	 * @param array $field_config Field configuration.
+	 * @param mixed                $value       Raw value.
+	 * @param array<string, mixed> $field_config Field configuration.
 	 * @return mixed Sanitized value.
 	 */
 	public function sanitize_value( $value, array $field_config ) {

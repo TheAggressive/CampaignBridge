@@ -104,13 +104,6 @@ class Form_Builder {
 		return $this;
 	}
 
-
-	/**
-	 * Save to post meta
-	 *
-	 * @param int $post_id Post ID.
-	 * @return self
-	 */
 	/**
 	 * Save form data to post meta
 	 *
@@ -124,7 +117,6 @@ class Form_Builder {
 		}
 		return $this;
 	}
-
 
 	/**
 	 * Save form data to WordPress Settings API
@@ -353,7 +345,6 @@ class Form_Builder {
 		$this->config->set_multipart_encoding();
 		return $this;
 	}
-
 
 	/**
 	 * Add a text field
@@ -622,9 +613,9 @@ class Form_Builder {
 	/**
 	 * Create multiple fields with smart state management (repeater pattern)
 	 *
-	 * @param string $field_id             Base field name.
-	 * @param array  $populate_all_choices All possible options [key => label].
-	 * @param mixed  $persistent_data      Current state data (string, array, or null).
+	 * @param string                $field_id             Base field name.
+	 * @param array<string, string> $populate_all_choices All possible options [key => label].
+	 * @param mixed                 $persistent_data      Current state data (string, array, or null).
 	 * @return Forms\Form_Field_Repeater
 	 * @throws \InvalidArgumentException When validation fails.
 	 */
@@ -665,7 +656,7 @@ class Form_Builder {
 	/**
 	 * Get form errors
 	 *
-	 * @return array
+	 * @return array<int|string, mixed>
 	 */
 	public function errors(): array {
 		return $this->form->errors();
@@ -674,7 +665,7 @@ class Form_Builder {
 	/**
 	 * Get form success messages
 	 *
-	 * @return array
+	 * @return array<int|string, mixed>
 	 */
 	public function messages(): array {
 		return $this->form->messages();
@@ -710,7 +701,6 @@ class Form_Builder {
 	public function get_config(): Form_Config {
 		return $this->config;
 	}
-
 
 	/**
 	 * Get the parent form instance
