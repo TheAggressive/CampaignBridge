@@ -1,6 +1,6 @@
-import { useCallback, useState } from "@wordpress/element";
-import { createDraft } from "../services/api";
-import { setParamAndReload } from "../utils/url";
+import { useCallback, useState } from '@wordpress/element';
+import { createDraft } from '../services/api';
+import { setParamAndReload } from '../utils/url';
 
 /**
  * useNewTemplate
@@ -11,16 +11,16 @@ import { setParamAndReload } from "../utils/url";
  *
  */
 export function useNewTemplate(
-  options: { onError?: (message: string) => void } = {},
+  options: { onError?: (message: string) => void } = {}
 ) {
   const { onError } = options;
 
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
 
   const openModal = useCallback(() => {
-    setTitle("");
+    setTitle('');
     setOpen(true);
   }, []);
 
@@ -35,14 +35,14 @@ export function useNewTemplate(
       setBusy(false);
       setOpen(false);
       setParamAndReload(
-        "post_id",
-        (created as { id?: number | string })?.id || created,
+        'post_id',
+        (created as { id?: number | string })?.id || created
       );
     } catch (e) {
       setBusy(false);
       setOpen(false);
-      if (typeof onError === "function") {
-        onError(e?.message || "Failed to create template.");
+      if (typeof onError === 'function') {
+        onError(e?.message || 'Failed to create template.');
       }
     }
   }, [title, onError]);

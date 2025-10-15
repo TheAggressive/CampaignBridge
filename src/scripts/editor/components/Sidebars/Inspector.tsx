@@ -1,5 +1,5 @@
-import { BlockInspector } from "@wordpress/block-editor";
-import { Panel } from "@wordpress/components";
+import { BlockInspector } from '@wordpress/block-editor';
+import { Panel } from '@wordpress/components';
 
 /**
  * Block Inspector Panel Component

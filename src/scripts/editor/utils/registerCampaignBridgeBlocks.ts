@@ -51,9 +51,9 @@
 
 // Use webpack's require.context to dynamically discover all block modules
 const blockContext = (globalThis as any).require?.context?.(
-  "../../../blocks",
+  '../../../blocks',
   true,
-  /index\.js$/,
+  /index\.js$/
 );
 
 type RegistrationResult =
@@ -96,18 +96,18 @@ interface BlockRegistration {
   validateBlockModule: (blockModule: BlockModule, blockName: string) => boolean;
   registerBlock: (
     blockName: string,
-    blockModule: BlockModule,
+    blockModule: BlockModule
   ) => RegistrationResult;
   registerBlockIfNeeded: (
     blockName: string,
-    blockModule: BlockModule,
+    blockModule: BlockModule
   ) => RegistrationResult;
 }
 
 /**
  * Configuration constants
  */
-const BLOCK_NAMESPACE = "campaignbridge";
+const BLOCK_NAMESPACE = 'campaignbridge';
 
 /**
  * Regular expression pattern for matching block file paths
@@ -189,7 +189,7 @@ const createBlockDiscovery = (): BlockDiscovery => {
    * extractBlockName('./hero/index.js') // returns 'hero'
    */
   const extractBlockName = (blockPath: string): string =>
-    blockPath.replace("./", "").replace("/index.js", "");
+    blockPath.replace('./', '').replace('/index.js', '');
 
   /**
    * Creates a full block name with the namespace prefix
@@ -223,7 +223,7 @@ const createBlockDiscovery = (): BlockDiscovery => {
     const blockPaths = getBlockPaths();
     const discoveredBlocks = [];
 
-    blockPaths.forEach((blockPath) => {
+    blockPaths.forEach(blockPath => {
       const blockName = extractBlockName(blockPath);
       const fullBlockName = createFullBlockName(blockName);
       const blockModule = loadBlockModule(blockPath);
@@ -279,13 +279,13 @@ const createBlockRegistration = (): BlockRegistration => {
    */
   const validateBlockModule = (
     blockModule: BlockModule,
-    blockName: string,
+    blockName: string
   ): boolean => {
     if (!blockModule) {
       throw new Error(`Block module not found for "${blockName}"`);
     }
 
-    if (typeof blockModule.init !== "function") {
+    if (typeof blockModule.init !== 'function') {
       throw new Error(`Block "${blockName}" missing required init function`);
     }
 
@@ -300,7 +300,7 @@ const createBlockRegistration = (): BlockRegistration => {
    */
   const registerBlock = (
     blockName: string,
-    blockModule: BlockModule,
+    blockModule: BlockModule
   ): RegistrationResult => {
     try {
       validateBlockModule(blockModule, blockName);
@@ -320,7 +320,7 @@ const createBlockRegistration = (): BlockRegistration => {
    */
   const registerBlockIfNeeded = (
     blockName: string,
-    blockModule: BlockModule,
+    blockModule: BlockModule
   ): RegistrationResult => {
     if (blockRegistry.isRegistered(blockName)) {
       return { success: true, skipped: true };
@@ -380,11 +380,11 @@ export const registerCampaignBridgeBlocks = (): RegistrationStats => {
   discoveredBlocks.forEach(({ name: blockName, module: blockModule }) => {
     const result = blockRegistration.registerBlockIfNeeded(
       blockName,
-      blockModule,
+      blockModule
     );
 
     if (result.success) {
-      if ("skipped" in result && result.skipped) {
+      if ('skipped' in result && result.skipped) {
         results.skipped++;
       } else {
         results.registered++;

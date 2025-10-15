@@ -3,8 +3,8 @@ import {
   Inserter,
   ObserveTyping,
   WritingFlow,
-} from "@wordpress/block-editor";
-import HistoryControls from "./Toolbar/HistoryControls";
+} from '@wordpress/block-editor';
+import HistoryControls from './Toolbar/HistoryControls';
 
 /**
  * Block Canvas Component
@@ -25,12 +25,12 @@ import HistoryControls from "./Toolbar/HistoryControls";
  */
 export default function BlockCanvas() {
   return (
-    <div className="cb-editor__canvas">
-      <div className="cb-editor__canvas-tools">
+    <div className='cb-editor__canvas'>
+      <div className='cb-editor__canvas-tools'>
         <Inserter rootClientId={null} />
         <HistoryControls />
       </div>
-      <div className="block-tools">
+      <div className='block-tools'>
         <WritingFlow>
           <ObserveTyping>
             <BlockList />

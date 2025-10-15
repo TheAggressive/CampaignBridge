@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from "@wordpress/element";
-import { savePostContent } from "../services/api";
-import { serializeSafe } from "../utils/blocks";
-import { AUTOSAVE_CONSTANTS, useAutoSave } from "./useAutoSave";
+import { useCallback, useRef, useState } from '@wordpress/element';
+import { savePostContent } from '../services/api';
+import { serializeSafe } from '../utils/blocks';
+import { AUTOSAVE_CONSTANTS, useAutoSave } from './useAutoSave';
 
 /**
  * Custom hook for managing auto-save functionality with status tracking
@@ -14,7 +14,7 @@ import { AUTOSAVE_CONSTANTS, useAutoSave } from "./useAutoSave";
  */
 export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
   const [saveStatus, setSaveStatus] = useState(
-    AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED,
+    AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED
   );
   const lastNoticeAtRef = useRef(0);
 
@@ -27,10 +27,10 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
           postId,
           {
             content: serializeSafe(blocksToSave),
-            status: "publish",
-            title: "",
+            status: 'publish',
+            title: '',
           },
-          signal,
+          signal
         );
 
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED);
@@ -42,7 +42,7 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
             now - lastNoticeAtRef.current >
             AUTOSAVE_CONSTANTS.NOTIFICATION_THROTTLE
           ) {
-            onSuccess && onSuccess("Template saved");
+            onSuccess && onSuccess('Template saved');
             lastNoticeAtRef.current = now;
           }
         } catch (notificationError) {
@@ -52,11 +52,11 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
         onBlocksChange && onBlocksChange(blocksToSave);
         return result;
       } catch (error) {
-        console.error("Save failed:", error);
+        console.error('Save failed:', error);
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.ERROR);
 
         try {
-          onError && onError("Failed to save changes");
+          onError && onError('Failed to save changes');
         } catch (notificationError) {
           // Silently handle notification errors
         }
@@ -64,7 +64,7 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
         throw error;
       }
     },
-    [postId, onBlocksChange, onSuccess, onError],
+    [postId, onBlocksChange, onSuccess, onError]
   );
 
   const save = useAutoSave(performSave, AUTOSAVE_CONSTANTS.DEFAULT_DEBOUNCE_MS);

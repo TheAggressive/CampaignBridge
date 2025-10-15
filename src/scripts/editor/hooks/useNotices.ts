@@ -1,6 +1,6 @@
-import { useDispatch } from "@wordpress/data";
-import { useCallback } from "@wordpress/element";
-import { store as noticesStore } from "@wordpress/notices";
+import { useDispatch } from '@wordpress/data';
+import { useCallback } from '@wordpress/element';
+import { store as noticesStore } from '@wordpress/notices';
 
 /**
  * useNotices
@@ -22,45 +22,45 @@ export function useNotices() {
   const success = useCallback(
     (message, options = {}) => {
       createSuccessNotice(message, {
-        type: "snackbar",
+        type: 'snackbar',
         isDismissible: true,
         ...options,
       });
     },
-    [createSuccessNotice],
+    [createSuccessNotice]
   );
 
   const error = useCallback(
     (message, options = {}) => {
       createErrorNotice(message, {
-        type: "snackbar",
+        type: 'snackbar',
         isDismissible: true,
         ...options,
       });
     },
-    [createErrorNotice],
+    [createErrorNotice]
   );
 
   const info = useCallback(
     (message, options = {}) => {
       createInfoNotice(message, {
-        type: "snackbar",
+        type: 'snackbar',
         isDismissible: true,
         ...options,
       });
     },
-    [createInfoNotice],
+    [createInfoNotice]
   );
 
   const warning = useCallback(
     (message, options = {}) => {
       createWarningNotice(message, {
-        type: "snackbar",
+        type: 'snackbar',
         isDismissible: true,
         ...options,
       });
     },
-    [createWarningNotice],
+    [createWarningNotice]
   );
 
   return { success, error, info, warning, removeNotice };

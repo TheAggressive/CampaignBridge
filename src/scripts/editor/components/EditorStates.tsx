@@ -1,8 +1,8 @@
 // Editor states-specific constants (exported for reuse if needed)
 export const EDITOR_STATES_CONSTANTS = {
   CSS_CLASSES: {
-    EDITOR_LOADING: "cb-editor-loading",
-    EDITOR_ERROR: "cb-editor-error",
+    EDITOR_LOADING: 'cb-editor-loading',
+    EDITOR_ERROR: 'cb-editor-error',
   },
 };
 

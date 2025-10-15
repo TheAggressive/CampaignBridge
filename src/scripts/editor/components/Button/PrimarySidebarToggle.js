@@ -1,8 +1,8 @@
 import { __ } from '@wordpress/i18n';
 import { drawerRight } from '@wordpress/icons';
 import {
-	SIDEBAR_CONSTANTS,
-	useSidebarState,
+  SIDEBAR_CONSTANTS,
+  useSidebarState,
 } from '../../hooks/useSidebarState';
 import { ToggleButton } from './ToggleButton';
 import { KeyboardShortcuts } from '@wordpress/components';
@@ -34,25 +34,25 @@ import { KeyboardShortcuts } from '@wordpress/components';
  * ```
  */
 export function PrimarySidebarToggle() {
-	const { isPrimaryOpen, togglePrimary } = useSidebarState(
-		SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
-		SIDEBAR_CONSTANTS.SCOPES.SECONDARY
-	);
+  const { isPrimaryOpen, togglePrimary } = useSidebarState(
+    SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+    SIDEBAR_CONSTANTS.SCOPES.SECONDARY
+  );
 
-	return (
-		<>
-			<KeyboardShortcuts
-				bindGlobal
-				shortcuts={ { 'ctrl+shift+,': togglePrimary } }
-			/>
-			<ToggleButton
-				className="cb-editor__toggle--primary"
-				isActive={ isPrimaryOpen }
-				onClick={ togglePrimary }
-				shortcut="ctrl+shift+,"
-				label={ __( 'Sidebar Ctrl+Shift+,', 'campaignbridge' ) }
-				icon={ drawerRight }
-			/>
-		</>
-	);
+  return (
+    <>
+      <KeyboardShortcuts
+        bindGlobal
+        shortcuts={{ 'ctrl+shift+,': togglePrimary }}
+      />
+      <ToggleButton
+        className='cb-editor__toggle--primary'
+        isActive={isPrimaryOpen}
+        onClick={togglePrimary}
+        shortcut='ctrl+shift+,'
+        label={__('Sidebar Ctrl+Shift+,', 'campaignbridge')}
+        icon={drawerRight}
+      />
+    </>
+  );
 }

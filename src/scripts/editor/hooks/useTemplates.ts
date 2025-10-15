@@ -4,8 +4,8 @@ import {
   useMemo,
   useRef,
   useState,
-} from "@wordpress/element";
-import { listTemplates } from "../services/api";
+} from '@wordpress/element';
+import { listTemplates } from '../services/api';
 
 // Template-specific constants (exported for reuse if needed)
 export const TEMPLATES_CONSTANTS = {
@@ -15,9 +15,9 @@ export const TEMPLATES_CONSTANTS = {
     DELAY_MS: 1000,
   },
   ERROR_MESSAGES: {
-    LOAD_FAILED: "Failed to load templates.",
-    INVALID_RESPONSE: "Invalid response format: expected array",
-    API_NOT_AVAILABLE: "Templates API not available.",
+    LOAD_FAILED: 'Failed to load templates.',
+    INVALID_RESPONSE: 'Invalid response format: expected array',
+    API_NOT_AVAILABLE: 'Templates API not available.',
   },
 };
 
@@ -95,12 +95,12 @@ export function useTemplates(
     includeDrafts?: boolean;
     onError?: (error: string) => void;
     disableCache?: boolean;
-  } = {},
+  } = {}
 ) {
   const { includeDrafts = true, onError, disableCache = false } = options;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   // Simple time-based caching
   const cacheRef = useRef({ data: null, timestamp: 0 });
@@ -120,7 +120,7 @@ export function useTemplates(
     async (signal, retryCount = 0) => {
       try {
         setLoading(true);
-        setError("");
+        setError('');
 
         // Check cache first if not disabled
         if (!disableCache && !isCacheStale()) {
@@ -142,28 +142,28 @@ export function useTemplates(
         cacheRef.current = { data: posts, timestamp: now };
 
         setItems(posts);
-        setError("");
+        setError('');
       } catch (e) {
         if (signal?.aborted) return;
 
         // Determine error message based on error type
         let msg = TEMPLATE_ERROR_MESSAGES.LOAD_FAILED;
         if (e?.message) msg = e.message;
-        if (e?.code === "rest_no_route") {
+        if (e?.code === 'rest_no_route') {
           msg = TEMPLATE_ERROR_MESSAGES.API_NOT_AVAILABLE;
         }
 
         // Retry logic for retryable errors
         const isRetryable =
-          e?.code !== "rest_forbidden" && e?.code !== "rest_invalid_param";
+          e?.code !== 'rest_forbidden' && e?.code !== 'rest_invalid_param';
 
         if (isRetryable && retryCount < TEMPLATES_CONSTANTS.RETRY.MAX_RETRIES) {
           const delayMs =
             TEMPLATES_CONSTANTS.RETRY.DELAY_MS * Math.pow(2, retryCount);
-          if ((globalThis as any).process?.env?.NODE_ENV === "development") {
+          if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
             console.warn(
               `useTemplates: Retrying templates fetch (attempt ${retryCount + 1}/${TEMPLATES_CONSTANTS.RETRY.MAX_RETRIES}):`,
-              e,
+              e
             );
           }
 
@@ -177,12 +177,12 @@ export function useTemplates(
 
         setError(msg);
         setItems([]); // Provide empty array as fallback
-        if (typeof onError === "function") onError(msg);
+        if (typeof onError === 'function') onError(msg);
 
-        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
           console.error(
-            "useTemplates: Failed to load templates after all retries:",
-            e,
+            'useTemplates: Failed to load templates after all retries:',
+            e
           );
         }
       } finally {
@@ -191,12 +191,12 @@ export function useTemplates(
         }
       }
     },
-    [includeDrafts, onError, disableCache, isCacheStale],
+    [includeDrafts, onError, disableCache, isCacheStale]
   );
 
   useEffect(() => {
     const controller =
-      typeof AbortController !== "undefined" ? new AbortController() : null;
+      typeof AbortController !== 'undefined' ? new AbortController() : null;
     fetchListWithRetry(controller?.signal);
     return () => controller?.abort?.();
   }, [fetchListWithRetry]);
@@ -204,7 +204,7 @@ export function useTemplates(
   // Manual refresh function
   const refresh = useCallback(() => {
     const controller =
-      typeof AbortController !== "undefined" ? new AbortController() : null;
+      typeof AbortController !== 'undefined' ? new AbortController() : null;
     fetchListWithRetry(controller?.signal);
     return () => controller?.abort?.();
   }, [fetchListWithRetry]);
@@ -215,7 +215,7 @@ export function useTemplates(
 
   const stateMemo = useMemo(
     () => ({ items, loading, error, lastUpdated, isStale }),
-    [items, loading, error, lastUpdated, isStale],
+    [items, loading, error, lastUpdated, isStale]
   );
 
   return {

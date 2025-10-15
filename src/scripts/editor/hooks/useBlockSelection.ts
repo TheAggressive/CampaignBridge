@@ -37,7 +37,7 @@
  *   }
  */
 
-import { useSelect } from "@wordpress/data";
+import { useSelect } from '@wordpress/data';
 
 type WordPressBlockEditor = {
   getBlock?: (clientId: string) => { innerBlocks?: unknown[] } | undefined;
@@ -49,8 +49,8 @@ type WordPressBlockEditor = {
 
 export function useBlockSelection(clientId: string, { deep = true } = {}) {
   return useSelect(
-    (select) => {
-      const be = select("core/block-editor") as WordPressBlockEditor;
+    select => {
+      const be = select('core/block-editor') as WordPressBlockEditor;
 
       const block = be.getBlock?.(clientId);
       const hasInnerBlocks = !!block?.innerBlocks?.length;
@@ -70,6 +70,6 @@ export function useBlockSelection(clientId: string, { deep = true } = {}) {
         selectedClientId,
       };
     },
-    [clientId, deep],
+    [clientId, deep]
   );
 }

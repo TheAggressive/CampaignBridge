@@ -31,37 +31,37 @@ import { KeyboardShortcuts } from '@wordpress/components';
  * ```
  */
 export function FullscreenToggle() {
-	const PREFERENCE_KEY = 'core/edit-post/fullscreenMode';
+  const PREFERENCE_KEY = 'core/edit-post/fullscreenMode';
 
-	const isActive = useSelect(
-		( select ) => select( 'core/preferences' ).get( PREFERENCE_KEY, false ),
-		[ PREFERENCE_KEY ]
-	);
+  const isActive = useSelect(
+    select => select('core/preferences').get(PREFERENCE_KEY, false),
+    [PREFERENCE_KEY]
+  );
 
-	const { toggle: togglePreference } = useDispatch( 'core/preferences' );
+  const { toggle: togglePreference } = useDispatch('core/preferences');
 
-	const handleToggle = () => {
-		togglePreference( PREFERENCE_KEY );
-	};
+  const handleToggle = () => {
+    togglePreference(PREFERENCE_KEY);
+  };
 
-	const label = isActive
-		? __( 'Exit Fullscreen Ctrl+Shift+Alt+F', 'campaignbridge' )
-		: __( 'Enter Fullscreen Ctrl+Shift+Alt+F', 'campaignbridge' );
+  const label = isActive
+    ? __('Exit Fullscreen Ctrl+Shift+Alt+F', 'campaignbridge')
+    : __('Enter Fullscreen Ctrl+Shift+Alt+F', 'campaignbridge');
 
-	return (
-		<>
-			<KeyboardShortcuts
-				bindGlobal
-				shortcuts={ { 'ctrl+shift+alt+f': handleToggle } }
-			/>
-			<ToggleButton
-				className="cb-fullscreen-toggle"
-				isActive={ isActive }
-				onClick={ handleToggle }
-				shortcut="ctrl+shift+alt+f"
-				label={ label }
-				icon={ fullscreen }
-			/>
-		</>
-	);
+  return (
+    <>
+      <KeyboardShortcuts
+        bindGlobal
+        shortcuts={{ 'ctrl+shift+alt+f': handleToggle }}
+      />
+      <ToggleButton
+        className='cb-fullscreen-toggle'
+        isActive={isActive}
+        onClick={handleToggle}
+        shortcut='ctrl+shift+alt+f'
+        label={label}
+        icon={fullscreen}
+      />
+    </>
+  );
 }

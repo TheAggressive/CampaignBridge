@@ -1,8 +1,8 @@
 // HistoryControls.jsx
-import { Button, Icon, Tooltip } from "@wordpress/components";
-import { useDispatch, useSelect } from "@wordpress/data";
-import { useCallback, useEffect, useState } from "@wordpress/element";
-import { redo as redoIcon, undo as undoIcon } from "@wordpress/icons";
+import { Button, Icon, Tooltip } from '@wordpress/components';
+import { useDispatch, useSelect } from '@wordpress/data';
+import { useCallback, useEffect, useState } from '@wordpress/element';
+import { redo as redoIcon, undo as undoIcon } from '@wordpress/icons';
 
 /**
  * History Controls Component
@@ -33,11 +33,11 @@ export default function HistoryControls() {
   // Get current blocks for history tracking
   const { currentBlocks } = useSelect(
     (select: any) => {
-      const blockEditor = select("core/block-editor");
+      const blockEditor = select('core/block-editor');
       const blocks = blockEditor?.getBlocks ? blockEditor.getBlocks() : [];
       return { currentBlocks: blocks };
     },
-    [history, historyIndex],
+    [history, historyIndex]
   );
 
   // Determine if undo/redo actions are available
@@ -67,7 +67,7 @@ export default function HistoryControls() {
     }
   }, [currentBlocks, history, historyIndex]);
 
-  const blockEditorDispatch = useDispatch("core/block-editor");
+  const blockEditorDispatch = useDispatch('core/block-editor');
 
   // Define undo/redo logic with useCallback for proper memoization
   const performUndo = useCallback(() => {
@@ -88,7 +88,7 @@ export default function HistoryControls() {
           setHistoryIndex(previousIndex);
         }
       } catch (error) {
-        console.error("Error during undo:", error);
+        console.error('Error during undo:', error);
       }
     }
   }, [historyIndex, history, blockEditorDispatch]);
@@ -111,19 +111,19 @@ export default function HistoryControls() {
           setHistoryIndex(nextIndex);
         }
       } catch (error) {
-        console.error("Error during redo:", error);
+        console.error('Error during redo:', error);
       }
     }
   }, [historyIndex, history, blockEditorDispatch]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
-    const handleKeyDown = (event) => {
+    const handleKeyDown = event => {
       // Ctrl+Z or Cmd+Z (Undo)
       if (
         (event.ctrlKey || event.metaKey) &&
         !event.shiftKey &&
-        event.key === "z"
+        event.key === 'z'
       ) {
         event.preventDefault();
         if (hasUndo) performUndo();
@@ -132,7 +132,7 @@ export default function HistoryControls() {
       else if (
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "z"
+        event.key === 'z'
       ) {
         event.preventDefault();
         if (hasRedo) performRedo();
@@ -141,45 +141,45 @@ export default function HistoryControls() {
       else if (
         (event.ctrlKey || event.metaKey) &&
         !event.shiftKey &&
-        event.key === "y"
+        event.key === 'y'
       ) {
         event.preventDefault();
         if (hasRedo) performRedo();
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [hasUndo, hasRedo, performUndo, performRedo]);
 
   return (
     <div
-      role="toolbar"
-      aria-label="Editor history controls"
-      style={{ display: "flex", gap: 8 }}
+      role='toolbar'
+      aria-label='Editor history controls'
+      style={{ display: 'flex', gap: 8 }}
     >
-      <Tooltip text="Undo last action (Ctrl+Z / Cmd+Z)">
+      <Tooltip text='Undo last action (Ctrl+Z / Cmd+Z)'>
         <Button
           onClick={performUndo}
           disabled={!hasUndo}
           aria-label={
             hasUndo
-              ? "Undo last action (Ctrl+Z or Cmd+Z)"
-              : "No actions available to undo"
+              ? 'Undo last action (Ctrl+Z or Cmd+Z)'
+              : 'No actions available to undo'
           }
         >
           <Icon icon={undoIcon} size={20} />
         </Button>
       </Tooltip>
 
-      <Tooltip text="Redo last undone action (Ctrl+Shift+Z / Cmd+Shift+Z)">
+      <Tooltip text='Redo last undone action (Ctrl+Shift+Z / Cmd+Shift+Z)'>
         <Button
           onClick={performRedo}
           disabled={!hasRedo}
           aria-label={
             hasRedo
-              ? "Redo last undone action (Ctrl+Shift+Z or Cmd+Shift+Z)"
-              : "No actions available to redo"
+              ? 'Redo last undone action (Ctrl+Shift+Z or Cmd+Shift+Z)'
+              : 'No actions available to redo'
           }
         >
           <Icon icon={redoIcon} size={20} />

@@ -1,7 +1,7 @@
-import { useDispatch, useSelect } from "@wordpress/data";
-import { useEffect, useState } from "@wordpress/element";
-import { store as noticesStore } from "@wordpress/notices";
-import { SIDEBAR_CONSTANTS } from "./useSidebarState";
+import { useDispatch, useSelect } from '@wordpress/data';
+import { useEffect, useState } from '@wordpress/element';
+import { store as noticesStore } from '@wordpress/notices';
+import { SIDEBAR_CONSTANTS } from './useSidebarState';
 
 type WordPressInterface = {
   getActiveComplementaryArea?: (scope: string) => string | undefined;
@@ -14,17 +14,17 @@ type WordPressBlockEditor = {
 // Layout-specific constants (exported for reuse if needed)
 export const LAYOUT_CONSTANTS = {
   MODIFIERS: {
-    HAS_PRIMARY: "cb-editor--has-primary",
-    NO_PRIMARY: "cb-editor--no-primary",
-    HAS_SECONDARY: "cb-editor--has-secondary",
-    NO_SECONDARY: "cb-editor--no-secondary",
+    HAS_PRIMARY: 'cb-editor--has-primary',
+    NO_PRIMARY: 'cb-editor--no-primary',
+    HAS_SECONDARY: 'cb-editor--has-secondary',
+    NO_SECONDARY: 'cb-editor--no-secondary',
   },
   CSS_CLASSES: {
-    EDITOR: "cb-editor",
-    EDITOR_SNACKBAR: "cb-editor__snackbar",
-    SIDEBAR_PRIMARY: "cb-editor__sidebar cb-editor__sidebar--primary",
-    SIDEBAR_SECONDARY: "cb-editor__sidebar cb-editor__sidebar--secondary",
-    SIDEBAR_CONTENT: "cb-editor__sidebar-content",
+    EDITOR: 'cb-editor',
+    EDITOR_SNACKBAR: 'cb-editor__snackbar',
+    SIDEBAR_PRIMARY: 'cb-editor__sidebar cb-editor__sidebar--primary',
+    SIDEBAR_SECONDARY: 'cb-editor__sidebar cb-editor__sidebar--secondary',
+    SIDEBAR_CONTENT: 'cb-editor__sidebar-content',
   },
 };
 
@@ -35,36 +35,36 @@ export const LAYOUT_CONSTANTS = {
  */
 export function useEditorLayout() {
   // Sidebar tab state
-  const [sidebarActiveTab, setSidebarActiveTab] = useState("template-settings");
+  const [sidebarActiveTab, setSidebarActiveTab] = useState('template-settings');
 
   // Track active complementary areas
   const activePrimary = useSelect(
-    (select) =>
+    select =>
       (
-        select("core/interface") as WordPressInterface
+        select('core/interface') as WordPressInterface
       ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.PRIMARY),
-    [SIDEBAR_CONSTANTS.SCOPES.PRIMARY],
+    [SIDEBAR_CONSTANTS.SCOPES.PRIMARY]
   );
 
   const activeSecondary = useSelect(
-    (select) =>
+    select =>
       (
-        select("core/interface") as WordPressInterface
+        select('core/interface') as WordPressInterface
       ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.SECONDARY),
-    [SIDEBAR_CONSTANTS.SCOPES.SECONDARY],
+    [SIDEBAR_CONSTANTS.SCOPES.SECONDARY]
   );
 
   // Detect block selection for auto-switching
-  const selectedBlock = useSelect((select) => {
+  const selectedBlock = useSelect(select => {
     try {
       const { getSelectedBlock } = select(
-        "core/block-editor",
+        'core/block-editor'
       ) as WordPressBlockEditor;
       return getSelectedBlock?.();
     } catch (error) {
       console.warn(
-        "useEditorLayout: Error accessing block editor state:",
-        error,
+        'useEditorLayout: Error accessing block editor state:',
+        error
       );
       return null;
     }
@@ -72,8 +72,8 @@ export function useEditorLayout() {
 
   // Auto-switch to block inspector when a block is selected
   useEffect(() => {
-    if (selectedBlock && sidebarActiveTab !== "block-inspector") {
-      setSidebarActiveTab("block-inspector");
+    if (selectedBlock && sidebarActiveTab !== 'block-inspector') {
+      setSidebarActiveTab('block-inspector');
     }
   }, [selectedBlock, sidebarActiveTab]);
 
@@ -81,11 +81,11 @@ export function useEditorLayout() {
 
   // Snackbar notifications
   const snackbarNotices = useSelect(
-    (select) =>
+    select =>
       select(noticesStore)
         .getNotices()
-        .filter((notice) => notice.type === "snackbar"),
-    [],
+        .filter(notice => notice.type === 'snackbar'),
+    []
   );
 
   const { removeNotice } = useDispatch(noticesStore);
@@ -116,11 +116,11 @@ export function useEditorLayout() {
   const secondarySidebarProps = {
     scope: SIDEBAR_CONSTANTS.SCOPES.SECONDARY,
     identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
-    closeLabel: "Close list view",
+    closeLabel: 'Close list view',
     isSecondary: true,
     className: LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_SECONDARY,
     isPinnable: false,
-    header: "List View",
+    header: 'List View',
   };
 
   return {

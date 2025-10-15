@@ -5,7 +5,12 @@
  * Follows BEM CSS class naming conventions.
  */
 
-@reference "tailwindcss";
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
 
 /* ===== FIELD WRAPPER ===== */
 .campaignbridge-field {

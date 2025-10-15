@@ -1,27 +1,27 @@
-import { BlockEditorProvider } from "@wordpress/block-editor";
-import { Popover, SlotFillProvider, SnackbarList } from "@wordpress/components";
-import { useSelect } from "@wordpress/data";
-import { useCallback, useEffect } from "@wordpress/element";
-import { __ } from "@wordpress/i18n";
+import { BlockEditorProvider } from '@wordpress/block-editor';
+import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
+import { useCallback, useEffect } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import {
   ComplementaryArea,
   FullscreenMode,
   InterfaceSkeleton,
-} from "@wordpress/interface";
-import { ShortcutProvider } from "@wordpress/keyboard-shortcuts";
-import { useAutoSaveManager } from "../hooks/useAutoSaveManager";
-import { useEditorData } from "../hooks/useEditorData";
-import { LAYOUT_CONSTANTS, useEditorLayout } from "../hooks/useEditorLayout";
-import { useEditorSettings } from "../hooks/useEditorSettings";
-import { useNotices } from "../hooks/useNotices";
-import { SIDEBAR_CONSTANTS } from "../hooks/useSidebarState";
-import { blockPatternCategories, blockPatterns } from "../utils/blockPatterns";
-import Content from "./Content";
-import { ErrorState, LoadingState } from "./EditorStates";
-import Footer from "./Footer";
-import Header from "./Header";
-import SecondarySidebar from "./Sidebars/SecondarySidebar";
-import { SidebarContent, SidebarHeader } from "./Sidebars/Sidebar";
+} from '@wordpress/interface';
+import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
+import { useAutoSaveManager } from '../hooks/useAutoSaveManager';
+import { useEditorData } from '../hooks/useEditorData';
+import { LAYOUT_CONSTANTS, useEditorLayout } from '../hooks/useEditorLayout';
+import { useEditorSettings } from '../hooks/useEditorSettings';
+import { useNotices } from '../hooks/useNotices';
+import { SIDEBAR_CONSTANTS } from '../hooks/useSidebarState';
+import { blockPatternCategories, blockPatterns } from '../utils/blockPatterns';
+import Content from './Content';
+import { ErrorState, LoadingState } from './EditorStates';
+import Footer from './Footer';
+import Header from './Header';
+import SecondarySidebar from './Sidebars/SecondarySidebar';
+import { SidebarContent, SidebarHeader } from './Sidebars/Sidebar';
 
 /**
  * Editor Chrome Component (Refactored)
@@ -57,7 +57,7 @@ export default function EditorChrome({
   onNew,
   postId,
   onBlocksChange = () => {},
-  postType = "post",
+  postType = 'post',
 }) {
   // Use custom hooks to manage complex state
   const {
@@ -79,7 +79,7 @@ export default function EditorChrome({
     postId,
     onBlocksChange,
     success,
-    errorNotice,
+    errorNotice
   );
 
   const {
@@ -93,53 +93,53 @@ export default function EditorChrome({
   } = useEditorLayout();
 
   const isFullscreen = useSelect(
-    (select) =>
+    select =>
       (
-        select("core/preferences") as {
+        select('core/preferences') as {
           get: (scope: string, key: string) => unknown;
         }
       ).get(
         SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE,
-        "isFullscreen",
+        'isFullscreen'
       ) as boolean,
-    [],
+    []
   );
 
   // Unified update handler using custom hook
   const handleBlocksUpdate = useCallback(
-    (next) => {
+    next => {
       setBlocks(next);
-      if (typeof save.schedule === "function") {
+      if (typeof save.schedule === 'function') {
         save.schedule(next);
       } else {
         save(next);
       }
     },
-    [save, setBlocks],
+    [save, setBlocks]
   );
 
   // Flush pending save on navigation/unload
   useEffect(() => {
     const beforeUnload = () => {
-      if (typeof save.flush === "function") {
+      if (typeof save.flush === 'function') {
         save.flush();
       }
     };
-    window.addEventListener("beforeunload", beforeUnload);
-    return () => window.removeEventListener("beforeunload", beforeUnload);
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
   }, [save]);
 
   // Early returns for loading and error states
   if (!ready) {
     return (
-      <LoadingState message={__("Initializing editor…", "campaignbridge")} />
+      <LoadingState message={__('Initializing editor…', 'campaignbridge')} />
     );
   }
 
   if (editorSettingsLoading) {
     return (
       <LoadingState
-        message={__("Loading editor settings…", "campaignbridge")}
+        message={__('Loading editor settings…', 'campaignbridge')}
       />
     );
   }
@@ -147,7 +147,7 @@ export default function EditorChrome({
   if (editorSettingsError) {
     return (
       <ErrorState
-        message={__("Error loading editor settings…", "campaignbridge")}
+        message={__('Error loading editor settings…', 'campaignbridge')}
       />
     );
   }

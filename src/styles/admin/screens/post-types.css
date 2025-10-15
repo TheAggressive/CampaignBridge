@@ -1,5 +1,5 @@
 /* Import global design tokens */
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @layer components {
   .cb-post-types__switches-box {
@@ -18,7 +18,7 @@
     }
 
     & .cb-post-types__slider::after {
-      content: "";
+      content: '';
       @apply absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow-md transition-transform duration-200;
     }
 

@@ -1,4 +1,4 @@
-import { BlockBreadcrumb as BlockBreadcrumbComponent } from "@wordpress/block-editor/build/components/block-breadcrumb";
+import { BlockBreadcrumb } from '@wordpress/block-editor/build/components/block-breadcrumb';
 
 /**
  * Footer Component
@@ -9,5 +9,5 @@ import { BlockBreadcrumb as BlockBreadcrumbComponent } from "@wordpress/block-ed
  * @returns {JSX.Element} The footer component
  */
 export default function Footer(): JSX.Element {
-  return <BlockBreadcrumbComponent rootLabelText="Template" />;
+  return <BlockBreadcrumb rootLabelText='Template' />;
 }

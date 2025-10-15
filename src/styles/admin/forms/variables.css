@@ -5,6 +5,13 @@
  * Inherits from global variables.css and adds form-specific overrides.
  */
 
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
 @layer base {
   :root {
     /* ===== FORM-SPECIFIC TOKENS ===== */

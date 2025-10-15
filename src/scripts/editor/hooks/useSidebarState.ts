@@ -1,29 +1,29 @@
-import { select, subscribe, useDispatch, useSelect } from "@wordpress/data";
-import { useCallback, useEffect, useState } from "@wordpress/element";
+import { select, subscribe, useDispatch, useSelect } from '@wordpress/data';
+import { useCallback, useEffect, useState } from '@wordpress/element';
 
 // Sidebar-specific constants (exported for reuse if needed)
 export const SIDEBAR_CONSTANTS = {
   IDENTIFIERS: {
-    PRIMARY: "primary",
-    SECONDARY: "secondary",
+    PRIMARY: 'primary',
+    SECONDARY: 'secondary',
   },
   PREFERENCE_KEYS: {
-    PRIMARY_OPEN: "primarySidebarOpen",
-    SECONDARY_OPEN: "secondarySidebarOpen",
+    PRIMARY_OPEN: 'primarySidebarOpen',
+    SECONDARY_OPEN: 'secondarySidebarOpen',
   },
   PREFERENCES: {
-    PRIMARY_SIDEBAR_OPEN: "campaignbridge/template-editor/primarySidebarOpen",
+    PRIMARY_SIDEBAR_OPEN: 'campaignbridge/template-editor/primarySidebarOpen',
     SECONDARY_SIDEBAR_OPEN:
-      "campaignbridge/template-editor/secondarySidebarOpen",
-    FULLSCREEN_MODE: "core/edit-post/fullscreenMode",
+      'campaignbridge/template-editor/secondarySidebarOpen',
+    FULLSCREEN_MODE: 'core/edit-post/fullscreenMode',
   },
   SCOPES: {
-    PRIMARY: "campaignbridge/template-editor/primary",
-    SECONDARY: "campaignbridge/template-editor/secondary",
+    PRIMARY: 'campaignbridge/template-editor/primary',
+    SECONDARY: 'campaignbridge/template-editor/secondary',
   },
   TABS: {
-    TEMPLATE: "template-settings",
-    INSPECTOR: "block-inspector",
+    TEMPLATE: 'template-settings',
+    INSPECTOR: 'block-inspector',
   },
 };
 
@@ -91,11 +91,11 @@ export function useSidebarState(primaryScope, secondaryScope) {
   const getIsOpen = (scope, identifier) => {
     if (!scope || !identifier) {
       throw new Error(
-        "getIsOpen: scope and identifier parameters are required",
+        'getIsOpen: scope and identifier parameters are required'
       );
     }
 
-    const state = select("core/interface").getActiveComplementaryArea(scope);
+    const state = select('core/interface').getActiveComplementaryArea(scope);
     return state === identifier;
   };
 
@@ -113,12 +113,12 @@ export function useSidebarState(primaryScope, secondaryScope) {
     scope,
     identifier,
     preferenceKey,
-    preferencePath,
+    preferencePath
   ) => {
     const isOpen = getIsOpen(scope, identifier);
-    const currentPref = select("core/preferences").get(
+    const currentPref = select('core/preferences').get(
       preferencePath,
-      preferenceKey,
+      preferenceKey
     );
 
     // Only save if the preference would actually change
@@ -164,7 +164,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
     identifier,
     preferenceKey,
     preferencePath,
-    setState,
+    setState
   ) => {
     return useCallback(() => {
       try {
@@ -185,8 +185,8 @@ export function useSidebarState(primaryScope, secondaryScope) {
         // Save preference for persistence
         setPreference(preferencePath, preferenceKey, newState);
       } catch (error) {
-        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
-          console.warn("useSidebarState: Error toggling sidebar:", error);
+        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
+          console.warn('useSidebarState: Error toggling sidebar:', error);
         }
       }
     }, [scope, identifier, preferenceKey, preferencePath, setState]);
@@ -213,35 +213,35 @@ export function useSidebarState(primaryScope, secondaryScope) {
         setPreference(preferencePath, preferenceKey, true);
       }
     } catch (error) {
-      if ((globalThis as any).process?.env?.NODE_ENV === "development") {
-        console.warn("useSidebarState: Error toggling sidebar:", error);
+      if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
+        console.warn('useSidebarState: Error toggling sidebar:', error);
       }
     }
   };
   // Get saved preferences for sidebar states
   const savedPrimaryOpen = useSelect(
-    (select) =>
+    select =>
       (
-        select("core/preferences") as {
+        select('core/preferences') as {
           get: (scope: string, key: string) => unknown;
         }
       ).get(
         SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
-        SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
+        SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN
       ),
-    [],
+    []
   );
   const savedSecondaryOpen = useSelect(
-    (select) =>
+    select =>
       (
-        select("core/preferences") as {
+        select('core/preferences') as {
           get: (scope: string, key: string) => unknown;
         }
       ).get(
         SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
-        SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
+        SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN
       ),
-    [],
+    []
   );
 
   // Sync local state with saved preferences on mount
@@ -258,9 +258,9 @@ export function useSidebarState(primaryScope, secondaryScope) {
   }, [savedSecondaryOpen]);
 
   // Get required functions from WordPress data package for state management
-  const { set: setPreference } = useDispatch("core/preferences");
+  const { set: setPreference } = useDispatch('core/preferences');
   const { enableComplementaryArea, disableComplementaryArea } =
-    useDispatch("core/interface");
+    useDispatch('core/interface');
 
   // Restore sidebar states from saved preferences on mount
   useEffect(() => {
@@ -268,7 +268,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
     restoreSidebarState(
       primaryScope,
       SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
-      savedPrimaryOpen,
+      savedPrimaryOpen
     );
     // If savedPrimaryOpen is undefined, we don't change anything - let the default state prevail
   }, [
@@ -283,7 +283,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
     restoreSidebarState(
       secondaryScope,
       SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
-      savedSecondaryOpen,
+      savedSecondaryOpen
     );
     // If savedSecondaryOpen is undefined, we don't change anything - let the default state prevail
   }, [
@@ -301,24 +301,24 @@ export function useSidebarState(primaryScope, secondaryScope) {
         primaryScope,
         SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
         SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
-        SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
+        SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN
       );
 
       saveSidebarPreference(
         secondaryScope,
         SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
         SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
-        SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
+        SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN
       );
 
       // Update local state when interface store changes
       const isPrimaryOpen = getIsOpen(
         primaryScope,
-        SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
+        SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY
       );
       const isSecondaryOpen = getIsOpen(
         secondaryScope,
-        SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
+        SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY
       );
 
       setPrimaryOpen(isPrimaryOpen);
@@ -336,7 +336,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
     SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
     SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
     SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
-    setPrimaryOpen,
+    setPrimaryOpen
   );
 
   /**
@@ -347,7 +347,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
     SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
     SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
     SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
-    setSecondaryOpen,
+    setSecondaryOpen
   );
 
   return {

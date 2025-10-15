@@ -1,7 +1,7 @@
-import { useEntityProp } from "@wordpress/core-data";
-import { useDispatch, useSelect } from "@wordpress/data";
-import { useCallback, useMemo, useRef, useState } from "@wordpress/element";
-import { AUTOSAVE_CONSTANTS, useAutoSave } from "./useAutoSave";
+import { useEntityProp } from '@wordpress/core-data';
+import { useDispatch, useSelect } from '@wordpress/data';
+import { useCallback, useMemo, useRef, useState } from '@wordpress/element';
+import { AUTOSAVE_CONSTANTS, useAutoSave } from './useAutoSave';
 
 /**
  * Auto-save manager for post meta.
@@ -28,7 +28,7 @@ export function useAutoSaveMetaManager({
   // --- lightweight input assert (non-breaking, helps find wrong callers)
   if (!postType || !postId) {
     // eslint-disable-next-line no-console
-    console.error("[useAutoSaveMetaManager] Missing postType or postId", {
+    console.error('[useAutoSaveMetaManager] Missing postType or postId', {
       postType,
       postId,
       keys,
@@ -37,39 +37,39 @@ export function useAutoSaveMetaManager({
 
   // Bind to post meta for this specific record
   const [meta = {}, setMeta] = useEntityProp(
-    "postType",
+    'postType',
     postType,
-    "meta",
-    postId,
+    'meta',
+    postId
   );
 
   // Only persist once the post-type schema is loaded
   const ready = useSelect(
-    (select) => {
+    select => {
       try {
         return !!(
-          select("core") as { getPostType?: (slug: string) => unknown }
+          select('core') as { getPostType?: (slug: string) => unknown }
         ).getPostType?.(postType);
       } catch {
         return false;
       }
     },
-    [postType],
+    [postType]
   );
 
   // Save status for UI
   const [saveStatus, setSaveStatus] = useState(
-    AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED,
+    AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED
   );
   const lastNoticeAtRef = useRef(0);
 
   // core-data persister (NOT core/editor)
-  const { saveEntityRecord } = useDispatch("core");
+  const { saveEntityRecord } = useDispatch('core');
 
   // Project to a controlled values object
   const values = useMemo(() => {
     const out = {};
-    for (const k of keys) out[k] = meta?.[k] ?? "";
+    for (const k of keys) out[k] = meta?.[k] ?? '';
     return out;
   }, [meta, keys]);
 
@@ -83,7 +83,7 @@ export function useAutoSaveMetaManager({
       try {
         if (!postType || !postId || !ready) {
           // eslint-disable-next-line no-console
-          console.warn("[useAutoSaveMetaManager] Skipping save (not ready)", {
+          console.warn('[useAutoSaveMetaManager] Skipping save (not ready)', {
             postType,
             postId,
             ready,
@@ -101,7 +101,7 @@ export function useAutoSaveMetaManager({
         setMeta(next);
 
         // 2) Persist to REST via core-data
-        await saveEntityRecord("postType", postType, {
+        await saveEntityRecord('postType', postType, {
           id: postId,
           meta: next,
         });
@@ -115,14 +115,14 @@ export function useAutoSaveMetaManager({
           now - lastNoticeAtRef.current >
             AUTOSAVE_CONSTANTS.NOTIFICATION_THROTTLE
         ) {
-          onSuccess("Template saved");
+          onSuccess('Template saved');
           lastNoticeAtRef.current = now;
         }
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error("Meta save failed:", err);
+        console.error('Meta save failed:', err);
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.ERROR);
-        onError?.("Failed to save changes");
+        onError?.('Failed to save changes');
         throw err;
       }
     },
@@ -136,7 +136,7 @@ export function useAutoSaveMetaManager({
       postType,
       postId,
       ready,
-    ],
+    ]
   );
 
   // Your existing debounced/abortable runner
@@ -146,15 +146,15 @@ export function useAutoSaveMetaManager({
   const update = useCallback(
     (key, value) => {
       if (!keys.includes(key)) return;
-      if ((meta?.[key] ?? "") === value) return; // avoid churn
+      if ((meta?.[key] ?? '') === value) return; // avoid churn
       setMeta({ ...meta, [key]: value }); // immediate UI
       save({ [key]: value }); // debounced persist
     },
-    [meta, setMeta, keys, save],
+    [meta, setMeta, keys, save]
   );
 
   const setMany = useCallback(
-    (partial) => {
+    partial => {
       const next = { ...meta };
       let changed = false;
       for (const k of Object.keys(partial)) {
@@ -169,7 +169,7 @@ export function useAutoSaveMetaManager({
         save(partial);
       }
     },
-    [meta, setMeta, keys, save],
+    [meta, setMeta, keys, save]
   );
 
   const saveNow = useCallback((partial = {}) => save(partial, true), [save]);

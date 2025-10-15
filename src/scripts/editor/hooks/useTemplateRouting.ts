@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo } from "@wordpress/element";
-import { getParam, setParamAndReload } from "../utils/url";
+import { useCallback, useEffect, useMemo } from '@wordpress/element';
+import { getParam, setParamAndReload } from '../utils/url';
 
 // Template routing-specific constants (exported for reuse if needed)
 export const ROUTING_CONSTANTS = {
   URL_PARAMS: {
-    TEMPLATE_ID: "post_id",
+    TEMPLATE_ID: 'post_id',
   },
 };
 
@@ -59,9 +59,9 @@ export function useTemplateRouting() {
 
       const parsed = Number(raw);
       if (isNaN(parsed) || parsed <= 0) {
-        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
           console.warn(
-            `useTemplateRouting: Invalid ${ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID} parameter: ${raw}`,
+            `useTemplateRouting: Invalid ${ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID} parameter: ${raw}`
           );
         }
         return null;
@@ -69,8 +69,8 @@ export function useTemplateRouting() {
 
       return parsed;
     } catch (error) {
-      if ((globalThis as any).process?.env?.NODE_ENV === "development") {
-        console.error("useTemplateRouting: Error parsing template ID:", error);
+      if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
+        console.error('useTemplateRouting: Error parsing template ID:', error);
       }
       return null;
     }
@@ -82,13 +82,13 @@ export function useTemplateRouting() {
   }, [currentId]);
 
   // Enhanced template selection with validation
-  const selectTemplate = useCallback((id) => {
+  const selectTemplate = useCallback(id => {
     try {
       if (!id) {
-        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
           console.warn(
-            "useTemplateRouting: Attempted to select invalid template ID:",
-            id,
+            'useTemplateRouting: Attempted to select invalid template ID:',
+            id
           );
         }
         return;
@@ -96,7 +96,7 @@ export function useTemplateRouting() {
 
       const numericId = Number(id);
       if (isNaN(numericId) || numericId <= 0 || !Number.isInteger(numericId)) {
-        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
           console.warn(`useTemplateRouting: Invalid template ID: ${id}`);
         }
         return;
@@ -104,8 +104,8 @@ export function useTemplateRouting() {
 
       setParamAndReload(ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID, numericId);
     } catch (error) {
-      if ((globalThis as any).process?.env?.NODE_ENV === "development") {
-        console.error("useTemplateRouting: Error selecting template:", error);
+      if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
+        console.error('useTemplateRouting: Error selecting template:', error);
       }
     }
   }, []);
@@ -115,28 +115,28 @@ export function useTemplateRouting() {
     const handleUrlChange = () => {
       try {
         // Force page reload when URL changes via browser navigation
-        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
           console.log(
-            "useTemplateRouting: URL changed via browser navigation, reloading...",
+            'useTemplateRouting: URL changed via browser navigation, reloading...'
           );
         }
         window.location.reload();
       } catch (error) {
-        if ((globalThis as any).process?.env?.NODE_ENV === "development") {
+        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
           console.error(
-            "useTemplateRouting: Error handling URL change:",
-            error,
+            'useTemplateRouting: Error handling URL change:',
+            error
           );
         }
       }
     };
 
     // Listen for browser navigation events
-    window.addEventListener("popstate", handleUrlChange);
+    window.addEventListener('popstate', handleUrlChange);
 
     // Cleanup event listener on unmount
     return () => {
-      window.removeEventListener("popstate", handleUrlChange);
+      window.removeEventListener('popstate', handleUrlChange);
     };
   }, []);
 

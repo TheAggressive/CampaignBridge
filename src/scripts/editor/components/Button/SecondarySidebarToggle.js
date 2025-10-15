@@ -2,8 +2,8 @@ import { KeyboardShortcuts } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { listView } from '@wordpress/icons';
 import {
-	SIDEBAR_CONSTANTS,
-	useSidebarState,
+  SIDEBAR_CONSTANTS,
+  useSidebarState,
 } from '../../hooks/useSidebarState';
 import { ToggleButton } from './ToggleButton';
 
@@ -34,25 +34,25 @@ import { ToggleButton } from './ToggleButton';
  * ```
  */
 export function SecondarySidebarToggle() {
-	const { isSecondaryOpen, toggleSecondary } = useSidebarState(
-		SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
-		SIDEBAR_CONSTANTS.SCOPES.SECONDARY
-	);
+  const { isSecondaryOpen, toggleSecondary } = useSidebarState(
+    SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+    SIDEBAR_CONSTANTS.SCOPES.SECONDARY
+  );
 
-	return (
-		<>
-			<KeyboardShortcuts
-				bindGlobal
-				shortcuts={ { 'shift+alt+o': toggleSecondary } }
-			/>
-			<ToggleButton
-				className="cb-editor__toggle--secondary"
-				isActive={ isSecondaryOpen }
-				onClick={ toggleSecondary }
-				shortcut="shift+alt+o"
-				label={ __( 'List View Shift+Alt+O', 'campaignbridge' ) }
-				icon={ listView }
-			/>
-		</>
-	);
+  return (
+    <>
+      <KeyboardShortcuts
+        bindGlobal
+        shortcuts={{ 'shift+alt+o': toggleSecondary }}
+      />
+      <ToggleButton
+        className='cb-editor__toggle--secondary'
+        isActive={isSecondaryOpen}
+        onClick={toggleSecondary}
+        shortcut='shift+alt+o'
+        label={__('List View Shift+Alt+O', 'campaignbridge')}
+        icon={listView}
+      />
+    </>
+  );
 }

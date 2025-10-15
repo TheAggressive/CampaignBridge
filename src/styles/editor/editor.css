@@ -1,9 +1,16 @@
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
 /* Global design tokens are imported in styles.css */
-@import "tailwindcss";
 
 /* Editor-specific variables */
 :root {
-  --cb-sidebar-width: var(--container-sm);
+  --cb-sidebar-width: 18rem;
+  --cb-secondary-sidebar-width: 24rem;
 }
 
 /* Editor Shell wrapper (outside InterfaceSkeleton) */
@@ -82,26 +89,35 @@
   }
 
   &.cb-editor--has-primary {
-    .components-interface-skeleton__sidebar,
     .interface-interface-skeleton__sidebar {
-      width: var(--cb-sidebar-width);
-      flex: 0 0 var(--cb-sidebar-width);
+      /* Core-like: Let JavaScript handle width via inline styles */
+      /* CSS handles flex behavior and transitions */
+      flex: 0 0 auto;
+      transition:
+        width 0.2s,
+        flex-basis 0.2s;
     }
   }
+
   &.cb-editor--no-primary {
-    .components-interface-skeleton__sidebar,
     .interface-interface-skeleton__sidebar {
       width: 0;
       flex: 0 0 0;
     }
   }
+
   &.cb-editor--has-secondary {
     .components-interface-skeleton__secondary-sidebar,
     .interface-interface-skeleton__secondary-sidebar {
-      width: var(--cb-sidebar-width);
-      flex: 0 0 var(--cb-sidebar-width);
+      /* Core-like: Let JavaScript handle width via inline styles */
+      /* CSS handles flex behavior and transitions */
+      flex: 0 0 auto;
+      transition:
+        width 0.2s,
+        flex-basis 0.2s;
     }
   }
+
   &.cb-editor--no-secondary {
     .components-interface-skeleton__secondary-sidebar,
     .interface-interface-skeleton__secondary-sidebar {
@@ -114,7 +130,6 @@
 /* Sidebar and related styles nested under .cb-editor */
 .cb-editor {
   &__sidebar {
-    width: var(--cb-sidebar-width);
     height: 100%;
     background: #fff;
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
@@ -158,7 +173,12 @@
 
     /* Modifiers */
     &--primary {
+      /* Core-like: Width handled by JavaScript override of Framer Motion */
       border-right: 1px solid rgba(0, 0, 0, 0.06);
+
+      /* Use CSS custom property set by JavaScript, fallback to desired width */
+      width: var(--cb-sidebar-width, 288px) !important;
+      flex-basis: var(--cb-sidebar-width, 288px) !important;
 
       &.cb-editor__sidebar--open {
         transform: translateX(0);
@@ -173,6 +193,10 @@
 
     &--secondary {
       border-left: 1px solid rgba(0, 0, 0, 0.06);
+
+      /* Use CSS custom property set by JavaScript */
+      width: var(--cb-sidebar-width, 480px) !important;
+      flex-basis: var(--cb-sidebar-width, 480px) !important;
 
       &.cb-editor__sidebar--open {
         transform: translateX(0);

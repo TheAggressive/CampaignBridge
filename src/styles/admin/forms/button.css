@@ -4,12 +4,26 @@
  * Button component styles and variants.
  * Follows BEM CSS class naming conventions.
  */
+/* Declare the layers you’ll use (order matters) */
 
-@reference "tailwindcss";
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
 
 /* ===== BUTTONS ===== */
 .campaignbridge-button {
-  @apply inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
+  @apply inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap transition-colors;
+
+  &:focus-visible {
+    @apply ring-2 ring-offset-2 outline-none;
+  }
+
+  &:disabled {
+    @apply pointer-events-none opacity-50;
+  }
+
   --tw-ring-offset-color: var(--color-background);
   --tw-ring-color: var(--color-ring);
   border-radius: var(--form-radius);

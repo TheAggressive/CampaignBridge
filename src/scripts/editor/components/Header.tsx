@@ -1,14 +1,14 @@
-import { FullscreenToggle } from "./Button/FullscreenToggle";
-import { PrimarySidebarToggle } from "./Button/PrimarySidebarToggle";
-import { SecondarySidebarToggle } from "./Button/SecondarySidebarToggle";
-import TemplateToolbar from "./TemplateToolbar";
+import { FullscreenToggle } from './Button/FullscreenToggle';
+import { PrimarySidebarToggle } from './Button/PrimarySidebarToggle';
+import { SecondarySidebarToggle } from './Button/SecondarySidebarToggle';
+import TemplateToolbar from './TemplateToolbar';
 
 /* CSS classes */
 const CLASSES = {
-  HEADER: "cb-editor__header",
-  HEADER_LEFT: "cb-editor__header-left",
-  HEADER_TITLE: "cb-editor__title",
-  HEADER_ACTIONS: "cb-editor__header-actions",
+  HEADER: 'cb-editor__header',
+  HEADER_LEFT: 'cb-editor__header-left',
+  HEADER_TITLE: 'cb-editor__title',
+  HEADER_ACTIONS: 'cb-editor__header-actions',
 };
 
 /**

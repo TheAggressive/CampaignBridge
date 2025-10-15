@@ -7,7 +7,7 @@
  */
 
 /* Global design tokens are imported in styles.css */
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @layer components {
   .cb-status {

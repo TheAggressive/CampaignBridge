@@ -11,10 +11,10 @@ const { name } = metadata;
 export { metadata, name };
 
 export const settings = {
-	edit: Edit,
-	save: Save,
+  edit: Edit,
+  save: Save,
 };
 
-export const init = () => registerBlockType( { name, ...metadata }, settings );
+export const init = () => registerBlockType({ name, ...metadata }, settings);
 
 init();

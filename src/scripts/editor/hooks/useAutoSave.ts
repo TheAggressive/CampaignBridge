@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "@wordpress/element";
+import { useMemo, useRef } from '@wordpress/element';
 
 // AutoSave-specific constants (exported for reuse if needed)
 export const AUTOSAVE_CONSTANTS = {
@@ -7,9 +7,9 @@ export const AUTOSAVE_CONSTANTS = {
   MAX_DEBOUNCE_MS: 10000,
   NOTIFICATION_THROTTLE: 8000,
   SAVE_STATUS: {
-    SAVED: "saved",
-    SAVING: "saving",
-    ERROR: "error",
+    SAVED: 'saved',
+    SAVING: 'saving',
+    ERROR: 'error',
   },
 };
 
@@ -61,12 +61,12 @@ function validateDelayMs(delayMs) {
   }
 
   if (
-    typeof delayMs !== "number" ||
+    typeof delayMs !== 'number' ||
     delayMs < MIN_DEBOUNCE_MS ||
     delayMs > MAX_DEBOUNCE_MS
   ) {
     console.warn(
-      `useAutoSave: delayMs ${delayMs}ms is invalid, using default ${DEFAULT_DEBOUNCE_MS}ms`,
+      `useAutoSave: delayMs ${delayMs}ms is invalid, using default ${DEFAULT_DEBOUNCE_MS}ms`
     );
     return DEFAULT_DEBOUNCE_MS;
   }
@@ -77,7 +77,7 @@ function validateDelayMs(delayMs) {
  * Creates a debounced save function with proper cleanup and error handling
  */
 function createDebouncedSave(debounceTimerRef, abortRef, performSave, delayMs) {
-  return (next) => {
+  return next => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -92,7 +92,7 @@ function createDebouncedSave(debounceTimerRef, abortRef, performSave, delayMs) {
  * Creates a force save function that bypasses debouncing
  */
 function createForceSave(debounceTimerRef, abortRef, performSave) {
-  return (next) => {
+  return next => {
     // Cancel any pending debounced save
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -119,8 +119,8 @@ async function executeSave(abortRef, performSave, next) {
     const result = await performSave(next, { signal });
     return result;
   } catch (error) {
-    if (error.name !== "AbortError") {
-      console.error("useAutoSave: Save operation failed:", error);
+    if (error.name !== 'AbortError') {
+      console.error('useAutoSave: Save operation failed:', error);
     }
     throw error;
   }
@@ -130,7 +130,7 @@ async function executeSave(abortRef, performSave, next) {
  * Creates an AbortController with cross-browser compatibility
  */
 function createAbortController() {
-  if (typeof AbortController === "undefined") {
+  if (typeof AbortController === 'undefined') {
     return null;
   }
   return new AbortController();
@@ -140,7 +140,7 @@ function createAbortController() {
  * Creates the schedule method for frame-coalesced updates
  */
 function createScheduleMethod(latestRef, rafIdRef, saveFn) {
-  return (next) => {
+  return next => {
     latestRef.current = next;
     if (rafIdRef.current) return; // Already scheduled
 
@@ -181,7 +181,7 @@ function createFlushMethod(
   rafIdRef,
   latestRef,
   abortRef,
-  performSave,
+  performSave
 ) {
   return () => {
     if (debounceTimerRef.current) {
@@ -225,7 +225,7 @@ export function useAutoSave(performSave, delayMsInput = undefined) {
       debounceTimerRef,
       abortRef,
       performSave,
-      delayMs,
+      delayMs
     );
     const forceSave = createForceSave(debounceTimerRef, abortRef, performSave);
 
@@ -245,7 +245,7 @@ export function useAutoSave(performSave, delayMsInput = undefined) {
       rafIdRef,
       latestRef,
       abortRef,
-      performSave,
+      performSave
     );
 
     return saveFn;

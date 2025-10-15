@@ -1,18 +1,18 @@
-import { Button, SelectControl } from "@wordpress/components";
-import { useMemo } from "@wordpress/element";
-import { __ } from "@wordpress/i18n";
+import { Button, SelectControl } from '@wordpress/components';
+import { useMemo } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 // Component-specific constants
 const TOOLBAR_LABELS = {
-  TEMPLATES: __("Templates", "campaignbridge"),
-  SELECT_TEMPLATE: __("Please Select a Template", "campaignbridge"),
-  LOADING: __("Loading…", "campaignbridge"),
-  NEW_TEMPLATE: __("New Template", "campaignbridge"),
+  TEMPLATES: __('Templates', 'campaignbridge'),
+  SELECT_TEMPLATE: __('Please Select a Template', 'campaignbridge'),
+  LOADING: __('Loading…', 'campaignbridge'),
+  NEW_TEMPLATE: __('New Template', 'campaignbridge'),
 };
 
 const TOOLBAR_CLASSES = {
-  CONTAINER: "cb-editor__toolbar",
-  SELECT: "cb-editor__templates-select",
+  CONTAINER: 'cb-editor__toolbar',
+  SELECT: 'cb-editor__templates-select',
   // Export for potential reuse by other toolbar components
 };
 
@@ -64,7 +64,7 @@ export default function TemplateToolbar({
 }) {
   // Transform the template list into select options (memoized)
   const options = useMemo(() => {
-    return (list || []).map((p) => ({
+    return (list || []).map(p => ({
       label: p?.title?.rendered || `#${p?.id}`,
       value: String(p?.id),
     }));
@@ -75,8 +75,8 @@ export default function TemplateToolbar({
         className={TOOLBAR_CLASSES.SELECT}
         label={TOOLBAR_LABELS.TEMPLATES}
         hideLabelFromVision={true}
-        value={currentId ? String(currentId) : ""}
-        onChange={(val) => onSelect(Number(val) || null)}
+        value={currentId ? String(currentId) : ''}
+        onChange={val => onSelect(Number(val) || null)}
         disabled={loading}
         __nextHasNoMarginBottom
         __next40pxDefaultSize
@@ -86,15 +86,15 @@ export default function TemplateToolbar({
             : [
                 {
                   label: TOOLBAR_LABELS.SELECT_TEMPLATE,
-                  value: "",
+                  value: '',
                 },
               ]),
           ...(loading
-            ? [{ label: TOOLBAR_LABELS.LOADING, value: "" }]
+            ? [{ label: TOOLBAR_LABELS.LOADING, value: '' }]
             : options),
         ]}
       />
-      <Button variant="primary" onClick={onNew}>
+      <Button variant='primary' onClick={onNew}>
         {TOOLBAR_LABELS.NEW_TEMPLATE}
       </Button>
     </div>

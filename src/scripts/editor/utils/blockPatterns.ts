@@ -3,16 +3,16 @@
  * Minimal patterns to reduce bundle size and complexity.
  */
 
-import { __ } from "@wordpress/i18n";
+import { __ } from '@wordpress/i18n';
 
 /**
  * Basic block pattern categories.
  */
 export const blockPatternCategories = [
   {
-    name: "email-basic",
-    label: __("Email Blocks", "campaignbridge"),
-    description: __("Basic email template blocks", "campaignbridge"),
+    name: 'email-basic',
+    label: __('Email Blocks', 'campaignbridge'),
+    description: __('Basic email template blocks', 'campaignbridge'),
   },
 ];
 
@@ -21,10 +21,10 @@ export const blockPatternCategories = [
  */
 export const blockPatterns = [
   {
-    name: "campaignbridge/columns-basic",
-    title: __("Two Columns", "campaignbridge"),
-    description: __("Simple two-column layout", "campaignbridge"),
-    category: "email-basic",
+    name: 'campaignbridge/columns-basic',
+    title: __('Two Columns', 'campaignbridge'),
+    description: __('Simple two-column layout', 'campaignbridge'),
+    category: 'email-basic',
     content: `
       <!-- wp:columns -->
       <div class="wp-block-columns">
@@ -47,10 +47,10 @@ export const blockPatterns = [
     `,
   },
   {
-    name: "campaignbridge/button-cta",
-    title: __("Call to Action", "campaignbridge"),
-    description: __("Simple call-to-action button", "campaignbridge"),
-    category: "email-basic",
+    name: 'campaignbridge/button-cta',
+    title: __('Call to Action', 'campaignbridge'),
+    description: __('Simple call-to-action button', 'campaignbridge'),
+    category: 'email-basic',
     content: `
       <!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
       <div class="wp-block-buttons">

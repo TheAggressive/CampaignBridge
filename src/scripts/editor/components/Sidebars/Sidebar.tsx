@@ -1,23 +1,23 @@
-import { createSlotFill } from "@wordpress/components";
-import { useSelect } from "@wordpress/data";
-import { memo, useCallback, useEffect, useState } from "@wordpress/element";
-import { __ } from "@wordpress/i18n";
-import Inspector from "./Inspector";
-import TemplateSettings from "./TemplateSettings";
+import { createSlotFill } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
+import { memo, useCallback, useEffect, useState } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
+import Inspector from './Inspector';
+import TemplateSettings from './TemplateSettings';
 
 // Slot/Fill system for plugin extensibility
 const { Slot: InspectorSlot, Fill: InspectorFill } = createSlotFill(
-  "CampaignBridgeBlockEditorSidebarInspector",
+  'CampaignBridgeBlockEditorSidebarInspector'
 );
 
 const { Slot: TemplateSlot, Fill: TemplateFill } = createSlotFill(
-  "CampaignBridgeBlockEditorSidebarTemplateSlot",
+  'CampaignBridgeBlockEditorSidebarTemplateSlot'
 );
 
 // Tab configuration constants
 const TABS = {
-  TEMPLATE: "template-settings",
-  INSPECTOR: "block-inspector",
+  TEMPLATE: 'template-settings',
+  INSPECTOR: 'block-inspector',
 };
 
 /**
@@ -31,11 +31,11 @@ const DEFAULT_PROPS = {
  * CSS class names for consistent styling
  */
 const CSS_CLASSES = {
-  SIDEBAR_PANEL: "cb-editor__sidebar-panel",
-  TAB_PANEL: "components-tab-panel__tabs",
-  TAB_ITEM: "components-tab-panel__tabs-item",
-  TAB_ACTIVE: "is-active",
-  SIDEBAR_ERROR: "cb-editor__sidebar-error",
+  SIDEBAR_PANEL: 'cb-editor__sidebar-panel',
+  TAB_PANEL: 'components-tab-panel__tabs',
+  TAB_ITEM: 'components-tab-panel__tabs-item',
+  TAB_ACTIVE: 'is-active',
+  SIDEBAR_ERROR: 'cb-editor__sidebar-error',
 };
 
 /**
@@ -61,19 +61,19 @@ const CSS_CLASSES = {
  */
 export function SidebarHeader({ activeTab, onTabChange }) {
   // Validate required props
-  if (typeof onTabChange !== "function") {
-    console.error("SidebarHeader: onTabChange prop must be a function");
+  if (typeof onTabChange !== 'function') {
+    console.error('SidebarHeader: onTabChange prop must be a function');
     return null;
   }
 
-  const handleTabClick = (tab) => {
-    if (tab !== activeTab && typeof onTabChange === "function") {
+  const handleTabClick = tab => {
+    if (tab !== activeTab && typeof onTabChange === 'function') {
       onTabChange(tab);
     }
   };
 
   const handleKeyDown = (event, tab) => {
-    if (event.key === "Enter" || event.key === " ") {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       handleTabClick(tab);
     }
@@ -82,39 +82,39 @@ export function SidebarHeader({ activeTab, onTabChange }) {
   return (
     <div
       className={CSS_CLASSES.TAB_PANEL}
-      role="tablist"
-      aria-label={__("Sidebar tabs", "campaignbridge")}
+      role='tablist'
+      aria-label={__('Sidebar tabs', 'campaignbridge')}
     >
       <button
-        type="button"
-        role="tab"
+        type='button'
+        role='tab'
         className={`${CSS_CLASSES.TAB_ITEM} ${
-          activeTab === TABS.TEMPLATE ? CSS_CLASSES.TAB_ACTIVE : ""
+          activeTab === TABS.TEMPLATE ? CSS_CLASSES.TAB_ACTIVE : ''
         }`}
         onClick={() => handleTabClick(TABS.TEMPLATE)}
-        onKeyDown={(e) => handleKeyDown(e, TABS.TEMPLATE)}
+        onKeyDown={e => handleKeyDown(e, TABS.TEMPLATE)}
         aria-selected={activeTab === TABS.TEMPLATE}
-        aria-controls="sidebar-content"
-        id="tab-document"
-        style={{ marginLeft: "-16px" }}
+        aria-controls='sidebar-content'
+        id='tab-document'
+        style={{ marginLeft: '-16px' }}
         tabIndex={activeTab === TABS.TEMPLATE ? 0 : -1}
       >
-        {__("Document", "campaignbridge")}
+        {__('Document', 'campaignbridge')}
       </button>
       <button
-        type="button"
-        role="tab"
+        type='button'
+        role='tab'
         className={`${CSS_CLASSES.TAB_ITEM} ${
-          activeTab === TABS.INSPECTOR ? CSS_CLASSES.TAB_ACTIVE : ""
+          activeTab === TABS.INSPECTOR ? CSS_CLASSES.TAB_ACTIVE : ''
         }`}
         onClick={() => handleTabClick(TABS.INSPECTOR)}
-        onKeyDown={(e) => handleKeyDown(e, TABS.INSPECTOR)}
+        onKeyDown={e => handleKeyDown(e, TABS.INSPECTOR)}
         aria-selected={activeTab === TABS.INSPECTOR}
-        aria-controls="sidebar-content"
-        id="tab-block"
+        aria-controls='sidebar-content'
+        id='tab-block'
         tabIndex={activeTab === TABS.INSPECTOR ? 0 : -1}
       >
-        {__("Block", "campaignbridge")}
+        {__('Block', 'campaignbridge')}
       </button>
     </div>
   );
@@ -153,16 +153,16 @@ export function SidebarContent({ activeTab, postType, postId }) {
           </>
         ) : (
           <div className={CSS_CLASSES.SIDEBAR_ERROR}>
-            <p>{__("Invalid tab selected", "campaignbridge")}</p>
+            <p>{__('Invalid tab selected', 'campaignbridge')}</p>
           </div>
         )}
       </>
     );
   } catch (error) {
-    console.error("SidebarContent: Error rendering content:", error);
+    console.error('SidebarContent: Error rendering content:', error);
     return (
       <div className={CSS_CLASSES.SIDEBAR_ERROR}>
-        <p>{__("Error loading sidebar content", "campaignbridge")}</p>
+        <p>{__('Error loading sidebar content', 'campaignbridge')}</p>
       </div>
     );
   }
@@ -206,14 +206,14 @@ function Sidebar({
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Detect when a block is selected in the editor
-  const selectedBlock = useSelect((select) => {
+  const selectedBlock = useSelect(select => {
     try {
-      const { getSelectedBlock } = select("core/block-editor") as {
+      const { getSelectedBlock } = select('core/block-editor') as {
         getSelectedBlock?: () => unknown;
       };
       return getSelectedBlock?.();
     } catch (error) {
-      console.warn("Sidebar: Error accessing block editor state:", error);
+      console.warn('Sidebar: Error accessing block editor state:', error);
       return null;
     }
   }, []);
@@ -227,12 +227,12 @@ function Sidebar({
 
   // Memoized tab change handler to prevent unnecessary re-renders
   const handleTabChange = useCallback(
-    (tabName) => {
-      if (tabName && typeof tabName === "string" && tabName !== activeTab) {
+    tabName => {
+      if (tabName && typeof tabName === 'string' && tabName !== activeTab) {
         setActiveTab(tabName);
       }
     },
-    [activeTab],
+    [activeTab]
   );
 
   try {
@@ -244,10 +244,10 @@ function Sidebar({
       />
     );
   } catch (error) {
-    console.error("Sidebar: Error rendering component:", error);
+    console.error('Sidebar: Error rendering component:', error);
     return (
       <div className={CSS_CLASSES.SIDEBAR_ERROR}>
-        <p>{__("Error loading sidebar", "campaignbridge")}</p>
+        <p>{__('Error loading sidebar', 'campaignbridge')}</p>
       </div>
     );
   }

@@ -1,10 +1,10 @@
-import apiFetch from "@wordpress/api-fetch";
-import { useEffect, useRef, useState } from "@wordpress/element";
+import apiFetch from '@wordpress/api-fetch';
+import { useEffect, useRef, useState } from '@wordpress/element';
 
 // Editor settings-specific constants (exported for reuse if needed)
 export const EDITOR_SETTINGS_CONSTANTS = {
   API_PATHS: {
-    EDITOR_SETTINGS: "/campaignbridge/v1/editor-settings",
+    EDITOR_SETTINGS: '/campaignbridge/v1/editor-settings',
   },
 };
 
@@ -39,7 +39,7 @@ export const EDITOR_SETTINGS_CONSTANTS = {
  * return <Editor settings={settings} />;
  * ```
  */
-export function useEditorSettings(postType = "post") {
+export function useEditorSettings(postType = 'post') {
   const [settings, setSettings] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,28 +74,28 @@ export function useEditorSettings(postType = "post") {
         });
 
         // Validate response before caching
-        if (response && typeof response === "object") {
+        if (response && typeof response === 'object') {
           settingsCacheRef.current.set(postType, response);
 
           if (isMounted) {
             setSettings(response);
           }
         } else {
-          throw new Error("Invalid response format from editor settings API");
+          throw new Error('Invalid response format from editor settings API');
         }
       } catch (err) {
         console.error(
           `useEditorSettings: Error on attempt ${retryCount + 1}/${MAX_RETRIES}:`,
-          err,
+          err
         );
         if (isMounted) {
           const isRetryableError =
-            err.code !== "rest_invalid_param" && err.code !== "rest_forbidden";
+            err.code !== 'rest_invalid_param' && err.code !== 'rest_forbidden';
 
           if (isRetryableError && retryCount < MAX_RETRIES) {
             console.warn(
               `useEditorSettings: Retrying... (attempt ${retryCount + 1}/${MAX_RETRIES}):`,
-              err,
+              err
             );
 
             // Exponential backoff for retries
@@ -110,8 +110,8 @@ export function useEditorSettings(postType = "post") {
 
           setError(err);
           console.error(
-            "Failed to fetch editor settings after all retries:",
-            err,
+            'Failed to fetch editor settings after all retries:',
+            err
           );
 
           // Set fallback settings if all retries fail

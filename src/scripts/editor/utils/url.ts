@@ -4,8 +4,7 @@
  * @param {string} k - The parameter key to retrieve
  * @return {string|null} The parameter value, or null if not found
  */
-export const getParam = (k) =>
-  new URLSearchParams(window.location.search).get(k);
+export const getParam = k => new URLSearchParams(window.location.search).get(k);
 /**
  * Sets a URL parameter and reloads the page with the updated URL.
  *
