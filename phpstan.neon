@@ -2,6 +2,13 @@ parameters:
 	level: 6
 	paths:
 		- includes/
+	excludePaths:
+		- includes/Admin_Legacy/  # Legacy admin code (deprecated)
+		- vendor/                 # Third-party dependencies
+		- node_modules/           # Node.js dependencies
+		- assets/                 # Compiled assets
+		- dist/                   # Build output
+		- tools/                  # Development tools (not analyzed)
 	scanDirectories:
 		- includes/
 		- tools/
