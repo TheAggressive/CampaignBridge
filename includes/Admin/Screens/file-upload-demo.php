@@ -89,9 +89,9 @@ use CampaignBridge\Admin\Core\Form;
 		<h2>📊 Upload Statistics</h2>
 		<div class="upload-stats">
 			<?php
-			$uploaded_files = get_option( 'file_upload_demo_profile_image', array() );
-			$document_files = get_option( 'file_upload_demo_document', array() );
-			$multiple_files = get_option( 'file_upload_demo_files', array() );
+			$uploaded_files = \CampaignBridge\Core\Storage::get_option( 'file_upload_demo_profile_image', array() );
+			$document_files = \CampaignBridge\Core\Storage::get_option( 'file_upload_demo_document', array() );
+			$multiple_files = \CampaignBridge\Core\Storage::get_option( 'file_upload_demo_files', array() );
 
 			?>
 

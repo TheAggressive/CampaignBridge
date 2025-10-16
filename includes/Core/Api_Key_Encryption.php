@@ -216,13 +216,13 @@ class Api_Key_Encryption {
 		$new_key = self::generate_master_key();
 
 		// Store the new key.
-		$success = update_option( self::MASTER_KEY_OPTION, $new_key, false );
+		$success = \CampaignBridge\Core\Storage::update_option( self::MASTER_KEY_OPTION, $new_key );
 
 		if ( $success ) {
 			// Update metadata.
 			$metadata['created'] = time();
 			$metadata['version'] = ( $metadata['version'] ?? 0 ) + 1;
-			update_option( self::KEY_META_OPTION, $metadata, false );
+			\CampaignBridge\Core\Storage::update_option( self::KEY_META_OPTION, $metadata );
 
 			// Log the rotation (without exposing the key).
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -244,19 +244,19 @@ class Api_Key_Encryption {
 	 * @return string The master key for encryption/decryption.
 	 */
 	private static function get_master_key(): string {
-		$stored_key = get_option( self::MASTER_KEY_OPTION );
+		$stored_key = \CampaignBridge\Core\Storage::get_option( self::MASTER_KEY_OPTION );
 
 		if ( ! $stored_key ) {
 			// Generate and store new master key.
 			$stored_key = self::generate_master_key();
-			add_option( self::MASTER_KEY_OPTION, $stored_key, '', false );
+			\CampaignBridge\Core\Storage::add_option( self::MASTER_KEY_OPTION, $stored_key );
 
 			// Initialize metadata.
 			$metadata = array(
 				'created' => time(),
 				'version' => 1,
 			);
-			add_option( self::KEY_META_OPTION, $metadata, '', false );
+			\CampaignBridge\Core\Storage::add_option( self::KEY_META_OPTION, $metadata );
 
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
@@ -283,7 +283,7 @@ class Api_Key_Encryption {
 	 * @return array<string, mixed> Key metadata including creation time and version.
 	 */
 	private static function get_key_metadata(): array {
-		return get_option( self::KEY_META_OPTION, array() );
+		return \CampaignBridge\Core\Storage::get_option( self::KEY_META_OPTION, array() );
 	}
 
 	/**

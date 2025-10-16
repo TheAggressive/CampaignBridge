@@ -41,7 +41,7 @@ $features = array(
 	'automation'  => 'Workflow Automation',
 );
 
-$saved_features = get_option( 'campaignbridge_test_enabled_features', array() );
+$saved_features = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_enabled_features', array() );
 
 $form2 = Form::make( 'repeater_state_based' )
 	->description( 'State-based mode - compares with persistent data' )
@@ -73,7 +73,7 @@ $permissions = array(
 	'admin'  => 'Admin Access',
 );
 
-$saved_permissions = get_option( 'campaignbridge_test_user_permissions', array() );
+$saved_permissions = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_user_permissions', array() );
 
 $form4 = Form::make( 'repeater_checkbox' )
 	->description( 'Checkbox field type example' )
@@ -90,7 +90,7 @@ $themes = array(
 	'custom' => 'Custom Theme',
 );
 
-$saved_theme = get_option( 'campaignbridge_test_theme_preference', array() );
+$saved_theme = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_theme_preference', array() );
 
 $form5 = Form::make( 'repeater_radio' )
 	->description( 'Radio field type example' )
@@ -207,11 +207,11 @@ $form5 = Form::make( 'repeater_radio' )
 				<code>
 				<?php
 					$db_values = array(
-						'campaignbridge_test_preferences' => get_option( 'campaignbridge_test_preferences', 'NOT SET' ),
-						'campaignbridge_test_enabled_features' => get_option( 'campaignbridge_test_enabled_features', 'NOT SET' ),
-						'campaignbridge_test_notification_types' => get_option( 'campaignbridge_test_notification_types', 'NOT SET' ),
-						'campaignbridge_test_user_permissions' => get_option( 'campaignbridge_test_user_permissions', 'NOT SET' ),
-						'campaignbridge_test_theme_preference' => get_option( 'campaignbridge_test_theme_preference', 'NOT SET' ),
+						'campaignbridge_test_preferences' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_preferences', 'NOT SET' ),
+						'campaignbridge_test_enabled_features' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_enabled_features', 'NOT SET' ),
+						'campaignbridge_test_notification_types' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_notification_types', 'NOT SET' ),
+						'campaignbridge_test_user_permissions' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_user_permissions', 'NOT SET' ),
+						'campaignbridge_test_theme_preference' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_theme_preference', 'NOT SET' ),
 					);
 					echo esc_html( wp_json_encode( $db_values, JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' );
 					?>
@@ -221,23 +221,23 @@ $form5 = Form::make( 'repeater_radio' )
 			<div class="campaignbridge-repeater-test__results">
 				<div class="campaignbridge-repeater-test__result">
 					<strong>Stateless Preferences:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_preferences', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_preferences', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 				<div class="campaignbridge-repeater-test__result">
 					<strong>Enabled Features:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_enabled_features', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_enabled_features', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 				<div class="campaignbridge-repeater-test__result">
 					<strong>Notification Types:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_notification_types', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_notification_types', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 				<div class="campaignbridge-repeater-test__result">
 					<strong>User Permissions:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_user_permissions', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_user_permissions', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 				<div class="campaignbridge-repeater-test__result">
 					<strong>Theme Preference:</strong>
-					<code><?php echo esc_html( wp_json_encode( get_option( 'campaignbridge_test_theme_preference', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
+					<code><?php echo esc_html( wp_json_encode( \CampaignBridge\Core\Storage::get_option( 'campaignbridge_test_theme_preference', array() ), JSON_PRETTY_PRINT ) ?: 'JSON encoding failed' ); ?></code>
 				</div>
 			</div>
 		</div>

@@ -64,7 +64,7 @@ class Input_Validator {
 	 * @return bool|WP_Error True if allowed, error if not.
 	 */
 	public static function validate_post_type_allowed( string $post_type, string $option_name ): bool|WP_Error {
-		$post_types_settings = get_option( $option_name, array() );
+		$post_types_settings = \CampaignBridge\Core\Storage::get_option( $option_name, array() );
 		$allowed_types       = isset( $post_types_settings['included_post_types'] ) && is_array( $post_types_settings['included_post_types'] )
 			? array_map( 'sanitize_key', $post_types_settings['included_post_types'] )
 			: array(); // If no specific types configured, allow all.

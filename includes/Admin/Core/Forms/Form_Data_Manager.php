@@ -115,7 +115,7 @@ class Form_Data_Manager {
 				// Only load the base option once for all repeater fields.
 				if ( ! isset( $loaded_base_names[ $base_name ] ) ) {
 					$option_key                      = $this->config['prefix'] . $base_name . $this->config['suffix'];
-					$loaded_base_names[ $base_name ] = \get_option( $option_key, array() );
+					$loaded_base_names[ $base_name ] = \CampaignBridge\Core\Storage::get_option( $option_key, array() );
 				}
 
 				// Check if this specific key is in the saved array.
@@ -134,7 +134,7 @@ class Form_Data_Manager {
 	 */
 	private function load_from_settings(): void {
 		$settings_group = $this->config['settings_group'] ?? $this->config['form_id'] ?? 'settings';
-		$settings_data  = \get_option( $settings_group, array() );
+		$settings_data  = \CampaignBridge\Core\Storage::get_option( $settings_group, array() );
 
 		// Load individual field values from the settings array.
 		foreach ( $this->fields as $field_id => $field_config ) {

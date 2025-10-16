@@ -82,7 +82,7 @@ class Rate_Limiter {
 		$identifier = $user_id ? 'user_' . $user_id : 'ip_' . $ip_address;
 
 		$cache_key = $cache_prefix . $endpoint_name . '_' . $identifier;
-		$requests  = get_transient( $cache_key );
+		$requests  = \CampaignBridge\Core\Storage::get_transient( $cache_key );
 
 		if ( false === $requests ) {
 			$requests = 0;
@@ -100,7 +100,7 @@ class Rate_Limiter {
 			);
 		}
 
-		set_transient( $cache_key, $requests + 1, $time_window );
+		\CampaignBridge\Core\Storage::set_transient( $cache_key, $requests + 1, $time_window );
 		return true;
 	}
 
@@ -129,7 +129,7 @@ class Rate_Limiter {
 		}
 
 		$cache_key = $cache_prefix . $endpoint_name . '_' . $user_id;
-		$requests  = get_transient( $cache_key );
+		$requests  = \CampaignBridge\Core\Storage::get_transient( $cache_key );
 
 		if ( false === $requests ) {
 			$requests = 0;
@@ -147,7 +147,7 @@ class Rate_Limiter {
 			);
 		}
 
-		set_transient( $cache_key, $requests + 1, $time_window );
+		\CampaignBridge\Core\Storage::set_transient( $cache_key, $requests + 1, $time_window );
 		return true;
 	}
 }

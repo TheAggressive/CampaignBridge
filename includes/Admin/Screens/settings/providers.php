@@ -16,9 +16,9 @@ global $screen;
 if ( ! isset( $screen ) ) {
 	$screen = null; // Fallback for PHPStan
 }
-$cb_provider           = $screen ? $screen->get( 'provider', get_option( 'cb_provider', 'html' ) ) : get_option( 'cb_provider', 'html' );
-$cb_mailchimp_api_key  = $screen ? $screen->get( 'mailchimp_api_key', get_option( 'cb_mailchimp_api_key', '' ) ) : get_option( 'cb_mailchimp_api_key', '' );
-$cb_mailchimp_audience = $screen ? $screen->get( 'mailchimp_audience', get_option( 'cb_mailchimp_audience', '' ) ) : get_option( 'cb_mailchimp_audience', '' );
+$cb_provider           = $screen ? $screen->get( 'provider', \CampaignBridge\Core\Storage::get_option( 'cb_provider', 'html' ) ) : \CampaignBridge\Core\Storage::get_option( 'cb_provider', 'html' );
+$cb_mailchimp_api_key  = $screen ? $screen->get( 'mailchimp_api_key', \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' );
+$cb_mailchimp_audience = $screen ? $screen->get( 'mailchimp_audience', \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_audience', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_audience', '' );
 $cb_is_connected       = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
 
 // Create the form using the Form API.

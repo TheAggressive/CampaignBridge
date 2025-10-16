@@ -435,10 +435,10 @@ class Form_Handler {
 	private function save_to_options( array $data ): bool {
 		foreach ( $data as $field_id => $value ) {
 			$option_key = $this->config->get( 'prefix', '' ) . $field_id . $this->config->get( 'suffix', '' );
-			\update_option( $option_key, $value );
+			\CampaignBridge\Core\Storage::update_option( $option_key, $value );
 
 			// Clear cache for this specific option.
-			\wp_cache_delete( $option_key, 'options' );
+			\CampaignBridge\Core\Storage::wp_cache_delete( $option_key, 'options' );
 		}
 
 		return true;
@@ -468,10 +468,10 @@ class Form_Handler {
 
 		// For Settings API, we save the entire data array as one option.
 		// This mimics how WordPress Settings API typically works.
-		$result = \update_option( $settings_group, $data );
+		$result = \CampaignBridge\Core\Storage::update_option( $settings_group, $data );
 
 		// Clear cache for this settings group.
-		\wp_cache_delete( $settings_group, 'options' );
+		\CampaignBridge\Core\Storage::wp_cache_delete( $settings_group, 'options' );
 
 		return $result;
 	}
@@ -503,10 +503,10 @@ class Form_Handler {
 		$post_id = $this->config->get( 'post_id', \get_the_ID() );
 
 		foreach ( $data as $field_id => $value ) {
-			\update_post_meta( $post_id, $field_id, $value );
+			\CampaignBridge\Core\Storage::update_post_meta( $post_id, $field_id, $value );
 
 			// Clear cache for this post meta.
-			\wp_cache_delete( $post_id, 'post_meta' );
+			\CampaignBridge\Core\Storage::wp_cache_delete( $post_id, 'post_meta' );
 		}
 		return true;
 	}

@@ -75,20 +75,20 @@ class Settings_Controller {
 	private function load_settings_data(): void {
 		$this->data = array(
 			// General settings data.
-			'from_name'           => get_option( 'cb_from_name', get_bloginfo( 'name' ) ),
-			'from_email'          => get_option( 'cb_from_email', get_option( 'admin_email' ) ),
-			'reply_to'            => get_option( 'cb_reply_to', get_option( 'admin_email' ) ),
+			'from_name'           => \CampaignBridge\Core\Storage::get_option( 'cb_from_name', get_bloginfo( 'name' ) ),
+			'from_email'          => \CampaignBridge\Core\Storage::get_option( 'cb_from_email', get_option( 'admin_email' ) ),
+			'reply_to'            => \CampaignBridge\Core\Storage::get_option( 'cb_reply_to', get_option( 'admin_email' ) ),
 
 			// Mailchimp integration data.
-			'mailchimp_api_key'   => get_option( 'cb_mailchimp_api_key', '' ),
-			'mailchimp_audience'  => get_option( 'cb_mailchimp_audience', '' ),
+			'mailchimp_api_key'   => \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' ),
+			'mailchimp_audience'  => \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_audience', '' ),
 			'mailchimp_connected' => $this->is_mailchimp_connected(),
 
 			// Advanced settings data.
-			'debug_mode'          => get_option( 'cb_debug_mode', false ),
-			'log_level'           => get_option( 'cb_log_level', 'info' ),
-			'cache_duration'      => get_option( 'cb_cache_duration', 3600 ),
-			'rate_limit'          => get_option( 'cb_rate_limit', 100 ),
+			'debug_mode'          => \CampaignBridge\Core\Storage::get_option( 'cb_debug_mode', false ),
+			'log_level'           => \CampaignBridge\Core\Storage::get_option( 'cb_log_level', 'info' ),
+			'cache_duration'      => \CampaignBridge\Core\Storage::get_option( 'cb_cache_duration', 3600 ),
+			'rate_limit'          => \CampaignBridge\Core\Storage::get_option( 'cb_rate_limit', 100 ),
 
 			// System info.
 			'plugin_version'      => defined( 'CAMPAIGNBRIDGE_VERSION' ) ? \CampaignBridge_Plugin::VERSION : '1.0.0',
@@ -98,7 +98,7 @@ class Settings_Controller {
 			// Statistics.
 			'total_subscribers'   => $this->get_total_subscribers(),
 			'total_campaigns'     => $this->get_total_campaigns(),
-			'last_sync'           => get_option( 'cb_last_sync', 'Never' ),
+			'last_sync'           => \CampaignBridge\Core\Storage::get_option( 'cb_last_sync', 'Never' ),
 		);
 	}
 
@@ -112,7 +112,7 @@ class Settings_Controller {
 			'mailchimp' => array(
 				'connected' => $this->is_mailchimp_connected(),
 				'status'    => $this->get_mailchimp_status(),
-				'last_test' => get_option( 'cb_mailchimp_last_test', 'Never tested' ),
+				'last_test' => \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_last_test', 'Never tested' ),
 			),
 			'sendgrid'  => array(
 				'connected' => false,
@@ -126,7 +126,7 @@ class Settings_Controller {
 	 * Check if Mailchimp is properly connected
 	 */
 	private function is_mailchimp_connected(): bool {
-		$api_key = get_option( 'cb_mailchimp_api_key', '' );
+		$api_key = \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' );
 		return ! empty( $api_key ) && strlen( $api_key ) > 20;
 	}
 
@@ -170,7 +170,7 @@ class Settings_Controller {
 
 		// Rate limiting for destructive actions
 		$rate_limit_key = 'reset_settings_' . get_current_user_id();
-		$last_reset     = get_transient( $rate_limit_key );
+		$last_reset     = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
 
 		if ( $last_reset && ( time() - $last_reset ) < 300 ) { // 5 minutes
 			wp_die( 'Please wait 5 minutes before resetting settings again.' );
@@ -189,11 +189,11 @@ class Settings_Controller {
 		);
 
 		foreach ( $options_to_reset as $option ) {
-			delete_option( $option );
+			\CampaignBridge\Core\Storage::delete_option( $option );
 		}
 
 		// Set rate limiting transient
-		set_transient( $rate_limit_key, time(), 300 ); // 5 minutes
+		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, time(), 300 ); // 5 minutes
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -223,10 +223,10 @@ class Settings_Controller {
 		}
 
 		$settings = array(
-			'from_name'      => get_option( 'cb_from_name' ),
-			'from_email'     => get_option( 'cb_from_email' ),
-			'debug_mode'     => get_option( 'cb_debug_mode' ),
-			'cache_duration' => get_option( 'cb_cache_duration' ),
+			'from_name'      => \CampaignBridge\Core\Storage::get_option( 'cb_from_name' ),
+			'from_email'     => \CampaignBridge\Core\Storage::get_option( 'cb_from_email' ),
+			'debug_mode'     => \CampaignBridge\Core\Storage::get_option( 'cb_debug_mode' ),
+			'cache_duration' => \CampaignBridge\Core\Storage::get_option( 'cb_cache_duration' ),
 			'exported_at'    => current_time( 'mysql' ),
 			'exported_by'    => wp_get_current_user()->user_login,
 		);
@@ -330,7 +330,7 @@ class Settings_Controller {
 		$valid_options = array( 'from_name', 'from_email', 'debug_mode', 'cache_duration' );
 		foreach ( $valid_options as $option ) {
 			if ( isset( $settings[ $option ] ) ) {
-				update_option( 'cb_' . $option, $settings[ $option ] );
+				\CampaignBridge\Core\Storage::update_option( 'cb_' . $option, $settings[ $option ] );
 			}
 		}
 

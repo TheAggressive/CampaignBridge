@@ -69,7 +69,7 @@ class Post_Types_Controller {
 	 */
 	private function load_enabled_types(): void {
 		// Load from separate option (better performance than nested arrays).
-		$enabled_types = get_option( 'campaignbridge_included_post_types', array() );
+		$enabled_types = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_included_post_types', array() );
 
 		// Ensure enabled types is an array.
 		if ( ! is_array( $enabled_types ) ) {

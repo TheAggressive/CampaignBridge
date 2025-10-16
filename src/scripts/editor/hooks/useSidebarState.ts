@@ -1,5 +1,5 @@
-import { select, subscribe, useDispatch, useSelect } from '@wordpress/data';
-import { useCallback, useEffect, useState } from '@wordpress/element';
+import { useDispatch, useSelect } from '@wordpress/data';
+import { useCallback, useEffect } from '@wordpress/element';
 
 // Sidebar-specific constants (exported for reuse if needed)
 export const SIDEBAR_CONSTANTS = {
@@ -36,16 +36,15 @@ export const SIDEBAR_CONSTANTS = {
  */
 
 /**
- * Custom hook for managing sidebar states with preference persistence.
- * Uses local state management with WordPress interface store synchronization
- * for reliable state tracking and instant UI feedback.
+ * Custom hook for managing sidebar states using WordPress interface store.
+ * Follows WordPress core patterns for complementary area state management.
  *
  * Features:
+ * - **WordPress Interface Store**: Uses core/interface store as the single source of truth
  * - **Preference Persistence**: Saves sidebar states to WordPress preferences
  * - **State Restoration**: Restores saved states on component mount
  * - **Close Button Support**: Captures ComplementaryArea close button interactions
- * - **Local State Management**: Uses React state for reliable state tracking
- * - **Real-time Sync**: Synchronizes with WordPress interface store changes
+ * - **Real-time Sync**: Automatically syncs with WordPress interface store changes
  * - **Instant UI Feedback**: Immediate visual feedback on user interactions
  * - **Error Handling**: Graceful error handling with development logging
  *
@@ -75,150 +74,28 @@ export const SIDEBAR_CONSTANTS = {
  * ```
  */
 export function useSidebarState(primaryScope, secondaryScope) {
-  // Use local state for reliable tracking of sidebar states
-  const [primaryOpen, setPrimaryOpen] = useState(false);
-  const [secondaryOpen, setSecondaryOpen] = useState(false);
+  // Get sidebar states directly from WordPress interface store
+  const isPrimaryOpen = useSelect(
+    select => {
+      const state = (
+        select('core/interface') as any
+      ).getActiveComplementaryArea(primaryScope);
+      return state === SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY;
+    },
+    [primaryScope]
+  );
 
-  /**
-   * Helper function to get current sidebar state from WordPress interface store.
-   *
-   * @private
-   * @param {string} scope - The sidebar scope identifier (e.g., "campaignbridge/template-editor/primary")
-   * @param {string} identifier - The sidebar identifier (e.g., "primary")
-   * @return {boolean} Whether the sidebar is currently open
-   * @throws {Error} If scope or identifier parameters are invalid
-   */
-  const getIsOpen = (scope, identifier) => {
-    if (!scope || !identifier) {
-      throw new Error(
-        'getIsOpen: scope and identifier parameters are required'
-      );
-    }
+  const isSecondaryOpen = useSelect(
+    select => {
+      const state = (
+        select('core/interface') as any
+      ).getActiveComplementaryArea(secondaryScope);
+      return state === SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY;
+    },
+    [secondaryScope]
+  );
 
-    const state = select('core/interface').getActiveComplementaryArea(scope);
-    return state === identifier;
-  };
-
-  /**
-   * Helper function to save sidebar preference when state changes.
-   * Only saves if the preference would actually change to avoid unnecessary updates.
-   *
-   * @private
-   * @param {string} scope - The sidebar scope identifier (e.g., "campaignbridge/template-editor/primary")
-   * @param {string} identifier - The sidebar identifier (e.g., "primary")
-   * @param {string} preferenceKey - The preference key for saving state (e.g., "primarySidebarOpen")
-   * @param {string} preferencePath - The preference path for saving state (e.g., "campaignbridge/template-editor/primarySidebarOpen")
-   */
-  const saveSidebarPreference = (
-    scope,
-    identifier,
-    preferenceKey,
-    preferencePath
-  ) => {
-    const isOpen = getIsOpen(scope, identifier);
-    const currentPref = select('core/preferences').get(
-      preferencePath,
-      preferenceKey
-    );
-
-    // Only save if the preference would actually change
-    if (isOpen !== currentPref) {
-      setPreference(preferencePath, preferenceKey, isOpen);
-    }
-  };
-
-  /**
-   * Generic helper function to handle sidebar restoration from preferences.
-   * Only acts if we have a definitive saved preference (true/false).
-   * If savedState is undefined, we don't change anything to let default state prevail.
-   *
-   * @private
-   * @param {string} scope - The sidebar scope identifier (e.g., "campaignbridge/template-editor/primary")
-   * @param {string} identifier - The sidebar identifier (e.g., "primary")
-   * @param {boolean|undefined} savedState - The saved preference state (true = open, false = closed, undefined = use default)
-   */
-  const restoreSidebarState = (scope, identifier, savedState) => {
-    if (savedState === true) {
-      enableComplementaryArea(scope, identifier);
-    } else if (savedState === false) {
-      disableComplementaryArea(scope);
-    }
-    // If savedState is undefined, we don't change anything - let the default state prevail
-  };
-
-  /**
-   * Generic helper function to create a toggle handler for a sidebar.
-   * Creates a memoized function that toggles sidebar state and saves preferences.
-   * Provides immediate UI feedback by updating local state first.
-   *
-   * @private
-   * @param {string} scope - The sidebar scope identifier (e.g., "campaignbridge/template-editor/primary")
-   * @param {string} identifier - The sidebar identifier (e.g., "primary")
-   * @param {string} preferenceKey - The preference key for saving state (e.g., "primarySidebarOpen")
-   * @param {string} preferencePath - The preference path for saving state (e.g., "campaignbridge/template-editor/primarySidebarOpen")
-   * @param {Function} setState - The React state setter function for updating local state
-   * @return {Function} The memoized toggle handler function
-   */
-  const createToggleHandler = (
-    scope,
-    identifier,
-    preferenceKey,
-    preferencePath,
-    setState
-  ) => {
-    return useCallback(() => {
-      try {
-        // Get current state from interface store
-        const currentState = getIsOpen(scope, identifier);
-        const newState = !currentState;
-
-        // Update interface store
-        if (newState) {
-          enableComplementaryArea(scope, identifier);
-        } else {
-          disableComplementaryArea(scope);
-        }
-
-        // Update local state immediately for instant UI feedback
-        setState(newState);
-
-        // Save preference for persistence
-        setPreference(preferencePath, preferenceKey, newState);
-      } catch (error) {
-        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-          console.warn('useSidebarState: Error toggling sidebar:', error);
-        }
-      }
-    }, [scope, identifier, preferenceKey, preferencePath, setState]);
-  };
-
-  /**
-   * Helper function to toggle a sidebar and save its preference.
-   * @private
-   *
-   * @param {string} scope - The sidebar scope identifier
-   * @param {string} identifier - The sidebar identifier
-   * @param {string} preferenceKey - The preference key for saving state
-   * @param {string} preferencePath - The preference path for saving state
-   */
-  const toggleSidebar = (scope, identifier, preferenceKey, preferencePath) => {
-    try {
-      const isOpen = getIsOpen(scope, identifier);
-
-      if (isOpen) {
-        disableComplementaryArea(scope);
-        setPreference(preferencePath, preferenceKey, false);
-      } else {
-        enableComplementaryArea(scope, identifier);
-        setPreference(preferencePath, preferenceKey, true);
-      }
-    } catch (error) {
-      if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-        console.warn('useSidebarState: Error toggling sidebar:', error);
-      }
-    }
-  };
-  // Get saved preferences for sidebar states
+  // Get saved preferences for restoration
   const savedPrimaryOpen = useSelect(
     select =>
       (
@@ -231,6 +108,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
       ),
     []
   );
+
   const savedSecondaryOpen = useSelect(
     select =>
       (
@@ -244,89 +122,92 @@ export function useSidebarState(primaryScope, secondaryScope) {
     []
   );
 
-  // Sync local state with saved preferences on mount
-  useEffect(() => {
-    if (savedPrimaryOpen !== undefined) {
-      setPrimaryOpen(!!savedPrimaryOpen);
-    }
-  }, [savedPrimaryOpen]);
-
-  useEffect(() => {
-    if (savedSecondaryOpen !== undefined) {
-      setSecondaryOpen(!!savedSecondaryOpen);
-    }
-  }, [savedSecondaryOpen]);
-
-  // Get required functions from WordPress data package for state management
-  const { set: setPreference } = useDispatch('core/preferences');
+  // Get WordPress dispatch functions
   const { enableComplementaryArea, disableComplementaryArea } =
     useDispatch('core/interface');
+  const { set: setPreference } = useDispatch('core/preferences');
+
+  /**
+   * Restore sidebar state from saved preferences on mount.
+   * Only acts if we have a definitive saved preference (true/false).
+   * If savedState is undefined, we don't change anything to let default state prevail.
+   */
+  const restoreSidebarState = useCallback(
+    (scope: string, identifier: string, savedState: boolean | undefined) => {
+      if (savedState === true) {
+        enableComplementaryArea(scope, identifier);
+      } else if (savedState === false) {
+        disableComplementaryArea(scope);
+      }
+      // If savedState is undefined, we don't change anything - let the default state prevail
+    },
+    [enableComplementaryArea, disableComplementaryArea]
+  );
 
   // Restore sidebar states from saved preferences on mount
   useEffect(() => {
-    // Only act if we have a definitive saved preference (not undefined)
     restoreSidebarState(
       primaryScope,
       SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
-      savedPrimaryOpen
+      savedPrimaryOpen as boolean | undefined
     );
-    // If savedPrimaryOpen is undefined, we don't change anything - let the default state prevail
-  }, [
-    savedPrimaryOpen,
-    primaryScope,
-    enableComplementaryArea,
-    disableComplementaryArea,
-  ]);
+  }, [savedPrimaryOpen, primaryScope, restoreSidebarState]);
 
   useEffect(() => {
-    // Only act if we have a definitive saved preference (not undefined)
     restoreSidebarState(
       secondaryScope,
       SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
-      savedSecondaryOpen
+      savedSecondaryOpen as boolean | undefined
     );
-    // If savedSecondaryOpen is undefined, we don't change anything - let the default state prevail
-  }, [
-    savedSecondaryOpen,
-    secondaryScope,
-    enableComplementaryArea,
-    disableComplementaryArea,
-  ]);
+  }, [savedSecondaryOpen, secondaryScope, restoreSidebarState]);
 
-  // Subscribe to interface store changes to keep local state in sync
-  useEffect(() => {
-    const unsubscribe = subscribe(() => {
-      // Save preferences when state changes (including from close buttons)
-      saveSidebarPreference(
-        primaryScope,
-        SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
-        SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
-        SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN
-      );
+  /**
+   * Create a toggle handler for a sidebar that updates interface store and saves preferences.
+   */
+  const createToggleHandler = useCallback(
+    (
+      scope: string,
+      identifier: string,
+      preferenceKey: string,
+      preferencePath: string
+    ) => {
+      return () => {
+        try {
+          // Get current state from interface store
+          const currentState =
+            isPrimaryOpen && scope === primaryScope
+              ? isPrimaryOpen
+              : isSecondaryOpen && scope === secondaryScope
+                ? isSecondaryOpen
+                : false;
+          const newState = !currentState;
 
-      saveSidebarPreference(
-        secondaryScope,
-        SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
-        SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
-        SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN
-      );
+          // Update interface store
+          if (newState) {
+            enableComplementaryArea(scope, identifier);
+          } else {
+            disableComplementaryArea(scope);
+          }
 
-      // Update local state when interface store changes
-      const isPrimaryOpen = getIsOpen(
-        primaryScope,
-        SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY
-      );
-      const isSecondaryOpen = getIsOpen(
-        secondaryScope,
-        SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY
-      );
-
-      setPrimaryOpen(isPrimaryOpen);
-      setSecondaryOpen(isSecondaryOpen);
-    });
-
-    return unsubscribe;
-  }, [primaryScope, secondaryScope, setPreference]);
+          // Save preference for persistence
+          setPreference(preferencePath, preferenceKey, newState);
+        } catch (error) {
+          if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
+            console.warn('useSidebarState: Error toggling sidebar:', error);
+          }
+        }
+      };
+    },
+    [
+      isPrimaryOpen,
+      isSecondaryOpen,
+      primaryScope,
+      secondaryScope,
+      enableComplementaryArea,
+      disableComplementaryArea,
+      setPreference,
+    ]
+  );
 
   /**
    * Toggle the primary sidebar with proper state management and preference persistence.
@@ -335,8 +216,7 @@ export function useSidebarState(primaryScope, secondaryScope) {
     primaryScope,
     SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
     SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
-    SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
-    setPrimaryOpen
+    SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN
   );
 
   /**
@@ -346,14 +226,13 @@ export function useSidebarState(primaryScope, secondaryScope) {
     secondaryScope,
     SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
     SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
-    SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
-    setSecondaryOpen
+    SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN
   );
 
   return {
-    // State - from local state (more reliable)
-    isPrimaryOpen: primaryOpen,
-    isSecondaryOpen: secondaryOpen,
+    // State - directly from WordPress interface store
+    isPrimaryOpen,
+    isSecondaryOpen,
 
     // Actions
     togglePrimary,

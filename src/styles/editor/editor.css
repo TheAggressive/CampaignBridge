@@ -1,11 +1,9 @@
-/* Declare the layers you’ll use (order matters) */
+/* Declare the layers you'll use (order matters) */
 @layer theme, components, utilities;
 
 /* Import only what you want; skip base/preflight */
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
-
-/* Global design tokens are imported in styles.css */
 
 /* Editor-specific variables */
 :root {
@@ -20,246 +18,54 @@
   position: relative;
 }
 
+/* Let WordPress InterfaceSkeleton handle the layout - only override what we need */
 .cb-editor {
-  &__header {
-    padding: 1rem;
-  }
-
-  &__toolbar,
-  &__header-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  /* Loading and placeholder states */
-  &-loading,
-  &-placeholder {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #555;
-  }
-
-  &-placeholder-content {
-    text-align: center;
-  }
-
-  &__content {
-    height: 100%;
-    overflow: auto;
-  }
-
-  .components-panel__header {
-    /* padding: 0; */
-  }
-
   /* Make content section background transparent to let page background show through */
   .components-interface-skeleton__content {
     background: transparent;
   }
 
-  &__canvas {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    min-height: 0; /* required so BlockList scrolls properly */
-    flex: 1;
-    position: relative;
-
-    &-tools {
-      @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
-    }
-  }
-
-  /* Animate InterfaceSkeleton column widths when toggling sidebars */
-  .components-interface-skeleton__sidebar,
-  .components-interface-skeleton__secondary-sidebar,
-  /* Legacy classnames in some WP versions */
-  .interface-interface-skeleton__sidebar,
-  .interface-interface-skeleton__secondary-sidebar {
-    transition:
-      width 0.2s ease,
-      flex-basis 0.2s ease;
-    overflow: hidden;
-    min-width: 0;
-    will-change: width, flex-basis;
-  }
-
-  &.cb-editor--has-primary {
-    .interface-interface-skeleton__sidebar {
-      /* Core-like: Let JavaScript handle width via inline styles */
-      /* CSS handles flex behavior and transitions */
-      flex: 0 0 auto;
-      transition:
-        width 0.2s,
-        flex-basis 0.2s;
-    }
-  }
-
-  &.cb-editor--no-primary {
-    .interface-interface-skeleton__sidebar {
-      width: 0;
-      flex: 0 0 0;
-    }
-  }
-
-  &.cb-editor--has-secondary {
-    .components-interface-skeleton__secondary-sidebar,
-    .interface-interface-skeleton__secondary-sidebar {
-      /* Core-like: Let JavaScript handle width via inline styles */
-      /* CSS handles flex behavior and transitions */
-      flex: 0 0 auto;
-      transition:
-        width 0.2s,
-        flex-basis 0.2s;
-    }
-  }
-
-  &.cb-editor--no-secondary {
-    .components-interface-skeleton__secondary-sidebar,
-    .interface-interface-skeleton__secondary-sidebar {
-      width: 0;
-      flex: 0 0 0;
-    }
+  &__canvas-tools {
+    @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
   }
 }
 
-/* Sidebar and related styles nested under .cb-editor */
+/* Basic sidebar styling - widths controlled by JavaScript */
 .cb-editor {
   &__sidebar {
-    height: 100%;
+    /* Basic appearance */
     background: #fff;
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-    transition:
-      transform 0.2s ease,
-      opacity 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    will-change: transform, opacity;
 
-    &-panel {
-      width: 100%;
-      height: 100%;
-    }
-
-    &-content-inner {
-      width: 100%;
-      height: 100%;
-    }
-
-    &-inner {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-
-    &-chrome {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      padding: 6px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    }
-
-    &-content {
-      flex: 1;
-      min-height: 0;
-      overflow: auto;
-    }
-
-    /* Modifiers */
+    /* Widths controlled by JavaScript inline styles */
     &--primary {
-      /* Core-like: Width handled by JavaScript override of Framer Motion */
       border-right: 1px solid rgba(0, 0, 0, 0.06);
-
-      /* Use CSS custom property set by JavaScript, fallback to desired width */
-      width: var(--cb-sidebar-width, 288px) !important;
-      flex-basis: var(--cb-sidebar-width, 288px) !important;
-
-      &.cb-editor__sidebar--open {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      &.cb-editor__sidebar--closed {
-        transform: translateX(100%);
-        opacity: 0;
-        pointer-events: none;
-      }
     }
 
     &--secondary {
       border-left: 1px solid rgba(0, 0, 0, 0.06);
-
-      /* Use CSS custom property set by JavaScript */
-      width: var(--cb-sidebar-width, 480px) !important;
-      flex-basis: var(--cb-sidebar-width, 480px) !important;
-
-      &.cb-editor__sidebar--open {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      &.cb-editor__sidebar--closed {
-        transform: translateX(-100%);
-        opacity: 0;
-        pointer-events: none;
-      }
     }
-  }
 
-  /* Close button tweaks */
-  &__close-btn.components-button {
-    min-width: 28px;
-    height: 28px;
-    padding: 0 6px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &__sidebar {
-      transition: none;
-    }
-    .components-interface-skeleton__sidebar,
-    .components-interface-skeleton__secondary-sidebar,
-    .interface-interface-skeleton__sidebar,
-    .interface-interface-skeleton__secondary-sidebar {
-      transition: none;
+    /* Content area styling within sidebar */
+    .cb-editor__sidebar-content {
+      padding: 16px;
+      height: 100%;
+      overflow-y: auto;
     }
   }
 }
 
-/* Header layout and polish (nested BEM) */
+/* Custom header styling */
 .cb-editor {
   &__header {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 14px;
+    /* Only override if you need custom header styling */
     background: rgba(255, 255, 255, 0.92);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     backdrop-filter: saturate(160%) blur(8px);
-
-    &-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
   }
 
   &__title {
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.2;
     font-weight: 600;
     color: #111827;
-    white-space: nowrap;
   }
 
   &__divider {
@@ -268,146 +74,16 @@
     background: rgba(0, 0, 0, 0.06);
     border-radius: 1px;
   }
-
-  &__header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  /* Compact WP controls inside header */
-  &__header .components-base-control {
-    margin-bottom: 0;
-  }
-
-  &__header .components-button {
-    height: 32px;
-    padding: 0 4px;
-    border-radius: 2px; /* match native */
-
-    &.is-primary {
-      padding: 0 16px;
-    }
-  }
-
-  /* Toggle buttons */
-  &__toggle.components-button {
-    background: transparent;
-    border: none;
-    border-radius: 2px; /* match native */
-    color: #111;
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
-    &:hover {
-      background: transparent;
-      color: #2271b1;
-    }
-    &.is-active {
-      background: #111;
-      color: #fff;
-    }
-    &.is-active:hover {
-      background: #111;
-      color: #fff;
-    }
-    svg {
-      fill: currentColor;
-    }
-  }
-
-  /* Fullscreen button */
-  .cb-fullscreen-toggle.components-button {
-    background: transparent;
-    border: none;
-    border-radius: 2px; /* match native */
-    color: #111;
-    &:hover {
-      background: transparent;
-      color: #2271b1;
-    }
-    &.is-active {
-      background: #111;
-      color: #fff;
-    }
-    &.is-active:hover {
-      background: #111;
-      color: #fff;
-    }
-    svg {
-      fill: currentColor;
-    }
-
-    /* Fullscreen active (match others when active) */
-    .is-fullscreen-mode & {
-      background: #111;
-      color: #fff;
-
-      svg {
-        fill: currentColor;
-      }
-    }
-
-    /* Fullscreen active hover should remain black/white */
-    .is-fullscreen-mode &:hover {
-      background: #111;
-      color: #fff;
-
-      svg {
-        fill: currentColor;
-      }
-    }
-  }
 }
 
-/* Match WordPress block editor header proportions */
-.cb-editor {
-  &__header {
-    height: 48px;
-    padding: 0 12px;
-  }
-  &__title {
-    font-size: 14px;
-    font-weight: 600;
-  }
-  &__header .components-button {
-    height: 32px;
-    min-height: 32px;
-    padding: 0 4px;
-    border-radius: 2px; /* match native */
-  }
-  &__header .dashicon,
-  &__header svg {
-    width: 24px;
-    height: 24px;
-  }
-}
-
-/* Compact SelectControl in header */
+/* Template selector styling */
 .cb-editor {
   &__templates-select {
-    /* hide visual label spacing */
     .components-base-control__label {
       display: none;
     }
     .components-base-control__field {
       margin-bottom: 0;
-    }
-
-    .components-select-control__input,
-    .components-input-control__container,
-    .components-input-control__backdrop,
-    .components-input-control__suffix,
-    .components-input-control__input {
-      height: 32px;
-      min-height: 32px;
-    }
-
-    .components-select-control__input,
-    .components-input-control__input {
-      padding-top: 4px;
-      padding-bottom: 4px;
     }
   }
 }
@@ -471,4 +147,3 @@
     }
   }
 }
-/* Header Toggle Buttons */

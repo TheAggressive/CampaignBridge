@@ -86,7 +86,7 @@ class Form_Query_Optimizer {
 
 		// Use WordPress core functions to avoid direct database queries.
 		foreach ( $meta_data as $meta_key => $meta_value ) {
-			$result = update_post_meta( $post_id, $meta_key, $meta_value );
+			$result = \CampaignBridge\Core\Storage::update_post_meta( $post_id, $meta_key, $meta_value );
 
 			if ( false === $result ) {
 				$success = false;
@@ -136,7 +136,7 @@ class Form_Query_Optimizer {
 			if ( ! empty( $meta_keys ) ) {
 				$post_data['meta'] = array();
 				foreach ( $meta_keys as $meta_key ) {
-					$post_data['meta'][ $meta_key ] = get_post_meta( $post_id, $meta_key, true );
+					$post_data['meta'][ $meta_key ] = \CampaignBridge\Core\Storage::get_post_meta( $post_id, $meta_key, true );
 				}
 			}
 
@@ -231,7 +231,7 @@ class Form_Query_Optimizer {
 	 */
 	public function get_cached_form_data( string $form_id, callable $data_loader ) {
 		$cache_key   = "form_data_{$form_id}";
-		$cached_data = wp_cache_get( $cache_key, 'campaignbridge_forms' );
+		$cached_data = \CampaignBridge\Core\Storage::wp_cache_get( $cache_key, 'campaignbridge_forms' );
 
 		if ( false !== $cached_data ) {
 			return $cached_data;
@@ -243,7 +243,7 @@ class Form_Query_Optimizer {
 		);
 
 		// Cache for 5 minutes.
-		wp_cache_set( $cache_key, $data, 'campaignbridge_forms', 300 );
+		\CampaignBridge\Core\Storage::wp_cache_set( $cache_key, $data, 'campaignbridge_forms', 300 );
 
 		return $data;
 	}

@@ -89,7 +89,7 @@ class Status_Controller {
 			'mailchimp' => [
 				'connected' => $this->is_mailchimp_connected(),
 				'status'    => $this->get_mailchimp_status(),
-				'last_test' => get_option( 'cb_mailchimp_last_test', 'Never tested' ),
+				'last_test' => \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_last_test', 'Never tested' ),
 			],
 			'sendgrid'  => [
 				'connected' => false,
@@ -120,7 +120,7 @@ class Status_Controller {
    * @return bool
 	 */
 	private function is_mailchimp_connected(): bool {
-		$api_key = get_option( 'cb_mailchimp_api_key', '' );
+		$api_key = \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' );
 		return ! empty( $api_key ) && strlen( $api_key ) > 20;
 	}
 
@@ -204,7 +204,7 @@ class Status_Controller {
 		}
 
 		// Clear any cached stats
-		delete_transient( 'cb_dashboard_stats' );
+		\CampaignBridge\Core\Storage::delete_transient( 'cb_dashboard_stats' );
 
 		// Reload fresh data
 		$this->load_campaign_stats();
@@ -234,14 +234,14 @@ class Status_Controller {
 
 		// Rate limiting for cache clearing
 		$rate_limit_key = 'clear_cache_' . get_current_user_id();
-		$last_clear = get_transient( $rate_limit_key );
+		$last_clear = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
 
 		if ( $last_clear && ( time() - $last_clear ) < 60 ) { // 1 minute
 			wp_die( 'Please wait 1 minute before clearing cache again.' );
 		}
 
 		// Clear plugin caches
-		wp_cache_flush_group( 'campaignbridge' );
+		\CampaignBridge\Core\Storage::wp_cache_flush_group( 'campaignbridge' );
 
 		// Clear WordPress object cache if available
 		if ( function_exists( 'wp_cache_flush' ) ) {
@@ -249,7 +249,7 @@ class Status_Controller {
 		}
 
 		// Set rate limiting transient
-		set_transient( $rate_limit_key, time(), 60 ); // 1 minute
+		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, time(), 60 ); // 1 minute
 
 		wp_redirect(add_query_arg([
 			'page'          => 'campaignbridge-status',

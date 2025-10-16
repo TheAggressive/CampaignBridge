@@ -40,7 +40,7 @@ $clear_cache_form = \CampaignBridge\Admin\Core\Form::make( 'clear_cache' )
 		function ( $data ) {
 			// Clear plugin caches.
 			wp_cache_flush();
-			delete_transient( 'campaignbridge_stats' );
+			\CampaignBridge\Core\Storage::delete_transient( 'campaignbridge_stats' );
 			return $data;
 		}
 	)

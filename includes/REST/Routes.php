@@ -218,7 +218,7 @@ class Routes extends Abstract_Rest_Controller {
 		}
 
 		// Get Post_Types settings instead of main settings.
-		$post_types_settings = get_option( 'campaignbridge_post_types', array() );
+		$post_types_settings = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_post_types', array() );
 
 		// Get included post types (default to all public if none specified).
 		$included_types = array();

@@ -37,20 +37,38 @@ export function useEditorLayout() {
   // Sidebar tab state
   const [sidebarActiveTab, setSidebarActiveTab] = useState('template-settings');
 
-  // Track active complementary areas
+  // Track active complementary areas with better reactivity
   const activePrimary = useSelect(
-    select =>
-      (
-        select('core/interface') as WordPressInterface
-      ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.PRIMARY),
+    select => {
+      try {
+        return (
+          select('core/interface') as WordPressInterface
+        ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.PRIMARY);
+      } catch (error) {
+        console.warn(
+          'useEditorLayout: Error getting primary sidebar state:',
+          error
+        );
+        return undefined;
+      }
+    },
     [SIDEBAR_CONSTANTS.SCOPES.PRIMARY]
   );
 
   const activeSecondary = useSelect(
-    select =>
-      (
-        select('core/interface') as WordPressInterface
-      ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.SECONDARY),
+    select => {
+      try {
+        return (
+          select('core/interface') as WordPressInterface
+        ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.SECONDARY);
+      } catch (error) {
+        console.warn(
+          'useEditorLayout: Error getting secondary sidebar state:',
+          error
+        );
+        return undefined;
+      }
+    },
     [SIDEBAR_CONSTANTS.SCOPES.SECONDARY]
   );
 
@@ -105,11 +123,11 @@ export function useEditorLayout() {
       : LAYOUT_CONSTANTS.MODIFIERS.NO_SECONDARY
   }`;
 
-  // Sidebar configuration
+  // Sidebar configuration with dynamic state-based classes
   const primarySidebarProps = {
     scope: SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
     identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
-    className: LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_PRIMARY,
+    className: `${LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_PRIMARY} cb-editor__sidebar--${activePrimary === SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY ? 'open' : 'closed'}`,
     isPinnable: false,
   };
 
@@ -118,7 +136,7 @@ export function useEditorLayout() {
     identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
     closeLabel: 'Close list view',
     isSecondary: true,
-    className: LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_SECONDARY,
+    className: `${LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_SECONDARY} cb-editor__sidebar--${activeSecondary === SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY ? 'open' : 'closed'}`,
     isPinnable: false,
     header: 'List View',
   };

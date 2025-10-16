@@ -32,22 +32,6 @@ class CampaignBridge_Uninstaller {
 	private const PLUGIN_SLUG = 'campaignbridge';
 	private const CPT_SLUG    = 'cb_email_template';
 
-
-	/**
-	 * Option name constants.
-	 */
-	private const OPTION_SETTINGS      = 'campaignbridge_settings';
-	private const OPTION_POST_TYPES    = 'campaignbridge_post_types';
-
-	/**
-	 * Transient prefix patterns.
-	 */
-	private const TRANSIENT_PREFIXES = array(
-		'cb_mc_',
-		'cb_campaignbridge_',
-		'campaignbridge_',
-	);
-
 	/**
 	 * Initialize the uninstaller.
 	 */
@@ -121,6 +105,10 @@ class CampaignBridge_Uninstaller {
 			$user_meta_deleted = self::cleanup_user_meta();
 			$success_count    += $user_meta_deleted;
 
+			// 5. Clean up cache data.
+			$cache_cleaned = self::cleanup_cache();
+			$success_count += $cache_cleaned;
+
 			// Report results.
 			self::log(
 				sprintf(
@@ -145,10 +133,7 @@ class CampaignBridge_Uninstaller {
 	 * @return int Number of options deleted.
 	 */
 	private static function cleanup_options(): int {
-		$options_to_delete = array(
-			self::OPTION_SETTINGS,
-			self::OPTION_POST_TYPES,
-		);
+		$options_to_delete = \CampaignBridge\Core\Storage_Prefixes::get_all_option_keys();
 
 		$deleted = 0;
 		foreach ( $options_to_delete as $option_name ) {
@@ -206,42 +191,36 @@ class CampaignBridge_Uninstaller {
 	 * @return int Number of transients deleted.
 	 */
 	private static function cleanup_transients(): int {
+		global $wpdb;
 		$deleted = 0;
 
 		try {
-			foreach ( self::TRANSIENT_PREFIXES as $prefix ) {
+			$transient_prefixes = \CampaignBridge\Core\Storage_Prefixes::get_all_transient_prefixes();
 
-				// Clean up transients using WordPress options API (avoid direct database calls).
+			foreach ( $transient_prefixes as $prefix ) {
+				// Use direct database queries to efficiently delete all transients with this prefix.
+				// This is more efficient than trying individual transient keys.
 				$transient_count = 0;
 
-				// Use a batch approach to avoid direct database queries
-				// We'll try common transient patterns for this prefix.
-				$batch_size = 50;
-				$offset     = 0;
+				// Delete transient values.
+				$transient_count += $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$wpdb->prepare(
+						"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+						$wpdb->esc_like( '_transient_' . $prefix ) . '%'
+					)
+				);
 
-				while ( $offset < $batch_size ) {
-					// Try common transient names with this prefix.
-					$transient_key = $prefix . 'batch_' . $offset;
-
-					// Check if transient exists using WordPress function.
-					if ( get_transient( $transient_key ) !== false ) {
-						// Delete the transient using WordPress function.
-						if ( delete_transient( $transient_key ) ) {
-							++$transient_count;
-						}
-					}
-
-					++$offset;
-
-					// Stop if we've processed a reasonable batch.
-					if ( $transient_count > 100 ) {
-						break;
-					}
-				}
+				// Delete transient timeouts.
+				$transient_count += $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$wpdb->prepare(
+						"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+						$wpdb->esc_like( '_transient_timeout_' . $prefix ) . '%'
+					)
+				);
 
 				if ( $transient_count > 0 ) {
 					$deleted += $transient_count;
-					self::log( "Deleted {$transient_count} transients with prefix: {$prefix}" );
+					self::log( "Deleted {$transient_count} transient entries with prefix: {$prefix}" );
 				}
 			}
 		} catch ( \Exception $e ) {
@@ -260,12 +239,8 @@ class CampaignBridge_Uninstaller {
 		$deleted = 0;
 
 		try {
-			// Delete user meta with plugin prefix using WordPress functions.
-			$meta_prefixes = array(
-				'campaignbridge_',
-				'cb_email_',
-				'cb_template_',
-			);
+			// Delete user meta with plugin prefix using Storage_Prefixes.
+			$meta_prefixes = \CampaignBridge\Core\Storage_Prefixes::get_all_user_meta_prefixes();
 
 			foreach ( $meta_prefixes as $prefix ) {
 				// Get all users.
@@ -293,6 +268,38 @@ class CampaignBridge_Uninstaller {
 		}
 
 		return $deleted;
+	}
+
+	/**
+	 * Clean up cache data.
+	 *
+	 * @return int Number of cache groups cleaned.
+	 */
+	private static function cleanup_cache(): int {
+		$cleaned = 0;
+
+		try {
+			// Clear plugin cache groups using Storage wrapper.
+			$cache_groups = array(
+				'campaignbridge',
+				'campaignbridge_forms',
+				'campaignbridge_queries',
+			);
+
+			foreach ( $cache_groups as $group ) {
+				// Use Storage wrapper for consistent cache group prefixing.
+				\CampaignBridge\Core\Storage::wp_cache_flush_group( $group );
+				++$cleaned;
+			}
+
+			if ( $cleaned > 0 ) {
+				self::log( "Cleaned {$cleaned} cache groups" );
+			}
+		} catch ( \Exception $e ) {
+			self::log( 'Error cleaning up cache: ' . $e->getMessage() );
+		}
+
+		return $cleaned;
 	}
 
 	/**

@@ -486,7 +486,7 @@ class Form_Security {
 		$rate_limit_key = $user_id . '_' . $client_ip;
 		$transient_key  = 'form_rate_limit_' . $this->form_id . '_' . md5( $rate_limit_key );
 
-		$attempts = \get_transient( $transient_key );
+		$attempts = \CampaignBridge\Core\Storage::get_transient( $transient_key );
 
 		if ( false === $attempts ) {
 			$attempts = 0;
@@ -506,7 +506,7 @@ class Form_Security {
 			return false; // Rate limited.
 		}
 
-		\set_transient( $transient_key, $attempts + 1, $time_window );
+		\CampaignBridge\Core\Storage::set_transient( $transient_key, $attempts + 1, $time_window );
 		return true;
 	}
 

@@ -65,7 +65,7 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 		function ( $data, $result ) {
 			if ( $result ) {
 				die();
-				wp_cache_delete( 'campaignbridge_email_config', 'campaignbridge' );
+				\CampaignBridge\Core\Storage::wp_cache_delete( 'campaignbridge_email_config', 'campaignbridge' );
 				error_log(
 					sprintf(
 						'General email settings updated by user %d: %s -> %s',

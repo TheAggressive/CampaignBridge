@@ -1,41 +1,13 @@
 parameters:
-  level: 8
-  paths:
-    - includes/
-    - campaignbridge.php
-  excludePaths:
-    - includes/Admin_Legacy/
-    - tests/
-    - includes/Admin/Screens/file-upload-demo.php
-    - includes/Admin/Screens/forms-demo.php
-    - includes/Admin/Screens/settings/general.php
-    - includes/Admin/Screens/settings/providers.php
-    - includes/Admin/Screens/form-simple-example.php
-  bootstrapFiles:
-    - includes/Autoloader.php
-  stubFiles:
-    - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
-  parallel:
-    processTimeout: 300.0
-    maximumNumberOfProcesses: 1
-  ignoreErrors:
-    # Placeholder methods for future implementation
-    - '#Method .*::get_critical_css_url\(\) is unused#'
-    - '#Method .*::get_critical_js_url\(\) is unused#'
-    - '#Method .*::get_critical_css_url\(\) never returns string so it can be removed from the return type#'
-    - '#Method .*::get_critical_js_url\(\) never returns string so it can be removed from the return type#'
-    # Method used as array callback in META_FIELD_CONFIG
-    - '#Static method CampaignBridge\\Post_Types\\Post_Type_Email_Template::sanitize_category_field\(\) is unused#'
-    # Form_File_Uploader does return WP_Error but PHPStan doesn't recognize it
-    - '#Method CampaignBridge\\Admin\\Core\\Forms\\Form_File_Uploader::create_attachment\(\) never returns WP_Error so it can be removed from the return type#'
-    # Property used as constructor parameter storage for future implementation
-    - '#Property CampaignBridge\\REST\\Editor_Settings_Routes::\$option_name is never read, only written#'
-    # Static properties set during initialization for future use
-    - '#Static property CampaignBridge\\REST\\Routes::\$option_name is never read, only written#'
-    - '#Static property CampaignBridge\\REST\\Routes::\$providers is never read, only written#'
-    # WordPress core function accepts WP_Post_Type as second parameter
-    - '#Parameter .*block_editor_context.*of function get_block_editor_settings expects WP_Block_Editor_Context, WP_Post_Type given#'
-    # WP_REST_Request generics are not needed for our use case and cause PHPCS conflicts
-    - '#Method .* has parameter .* with generic class WP_REST_Request but does not specify its types: T#'
-  reportUnmatchedIgnoredErrors: false
-  treatPhpDocTypesAsCertain: false
+	level: 6
+	paths:
+		- includes/
+	scanDirectories:
+		- includes/
+		- tools/
+	stubFiles:
+		- stubs/wordpress.php
+
+rules:
+	# Custom rules for CampaignBridge
+	- CampaignBridge\Tools\PHPStan\Rules\NoDirectWordPressStorageFunctionsRule

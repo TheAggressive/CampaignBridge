@@ -210,7 +210,7 @@ class Error_Handler {
 			return self::LOG_LEVEL_ERROR; // Default to most restrictive level for non-admins.
 		}
 
-		$level = get_option( 'campaignbridge_log_level', 'INFO' );
+		$level = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_log_level', 'INFO' );
 
 		return match ( strtoupper( $level ) ) {
 			'DEBUG'   => self::LOG_LEVEL_DEBUG,

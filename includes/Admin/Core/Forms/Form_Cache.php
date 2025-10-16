@@ -195,7 +195,7 @@ class Form_Cache {
 	 * @return void
 	 */
 	public function clear_all_cache(): void {
-		wp_cache_flush_group( self::CACHE_GROUP );
+		\CampaignBridge\Core\Storage::wp_cache_flush_group( self::CACHE_GROUP );
 	}
 
 	/**

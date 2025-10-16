@@ -89,7 +89,7 @@ abstract class Abstract_Rest_Controller {
 	 * @return bool True if post type is allowed.
 	 */
 	protected static function is_post_type_allowed( string $post_type, string $option_name ): bool {
-		$post_types_settings = get_option( $option_name, array() );
+		$post_types_settings = \CampaignBridge\Core\Storage::get_option( $option_name, array() );
 		$allowed_types       = isset( $post_types_settings['included_post_types'] ) && is_array( $post_types_settings['included_post_types'] )
 			? array_map( 'sanitize_key', $post_types_settings['included_post_types'] )
 			: array(); // If no specific types configured, allow all.

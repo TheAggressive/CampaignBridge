@@ -42,7 +42,7 @@ class Performance_Optimizer {
 	 * @return mixed
 	 */
 	public function get_cached_data( string $key, callable $callback, int $ttl = self::CACHE_MEDIUM, string $group = self::CACHE_GROUP_QUERIES ): mixed {
-		$cached = wp_cache_get( $key, $group );
+		$cached = \CampaignBridge\Core\Storage::wp_cache_get( $key, $group );
 
 		if ( false !== $cached ) {
 			return $cached;
@@ -50,7 +50,7 @@ class Performance_Optimizer {
 
 		$data = $callback();
 
-		wp_cache_set( $key, $data, $group, $ttl );
+		\CampaignBridge\Core\Storage::wp_cache_set( $key, $data, $group, $ttl );
 
 		return $data;
 	}
@@ -64,14 +64,14 @@ class Performance_Optimizer {
 	 * @return mixed
 	 */
 	public function get_transient_data( string $key, callable $callback, int $ttl = self::CACHE_LONG ): mixed {
-		$cached = get_transient( $this->get_transient_key( $key ) );
+		$cached = \CampaignBridge\Core\Storage::get_transient( $key );
 
 		if ( false !== $cached ) {
 			return $cached;
 		}
 
 		$data = $callback();
-		set_transient( $this->get_transient_key( $key ), $data, $ttl );
+		\CampaignBridge\Core\Storage::set_transient( $key, $data, $ttl );
 
 		return $data;
 	}
@@ -147,7 +147,7 @@ class Performance_Optimizer {
 	 * @return void
 	 */
 	public function invalidate_cache_group( string $group ): void {
-		wp_cache_flush_group( $group );
+		\CampaignBridge\Core\Storage::wp_cache_flush_group( $group );
 	}
 
 	/**
@@ -158,24 +158,26 @@ class Performance_Optimizer {
 	public function clear_plugin_transients(): void {
 		global $wpdb;
 
-		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options}
-				 WHERE option_name LIKE %s",
-				'%_transient_campaignbridge_%'
-			)
-		);
+		// Get all transient prefixes from Storage_Prefixes.
+		$prefixes = \CampaignBridge\Core\Storage_Prefixes::get_all_transient_prefixes();
+
+		foreach ( $prefixes as $prefix ) {
+			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+					'%_transient_' . $wpdb->esc_like( $prefix ) . '%'
+				)
+			);
+
+			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+					'%_transient_timeout_' . $wpdb->esc_like( $prefix ) . '%'
+				)
+			);
+		}
 	}
 
-	/**
-	 * Generate transient key with namespace
-	 *
-	 * @param string $key Base key.
-	 * @return string Namespaced transient key
-	 */
-	private function get_transient_key( string $key ): string {
-		return 'campaignbridge_' . $key;
-	}
 
 	/**
 	 * Performance monitoring for expensive operations

@@ -14,7 +14,7 @@ import { useEditorData } from '../hooks/useEditorData';
 import { LAYOUT_CONSTANTS, useEditorLayout } from '../hooks/useEditorLayout';
 import { useEditorSettings } from '../hooks/useEditorSettings';
 import { useNotices } from '../hooks/useNotices';
-import { SIDEBAR_CONSTANTS } from '../hooks/useSidebarState';
+import { SIDEBAR_CONSTANTS, useSidebarState } from '../hooks/useSidebarState';
 import { blockPatternCategories, blockPatterns } from '../utils/blockPatterns';
 import Content from './Content';
 import { ErrorState, LoadingState } from './EditorStates';
@@ -104,6 +104,175 @@ export default function EditorChrome({
       ) as boolean,
     []
   );
+
+  // Get sidebar states using the dedicated hook for consistent state management
+  // This replaces manual useSelect calls and ensures proper state restoration from preferences
+  const { isPrimaryOpen, isSecondaryOpen } = useSidebarState(
+    SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+    SIDEBAR_CONSTANTS.SCOPES.SECONDARY
+  );
+
+  // Control sidebar widths with JavaScript - aggressively override WordPress inline styles
+  useEffect(() => {
+    const findAndControlSidebars = () => {
+      // Find all sidebar-related elements that might have WordPress inline styles
+      const allSidebarElements = document.querySelectorAll(
+        '[class*="cb-editor__sidebar"], [class*="complementary-area"], [class*="interface-interface-skeleton__sidebar"]'
+      );
+
+      allSidebarElements.forEach(element => {
+        const htmlElement = element as HTMLElement;
+        // Remove any WordPress inline width styles
+        htmlElement.style.removeProperty('width');
+      });
+
+      // Find sidebar elements by their class names
+      const primarySidebar = document.querySelector(
+        '.cb-editor__sidebar.cb-editor__sidebar--primary'
+      ) as HTMLElement;
+      const secondarySidebar = document.querySelector(
+        '.cb-editor__sidebar.cb-editor__sidebar--secondary'
+      ) as HTMLElement;
+
+      if (primarySidebar) {
+        // Force override with !important-like behavior using setProperty
+        primarySidebar.style.setProperty(
+          'width',
+          isPrimaryOpen ? '18rem' : '0px',
+          'important'
+        );
+        primarySidebar.style.setProperty(
+          'overflow',
+          isPrimaryOpen ? 'visible' : 'hidden',
+          'important'
+        );
+        primarySidebar.style.setProperty('transition', 'none', 'important');
+
+        // Also override parent elements that might have WordPress styles
+        let parent = primarySidebar.parentElement;
+        let depth = 0;
+        while (parent && parent !== document.body && depth < 5) {
+          if (
+            parent.classList.contains('complementary-area') ||
+            parent.classList.contains(
+              'interface-interface-skeleton__sidebar'
+            ) ||
+            parent.classList.contains('components-panel')
+          ) {
+            parent.style.setProperty(
+              'width',
+              isPrimaryOpen ? '18rem' : '0px',
+              'important'
+            );
+            parent.style.setProperty(
+              'overflow',
+              isPrimaryOpen ? 'visible' : 'hidden',
+              'important'
+            );
+            parent.style.setProperty('transition', 'none', 'important');
+          }
+          parent = parent.parentElement;
+          depth++;
+        }
+      }
+
+      if (secondarySidebar) {
+        // Force override with !important-like behavior using setProperty
+        secondarySidebar.style.setProperty(
+          'width',
+          isSecondaryOpen ? '24rem' : '0px',
+          'important'
+        );
+        secondarySidebar.style.setProperty(
+          'overflow',
+          isSecondaryOpen ? 'visible' : 'hidden',
+          'important'
+        );
+        secondarySidebar.style.setProperty('transition', 'none', 'important');
+
+        // Also override parent elements that might have WordPress styles
+        let parent = secondarySidebar.parentElement;
+        let depth = 0;
+        while (parent && parent !== document.body && depth < 5) {
+          if (
+            parent.classList.contains('complementary-area') ||
+            parent.classList.contains(
+              'interface-interface-skeleton__sidebar'
+            ) ||
+            parent.classList.contains('components-panel')
+          ) {
+            parent.style.setProperty(
+              'width',
+              isSecondaryOpen ? '24rem' : '0px',
+              'important'
+            );
+            parent.style.setProperty(
+              'overflow',
+              isSecondaryOpen ? 'visible' : 'hidden',
+              'important'
+            );
+            parent.style.setProperty('transition', 'none', 'important');
+          }
+          parent = parent.parentElement;
+          depth++;
+        }
+      }
+    };
+
+    // Run immediately
+    findAndControlSidebars();
+
+    // Run after DOM updates
+    requestAnimationFrame(findAndControlSidebars);
+
+    // Run multiple times to catch WordPress style updates
+    const timeoutIds = [
+      setTimeout(findAndControlSidebars, 50),
+      setTimeout(findAndControlSidebars, 150),
+      setTimeout(findAndControlSidebars, 300),
+      setTimeout(findAndControlSidebars, 500),
+      setTimeout(findAndControlSidebars, 1000), // Extra delay for slow-loading WordPress styles
+    ];
+
+    // Set up a MutationObserver to watch for style changes
+    const observer = new MutationObserver(mutations => {
+      let shouldUpdate = false;
+      mutations.forEach(mutation => {
+        if (
+          mutation.type === 'attributes' &&
+          mutation.attributeName === 'style'
+        ) {
+          shouldUpdate = true;
+        }
+      });
+      if (shouldUpdate) {
+        // Debounce the updates to avoid excessive calls
+        setTimeout(findAndControlSidebars, 10);
+      }
+    });
+
+    // Start observing after a delay to let WordPress initialize
+    const observerTimeout = setTimeout(() => {
+      const sidebarContainer =
+        document.querySelector('.interface-interface-skeleton__body') ||
+        document.querySelector('.interface-interface-skeleton') ||
+        document.body;
+      if (sidebarContainer) {
+        observer.observe(sidebarContainer, {
+          attributes: true,
+          subtree: true,
+          attributeFilter: ['style'],
+          attributeOldValue: true,
+        });
+      }
+    }, 200);
+
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+      clearTimeout(observerTimeout);
+      observer.disconnect();
+    };
+  }, [isPrimaryOpen, isSecondaryOpen]);
 
   // Unified update handler using custom hook
   const handleBlocksUpdate = useCallback(
