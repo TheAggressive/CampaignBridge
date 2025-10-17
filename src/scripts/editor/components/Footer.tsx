@@ -1,4 +1,4 @@
-import { BlockBreadcrumb } from '@wordpress/block-editor/build/components/block-breadcrumb';
+import { BlockBreadcrumb } from '@wordpress/block-editor';
 
 /**
  * Footer Component

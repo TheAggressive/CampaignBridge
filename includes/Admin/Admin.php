@@ -138,7 +138,6 @@ class Admin {
 
 		// Global admin assets using Asset_Manager.
 		Asset_Manager::enqueue_asset( 'cb-admin-global-styles', 'dist/styles/styles.asset.php' );
-		Asset_Manager::enqueue_asset( 'cb-admin-global-scripts', 'dist/scripts/admin/settings.asset.php' );
 
 		// Localize global data.
 		wp_localize_script(

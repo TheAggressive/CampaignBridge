@@ -165,27 +165,26 @@ class Screen_Context {
 	 * @return array<string, mixed> Asset data array.
 	 */
 	private function prepare_asset_data( string $asset_file_path, array $additional_deps, array $default_deps = array(), bool $in_footer = true ): array {
-		// Try to load asset data from corresponding .asset.php file.
-		$asset_php_path = str_replace( array( '.js', '.css' ), '.asset.php', $asset_file_path );
-		$asset_data     = \CampaignBridge\Admin\Asset_Manager::load_asset_data_static( $asset_php_path );
+		// Load asset data from the .asset.php file.
+		$asset_data = \CampaignBridge\Admin\Asset_Manager::load_asset_data_static( $asset_file_path );
 
 		if ( $asset_data ) {
 			// Merge dependencies for .asset.php files.
 			$asset_data['dependencies'] = array_merge( $default_deps, $asset_data['dependencies'], $additional_deps );
 
 			// Set footer option for scripts.
-			if ( str_ends_with( $asset_file_path, '.js' ) ) {
+			if ( str_ends_with( $asset_file_path, '.js' ) || str_ends_with( $asset_file_path, '.asset.php' ) ) {
 				$asset_data['in_footer'] = $in_footer;
 			}
 		} else {
-			// No .asset.php file found - create default asset data for direct file paths.
+			// No .asset.php file found - create default asset data.
 			$asset_data = array(
 				'dependencies' => array_merge( $default_deps, $additional_deps ),
 				'version'      => \CampaignBridge_Plugin::VERSION,
 			);
 
 			// Set footer option for scripts.
-			if ( str_ends_with( $asset_file_path, '.js' ) ) {
+			if ( str_ends_with( $asset_file_path, '.js' ) || str_ends_with( $asset_file_path, '.asset.php' ) ) {
 				$asset_data['in_footer'] = $in_footer;
 			}
 		}

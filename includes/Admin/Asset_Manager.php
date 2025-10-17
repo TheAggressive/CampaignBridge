@@ -134,10 +134,9 @@ class Asset_Manager {
 	 * @return void
 	 */
 	private static function enqueue_asset_style_internal( string $handle, string $asset_path, array $asset_data = array() ): void {
-		$asset_info = self::prepare_asset_enqueue( $asset_path, $asset_data, '.css', 'wp_enqueue_style' );
+		$asset_info = self::prepare_asset_enqueue( $asset_path, $asset_data, '.css' );
 
-		call_user_func(
-			$asset_info['enqueue_function'],
+		\wp_enqueue_style(
 			$handle,
 			$asset_info['url'],
 			$asset_info['dependencies'],
@@ -154,10 +153,9 @@ class Asset_Manager {
 	 * @return void
 	 */
 	private static function enqueue_asset_script_internal( string $handle, string $asset_path, array $asset_data = array() ): void {
-		$asset_info = self::prepare_asset_enqueue( $asset_path, $asset_data, '.js', 'wp_enqueue_script' );
+		$asset_info = self::prepare_asset_enqueue( $asset_path, $asset_data, '.js' );
 
-		call_user_func(
-			$asset_info['enqueue_function'],
+		\wp_enqueue_script(
 			$handle,
 			$asset_info['url'],
 			$asset_info['dependencies'],
@@ -172,32 +170,29 @@ class Asset_Manager {
 	 * @param string               $asset_path      Asset path.
 	 * @param array<string, mixed> $asset_data      Optional asset data override.
 	 * @param string               $file_extension  File extension (.css or .js).
-	 * @param string               $enqueue_function WordPress enqueue function name.
 	 * @return array<string, mixed> Prepared asset information.
 	 */
-	private static function prepare_asset_enqueue( string $asset_path, array $asset_data, string $file_extension, string $enqueue_function ): array {
+	private static function prepare_asset_enqueue( string $asset_path, array $asset_data, string $file_extension ): array {
 		$plugin_url = \CampaignBridge_Plugin::url();
 
 		// If asset_data is provided, it means we're dealing with a .asset.php file.
 		if ( ! empty( $asset_data ) ) {
 			$asset_path = str_replace( '.asset.php', $file_extension, $asset_path );
 			return array(
-				'url'              => $plugin_url . $asset_path,
-				'dependencies'     => $asset_data['dependencies'],
-				'version'          => $asset_data['version'],
-				'in_footer'        => $asset_data['in_footer'] ?? null,
-				'enqueue_function' => $enqueue_function,
+				'url'          => $plugin_url . $asset_path,
+				'dependencies' => $asset_data['dependencies'],
+				'version'      => $asset_data['version'],
+				'in_footer'    => $asset_data['in_footer'] ?? null,
 			);
 		}
 
 		// Check if this is a direct file path.
 		if ( strpos( $asset_path, $file_extension ) !== false ) {
 			return array(
-				'url'              => $plugin_url . $asset_path,
-				'dependencies'     => array(),
-				'version'          => \CampaignBridge_Plugin::VERSION,
-				'in_footer'        => ( '.js' === $file_extension ) ? true : null,
-				'enqueue_function' => $enqueue_function,
+				'url'          => $plugin_url . $asset_path,
+				'dependencies' => array(),
+				'version'      => \CampaignBridge_Plugin::VERSION,
+				'in_footer'    => ( '.js' === $file_extension ) ? true : null,
 			);
 		}
 
@@ -206,11 +201,10 @@ class Asset_Manager {
 		$asset_path        = str_replace( '.asset.php', $file_extension, $asset_path );
 
 		return array(
-			'url'              => $plugin_url . $asset_path,
-			'dependencies'     => $loaded_asset_data['dependencies'],
-			'version'          => $loaded_asset_data['version'],
-			'in_footer'        => ( '.js' === $file_extension ) ? true : null,
-			'enqueue_function' => $enqueue_function,
+			'url'          => $plugin_url . $asset_path,
+			'dependencies' => $loaded_asset_data['dependencies'],
+			'version'      => $loaded_asset_data['version'],
+			'in_footer'    => ( '.js' === $file_extension ) ? true : null,
 		);
 	}
 

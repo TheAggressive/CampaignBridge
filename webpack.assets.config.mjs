@@ -14,13 +14,13 @@ function buildEntries() {
   const entries = {};
 
   // Scripts: src/scripts/**/*.js -> dist/scripts/**/*.js (preserve structure)
-  const jsFiles = fg.sync('src/scripts/**/*.js', { cwd });
+  const jsFiles = fg.sync('src/scripts/**/*.{js,ts,tsx}', { cwd });
   jsFiles.forEach(file => {
     // Keep the full relative path from src/scripts
     const rel = toPosix(
       path.relative(path.join(cwd, 'src/scripts'), path.join(cwd, file))
     );
-    const name = rel.replace(/\.js$/i, '');
+    const name = rel.replace(/\.(js|ts|tsx)$/i, '');
     // This creates entries like: 'scripts/admin/template-manager'
     entries[`scripts/${name}`] = path.resolve(cwd, file);
   });

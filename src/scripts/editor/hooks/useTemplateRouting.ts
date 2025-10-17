@@ -1,19 +1,22 @@
-import { useCallback, useEffect, useMemo } from '@wordpress/element';
+import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
 import { getParam, setParamAndReload } from '../utils/url';
+
 
 // Template routing-specific constants (exported for reuse if needed)
 export const ROUTING_CONSTANTS = {
   URL_PARAMS: {
     TEMPLATE_ID: 'post_id',
   },
-};
+} as const;
 
 /**
- * @typedef {Object} TemplateRoutingState
- * @property {number|null} currentId - Currently selected template ID from URL parameter
- * @property {(id: number) => void} selectTemplate - Function to select a new template and reload page
- * @property {boolean} isValidId - Whether currentId is a valid template ID
+ * Template routing state interface
  */
+interface TemplateRoutingState {
+  currentId: number | null;
+  selectTemplate: (id: number) => void;
+  isValidId: boolean;
+}
 
 /**
  * Enhanced useTemplateRouting
@@ -26,7 +29,7 @@ export const ROUTING_CONSTANTS = {
  * - **Input Validation**: Validates template IDs before navigation
  * - **Enhanced Error Handling**: Comprehensive error handling with development logging
  * - **Browser Navigation Support**: Handles browser back/forward button navigation
- * - **Type Safety**: JSDoc typedefs for better IDE support and documentation
+ * - **Type Safety**: Full TypeScript typing
  * - **Performance Optimized**: Efficient memoization and callback stability
  * - **URL Change Detection**: Automatically responds to URL parameter changes
  *
@@ -50,7 +53,10 @@ export const ROUTING_CONSTANTS = {
  * }
  * ```
  */
-export function useTemplateRouting() {
+export function useTemplateRouting(): TemplateRoutingState {
+  // Track URL changes to make currentId reactive
+  const [urlKey, setUrlKey] = useState(0);
+
   // Parse current template ID from URL with enhanced error handling
   const currentId = useMemo(() => {
     try {
@@ -59,22 +65,14 @@ export function useTemplateRouting() {
 
       const parsed = Number(raw);
       if (isNaN(parsed) || parsed <= 0) {
-        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-          console.warn(
-            `useTemplateRouting: Invalid ${ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID} parameter: ${raw}`
-          );
-        }
         return null;
       }
 
       return parsed;
     } catch (error) {
-      if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-        console.error('useTemplateRouting: Error parsing template ID:', error);
-      }
       return null;
     }
-  }, []);
+  }, [urlKey]);
 
   // Computed property for ID validity
   const isValidId = useMemo(() => {
@@ -82,31 +80,15 @@ export function useTemplateRouting() {
   }, [currentId]);
 
   // Enhanced template selection with validation
-  const selectTemplate = useCallback(id => {
+  const selectTemplate = useCallback((id: number) => {
     try {
-      if (!id) {
-        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-          console.warn(
-            'useTemplateRouting: Attempted to select invalid template ID:',
-            id
-          );
-        }
+      if (!id || !Number.isInteger(id) || id <= 0) {
         return;
       }
 
-      const numericId = Number(id);
-      if (isNaN(numericId) || numericId <= 0 || !Number.isInteger(numericId)) {
-        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-          console.warn(`useTemplateRouting: Invalid template ID: ${id}`);
-        }
-        return;
-      }
-
-      setParamAndReload(ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID, numericId);
+      setParamAndReload(ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID, id);
     } catch (error) {
-      if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-        console.error('useTemplateRouting: Error selecting template:', error);
-      }
+      // Silently handle errors
     }
   }, []);
 
@@ -114,20 +96,10 @@ export function useTemplateRouting() {
   useEffect(() => {
     const handleUrlChange = () => {
       try {
-        // Force page reload when URL changes via browser navigation
-        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-          console.log(
-            'useTemplateRouting: URL changed via browser navigation, reloading...'
-          );
-        }
-        window.location.reload();
+        // Update URL key to trigger re-evaluation of currentId
+        setUrlKey(prev => prev + 1);
       } catch (error) {
-        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-          console.error(
-            'useTemplateRouting: Error handling URL change:',
-            error
-          );
-        }
+        // Silently handle errors
       }
     };
 

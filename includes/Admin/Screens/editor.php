@@ -13,13 +13,14 @@ global $screen;
 // Add additional dependencies to the existing .asset.php dependencies.
 $screen->asset_enqueue_script(
 	'cb-block-editor-script',
-	'dist/scripts/editor/editor.js',
+	'dist/scripts/editor/editor.asset.php',
 	array( 'wp-edit-post' ) // Additional dependencies.
 );
-$screen->enqueue_style( 'cb-block-editor-core-styles', 'dist/scripts/editor/editor.css' );
-$screen->enqueue_style( 'cb-block-editor-styles', 'dist/styles/editor/editor.css', array( 'wp-edit-post' ) );
-
-
+$screen->enqueue_style(
+	'cb-block-editor-styles',
+	'dist/styles/editor/editor.css',
+	array( 'wp-editor' )
+);
 
 ?>
 
