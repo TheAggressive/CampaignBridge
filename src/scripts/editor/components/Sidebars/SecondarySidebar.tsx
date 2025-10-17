@@ -1,7 +1,27 @@
+// @ts-ignore
 import { __experimentalListView as ListView } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
 
-export default function SecondarySidebar() {
+/**
+ * Secondary Sidebar Component
+ *
+ * Displays a hierarchical list view of all blocks in the current post.
+ * Shows the block structure and allows navigation through the block tree.
+ * This component is displayed in the secondary sidebar area.
+ *
+ * Features:
+ * - Hierarchical block list with nesting visualization
+ * - Shows selected block highlighting
+ * - Empty state when no blocks exist
+ * - Auto-scrolling to selected blocks
+ * - Keyboard navigation support
+ *
+ * @example
+ * ```jsx
+ * <SecondarySidebar />
+ * ```
+ */
+export default function SecondarySidebar(): JSX.Element {
   // Get the selected block and root blocks count for display
   const { selectedBlockClientId, blockCount } = useSelect((select: any) => {
     const blockEditorSelect = select('core/block-editor');

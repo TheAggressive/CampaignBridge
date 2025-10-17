@@ -99,6 +99,43 @@ const SIDEBAR_CONFIG_MAP: Record<SidebarType, SidebarConfig> = {
  * }
  * ```
  */
+
+/**
+ * useSidebarState - Custom hook for managing sidebar state with WordPress preferences
+ *
+ * Provides a unified interface for managing primary and secondary sidebar states,
+ * including persistence to WordPress preferences and toggle functionality.
+ * Integrates with WordPress core/interface store for complementary area management.
+ *
+ * @param {string} primaryScope - Scope identifier for the primary sidebar
+ * @param {string} secondaryScope - Scope identifier for the secondary sidebar
+ * @returns {Object} Sidebar state and control functions
+ * @returns {boolean} returns.isPrimaryOpen - Whether primary sidebar is currently open
+ * @returns {boolean} returns.isSecondaryOpen - Whether secondary sidebar is currently open
+ * @returns {Function} returns.togglePrimary - Function to toggle primary sidebar state
+ * @returns {Function} returns.toggleSecondary - Function to toggle secondary sidebar state
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   isPrimaryOpen,
+ *   isSecondaryOpen,
+ *   togglePrimary,
+ *   toggleSecondary
+ * } = useSidebarState(
+ *   'campaignbridge/template-editor/primary',
+ *   'campaignbridge/template-editor/secondary'
+ * );
+ *
+ * // Toggle primary sidebar
+ * togglePrimary();
+ *
+ * // Check sidebar states
+ * if (isPrimaryOpen) {
+ *   console.log('Primary sidebar is open');
+ * }
+ * ```
+ */
 export function useSidebarState(primaryScope, secondaryScope) {
   // Get WordPress dispatch functions
   const { enableComplementaryArea, disableComplementaryArea } =

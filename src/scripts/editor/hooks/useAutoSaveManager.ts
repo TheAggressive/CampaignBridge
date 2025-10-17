@@ -1,25 +1,56 @@
+import { BlockInstance } from '@wordpress/blocks';
 import { useCallback, useRef, useState } from '@wordpress/element';
 import { savePostContent } from '../services/api';
 import { serializeSafe } from '../utils/blocks';
 import { AUTOSAVE_CONSTANTS, useAutoSave } from './useAutoSave';
 
 /**
- * Custom hook for managing auto-save functionality with status tracking
+ * useAutoSaveManager - Custom hook for managing auto-save functionality with status tracking.
  *
- * @param {number} postId - The ID of the post being edited
- * @param {Function} onBlocksChange - Callback fired when blocks change
- * @param {Function} onSuccess - Success notification callback
- * @param {Function} onError - Error notification callback
- * @returns {Object} Save status and save function
+ * Provides a debounced auto-save system that saves block content changes while tracking
+ * save status and providing user feedback. Integrates with the useAutoSave hook for
+ * advanced debouncing and request management.
+ *
+ * @returns {Object} Auto-save management interface
+ * @returns {Function} returns.save - Auto-save function with debouncing and request management
+ * @returns {string} returns.saveStatus - Current save status ('saved' | 'saving' | 'error')
+ * @returns {Function} returns.setSaveStatus - Function to manually set save status
+ *
+ * @example
+ * ```tsx
+ * const { save, saveStatus, setSaveStatus } = useAutoSaveManager(
+ *   postId,
+ *   handleBlocksChange,
+ *   showSuccessMessage,
+ *   showErrorMessage
+ * );
+ *
+ * // Auto-save will trigger when blocks change
+ * useEffect(() => {
+ *   save.schedule(blocks);
+ * }, [blocks]);
+ * ```
  */
-export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
+export function useAutoSaveManager(
+  postId: number,
+  onBlocksChange: (blocks: BlockInstance[]) => void,
+  onSuccess: (message: string) => void,
+  onError: (message: string) => void
+): {
+  save: any;
+  saveStatus: string;
+  setSaveStatus: (status: string) => void;
+} {
   const [saveStatus, setSaveStatus] = useState(
     AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVED
   );
   const lastNoticeAtRef = useRef(0);
 
   const performSave = useCallback(
-    async (blocksToSave, { signal }: { signal?: AbortSignal } = {}) => {
+    async (
+      blocksToSave: BlockInstance[],
+      { signal }: { signal?: AbortSignal } = {}
+    ) => {
       try {
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.SAVING);
 
