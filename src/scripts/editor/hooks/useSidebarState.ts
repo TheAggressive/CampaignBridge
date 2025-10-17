@@ -1,31 +1,57 @@
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useCallback, useEffect } from '@wordpress/element';
 
+// Type definitions for better type safety
+type SidebarType = 'primary' | 'secondary';
+
+interface SidebarConfig {
+  readonly scope: string;
+  readonly identifier: string;
+  readonly preferenceKey: string;
+  readonly preferencePath: string;
+}
+
 // Sidebar-specific constants (exported for reuse if needed)
 export const SIDEBAR_CONSTANTS = {
   IDENTIFIERS: {
     PRIMARY: 'primary',
     SECONDARY: 'secondary',
-  },
+  } as const,
   PREFERENCE_KEYS: {
     PRIMARY_OPEN: 'primarySidebarOpen',
     SECONDARY_OPEN: 'secondarySidebarOpen',
-  },
+  } as const,
   PREFERENCES: {
     PRIMARY_SIDEBAR_OPEN: 'campaignbridge/template-editor/primarySidebarOpen',
     SECONDARY_SIDEBAR_OPEN:
       'campaignbridge/template-editor/secondarySidebarOpen',
     FULLSCREEN_MODE: 'core/edit-post/fullscreenMode',
-  },
+  } as const,
   SCOPES: {
     PRIMARY: 'campaignbridge/template-editor/primary',
     SECONDARY: 'campaignbridge/template-editor/secondary',
-  },
+  } as const,
   TABS: {
     TEMPLATE: 'template-settings',
     INSPECTOR: 'block-inspector',
+  } as const,
+} as const;
+
+// Configuration mapping for cleaner code
+const SIDEBAR_CONFIG_MAP: Record<SidebarType, SidebarConfig> = {
+  primary: {
+    scope: SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+    identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
+    preferenceKey: SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
+    preferencePath: SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
   },
-};
+  secondary: {
+    scope: SIDEBAR_CONSTANTS.SCOPES.SECONDARY,
+    identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
+    preferenceKey: SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
+    preferencePath: SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
+  },
+} as const;
 
 /**
  * @typedef {Object} SidebarState
@@ -74,25 +100,29 @@ export const SIDEBAR_CONSTANTS = {
  * ```
  */
 export function useSidebarState(primaryScope, secondaryScope) {
-  // Get sidebar states directly from WordPress interface store
+  // Get WordPress dispatch functions
+  const { enableComplementaryArea, disableComplementaryArea } =
+    useDispatch('core/interface');
+  const { set: setPreference } = useDispatch('core/preferences');
+
+  // Get interface selector for use in toggle handlers
+  const select = useSelect(select => select, []);
+
+  // Create sidebar states using configuration
   const isPrimaryOpen = useSelect(
-    select => {
-      const state = (
-        select('core/interface') as any
-      ).getActiveComplementaryArea(primaryScope);
-      return state === SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY;
-    },
-    [primaryScope]
+    select =>
+      (select('core/interface') as any).getActiveComplementaryArea(
+        SIDEBAR_CONFIG_MAP.primary.scope
+      ) === SIDEBAR_CONFIG_MAP.primary.identifier,
+    [SIDEBAR_CONFIG_MAP.primary.scope]
   );
 
   const isSecondaryOpen = useSelect(
-    select => {
-      const state = (
-        select('core/interface') as any
-      ).getActiveComplementaryArea(secondaryScope);
-      return state === SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY;
-    },
-    [secondaryScope]
+    select =>
+      (select('core/interface') as any).getActiveComplementaryArea(
+        SIDEBAR_CONFIG_MAP.secondary.scope
+      ) === SIDEBAR_CONFIG_MAP.secondary.identifier,
+    [SIDEBAR_CONFIG_MAP.secondary.scope]
   );
 
   // Get saved preferences for restoration
@@ -103,8 +133,8 @@ export function useSidebarState(primaryScope, secondaryScope) {
           get: (scope: string, key: string) => unknown;
         }
       ).get(
-        SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
-        SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN
+        SIDEBAR_CONFIG_MAP.primary.preferencePath,
+        SIDEBAR_CONFIG_MAP.primary.preferenceKey
       ),
     []
   );
@@ -116,118 +146,91 @@ export function useSidebarState(primaryScope, secondaryScope) {
           get: (scope: string, key: string) => unknown;
         }
       ).get(
-        SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
-        SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN
+        SIDEBAR_CONFIG_MAP.secondary.preferencePath,
+        SIDEBAR_CONFIG_MAP.secondary.preferenceKey
       ),
     []
   );
 
-  // Get WordPress dispatch functions
-  const { enableComplementaryArea, disableComplementaryArea } =
-    useDispatch('core/interface');
-  const { set: setPreference } = useDispatch('core/preferences');
+  // Create toggle functions using configuration
+  const togglePrimary = useCallback(() => {
+    const currentState =
+      (select('core/interface') as any).getActiveComplementaryArea(
+        SIDEBAR_CONFIG_MAP.primary.scope
+      ) === SIDEBAR_CONFIG_MAP.primary.identifier;
+    const newState = !currentState;
 
-  /**
-   * Restore sidebar state from saved preferences on mount.
-   * Only acts if we have a definitive saved preference (true/false).
-   * If savedState is undefined, we don't change anything to let default state prevail.
-   */
-  const restoreSidebarState = useCallback(
-    (scope: string, identifier: string, savedState: boolean | undefined) => {
-      if (savedState === true) {
-        enableComplementaryArea(scope, identifier);
-      } else if (savedState === false) {
-        disableComplementaryArea(scope);
-      }
-      // If savedState is undefined, we don't change anything - let the default state prevail
-    },
-    [enableComplementaryArea, disableComplementaryArea]
-  );
+    if (newState) {
+      enableComplementaryArea(
+        SIDEBAR_CONFIG_MAP.primary.scope,
+        SIDEBAR_CONFIG_MAP.primary.identifier
+      );
+    } else {
+      disableComplementaryArea(SIDEBAR_CONFIG_MAP.primary.scope);
+    }
+
+    setPreference(
+      SIDEBAR_CONFIG_MAP.primary.preferencePath,
+      SIDEBAR_CONFIG_MAP.primary.preferenceKey,
+      newState
+    );
+  }, [
+    enableComplementaryArea,
+    disableComplementaryArea,
+    setPreference,
+    select,
+  ]);
+
+  const toggleSecondary = useCallback(() => {
+    const currentState =
+      (select('core/interface') as any).getActiveComplementaryArea(
+        SIDEBAR_CONFIG_MAP.secondary.scope
+      ) === SIDEBAR_CONFIG_MAP.secondary.identifier;
+    const newState = !currentState;
+
+    if (newState) {
+      enableComplementaryArea(
+        SIDEBAR_CONFIG_MAP.secondary.scope,
+        SIDEBAR_CONFIG_MAP.secondary.identifier
+      );
+    } else {
+      disableComplementaryArea(SIDEBAR_CONFIG_MAP.secondary.scope);
+    }
+
+    setPreference(
+      SIDEBAR_CONFIG_MAP.secondary.preferencePath,
+      SIDEBAR_CONFIG_MAP.secondary.preferenceKey,
+      newState
+    );
+  }, [
+    enableComplementaryArea,
+    disableComplementaryArea,
+    setPreference,
+    select,
+  ]);
 
   // Restore sidebar states from saved preferences on mount
   useEffect(() => {
-    restoreSidebarState(
-      primaryScope,
-      SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
-      savedPrimaryOpen as boolean | undefined
-    );
-  }, [savedPrimaryOpen, primaryScope, restoreSidebarState]);
+    if (savedPrimaryOpen === true) {
+      enableComplementaryArea(
+        SIDEBAR_CONFIG_MAP.primary.scope,
+        SIDEBAR_CONFIG_MAP.primary.identifier
+      );
+    } else if (savedPrimaryOpen === false) {
+      disableComplementaryArea(SIDEBAR_CONFIG_MAP.primary.scope);
+    }
+  }, [savedPrimaryOpen, enableComplementaryArea, disableComplementaryArea]);
 
   useEffect(() => {
-    restoreSidebarState(
-      secondaryScope,
-      SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
-      savedSecondaryOpen as boolean | undefined
-    );
-  }, [savedSecondaryOpen, secondaryScope, restoreSidebarState]);
-
-  /**
-   * Create a toggle handler for a sidebar that updates interface store and saves preferences.
-   */
-  const createToggleHandler = useCallback(
-    (
-      scope: string,
-      identifier: string,
-      preferenceKey: string,
-      preferencePath: string
-    ) => {
-      return () => {
-        try {
-          // Get current state from interface store
-          const currentState =
-            isPrimaryOpen && scope === primaryScope
-              ? isPrimaryOpen
-              : isSecondaryOpen && scope === secondaryScope
-                ? isSecondaryOpen
-                : false;
-          const newState = !currentState;
-
-          // Update interface store
-          if (newState) {
-            enableComplementaryArea(scope, identifier);
-          } else {
-            disableComplementaryArea(scope);
-          }
-
-          // Save preference for persistence
-          setPreference(preferencePath, preferenceKey, newState);
-        } catch (error) {
-          if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-            console.warn('useSidebarState: Error toggling sidebar:', error);
-          }
-        }
-      };
-    },
-    [
-      isPrimaryOpen,
-      isSecondaryOpen,
-      primaryScope,
-      secondaryScope,
-      enableComplementaryArea,
-      disableComplementaryArea,
-      setPreference,
-    ]
-  );
-
-  /**
-   * Toggle the primary sidebar with proper state management and preference persistence.
-   */
-  const togglePrimary = createToggleHandler(
-    primaryScope,
-    SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
-    SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
-    SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN
-  );
-
-  /**
-   * Toggle the secondary sidebar with proper state management and preference persistence.
-   */
-  const toggleSecondary = createToggleHandler(
-    secondaryScope,
-    SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
-    SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
-    SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN
-  );
+    if (savedSecondaryOpen === true) {
+      enableComplementaryArea(
+        SIDEBAR_CONFIG_MAP.secondary.scope,
+        SIDEBAR_CONFIG_MAP.secondary.identifier
+      );
+    } else if (savedSecondaryOpen === false) {
+      disableComplementaryArea(SIDEBAR_CONFIG_MAP.secondary.scope);
+    }
+  }, [savedSecondaryOpen, enableComplementaryArea, disableComplementaryArea]);
 
   return {
     // State - directly from WordPress interface store

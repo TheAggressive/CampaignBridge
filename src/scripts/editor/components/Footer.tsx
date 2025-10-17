@@ -1,3 +1,4 @@
+// @ts-ignore - BlockBreadcrumb may not be available in current WP version
 import { BlockBreadcrumb } from '@wordpress/block-editor';
 
 /**

@@ -40,6 +40,10 @@ const CLASSES = {
  * @param {boolean} props.loading - Whether templates are currently loading
  * @param {function} props.onSelect - Callback fired when a template is selected
  * @param {function} props.onNew - Callback fired when creating a new template
+ * @param {boolean} props.isPrimaryOpen - Whether the primary sidebar is open
+ * @param {boolean} props.isSecondaryOpen - Whether the secondary sidebar is open
+ * @param {function} props.togglePrimary - Function to toggle the primary sidebar
+ * @param {function} props.toggleSecondary - Function to toggle the secondary sidebar
  * @returns {JSX.Element} The editor header with toolbar and controls
  *
  * @example
@@ -50,11 +54,24 @@ const CLASSES = {
  *   loading={false}
  *   onSelect={handleSelect}
  *   onNew={handleNew}
- *   saveStatus="saved"
+ *   isPrimaryOpen={true}
+ *   isSecondaryOpen={false}
+ *   togglePrimary={handleTogglePrimary}
+ *   toggleSecondary={handleToggleSecondary}
  * />
  * ```
  */
-export default function Header({ list, currentId, loading, onSelect, onNew }) {
+export default function Header({
+  list,
+  currentId,
+  loading,
+  onSelect,
+  onNew,
+  isPrimaryOpen,
+  isSecondaryOpen,
+  togglePrimary,
+  toggleSecondary,
+}) {
   return (
     <div className={CLASSES.HEADER}>
       <div className={CLASSES.HEADER_LEFT}>
@@ -69,8 +86,11 @@ export default function Header({ list, currentId, loading, onSelect, onNew }) {
       </div>
 
       <div className={CLASSES.HEADER_ACTIONS}>
-        <SecondarySidebarToggle />
-        <PrimarySidebarToggle />
+        <SecondarySidebarToggle
+          isOpen={isSecondaryOpen}
+          onToggle={toggleSecondary}
+        />
+        <PrimarySidebarToggle isOpen={isPrimaryOpen} onToggle={togglePrimary} />
         <FullscreenToggle />
       </div>
     </div>

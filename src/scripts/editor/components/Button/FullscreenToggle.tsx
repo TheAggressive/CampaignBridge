@@ -1,8 +1,13 @@
+import { KeyboardShortcuts } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import { fullscreen } from '@wordpress/icons';
+import { SIDEBAR_CONSTANTS } from '../../hooks/useSidebarState';
 import { ToggleButton } from './ToggleButton';
-import { KeyboardShortcuts } from '@wordpress/components';
+
+// Fullscreen mode preference constants (consistent with EditorChrome)
+const FULLSCREEN_SCOPE = SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE;
+const FULLSCREEN_KEY = 'isFullscreen';
 
 /**
  * Fullscreen Toggle Button Component
@@ -19,31 +24,38 @@ import { KeyboardShortcuts } from '@wordpress/components';
  * - No external dependencies - completely independent
  *
  * State Management:
- * - Uses preference key: "core/edit-post/fullscreenMode"
+ * - Uses WordPress preferences store with proper scope/key pattern
+ * - Consistent with EditorChrome fullscreen state management
  * - Persists state across page reloads
- * - Manages its own toggle logic and keyboard shortcuts
  *
- * @return {JSX.Element} The fullscreen toggle button
+ * @return The fullscreen toggle button
  *
  * @example
- * ```jsx
+ * ```tsx
  * <FullscreenToggle />
  * ```
  */
-export function FullscreenToggle() {
-  const PREFERENCE_KEY = 'core/edit-post/fullscreenMode';
-
+export function FullscreenToggle(): JSX.Element {
+  // Get fullscreen state from WordPress preferences (same pattern as EditorChrome)
   const isActive = useSelect(
-    select => select('core/preferences').get(PREFERENCE_KEY, false),
-    [PREFERENCE_KEY]
+    select =>
+      (
+        select('core/preferences') as {
+          get: (scope: string, key: string) => unknown;
+        }
+      ).get(FULLSCREEN_SCOPE, FULLSCREEN_KEY) as boolean,
+    [FULLSCREEN_SCOPE, FULLSCREEN_KEY]
   );
 
+  // Get preference toggle dispatcher
   const { toggle: togglePreference } = useDispatch('core/preferences');
 
-  const handleToggle = () => {
-    togglePreference(PREFERENCE_KEY);
+  // Handle toggle action
+  const handleToggle = (): void => {
+    togglePreference(FULLSCREEN_SCOPE, FULLSCREEN_KEY);
   };
 
+  // Dynamic label based on current state
   const label = isActive
     ? __('Exit Fullscreen Ctrl+Shift+Alt+F', 'campaignbridge')
     : __('Enter Fullscreen Ctrl+Shift+Alt+F', 'campaignbridge');

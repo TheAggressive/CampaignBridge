@@ -107,7 +107,7 @@ export default function EditorChrome({
 
   // Get sidebar states using the dedicated hook for consistent state management
   // This replaces manual useSelect calls and ensures proper state restoration from preferences
-  const { isPrimaryOpen, isSecondaryOpen } = useSidebarState(
+  const { isPrimaryOpen, isSecondaryOpen, togglePrimary, toggleSecondary } = useSidebarState(
     SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
     SIDEBAR_CONSTANTS.SCOPES.SECONDARY
   );
@@ -375,6 +375,10 @@ export default function EditorChrome({
                 loading={loading}
                 onSelect={onSelect}
                 onNew={onNew}
+                isPrimaryOpen={isPrimaryOpen}
+                isSecondaryOpen={isSecondaryOpen}
+                togglePrimary={togglePrimary}
+                toggleSecondary={toggleSecondary}
               />
             }
             content={<Content />}
