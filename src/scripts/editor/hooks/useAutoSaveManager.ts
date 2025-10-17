@@ -28,7 +28,6 @@ export function useAutoSaveManager(postId, onBlocksChange, onSuccess, onError) {
           {
             content: serializeSafe(blocksToSave),
             status: 'publish',
-            title: '',
           },
           signal
         );
