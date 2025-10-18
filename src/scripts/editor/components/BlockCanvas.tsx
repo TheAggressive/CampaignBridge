@@ -1,5 +1,6 @@
 import {
   BlockList,
+  ButtonBlockAppender,
   Inserter,
   ObserveTyping,
   WritingFlow,

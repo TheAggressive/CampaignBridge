@@ -1,5 +1,6 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
 import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
+import { EntityProvider } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useCallback, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
@@ -361,35 +362,37 @@ export default function EditorChrome({
         </ComplementaryArea>
 
         {/* Block editor with merged settings */}
-        <BlockEditorProvider
-          value={blocks}
-          onInput={handleBlocksUpdate}
-          onChange={handleBlocksUpdate}
-          settings={mergedEditorSettings}
-        >
-          <InterfaceSkeleton
-            className={skeletonClassName}
-            header={
-              <Header
-                list={list}
-                currentId={currentId}
-                loading={loading}
-                onSelect={onSelect}
-                onNew={onNew}
-                isPrimaryOpen={isPrimaryOpen}
-                isSecondaryOpen={isSecondaryOpen}
-                togglePrimary={togglePrimary}
-                toggleSecondary={toggleSecondary}
-              />
-            }
-            content={<Content />}
-            sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
-            secondarySidebar={
-              <ComplementaryArea.Slot {...secondarySidebarProps} />
-            }
-            footer={<Footer />}
-          />
-        </BlockEditorProvider>
+        <EntityProvider kind='postType' type='post' id={postId}>
+          <BlockEditorProvider
+            value={blocks}
+            onInput={handleBlocksUpdate}
+            onChange={handleBlocksUpdate}
+            settings={mergedEditorSettings}
+          >
+            <InterfaceSkeleton
+              className={skeletonClassName}
+              header={
+                <Header
+                  list={list}
+                  currentId={currentId}
+                  loading={loading}
+                  onSelect={onSelect}
+                  onNew={onNew}
+                  isPrimaryOpen={isPrimaryOpen}
+                  isSecondaryOpen={isSecondaryOpen}
+                  togglePrimary={togglePrimary}
+                  toggleSecondary={toggleSecondary}
+                />
+              }
+              content={<Content />}
+              sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
+              secondarySidebar={
+                <ComplementaryArea.Slot {...secondarySidebarProps} />
+              }
+              footer={<Footer />}
+            />
+          </BlockEditorProvider>
+        </EntityProvider>
 
         <Popover.Slot />
         <div className={LAYOUT_CONSTANTS.CSS_CLASSES.EDITOR_SNACKBAR}>
