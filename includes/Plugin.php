@@ -42,10 +42,6 @@ class Plugin {
 	 */
 	private const OPTION_NAME = 'campaignbridge_settings';
 
-
-
-
-
 	/**
 	 * Map of provider slug => provider instance.
 	 *
@@ -59,7 +55,6 @@ class Plugin {
 	 * @var Service_Container
 	 */
 	private Service_Container $service_container;
-
 
 	/**
 	 * Initialize service container and providers.
@@ -164,36 +159,12 @@ class Plugin {
 		// See includes/Admin/Admin.php for the new implementation.
 	}
 
-	/**
-	 * Run security migration for existing plaintext API keys.
-	 *
-	 * This method checks for and migrates any existing plaintext API keys
-	 * to encrypted storage. It runs once per plugin version to ensure
-	 * backward compatibility and enhanced security.
-	 *
-	 * @since 0.1.0
-	 * @return void
-	 */
-
-	/**
-	 * Register plugin settings with WordPress options API and sanitization.
-	 *
-	 * This method registers the CampaignBridge settings with WordPress's
-	 * options system, providing a secure and standardized way to store
-	 * plugin configuration. It includes comprehensive sanitization and
-	 * validation to ensure data integrity and security.
-	 *
-	 * @since 0.1.0
-	 * @return void
-	 */
-
-
-	/**
-	 * Initialize core plugin systems.
-	 *
-	 * @since 0.1.0
-	 * @return void
-	 */
+		/**
+		 * Initialize core plugin systems.
+		 *
+		 * @since 0.1.0
+		 * @return void
+		 */
 	private function init_core_systems(): void {
 
 		// Initialize Blocks system.
