@@ -7,7 +7,7 @@
 
 /* Editor-specific variables */
 :root {
-  --cb-sidebar-width: 18rem;
+  --cb-sidebar-width: 8rem;
   --cb-secondary-sidebar-width: 24rem;
 }
 
@@ -64,7 +64,6 @@
 
   /* Content area styling within sidebar */
   .cb-editor__sidebar-content {
-    padding: 16px;
     height: 100%;
     overflow-y: auto;
   }

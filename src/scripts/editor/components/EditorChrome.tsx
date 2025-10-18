@@ -1,5 +1,10 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
-import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
+import {
+  Popover,
+  ResizableBox,
+  SlotFillProvider,
+  SnackbarList,
+} from '@wordpress/components';
 import { EntityProvider } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useCallback, useEffect } from '@wordpress/element';
@@ -95,11 +100,7 @@ export default function EditorChrome({
 
   const isFullscreen = useSelect(
     select =>
-      (
-        select('core/preferences') as {
-          get: (scope: string, key: string) => unknown;
-        }
-      ).get(
+      (select('core/preferences') as any).get(
         SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE,
         'isFullscreen'
       ) as boolean,
@@ -202,11 +203,18 @@ export default function EditorChrome({
         </ComplementaryArea>
 
         {/* Secondary sidebar (list view) */}
-        <ComplementaryArea {...secondarySidebarProps}>
-          <div className={LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
-            <SecondarySidebar />
-          </div>
-        </ComplementaryArea>
+        <ResizableBox
+          size={{ width: 165 }}
+          minWidth={165}
+          maxWidth={300}
+          enable={false}
+        >
+          <ComplementaryArea {...secondarySidebarProps}>
+            <div className={LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
+              <SecondarySidebar />
+            </div>
+          </ComplementaryArea>
+        </ResizableBox>
 
         {/* Block editor with merged settings */}
         <EntityProvider kind='postType' type='post' id={postId}>

@@ -1,14 +1,19 @@
 import {
   BlockList,
   BlockSelectionClearer,
-  BlockToolbar,
-  DefaultBlockAppender,
+  BlockTools,
+  ButtonBlockAppender,
   Inserter,
   ObserveTyping,
   WritingFlow,
 } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
+import * as React from 'react';
 import HistoryControls from './Toolbar/HistoryControls';
+
+declare module '@wordpress/block-editor' {
+  export const BlockTools: React.ComponentType<any>;
+}
 
 /**
  * Block Canvas Component
@@ -44,17 +49,19 @@ export default function BlockCanvas() {
         <Inserter rootClientId={null} />
         <HistoryControls />
       </div>
-      <BlockToolbar />
       <BlockSelectionClearer>
-        <WritingFlow>
-          <ObserveTyping>
-            <BlockList />
-            <DefaultBlockAppender
-              rootClientId={null}
-              lastBlockClientId={lastBlockClientId}
-            />
-          </ObserveTyping>
-        </WritingFlow>
+        <BlockTools>
+          <WritingFlow>
+            <ObserveTyping>
+              <BlockList />
+              <ButtonBlockAppender rootClientId={null} />
+              {/* <DefaultBlockAppender
+                rootClientId={null}
+                lastBlockClientId={lastBlockClientId}
+              /> */}
+            </ObserveTyping>
+          </WritingFlow>
+        </BlockTools>
       </BlockSelectionClearer>
     </div>
   );

@@ -72,6 +72,7 @@ export default function CampaignBridgeBlockEditor(): JSX.Element {
     loading,
     error: loadError,
   } = useTemplates({ onError: setError });
+
   const {
     open: newModalOpen,
     title: newTitle,

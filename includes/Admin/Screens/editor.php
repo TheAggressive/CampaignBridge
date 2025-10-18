@@ -19,7 +19,7 @@ $screen->asset_enqueue_script(
 $screen->enqueue_style(
 	'cb-block-editor-styles',
 	'dist/styles/editor/editor.css',
-	array( 'wp-editor', 'wp-block-library', 'wp-edit-blocks' )
+	array( 'wp-editor', 'wp-block-library', 'wp-edit-blocks', 'wp-components' )
 );
 
 ?>
