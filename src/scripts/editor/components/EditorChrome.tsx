@@ -107,10 +107,11 @@ export default function EditorChrome({
 
   // Get sidebar states using the dedicated hook for consistent state management
   // This replaces manual useSelect calls and ensures proper state restoration from preferences
-  const { isPrimaryOpen, isSecondaryOpen, togglePrimary, toggleSecondary } = useSidebarState(
-    SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
-    SIDEBAR_CONSTANTS.SCOPES.SECONDARY
-  );
+  const { isPrimaryOpen, isSecondaryOpen, togglePrimary, toggleSecondary } =
+    useSidebarState(
+      SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+      SIDEBAR_CONSTANTS.SCOPES.SECONDARY
+    );
 
   // Control sidebar widths with JavaScript - aggressively override WordPress inline styles
   useEffect(() => {

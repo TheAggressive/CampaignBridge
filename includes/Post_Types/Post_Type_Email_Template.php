@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Post_Types;
 
+use CampaignBridge\Core\Storage;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -438,7 +440,7 @@ class Post_Type_Email_Template {
 	 * @return mixed The meta value or fallback.
 	 */
 	public static function get_meta( int $post_id, string $meta_key, $fallback = '' ) {
-		$value = get_post_meta( $post_id, $meta_key, true );
+		$value = Storage::get_post_meta( $post_id, $meta_key, true );
 		return ! empty( $value ) ? $value : $fallback;
 	}
 

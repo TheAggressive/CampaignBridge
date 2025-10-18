@@ -1,19 +1,19 @@
 parameters:
-	level: 6
-	paths:
-		- includes/
-	excludePaths:
-		- includes/Admin_Legacy/  # Legacy admin code (deprecated)
-		- vendor/                 # Third-party dependencies
-		- node_modules/           # Node.js dependencies
-		- assets/                 # Compiled assets
-		- dist/                   # Build output
-		- tools/                  # Development tools (not analyzed)
-	scanDirectories:
-		- includes/
-		- tools/
-	stubFiles:
-		- stubs/wordpress.php
+    level: 6
+    paths:
+      - includes/
+      - campaignbridge.php      # Include main plugin file
+    excludePaths:
+      - includes/Admin_Legacy/  # Legacy admin code (deprecated)
+      - vendor/                 # Third-party dependencies
+      - node_modules/           # Node.js dependencies
+      - assets/?                # Compiled assets (optional)
+      - dist/?                  # Build output (optional)
+    scanDirectories:
+      - includes/
+      - tools/                  # Include for custom rules loading
+    stubFiles:
+      - stubs/wordpress.php
 
 rules:
 	# Custom rules for CampaignBridge

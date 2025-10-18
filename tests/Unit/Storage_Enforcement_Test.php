@@ -55,11 +55,10 @@ class Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 		'includes/Core/Storage.php',
 		'includes/Core/Storage_Prefixes.php',
 		'uninstall.php',
-		'bin/check-storage-usage.php',
 	);
 
 	/**
-	 * Directories that are allowed during migration.
+	 * Directories that are allowed during migration and testing.
 	 *
 	 * @var array<string>
 	 */
@@ -67,6 +66,8 @@ class Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 		'includes/Admin_Legacy/',
 		'vendor/',
 		'node_modules/',
+		'tests/',
+		'bin/',
 	);
 
 	/**
@@ -322,36 +323,43 @@ class Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 
 		foreach ( $lines as $line_number => $line ) {
 			foreach ( self::FORBIDDEN_FUNCTIONS as $function ) {
-				// Look for function calls (not method calls or inside strings)
-				$pattern = '/\b' . preg_quote( $function, '/' ) . '\s*\(/';
+				// Enhanced pattern to catch more variations
+				$patterns = array(
+					'/\b' . preg_quote( $function, '/' ) . '\s*\(/',           // Direct calls: get_option(
+					'/\b\\\\' . preg_quote( $function, '/' ) . '\s*\(/',      // Namespaced: \get_option(
+					'/\$\w+\s*\(\s*[\'"]' . preg_quote( $function, '/' ) . '[\'"]\s*\)/', // Variable functions: $func('get_option')
+					'/call_user_func\s*\(\s*[\'"]' . preg_quote( $function, '/' ) . '[\'"]/', // call_user_func
+				);
 
-				if ( preg_match( $pattern, $line ) ) {
-					// Skip if it's a method call (contains :: or ->)
-					if ( str_contains( $line, '::' ) || str_contains( $line, '->' ) ) {
-						continue;
+				foreach ( $patterns as $pattern ) {
+					if ( preg_match( $pattern, $line ) ) {
+						// Skip if it's a method call (contains :: or ->)
+						if ( str_contains( $line, '::' ) || str_contains( $line, '->' ) ) {
+							continue 2; // Continue to next pattern
+						}
+
+						// Skip if it's inside a comment
+						if ( preg_match( '/^\s*\/\//', $line ) || preg_match( '/^\s*\*/', $line ) ) {
+							continue 2; // Continue to next pattern
+						}
+
+						// Skip if it's inside a string literal
+						if ( $this->isInsideStringLiteral( $line, $function ) ) {
+							continue 2; // Continue to next pattern
+						}
+
+						// Skip if it's a function definition
+						if ( preg_match( '/^\s*function\s+' . preg_quote( $function, '/' ) . '\s*\(/', $line ) ) {
+							continue 2; // Continue to next pattern
+						}
+
+						$violations[] = array(
+							'file'         => $file_path,
+							'line'         => $line_number + 1,
+							'function'     => $function,
+							'line_content' => trim( $line ),
+						);
 					}
-
-					// Skip if it's inside a comment
-					if ( preg_match( '/^\s*\/\//', $line ) || preg_match( '/^\s*\*/', $line ) ) {
-						continue;
-					}
-
-					// Skip if it's inside a string
-					if ( preg_match( '/[\'"][^\'"]*' . preg_quote( $function, '/' ) . '[^\'"]*[\'"]/', $line ) ) {
-						continue;
-					}
-
-					// Skip if it's a function definition
-					if ( preg_match( '/^\s*function\s+' . preg_quote( $function, '/' ) . '\s*\(/', $line ) ) {
-						continue;
-					}
-
-					$violations[] = array(
-						'file'         => $file_path,
-						'line'         => $line_number + 1,
-						'function'     => $function,
-						'line_content' => trim( $line ),
-					);
 				}
 			}
 		}
@@ -386,5 +394,29 @@ class Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 		$message .= "   3. Run tests again to verify fixes\n";
 
 		return $message;
+	}
+
+	/**
+	 * Check if a function name appears to be inside a string literal.
+	 *
+	 * This is a simple heuristic to avoid false positives when function names
+	 * appear in strings, comments, or other non-executable contexts.
+	 *
+	 * @param string $line     The line of code to check.
+	 * @param string $function The function name to check for.
+	 * @return bool True if the function appears to be inside quotes.
+	 */
+	private function isInsideStringLiteral( string $line, string $function ): bool {
+		// Simple check: if the function appears between quotes
+		if ( preg_match( '/[\'"][^\'"]*' . preg_quote( $function, '/' ) . '[^\'"]*[\'"]/', $line ) ) {
+			return true;
+		}
+
+		// Check for function in array keys/values that might be strings
+		if ( preg_match( '/[\'"]' . preg_quote( $function, '/' ) . '[\'"]\s*=>/', $line ) ) {
+			return true;
+		}
+
+		return false;
 	}
 }

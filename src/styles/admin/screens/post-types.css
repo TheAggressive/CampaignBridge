@@ -2,49 +2,49 @@
 @import 'tailwindcss';
 
 @layer components {
-  .cb-post-types__switches-box {
-    @apply mt-4 mb-4 max-h-fit max-w-3xl overflow-auto rounded-lg border border-gray-200 bg-white p-6 shadow-sm;
-  }
+	.cb-post-types__switches-box {
+	@apply mt-4 mb-4 max-h-fit max-w-3xl overflow-auto rounded-lg border border-gray-200 bg-white p-6 shadow-sm;
+	}
 
-  .cb-post-types__switch {
-    @apply relative mr-4 mb-4 inline-flex items-center gap-4 font-medium;
+	.cb-post-types__switch {
+	@apply relative mr-4 mb-4 inline-flex items-center gap-4 font-medium;
 
-    & input {
-      @apply pointer-events-none absolute h-0 w-0 appearance-none opacity-0;
-    }
+	& input {
+		@apply pointer-events-none absolute h-0 w-0 appearance-none opacity-0;
+	}
 
-    & .cb-post-types__slider {
-      @apply relative h-4 w-9 rounded-full bg-gray-300 transition-colors duration-200;
-    }
+	& .cb-post-types__slider {
+		@apply relative h-4 w-9 rounded-full bg-gray-300 transition-colors duration-200;
+	}
 
-    & .cb-post-types__slider::after {
-      content: '';
-      @apply absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow-md transition-transform duration-200;
-    }
+	& .cb-post-types__slider::after {
+		content: '';
+		@apply absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow-md transition-transform duration-200;
+	}
 
-    & input:checked + .cb-post-types__slider {
-      @apply bg-emerald-600;
-    }
+	& input:checked + .cb-post-types__slider {
+		@apply bg-emerald-600;
+	}
 
-    & input:checked + .cb-post-types__slider::after {
-      @apply translate-x-5;
-    }
+	& input:checked + .cb-post-types__slider::after {
+		@apply translate-x-5;
+	}
 
-    & input:focus-visible + .cb-post-types__slider {
-      @apply outline-2 outline-offset-2 outline-emerald-600;
-    }
-  }
+	& input:focus-visible + .cb-post-types__slider {
+		@apply outline-2 outline-offset-2 outline-emerald-600;
+	}
+	}
 
-  .cb-post-types__switches-group {
-    @apply mb-8 last:mb-0;
-  }
+	.cb-post-types__switches-group {
+	@apply mb-8 last:mb-0;
+	}
 
-  .cb-post-types__switches-title {
-    @apply mb-6 font-semibold;
-  }
+	.cb-post-types__switches-title {
+	@apply mb-6 font-semibold;
+	}
 
-  .cb-post-types__switches-grid {
-    @apply grid gap-4;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  }
+	.cb-post-types__switches-grid {
+	@apply grid gap-4;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	}
 }

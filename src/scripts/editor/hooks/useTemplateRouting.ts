@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
 import { getParam, setParamAndReload } from '../utils/url';
 
-
 // Template routing-specific constants (exported for reuse if needed)
 export const ROUTING_CONSTANTS = {
   URL_PARAMS: {

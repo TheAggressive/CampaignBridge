@@ -80,6 +80,7 @@ export default function TemplateSettings({ postType, postId }) {
             options={categoryOptions}
             onChange={value => update('cb_template_category', value)}
             __nextHasNoMarginBottom
+            __next40pxDefaultSize
           />
 
           <TextControl
@@ -88,6 +89,7 @@ export default function TemplateSettings({ postType, postId }) {
             onChange={value => update('cb_subject', value)}
             placeholder={__('Enter email subject...', 'campaignbridge')}
             __nextHasNoMarginBottom
+            __next40pxDefaultSize
           />
 
           <TextControl
@@ -97,6 +99,7 @@ export default function TemplateSettings({ postType, postId }) {
             placeholder={__('Hidden preview text...', 'campaignbridge')}
             help={__('Shown in email client previews', 'campaignbridge')}
             __nextHasNoMarginBottom
+            __next40pxDefaultSize
           />
 
           <TextControl
@@ -106,6 +109,7 @@ export default function TemplateSettings({ postType, postId }) {
             placeholder={__('tag1, tag2, tag3', 'campaignbridge')}
             help={__('Comma-separated list of audience tags', 'campaignbridge')}
             __nextHasNoMarginBottom
+            __next40pxDefaultSize
           />
         </PanelBody>
       </Panel>
@@ -122,6 +126,7 @@ export default function TemplateSettings({ postType, postId }) {
             onChange={value => update('cb_sender_name', value)}
             placeholder={__('Your Name', 'campaignbridge')}
             __nextHasNoMarginBottom
+            __next40pxDefaultSize
           />
 
           <TextControl
@@ -131,6 +136,7 @@ export default function TemplateSettings({ postType, postId }) {
             type='email'
             placeholder={__('sender@domain.com', 'campaignbridge')}
             __nextHasNoMarginBottom
+            __next40pxDefaultSize
           />
 
           <ToggleControl
@@ -150,6 +156,7 @@ export default function TemplateSettings({ postType, postId }) {
               type='url'
               placeholder={__('https://...', 'campaignbridge')}
               __nextHasNoMarginBottom
+              __next40pxDefaultSize
             />
           )}
 
@@ -164,6 +171,7 @@ export default function TemplateSettings({ postType, postId }) {
               'campaignbridge'
             )}
             __nextHasNoMarginBottom
+            __next40pxDefaultSize
           />
         </PanelBody>
       </Panel>
@@ -202,6 +210,7 @@ export default function TemplateSettings({ postType, postId }) {
               placeholder={'utm_source=newsletter&utm_campaign={post_slug}'}
               help={__('Template for UTM query parameters', 'campaignbridge')}
               __nextHasNoMarginBottom
+              __next40pxDefaultSize
             />
           )}
 
@@ -225,6 +234,7 @@ export default function TemplateSettings({ postType, postId }) {
               onChange={value => update('cb_footer_pattern', value)}
               placeholder={__('Footer template slug', 'campaignbridge')}
               __nextHasNoMarginBottom
+              __next40pxDefaultSize
             />
           )}
         </PanelBody>

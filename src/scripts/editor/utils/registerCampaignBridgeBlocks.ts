@@ -1,20 +1,21 @@
 /**
- * CampaignBridge Block Registration System - Legacy Compatibility Layer
+ * CampaignBridge Block Registration - Core API
  *
- * @deprecated This file now serves as a compatibility layer.
- * Import from './block-registry' instead for the new modular architecture.
+ * Provides the main API for registering CampaignBridge blocks, similar to
+ * WordPress core's registerCoreBlocks(). This is the primary entry point
+ * for block registration in CampaignBridge.
  *
- * This maintains backward compatibility while encouraging migration
- * to the new modular structure in the 'block-registry' subdirectory.
+ * Usage:
+ * ```typescript
+ * import { registerCampaignBridgeBlocks } from './utils/registerCampaignBridgeBlocks';
+ *
+ * // Register all CampaignBridge blocks
+ * registerCampaignBridgeBlocks();
+ * ```
  */
 
-// Re-export the new modular API for backward compatibility
-export {
-  BlockNotFoundError,
-  BlockValidationError,
-  registerCampaignBridgeBlocks,
-  type BlockModule,
-  type DiscoveredBlock,
-  type RegistrationResult,
-  type RegistrationStats,
-} from './block-registry';
+// Re-export the core registration function (matches WordPress registerCoreBlocks API)
+export { registerCampaignBridgeBlocks } from './block-registry';
+
+// Re-export types for TypeScript users
+export type { RegistrationStats } from './block-registry';

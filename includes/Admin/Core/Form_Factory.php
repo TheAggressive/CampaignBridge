@@ -7,6 +7,8 @@
 
 namespace CampaignBridge\Admin\Core;
 
+use CampaignBridge\Core\Storage;
+
 /**
  * Form Factory - Static methods for creating pre-configured forms
  *
@@ -47,7 +49,7 @@ class Form_Factory {
 				),
 				'hooks'  => array(
 					'after_save' => function ( $data ) {
-						\wp_mail( \get_option( 'admin_email' ), $data['subject'] ?? 'Contact Form', $data['message'] );
+						\wp_mail( Storage::get_option( 'admin_email' ), $data['subject'] ?? 'Contact Form', $data['message'] );
 					},
 				),
 			)

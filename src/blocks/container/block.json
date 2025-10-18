@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "name": "campaignbridge/container",
   "title": "Email Container",
-  "category": "layout",
+  "category": "widgets",
   "icon": "email",
   "description": "Root email container (centered table). Colors come from core color support; paddings are attributes.",
   "textdomain": "campaignbridge",

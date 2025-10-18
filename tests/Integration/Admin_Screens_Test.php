@@ -159,7 +159,7 @@ class Admin_Screens_Test extends Test_Case {
 		$output = ob_get_clean();
 
 		// Verify editor screen structure
-		$this->assertStringContainsString( 'Email Template Editor', $output, 'Should contain editor title' );
+		$this->assertStringContainsString( 'cb-block-editor-root', $output, 'Should contain editor root div' );
 		$this->assertStringContainsString( 'editor-screen', $output, 'Should contain editor CSS classes' );
 	}
 

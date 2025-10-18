@@ -27,7 +27,7 @@ export function useAutoSaveMetaManager({
 }) {
   // --- lightweight input assert (non-breaking, helps find wrong callers)
   if (!postType || !postId) {
-    // eslint-disable-next-line no-console
+     
     console.error('[useAutoSaveMetaManager] Missing postType or postId', {
       postType,
       postId,
@@ -82,7 +82,7 @@ export function useAutoSaveMetaManager({
     async (partial /*, { signal } = {} */) => {
       try {
         if (!postType || !postId || !ready) {
-          // eslint-disable-next-line no-console
+           
           console.warn('[useAutoSaveMetaManager] Skipping save (not ready)', {
             postType,
             postId,
@@ -119,7 +119,7 @@ export function useAutoSaveMetaManager({
           lastNoticeAtRef.current = now;
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.error('Meta save failed:', err);
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.ERROR);
         onError?.('Failed to save changes');

@@ -5,12 +5,14 @@
  * Demonstrates the modern fluent API for form creation
  * Auto-discovered as part of Settings screen
  * Controller: Settings_Controller (auto-discovered)
+ *
+ * @package CampaignBridge
  */
 
-// Include the Form system
+// Include the Form system.
 require_once __DIR__ . '/../../Core/Form.php';
 
-// Create the general settings form using the fluent API
+// Create the general settings form using the fluent API.
 $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 	->table()
 	->success( 'Settings saved successfully!' )
@@ -38,19 +40,19 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 		->autocomplete( 'email' )
 		->end()
 
-	->before_validate(
-		function ( $data ) {
-			// Ensure from_email is different from reply_to
-			if ( ! empty( $data['reply_to'] ) && $data['from_email'] === $data['reply_to'] ) {
-				throw new Exception( __( 'From Email and Reply-To Email should be different.', 'campaignbridge' ) );
+		->before_validate(
+			function ( $data ) {
+				// Ensure from_email is different from reply_to.
+				if ( ! empty( $data['reply_to'] ) && $data['from_email'] === $data['reply_to'] ) {
+					throw new Exception( esc_html__( 'From Email and Reply-To Email should be different.', 'campaignbridge' ) );
+				}
+				return $data;
 			}
-			return $data;
-		}
-	)
+		)
 	->after_validate(
 		function ( $data, $errors ) {
-			if ( ! empty( $errors ) ) {
-				error_log( 'General settings validation failed: ' . print_r( $errors, true ) );
+			if ( ! empty( $errors ) && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'General settings validation failed: ' . print_r( $errors, true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging.
 			}
 		}
 	)

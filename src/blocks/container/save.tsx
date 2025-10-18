@@ -8,11 +8,14 @@
  * The actual rendering is handled by the PHP render callback in render.php,
  * which provides full server-side control over the email HTML structure and
  * ensures proper email client compatibility.
- *
- * @return {JSX.Element} The save component (InnerBlocks content placeholder)
  */
 import { InnerBlocks } from '@wordpress/block-editor';
 
-export default function Save() {
+interface ContainerBlockAttributes {
+  // Add specific attributes here as needed
+  [key: string]: any;
+}
+
+export default function Save(): JSX.Element {
   return <InnerBlocks.Content />;
 }

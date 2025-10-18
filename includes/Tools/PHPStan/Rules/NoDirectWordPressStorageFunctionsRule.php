@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tools\PHPStan\Rules;
 
+use CampaignBridge\Core\Storage_Prefixes;
+
 use PhpParser\Node;
 use PhpParser\Node\Expr\FuncCall;
 use PHPStan\Analyser\Scope;
@@ -95,37 +97,37 @@ class NoDirectWordPressStorageFunctionsRule implements Rule {
 			return array();
 		}
 
-		$functionName = $node->name->name;
+		$function_name = $node->name->name;
 
-		if ( ! isset( self::FORBIDDEN_FUNCTIONS[ $functionName ] ) ) {
+		if ( ! isset( self::FORBIDDEN_FUNCTIONS[ $function_name ] ) ) {
 			return array();
 		}
 
-		// Check if this function is allowed in the current file
-		$filePath     = $scope->getFile();
-		$relativePath = $this->getRelativePath( $filePath );
+		// Check if this function is allowed in the current file.
+		$file_path     = $scope->getFile();
+		$relative_path = $this->getRelativePath( $file_path );
 
-		// Allow in specific files
-		if ( isset( self::ALLOWED_IN_FILES[ $relativePath ] ) ) {
-			$allowed = self::ALLOWED_IN_FILES[ $relativePath ];
-			if ( in_array( '*', $allowed, true ) || in_array( $functionName, $allowed, true ) ) {
+		// Allow in specific files.
+		if ( isset( self::ALLOWED_IN_FILES[ $relative_path ] ) ) {
+			$allowed = self::ALLOWED_IN_FILES[ $relative_path ];
+			if ( in_array( '*', $allowed, true ) || in_array( $function_name, $allowed, true ) ) {
 				return array();
 			}
 		}
 
-		// Allow in specific directories during migration and testing
-		foreach ( self::ALLOWED_IN_DIRECTORIES as $allowedPath ) {
-			if ( str_starts_with( $relativePath, $allowedPath ) ) {
+		// Allow in specific directories during migration and testing.
+		foreach ( self::ALLOWED_IN_DIRECTORIES as $allowed_path ) {
+			if ( str_starts_with( $relative_path, $allowed_path ) ) {
 				return array();
 			}
 		}
 
-		// Check if this is a method call on a class (not a direct function call)
+		// Check if this is a method call on a class (not a direct function call).
 		if ( $this->isMethodCall( $node ) ) {
 			return array();
 		}
 
-		$suggestion = self::FORBIDDEN_FUNCTIONS[ $functionName ];
+		$suggestion = self::FORBIDDEN_FUNCTIONS[ $function_name ];
 
 		return array(
 			RuleErrorBuilder::message(
@@ -139,12 +141,12 @@ class NoDirectWordPressStorageFunctionsRule implements Rule {
 	/**
 	 * Gets the relative path from the project root.
 	 *
-	 * @param string $absolutePath The absolute file path.
+	 * @param string $absolute_path The absolute file path.
 	 * @return string The relative path.
 	 */
-	private function getRelativePath( string $absolutePath ): string {
-		$projectRoot = dirname( __DIR__, 2 ); // Go up to plugin root
-		return str_replace( $projectRoot . '/', '', $absolutePath );
+	private function getRelativePath( string $absolute_path ): string {
+		$project_root = dirname( __DIR__, 2 ); // Go up to plugin root.
+		return str_replace( $project_root . '/', '', $absolute_path );
 	}
 
 	/**

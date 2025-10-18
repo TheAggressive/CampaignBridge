@@ -14,161 +14,161 @@
 
 /* ===== BUTTONS ===== */
 .campaignbridge-button {
-  @apply inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap transition-colors;
+	@apply inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap transition-colors;
 
-  &:focus-visible {
-    @apply ring-2 ring-offset-2 outline-none;
-  }
+	&:focus-visible {
+	@apply ring-2 ring-offset-2 outline-none;
+	}
 
-  &:disabled {
-    @apply pointer-events-none opacity-50;
-  }
+	&:disabled {
+	@apply pointer-events-none opacity-50;
+	}
 
-  --tw-ring-offset-color: var(--color-background);
-  --tw-ring-color: var(--color-ring);
-  border-radius: var(--form-radius);
-  transition: var(--form-transition);
+	--tw-ring-offset-color: var(--color-background);
+	--tw-ring-color: var(--color-ring);
+	border-radius: var(--form-radius);
+	transition: var(--form-transition);
 
-  /* Default variant */
-  &--default {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    border: 1px solid var(--color-border);
+	/* Default variant */
+	&--default {
+	background-color: var(--color-background);
+	color: var(--color-foreground);
+	border: 1px solid var(--color-border);
 
-    &:hover {
-      background-color: var(--color-accent);
-      color: var(--color-accent-foreground);
-    }
+	&:hover {
+		background-color: var(--color-accent);
+		color: var(--color-accent-foreground);
+	}
 
-    &:focus {
-      box-shadow:
-        0 0 0 var(--form-focus-ring-offset) var(--color-background),
-        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
-          var(--form-focus-ring-color);
-    }
-  }
+	&:focus {
+		box-shadow:
+		0 0 0 var(--form-focus-ring-offset) var(--color-background),
+		0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+			var(--form-focus-ring-color);
+	}
+	}
 
-  /* Primary variant */
-  &--primary {
-    background-color: var(--color-primary);
-    color: var(--color-primary-foreground);
+	/* Primary variant */
+	&--primary {
+	background-color: var(--color-primary);
+	color: var(--color-primary-foreground);
 
-    &:hover {
-      background-color: hsl(var(--color-primary) / 0.9);
-    }
+	&:hover {
+		background-color: hsl(var(--color-primary) / 0.9);
+	}
 
-    &:focus {
-      box-shadow:
-        0 0 0 var(--form-focus-ring-offset) var(--color-background),
-        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
-          var(--form-focus-ring-color);
-    }
-  }
+	&:focus {
+		box-shadow:
+		0 0 0 var(--form-focus-ring-offset) var(--color-background),
+		0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+			var(--form-focus-ring-color);
+	}
+	}
 
-  /* Secondary variant */
-  &--secondary {
-    background-color: var(--color-secondary);
-    color: var(--color-secondary-foreground);
+	/* Secondary variant */
+	&--secondary {
+	background-color: var(--color-secondary);
+	color: var(--color-secondary-foreground);
 
-    &:hover {
-      background-color: hsl(var(--color-secondary) / 0.8);
-    }
+	&:hover {
+		background-color: hsl(var(--color-secondary) / 0.8);
+	}
 
-    &:focus {
-      box-shadow:
-        0 0 0 var(--form-focus-ring-offset) var(--color-background),
-        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
-          var(--form-focus-ring-color);
-    }
-  }
+	&:focus {
+		box-shadow:
+		0 0 0 var(--form-focus-ring-offset) var(--color-background),
+		0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+			var(--form-focus-ring-color);
+	}
+	}
 
-  /* Outline variant */
-  &--outline {
-    background-color: var(--color-background);
-    color: var(--color-accent-foreground);
-    border: 1px solid var(--color-border);
+	/* Outline variant */
+	&--outline {
+	background-color: var(--color-background);
+	color: var(--color-accent-foreground);
+	border: 1px solid var(--color-border);
 
-    &:hover {
-      background-color: var(--color-accent);
-      color: var(--color-accent-foreground);
-    }
+	&:hover {
+		background-color: var(--color-accent);
+		color: var(--color-accent-foreground);
+	}
 
-    &:focus {
-      box-shadow:
-        0 0 0 var(--form-focus-ring-offset) var(--color-background),
-        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
-          var(--form-focus-ring-color);
-    }
-  }
+	&:focus {
+		box-shadow:
+		0 0 0 var(--form-focus-ring-offset) var(--color-background),
+		0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+			var(--form-focus-ring-color);
+	}
+	}
 
-  /* Ghost variant */
-  &--ghost {
-    background-color: transparent;
-    color: var(--color-foreground);
+	/* Ghost variant */
+	&--ghost {
+	background-color: transparent;
+	color: var(--color-foreground);
 
-    &:hover {
-      background-color: var(--color-accent);
-      color: var(--color-accent-foreground);
-    }
+	&:hover {
+		background-color: var(--color-accent);
+		color: var(--color-accent-foreground);
+	}
 
-    &:focus {
-      box-shadow:
-        0 0 0 var(--form-focus-ring-offset) var(--color-background),
-        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
-          var(--form-focus-ring-color);
-    }
-  }
+	&:focus {
+		box-shadow:
+		0 0 0 var(--form-focus-ring-offset) var(--color-background),
+		0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+			var(--form-focus-ring-color);
+	}
+	}
 
-  /* Link variant */
-  &--link {
-    background-color: transparent;
-    color: var(--color-primary);
-    text-decoration: underline;
+	/* Link variant */
+	&--link {
+	background-color: transparent;
+	color: var(--color-primary);
+	text-decoration: underline;
 
-    &:hover {
-      background-color: var(--color-accent);
-      color: var(--color-accent-foreground);
-    }
+	&:hover {
+		background-color: var(--color-accent);
+		color: var(--color-accent-foreground);
+	}
 
-    &:focus {
-      box-shadow:
-        0 0 0 var(--form-focus-ring-offset) var(--color-background),
-        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
-          var(--form-focus-ring-color);
-    }
-  }
+	&:focus {
+		box-shadow:
+		0 0 0 var(--form-focus-ring-offset) var(--color-background),
+		0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+			var(--form-focus-ring-color);
+	}
+	}
 
-  /* Destructive variant */
-  &--destructive {
-    background-color: var(--color-destructive, #ef4444);
-    color: var(--color-destructive-foreground, #ffffff);
+	/* Destructive variant */
+	&--destructive {
+	background-color: var(--color-destructive, #ef4444);
+	color: var(--color-destructive-foreground, #ffffff);
 
-    &:hover {
-      background-color: hsl(var(--color-destructive, #ef4444) / 0.9);
-    }
+	&:hover {
+		background-color: hsl(var(--color-destructive, #ef4444) / 0.9);
+	}
 
-    &:focus {
-      box-shadow:
-        0 0 0 var(--form-focus-ring-offset) var(--color-background),
-        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
-          var(--form-focus-ring-color);
-    }
-  }
+	&:focus {
+		box-shadow:
+		0 0 0 var(--form-focus-ring-offset) var(--color-background),
+		0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+			var(--form-focus-ring-color);
+	}
+	}
 
-  /* Size variants */
-  &--sm {
-    @apply h-9 px-3;
-  }
+	/* Size variants */
+	&--sm {
+	@apply h-9 px-3;
+	}
 
-  &--md {
-    @apply h-10 px-4 py-2;
-  }
+	&--md {
+	@apply h-10 px-4 py-2;
+	}
 
-  &--lg {
-    @apply h-11 px-8;
-  }
+	&--lg {
+	@apply h-11 px-8;
+	}
 
-  &--icon {
-    @apply h-10 w-10;
-  }
+	&--icon {
+	@apply h-10 w-10;
+	}
 }

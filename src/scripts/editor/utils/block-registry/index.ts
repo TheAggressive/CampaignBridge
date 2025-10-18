@@ -6,7 +6,6 @@
  */
 
 import { blockDiscovery } from './discovery';
-import { blockRegistration } from './registration';
 import type { RegistrationStats } from './types';
 
 /**
@@ -25,7 +24,6 @@ import type { RegistrationStats } from './types';
  *
  * // Register all blocks
  * const results = registerCampaignBridgeBlocks();
- * console.log(`Registered ${results.registered} blocks, ${results.failed} failed`);
  *
  * // Results object structure:
  * // {
@@ -36,46 +34,67 @@ import type { RegistrationStats } from './types';
  * // }
  * ```
  */
-export const registerCampaignBridgeBlocks = (): RegistrationStats => {
+/**
+ * Gets all CampaignBridge block modules (like __experimentalGetCoreBlocks)
+ *
+ * @returns Array of block modules with init functions
+ */
+const __getCampaignBridgeBlocks = () => {
   const discoveredBlocks = blockDiscovery.discoverAllBlocks();
+  return discoveredBlocks.map(({ module }) => module);
+};
 
+/**
+ * Function to register CampaignBridge blocks provided by the block editor.
+ *
+ * @param {Array} blocks An optional array of the CampaignBridge blocks being registered.
+ *
+ * @example
+ * ```typescript
+ * import { registerCampaignBridgeBlocks } from './utils/block-registry';
+ *
+ * registerCampaignBridgeBlocks();
+ * ```
+ */
+export const registerCampaignBridgeBlocks = (
+  blocks = __getCampaignBridgeBlocks()
+): RegistrationStats => {
   const results: RegistrationStats = {
-    discovered: discoveredBlocks.length,
+    discovered: blocks.length,
     registered: 0,
     skipped: 0,
     failed: 0,
   };
 
-  discoveredBlocks.forEach(({ name: blockName, module: blockModule }) => {
-    const result = blockRegistration.registerBlockIfNeeded(
-      blockName,
-      blockModule
-    );
+  blocks.forEach(blockModule => {
+    try {
+      // Call init function (just like WordPress core)
+      if (blockModule.init && typeof blockModule.init === 'function') {
+        blockModule.init();
 
-    if (result.success) {
-      if ('skipped' in result && result.skipped) {
-        results.skipped++;
+        // Verify the block was registered
+        if (typeof wp !== 'undefined' && wp.blocks && wp.blocks.getBlockType) {
+          const blockType = wp.blocks.getBlockType(blockModule.name);
+          if (blockType) {
+            results.registered++;
+          } else {
+            results.failed++;
+          }
+        } else {
+          // Fallback if wp.blocks is not available yet
+          results.registered++;
+        }
       } else {
-        results.registered++;
+        results.failed++;
       }
-    } else {
+    } catch (error) {
       results.failed++;
     }
   });
-
   return results;
 };
 
-// Re-export types for external usage
-export type {
-  RegistrationStats,
-  DiscoveredBlock,
-  BlockModule,
-  RegistrationResult,
-} from './types';
+// Note: Blocks are registered manually in editor.tsx, similar to registerCoreBlocks()
 
-// Re-export error classes for error handling
-export {
-  BlockNotFoundError,
-  BlockValidationError,
-} from './types';
+// Re-export types for external usage
+export type { BlockModule, DiscoveredBlock, RegistrationStats } from './types';

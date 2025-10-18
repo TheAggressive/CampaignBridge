@@ -11,6 +11,7 @@
 
 // Include the Form API.
 use CampaignBridge\Admin\Core\Form;
+use CampaignBridge\Core\Storage;
 
 ?>
 
@@ -174,7 +175,7 @@ use CampaignBridge\Admin\Core\Form;
 							);
 
 						foreach ( $options_to_delete as $option_name ) {
-							$option_value = get_option( $option_name );
+							$option_value = Storage::get_option( $option_name );
 							if ( $option_value ) {
 								// Delete single files
 								if ( isset( $option_value['file'] ) && file_exists( $option_value['file'] ) ) {
@@ -188,7 +189,7 @@ use CampaignBridge\Admin\Core\Form;
 										}
 									}
 								}
-								delete_option( $option_name );
+								Storage::delete_option( $option_name );
 							}
 						}
 					}

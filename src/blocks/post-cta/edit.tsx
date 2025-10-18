@@ -12,7 +12,7 @@ export default function Edit({ context }) {
         : null,
     [postType, postId]
   );
-  const link = post?.link || '';
+  const link = (post && post.link) || '';
   return (
     <p {...useBlockProps()}>
       <a

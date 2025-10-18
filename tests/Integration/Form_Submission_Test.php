@@ -54,9 +54,9 @@ class Form_Submission_Test extends Test_Case {
 		$form->render(); // This triggers form processing internally
 
 		// Assert: Verify data was saved to WordPress options
-		// save_to_options() saves each field as separate option
-		$this->assertEquals( 'John Doe', get_option( 'user_name' ), 'User name should be saved' );
-		$this->assertEquals( 'john@example.com', get_option( 'user_email' ), 'User email should be saved' );
+		// save_to_options() saves each field as separate option with cb_ prefix
+		$this->assertEquals( 'John Doe', get_option( 'cb_user_name' ), 'User name should be saved' );
+		$this->assertEquals( 'john@example.com', get_option( 'cb_user_email' ), 'User email should be saved' );
 	}
 
 	/**
@@ -157,10 +157,10 @@ class Form_Submission_Test extends Test_Case {
 		$this->assertEmpty( $form->errors(), 'Should have no errors' );
 
 		// Verify data persistence
-		// save_to_options() saves each field as separate option
-		$this->assertEquals( 'Jane Smith', get_option( 'name' ) );
-		$this->assertEquals( 'jane@example.com', get_option( 'email' ) );
-		$this->assertEquals( 'This is a test message', get_option( 'message' ) );
+		// save_to_options() saves each field as separate option with cb_ prefix
+		$this->assertEquals( 'Jane Smith', get_option( 'cb_name' ) );
+		$this->assertEquals( 'jane@example.com', get_option( 'cb_email' ) );
+		$this->assertEquals( 'This is a test message', get_option( 'cb_message' ) );
 	}
 
 	/**
@@ -204,8 +204,8 @@ class Form_Submission_Test extends Test_Case {
 		// Assert: Data should be saved to post meta
 		$this->assertTrue( $form->valid(), 'Form should be valid' );
 
-		$saved_title       = get_post_meta( $post_id, 'meta_title', true );
-		$saved_description = get_post_meta( $post_id, 'meta_description', true );
+		$saved_title       = get_post_meta( $post_id, 'cb_meta_title', true );
+		$saved_description = get_post_meta( $post_id, 'cb_meta_description', true );
 
 		$this->assertEquals( 'Updated Title', $saved_title, 'Meta title should be saved' );
 		$this->assertEquals( 'Updated description for the post', $saved_description, 'Meta description should be saved' );

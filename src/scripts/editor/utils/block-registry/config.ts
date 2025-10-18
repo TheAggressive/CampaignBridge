@@ -10,10 +10,10 @@ export const BLOCK_CONFIG = {
   NAMESPACE: 'campaignbridge',
 
   /** Directory path relative to this file where blocks are located */
-  DIRECTORY: '../../../blocks',
+  DIRECTORY: '../../../../blocks',
 
   /** File pattern for matching block index files */
-  PATTERN: /^\.\/.*\/index\.js$/,
+  PATTERN: /^\.\/.*\/index\.(ts|tsx)$/,
 
   /** Enable subdirectories in require.context */
   USE_SUBDIRECTORIES: true,
@@ -41,5 +41,5 @@ declare const require: {
 export const blockContext = (require as any).context(
   '../../../../blocks',
   true,
-  /index\.js$/
+  /index\.(ts|tsx)$/
 );

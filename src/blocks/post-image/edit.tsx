@@ -12,7 +12,7 @@ export default function Edit({ context = {} }) {
         : null,
     [postType, postId]
   );
-  const mediaId = post?.featured_media || 0;
+  const mediaId = (post && post.featured_media) || 0;
   const media = useSelect(
     select =>
       mediaId
@@ -21,7 +21,13 @@ export default function Edit({ context = {} }) {
     [mediaId]
   );
   const url =
-    media?.media_details?.sizes?.full?.source_url || media?.source_url || '';
+    (media &&
+      media.media_details &&
+      media.media_details.sizes &&
+      media.media_details.sizes.full &&
+      media.media_details.sizes.full.source_url) ||
+    (media && media.source_url) ||
+    '';
   const props = useBlockProps();
   return (
     <div {...props}>

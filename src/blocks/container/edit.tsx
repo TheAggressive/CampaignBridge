@@ -18,15 +18,6 @@
  * - Outer wrapper with outer padding and color support
  * - Inner container with max-width and auto margins (centered)
  * - InnerBlocks area with configurable appender behavior
- *
- * @param {Object}   props                         - Block edit props
- * @param {Object}   props.attributes              - Block attributes
- * @param {number}   props.attributes.maxWidth     - Maximum container width in pixels
- * @param {Object}   props.attributes.outerPadding - Padding around inner container
- * @param {Object}   props.attributes.padding      - Padding inside content area
- * @param {Function} props.setAttributes           - Function to update block attributes
- * @param {string}   props.clientId                - Unique block client ID
- * @return {JSX.Element} The edit component
  */
 
 import {
@@ -35,13 +26,41 @@ import {
   useBlockProps,
   useInnerBlocksProps,
 } from '@wordpress/block-editor';
-import { PanelBody, RangeControl, __experimentalBoxControl as BoxControl } from '@wordpress/components';
+import type { BlockEditProps } from '@wordpress/blocks';
+import { BoxControl, PanelBody, RangeControl } from '@wordpress/components';
 import { useDispatch } from '@wordpress/data';
 import { useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { useBlockSelection } from '../../scripts/editor/hooks/useBlockSelection';
 
-export default function Edit({ attributes, setAttributes, clientId }) {
+interface ContainerBlockAttributes {
+  maxWidth?: number;
+  outerPadding?: {
+    top?: string;
+    right?: string;
+    bottom?: string;
+    left?: string;
+  };
+  padding?: {
+    top?: string;
+    right?: string;
+    bottom?: string;
+    left?: string;
+  };
+  backgroundColor?: string;
+  textColor?: string;
+  [key: string]: any;
+}
+
+interface EditProps extends BlockEditProps<ContainerBlockAttributes> {
+  clientId: string;
+}
+
+export default function Edit({
+  attributes,
+  setAttributes,
+  clientId,
+}: EditProps): JSX.Element {
   const { maxWidth, outerPadding, padding } = attributes;
   const { updateBlockAttributes } = useDispatch('core/block-editor');
   const { hasInnerBlocks } = useBlockSelection(clientId);
@@ -83,7 +102,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
   });
 
   return (
-    <div {...blockProps}>
+    <>
       <InspectorControls>
         <PanelBody title={__('Container', 'campaignbridge')} initialOpen>
           <RangeControl
@@ -101,7 +120,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             values={outerPadding}
             onChange={vals => setAttributes({ outerPadding: vals })}
             __next40pxDefaultSize
-            __nextHasNoMarginBottom
           />
 
           <BoxControl
@@ -109,7 +127,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             values={padding}
             onChange={vals => setAttributes({ padding: vals })}
             __next40pxDefaultSize
-            __nextHasNoMarginBottom
           />
         </PanelBody>
       </InspectorControls>
@@ -117,6 +134,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
       <div {...blockProps}>
         <div {...innerBlocksProps} />
       </div>
-    </div>
+    </>
   );
 }

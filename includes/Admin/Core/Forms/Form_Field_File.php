@@ -137,7 +137,7 @@ class Form_Field_File extends Form_Field_Base {
 				esc_url( $file_url ),
 				esc_html( $file_name ),
 				esc_attr( $this->config['name'] . '_current' ),
-				esc_attr( (string) (is_numeric( $file ) ? $file : $file_url) )
+				esc_attr( (string) ( is_numeric( $file ) ? $file : $file_url ) )
 			);
 		}
 	}

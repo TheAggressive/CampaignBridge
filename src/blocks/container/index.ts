@@ -16,6 +16,8 @@
  */
 
 import { registerBlockType } from '@wordpress/blocks';
+import type { BlockConfiguration } from '@wordpress/blocks';
+import type { ComponentType } from 'react';
 
 import metadata from './block.json';
 import Edit from './edit';
@@ -23,28 +25,27 @@ import Save from './save';
 
 /**
  * Block metadata imported from block.json
- * @type {Object}
  */
 export { metadata };
 
 /**
  * Block name extracted from metadata
- * @type {string}
  */
-export const { name } = metadata;
+export const { name }: { name: string } = metadata;
 
 /**
  * Block settings configuration
  *
  * Defines the edit and save components for the container block.
- *
- * @type {Object}
- * @property {Function} edit - The edit component for block editing
- * @property {Function} save - The save component for block rendering
  */
-export const settings = {
-  edit: Edit,
-  save: Save,
+export interface ContainerBlockSettings {
+	edit: ComponentType<any>;
+	save: ComponentType<any> | (() => JSX.Element | null);
+}
+
+export const settings: ContainerBlockSettings = {
+	edit: Edit,
+	save: Save,
 };
 
 /**
@@ -52,10 +53,10 @@ export const settings = {
  *
  * Registers the block with WordPress using the metadata and settings.
  * This function is called immediately to register the block on load.
- *
- * @return {void}
  */
-export const init = () => registerBlockType({ name, ...metadata }, settings);
+export const init = (): void => {
+	registerBlockType({ name, ...metadata } as BlockConfiguration, settings);
+};
 
 // Initialize the block immediately
 init();

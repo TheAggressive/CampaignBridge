@@ -22,33 +22,33 @@
  */
 
 import { registerBlockType } from '@wordpress/blocks';
+import type { BlockConfiguration } from '@wordpress/blocks';
 
 import metadata from './block.json';
 import Edit from './edit';
 
 /**
  * Block metadata imported from block.json
- * @type {Object}
  */
 export { metadata };
 
 /**
  * Block name extracted from metadata
- * @type {string}
  */
-export const { name } = metadata;
+export const { name }: { name: string } = metadata;
 
 /**
  * Block settings configuration
  *
  * Defines the edit component for the post image block.
  * Note: This block uses server-side rendering, so no save component is needed.
- *
- * @type {Object}
- * @property {Function} edit - The edit component for block editing
  */
-export const settings = {
-  edit: Edit,
+export interface PostImageBlockSettings {
+	edit: React.ComponentType<any>;
+}
+
+export const settings: PostImageBlockSettings = {
+	edit: Edit,
 };
 
 /**
@@ -56,10 +56,10 @@ export const settings = {
  *
  * Registers the block with WordPress using the metadata and settings.
  * This function is called immediately to register the block on load.
- *
- * @return {void}
  */
-export const init = () => registerBlockType({ name, ...metadata }, settings);
+export const init = (): void => {
+	registerBlockType({ name, ...metadata } as BlockConfiguration, settings);
+};
 
 // Initialize the block immediately
 init();
