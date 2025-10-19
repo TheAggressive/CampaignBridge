@@ -10,7 +10,10 @@ namespace CampaignBridge\Tests\Unit;
 use CampaignBridge\Admin\Core\Form;
 use CampaignBridge\Admin\Core\Forms\Form_Config;
 use CampaignBridge\Admin\Core\Forms\Form_Container;
+use CampaignBridge\Admin\Core\Forms\Form_Handler;
 use CampaignBridge\Admin\Core\Forms\Form_Notice_Handler;
+use CampaignBridge\Admin\Core\Forms\Form_Security;
+use CampaignBridge\Admin\Core\Forms\Form_Validator;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
 /**
@@ -228,5 +231,87 @@ class Form_Test extends Test_Case {
 			$form->render();
 			ob_end_clean();
 		}
+	}
+
+	/**
+	 * Test that encrypted form fields properly encrypt submitted values.
+	 */
+	public function test_encrypted_field_encryption(): void {
+		// Skip if encryption is not available
+		if ( ! class_exists( '\CampaignBridge\Core\Encryption' ) ) {
+			$this->markTestSkipped( 'Encryption class not available' );
+		}
+
+		// Create a Form_Handler instance using our test container
+		$form           = $this->createMock( Form::class );
+		$security       = $this->createMock( Form_Security::class );
+		$validator      = $this->createMock( Form_Validator::class );
+		$notice_handler = $this->createMock( Form_Notice_Handler::class );
+
+		$handler = new Form_Handler(
+			$form,
+			$this->config,
+			array(),
+			$security,
+			$validator,
+			$notice_handler
+		);
+
+		// Test data
+		$plain_text_value = 'super_secret_api_key_12345';
+		$field_config     = array(
+			'type'    => 'encrypted',
+			'context' => 'api_key',
+		);
+
+		// Test that plain text gets encrypted
+		$sanitized_value = $this->invoke_private_method( $handler, 'sanitize_field_value', array( $plain_text_value, $field_config ) );
+
+		// Verify the value is encrypted
+		$this->assertNotEquals( $plain_text_value, $sanitized_value );
+		$this->assertTrue( \CampaignBridge\Core\Encryption::is_encrypted_value( $sanitized_value ) );
+
+		// Verify we can decrypt it back
+		$decrypted_value = \CampaignBridge\Core\Encryption::decrypt( $sanitized_value );
+		$this->assertEquals( $plain_text_value, $decrypted_value );
+
+		// Test that already encrypted values are not double-encrypted
+		$already_encrypted = \CampaignBridge\Core\Encryption::encrypt( 'another_secret' );
+		$sanitized_again   = $this->invoke_private_method( $handler, 'sanitize_field_value', array( $already_encrypted, $field_config ) );
+
+		// Should return the same encrypted value
+		$this->assertEquals( $already_encrypted, $sanitized_again );
+
+		// Test empty values are handled correctly
+		$empty_sanitized = $this->invoke_private_method( $handler, 'sanitize_field_value', array( '', $field_config ) );
+		$this->assertEquals( '', $empty_sanitized );
+
+		// Test masked values (containing •) get encrypted since they're not already encrypted
+		$masked_value     = '••••••••••••abcd';
+		$masked_sanitized = $this->invoke_private_method( $handler, 'sanitize_field_value', array( $masked_value, $field_config ) );
+
+		// Masked values should be encrypted because they're plain text
+		$this->assertNotEquals( $masked_value, $masked_sanitized );
+		$this->assertTrue( \CampaignBridge\Core\Encryption::is_encrypted_value( $masked_sanitized ) );
+
+		// Should be able to decrypt back
+		$decrypted_masked = \CampaignBridge\Core\Encryption::decrypt( $masked_sanitized );
+		$this->assertEquals( $masked_value, $decrypted_masked );
+	}
+
+	/**
+	 * Helper method to invoke private methods for testing.
+	 *
+	 * @param object $object     The object instance.
+	 * @param string $method_name The private method name.
+	 * @param array  $args       Arguments to pass to the method.
+	 * @return mixed The method result.
+	 */
+	private function invoke_private_method( object $object, string $method_name, array $args = array() ): mixed {
+		$reflection = new \ReflectionClass( $object );
+		$method     = $reflection->getMethod( $method_name );
+		$method->setAccessible( true );
+
+		return $method->invokeArgs( $object, $args );
 	}
 }
