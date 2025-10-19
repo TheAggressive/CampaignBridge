@@ -62,7 +62,7 @@ class Post_Types extends Admin {
 	 * @return array The current settings array.
 	 */
 	public static function get_settings(): array {
-		return get_option( self::get_option_name(), array() );
+		return \CampaignBridge\Core\Storage::get_option( self::get_option_name(), array() );
 	}
 
 	/**

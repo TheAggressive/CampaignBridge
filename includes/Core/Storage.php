@@ -1,4 +1,6 @@
 <?php // phpcs:ignore WordPress.Files.FileName
+// phpcs:disable CampaignBridge.Sniffs.StorageUsage.ForbiddenStorageFunction -- This file intentionally uses WordPress storage functions as wrappers
+
 /**
  * Storage Operations for CampaignBridge Plugin
  *

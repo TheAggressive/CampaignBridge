@@ -753,4 +753,13 @@ class Form_Builder {
 	public function get_form(): \CampaignBridge\Admin\Core\Form {
 		return $this->form;
 	}
+
+	/**
+	 * Get all form fields
+	 *
+	 * @return array<string, mixed> Array of field configurations.
+	 */
+	public function get_fields(): array {
+		return $this->config->get_fields();
+	}
 }

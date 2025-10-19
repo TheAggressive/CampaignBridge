@@ -115,7 +115,7 @@ abstract class Admin {
 	 * @return array The current settings array, or empty array if no settings exist.
 	 */
 	public static function get_settings(): array {
-		return get_option( self::$option_name, array() );
+		return \CampaignBridge\Core\Storage::get_option( self::$option_name, array() );
 	}
 
 	/**

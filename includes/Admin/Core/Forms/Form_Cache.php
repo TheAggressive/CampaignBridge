@@ -56,7 +56,7 @@ class Form_Cache {
 	 */
 	public function set_form_config( string $cache_key, array $config, int $expiry = self::CACHE_EXPIRY ): bool {
 		$cache_key = $this->sanitize_cache_key( $cache_key );
-		return wp_cache_set( $cache_key, $config, self::CACHE_GROUP, $expiry );
+		return \CampaignBridge\Core\Storage::wp_cache_set( $cache_key, $config, self::CACHE_GROUP, $expiry );
 	}
 
 	/**
@@ -80,7 +80,7 @@ class Form_Cache {
 	 */
 	public function get_form_config( string $cache_key ): ?array {
 		$cache_key = $this->sanitize_cache_key( $cache_key );
-		$cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+		$cached    = \CampaignBridge\Core\Storage::wp_cache_get( $cache_key, self::CACHE_GROUP );
 
 		return false !== $cached ? $cached : null;
 	}
@@ -120,7 +120,7 @@ class Form_Cache {
 		$conditions_json = wp_json_encode( $conditions );
 		$conditions_hash = $conditions_json ? md5( $conditions_json ) : 'empty';
 		$cache_key       = "rendered_{$form_id}_{$conditions_hash}";
-		return wp_cache_set( $cache_key, $html, self::CACHE_GROUP, self::CACHE_EXPIRY / 4 ); // Shorter cache for HTML.
+		return \CampaignBridge\Core\Storage::wp_cache_set( $cache_key, $html, self::CACHE_GROUP, self::CACHE_EXPIRY / 4 ); // Shorter cache for HTML.
 	}
 
 	/**
@@ -134,7 +134,7 @@ class Form_Cache {
 		$conditions_json = wp_json_encode( $conditions );
 		$conditions_hash = $conditions_json ? md5( $conditions_json ) : 'empty';
 		$cache_key       = "rendered_{$form_id}_{$conditions_hash}";
-		$cached          = wp_cache_get( $cache_key, self::CACHE_GROUP );
+		$cached          = \CampaignBridge\Core\Storage::wp_cache_get( $cache_key, self::CACHE_GROUP );
 
 		return false !== $cached ? $cached : null;
 	}
@@ -181,9 +181,9 @@ class Form_Cache {
 	 */
 	public function invalidate_form_cache( string $form_id ): void {
 		// Delete specific cache entries for this form.
-		wp_cache_delete( "config_{$form_id}", self::CACHE_GROUP );
-		wp_cache_delete( "fields_{$form_id}", self::CACHE_GROUP );
-		wp_cache_delete( "validation_{$form_id}", self::CACHE_GROUP );
+		\CampaignBridge\Core\Storage::wp_cache_delete( "config_{$form_id}", self::CACHE_GROUP );
+		\CampaignBridge\Core\Storage::wp_cache_delete( "fields_{$form_id}", self::CACHE_GROUP );
+		\CampaignBridge\Core\Storage::wp_cache_delete( "validation_{$form_id}", self::CACHE_GROUP );
 
 		// Delete rendered form caches (pattern-based deletion).
 		$this->invalidate_pattern( "rendered_{$form_id}_*" );
@@ -221,7 +221,7 @@ class Form_Cache {
 		// Replace spaces and special characters with underscores.
 		$sanitized = preg_replace( '/[^a-zA-Z0-9_-]/', '_', $key );
 
-		// Handle preg_replace failure
+		// Handle preg_replace failure.
 		if ( null === $sanitized ) {
 			$sanitized = $key;
 		}

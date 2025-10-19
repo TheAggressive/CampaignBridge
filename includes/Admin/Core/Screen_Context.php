@@ -254,7 +254,6 @@ class Screen_Context {
 		wp_localize_script( 'cb-' . $handle, $object_name, $data );
 	}
 
-
 	/**
 	 * Returns information about the current screen.
 	 *

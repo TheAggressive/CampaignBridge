@@ -184,7 +184,6 @@ class Service_Container {
 		);
 	}
 
-
 	/**
 	 * Get all registered services
 	 *

@@ -124,7 +124,7 @@ class Form_Data_Manager {
 			} else {
 				// Regular field - load normally.
 				$option_key              = $this->config['prefix'] . $field_id . $this->config['suffix'];
-				$this->data[ $field_id ] = \get_option( $option_key, $field_config['default'] ?? '' );
+				$this->data[ $field_id ] = \CampaignBridge\Core\Storage::get_option( $option_key, $field_config['default'] ?? '' );
 			}
 		}
 	}
@@ -149,7 +149,7 @@ class Form_Data_Manager {
 		$post_id = $this->config['post_id'] ?? \get_the_ID();
 
 		foreach ( $this->fields as $field_id => $field_config ) {
-			$this->data[ $field_id ] = \get_post_meta( $post_id, $field_id, true );
+			$this->data[ $field_id ] = \CampaignBridge\Core\Storage::get_post_meta( $post_id, $field_id, true );
 		}
 	}
 

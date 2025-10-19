@@ -178,7 +178,6 @@ class Performance_Optimizer {
 		}
 	}
 
-
 	/**
 	 * Performance monitoring for expensive operations
 	 *

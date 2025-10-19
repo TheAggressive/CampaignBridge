@@ -84,7 +84,7 @@ class Settings_Manager {
 	 * @return array Current settings or empty array if none exist.
 	 */
 	public static function get_settings(): array {
-		$raw_settings = get_option( self::OPTION_NAME, array() );
+		$raw_settings = \CampaignBridge\Core\Storage::get_option( self::OPTION_NAME, array() );
 
 		// Decrypt sensitive fields for display/use
 		return self::decrypt_sensitive_fields( $raw_settings );
@@ -206,7 +206,7 @@ class Settings_Manager {
 	 */
 	public static function sanitize_settings( array $settings ): array {
 		// Get existing settings to preserve other tabs' data
-		$existing_settings = get_option( self::OPTION_NAME, array() );
+		$existing_settings = \CampaignBridge\Core\Storage::get_option( self::OPTION_NAME, array() );
 
 		// Merge new settings with existing ones to preserve all data
 		$merged_settings = array_merge( $existing_settings, $settings );
@@ -295,12 +295,12 @@ class Settings_Manager {
 	 */
 	private static function decrypt_sensitive_fields( array $settings ): array {
 		// Only decrypt if the encryption system is available and secure
-		if ( ! class_exists( '\CampaignBridge\Core\Api_Key_Encryption' ) ) {
-			error_log( 'CampaignBridge: Api_Key_Encryption class not found for decryption' );
+		if ( ! class_exists( '\CampaignBridge\Core\Encryption' ) ) {
+			error_log( 'CampaignBridge: Encryption class not found for decryption' );
 			return $settings;
 		}
 
-		$security_check = \CampaignBridge\Core\Api_Key_Encryption::security_check();
+		$security_check = \CampaignBridge\Core\Encryption::security_check();
 		if ( ! $security_check['secure'] ) {
 			// Log security issue without exposing sensitive details
 			error_log( 'CampaignBridge: Decryption security check failed - system may be compromised' );

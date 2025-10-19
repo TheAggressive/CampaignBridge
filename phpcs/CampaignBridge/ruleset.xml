@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<ruleset name="CampaignBridge Custom Rules">
+    <description>CampaignBridge custom PHPCS rules for plugin-specific standards.</description>
+
+
+    <!-- Register our custom sniffs -->
+    <rule ref="phpcs/CampaignBridge/Sniffs/StorageUsageSniff.php">
+        <severity>error</severity>
+    </rule>
+</ruleset>

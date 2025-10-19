@@ -70,7 +70,6 @@ class Admin {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_global_assets' ) );
 	}
 
-
 	/**
 	 * Add the main CampaignBridge menu page.
 	 */

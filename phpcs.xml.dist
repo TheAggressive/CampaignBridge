@@ -2,10 +2,26 @@
 <ruleset name="CampaignBridge">
   <description>CampaignBridge WordPress Coding Standards - Modern PHP with WordPress conventions.</description>
 
+
   <!-- Base WordPress rules -->
   <rule ref="WordPress"/>
   <rule ref="WordPress-Extra"/>
   <rule ref="WordPress-Docs"/>
+  <rule ref="WordPress.Security"/>
+
+  <!-- Custom CampaignBridge rules -->
+  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/StorageUsageSniff.php">
+    <severity>error</severity>
+  </rule>
+  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/HookUsageSniff.php">
+    <severity>warning</severity>
+  </rule>
+  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/SecurityValidationSniff.php">
+    <severity>warning</severity>
+  </rule>
+  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DatabaseOperationSniff.php">
+    <severity>error</severity>
+  </rule>
 
   <!-- Exclude build and dependency directories -->
   <exclude-pattern>vendor/*</exclude-pattern>
@@ -27,6 +43,25 @@
   </rule>
 
   <rule ref="WordPress.WP.I18n.MissingTranslatorsComment">
+    <severity>warning</severity>
+  </rule>
+
+  <!-- Database Best Practices -->
+  <rule ref="WordPress.DB.RestrictedClasses">
+    <severity>error</severity>
+  </rule>
+  <rule ref="WordPress.DB.RestrictedFunctions">
+    <severity>error</severity>
+  </rule>
+
+  <!-- Code Quality -->
+  <rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+    <severity>warning</severity>
+  </rule>
+  <rule ref="Generic.CodeAnalysis.UnconditionalIfStatement">
+    <severity>warning</severity>
+  </rule>
+  <rule ref="Generic.PHP.NoSilencedErrors">
     <severity>warning</severity>
   </rule>
 </ruleset>

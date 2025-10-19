@@ -198,6 +198,20 @@ class Encryption {
 	}
 
 	/**
+	 * Decrypt data for display purposes (admin interface, settings pages).
+	 *
+	 * This is a convenience method that decrypts data for display in admin interfaces.
+	 * Requires administrator permissions (manage_options).
+	 *
+	 * @param string $encrypted The encrypted data from storage.
+	 * @return string The decrypted data for display.
+	 * @throws \RuntimeException If decryption fails, data is corrupted, or user lacks permission.
+	 */
+	public static function decrypt_for_display( string $encrypted ): string {
+		return self::decrypt_for_context( $encrypted, 'sensitive' );
+	}
+
+	/**
 	 * Check if current user has permission for the given context.
 	 *
 	 * @param string $context The security context.
@@ -375,7 +389,6 @@ class Encryption {
 			'key_age_days'      => isset( $metadata['created'] ) ? (int) ( ( time() - $metadata['created'] ) / DAY_IN_SECONDS ) : 0,
 		);
 	}
-
 
 	/**
 	 * Check if a value appears to be encrypted data.

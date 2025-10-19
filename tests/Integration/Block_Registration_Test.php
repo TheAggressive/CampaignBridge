@@ -190,7 +190,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 
 		$this->assertNotNull( $container_block, 'Container block should be registered' );
 		$this->assertEquals( 'Email Container', $container_block->title, 'Container block should have correct title' );
-		$this->assertEquals( 'layout', $container_block->category, 'Container block should be in layout category' );
+		$this->assertEquals( 'widgets', $container_block->category, 'Container block should be in widgets category' );
 		$this->assertEquals( 'email', $container_block->icon, 'Container block should have email icon' );
 
 		// Test supports

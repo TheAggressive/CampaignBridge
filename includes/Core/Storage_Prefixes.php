@@ -44,38 +44,38 @@ class Storage_Prefixes {
 	 * Standard WordPress cache groups that need prefixing for plugin data.
 	 */
 	public const STANDARD_CACHE_GROUPS = array(
-		'options',     // WordPress options cache
-		'post_meta',   // Post meta cache
-		'user_meta',   // User meta cache
+		'options',     // WordPress options cache.
+		'post_meta',   // Post meta cache.
+		'user_meta',   // User meta cache.
 	);
 
 	/**
 	 * Transient prefixes for different data types.
 	 */
 	public const TRANSIENT_PREFIXES = array(
-		'cb_mc_',           // Mailchimp related
-		'cb_campaignbridge_', // General plugin transients
-		'campaignbridge_',  // Legacy transients
-		'form_rate_limit_', // Form security rate limiting
+		'cb_mc_',           // Mailchimp related.
+		'cb_campaignbridge_', // General plugin transients.
+		'campaignbridge_',  // Legacy transients.
+		'form_rate_limit_', // Form security rate limiting.
 	);
 
 	/**
 	 * Post meta key prefixes.
 	 */
 	public const POST_META_PREFIXES = array(
-		'cb_template_',     // Email template meta
-		'cb_subject',       // Subject line
-		'cb_preheader',     // Preheader text
-		'cb_audience_tags', // Audience tags
+		'cb_template_',     // Email template meta.
+		'cb_subject',       // Subject line.
+		'cb_preheader',     // Preheader text.
+		'cb_audience_tags', // Audience tags.
 	);
 
 	/**
 	 * User meta key prefixes.
 	 */
 	public const USER_META_PREFIXES = array(
-		'campaignbridge_',  // General user meta
-		'cb_email_',        // Email related user meta
-		'cb_template_',     // Template related user meta
+		'campaignbridge_',  // General user meta.
+		'cb_email_',        // Email related user meta.
+		'cb_template_',     // Template related user meta.
 	);
 
 	/**
@@ -93,14 +93,14 @@ class Storage_Prefixes {
 		'cb_rate_limit',
 		'cb_last_sync',
 		'cb_mailchimp_last_test',
-		'campaignbridge_post_types', // Legacy
+		'campaignbridge_post_types', // Legacy.
 	);
 
 	/**
 	 * Option keys that use array storage (single option containing array).
 	 */
 	public const ARRAY_OPTIONS = array(
-		'campaignbridge_settings', // Main settings array
+		'campaignbridge_settings', // Main settings array.
 	);
 
 	/**
@@ -110,12 +110,12 @@ class Storage_Prefixes {
 	 * @return string The prefixed option key.
 	 */
 	public static function get_option_key( string $key ): string {
-		// If key already has a known prefix, return as-is
+		// If key already has a known prefix, return as-is.
 		if ( self::has_known_prefix( $key ) ) {
 			return $key;
 		}
 
-		// Add settings prefix for new options
+		// Add settings prefix for new options.
 		return self::SETTINGS_PREFIX . $key;
 	}
 
@@ -126,7 +126,7 @@ class Storage_Prefixes {
 	 * @return string The prefixed transient key.
 	 */
 	public static function get_transient_key( string $key ): string {
-		// If key already has a known prefix, return as-is
+		// If key already has a known prefix, return as-is.
 		if ( self::has_known_prefix( $key ) ) {
 			return $key;
 		}
@@ -141,7 +141,7 @@ class Storage_Prefixes {
 	 * @return string The prefixed meta key.
 	 */
 	public static function get_post_meta_key( string $key ): string {
-		// If key already has a known prefix, return as-is
+		// If key already has a known prefix, return as-is.
 		if ( self::has_known_prefix( $key ) ) {
 			return $key;
 		}
@@ -156,7 +156,7 @@ class Storage_Prefixes {
 	 * @return string The prefixed meta key.
 	 */
 	public static function get_user_meta_key( string $key ): string {
-		// If key already has a known prefix, return as-is
+		// If key already has a known prefix, return as-is.
 		if ( self::has_known_prefix( $key ) ) {
 			return $key;
 		}
@@ -171,7 +171,7 @@ class Storage_Prefixes {
 	 * @return string The prefixed cache group.
 	 */
 	public static function get_cache_group( string $group ): string {
-		// If group already has our cache prefix, return as-is
+		// If group already has our cache prefix, return as-is.
 		if ( str_starts_with( $group, self::CACHE_GROUP_PREFIX . '_' ) ) {
 			return $group;
 		}

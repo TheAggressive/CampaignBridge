@@ -76,7 +76,7 @@ class Security_Test extends Test_Case {
 
 		// This should throw an exception for non-admin users
 		$this->expectException( \RuntimeException::class );
-		$this->expectExceptionMessage( 'Unauthorized attempt to view decrypted sensitive data' );
+		$this->expectExceptionMessage( 'Unauthorized attempt to view decrypted data in context: sensitive' );
 
 		Encryption::decrypt_for_display( $encrypted );
 	}
@@ -432,7 +432,7 @@ class Security_Test extends Test_Case {
 
 			// Error message should mention unauthorized access but not expose sensitive data
 			$this->assertStringContainsString( 'Unauthorized', $error_message );
-			$this->assertStringContainsString( 'sensitive data', $error_message );
+			$this->assertStringContainsString( 'sensitive', $error_message );
 			$this->assertStringNotContainsString( $this->test_data['api_key'], $error_message );
 		}
 	}

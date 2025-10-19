@@ -10,11 +10,7 @@ parameters:
       - assets/?                # Compiled assets (optional)
       - dist/?                  # Build output (optional)
     scanDirectories:
-      - includes/
-      - tools/                  # Include for custom rules loading
+      - includes/               # Include for custom rules and classes
     stubFiles:
       - stubs/wordpress.php
 
-rules:
-	# Custom rules for CampaignBridge
-	- CampaignBridge\Tools\PHPStan\Rules\NoDirectWordPressStorageFunctionsRule

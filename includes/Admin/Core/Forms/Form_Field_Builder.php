@@ -55,7 +55,7 @@ class Form_Field_Builder {
 	/**
 	 * Set field as required
 	 *
-	 * @return Form_Field_Builder
+	 * @return self
 	 */
 	public function required(): self {
 		$this->form_builder->get_config()->update_field( $this->field_name, array( 'required' => true ) );
@@ -323,6 +323,39 @@ class Form_Field_Builder {
 	 */
 	public function add( string $name, string $type, string $label = '' ): Form_Field_Builder {
 		return $this->form_builder->add( $name, $type, $label );
+	}
+
+	/**
+	 * Set security context for encrypted fields
+	 *
+	 * @param string $context Security context ('api_key', 'sensitive', 'personal', 'public').
+	 * @return self
+	 */
+	public function context( string $context ): self {
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'context' => $context ) );
+		return $this;
+	}
+
+	/**
+	 * Show or hide the reveal button for encrypted fields
+	 *
+	 * @param bool $show Whether to show the reveal button.
+	 * @return self
+	 */
+	public function show_reveal( bool $show = true ): self {
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'show_reveal' => $show ) );
+		return $this;
+	}
+
+	/**
+	 * Show or hide the edit button for encrypted fields
+	 *
+	 * @param bool $show Whether to show the edit button.
+	 * @return self
+	 */
+	public function show_edit( bool $show = true ): self {
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'show_edit' => $show ) );
+		return $this;
 	}
 
 	/**

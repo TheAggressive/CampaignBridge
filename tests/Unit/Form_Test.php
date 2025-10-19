@@ -159,7 +159,7 @@ class Form_Test extends Test_Case {
 			->submit( 'Save Data' );
 
 		// Verify the form was created correctly.
-		$this->assertInstanceOf( Form::class, $form );
+		$this->assertInstanceOf( \CampaignBridge\Admin\Core\Form_Builder::class, $form );
 
 		// Verify fields were added.
 		$fields = $form->get_fields();
