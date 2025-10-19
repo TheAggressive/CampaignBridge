@@ -209,9 +209,9 @@ class Form_Query_Optimizer {
 
 		// Log slow queries (>100ms) or high memory usage (>10MB) in debug mode only.
 		if ( ( defined( 'WP_DEBUG' ) && WP_DEBUG ) && ( $duration > 0.1 || $memory_used > 10485760 ) ) {
-			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging for performance monitoring
-				sprintf(
-					'[FORM_QUERY_PERFORMANCE] %s: %.4f seconds, %s memory',
+			\CampaignBridge\Core\Error_Handler::info(
+				'[FORM_QUERY_PERFORMANCE] ' . sprintf(
+					'%s: %.4f seconds, %s memory',
 					$operation_name,
 					$duration,
 					size_format( $memory_used )

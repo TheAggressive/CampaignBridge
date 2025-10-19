@@ -189,11 +189,11 @@ class Dispatcher {
 					} catch ( \Throwable $e ) {
 						// Log error but don't expose details.
 						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-							error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging only.
-								sprintf(
-									'CampaignBridge Dispatcher: Failed to decrypt sensitive field "%s": %s',
-									$field,
-									$e->getMessage()
+							\CampaignBridge\Core\Error_Handler::error(
+								'CampaignBridge Dispatcher: Failed to decrypt sensitive field',
+								array(
+									'field' => $field,
+									'error' => $e->getMessage(),
 								)
 							);
 						}

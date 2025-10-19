@@ -296,19 +296,13 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	private function create_mailchimp_campaign( array $campaign_data, string $api_key ) {
-		$json_body = wp_json_encode( $campaign_data );
-		if ( false === $json_body ) {
-			return $this->create_error( 'json_encode_error', __( 'Failed to encode campaign data.', 'campaignbridge' ) );
-		}
-
-		$response = wp_remote_post(
+		$response = \CampaignBridge\Core\Http_Client::post_json(
 			self::API_BASE_URL . self::ENDPOINT_CAMPAIGNS,
+			$campaign_data,
 			array(
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
-					'Content-Type'  => 'application/json',
 				),
-				'body'    => $json_body,
 				'timeout' => 30,
 			)
 		);
@@ -317,8 +311,8 @@ class Mailchimp_Provider extends Abstract_Provider {
 			return $response;
 		}
 
-		$status_code = wp_remote_retrieve_response_code( $response );
-		$body        = wp_remote_retrieve_body( $response );
+		$status_code = $response['status_code'];
+		$body        = $response['body'];
 
 		if ( $status_code < 200 || $status_code >= 300 ) {
 			$error_data  = json_decode( $body, true );
@@ -341,12 +335,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	private function send_mailchimp_campaign( string $campaign_id, string $api_key ) {
 		$send_data = array( 'send' => true );
 
-		$json_body = wp_json_encode( $send_data );
-		if ( false === $json_body ) {
-			return $this->create_error( 'json_encode_error', __( 'Failed to encode send data.', 'campaignbridge' ) );
-		}
-
-		$response = wp_remote_request(
+		$response = \CampaignBridge\Core\Http_Client::post(
 			self::API_BASE_URL . self::ENDPOINT_CAMPAIGNS . '/' . $campaign_id . '/actions/send',
 			array(
 				'method'  => 'PATCH',
@@ -354,7 +343,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 					'Authorization' => 'Bearer ' . $api_key,
 					'Content-Type'  => 'application/json',
 				),
-				'body'    => $json_body,
+				'body'    => wp_json_encode( $send_data ),
 				'timeout' => 30,
 			)
 		);
@@ -363,10 +352,10 @@ class Mailchimp_Provider extends Abstract_Provider {
 			return $response;
 		}
 
-		$status_code = wp_remote_retrieve_response_code( $response );
+		$status_code = $response['status_code'];
 
 		if ( $status_code < 200 || $status_code >= 300 ) {
-			$body        = wp_remote_retrieve_body( $response );
+			$body        = $response['body'];
 			$error_data  = json_decode( $body, true );
 			$error_msg   = $error_data['detail'] ?? sprintf( 'Failed to send campaign with status %d', $status_code );
 			$safe_status = is_int( $status_code ) ? $status_code : 500;
@@ -384,7 +373,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	private function get_mailchimp_templates( string $api_key ) {
-		$response = wp_remote_get(
+		$response = \CampaignBridge\Core\Http_Client::get(
 			self::API_BASE_URL . self::ENDPOINT_TEMPLATES,
 			array(
 				'headers' => array(
@@ -398,8 +387,8 @@ class Mailchimp_Provider extends Abstract_Provider {
 			return $response;
 		}
 
-		$status_code = wp_remote_retrieve_response_code( $response );
-		$body        = wp_remote_retrieve_body( $response );
+		$status_code = $response['status_code'];
+		$body        = $response['body'];
 
 		if ( $status_code < 200 || $status_code >= 300 ) {
 			$error_data  = json_decode( $body, true );

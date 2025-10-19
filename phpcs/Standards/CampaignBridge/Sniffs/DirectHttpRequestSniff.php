@@ -82,10 +82,21 @@ class DirectHttpRequestSniff implements Sniff {
 			'Provider', // Generic provider classes.
 		);
 
+		$allowed_class_prefixes = array(
+			'Http_Client', // Our HTTP client wrapper classes.
+		);
+
 		// Allow in classes that contain "Provider" in their name.
 		$class_name = $this->get_current_class_name( $phpcs_file, $stack_ptr );
 		if ( false !== $class_name && strpos( $class_name, 'Provider' ) !== false ) {
 			return true;
+		}
+
+		// Allow in our HTTP client wrapper classes.
+		foreach ( $allowed_class_prefixes as $prefix ) {
+			if ( false !== $class_name && strpos( $class_name, $prefix ) === 0 ) {
+				return true;
+			}
 		}
 
 		foreach ( $allowed_classes as $allowed_class ) {

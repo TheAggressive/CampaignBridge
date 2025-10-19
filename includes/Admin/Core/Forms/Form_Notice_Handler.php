@@ -34,7 +34,7 @@ class Form_Notice_Handler {
 	 * @param Form_Config          $config Form configuration.
 	 * @param array<string, mixed> $data   Form data.
 	 */
-	public function trigger_error( Form_Config $config, array $data ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+	public function trigger_error( Form_Config $config, array $data ): void {
 		$message = $config->get( 'error_message' );
 		$this->display_notice( $message, 'error' );
 	}

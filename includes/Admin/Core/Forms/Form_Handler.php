@@ -406,8 +406,9 @@ class Form_Handler {
 					} catch ( \RuntimeException $e ) {
 						// Log error but don't expose details to user.
 						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-							error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-								'CampaignBridge: Failed to encrypt form field: ' . $e->getMessage()
+							\CampaignBridge\Core\Error_Handler::error(
+								'CampaignBridge: Failed to encrypt form field',
+								array( 'error' => $e->getMessage() )
 							);
 						}
 						// Return empty string rather than unencrypted data.

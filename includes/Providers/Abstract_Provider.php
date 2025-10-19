@@ -209,8 +209,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 			if ( ! empty( $context ) ) {
 				$log_message .= ' Context: ' . wp_json_encode( $context );
 			}
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging only.
-			error_log( $log_message );
+			\CampaignBridge\Core\Error_Handler::info( $log_message );
 		}
 	}
 

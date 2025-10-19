@@ -164,19 +164,18 @@ class ExampleProvider extends Abstract_Provider {
 				'recipients' => array( 'all' => true ),
 			);
 
-			$json_body = wp_json_encode( $campaign_data );
-			if ( false === $json_body ) {
-				return $this->create_error( 'json_encode_error', __( 'Failed to encode campaign data.', 'campaignbridge' ) );
-			}
+			// Example of using instance for dependency injection
+			// $http_client = Http_Client::create_instance(); // For DI
+			// $response = $http_client->post_json(...);.
 
-			$response = wp_remote_post(
+			// Using static methods (current approach).
+			$response = \CampaignBridge\Core\Http_Client::post_json(
 				$endpoint . '/campaigns',
+				$campaign_data,
 				array(
 					'headers' => array(
 						'Authorization' => 'Bearer ' . $api_key,
-						'Content-Type'  => 'application/json',
 					),
-					'body'    => $json_body,
 					'timeout' => 30,
 				)
 			);
@@ -185,17 +184,16 @@ class ExampleProvider extends Abstract_Provider {
 				return $response;
 			}
 
-			$status_code = wp_remote_retrieve_response_code( $response );
-			if ( ! is_int( $status_code ) || $status_code < 200 || $status_code >= 300 ) {
-				$safe_status = is_int( $status_code ) ? $status_code : 500;
+			$status_code = $response['status_code'];
+			if ( $status_code < 200 || $status_code >= 300 ) {
 				return $this->create_error(
 					'api_error',
 					sprintf(
 						/* translators: %d: HTTP status code */
 						__( 'API request failed with status %d.', 'campaignbridge' ),
-						$safe_status
+						$status_code
 					),
-					$safe_status
+					$status_code
 				);
 			}
 

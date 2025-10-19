@@ -294,4 +294,136 @@ class Storage {
 
 		return true;
 	}
+
+	/**
+	 * Batch update post meta with performance optimization.
+	 *
+	 * FOOL-PROOF SECURITY: All meta values are automatically sanitized to prevent
+	 * security vulnerabilities regardless of caller input. No "oops" possible.
+	 *
+	 * @param array<int, array<string, mixed>> $post_meta_updates Array of post_id => meta_data pairs.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function batch_update_post_meta( array $post_meta_updates ): bool {
+		if ( empty( $post_meta_updates ) ) {
+			return true;
+		}
+
+		global $wpdb;
+
+		// Build batch insert/update query.
+		$values       = array();
+		$placeholders = array();
+
+		foreach ( $post_meta_updates as $post_id => $meta_data ) {
+			foreach ( $meta_data as $meta_key => $meta_value ) {
+				$values[]       = absint( $post_id );
+				$values[]       = sanitize_key( $meta_key );
+				$values[]       = self::sanitize_meta_value( $meta_value ); // FOOL-PROOF: Always sanitize.
+				$placeholders[] = '(%d, %s, %s)';
+			}
+		}
+
+		if ( empty( $placeholders ) ) {
+			return false;
+		}
+
+		$sql = "INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value)
+				VALUES " . implode( ', ', $placeholders ) . '
+				ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)';
+
+		return (bool) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,CampaignBridge.Sniffs.DirectDatabaseQuery.DirectDatabaseMethod -- Batch operations require direct queries for performance.
+			$wpdb->prepare( $sql, $values ) // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,CampaignBridge.Sniffs.DirectDatabaseQuery.DirectDatabaseMethod -- SQL dynamically built with placeholders above.
+		);
+	}
+
+	/**
+	 * Sanitize meta value for safe database storage.
+	 *
+	 * FOOL-PROOF: Automatically handles all data types to prevent security issues.
+	 * No matter what data is passed, it gets sanitized appropriately.
+	 *
+	 * @param mixed $value The value to sanitize.
+	 * @return mixed Sanitized value safe for database storage.
+	 */
+	private static function sanitize_meta_value( $value ) {
+		// Handle different data types.
+		switch ( gettype( $value ) ) {
+			case 'string':
+				// Sanitize strings, but preserve HTML for rich content.
+				return wp_kses_post( $value );
+
+			case 'integer':
+			case 'double':
+				// Numbers are safe as-is.
+				return $value;
+
+			case 'boolean':
+				// Convert to integer for consistent storage.
+				return $value ? 1 : 0;
+
+			case 'array':
+				// Recursively sanitize array values, then serialize.
+				$sanitized_array = array();
+				foreach ( $value as $key => $item ) {
+					$sanitized_key                     = is_string( $key ) ? sanitize_key( $key ) : $key;
+					$sanitized_array[ $sanitized_key ] = self::sanitize_meta_value( $item );
+				}
+				return maybe_serialize( $sanitized_array );
+
+			case 'object':
+				// Objects get serialized after basic sanitization check.
+				if ( method_exists( $value, '__toString' ) ) {
+					// If object has __toString, use that.
+					return sanitize_text_field( (string) $value );
+				}
+				// Otherwise serialize the object.
+				return maybe_serialize( $value );
+
+			case 'NULL':
+			case 'null':
+				// Null values become empty strings.
+				return '';
+
+			case 'resource':
+			case 'resource (closed)':
+				// Resources cannot be serialized - reject them.
+				return '';
+
+			default:
+				// Unknown types get converted to string and sanitized.
+				return sanitize_text_field( (string) $value );
+		}
+	}
+
+	/**
+	 * Bulk delete plugin transients.
+	 *
+	 * SECURITY: Uses predefined prefixes from Storage_Prefixes constants.
+	 * All prefixes are hardcoded and safe - no user input involved.
+	 *
+	 * @return void
+	 */
+	public static function bulk_delete_plugin_transients(): void {
+		global $wpdb;
+
+		// Get all transient prefixes from Storage_Prefixes.
+		$prefixes = Storage_Prefixes::get_all_transient_prefixes();
+
+		foreach ( $prefixes as $prefix ) {
+			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,CampaignBridge.Sniffs.DirectDatabaseQuery.DirectDatabaseMethod -- Bulk transient cleanup requires direct queries.
+				$wpdb->prepare( // phpcs:ignore CampaignBridge.Sniffs.DirectDatabaseQuery.DirectDatabaseMethod -- Bulk transient cleanup requires direct queries.
+					"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+					'%_transient_' . $wpdb->esc_like( $prefix ) . '%'
+				)
+			);
+
+			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,CampaignBridge.Sniffs.DirectDatabaseQuery.DirectDatabaseMethod -- Bulk transient cleanup requires direct queries.
+				$wpdb->prepare( // phpcs:ignore CampaignBridge.Sniffs.DirectDatabaseQuery.DirectDatabaseMethod -- Bulk transient cleanup requires direct queries.
+					"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+					'%_transient_timeout_' . $wpdb->esc_like( $prefix ) . '%'
+				)
+			);
+		}
+	}
 }

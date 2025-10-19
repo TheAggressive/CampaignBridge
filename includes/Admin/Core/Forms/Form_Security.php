@@ -529,12 +529,9 @@ class Form_Security {
 			)
 		);
 
-		error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			sprintf(
-				'[SECURITY] %s: %s',
-				$event,
-				\wp_json_encode( $log_data )
-			)
+		\CampaignBridge\Core\Error_Handler::info(
+			'[SECURITY] ' . $event,
+			$log_data
 		);
 	}
 

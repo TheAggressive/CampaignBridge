@@ -112,32 +112,7 @@ class Performance_Optimizer {
 			return false;
 		}
 
-		global $wpdb;
-
-		// Use batch updates for better performance.
-		$values       = array();
-		$placeholders = array();
-
-		foreach ( $post_meta_updates as $post_id => $meta_data ) {
-			foreach ( $meta_data as $meta_key => $meta_value ) {
-				$values[]       = $post_id;
-				$values[]       = $meta_key;
-				$values[]       = $meta_value;
-				$placeholders[] = '(%d, %s, %s)';
-			}
-		}
-
-		if ( empty( $placeholders ) ) {
-			return false;
-		}
-
-		$sql = "INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value)
-				VALUES " . implode( ', ', $placeholders ) . '
-				ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)';
-
-		return (bool) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->prepare( $sql, $values ) // phpcs:ignore WordPress.DB.PreparedSQL
-		);
+		return \CampaignBridge\Core\Storage::batch_update_post_meta( $post_meta_updates );
 	}
 
 	/**
@@ -156,26 +131,7 @@ class Performance_Optimizer {
 	 * @return void
 	 */
 	public function clear_plugin_transients(): void {
-		global $wpdb;
-
-		// Get all transient prefixes from Storage_Prefixes.
-		$prefixes = \CampaignBridge\Core\Storage_Prefixes::get_all_transient_prefixes();
-
-		foreach ( $prefixes as $prefix ) {
-			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$wpdb->prepare(
-					"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-					'%_transient_' . $wpdb->esc_like( $prefix ) . '%'
-				)
-			);
-
-			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$wpdb->prepare(
-					"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-					'%_transient_timeout_' . $wpdb->esc_like( $prefix ) . '%'
-				)
-			);
-		}
+		\CampaignBridge\Core\Storage::bulk_delete_plugin_transients();
 	}
 
 	/**
@@ -199,9 +155,9 @@ class Performance_Optimizer {
 
 		// Log slow operations (> 1 second).
 		if ( $execution_time > 1.0 && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Production logging.
-				sprintf(
-					'[CAMPAIGNBRIDGE PERFORMANCE] Slow operation "%s": %.4fs, %s memory used',
+			\CampaignBridge\Core\Error_Handler::info(
+				'[CAMPAIGNBRIDGE PERFORMANCE] ' . sprintf(
+					'Slow operation "%s": %.4fs, %s memory used',
 					$operation,
 					$execution_time,
 					size_format( $memory_used )
