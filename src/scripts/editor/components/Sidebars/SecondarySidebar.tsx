@@ -34,7 +34,7 @@ export default function SecondarySidebar(): JSX.Element {
   return (
     <div
       className='cb-editor__sidebar-content-inner'
-      style={{ height: '100%', overflow: 'auto' }}
+      style={{ height: '100%', overflowX: 'hidden' }}
     >
       {blockCount > 0 ? (
         <ListView

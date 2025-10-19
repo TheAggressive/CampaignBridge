@@ -14,12 +14,12 @@ global $screen;
 $screen->asset_enqueue_script(
 	'cb-block-editor-script',
 	'dist/scripts/editor/editor.asset.php',
-	array() // Additional dependencies.
 );
+
 $screen->enqueue_style(
 	'cb-block-editor-styles',
 	'dist/styles/editor/editor.css',
-	array( 'wp-editor', 'wp-block-library', 'wp-edit-blocks', 'wp-components' )
+	array( 'wp-editor', 'wp-block-library', 'wp-edit-blocks', 'wp-components', 'wp-edit-post' )
 );
 
 ?>

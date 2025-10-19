@@ -66,6 +66,10 @@
   .cb-editor__sidebar-content {
     height: 100%;
     overflow-y: auto;
+
+    &-inner {
+      overflow-x: hidden !important;
+    }
   }
 }
 
