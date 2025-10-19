@@ -398,6 +398,24 @@ class Form_Handler {
 				return \is_numeric( $value ) ? (float) $value : 0;
 			case 'checkbox':
 				return \is_array( $value ) ? array_map( '\sanitize_text_field', $value ) : (bool) $value;
+			case 'encrypted':
+				// Encrypt sensitive data before saving to database.
+				if ( ! empty( $value ) && ! \CampaignBridge\Core\Encryption::is_encrypted_value( $value ) ) {
+					try {
+						return \CampaignBridge\Core\Encryption::encrypt( $value );
+					} catch ( \RuntimeException $e ) {
+						// Log error but don't expose details to user.
+						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+							error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+								'CampaignBridge: Failed to encrypt form field: ' . $e->getMessage()
+							);
+						}
+						// Return empty string rather than unencrypted data.
+						return '';
+					}
+				}
+				// If already encrypted or empty, return as-is.
+				return $value;
 			default:
 				return \sanitize_text_field( $value );
 		}
