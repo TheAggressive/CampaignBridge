@@ -139,6 +139,9 @@ class Admin {
 		// Global admin assets using Asset_Manager.
 		Asset_Manager::enqueue_asset( 'cb-admin-global-styles', 'dist/styles/styles.asset.php' );
 
+		// Global form styles - load on all admin pages since many screens use forms.
+		Asset_Manager::enqueue_asset( 'cb-admin-form-styles', 'dist/styles/admin/forms/forms.asset.php' );
+
 		// Localize global data.
 		wp_localize_script(
 			'cb-admin-global-scripts',
