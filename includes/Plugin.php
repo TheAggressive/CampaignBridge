@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace CampaignBridge;
 
 use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\Core\Api_Key_Encryption;
+use CampaignBridge\Core\Encryption;
 use CampaignBridge\Core\Service_Container;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\REST\Routes as RestRoutes;
@@ -142,23 +142,6 @@ class Plugin {
 		$this->init_rest_api();
 	}
 
-	/**
-	 * Legacy admin menu method - NO LONGER USED
-	 *
-	 * Menu creation is now handled by the new file-based admin system
-	 * in includes/Admin/Admin.php. This method is kept for reference
-	 * but does nothing to avoid duplicate menus.
-	 *
-	 * @since 0.1.0
-	 * @deprecated Replaced by file-based admin system
-	 * @return void
-	 */
-	public function add_admin_menu(): void {
-		// NO-OP: Menu creation is now handled by the new file-based admin system
-		// The new system auto-discovers screens and creates menus automatically
-		// See includes/Admin/Admin.php for the new implementation.
-	}
-
 		/**
 		 * Initialize core plugin systems.
 		 *
@@ -181,9 +164,6 @@ class Plugin {
 	 * @return void
 	 */
 	private function init_admin_interface(): void {
-		// Wire admin hooks.
-		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
-
 		// Initialize NEW file-based admin system.
 		\CampaignBridge\Admin\Admin::get_instance();
 	}

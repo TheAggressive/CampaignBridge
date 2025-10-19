@@ -1,9 +1,9 @@
 <?php
 /**
- * Ultra-secure API Key Encryption for CampaignBridge.
+ * Ultra-secure Encryption for CampaignBridge.
  *
- * Provides military-grade encryption for API keys using AES-256-GCM with
- * proper key management, rotation, and WordPress security best practices.
+ * Provides military-grade encryption using AES-256-GCM with context-aware
+ * permission levels for different types of sensitive data.
  *
  * @package CampaignBridge
  * @since 0.1.0
@@ -18,16 +18,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Ultra-secure API Key Encryption Class
+ * Ultra-secure Encryption Class
  *
- * Handles encryption/decryption of sensitive API keys with:
+ * Handles encryption/decryption of sensitive data with:
  * - AES-256-GCM encryption for authenticated encryption
+ * - Context-aware permission levels (api_key, sensitive, personal, public)
  * - Secure key derivation and management
  * - Key rotation capabilities
  * - Comprehensive error handling
  * - WordPress security best practices
  */
-class Api_Key_Encryption {
+class Encryption {
 
 	/**
 	 * Encryption algorithm constant.
@@ -170,25 +171,54 @@ class Api_Key_Encryption {
 		}
 	}
 
+
 	/**
-	 * Decrypt an API key for admin display purposes.
+	 * Decrypt data with context-aware permission checking.
 	 *
-	 * This method includes security checks to ensure only administrators
-	 * can view decrypted API keys in forms and interfaces.
+	 * Different contexts have different permission requirements:
+	 * - 'api_key': Only administrators (manage_options)
+	 * - 'sensitive': Only administrators (manage_options)
+	 * - 'personal': Logged-in users can access their own data
+	 * - 'public': No restrictions (for encrypted but non-sensitive data)
 	 *
-	 * @param string $encrypted The encrypted API key from storage.
-	 * @return string The decrypted API key.
+	 * @param string $encrypted The encrypted data from storage.
+	 * @param string $context The security context ('api_key', 'sensitive', 'personal', 'public').
+	 * @return string The decrypted data.
 	 * @throws \RuntimeException If decryption fails, data is corrupted, or user lacks permission.
 	 */
-	public static function decrypt_for_display( string $encrypted ): string {
-		// Only allow admin users to view decrypted API keys.
-		if ( ! current_user_can( 'manage_options' ) ) {
+	public static function decrypt_for_context( string $encrypted, string $context = 'sensitive' ): string {
+		// Check permissions based on context.
+		if ( ! self::check_context_permissions( $context ) ) {
 			throw new \RuntimeException(
-				'Unauthorized attempt to view decrypted sensitive data. Admin access required.'
+				sprintf( 'Unauthorized attempt to view decrypted data in context: %s', esc_html( $context ) )
 			);
 		}
 
 		return self::decrypt( $encrypted );
+	}
+
+	/**
+	 * Check if current user has permission for the given context.
+	 *
+	 * @param string $context The security context.
+	 * @return bool True if user has permission.
+	 */
+	private static function check_context_permissions( string $context ): bool {
+		switch ( $context ) {
+			case 'api_key':
+			case 'sensitive':
+				return current_user_can( 'manage_options' );
+
+			case 'personal':
+				return is_user_logged_in();
+
+			case 'public':
+				return true; // No restrictions for public data.
+
+			default:
+				// Unknown context - require admin.
+				return current_user_can( 'manage_options' );
+		}
 	}
 
 	/**

@@ -16,7 +16,7 @@ namespace CampaignBridge\Tests\Security;
 use CampaignBridge\Admin\Controllers\Settings_Controller;
 use CampaignBridge\Admin\Core\Form;
 use CampaignBridge\Admin\Core\Screen_Context;
-use CampaignBridge\Core\Api_Key_Encryption;
+use CampaignBridge\Core\Encryption;
 use CampaignBridge\Providers\Mailchimp_Provider;
 use CampaignBridge\REST\Rate_Limiter;
 use CampaignBridge\Tests\Helpers\Test_Case;
@@ -58,8 +58,8 @@ class Security_Test extends Test_Case {
 		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $admin_id );
 
-		$encrypted = Api_Key_Encryption::encrypt( $this->test_data['api_key'] );
-		$decrypted = Api_Key_Encryption::decrypt_for_display( $encrypted );
+		$encrypted = Encryption::encrypt( $this->test_data['api_key'] );
+		$decrypted = Encryption::decrypt_for_display( $encrypted );
 
 		$this->assertEquals( $this->test_data['api_key'], $decrypted );
 	}
@@ -72,13 +72,13 @@ class Security_Test extends Test_Case {
 		$subscriber_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $subscriber_id );
 
-		$encrypted = Api_Key_Encryption::encrypt( $this->test_data['api_key'] );
+		$encrypted = Encryption::encrypt( $this->test_data['api_key'] );
 
 		// This should throw an exception for non-admin users
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'Unauthorized attempt to view decrypted sensitive data' );
 
-		Api_Key_Encryption::decrypt_for_display( $encrypted );
+		Encryption::decrypt_for_display( $encrypted );
 	}
 
 	/**
@@ -339,7 +339,7 @@ class Security_Test extends Test_Case {
 		$this->assertEquals( $this->test_data['api_key'], $saved_key );
 
 		// Test that admin can decrypt for display
-		$display_key = Api_Key_Encryption::decrypt_for_display( $saved_key );
+		$display_key = Encryption::decrypt_for_display( $saved_key );
 		$this->assertEquals( $this->test_data['api_key'], $display_key );
 	}
 
@@ -424,8 +424,8 @@ class Security_Test extends Test_Case {
 
 		// Try to decrypt for display as non-admin - should get permission error
 		try {
-			$encrypted = Api_Key_Encryption::encrypt( $this->test_data['api_key'] );
-			Api_Key_Encryption::decrypt_for_display( $encrypted );
+			$encrypted = Encryption::encrypt( $this->test_data['api_key'] );
+			Encryption::decrypt_for_display( $encrypted );
 			$this->fail( 'Expected exception was not thrown' );
 		} catch ( \RuntimeException $e ) {
 			$error_message = $e->getMessage();

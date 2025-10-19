@@ -40,6 +40,13 @@ class Form_Builder {
 	private Form_Field_Manager $field_manager;
 
 	/**
+	 * Currently open field builder (for ->end() removal)
+	 *
+	 * @var Form_Field_Builder|null
+	 */
+	private ?Form_Field_Builder $current_field = null;
+
+	/**
 	 * Constructor
 	 *
 	 * @param Form_Config                     $config Form configuration instance.
@@ -49,6 +56,18 @@ class Form_Builder {
 		$this->config        = $config;
 		$this->form          = $form;
 		$this->field_manager = new Form_Field_Manager( $config, $this );
+	}
+
+	/**
+	 * Automatically close any open field
+	 *
+	 * @return void
+	 */
+	private function auto_close_field(): void {
+		if ( $this->current_field ) {
+			// The field is automatically closed when we start a new field or call form methods.
+			$this->current_field = null;
+		}
 	}
 
 	/**
@@ -97,6 +116,7 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function save_to_options( string $prefix = '' ): self {
+		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'options' );
 		if ( $prefix ) {
 			$this->config->set_prefix( $prefix );
@@ -111,6 +131,7 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function save_to_post_meta( int $post_id = 0 ): self {
+		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'post_meta' );
 		if ( $post_id ) {
 			$this->config->set_post_id( $post_id );
@@ -125,6 +146,7 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function save_to_settings_api( string $settings_group = '' ): self {
+		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'settings' );
 		$this->config->set( 'data_source', 'settings' );
 
@@ -145,6 +167,7 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function save_to_custom( callable $callback ): self {
+		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'custom' );
 		$this->config->add_hook( 'save_data', $callback );
 
@@ -204,6 +227,7 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function success( string $message ): self {
+		$this->auto_close_field(); // Close any open field.
 		$this->config->set_success_message( $message );
 		return $this;
 	}
@@ -215,6 +239,7 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function error( string $message ): self {
+		$this->auto_close_field(); // Close any open field.
 		$this->config->set_error_message( $message );
 		return $this;
 	}
@@ -249,6 +274,7 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function submit( string $text = 'Save', string $type = 'primary' ): self {
+		$this->auto_close_field(); // Close any open field.
 		$this->config->set_submit_button( $text, $type );
 		return $this;
 	}
@@ -599,6 +625,17 @@ class Form_Builder {
 	}
 
 	/**
+	 * Add an encrypted field for sensitive data
+	 *
+	 * @param string $name  Field name.
+	 * @param string $label Field label.
+	 * @return Form_Field_Builder
+	 */
+	public function encrypted( string $name, string $label = '' ): Form_Field_Builder {
+		return $this->add_field( $name, 'encrypted', $label );
+	}
+
+	/**
 	 * Add a field with custom type
 	 *
 	 * @param string $name Field name.
@@ -632,7 +669,13 @@ class Form_Builder {
 	 * @return Form_Field_Builder
 	 */
 	private function add_field( string $name, string $type, string $label = '' ): Form_Field_Builder {
-		return $this->field_manager->add_field( $name, $type, $label );
+		// Automatically close any open field before starting a new one.
+		$this->auto_close_field();
+
+		$field_builder       = $this->field_manager->add_field( $name, $type, $label );
+		$this->current_field = $field_builder;
+
+		return $field_builder;
 	}
 
 	/**

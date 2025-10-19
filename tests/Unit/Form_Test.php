@@ -147,6 +147,47 @@ class Form_Test extends Test_Case {
 	}
 
 	/**
+	 * Test that form API works without ->end() calls
+	 */
+	public function test_form_api_works_without_end_calls(): void {
+		// Create a test form using the new fluent API without ->end().
+		$form = Form::make( 'fluent_test' )
+			->text( 'name', 'Full Name' )->required()
+			->email( 'email', 'Email Address' )->required()
+			->save_to_options( 'test_' )
+			->success( 'Data saved successfully!' )
+			->submit( 'Save Data' );
+
+		// Verify the form was created correctly.
+		$this->assertInstanceOf( Form::class, $form );
+
+		// Verify fields were added.
+		$fields = $form->get_fields();
+		$this->assertArrayHasKey( 'name', $fields );
+		$this->assertArrayHasKey( 'email', $fields );
+
+		// Verify field configurations.
+		$this->assertEquals( 'text', $fields['name']['type'] );
+		$this->assertEquals( 'Full Name', $fields['name']['label'] );
+		$this->assertTrue( $fields['name']['required'] );
+
+		$this->assertEquals( 'email', $fields['email']['type'] );
+		$this->assertEquals( 'Email Address', $fields['email']['label'] );
+		$this->assertTrue( $fields['email']['required'] );
+
+		// Test encrypted field.
+		$form2 = Form::make( 'encrypted_test' )
+			->encrypted( 'api_key', 'API Key' )->context( 'api_key' )
+			->save_to_options( 'test_' )
+			->submit( 'Save' );
+
+		$fields2 = $form2->get_fields();
+		$this->assertArrayHasKey( 'api_key', $fields2 );
+		$this->assertEquals( 'encrypted', $fields2['api_key']['type'] );
+		$this->assertEquals( 'api_key', $fields2['api_key']['context'] );
+	}
+
+	/**
 	 * Test that non-custom save methods do not trigger warning
 	 */
 	public function test_non_custom_save_methods_do_not_trigger_warning(): void {

@@ -233,10 +233,9 @@ class Form {
 	/**
 	 * Render the form HTML.
 	 *
-	 * @param bool $include_messages Whether to include messages in the output (deprecated - messages now auto-display via Screen_Context).
 	 * @return void
 	 */
-	public function render( bool $include_messages = true ): void {
+	public function render(): void {
 		$this->ensure_initialized();
 		// Ensure services are initialized.
 		assert( null !== $this->data_manager, 'Data manager must be initialized' );
@@ -260,10 +259,8 @@ class Form {
 
 		$this->renderer->render_form_open();
 
-		// Only render messages if explicitly requested (for backward compatibility).
-		if ( $include_messages ) {
-			$this->renderer->render_messages();
-		}
+		// Render messages.
+		$this->renderer->render_messages();
 
 		$this->renderer->render_fields();
 		$this->renderer->render_submit_button();

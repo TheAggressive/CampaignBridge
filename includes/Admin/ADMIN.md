@@ -4,21 +4,85 @@ A comprehensive, developer-friendly admin system for WordPress that provides scr
 
 ## Table of Contents
 
+### Getting Started
 1. [Quick Start](#quick-start)
 2. [Architecture Overview](#architecture-overview)
+
+### Core Concepts
 3. [Screen System](#screen-system)
+   - Auto-Discovery
+   - Screen Context
 4. [Creating Screens](#creating-screens)
+   - File Naming Conventions
+   - Simple Screens
+   - Tabbed Screens
 5. [Tab System](#tab-system)
+   - Creating Tabbed Screens
+   - Tab File Structure
+   - Tab Discovery & Configuration
+   - Tab Navigation
 6. [Controller System](#controller-system)
+   - Auto-Discovery
+   - Controller Structure
+   - Controller Data Access
+
+### Data & Logic
 7. [Controller Data Flow](#controller-data-flow)
-8. [Security Features](#security-features)
-9. [Asset Management](#asset-management)
-10. [Advanced Features](#advanced-features)
-11. [Extending the System](#extending-the-system)
-12. [Screen Registry Advanced Features](#screen-registry-advanced-features)
-13. [Best Practices](#best-practices)
-14. [Troubleshooting](#troubleshooting)
+   - Data Lifecycle
+   - Data Storage Methods
+   - Data Access Patterns
+   - Data Validation and Sanitization
+   - Performance Considerations
+8. [Asset Management](#asset-management)
+   - Automatic Asset Loading
+   - Asset Configuration in _config.php
+   - Built Asset Enqueuing (.asset.php files)
+   - Script Localization
+   - Global Assets
+   - Asset Loading Priority
+
+### Security & Quality
+9. [Security Features](#security-features)
+   - Automatic Security
+   - Manual Security Controls
+   - Security Best Practices
+10. [Best Practices](#best-practices)
+    - Code Organization
+    - Security
+    - Performance
+    - User Experience
+11. [Troubleshooting](#troubleshooting)
+    - Common Issues
+    - Debug Mode
+    - Error Logging
+
+### Advanced Features
+12. [Advanced Features](#advanced-features)
+    - Custom Screen Components
+    - Dynamic Data Loading
+    - Conditional Logic in Screens
+    - Multi-Step Processes
+13. [Extending the System](#extending-the-system)
+    - Custom Controllers
+    - Custom Screen Types
+    - Custom Form Validators
+14. [Screen Registry Advanced Features](#screen-registry-advanced-features)
+    - Complete Configuration Options
+    - Custom Screen Types
+    - Advanced Controller Discovery
+    - Custom Asset Loading Strategies
+    - Screen Registration Hooks
+    - Advanced Screen Discovery
+    - Performance Optimizations
+
+### Reference
 15. [API Reference](#api-reference)
+    - Screen_Registry Methods
+    - Enhanced Screen_Context Methods
+    - Data Management Methods
+    - Advanced Asset Management Methods
+    - Tab Navigation Methods
+    - Screen Information Methods
 
 ## Quick Start
 
@@ -2810,3 +2874,14 @@ class Optimized_Screen_Registry extends \CampaignBridge\Admin\Core\Screen_Regist
 - `campaignbridge_controller_class` - Modify controller class name
 
 This comprehensive admin system provides a solid foundation for building modern WordPress admin interfaces with advanced features, security, and developer experience in mind.
+
+### Recent Changes (v2.0+)
+
+- **Documentation Reorganization**: Better structured table of contents with logical grouping
+- **Enhanced Auto-Discovery**: Improved screen and controller discovery with better error handling
+- **Advanced Configuration**: Complete `_config.php` support with asset management and custom settings
+- **Performance Optimizations**: Caching support and optimized asset loading
+- **Security Enhancements**: Built-in CSRF protection and capability checking
+- **Asset Management**: Support for built assets (.asset.php files) and script localization
+- **Tab System Improvements**: Custom tab ordering, per-tab capabilities, and conditional loading
+- **Controller Architecture**: Enhanced data flow with lazy loading and performance optimizations

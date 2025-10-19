@@ -226,12 +226,12 @@ class Settings_Manager {
 	 */
 	private static function encrypt_sensitive_fields( array $settings ): array {
 		// Only encrypt if the encryption system is available and secure
-		if ( ! class_exists( '\CampaignBridge\Core\Api_Key_Encryption' ) ) {
-			error_log( 'CampaignBridge: Api_Key_Encryption class not found' );
+		if ( ! class_exists( '\CampaignBridge\Core\Encryption' ) ) {
+			error_log( 'CampaignBridge: Encryption class not found' );
 			return $settings;
 		}
 
-		$security_check = \CampaignBridge\Core\Api_Key_Encryption::security_check();
+		$security_check = \CampaignBridge\Core\Encryption::security_check();
 		if ( ! $security_check['secure'] ) {
 			// Log security issue without exposing sensitive details
 			error_log( 'CampaignBridge: Encryption security check failed - system may be compromised' );
@@ -255,11 +255,11 @@ class Settings_Manager {
 				}
 
 				// Check if it's already encrypted
-				if ( ! \CampaignBridge\Core\Api_Key_Encryption::is_encrypted_value( $value ) ) {
+				if ( ! \CampaignBridge\Core\Encryption::is_encrypted_value( $value ) ) {
 					try {
 						error_log( "CampaignBridge: Encrypting field '$field'" );
 						// Encrypt the value
-						$encrypted_value = \CampaignBridge\Core\Api_Key_Encryption::encrypt( $value );
+						$encrypted_value = \CampaignBridge\Core\Encryption::encrypt( $value );
 						if ( ! empty( $encrypted_value ) ) {
 							$settings[ $field ] = $encrypted_value;
 							error_log( "CampaignBridge: Successfully encrypted field '$field'" );
@@ -322,11 +322,11 @@ class Settings_Manager {
 				}
 
 				// Check if it's encrypted
-				if ( \CampaignBridge\Core\Api_Key_Encryption::is_encrypted_value( $value ) ) {
+				if ( \CampaignBridge\Core\Encryption::is_encrypted_value( $value ) ) {
 					try {
 						error_log( "CampaignBridge: Decrypting field '$field'" );
 						// Decrypt the value for display
-						$decrypted_value = \CampaignBridge\Core\Api_Key_Encryption::decrypt_for_display( $value );
+						$decrypted_value = \CampaignBridge\Core\Encryption::decrypt_for_context( $value, 'api_key' );
 						if ( ! empty( $decrypted_value ) ) {
 							$settings[ $field ] = $decrypted_value;
 							error_log( "CampaignBridge: Successfully decrypted field '$field'" );

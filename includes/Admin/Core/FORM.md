@@ -4,20 +4,53 @@ A comprehensive, developer-friendly forms system for WordPress admin interfaces.
 
 ## Table of Contents
 
+### Getting Started
 1. [Quick Start](#quick-start)
 2. [Basic Usage](#basic-usage)
+   - Method Naming Convention
+   - Fluent API Chaining
+
+### Core Concepts
 3. [Field Types](#field-types)
+   - Standard HTML5 Fields
+   - Choice Fields
+   - Advanced Fields
+   - Encrypted Fields
 4. [Form Configuration](#form-configuration)
+   - Layout Options
+   - Form Methods and Actions
+
+### Data Management
 5. [Data Sources & Storage](#data-sources--storage)
-6. [Validation](#validation)
-7. [Security](#security)
-8. [Advanced Features](#advanced-features)
-9. [Custom Fields](#custom-fields)
-10. [Hooks & Lifecycle](#hooks--lifecycle)
-11. [Styling & Theming](#styling--theming)
-12. [Troubleshooting](#troubleshooting)
-13. [Best Practices](#best-practices)
-14. [Architecture Overview](#architecture-overview)
+6. [Data Encryption & Security](#data-encryption--security)
+   - Encryption Classes
+   - Security Contexts
+   - Encrypted Field Types
+
+### Security & Validation
+7. [Validation](#validation)
+   - Built-in Validation Rules
+   - Custom Validation
+8. [Security](#security)
+   - Automatic Security Features
+   - File Upload Security
+
+### Advanced Features
+9. [Conditional Fields](#conditional-fields)
+10. [Dynamic Field Options](#dynamic-field-options)
+11. [Multi-Step Forms](#multi-step-forms)
+12. [Custom Fields](#custom-fields)
+13. [Hooks & Lifecycle](#hooks--lifecycle)
+
+### Presentation & UX
+14. [Universal Notice System](#universal-notice-system)
+15. [Styling & Theming](#styling--theming)
+
+### Developer Experience
+16. [Troubleshooting](#troubleshooting)
+17. [Best Practices](#best-practices)
+18. [Architecture Overview](#architecture-overview)
+19. [Recent Changes](#recent-changes)
 
 ## Quick Start
 
@@ -85,7 +118,7 @@ $settings_form = Form_Factory::settings_api('plugin_settings');
 
 ### Method Naming Convention
 
-All Form API methods use **snake_case** naming (e.g., `before_save`, `after_validate`, `on_success`). This follows WordPress PHP coding standards.
+All Form API methods use **snake_case** naming (e.g., `before_save`, `after_validate`, `on_success`). This follows WordPress PHP coding standards and is enforced throughout the codebase.
 
 ```php
 // ✅ Correct - snake_case
@@ -93,11 +126,13 @@ $form->before_save($callback);
 $form->after_validate($callback);
 $form->on_success($callback);
 
-// ❌ Incorrect - camelCase
+// ❌ Incorrect - camelCase (not allowed)
 $form->beforeSave($callback);      // Wrong!
 $form->afterValidate($callback);   // Wrong!
 $form->onSuccess($callback);       // Wrong!
 ```
+
+**Note**: All methods in the forms system, including PHPStan rules and development tools, use snake_case for consistency.
 
 ### Creating Forms
 
@@ -123,19 +158,17 @@ $form = Form::make('contact_form')
 
 ### Fluent API Chaining
 
-The Form API supports **seamless chaining** with a two-level context system:
+The Form API supports **automatic field closing** with seamless chaining. You **never need to call `->end()`** - fields are automatically closed when you start a new field or call form-level methods.
 
-#### Field-Level Chaining
-You can call field creation methods directly from field configuration contexts:
-
+#### Automatic Field Management
 ```php
 $form = Form::make('user_profile')
-    // ✅ Seamless chaining within field configuration
+    // ✅ Automatic chaining - no ->end() needed!
     ->text('first_name', 'First Name')
         ->required()
         ->placeholder('Enter your first name')
 
-    ->email('email', 'Email Address')  // ← Can call field methods directly
+    ->email('email', 'Email Address')  // ← Automatically closes previous field
         ->required()
         ->placeholder('your@email.com')
 
@@ -154,15 +187,17 @@ $form = Form::make('user_profile')
     ->switch('notifications', 'Enable Notifications')
         ->default(true)
 
-    ->end() // ← Return to Form_Builder for configuration methods
-
-    // ✅ Now you can call form configuration methods
+    // ✅ Form-level methods automatically close any open field
     ->success('Profile saved successfully!')
     ->error('Please correct the errors below.')
     ->submit('Save Profile');
 ```
 
-**How it works:** Field configuration methods (`->required()`, `->placeholder()`, etc.) automatically enable calling field creation methods (`->email()`, `->text()`, etc.) without needing `->end()`.
+**How it works:** The system automatically closes fields when:
+- A new field is started (`->text()`, `->email()`, etc.)
+- Form-level methods are called (`->success()`, `->error()`, `->submit()`, `->save_to_*()`)
+
+**Legacy compatibility:** While `->end()` is still supported for backward compatibility, it's never required in modern usage.
 
 ### Adding Fields
 
@@ -508,6 +543,38 @@ $form->switch('enable_feature', 'Enable Feature')
     ->description('Turn this feature on or off');
 ```
 
+#### Encrypted Fields (Secure Sensitive Data)
+```php
+// API Key field (admin-only viewing)
+$form->encrypted('api_key', 'API Key')
+    ->context('api_key')  // Only admins can view decrypted values
+    ->required()
+    ->description('Your API key will be encrypted and stored securely');
+
+// Sensitive user data (user can view their own)
+$form->encrypted('card_number', 'Card Number')
+    ->context('personal')  // Logged-in users can view their own data
+    ->description('Card number will be masked for security');
+
+// Public encrypted data
+$form->encrypted('reference_code', 'Reference Code')
+    ->context('public')  // No permission restrictions
+    ->description('Reference code for public sharing');
+```
+
+**Security Contexts:**
+- `'api_key'` - Only administrators can view decrypted values
+- `'sensitive'` - Only administrators can view decrypted values
+- `'personal'` - Logged-in users can view their own decrypted data
+- `'public'` - No permission restrictions
+
+**Features:**
+- **Masked Display**: Shows `••••••••••••abcd` instead of raw values
+- **Reveal on Demand**: Click to temporarily show full value (permission required)
+- **Edit in Place**: Secure editing without exposing values in form HTML
+- **Permission-Based**: Access control based on security context
+- **Encrypted Storage**: Values are always encrypted in database
+
 ### Advanced Fields
 
 #### Textarea
@@ -749,6 +816,61 @@ $form_data = get_option('my_form_data');
 $form->set_data($form_data); // Manually set form data
 ```
 
+## Data Encryption & Security
+
+The forms system includes a comprehensive **AES-256-GCM encryption system** with context-aware permission levels for secure handling of sensitive data.
+
+### Encryption Classes
+
+**`Encryption` Class** - Core encryption functionality:
+```php
+use CampaignBridge\Core\Encryption;
+
+// Context-aware encryption/decryption
+$encrypted = Encryption::encrypt('sensitive_data');
+$decrypted = Encryption::decrypt_for_context($encrypted, 'api_key'); // Admin-only
+```
+
+### Security Contexts
+
+Different contexts provide different permission levels:
+
+- **`'api_key'`** - Only administrators can view decrypted values
+- **`'sensitive'`** - Only administrators can view decrypted values
+- **`'personal'`** - Logged-in users can view their own decrypted data
+- **`'public'`** - No permission restrictions
+
+### Encrypted Field Types
+
+```php
+$form = Form::make('secure_settings')
+    // API key - admin-only viewing
+    ->encrypted('mailchimp_api_key', 'Mailchimp API Key')
+        ->context('api_key')
+        ->required()
+        ->description('API key is encrypted and only visible to administrators')
+
+    // User data - user can view their own
+    ->encrypted('backup_email', 'Backup Email')
+        ->context('personal')
+        ->description('Encrypted backup email address')
+
+    // Public data - no restrictions
+    ->encrypted('public_token', 'Public Token')
+        ->context('public')
+        ->description('Publicly shareable encrypted token');
+```
+
+### Encryption Features
+
+- **Military-grade encryption**: AES-256-GCM with authenticated encryption
+- **Secure key management**: Automatic key rotation and secure storage
+- **Context-aware permissions**: Different access levels for different data types
+- **Masked UI**: Shows `••••••••••••abcd` instead of raw sensitive values
+- **Reveal on demand**: Temporary display with permission checks
+- **Secure editing**: Values never exposed in HTML, encrypted server-side
+- **Audit logging**: All encryption/decryption operations are logged
+
 ## Validation
 
 ### Built-in Validation Rules
@@ -836,13 +958,14 @@ $form = Form::make('registration')
     });
 ```
 
-## Security
+## Security & Validation
 
-### Automatic Security Features
+### Security Features
 
 ```php
 $form = Form::make('secure_form')
-    ->text('sensitive_data', 'Sensitive Data')
+    ->text('regular_data', 'Regular Data')
+    ->encrypted('api_key', 'API Key')->context('api_key')
     ->submit('Save');
 
 // Automatically includes:
@@ -850,6 +973,7 @@ $form = Form::make('secure_form')
 // - Input sanitization
 // - XSS protection
 // - CSRF protection
+// - Context-aware encryption for sensitive fields
 ```
 
 ### Manual Security Controls
@@ -1659,7 +1783,7 @@ class OptimizedFormBuilder {
 
 ```
 Form (Facade)
-├── Form_Builder (Fluent API)
+├── Form_Builder (Fluent API with Automatic Field Closing)
 │   ├── Form_Field_Builder (Field Configuration)
 │   └── Form_Field_Manager (Field Management)
 ├── Form_Config (Configuration Management)
@@ -1668,28 +1792,31 @@ Form (Facade)
 │   ├── Form_Validator (Validation Engine)
 │   ├── Form_Handler (Submission Logic)
 │   ├── Form_Renderer (Output Generation)
-│   └── Form_Data_Manager (Data Persistence)
-└── Form_Field_* (Field Implementations)
+│   ├── Form_Data_Manager (Data Persistence)
+│   └── Encryption (AES-256-GCM with Context-Aware Permissions)
+└── Form_Field_* (Field Implementations including Encrypted Fields)
 ```
 
 ### Data Flow
 
 1. **Initialization**: Form created with configuration
-2. **Data Loading**: Form_Data_Manager loads existing data
-3. **Rendering**: Form_Renderer generates HTML output
+2. **Data Loading**: Form_Data_Manager loads existing data (decrypts encrypted fields based on context permissions)
+3. **Rendering**: Form_Renderer generates HTML output (masks encrypted fields, shows permission-restricted access)
 4. **Submission**: Form_Handler processes submitted data
 5. **Validation**: Form_Validator checks data integrity
 6. **Security**: Form_Security verifies requests and sanitizes input
-7. **Persistence**: Form_Data_Manager saves validated data
-8. **Response**: Success/error messages displayed
+7. **Encryption**: Sensitive data encrypted using AES-256-GCM with context-aware permissions
+8. **Persistence**: Form_Data_Manager saves validated data (encrypted fields stored securely)
+9. **Response**: Success/error messages displayed
 
 ### Extension Points
 
-- **Field Types**: Implement `Form_Field_Interface`
+- **Field Types**: Implement `Form_Field_Interface` (includes encrypted fields with context-aware permissions)
 - **Validation Rules**: Extend `Form_Validator`
 - **Data Sources**: Implement custom data managers
 - **Renderers**: Create custom layout engines
-- **Security**: Add custom security checks
+- **Security**: Add custom security checks and encryption contexts
+- **Encryption**: Extend `Encryption` class with custom contexts
 - **Hooks**: Use form lifecycle hooks
 
 ### Dependencies
@@ -1700,3 +1827,12 @@ Form (Facade)
 - **Validation**: WordPress sanitization and validation functions
 
 This forms system provides a robust, extensible foundation for building WordPress admin interfaces with a focus on developer experience, security, and maintainability.
+
+### Recent Changes (v2.0+)
+
+- **Snake Case Enforcement**: All methods now use snake_case naming convention
+- **Automatic Field Closing**: No need to call `->end()` - fields close automatically
+- **Context-Aware Encryption**: New `Encryption` class with permission-based decryption
+- **Encrypted Form Fields**: New `->encrypted()` field type with masked display
+- **Deprecated Code Removal**: Removed `decrypt_for_display()`, `add_admin_menu()`, and `$include_messages` parameter
+- **Enhanced Security**: AES-256-GCM encryption with admin-only API key viewing

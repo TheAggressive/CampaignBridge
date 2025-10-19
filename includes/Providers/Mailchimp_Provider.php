@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Providers;
 
-use CampaignBridge\Core\Api_Key_Encryption;
+use CampaignBridge\Core\Encryption;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {

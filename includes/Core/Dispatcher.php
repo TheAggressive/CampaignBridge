@@ -185,7 +185,7 @@ class Dispatcher {
 				$value = $decrypted_settings[ $field ];
 				if ( is_string( $value ) && self::is_encrypted_value( $value ) ) {
 					try {
-						$decrypted_settings[ $field ] = Api_Key_Encryption::decrypt( $value );
+						$decrypted_settings[ $field ] = Encryption::decrypt( $value );
 					} catch ( \Throwable $e ) {
 						// Log error but don't expose details.
 						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

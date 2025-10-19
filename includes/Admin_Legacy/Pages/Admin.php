@@ -17,7 +17,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin\Pages;
 
-use CampaignBridge\Core\Api_Key_Encryption;
+use CampaignBridge\Core\Encryption;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -135,7 +135,7 @@ abstract class Admin {
 		foreach ( $sensitive_fields as $field ) {
 			if ( isset( $settings[ $field ] ) && ! empty( $settings[ $field ] ) ) {
 				try {
-					$settings[ $field ] = Api_Key_Encryption::decrypt_for_display( $settings[ $field ] );
+					$settings[ $field ] = Encryption::decrypt_for_context( $settings[ $field ], 'api_key' );
 				} catch ( \Throwable $e ) {
 					// Log error but don't expose sensitive details.
 					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

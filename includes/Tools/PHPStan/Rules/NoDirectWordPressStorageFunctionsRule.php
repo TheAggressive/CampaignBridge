@@ -105,7 +105,7 @@ class NoDirectWordPressStorageFunctionsRule implements Rule {
 
 		// Check if this function is allowed in the current file.
 		$file_path     = $scope->getFile();
-		$relative_path = $this->getRelativePath( $file_path );
+		$relative_path = $this->get_relative_path( $file_path );
 
 		// Allow in specific files.
 		if ( isset( self::ALLOWED_IN_FILES[ $relative_path ] ) ) {
@@ -123,7 +123,7 @@ class NoDirectWordPressStorageFunctionsRule implements Rule {
 		}
 
 		// Check if this is a method call on a class (not a direct function call).
-		if ( $this->isMethodCall( $node ) ) {
+		if ( $this->is_method_call( $node ) ) {
 			return array();
 		}
 
@@ -144,7 +144,7 @@ class NoDirectWordPressStorageFunctionsRule implements Rule {
 	 * @param string $absolute_path The absolute file path.
 	 * @return string The relative path.
 	 */
-	private function getRelativePath( string $absolute_path ): string {
+	private function get_relative_path( string $absolute_path ): string {
 		$project_root = dirname( __DIR__, 2 ); // Go up to plugin root.
 		return str_replace( $project_root . '/', '', $absolute_path );
 	}
@@ -155,7 +155,7 @@ class NoDirectWordPressStorageFunctionsRule implements Rule {
 	 * @param FuncCall $node The function call node.
 	 * @return bool True if it's a method call.
 	 */
-	private function isMethodCall( FuncCall $node ): bool {
+	private function is_method_call( FuncCall $node ): bool {
 		// This is a simplified check. In a real implementation, you'd need
 		// more sophisticated AST analysis to detect method calls vs function calls.
 		// For now, we'll rely on the file-based allowlist for Storage class methods.

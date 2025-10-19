@@ -71,6 +71,9 @@ class Form_Field_Factory {
 			case 'toggle':
 				return new Form_Field_Switch( $field_config );
 
+			case 'encrypted':
+				return new Form_Field_Encrypted( $field_config );
+
 			default:
 				// Allow custom field types via filter.
 				$custom_field = apply_filters( 'campaignbridge_form_custom_field', null, $field_type, $field_config );
