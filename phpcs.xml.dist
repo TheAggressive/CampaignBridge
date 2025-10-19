@@ -22,6 +22,15 @@
   <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DatabaseOperationSniff.php">
     <severity>error</severity>
   </rule>
+  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DirectLoggingSniff.php">
+    <severity>warning</severity>
+  </rule>
+  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DirectDatabaseQuerySniff.php">
+    <severity>warning</severity>
+  </rule>
+  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DirectHttpRequestSniff.php">
+    <severity>warning</severity>
+  </rule>
 
   <!-- Exclude build and dependency directories -->
   <exclude-pattern>vendor/*</exclude-pattern>

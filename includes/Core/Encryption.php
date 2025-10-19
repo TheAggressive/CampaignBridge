@@ -159,10 +159,11 @@ class Encryption {
 		} catch ( \Throwable $e ) {
 			// Log the error for debugging but don't expose details.
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-					sprintf(
-						'CampaignBridge API key decryption failed: %s',
-						$e->getMessage()
+				\CampaignBridge\Core\Error_Handler::error(
+					'CampaignBridge API key decryption failed',
+					array(
+						'error' => $e->getMessage(),
+						'trace' => $e->getTraceAsString(),
 					)
 				);
 			}
@@ -270,11 +271,9 @@ class Encryption {
 
 			// Log the rotation (without exposing the key).
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-					sprintf(
-						'CampaignBridge master encryption key rotated. New version: %d',
-						$metadata['version']
-					)
+				\CampaignBridge\Core\Error_Handler::info(
+					'CampaignBridge master encryption key rotated',
+					array( 'version' => $metadata['version'] )
 				);
 			}
 		}
@@ -303,8 +302,9 @@ class Encryption {
 			\CampaignBridge\Core\Storage::add_option( self::KEY_META_OPTION, $metadata );
 
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-				error_log( 'CampaignBridge master encryption key generated' );
+				\CampaignBridge\Core\Error_Handler::info(
+					'CampaignBridge master encryption key generated'
+				);
 			}
 		}
 

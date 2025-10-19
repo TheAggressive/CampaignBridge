@@ -54,15 +54,21 @@ class Settings_Controller {
 	 */
 	public function handle_request(): void {
 		// Global settings actions can be handled here.
-		if ( isset( $_POST['reset_all_settings'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in individual handler methods
+		$reset_settings = isset( $_POST['reset_all_settings'] ) ? sanitize_text_field( wp_unslash( $_POST['reset_all_settings'] ) ) : '';
+		if ( ! empty( $reset_settings ) ) {
 			$this->handle_reset_all_settings();
 		}
 
-		if ( isset( $_POST['export_settings'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in individual handler methods
+		$export_settings = isset( $_POST['export_settings'] ) ? sanitize_text_field( wp_unslash( $_POST['export_settings'] ) ) : '';
+		if ( ! empty( $export_settings ) ) {
 			$this->handle_export_settings();
 		}
 
-		if ( isset( $_POST['import_settings'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in individual handler methods
+		$import_settings = isset( $_POST['import_settings'] ) ? sanitize_text_field( wp_unslash( $_POST['import_settings'] ) ) : '';
+		if ( ! empty( $import_settings ) ) {
 			$this->handle_import_settings();
 		}
 	}
@@ -164,11 +170,13 @@ class Settings_Controller {
 	 * @return void
 	 */
 	private function handle_reset_all_settings(): void {
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_reset_all' ) ) {
+		// Double security: sanitize input before nonce verification.
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'cb_reset_all' ) ) {
 			wp_die( 'Security check failed' );
 		}
 
-		// Rate limiting for destructive actions
+		// Rate limiting for destructive actions.
 		$rate_limit_key = 'reset_settings_' . get_current_user_id();
 		$last_reset     = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
 
@@ -192,7 +200,7 @@ class Settings_Controller {
 			\CampaignBridge\Core\Storage::delete_option( $option );
 		}
 
-		// Set rate limiting transient
+		// Set rate limiting transient.
 		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, time(), 300 ); // 5 minutes
 
 		wp_safe_redirect(
@@ -213,11 +221,13 @@ class Settings_Controller {
 	 * @return void
 	 */
 	private function handle_export_settings(): void {
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_export_settings' ) ) {
+		// Double security: sanitize input before nonce verification.
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'cb_export_settings' ) ) {
 			wp_die( 'Security check failed' );
 		}
 
-		// Check user capabilities
+		// Check user capabilities.
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( 'You do not have permission to export settings.' );
 		}
@@ -243,16 +253,19 @@ class Settings_Controller {
 	 * @return void
 	 */
 	private function handle_import_settings(): void {
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'cb_import_settings' ) ) {
+		// Double security: sanitize input before nonce verification.
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'cb_import_settings' ) ) {
 			wp_die( 'Security check failed' );
 		}
 
-		// Check user capabilities
+		// Check user capabilities.
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( 'You do not have permission to import settings.' );
 		}
 
-		if ( ! isset( $_FILES['import_file'] ) || UPLOAD_ERR_OK !== $_FILES['import_file']['error'] ) {
+		$import_file_error = isset( $_FILES['import_file']['error'] ) ? intval( $_FILES['import_file']['error'] ) : UPLOAD_ERR_OK;
+		if ( UPLOAD_ERR_OK !== $import_file_error ) {
 			wp_safe_redirect(
 				add_query_arg(
 					array(
@@ -266,9 +279,10 @@ class Settings_Controller {
 			exit;
 		}
 
-		// Validate file upload security
+		// Validate file upload security.
 		$allowed_mime_types = array( 'application/json', 'text/plain' );
-		$uploaded_file_type = wp_check_filetype( $_FILES['import_file']['name'] );
+		$uploaded_file_name = isset( $_FILES['import_file']['name'] ) ? sanitize_file_name( $_FILES['import_file']['name'] ) : '';
+		$uploaded_file_type = wp_check_filetype( $uploaded_file_name );
 
 		if ( ! in_array( $uploaded_file_type['type'], $allowed_mime_types, true ) ) {
 			wp_safe_redirect(
@@ -284,9 +298,10 @@ class Settings_Controller {
 			exit;
 		}
 
-		// Check file size (max 1MB for settings)
-		$max_size = 1024 * 1024; // 1MB
-		if ( $_FILES['import_file']['size'] > $max_size ) {
+		// Check file size (max 1MB for settings).
+		$max_size           = 1024 * 1024; // 1MB
+		$uploaded_file_size = isset( $_FILES['import_file']['size'] ) ? intval( $_FILES['import_file']['size'] ) : 0;
+		if ( $uploaded_file_size > $max_size ) {
 			wp_safe_redirect(
 				add_query_arg(
 					array(
@@ -300,12 +315,14 @@ class Settings_Controller {
 			exit;
 		}
 
-		// Secure file reading for uploaded files
-		if ( ! is_uploaded_file( $_FILES['import_file']['tmp_name'] ) ) {
+		// Secure file reading for uploaded files.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- $_FILES tmp_name is system-generated and safe for upload validation
+		$uploaded_file_tmp_name = isset( $_FILES['import_file']['tmp_name'] ) ? $_FILES['import_file']['tmp_name'] : '';
+		if ( ! is_uploaded_file( $uploaded_file_tmp_name ) ) {
 			wp_die( 'Invalid file upload' );
 		}
 
-		$content = file_get_contents( $_FILES['import_file']['tmp_name'] );
+		$content = file_get_contents( $uploaded_file_tmp_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, CampaignBridge.Sniffs.DirectHttpRequest.DirectHttpFunction -- Reading uploaded file, not HTTP request
 		if ( false === $content ) {
 			wp_die( 'Failed to read uploaded file' );
 		}

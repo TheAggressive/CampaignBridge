@@ -44,11 +44,30 @@ class Error_Handler {
 	private string $log_file;
 
 	/**
+	 * Singleton instance
+	 *
+	 * @var self|null
+	 */
+	private static ?self $instance = null;
+
+	/**
 	 * Constructor
+	 *
+	 * Initializes the error handler with default log level and file path.
 	 */
 	public function __construct() {
 		$this->log_level = $this->get_log_level();
 		$this->log_file  = WP_CONTENT_DIR . '/campaignbridge.log';
+	}
+
+	/**
+	 * Get singleton instance
+	 */
+	private static function get_instance(): self {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
 	}
 
 	/**
@@ -103,8 +122,8 @@ class Error_Handler {
 	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
-	public function debug( string $message, array $context = array() ): void {
-		$this->log( self::LOG_LEVEL_DEBUG, $message, $context );
+	public static function debug( string $message, array $context = array() ): void {
+		self::get_instance()->log( self::LOG_LEVEL_DEBUG, $message, $context );
 	}
 
 	/**
@@ -114,8 +133,8 @@ class Error_Handler {
 	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
-	public function info( string $message, array $context = array() ): void {
-		$this->log( self::LOG_LEVEL_INFO, $message, $context );
+	public static function info( string $message, array $context = array() ): void {
+		self::get_instance()->log( self::LOG_LEVEL_INFO, $message, $context );
 	}
 
 	/**
@@ -125,8 +144,8 @@ class Error_Handler {
 	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
-	public function warning( string $message, array $context = array() ): void {
-		$this->log( self::LOG_LEVEL_WARNING, $message, $context );
+	public static function warning( string $message, array $context = array() ): void {
+		self::get_instance()->log( self::LOG_LEVEL_WARNING, $message, $context );
 	}
 
 	/**
@@ -136,8 +155,8 @@ class Error_Handler {
 	 * @param array<string, mixed> $context Additional context.
 	 * @return void
 	 */
-	public function error( string $message, array $context = array() ): void {
-		$this->log( self::LOG_LEVEL_ERROR, $message, $context );
+	public static function error( string $message, array $context = array() ): void {
+		self::get_instance()->log( self::LOG_LEVEL_ERROR, $message, $context );
 	}
 
 	/**
@@ -169,7 +188,7 @@ class Error_Handler {
 		if ( WP_DEBUG ) {
 			file_put_contents( $this->log_file, $log_line, FILE_APPEND | LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Logging only.
 		} else {
-			error_log( $log_line ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Production logging.
+			error_log( $log_line ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Sniffs.DirectLogging.DirectLoggingFunction -- Production logging within Error_Handler.
 		}
 	}
 

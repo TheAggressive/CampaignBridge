@@ -94,8 +94,10 @@ class Plugin {
 	private function handle_initialization_error( \Exception $e ): void {
 		// Log the error and show admin notice.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'CampaignBridge Plugin Error: ' . $e->getMessage() );
+			\CampaignBridge\Core\Error_Handler::error(
+				'CampaignBridge Plugin Error',
+				array( 'error' => $e->getMessage() )
+			);
 		}
 
 		// Add admin notice about the error.
