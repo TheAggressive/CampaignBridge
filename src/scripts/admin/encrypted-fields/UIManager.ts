@@ -17,23 +17,47 @@ export class UIManager {
   constructor(private accessibility: AccessibilityManager) {}
 
   /**
+   * Helper method to hide an element using CSS classes
+   */
+  private hideElement(element: HTMLElement): void {
+    // Remove any visibility classes
+    element.classList.remove(
+      CLASSES.CONTROLS_HIDDEN,
+      CLASSES.DISPLAY_HIDDEN,
+      CLASSES.REVEAL_BTN_HIDDEN,
+      CLASSES.HIDE_BTN_VISIBLE,
+      CLASSES.EDIT_VISIBLE,
+      CLASSES.EDIT_CONTROLS_VISIBLE
+    );
+  }
+
+  /**
+   * Helper method to show an element using CSS classes
+   */
+  private showElement(element: HTMLElement, visibilityClass: string): void {
+    element.classList.add(visibilityClass);
+  }
+
+  /**
    * Switch field to edit mode with UI updates
    */
   switchToEditMode(elements: FieldElements): void {
-    // Update visibility
+    // Update visibility using CSS classes
     if (elements.displayInput) {
-      elements.displayInput.style.display = 'none';
+      elements.displayInput.classList.add(CLASSES.DISPLAY_HIDDEN);
       this.accessibility.updateAriaForMasked(elements);
     }
-    if (elements.controls) elements.controls.style.display = 'none';
+    if (elements.controls)
+      elements.controls.classList.add(CLASSES.CONTROLS_HIDDEN);
 
     if (elements.editInput) {
-      elements.editInput.style.display = 'block';
+      this.showElement(elements.editInput, CLASSES.EDIT_VISIBLE);
       // Ensure edit input is editable
       elements.editInput.removeAttribute('readonly');
       elements.editInput.removeAttribute('disabled');
     }
-    if (elements.editControls) elements.editControls.style.display = 'block';
+    if (elements.editControls)
+      this.showElement(elements.editControls, CLASSES.EDIT_CONTROLS_VISIBLE);
 
     // Update accessibility
     this.accessibility.updateAriaForEdit(elements);
@@ -46,18 +70,12 @@ export class UIManager {
    * Switch field back to display mode
    */
   switchToDisplayMode(elements: FieldElements): void {
-    if (elements.editInput) {
-      elements.editInput.style.display = 'none';
-    }
-    if (elements.editControls) {
-      elements.editControls.style.display = 'none';
-    }
-    if (elements.displayInput) {
-      elements.displayInput.style.display = 'block';
-    }
-    if (elements.controls) {
-      elements.controls.style.display = 'block';
-    }
+    if (elements.editInput) this.hideElement(elements.editInput);
+    if (elements.editControls) this.hideElement(elements.editControls);
+    if (elements.displayInput)
+      this.showElement(elements.displayInput, CLASSES.DISPLAY);
+    if (elements.controls)
+      this.showElement(elements.controls, CLASSES.CONTROLS);
   }
 
   /**
@@ -67,30 +85,27 @@ export class UIManager {
     // Clear edit input
     if (elements.editInput) {
       elements.editInput.value = '';
-      elements.editInput.style.display = 'none';
+      this.hideElement(elements.editInput);
     }
-    if (elements.editControls) {
-      elements.editControls.style.display = 'none';
-    }
+    if (elements.editControls) this.hideElement(elements.editControls);
 
     // Restore display value
     if (elements.displayInput && originalValue) {
       elements.displayInput.value = originalValue;
-      elements.displayInput.style.display = 'block';
+      // Remove hidden class to show display input again
+      elements.displayInput.classList.remove(CLASSES.DISPLAY_HIDDEN);
     }
 
     // Reset button states - only show reveal button for masked state
-    if (elements.controls) elements.controls.style.display = 'block';
+    if (elements.controls) {
+      elements.controls.classList.remove(CLASSES.CONTROLS_HIDDEN);
+    }
     if (elements.revealBtn) {
-      elements.revealBtn.style.display = 'inline-block';
+      // Reveal button is visible by default, no special class needed
       this.accessibility.manageFocus(elements, 'reveal');
     }
-    if (elements.hideBtn) {
-      elements.hideBtn.style.display = 'none';
-    }
-    if (elements.editBtn) {
-      elements.editBtn.style.display = 'none';
-    }
+    if (elements.hideBtn) this.hideElement(elements.hideBtn);
+    if (elements.editBtn) this.hideElement(elements.editBtn);
 
     // Update accessibility
     this.accessibility.updateAriaForMasked(elements);
@@ -137,14 +152,11 @@ export class UIManager {
 
     // Update button states
     if (revealBtn) {
-      revealBtn.style.display = 'inline-block';
+      // Ensure reveal button is visible by removing hidden class
+      revealBtn.classList.remove(CLASSES.REVEAL_BTN_HIDDEN);
     }
-    if (hideBtn) {
-      hideBtn.style.display = 'none';
-    }
-    if (editBtn) {
-      editBtn.style.display = 'none';
-    }
+    if (hideBtn) this.hideElement(hideBtn);
+    if (editBtn) this.hideElement(editBtn);
 
     // Update accessibility
     const elements = {
@@ -207,13 +219,14 @@ export class UIManager {
    */
   updateButtonsAfterReveal(elements: FieldElements): void {
     if (elements.revealBtn) {
-      elements.revealBtn.style.display = 'none';
+      // Reveal button should be hidden when values are revealed
+      elements.revealBtn.classList.add(CLASSES.REVEAL_BTN_HIDDEN);
     }
     if (elements.hideBtn) {
-      elements.hideBtn.style.display = 'inline-block';
+      this.showElement(elements.hideBtn, CLASSES.HIDE_BTN_VISIBLE);
     }
     if (elements.editBtn) {
-      elements.editBtn.style.display = 'inline-block';
+      // Edit button is visible by default, no special class needed
     }
 
     this.accessibility.updateAriaForRevealed(elements);
@@ -226,22 +239,26 @@ export class UIManager {
     // Reset display
     if (elements.displayInput && originalValue) {
       elements.displayInput.value = originalValue;
-      elements.displayInput.style.display = 'block';
+      // Ensure display input is visible by removing hidden class
+      elements.displayInput.classList.remove(CLASSES.DISPLAY_HIDDEN);
     }
 
     // Reset edit mode
     if (elements.editInput) {
-      elements.editInput.style.display = 'none';
+      this.hideElement(elements.editInput);
       elements.editInput.value = '';
     }
-    if (elements.editControls) {
-      elements.editControls.style.display = 'none';
-    }
+    if (elements.editControls) this.hideElement(elements.editControls);
 
     // Reset buttons
-    if (elements.controls) elements.controls.style.display = 'block';
-    if (elements.revealBtn) elements.revealBtn.style.display = 'inline-block';
-    if (elements.editBtn) elements.editBtn.style.display = 'none';
+    if (elements.controls) {
+      elements.controls.classList.remove(CLASSES.CONTROLS_HIDDEN);
+    }
+    if (elements.revealBtn) {
+      // Remove hidden class to show reveal button again
+      elements.revealBtn.classList.remove(CLASSES.REVEAL_BTN_HIDDEN);
+    }
+    if (elements.editBtn) this.hideElement(elements.editBtn);
 
     // Reset accessibility
     this.accessibility.updateAriaForMasked(elements);

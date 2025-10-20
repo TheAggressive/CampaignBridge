@@ -90,17 +90,17 @@ export class EventHandler {
         const elements = this.fieldElements.getFieldElements(field);
 
         // If in edit mode, cancel edit
-        if (elements.editInput && elements.editInput.style.display !== 'none') {
+        if (
+          elements.editInput &&
+          elements.editInput.classList.contains(CLASSES.EDIT_VISIBLE)
+        ) {
           event.preventDefault();
           this.handlers.handleCancel(elements.cancelBtn || elements.saveBtn);
           return;
         }
 
         // If data is revealed, hide it immediately
-        if (
-          elements.displayInput &&
-          elements.displayInput.style.display !== 'none'
-        ) {
+        if (elements.displayInput) {
           const fieldId = field.dataset.fieldId;
           if (fieldId && this.stateManager.hasRevealedValue(fieldId)) {
             event.preventDefault();

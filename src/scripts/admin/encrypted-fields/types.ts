@@ -96,6 +96,14 @@ export const CLASSES = {
   SAVE_BTN: 'campaignbridge-encrypted-field__save-btn',
   CANCEL_BTN: 'campaignbridge-encrypted-field__cancel-btn',
   PERMISSION_DENIED: 'campaignbridge-encrypted-field--permission-denied',
+  // Visibility state classes
+  CONTROLS_HIDDEN: 'campaignbridge-encrypted-field__controls--hidden',
+  DISPLAY_HIDDEN: 'campaignbridge-encrypted-field__display--hidden',
+  REVEAL_BTN_HIDDEN: 'campaignbridge-encrypted-field__reveal-btn--hidden',
+  HIDE_BTN_VISIBLE: 'campaignbridge-encrypted-field__hide-btn--visible',
+  EDIT_VISIBLE: 'campaignbridge-encrypted-field__edit--visible',
+  EDIT_CONTROLS_VISIBLE:
+    'campaignbridge-encrypted-field__edit-controls--visible',
 } as const;
 
 // Global type declarations

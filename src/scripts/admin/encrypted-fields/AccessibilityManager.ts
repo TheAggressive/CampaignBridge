@@ -7,6 +7,7 @@
  */
 
 import type { FieldElements } from './types';
+import { CLASSES } from './types';
 
 /**
  * Manages accessibility features for encrypted fields
@@ -157,16 +158,16 @@ export class AccessibilityManager {
     // Handle Escape key for canceling operations
     if (event.key === 'Escape') {
       // If in edit mode, cancel edit
-      if (elements.editInput && elements.editInput.style.display !== 'none') {
+      if (
+        elements.editInput &&
+        elements.editInput.classList.contains(CLASSES.EDIT_VISIBLE)
+      ) {
         event.preventDefault();
         return true; // Signal that escape was handled
       }
 
       // If data is revealed, hide it immediately
-      if (
-        elements.displayInput &&
-        elements.displayInput.style.display !== 'none'
-      ) {
+      if (elements.displayInput) {
         // This will be handled by the caller
         event.preventDefault();
         return true;

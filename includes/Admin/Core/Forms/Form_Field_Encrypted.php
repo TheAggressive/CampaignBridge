@@ -213,7 +213,7 @@ class Form_Field_Encrypted extends Form_Field_Input {
 			$html .= '</button>';
 
 			// Hide button (initially hidden) - shown when values are revealed.
-			$html .= '<button type="button" class="button button-secondary campaignbridge-encrypted-field__hide-btn" data-action="hide" style="display: none;">';
+			$html .= '<button type="button" class="button button-secondary campaignbridge-encrypted-field__hide-btn" data-action="hide">';
 			$html .= '<span class="dashicons dashicons-hidden"></span> ' . esc_html__( 'Hide', 'campaignbridge' );
 			$html .= '</button>';
 		}
@@ -230,7 +230,6 @@ class Form_Field_Encrypted extends Form_Field_Input {
 		$edit_attrs                = $attrs;
 		$edit_attrs['type']        = 'password';
 		$edit_attrs['value']       = '';
-		$edit_attrs['style']       = 'display: none;';
 		$edit_attrs['class']       = ( $edit_attrs['class'] ?? '' ) . ' campaignbridge-encrypted-field__edit';
 		$edit_attrs['placeholder'] = esc_html__( 'Enter new value...', 'campaignbridge' );
 		// Set unique name and id to satisfy browser validation.
@@ -242,7 +241,7 @@ class Form_Field_Encrypted extends Form_Field_Input {
 		$html .= '<input ' . $this->build_attributes_string( $edit_attrs ) . ' data-original-name="' . esc_attr( $field_name ) . '" data-field-id="' . esc_attr( $field_id ) . '" />';
 
 		// Edit controls (hidden initially).
-		$html .= '<div class="campaignbridge-encrypted-field__edit-controls" style="display: none;">';
+		$html .= '<div class="campaignbridge-encrypted-field__edit-controls">';
 		$html .= '<button type="button" class="button button-primary campaignbridge-encrypted-field__save-btn" data-action="save">';
 		$html .= esc_html__( 'Update', 'campaignbridge' );
 		$html .= '</button>';
