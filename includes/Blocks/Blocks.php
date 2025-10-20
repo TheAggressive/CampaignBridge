@@ -41,7 +41,7 @@ class Blocks {
 	 * @return void
 	 */
 	public static function init(): void {
-		add_action( 'init', array( __CLASS__, 'register' ) );
+		\add_action( 'init', array( __CLASS__, 'register' ) );
 	}
 
 	/**

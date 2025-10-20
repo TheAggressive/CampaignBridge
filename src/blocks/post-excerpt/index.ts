@@ -1,5 +1,5 @@
-import { registerBlockType } from '@wordpress/blocks';
 import type { BlockConfiguration } from '@wordpress/blocks';
+import { registerBlockType } from '@wordpress/blocks';
 
 import './editor.css';
 import './style.css';
@@ -12,17 +12,20 @@ const { name }: { name: string } = metadata;
 export { metadata, name };
 
 export interface PostExcerptBlockSettings {
-	edit: React.ComponentType<any>;
-	save: React.ComponentType<any>;
+  edit: React.ComponentType<any>;
+  save: React.ComponentType<any>;
 }
 
 export const settings: PostExcerptBlockSettings = {
-	edit: Edit,
-	save: Save,
+  edit: Edit,
+  save: Save,
 };
 
 export const init = (): void => {
-	registerBlockType({ name, ...metadata } as BlockConfiguration, settings);
+  registerBlockType(
+    { name, ...metadata } as unknown as BlockConfiguration,
+    settings
+  );
 };
 
 init();

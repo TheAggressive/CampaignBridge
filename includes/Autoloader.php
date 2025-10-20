@@ -68,12 +68,6 @@ class CampaignBridge_Autoloader {
 	 * @return void
 	 */
 	public static function load( string $class_name ): void {
-		// Debug logging for troubleshooting.
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( "CampaignBridge Autoloader: Attempting to load class: $class_name" );
-		}
-
 		// Only handle CampaignBridge classes.
 		if ( ! self::is_campaignbridge_class( $class_name ) ) {
 			return;
@@ -242,8 +236,7 @@ class CampaignBridge_Autoloader {
 	 */
 	private static function log_error( string $message ): void {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'CampaignBridge Autoloader: ' . $message );
+			error_log( 'CampaignBridge Autoloader: ' . $message ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- Autoloader cannot use Error_Handler class before it's loaded
 		}
 	}
 

@@ -108,11 +108,12 @@ class Performance_Optimizer {
 	 */
 	public function batch_update_post_meta( array $post_meta_updates ): bool {
 		// Security: Only allow admin users to perform bulk database operations.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'manage_options' ) ) {
 			return false;
 		}
 
-		return \CampaignBridge\Core\Storage::batch_update_post_meta( $post_meta_updates );
+		$result = \CampaignBridge\Core\Storage::batch_update_post_meta( $post_meta_updates );
+		return $result['success'];
 	}
 
 	/**

@@ -17,7 +17,10 @@ export const settings: PostCTABlockSettings = {
 };
 
 export const init = (): void => {
-  registerBlockType({ name, ...metadata } as BlockConfiguration, settings);
+  registerBlockType(
+    { name, ...metadata } as unknown as BlockConfiguration,
+    settings
+  );
 };
 
 init();

@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-namespace Standards\CampaignBridge\Sniffs;
+namespace CampaignBridge\Standard\Sniffs\Database;
 
 use PHP_CodeSniffer\Sniffs\Sniff;
 use PHP_CodeSniffer\Files\File;
@@ -94,7 +94,7 @@ class DatabaseOperationSniff implements Sniff {
 				'Direct SQL function %s() is not allowed. Use WordPress database API ($wpdb) instead.',
 				$content
 			);
-			$phpcs_file->addError( $error, $stack_ptr, 'DirectSQLFunction' );
+			$phpcs_file->addError( $error, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectSQLFunction' );
 		}
 
 		// Check for WordPress database method usage.
@@ -132,19 +132,157 @@ class DatabaseOperationSniff implements Sniff {
 	 * @return void
 	 */
 	private function validateWordPressDbUsage( File $phpcs_file, int $stack_ptr, string $method_name ): void {
+		// Skip validation if this appears to be an HTTP client operation.
+		if ( $this->isHttpClientOperation( $phpcs_file, $stack_ptr ) ) {
+			return;
+		}
+
 		// Check if this is called on $wpdb.
 		if ( ! $this->isCalledOnWpdb( $phpcs_file, $stack_ptr ) ) {
 			$warning = sprintf(
 				'%s() should be called on $wpdb object for proper WordPress database operations.',
 				$method_name
 			);
-			$phpcs_file->addWarning( $warning, $stack_ptr, 'InvalidWpdbUsage' );
+			$phpcs_file->addWarning( $warning, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.InvalidWpdbUsage' );
 		}
 
 		// Check for prepared statements when needed.
 		if ( in_array( $method_name, array( 'query', 'get_var', 'get_row', 'get_col', 'get_results' ), true ) ) {
 			$this->validatePreparedStatement( $phpcs_file, $stack_ptr, $method_name );
 		}
+	}
+
+	/**
+	 * Checks if this appears to be an HTTP client operation rather than a database operation.
+	 *
+	 * @param File $phpcs_file The file being scanned.
+	 * @param int  $stack_ptr  The position of the current token in the stack.
+	 *
+	 * @return bool True if this appears to be an HTTP client operation.
+	 */
+	private function isHttpClientOperation( File $phpcs_file, int $stack_ptr ): bool {
+		$tokens = $phpcs_file->getTokens();
+
+		// Check if we're in a class that contains "Http" or "Client" in the name.
+		$class_name = $this->getClassName( $phpcs_file );
+		if ( $class_name && ( stripos( $class_name, 'Http' ) !== false || stripos( $class_name, 'Client' ) !== false ) ) {
+			return true;
+		}
+
+		// Check if the method returns HTTP-related types (WP_Error, array for HTTP responses).
+		$method_return_type = $this->getMethodReturnType( $phpcs_file, $stack_ptr );
+		if ( $method_return_type && ( stripos( $method_return_type, 'WP_Error' ) !== false || stripos( $method_return_type, 'array' ) !== false ) ) {
+			return true;
+		}
+
+		// Check if the method contains HTTP-related parameters (URL, args).
+		if ( $this->hasHttpParameters( $phpcs_file, $stack_ptr ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Gets the class name containing the current token.
+	 *
+	 * @param File $phpcs_file The file being scanned.
+	 *
+	 * @return string|null The class name or null if not found.
+	 */
+	private function getClassName( File $phpcs_file ): ?string {
+		$tokens = $phpcs_file->getTokens();
+
+		// Find the class declaration.
+		foreach ( $tokens as $token ) {
+			if ( $token['code'] === T_CLASS ) {
+				$class_name_ptr = $phpcs_file->findNext( T_STRING, $token['scope_opener'] + 1 );
+				if ( $class_name_ptr !== false ) {
+					return $tokens[ $class_name_ptr ]['content'];
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Gets the return type of the method containing the current token.
+	 *
+	 * @param File $phpcs_file The file being scanned.
+	 * @param int  $stack_ptr  The position of the current token in the stack.
+	 *
+	 * @return string|null The return type or null if not found.
+	 */
+	private function getMethodReturnType( File $phpcs_file, int $stack_ptr ): ?string {
+		$tokens = $phpcs_file->getTokens();
+
+		// Find the method declaration.
+		$method_start = $phpcs_file->findPrevious( T_FUNCTION, $stack_ptr );
+		if ( $method_start === false ) {
+			return null;
+		}
+
+		// Look for return type after the closing parenthesis.
+		$closing_paren = $phpcs_file->findNext( T_CLOSE_PARENTHESIS, $method_start );
+		if ( $closing_paren === false ) {
+			return null;
+		}
+
+		$colon = $phpcs_file->findNext( T_COLON, $closing_paren );
+		if ( $colon === false ) {
+			return null;
+		}
+
+		$return_type_end = $phpcs_file->findNext( array( T_WHITESPACE, T_OPEN_CURLY_BRACKET ), $colon, null, true );
+		if ( $return_type_end === false ) {
+			$return_type_end = $colon + 1;
+		}
+
+		$return_type = '';
+		for ( $i = $colon + 1; $i < $return_type_end; $i++ ) {
+			$return_type .= $tokens[ $i ]['content'];
+		}
+
+		return trim( $return_type );
+	}
+
+	/**
+	 * Checks if the method has HTTP-related parameters.
+	 *
+	 * @param File $phpcs_file The file being scanned.
+	 * @param int  $stack_ptr  The position of the current token in the stack.
+	 *
+	 * @return bool True if HTTP parameters are found.
+	 */
+	private function hasHttpParameters( File $phpcs_file, int $stack_ptr ): bool {
+		$tokens = $phpcs_file->getTokens();
+
+		// Find the method declaration.
+		$method_start = $phpcs_file->findPrevious( T_FUNCTION, $stack_ptr );
+		if ( $method_start === false ) {
+			return false;
+		}
+
+		// Look at the method parameters.
+		$opening_paren = $phpcs_file->findNext( T_OPEN_PARENTHESIS, $method_start );
+		$closing_paren = $phpcs_file->findNext( T_CLOSE_PARENTHESIS, $opening_paren );
+
+		if ( $opening_paren === false || $closing_paren === false ) {
+			return false;
+		}
+
+		$method_content = '';
+		for ( $i = $opening_paren; $i <= $closing_paren; $i++ ) {
+			$method_content .= $tokens[ $i ]['content'];
+		}
+
+		// Check for HTTP-related parameter patterns.
+		if ( stripos( $method_content, '$url' ) !== false || stripos( $method_content, '$args' ) !== false ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -224,36 +362,84 @@ class DatabaseOperationSniff implements Sniff {
 	private function checkForSQLInjection( File $phpcs_file, int $stack_ptr, string $function_name ): void {
 		$tokens = $phpcs_file->getTokens();
 
-		// Look for string concatenation or variable interpolation in SQL contexts.
-		$max_tokens = min( count( $tokens ), $stack_ptr + 100 );
+		// Only check for SQL injection in functions that actually execute SQL queries.
+		if ( ! in_array( $function_name, array( 'query', 'get_var', 'get_row', 'get_col', 'get_results', 'prepare' ), true ) ) {
+			return;
+		}
+
+		// Look for actual SQL injection patterns: variables concatenated directly into SQL strings.
+		$sql_context = $this->isInSQLContext( $phpcs_file, $stack_ptr );
+
+		if ( ! $sql_context ) {
+			return;
+		}
+
+		// Check for dangerous patterns within the function call.
+		$max_tokens = min( count( $tokens ), $stack_ptr + 50 );
 		for ( $i = $stack_ptr; $i < $max_tokens; $i++ ) {
 			$token = $tokens[ $i ];
 
-			// Stop at end of statement.
-			if ( T_SEMICOLON === $token['code'] ) {
+			// Stop at end of statement or closing parenthesis.
+			if ( T_SEMICOLON === $token['code'] || T_CLOSE_PARENTHESIS === $token['code'] ) {
 				break;
 			}
 
-			// Check for string concatenation that might indicate SQL injection.
+			// Check for string concatenation with variables (dangerous pattern).
 			if ( T_STRING_CONCAT === $token['code'] ) {
-				$warning = sprintf(
-					'String concatenation detected in database operation. Consider using prepared statements to prevent SQL injection.',
-					$function_name
-				);
-				$phpcs_file->addWarning( $warning, $stack_ptr, 'PotentialSQLInjection' );
-				break;
-			}
+				// Look backwards for variable and forwards for string to confirm SQL injection pattern.
+				$prev_token = $phpcs_file->findPrevious( T_WHITESPACE, $i - 1, null, true );
+				$next_token = $phpcs_file->findNext( T_WHITESPACE, $i + 1, null, true );
 
-			// Check for variable interpolation in strings.
-			if ( T_DOUBLE_QUOTED_STRING === $token['code'] ||
-				T_HEREDOC === $token['code'] ) {
-				if ( preg_match( '/\$[a-zA-Z_][a-zA-Z0-9_]*/', $token['content'] ) ) {
-					$warning = 'Variable interpolation detected in database operation. Consider using prepared statements to prevent SQL injection.';
-					$phpcs_file->addWarning( $warning, $stack_ptr, 'PotentialSQLInjection' );
+				if ( $prev_token && $next_token &&
+					( T_VARIABLE === $tokens[ $prev_token ]['code'] || T_STRING === $tokens[ $prev_token ]['code'] ) &&
+					( T_CONSTANT_ENCAPSED_STRING === $tokens[ $next_token ]['code'] ) ) {
+					$warning = sprintf(
+						'Potential SQL injection: Variable concatenated with SQL string in %s(). Use prepared statements.',
+						$function_name
+					);
+					$phpcs_file->addWarning( $warning, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.PotentialSQLInjection' );
 					break;
 				}
 			}
 		}
+	}
+
+	/**
+	 * Checks if the current position is in an SQL context.
+	 *
+	 * @param File $phpcs_file The file being scanned.
+	 * @param int  $stack_ptr  The position of the current token in the stack.
+	 *
+	 * @return bool True if in SQL context, false otherwise.
+	 */
+	private function isInSQLContext( File $phpcs_file, int $stack_ptr ): bool {
+		$tokens = $phpcs_file->getTokens();
+
+		// Look backwards for SQL keywords or patterns.
+		$max_lookback = 20;
+		for ( $i = $stack_ptr - 1; $i > max( 0, $stack_ptr - $max_lookback ); $i-- ) {
+			$token = $tokens[ $i ];
+
+			// Skip whitespace and comments.
+			if ( T_WHITESPACE === $token['code'] || T_COMMENT === $token['code'] || T_DOC_COMMENT === $token['code'] ) {
+				continue;
+			}
+
+			// Check for SQL keywords.
+			if ( T_STRING === $token['code'] ) {
+				$content = strtolower( $token['content'] );
+				if ( in_array( $content, array( 'select', 'insert', 'update', 'delete', 'where', 'from', 'join' ), true ) ) {
+					return true;
+				}
+			}
+
+			// Stop at function calls or other significant tokens.
+			if ( T_OPEN_PARENTHESIS === $token['code'] || T_SEMICOLON === $token['code'] ) {
+				break;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -276,7 +462,7 @@ class DatabaseOperationSniff implements Sniff {
 			// Warn about direct $wpdb manipulation.
 			if ( in_array( $next_token['code'], array( T_EQUAL, T_PLUS_EQUAL, T_OBJECT_OPERATOR ), true ) ) {
 				$warning = 'Direct manipulation of $wpdb object detected. Use WordPress database API methods instead.';
-				$phpcs_file->addWarning( $warning, $stack_ptr, 'DirectWpdbManipulation' );
+				$phpcs_file->addWarning( $warning, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation' );
 			}
 		}
 	}

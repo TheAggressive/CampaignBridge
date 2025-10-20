@@ -19,8 +19,8 @@
  * @module post-title
  */
 
-import { registerBlockType } from '@wordpress/blocks';
 import type { BlockConfiguration } from '@wordpress/blocks';
+import { registerBlockType } from '@wordpress/blocks';
 
 import metadata from './block.json';
 import Edit from './edit';
@@ -42,11 +42,11 @@ export const { name }: { name: string } = metadata;
  * Note: This block uses server-side rendering, so no save component is needed.
  */
 export interface PostTitleBlockSettings {
-	edit: React.ComponentType<any>;
+  edit: React.ComponentType<any>;
 }
 
 export const settings: PostTitleBlockSettings = {
-	edit: Edit,
+  edit: Edit,
 };
 
 /**
@@ -56,7 +56,10 @@ export const settings: PostTitleBlockSettings = {
  * This function is called immediately to register the block on load.
  */
 export const init = (): void => {
-	registerBlockType({ name, ...metadata } as BlockConfiguration, settings);
+  registerBlockType(
+    { name, ...metadata } as unknown as BlockConfiguration,
+    settings
+  );
 };
 
 // Initialize the block immediately

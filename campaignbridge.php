@@ -111,8 +111,8 @@ class CampaignBridge_Plugin {
 	 */
 	public static function init(): void {
 		// Register activation/deactivation hooks.
-		register_activation_hook( self::FILE, array( self::class, 'activate' ) );
-		register_deactivation_hook( self::FILE, array( self::class, 'deactivate' ) );
+		\register_activation_hook( self::FILE, array( self::class, 'activate' ) );
+		\register_deactivation_hook( self::FILE, array( self::class, 'deactivate' ) );
 
 		// Load text domain immediately to prevent just-in-time loading issues.
 		self::load_textdomain();
@@ -128,7 +128,7 @@ class CampaignBridge_Plugin {
 	 * @return void
 	 */
 	private static function load_textdomain(): void {
-		load_plugin_textdomain(
+		\load_plugin_textdomain(
 			'campaignbridge',
 			false,
 			dirname( self::basename() ) . '/languages'
@@ -151,7 +151,7 @@ class CampaignBridge_Plugin {
 
 		// Initialize plugin with enhanced error handling.
 		// Defer initialization until WordPress is fully loaded and translations are ready.
-		add_action(
+		\add_action(
 			'init',
 			function () {
 				try {
@@ -178,7 +178,7 @@ class CampaignBridge_Plugin {
 		}
 
 		// Show error notice if autoloader is missing.
-		add_action(
+		\add_action(
 			'admin_notices',
 			function () {
 				$class   = 'notice notice-error';
@@ -202,7 +202,7 @@ class CampaignBridge_Plugin {
 	 */
 	private static function handle_bootstrap_error( \Exception $e ): void {
 		// Enhanced error handling for bootstrap failures.
-		add_action(
+		\add_action(
 			'admin_notices',
 			function () use ( $e ) {
 				$class   = 'notice notice-error is-dismissible';
@@ -218,8 +218,8 @@ class CampaignBridge_Plugin {
 
 		// Log the error for debugging (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'CampaignBridge Bootstrap Error: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
-			error_log( 'Stack trace: ' . $e->getTraceAsString() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+			error_log( 'CampaignBridge Bootstrap Error: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- Bootstrap error logging before Error_Handler is available.
+			error_log( 'Stack trace: ' . $e->getTraceAsString() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- Bootstrap error logging before Error_Handler is available.
 		}
 	}
 
@@ -244,28 +244,28 @@ class CampaignBridge_Plugin {
 		}
 
 		// Check WordPress version compatibility.
-		if ( version_compare( get_bloginfo( 'version' ), self::MIN_WP_VERSION, '<' ) ) {
+		if ( version_compare( \get_bloginfo( 'version' ), self::MIN_WP_VERSION, '<' ) ) {
 			self::deactivate_and_die(
 				sprintf(
 					'CampaignBridge requires WordPress %s or higher. Your current version is %s.',
 					self::MIN_WP_VERSION,
-					get_bloginfo( 'version' )
+					\get_bloginfo( 'version' )
 				)
 			);
 		}
 
 		// Grant custom capability to administrators.
-		$admin_role = get_role( 'administrator' );
+		$admin_role = \get_role( 'administrator' );
 		if ( $admin_role && ! $admin_role->has_cap( 'campaignbridge_manage' ) ) {
 			$admin_role->add_cap( 'campaignbridge_manage' );
 		}
 
 		// Flush rewrite rules on activation.
-		flush_rewrite_rules();
+		\flush_rewrite_rules();
 
 		// Log activation (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'CampaignBridge plugin activated successfully.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+			error_log( 'CampaignBridge plugin activated successfully.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Sniffs.DirectLogging.DirectLoggingFunction -- Plugin lifecycle logging before Error_Handler is available.
 		}
 	}
 
@@ -279,11 +279,11 @@ class CampaignBridge_Plugin {
 	 */
 	public static function deactivate(): void {
 		// Flush rewrite rules on deactivation.
-		flush_rewrite_rules();
+		\flush_rewrite_rules();
 
 		// Log deactivation (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( __( 'CampaignBridge plugin deactivated.', 'campaignbridge' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Security event logging.
+			error_log( __( 'CampaignBridge plugin deactivated.', 'campaignbridge' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Sniffs.DirectLogging.DirectLoggingFunction -- Plugin lifecycle logging before Error_Handler is available.
 		}
 	}
 
@@ -295,8 +295,8 @@ class CampaignBridge_Plugin {
 	 * @return void
 	 */
 	private static function deactivate_and_die( string $message ): void {
-		deactivate_plugins( self::basename() );
-		wp_die(
+		\deactivate_plugins( self::basename() );
+		\wp_die(
 			esc_html(
 				$message,
 			),

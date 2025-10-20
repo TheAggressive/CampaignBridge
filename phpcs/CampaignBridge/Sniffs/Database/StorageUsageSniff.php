@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-namespace CampaignBridge\Sniffs;
+namespace CampaignBridge\Standard\Sniffs\Database;
 
 use PHP_CodeSniffer\Sniffs\Sniff;
 use PHP_CodeSniffer\Files\File;
@@ -201,7 +201,7 @@ class StorageUsageSniff implements Sniff {
 		$phpcs_file->addError(
 			$error,
 			$stack_ptr,
-			'CampaignBridge.Sniffs.StorageUsage.ForbiddenStorageFunction'
+			'CampaignBridge.Standard.Sniffs.Database.StorageUsage.ForbiddenStorageFunction'
 		);
 	}
 }

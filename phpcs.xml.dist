@@ -10,25 +10,35 @@
   <rule ref="WordPress.Security"/>
 
   <!-- Custom CampaignBridge rules -->
-  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/StorageUsageSniff.php">
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Database/StorageUsageSniff.php">
     <severity>error</severity>
   </rule>
-  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/HookUsageSniff.php">
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Hooks/HookUsageSniff.php">
     <severity>warning</severity>
   </rule>
-  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/SecurityValidationSniff.php">
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Security/SecurityValidationSniff.php">
     <severity>warning</severity>
   </rule>
-  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DatabaseOperationSniff.php">
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Database/DatabaseOperationSniff.php">
     <severity>error</severity>
   </rule>
-  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DirectLoggingSniff.php">
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Logging/DirectLoggingSniff.php">
     <severity>warning</severity>
   </rule>
-  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DirectDatabaseQuerySniff.php">
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Database/DirectDatabaseQuerySniff.php">
     <severity>warning</severity>
   </rule>
-  <rule ref="./phpcs/Standards/CampaignBridge/Sniffs/DirectHttpRequestSniff.php">
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Http/DirectHttpRequestSniff.php">
+    <severity>warning</severity>
+  </rule>
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Assets/AssetEnqueueSniff.php">
     <severity>warning</severity>
   </rule>
 

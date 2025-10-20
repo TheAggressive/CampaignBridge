@@ -101,7 +101,7 @@ class Plugin {
 		}
 
 		// Add admin notice about the error.
-		add_action(
+		\add_action(
 			'admin_notices',
 			function () use ( $e ) {
 				echo '<div class="notice notice-error"><p>';
@@ -181,6 +181,6 @@ class Plugin {
 		RestRoutes::init( self::OPTION_NAME, $this->providers );
 
 		// Register REST routes when REST API is initialized.
-		add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
+		\add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
 	}
 }

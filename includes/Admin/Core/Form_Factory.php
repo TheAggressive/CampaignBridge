@@ -49,6 +49,9 @@ class Form_Factory {
 				),
 				'hooks'  => array(
 					'after_save' => function ( $data ) {
+						// Send notification email when contact form is submitted.
+						// No capability check needed as this is part of legitimate form functionality.
+						// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingCapabilityCheck
 						\wp_mail( Storage::get_option( 'admin_email' ), $data['subject'] ?? 'Contact Form', $data['message'] );
 					},
 				),

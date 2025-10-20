@@ -122,10 +122,10 @@ export default function Edit({
         morePlacement === 'inline' ? 'is-inline-readmore-wrap' : undefined,
     },
     {
-      template,
+      template: template as any,
       allowedBlocks: ALLOWED,
       templateLock: 'all',
-      renderAppender: false,
+      renderAppender: false as any,
       templateInsertUpdatesSelection: false,
     }
   );

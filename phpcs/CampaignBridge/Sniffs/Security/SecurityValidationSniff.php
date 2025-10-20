@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-namespace Standards\CampaignBridge\Sniffs;
+namespace CampaignBridge\Standard\Sniffs\Security;
 
 use PHP_CodeSniffer\Sniffs\Sniff;
 use PHP_CodeSniffer\Files\File;
@@ -125,7 +125,7 @@ class SecurityValidationSniff implements Sniff {
 				'%s() should be preceded by nonce verification (wp_verify_nonce, check_ajax_referer, or check_admin_referer)',
 				$function_name
 			);
-			$phpcs_file->addWarning( $warning, $stack_ptr, 'MissingNonceVerification' );
+			$phpcs_file->addWarning( $warning, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification' );
 		}
 	}
 
@@ -163,7 +163,7 @@ class SecurityValidationSniff implements Sniff {
 				'%s() should be preceded by capability check (current_user_can or user_can)',
 				$function_name
 			);
-			$phpcs_file->addWarning( $warning, $stack_ptr, 'MissingCapabilityCheck' );
+			$phpcs_file->addWarning( $warning, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingCapabilityCheck' );
 		}
 	}
 
@@ -197,7 +197,7 @@ class SecurityValidationSniff implements Sniff {
 						$token['content'],
 						$function_name
 					);
-					$phpcs_file->addWarning( $warning, $stack_ptr, 'UnsanitizedInput' );
+					$phpcs_file->addWarning( $warning, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput' );
 				}
 			}
 		}

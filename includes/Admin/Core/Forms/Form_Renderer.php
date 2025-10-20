@@ -269,7 +269,13 @@ class Form_Renderer {
 	 */
 	private function render_field_input( string $field_name, array $field_config, $value ): void {
 		$field_renderer = $this->create_field_renderer( $field_name, $field_config, $value );
-		$field_renderer->render_input();
+
+		// For encrypted fields, use render() method instead of render_input().
+		if ( $field_renderer instanceof Form_Field_Encrypted ) {
+			echo $field_renderer->render(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Encrypted field HTML is properly escaped internally
+		} else {
+			$field_renderer->render_input();
+		}
 	}
 
 	/**
@@ -320,6 +326,7 @@ class Form_Renderer {
 			'wysiwyg'        => Form_Field_Wysiwyg::class,
 			'switch'         => Form_Field_Switch::class,
 			'toggle'         => Form_Field_Switch::class,
+			'encrypted'      => Form_Field_Encrypted::class,
 		);
 
 		$renderer_class = $type_map[ $type ] ?? Form_Field_Input::class;

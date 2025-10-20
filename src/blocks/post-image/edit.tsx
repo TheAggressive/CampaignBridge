@@ -8,7 +8,7 @@ export default function Edit({ context = {} }) {
   const post = useSelect(
     select =>
       postId
-        ? select('core').getEntityRecord('postType', postType, postId)
+        ? (select('core') as any).getEntityRecord('postType', postType, postId)
         : null,
     [postType, postId]
   );
@@ -16,7 +16,11 @@ export default function Edit({ context = {} }) {
   const media = useSelect(
     select =>
       mediaId
-        ? select('core').getEntityRecord('postType', 'attachment', mediaId)
+        ? (select('core') as any).getEntityRecord(
+            'postType',
+            'attachment',
+            mediaId
+          )
         : null,
     [mediaId]
   );

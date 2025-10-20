@@ -20,8 +20,8 @@ Our PHPCS configuration enforces WordPress coding standards, security best pract
 
 ### 🔧 **Custom CampaignBridge Sniffs**
 
-#### 1. **StorageUsageSniff** (`CampaignBridge.Sniffs.StorageUsage.ForbiddenStorageFunction`)
-**Location**: `phpcs/Standards/CampaignBridge/Sniffs/StorageUsageSniff.php`
+#### 1. **StorageUsageSniff** (`CampaignBridge.Standard.Sniffs.Database.StorageUsage.ForbiddenStorageFunction`)
+**Location**: `phpcs/CampaignBridge/Sniffs/Database/StorageUsageSniff.php`
 **Severity**: Error
 
 Enforces usage of CampaignBridge Storage wrapper instead of direct WordPress functions:
@@ -50,8 +50,8 @@ wp_cache_get('key', 'group')
 \CampaignBridge\Core\Storage::wp_cache_get('key', 'group')
 ```
 
-#### 2. **HookUsageSniff** (`CampaignBridge.Sniffs.HookUsage.InvalidHookParameters`)
-**Location**: `phpcs/Standards/CampaignBridge/Sniffs/HookUsageSniff.php`
+#### 2. **HookUsageSniff** (`CampaignBridge.Standard.Sniffs.Hooks.HookUsage.InvalidHookParameters`)
+**Location**: `phpcs/CampaignBridge/Sniffs/Hooks/HookUsageSniff.php`
 **Severity**: Warning
 
 Validates proper WordPress hook usage:
@@ -65,8 +65,8 @@ Validates proper WordPress hook usage:
 - `remove_action()`, `remove_filter()`
 - `remove_all_actions()`, `remove_all_filters()`
 
-#### 3. **SecurityValidationSniff** (`CampaignBridge.Sniffs.SecurityValidation.*`)
-**Location**: `phpcs/Standards/CampaignBridge/Sniffs/SecurityValidationSniff.php`
+#### 3. **SecurityValidationSniff** (`CampaignBridge.Standard.Sniffs.Security.SecurityValidation.*`)
+**Location**: `phpcs/CampaignBridge/Sniffs/Security/SecurityValidationSniff.php`
 **Severity**: Warning
 
 Enforces WordPress security best practices:
@@ -85,8 +85,8 @@ Enforces WordPress security best practices:
 - Warns about direct use of `$_POST`, `$_GET`, `$_REQUEST` without sanitization
 - Recommends: `sanitize_text_field()`, `sanitize_email()`, `intval()`, `wp_kses()`, etc.
 
-#### 4. **DatabaseOperationSniff** (`CampaignBridge.Sniffs.DatabaseOperation.*`)
-**Location**: `phpcs/Standards/CampaignBridge/Sniffs/DatabaseOperationSniff.php`
+#### 4. **DatabaseOperationSniff** (`CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.*`)
+**Location**: `phpcs/CampaignBridge/Sniffs/Database/DatabaseOperationSniff.php`
 **Severity**: Error
 
 Enforces proper database operations:
@@ -163,13 +163,13 @@ pnpm qa
 ### Error Code Format
 All custom sniff violations use the format:
 ```
-CampaignBridge.Sniffs.{SniffName}.{ErrorCode}
+CampaignBridge.Standard.Sniffs.{Category}.{SniffName}.{ErrorCode}
 ```
 
 Examples:
-- `CampaignBridge.Sniffs.StorageUsage.ForbiddenStorageFunction`
-- `CampaignBridge.Sniffs.SecurityValidation.MissingNonceVerification`
-- `CampaignBridge.Sniffs.DatabaseOperation.DirectSQLFunction`
+- `CampaignBridge.Standard.Sniffs.Database.StorageUsage.ForbiddenStorageFunction`
+- `CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification`
+- `CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectSQLFunction`
 
 ### VS Code Integration
 PHPCS errors appear in VS Code with:
@@ -181,7 +181,7 @@ PHPCS errors appear in VS Code with:
 
 ### Files
 - **Ruleset**: `phpcs.xml.dist`
-- **Custom Sniffs**: `phpcs/Standards/CampaignBridge/Sniffs/`
+- **Custom Sniffs**: `phpcs/CampaignBridge/Sniffs/{Category}/`
 - **Package Commands**: `package.json`
 
 ### Severity Levels

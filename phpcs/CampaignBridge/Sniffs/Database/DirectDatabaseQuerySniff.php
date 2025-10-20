@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-namespace Standards\CampaignBridge\Sniffs;
+namespace CampaignBridge\Standard\Sniffs\Database;
 
 use PHP_CodeSniffer\Sniffs\Sniff;
 use PHP_CodeSniffer\Files\File;
@@ -85,7 +85,7 @@ class DirectDatabaseQuerySniff implements Sniff {
 			// Check for direct property access (like $wpdb->posts).
 			if ( T_OBJECT_OPERATOR === $next_token['code'] || T_DOUBLE_ARROW === $next_token['code'] ) {
 				$warning = 'Direct $wpdb property access detected. Consider using Storage wrapper for consistency.';
-				$phpcs_file->addWarning( $warning, $stack_ptr, 'DirectWpdbPropertyAccess' );
+				$phpcs_file->addWarning( $warning, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess' );
 			}
 		}
 	}
@@ -230,7 +230,7 @@ class DirectDatabaseQuerySniff implements Sniff {
 		$phpcs_file->addWarning(
 			$warning,
 			$stack_ptr,
-			'CampaignBridge.Sniffs.DirectDatabaseQuery.DirectDatabaseMethod'
+			'CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod'
 		);
 	}
 }

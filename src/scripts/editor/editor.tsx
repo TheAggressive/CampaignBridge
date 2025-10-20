@@ -171,6 +171,10 @@ function EmptyState({
           loading={loading}
           onSelect={onSelect}
           onNew={onNew}
+          isPrimaryOpen={false}
+          isSecondaryOpen={false}
+          togglePrimary={() => {}}
+          toggleSecondary={() => {}}
         />
       }
       content={

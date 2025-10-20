@@ -32,42 +32,42 @@ $encrypted_test_form = \CampaignBridge\Admin\Core\Form::make( 'encrypted_forms_t
 	->success( 'Encrypted form data saved successfully!' )
 	->error( 'Please correct the errors below.' )
 
-	// Regular text field for comparison
+	// Regular text field for comparison.
 	->text( 'regular_field', 'Regular Text Field' )
-		->description( 'This is a regular field for comparison' )
+		->description( 'This is a regular field for comparison.' )
 		->default( 'Sample regular text' )
 
-	// API Key field - admin-only viewing (highest security)
+	// API Key field - admin-only viewing (highest security).
 	->encrypted( 'api_key_field', 'API Key (Admin Only)' )
 		->context( 'api_key' )
 		->description( 'API key - only administrators can view decrypted values. Shows as masked dots to regular users.' )
 		->placeholder( 'sk-...' )
 
-	// Sensitive data field - admin-only viewing
+	// Sensitive data field - admin-only viewing.
 	->encrypted( 'sensitive_field', 'Sensitive Data' )
 		->context( 'sensitive' )
 		->description( 'Sensitive data - only administrators can view decrypted values.' )
 		->placeholder( 'Enter sensitive information' )
 
-	// Personal data field - logged-in users can view their own data
+	// Personal data field - logged-in users can view their own data.
 	->encrypted( 'personal_field', 'Personal Data' )
 		->context( 'personal' )
 		->description( 'Personal data - logged-in users can view their own decrypted data.' )
 		->placeholder( 'Your personal information' )
 
-	// Public encrypted data - no restrictions
+	// Public encrypted data - no restrictions.
 	->encrypted( 'public_field', 'Public Encrypted Data' )
 		->context( 'public' )
 		->description( 'Public encrypted data - no permission restrictions for viewing.' )
 		->placeholder( 'Publicly shareable data' )
 
-	// Test field with reveal disabled
+	// Test field with reveal disabled.
 	->encrypted( 'no_reveal_field', 'Field Without Reveal' )
 		->context( 'sensitive' )
 		->show_reveal( false )
 		->description( 'This field has reveal functionality disabled.' )
 
-	// Test field with edit disabled
+	// Test field with edit disabled.
 	->encrypted( 'read_only_field', 'Read-Only Encrypted Field' )
 		->context( 'api_key' )
 		->show_edit( false )
@@ -135,11 +135,6 @@ $encrypted_test_form = \CampaignBridge\Admin\Core\Form::make( 'encrypted_forms_t
 		</div>
 
 		<?php
-		if ( $encrypted_test_form->submitted() && $encrypted_test_form->valid() ) {
-			echo '<div class="notice notice-success is-dismissible"><p>✅ <strong>Encrypted form saved!</strong> All sensitive data has been securely encrypted and stored.</p></div>';
-		} elseif ( $encrypted_test_form->submitted() ) {
-			echo '<div class="notice notice-error is-dismissible"><p>❌ <strong>Form validation failed.</strong> Please check the errors below.</p></div>';
-		}
 
 		$encrypted_test_form->render();
 		?>
@@ -149,7 +144,7 @@ $encrypted_test_form = \CampaignBridge\Admin\Core\Form::make( 'encrypted_forms_t
 		<h2>🔍 Current Stored Data (Admin Only)</h2>
 
 		<?php
-		// Show current stored data using form's data retrieval methods
+		// Show current stored data using form's data retrieval methods.
 		$stored_data = $encrypted_test_form->data();
 		?>
 
@@ -164,7 +159,7 @@ $encrypted_test_form = \CampaignBridge\Admin\Core\Form::make( 'encrypted_forms_t
 			);
 			foreach ( $stored_data as $field => $value ) :
 				if ( ! isset( $field_labels[ $field ] ) ) {
-					continue; // Skip fields not in our display list
+					continue; // Skip fields not in our display list.
 				}
 				$display_value = empty( $value ) ? 'Not set' : $value;
 				?>

@@ -69,7 +69,10 @@ export const settings: PostCardBlockSettings = {
  * This function is called immediately to register the block on load.
  */
 export const init = (): void => {
-  registerBlockType({ name, ...metadata } as BlockConfiguration, settings);
+  registerBlockType(
+    { name, ...metadata } as unknown as BlockConfiguration,
+    settings
+  );
 };
 
 // Initialize the block immediately

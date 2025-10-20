@@ -9,6 +9,10 @@ export default [
   js.configs.recommended,
   reactPlugin.configs.flat.recommended,
   {
+    env: {
+      browser: true,
+      es2021: true,
+    },
     plugins: {
       'react-hooks': reactHooksPlugin,
     },

@@ -209,7 +209,7 @@ class Settings_Controller {
 					'page'  => 'campaignbridge-settings',
 					'reset' => 'success',
 				),
-				admin_url( 'admin.php' )
+				\admin_url( 'admin.php' )
 			)
 		);
 		exit;
@@ -228,7 +228,7 @@ class Settings_Controller {
 		}
 
 		// Check user capabilities.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'manage_options' ) ) {
 			wp_die( 'You do not have permission to export settings.' );
 		}
 
@@ -260,7 +260,7 @@ class Settings_Controller {
 		}
 
 		// Check user capabilities.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'manage_options' ) ) {
 			wp_die( 'You do not have permission to import settings.' );
 		}
 
@@ -273,7 +273,7 @@ class Settings_Controller {
 						'import'  => 'error',
 						'message' => 'File upload failed',
 					),
-					admin_url( 'admin.php' )
+					\admin_url( 'admin.php' )
 				)
 			);
 			exit;
@@ -292,7 +292,7 @@ class Settings_Controller {
 						'import'  => 'error',
 						'message' => 'Invalid file type. Only JSON files are allowed.',
 					),
-					admin_url( 'admin.php' )
+					\admin_url( 'admin.php' )
 				)
 			);
 			exit;
@@ -309,7 +309,7 @@ class Settings_Controller {
 						'import'  => 'error',
 						'message' => 'File too large. Maximum size is 1MB.',
 					),
-					admin_url( 'admin.php' )
+					\admin_url( 'admin.php' )
 				)
 			);
 			exit;
@@ -322,7 +322,7 @@ class Settings_Controller {
 			wp_die( 'Invalid file upload' );
 		}
 
-		$content = file_get_contents( $uploaded_file_tmp_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, CampaignBridge.Sniffs.DirectHttpRequest.DirectHttpFunction -- Reading uploaded file, not HTTP request
+		$content = file_get_contents( $uploaded_file_tmp_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents,CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction -- Reading uploaded file, not HTTP request
 		if ( false === $content ) {
 			wp_die( 'Failed to read uploaded file' );
 		}
@@ -337,7 +337,7 @@ class Settings_Controller {
 						'import'  => 'error',
 						'message' => 'Invalid JSON file',
 					),
-					admin_url( 'admin.php' )
+					\admin_url( 'admin.php' )
 				)
 			);
 			exit;
@@ -357,7 +357,7 @@ class Settings_Controller {
 					'page'   => 'campaignbridge-settings',
 					'import' => 'success',
 				),
-				admin_url( 'admin.php' )
+				\admin_url( 'admin.php' )
 			)
 		);
 		exit;

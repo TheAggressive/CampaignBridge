@@ -22,7 +22,7 @@ export function useInlinePlacementClass(
       return;
     }
 
-    const kids = select(blockEditorStore).getBlocks(clientId);
+    const kids = (select(blockEditorStore) as any).getBlocks(clientId);
 
     const toggle = block => {
       if (!block) {

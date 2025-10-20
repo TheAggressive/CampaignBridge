@@ -14,7 +14,9 @@ import { decodeEntities } from '@wordpress/html-entities';
 export function useExcerptPreview({ postId, postType, maxWords, showMore }) {
   const post = useSelect(
     s =>
-      postId ? s('core').getEntityRecord('postType', postType, postId) : null,
+      postId
+        ? (s('core') as any).getEntityRecord('postType', postType, postId)
+        : null,
     [postId, postType]
   );
 

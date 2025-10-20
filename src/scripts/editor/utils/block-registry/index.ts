@@ -5,6 +5,15 @@
  * Eliminates manual registration by dynamically discovering block modules.
  */
 
+// Declare WordPress global
+declare global {
+  const wp: {
+    blocks?: {
+      getBlockType?: (name: string) => any;
+    };
+  };
+}
+
 import { blockDiscovery } from './discovery';
 import type { RegistrationStats } from './types';
 

@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-namespace Standards\CampaignBridge\Sniffs;
+namespace CampaignBridge\Standard\Sniffs\Hooks;
 
 use PHP_CodeSniffer\Sniffs\Sniff;
 use PHP_CodeSniffer\Files\File;
@@ -83,7 +83,7 @@ class HookUsageSniff implements Sniff {
 				'%s() should have proper parameters for hook name, callback, priority, and accepted args',
 				$function_name
 			);
-			$phpcs_file->addWarning( $error, $stack_ptr, 'InvalidHookParameters' );
+			$phpcs_file->addWarning( $error, $stack_ptr, 'CampaignBridge.Standard.Sniffs.Hooks.HookUsage.InvalidHookParameters' );
 		}
 
 		// Check for hardcoded hook priorities (should use constants or meaningful values).

@@ -15,8 +15,8 @@
  * @module container
  */
 
-import { registerBlockType } from '@wordpress/blocks';
 import type { BlockConfiguration } from '@wordpress/blocks';
+import { registerBlockType } from '@wordpress/blocks';
 import type { ComponentType } from 'react';
 
 import metadata from './block.json';
@@ -39,13 +39,13 @@ export const { name }: { name: string } = metadata;
  * Defines the edit and save components for the container block.
  */
 export interface ContainerBlockSettings {
-	edit: ComponentType<any>;
-	save: ComponentType<any> | (() => JSX.Element | null);
+  edit: ComponentType<any>;
+  save: ComponentType<any> | (() => JSX.Element | null);
 }
 
 export const settings: ContainerBlockSettings = {
-	edit: Edit,
-	save: Save,
+  edit: Edit,
+  save: Save,
 };
 
 /**
@@ -55,7 +55,10 @@ export const settings: ContainerBlockSettings = {
  * This function is called immediately to register the block on load.
  */
 export const init = (): void => {
-	registerBlockType({ name, ...metadata } as BlockConfiguration, settings);
+  registerBlockType(
+    { name, ...metadata } as unknown as BlockConfiguration,
+    settings
+  );
 };
 
 // Initialize the block immediately

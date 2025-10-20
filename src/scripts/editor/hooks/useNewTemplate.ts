@@ -36,7 +36,9 @@ export function useNewTemplate(
       setOpen(false);
       setParamAndReload(
         'post_id',
-        (created as { id?: number | string })?.id || created
+        ((created as { id?: number | string })?.id || created) as
+          | string
+          | number
       );
     } catch (e) {
       setBusy(false);

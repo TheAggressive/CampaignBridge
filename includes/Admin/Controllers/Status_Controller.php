@@ -199,7 +199,7 @@ class Status_Controller {
 		}
 
 		// Check user capabilities
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'manage_options' ) ) {
 			wp_die( 'You do not have permission to refresh stats.' );
 		}
 
@@ -213,7 +213,7 @@ class Status_Controller {
 			'page'      => 'campaignbridge-status',
 			'refreshed' => 'success',
 		],
-		admin_url( 'admin.php' )));
+		\admin_url( 'admin.php' )));
 		exit;
 	}
 
@@ -228,7 +228,7 @@ class Status_Controller {
 		}
 
 		// Check user capabilities
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'manage_options' ) ) {
 			wp_die( 'You do not have permission to clear cache.' );
 		}
 
@@ -255,7 +255,7 @@ class Status_Controller {
 			'page'          => 'campaignbridge-status',
 			'cache_cleared' => 'success',
 		],
-		admin_url( 'admin.php' )));
+		\admin_url( 'admin.php' )));
 		exit;
 	}
 }

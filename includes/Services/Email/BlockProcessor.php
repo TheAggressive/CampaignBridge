@@ -562,8 +562,10 @@ class BlockProcessor {
 
 		// Log unknown block for debugging.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Logging only.
-			error_log( sprintf( 'CampaignBridge: Unknown block type: %s', $block_name ) );
+			\CampaignBridge\Core\Error_Handler::info(
+				'CampaignBridge: Unknown block type encountered',
+				array( 'block_name' => $block_name )
+			);
 		}
 
 		return sprintf(

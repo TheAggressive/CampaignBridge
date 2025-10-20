@@ -151,6 +151,9 @@ class Form_Field_Encrypted extends Form_Field_Input {
 		$type  = $this->config['type'];
 		$attrs = $this->get_attributes();
 
+		// For empty fields, allow direct input - remove disabled/readonly.
+		unset( $attrs['disabled'], $attrs['readonly'] );
+
 		// Build attributes string.
 		$attr_string = $this->build_attributes_string( $attrs );
 
@@ -163,12 +166,22 @@ class Form_Field_Encrypted extends Form_Field_Input {
 	}
 
 	/**
-	 * Render field with masked value
+	 * Render field with masked value (uses current config value)
 	 *
 	 * @return string HTML output.
 	 */
 	private function render_masked_field(): string {
-		$value = $this->get_value();
+		return $this->render_masked_field_with_values( $this->get_value(), $this->get_value() );
+	}
+
+	/**
+	 * Render field with specific encrypted and display values
+	 *
+	 * @param string $encrypted_value The actual encrypted value for the hidden input.
+	 * @param string $display_value   The value to show in the display input.
+	 * @return string HTML output.
+	 */
+	private function render_masked_field_with_values( string $encrypted_value, string $display_value ): string {
 		$attrs = $this->get_attributes();
 
 		// Create masked display.
@@ -177,29 +190,36 @@ class Form_Field_Encrypted extends Form_Field_Input {
 
 		$html = '<div class="campaignbridge-encrypted-field" data-field-id="' . esc_attr( $field_id ) . '">';
 
-		// Hidden input with actual value.
-		$html .= '<input type="hidden" name="' . esc_attr( $field_name ) . '" value="' . esc_attr( $value ) . '" />';
+		// Hidden input with actual encrypted value.
+		$html .= '<input type="hidden" name="' . esc_attr( $field_name ) . '" value="' . esc_attr( $encrypted_value ) . '" />';
 
 		// Masked display input (readonly).
 		$display_attrs             = $attrs;
 		$display_attrs['type']     = 'text';
-		$display_attrs['value']    = $value;
-		$display_attrs['readonly'] = 'readonly';
-		$display_attrs['class']    = ( $display_attrs['class'] ?? '' ) . ' campaignbridge-encrypted-display';
+		$display_attrs['value']    = $display_value;
+		$display_attrs['readonly'] = 'readonly'; // Boolean attribute.
+		$display_attrs['class']    = ( $display_attrs['class'] ?? '' ) . ' campaignbridge-encrypted-field__display';
+		// Remove name attribute so display input doesn't override hidden input on form submission.
+		unset( $display_attrs['name'] );
 
 		$html .= '<input ' . $this->build_attributes_string( $display_attrs ) . ' />';
 
 		// Control buttons.
-		$html .= '<div class="campaignbridge-encrypted-controls">';
+		$html .= '<div class="campaignbridge-encrypted-field__controls">';
 
 		if ( $this->show_reveal ) {
-			$html .= '<button type="button" class="button button-secondary campaignbridge-reveal-btn" data-action="reveal">';
+			$html .= '<button type="button" class="button button-secondary campaignbridge-encrypted-field__reveal-btn" data-action="reveal">';
 			$html .= '<span class="dashicons dashicons-visibility"></span> ' . esc_html__( 'Reveal', 'campaignbridge' );
+			$html .= '</button>';
+
+			// Hide button (initially hidden) - shown when values are revealed.
+			$html .= '<button type="button" class="button button-secondary campaignbridge-encrypted-field__hide-btn" data-action="hide" style="display: none;">';
+			$html .= '<span class="dashicons dashicons-hidden"></span> ' . esc_html__( 'Hide', 'campaignbridge' );
 			$html .= '</button>';
 		}
 
 		if ( $this->show_edit ) {
-			$html .= '<button type="button" class="button button-secondary campaignbridge-edit-btn" data-action="edit">';
+			$html .= '<button type="button" class="button button-secondary campaignbridge-encrypted-field__edit-btn" data-action="edit">';
 			$html .= '<span class="dashicons dashicons-edit"></span> ' . esc_html__( 'Edit', 'campaignbridge' );
 			$html .= '</button>';
 		}
@@ -211,17 +231,22 @@ class Form_Field_Encrypted extends Form_Field_Input {
 		$edit_attrs['type']        = 'password';
 		$edit_attrs['value']       = '';
 		$edit_attrs['style']       = 'display: none;';
-		$edit_attrs['class']       = ( $edit_attrs['class'] ?? '' ) . ' campaignbridge-encrypted-edit';
+		$edit_attrs['class']       = ( $edit_attrs['class'] ?? '' ) . ' campaignbridge-encrypted-field__edit';
 		$edit_attrs['placeholder'] = esc_html__( 'Enter new value...', 'campaignbridge' );
+		// Set unique name and id to satisfy browser validation.
+		$edit_attrs['name'] = $field_name . '_edit_input';
+		$edit_attrs['id']   = $field_id . '_edit_input';
+		// Ensure edit input is not readonly, disabled, or required (not part of form submission).
+		unset( $edit_attrs['readonly'], $edit_attrs['disabled'], $edit_attrs['required'] );
 
-		$html .= '<input ' . $this->build_attributes_string( $edit_attrs ) . ' data-original-name="' . esc_attr( $field_name ) . '" />';
+		$html .= '<input ' . $this->build_attributes_string( $edit_attrs ) . ' data-original-name="' . esc_attr( $field_name ) . '" data-field-id="' . esc_attr( $field_id ) . '" />';
 
 		// Edit controls (hidden initially).
-		$html .= '<div class="campaignbridge-edit-controls" style="display: none;">';
-		$html .= '<button type="button" class="button button-primary campaignbridge-save-btn" data-action="save">';
-		$html .= esc_html__( 'Save', 'campaignbridge' );
+		$html .= '<div class="campaignbridge-encrypted-field__edit-controls" style="display: none;">';
+		$html .= '<button type="button" class="button button-primary campaignbridge-encrypted-field__save-btn" data-action="save">';
+		$html .= esc_html__( 'Update', 'campaignbridge' );
 		$html .= '</button>';
-		$html .= '<button type="button" class="button button-secondary campaignbridge-cancel-btn" data-action="cancel">';
+		$html .= '<button type="button" class="button button-secondary campaignbridge-encrypted-field__cancel-btn" data-action="cancel">';
 		$html .= esc_html__( 'Cancel', 'campaignbridge' );
 		$html .= '</button>';
 		$html .= '</div>';
@@ -240,21 +265,12 @@ class Form_Field_Encrypted extends Form_Field_Input {
 		$value = $this->get_value();
 
 		try {
-			// Try to decrypt for display (will check permissions).
+			// Decrypt and mask for display (shows last 4 chars for recognition).
 			$decrypted = Encryption::decrypt_for_context( $value, $this->context );
 			$masked    = $this->mask_value( $decrypted );
 
-			// Temporarily set masked value for rendering.
-			$original_value        = $this->config['value'];
-			$this->config['value'] = $masked;
-
-			// Render as masked field.
-			$result = $this->render_masked_field();
-
-			// Restore original encrypted value.
-			$this->config['value'] = $original_value;
-
-			return $result;
+			// Render masked field with proper encrypted/masked values.
+			return $this->render_masked_field_with_values( $value, $masked );
 
 		} catch ( \RuntimeException $e ) {
 			// Permission denied - show permission error.
@@ -270,7 +286,7 @@ class Form_Field_Encrypted extends Form_Field_Input {
 	private function render_permission_denied(): string {
 		$field_id = $this->config['id'] ?? '';
 
-		$html  = '<div class="campaignbridge-encrypted-field campaignbridge-permission-denied" data-field-id="' . esc_attr( $field_id ) . '">';
+		$html  = '<div class="campaignbridge-encrypted-field campaignbridge-encrypted-field--permission-denied" data-field-id="' . esc_attr( $field_id ) . '">';
 		$html .= '<input type="text" readonly="readonly" value="' . esc_attr__( '•••••••••••••••• (Access Restricted)', 'campaignbridge' ) . '" class="regular-text" />';
 		$html .= '<div class="campaignbridge-permission-notice">';
 		$html .= '<span class="dashicons dashicons-lock"></span> ';
@@ -308,9 +324,15 @@ class Form_Field_Encrypted extends Form_Field_Input {
 			return str_repeat( '•', $length );
 		}
 
-		// Show last 4 characters, mask the rest.
-		$visible = substr( $value, -4 );
-		$masked  = str_repeat( '•', $length - 4 );
+		// For very long values (like encrypted data), limit the mask length to 20 chars + last 4.
+		$max_mask_length = 20;
+		$visible         = substr( $value, -4 );
+
+		if ( $length > $max_mask_length + 4 ) {
+			$masked = str_repeat( '•', $max_mask_length );
+		} else {
+			$masked = str_repeat( '•', $length - 4 );
+		}
 
 		return $masked . $visible;
 	}
@@ -325,11 +347,14 @@ class Form_Field_Encrypted extends Form_Field_Input {
 		$parts = array();
 
 		foreach ( $attrs as $key => $value ) {
-			if ( is_bool( $value ) ) {
-				if ( $value ) {
-					$parts[] = esc_attr( $key );
-				}
+			if ( is_bool( $value ) && $value ) {
+				// Boolean attributes like 'readonly', 'disabled', 'required'.
+				$parts[] = esc_attr( $key );
+			} elseif ( 'readonly' === $value || 'disabled' === $value || 'required' === $value ) {
+				// String boolean attributes.
+				$parts[] = esc_attr( $value );
 			} else {
+				// Regular key-value attributes.
 				$parts[] = esc_attr( $key ) . '="' . esc_attr( $value ) . '"';
 			}
 		}

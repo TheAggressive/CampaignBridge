@@ -56,17 +56,17 @@ class Form_Security {
 		}
 
 		// Check user capabilities.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'manage_options' ) ) {
 			return false;
 		}
 
 		// Check if request is coming from admin area.
-		if ( ! is_admin() ) {
+		if ( ! \is_admin() ) {
 			return false;
 		}
 
 		// Check referer.
-		$admin_url = admin_url();
+		$admin_url = \admin_url();
 		$referer   = \wp_get_referer();
 
 		if ( $referer && strpos( $referer, $admin_url ) !== 0 ) {

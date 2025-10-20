@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-namespace Standards\CampaignBridge\Sniffs;
+namespace CampaignBridge\Standard\Sniffs\Logging;
 
 use PHP_CodeSniffer\Sniffs\Sniff;
 use PHP_CodeSniffer\Files\File;
@@ -199,7 +199,7 @@ class DirectLoggingSniff implements Sniff {
 		$phpcs_file->addWarning(
 			$error,
 			$stack_ptr,
-			'CampaignBridge.Sniffs.DirectLogging.DirectLoggingFunction'
+			'CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction'
 		);
 	}
 }

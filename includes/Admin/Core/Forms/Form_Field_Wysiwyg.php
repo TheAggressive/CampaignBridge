@@ -61,8 +61,8 @@ class Form_Field_Wysiwyg extends Form_Field_Base {
 	 */
 	private function enqueue_editor_scripts( string $editor_id, array $editor_settings ): void {
 		// Ensure WordPress editor scripts are loaded.
-		if ( ! did_action( 'wp_enqueue_editor' ) ) {
-			wp_enqueue_editor();
+		if ( ! \did_action( 'wp_enqueue_editor' ) ) {
+			\wp_enqueue_editor();
 		}
 
 		// Add inline script to initialize the editor.

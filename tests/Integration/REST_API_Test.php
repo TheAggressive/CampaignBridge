@@ -390,4 +390,298 @@ class REST_API_Test extends Test_Case {
 		$response = rest_do_request( $request );
 		$this->assertEquals( 200, $response->get_status(), 'User 2 should not be rate limited by User 1' );
 	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure no API keys leak through decrypt-field endpoint.
+	 */
+	public function test_decrypt_field_endpoint_does_not_leak_api_keys(): void {
+		// Arrange: Create admin user and test API key.
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$test_api_key = 'sk-test-12345678901234567890123456789012';
+		$encrypted    = \CampaignBridge\Core\Encryption::encrypt( $test_api_key );
+
+		// Act: Make decrypt request with valid nonce.
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		$response = rest_do_request( $request );
+
+		// Assert: Should return decrypted data in secure format.
+		$this->assertEquals( 200, $response->get_status(), 'Should successfully decrypt' );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data, 'Should return array response' );
+		$this->assertArrayHasKey( 'success', $data, 'Should have success flag' );
+		$this->assertArrayHasKey( 'data', $data, 'Should have data wrapper' );
+		$this->assertArrayHasKey( 'decrypted', $data['data'], 'Should have decrypted value' );
+
+		// CRITICAL: Verify the decrypted value is exactly what we encrypted.
+		$this->assertEquals( $test_api_key, $data['data']['decrypted'], 'Should return exact decrypted value' );
+
+		// Verify response structure doesn't expose sensitive metadata.
+		$this->assertArrayNotHasKey( 'encryption_key', $data, 'Should not expose encryption key' );
+		$this->assertArrayNotHasKey( 'algorithm', $data, 'Should not expose algorithm details' );
+		$this->assertArrayNotHasKey( 'timestamp', $data, 'Should not expose timing information' );
+	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure non-admin users cannot decrypt sensitive data.
+	 */
+	public function test_non_admin_users_cannot_decrypt_sensitive_data(): void {
+		// Arrange: Create subscriber user and test API key.
+		$user_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $user_id );
+
+		$test_api_key = 'sk-test-12345678901234567890123456789012';
+		$encrypted    = \CampaignBridge\Core\Encryption::encrypt( $test_api_key );
+
+		// Act: Try to decrypt as non-admin user.
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		$response = rest_do_request( $request );
+
+		// Assert: Should be forbidden.
+		$this->assertEquals( 403, $response->get_status(), 'Non-admin should not be able to decrypt' );
+
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'code', $data, 'Should have error code' );
+		$this->assertEquals( 'rest_forbidden', $data['code'], 'Should indicate permission denied' );
+
+		// CRITICAL: Ensure no decrypted data is returned.
+		$this->assertArrayNotHasKey( 'decrypted', $data, 'Should not return decrypted data' );
+		$this->assertStringNotContainsString( $test_api_key, json_encode( $data ), 'Should not leak API key in any form' );
+	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure invalid encrypted values don't crash system.
+	 */
+	public function test_decrypt_field_handles_invalid_encrypted_values_securely(): void {
+		// Arrange: Create admin user.
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$invalid_values = array(
+			'', // Empty string
+			'invalid-encrypted-data', // Invalid format
+			'script><alert(1)</script>', // XSS attempt
+			str_repeat( 'A', 10000 ), // Very long string (potential DoS)
+		);
+
+		foreach ( $invalid_values as $invalid_value ) {
+			// Act: Try to decrypt invalid value.
+			$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+			$request->set_param( 'encrypted_value', $invalid_value );
+			$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+			$response = rest_do_request( $request );
+
+			// Assert: Should fail gracefully without exposing system details.
+			$this->assertEquals( 400, $response->get_status(), "Should reject invalid value: {$invalid_value}" );
+
+			$data = $response->get_data();
+			$this->assertArrayHasKey( 'code', $data, 'Should have error code' );
+
+			// CRITICAL: Error message should not expose internal details.
+			$this->assertStringNotContainsString( 'Exception', $data['message'] ?? '', 'Should not expose exception details' );
+			$this->assertStringNotContainsString( 'decrypt', $data['message'] ?? '', 'Should not expose decryption details' );
+
+			// CRITICAL: No sensitive data should be leaked.
+			$this->assertArrayNotHasKey( 'decrypted', $data, 'Should not return decrypted data for invalid input' );
+		}
+	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure encrypt-field endpoint properly validates input.
+	 */
+	public function test_encrypt_field_endpoint_validates_input_securely(): void {
+		// Arrange: Create admin user.
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$test_data = array(
+			'field_id'  => 'test_field',
+			'new_value' => 'valid-test-value-123',
+		);
+
+		// Act: Make encrypt request.
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
+		$request->set_param( 'field_id', $test_data['field_id'] );
+		$request->set_param( 'new_value', $test_data['new_value'] );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		$response = rest_do_request( $request );
+
+		// Assert: Should encrypt successfully.
+		$this->assertEquals( 200, $response->get_status(), 'Should encrypt successfully' );
+
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'success', $data, 'Should have success flag' );
+		$this->assertArrayHasKey( 'data', $data, 'Should have data wrapper' );
+
+		// CRITICAL: Should return encrypted data, not the original value.
+		$this->assertArrayHasKey( 'encrypted', $data['data'], 'Should return encrypted value' );
+		$this->assertArrayHasKey( 'masked', $data['data'], 'Should return masked value' );
+
+		// CRITICAL: Encrypted value should be different from original.
+		$this->assertNotEquals( $test_data['new_value'], $data['data']['encrypted'], 'Encrypted value should differ from original' );
+
+		// CRITICAL: Original value should not appear in response.
+		$this->assertStringNotContainsString( $test_data['new_value'], json_encode( $data ), 'Should not leak original value' );
+	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure encrypt-field rejects malicious input.
+	 */
+	public function test_encrypt_field_rejects_malicious_input(): void {
+		// Arrange: Create admin user.
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$malicious_inputs = array(
+			'<script>alert("xss")</script>'  => 'script_tag',
+			'javascript:alert(1)'            => 'javascript_url',
+			'onclick=alert(1)'               => 'event_handler',
+			'"><img src=x onerror=alert(1)>' => 'html_injection',
+		);
+
+		foreach ( $malicious_inputs as $malicious_value => $test_name ) {
+			// Act: Try to encrypt malicious value.
+			$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
+			$request->set_param( 'field_id', 'test_field' );
+			$request->set_param( 'new_value', $malicious_value );
+			$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+			$response = rest_do_request( $request );
+
+			// Assert: Should reject malicious input.
+			$this->assertEquals( 400, $response->get_status(), "Should reject malicious input: {$test_name}" );
+
+			$data = $response->get_data();
+			$this->assertArrayHasKey( 'code', $data, 'Should have error code' );
+
+			// CRITICAL: Should not encrypt malicious content.
+			$this->assertArrayNotHasKey( 'encrypted', $data, 'Should not return encrypted malicious content' );
+			$this->assertArrayNotHasKey( 'masked', $data, 'Should not return masked malicious content' );
+
+			// CRITICAL: Malicious content should not appear in response.
+			$this->assertStringNotContainsString( $malicious_value, json_encode( $data ), 'Should not echo malicious content' );
+		}
+	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure rate limiting protects encrypt/decrypt endpoints.
+	 */
+	public function test_encrypted_field_endpoints_are_rate_limited(): void {
+		// Arrange: Create admin user.
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$test_value = 'rate-limit-test-value';
+		$encrypted  = \CampaignBridge\Core\Encryption::encrypt( $test_value );
+
+		// Act: Make multiple decrypt requests to trigger rate limiting.
+		for ( $i = 0; $i < 15; $i++ ) { // More than the 10 request limit
+			$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+			$request->set_param( 'encrypted_value', $encrypted );
+			$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+			$response = rest_do_request( $request );
+
+			if ( $i < 10 ) {
+				// First 10 requests should succeed.
+				$this->assertEquals( 200, $response->get_status(), "Request {$i} should succeed" );
+			} else {
+				// Subsequent requests should be rate limited.
+				$this->assertEquals( 429, $response->get_status(), "Request {$i} should be rate limited" );
+			}
+		}
+	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure unauthenticated requests are rejected.
+	 */
+	public function test_encrypted_field_endpoints_require_authentication(): void {
+		// Arrange: No user logged in.
+		wp_set_current_user( 0 );
+
+		$test_value = 'auth-test-value';
+		$encrypted  = \CampaignBridge\Core\Encryption::encrypt( $test_value );
+
+		// Test decrypt endpoint.
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 401, $response->get_status(), 'Decrypt should require authentication' );
+
+		// Test encrypt endpoint.
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
+		$request->set_param( 'field_id', 'test_field' );
+		$request->set_param( 'new_value', $test_value );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 401, $response->get_status(), 'Encrypt should require authentication' );
+	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure CSRF protection works.
+	 */
+	public function test_encrypted_field_endpoints_require_valid_nonces(): void {
+		// Arrange: Create admin user but use invalid nonce.
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$test_value = 'csrf-test-value';
+		$encrypted  = \CampaignBridge\Core\Encryption::encrypt( $test_value );
+
+		// Test decrypt with invalid nonce.
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( '_wpnonce', 'invalid_nonce' );
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 403, $response->get_status(), 'Decrypt should reject invalid nonce' );
+
+		// Test encrypt with invalid nonce.
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
+		$request->set_param( 'field_id', 'test_field' );
+		$request->set_param( 'new_value', $test_value );
+		$request->set_param( '_wpnonce', 'invalid_nonce' );
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 403, $response->get_status(), 'Encrypt should reject invalid nonce' );
+	}
+
+	/**
+	 * CRITICAL SECURITY TEST: Ensure timing attacks are mitigated.
+	 */
+	public function test_encrypted_field_endpoints_mitigate_timing_attacks(): void {
+		// Arrange: Create admin user.
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$valid_encrypted   = \CampaignBridge\Core\Encryption::encrypt( 'valid-key' );
+		$invalid_encrypted = 'invalid-encrypted-data';
+
+		// Measure response times for valid vs invalid inputs.
+		$start_time = microtime( true );
+		$request    = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+		$request->set_param( 'encrypted_value', $valid_encrypted );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		rest_do_request( $request );
+		$valid_time = microtime( true ) - $start_time;
+
+		$start_time = microtime( true );
+		$request    = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+		$request->set_param( 'encrypted_value', $invalid_encrypted );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		rest_do_request( $request );
+		$invalid_time = microtime( true ) - $start_time;
+
+		// CRITICAL: Response times should be similar to prevent timing attacks.
+		// Allow for some variance but ensure they're within reasonable bounds.
+		$time_difference = abs( $valid_time - $invalid_time );
+		$this->assertLessThan( 0.1, $time_difference, 'Response times should be similar to prevent timing attacks' );
+	}
 }

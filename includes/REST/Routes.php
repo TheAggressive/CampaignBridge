@@ -14,6 +14,8 @@ declare(strict_types=1);
 namespace CampaignBridge\REST;
 
 use WP_REST_Request;
+use WP_REST_Response;
+use WP_Error;
 use CampaignBridge\REST\Helpers\Response_Formatter;
 use CampaignBridge\REST\Helpers\Input_Validator;
 
@@ -28,8 +30,10 @@ class Routes extends Abstract_Rest_Controller {
 	/**
 	 * Endpoint paths
 	 */
-	private const ENDPOINT_POSTS      = '/posts';
-	private const ENDPOINT_POST_TYPES = '/post-types';
+	private const ENDPOINT_POSTS         = '/posts';
+	private const ENDPOINT_POST_TYPES    = '/post-types';
+	private const ENDPOINT_DECRYPT_FIELD = '/decrypt-field';
+	private const ENDPOINT_ENCRYPT_FIELD = '/encrypt-field';
 
 	/**
 	 * Option key used to store plugin settings.
@@ -82,6 +86,9 @@ class Routes extends Abstract_Rest_Controller {
 		self::register_posts_route();
 		self::register_post_types_route();
 
+		// Register encrypted field routes.
+		self::register_encrypted_field_routes();
+
 		// Mapping slots endpoint removed (block-based workflow).
 
 		// Register editor settings routes.
@@ -94,7 +101,7 @@ class Routes extends Abstract_Rest_Controller {
 	 * @return void
 	 */
 	private static function register_posts_route(): void {
-		register_rest_route(
+		\register_rest_route(
 			Rest_Constants::API_NAMESPACE,
 			self::ENDPOINT_POSTS,
 			array(
@@ -119,7 +126,7 @@ class Routes extends Abstract_Rest_Controller {
 	 * @return void
 	 */
 	private static function register_post_types_route(): void {
-		register_rest_route(
+		\register_rest_route(
 			Rest_Constants::API_NAMESPACE,
 			self::ENDPOINT_POST_TYPES,
 			array(
@@ -130,7 +137,55 @@ class Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * Register the encrypted field endpoints.
+	 *
+	 * @return void
+	 */
+	private static function register_encrypted_field_routes(): void {
+		// Decrypt field endpoint.
+		\register_rest_route(
+			Rest_Constants::API_NAMESPACE,
+			self::ENDPOINT_DECRYPT_FIELD,
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'r_decrypt_field' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+				'args'                => array(
+					'encrypted_value' => array(
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => array( __CLASS__, 'validate_encrypted_value' ),
+					),
+				),
+			)
+		);
 
+		// Encrypt field endpoint.
+		\register_rest_route(
+			Rest_Constants::API_NAMESPACE,
+			self::ENDPOINT_ENCRYPT_FIELD,
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'r_encrypt_field' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+				'args'                => array(
+					'field_id'  => array(
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'new_value' => array(
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => array( __CLASS__, 'validate_field_value' ),
+					),
+				),
+			)
+		);
+	}
 
 	/**
 	 * GET /posts endpoint.
@@ -175,7 +230,6 @@ class Routes extends Abstract_Rest_Controller {
 
 		return self::ensure_response( array( 'items' => $items ) );
 	}
-
 
 	/**
 	 * Get query arguments for posts endpoint.
@@ -263,5 +317,245 @@ class Routes extends Abstract_Rest_Controller {
 		usort( $items, fn( $a, $b ) => strcasecmp( (string) $a['label'], (string) $b['label'] ) );
 
 		return self::ensure_response( array( 'items' => $items ) );
+	}
+
+	/**
+	 * POST /decrypt-field endpoint.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 * @return \WP_REST_Response|\WP_Error Response or error.
+	 * @throws \RuntimeException When decryption fails.
+	 */
+	public static function r_decrypt_field( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		// Verify nonce for CSRF protection.
+		$nonce = $request->get_param( '_wpnonce' );
+		if ( ! \wp_verify_nonce( $nonce, 'campaignbridge_encrypted_fields' ) ) {
+			\CampaignBridge\Core\Error_Handler::error( 'Invalid nonce in decrypt request' );
+			return new WP_Error( 'invalid_nonce', 'Security validation failed', array( 'status' => 403 ) );
+		}
+
+		// Rate limiting to prevent brute force attacks (max 10 requests per minute per user).
+		$user_id        = get_current_user_id();
+		$rate_limit_key = "decrypt_rate_limit_{$user_id}";
+		$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
+		$requests       = $requests ?? 0;
+
+		if ( $requests >= 10 ) {
+			\CampaignBridge\Core\Error_Handler::warning( 'Rate limit exceeded for decrypt requests', array( 'user_id' => $user_id ) );
+			return new WP_Error( 'rate_limit_exceeded', 'Too many requests. Please try again later.', array( 'status' => 429 ) );
+		}
+
+		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute window
+
+		$encrypted_value = $request->get_param( 'encrypted_value' );
+		try {
+			// For admin operations, try multiple contexts since we don't know the original context.
+			// Admin users should be able to decrypt fields they have access to.
+			$decrypted  = null;
+			$last_error = null;
+
+			// Try contexts in order of restrictiveness.
+			$contexts_to_try = array( 'public', 'personal', 'sensitive', 'api_key' );
+
+			foreach ( $contexts_to_try as $context ) {
+				try {
+					$decrypted = \CampaignBridge\Core\Encryption::decrypt_for_context( $encrypted_value, $context );
+					break; // Success - use this decrypted value.
+				} catch ( \RuntimeException $e ) {
+					$last_error = $e;
+					continue; // Try next context.
+				}
+			}
+
+			// If no context worked, throw the last error.
+			if ( null === $decrypted ) {
+				throw $last_error ?? new \RuntimeException( 'Unable to decrypt with any available context' );
+			}
+
+			// Ensure the decrypted value is safe for JSON transmission.
+			// Remove any potential binary data or problematic characters.
+			$safe_decrypted = self::sanitize_decrypted_value( $decrypted );
+
+			// Add small random delay to prevent timing attacks (10-50ms).
+			usleep( wp_rand( 10000, 50000 ) );
+
+			// Return response in the format JavaScript expects.
+			return self::ensure_response(
+				array(
+					'success' => true,
+					'data'    => array( 'decrypted' => $safe_decrypted ),
+				)
+			);
+		} catch ( \RuntimeException $e ) {
+			\CampaignBridge\Core\Error_Handler::error(
+				'Failed to decrypt field value via REST API',
+				array( 'error' => $e->getMessage() )
+			);
+			// Sanitize error message for production - don't expose internal details.
+			$error_message = WP_DEBUG ? $e->getMessage() : 'Unable to process the encrypted data';
+			return new WP_Error( 'decryption_failed', $error_message, array( 'status' => 400 ) );
+		}
+	}
+
+	/**
+	 * Sanitize decrypted value for safe JSON transmission.
+	 *
+	 * @param string $value The decrypted value.
+	 * @return string The sanitized value.
+	 */
+	private static function sanitize_decrypted_value( string $value ): string {
+		// Remove null bytes and other control characters that can break JSON.
+		$value = str_replace( "\x00", '', $value );
+
+		// Ensure the value is valid UTF-8.
+		if ( ! mb_check_encoding( $value, 'UTF-8' ) ) {
+			$value = mb_convert_encoding( $value, 'UTF-8', 'UTF-8' );
+		}
+
+		// Additional safety: limit length and remove potentially problematic characters.
+		$value = substr( $value, 0, 10000 ); // Reasonable limit for field values.
+
+		return $value;
+	}
+
+	/**
+	 * POST /encrypt-field endpoint.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 * @return \WP_REST_Response|\WP_Error Response or error.
+	 * @throws \InvalidArgumentException When validation fails.
+	 */
+	public static function r_encrypt_field( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		// Verify nonce for CSRF protection.
+		$nonce = $request->get_param( '_wpnonce' );
+		if ( ! \wp_verify_nonce( $nonce, 'campaignbridge_encrypted_fields' ) ) {
+			\CampaignBridge\Core\Error_Handler::error( 'Invalid nonce in encrypt request' );
+			return new WP_Error( 'invalid_nonce', 'Security validation failed', array( 'status' => 403 ) );
+		}
+
+		// Rate limiting to prevent abuse (max 20 requests per minute per user).
+		$user_id        = get_current_user_id();
+		$rate_limit_key = "encrypt_rate_limit_{$user_id}";
+		$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
+		$requests       = $requests ?? 0;
+
+		if ( $requests >= 20 ) {
+			\CampaignBridge\Core\Error_Handler::warning( 'Rate limit exceeded for encrypt requests', array( 'user_id' => $user_id ) );
+			return new WP_Error( 'rate_limit_exceeded', 'Too many requests. Please try again later.', array( 'status' => 429 ) );
+		}
+
+		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute window
+
+		$field_id  = $request->get_param( 'field_id' );
+		$new_value = $request->get_param( 'new_value' );
+
+		try {
+			// Validate the new value.
+			$new_value = sanitize_text_field( $new_value );
+
+			if ( empty( $new_value ) ) {
+				throw new \InvalidArgumentException( 'New value cannot be empty' );
+			}
+
+			// Encrypt the new value using sensitive context for admin operations.
+			$encrypted = \CampaignBridge\Core\Encryption::encrypt( $new_value );
+
+			// Generate masked version for display.
+			$masked = self::mask_value( $new_value );
+
+			// Add small random delay to prevent timing attacks (10-50ms).
+			usleep( wp_rand( 10000, 50000 ) );
+
+			// Return response in the format JavaScript expects.
+			return self::ensure_response(
+				array(
+					'success' => true,
+					'data'    => array(
+						'encrypted' => $encrypted,
+						'masked'    => $masked,
+					),
+				)
+			);
+		} catch ( \RuntimeException $e ) {
+			\CampaignBridge\Core\Error_Handler::error(
+				'Failed to encrypt field value via REST API',
+				array( 'error' => $e->getMessage() )
+			);
+			// Sanitize error message for production - don't expose internal details.
+			$error_message = WP_DEBUG ? $e->getMessage() : 'Unable to process the data for encryption';
+			return new WP_Error( 'encryption_failed', $error_message, array( 'status' => 400 ) );
+		}
+	}
+
+	/**
+	 * Validate encrypted value parameter.
+	 *
+	 * @param string $value The value to validate.
+	 * @return bool True if valid.
+	 */
+	public static function validate_encrypted_value( string $value ): bool {
+		return ! empty( $value ) && \CampaignBridge\Core\Encryption::is_encrypted_value( $value );
+	}
+
+	/**
+	 * Validate field value parameter.
+	 *
+	 * @param string $value The value to validate.
+	 * @return bool True if valid.
+	 */
+	public static function validate_field_value( string $value ): bool {
+		// Check length (reasonable limit for field values).
+		if ( strlen( $value ) > 1000 ) {
+			return false;
+		}
+
+		// Check for potentially dangerous content.
+		$suspicious = array(
+			'<script',
+			'javascript:',
+			'onclick=',
+			'onload=',
+			'onerror=',
+			'vbscript:',
+			'data:text/html',
+		);
+
+		foreach ( $suspicious as $pattern ) {
+			if ( stripos( $value, $pattern ) !== false ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Mask a value for display (show last 4 characters).
+	 *
+	 * @param string $value The value to mask.
+	 * @return string The masked value.
+	 */
+	private static function mask_value( string $value ): string {
+		if ( empty( $value ) ) {
+			return '';
+		}
+
+		$length = strlen( $value );
+
+		if ( $length <= 4 ) {
+			return str_repeat( '•', $length );
+		}
+
+		// For very long values (like encrypted data), limit the mask length to 20 chars + last 4.
+		$max_mask_length = 20;
+		$visible         = substr( $value, -4 );
+
+		if ( $length > $max_mask_length + 4 ) {
+			$masked = str_repeat( '•', $max_mask_length );
+		} else {
+			$masked = str_repeat( '•', $length - 4 );
+		}
+
+		return $masked . $visible;
 	}
 }

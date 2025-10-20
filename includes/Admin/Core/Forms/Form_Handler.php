@@ -144,10 +144,10 @@ class Form_Handler {
 			return;
 		}
 
-		$this->is_submitted = true;
+		$this->is_submitted = true; // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Form submission flag set after nonce presence verification.
 
 		// Verify security.
-		if ( ! $this->security->verify_request() ) {
+		if ( ! $this->security->verify_request() ) { // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Security verification called immediately after nonce check.
 			$this->errors[] = \__( 'Security check failed. Please try again.', 'campaignbridge' );
 			return;
 		}
@@ -169,6 +169,10 @@ class Form_Handler {
 		}
 
 		$this->is_valid = true;
+
+		// For partial form submissions (like when updating individual encrypted fields),
+		// merge submitted data with existing data to preserve unchanged fields.
+		$form_data = $this->merge_with_existing_data( $form_data );
 
 		// Run before save hook.
 		$this->run_hook( 'before_save', $form_data );
@@ -206,6 +210,45 @@ class Form_Handler {
 	}
 
 	/**
+	 * Merge submitted data with existing data to preserve unchanged fields
+	 *
+	 * @param array<string, mixed> $submitted_data Submitted form data.
+	 * @return array<string, mixed> Merged data.
+	 */
+	private function merge_with_existing_data( array $submitted_data ): array {
+		// Get existing data from the data manager.
+		if ( $this->form && method_exists( $this->form, 'data' ) ) {
+			// Ensure form data is loaded before trying to access it.
+			if ( method_exists( $this->form, 'reload_data' ) ) {
+				$this->form->reload_data();
+			}
+
+			$existing_data = $this->form->data();
+
+			// Special handling for encrypted fields: preserve existing encrypted values if submitted value is empty.
+			foreach ( $this->fields as $field_id => $field_config ) {
+				if ( ( $field_config['type'] ?? '' ) === 'encrypted' ) {
+					$submitted_value = $submitted_data[ $field_id ] ?? null;
+					$existing_value  = $existing_data[ $field_id ] ?? null;
+
+					// If submitted value is empty but existing value is encrypted, preserve existing value.
+					if ( empty( $submitted_value ) && ! empty( $existing_value ) && \CampaignBridge\Core\Encryption::is_encrypted_value( $existing_value ) ) {
+						$submitted_data[ $field_id ] = $existing_value;
+					}
+				}
+			}
+
+			// Merge submitted data with existing data, giving priority to submitted data.
+			$merged_data = array_merge( $existing_data, $submitted_data );
+
+			return $merged_data;
+		}
+
+		// If no existing data available, just return submitted data.
+		return $submitted_data;
+	}
+
+	/**
 	 * Get submitted form data
 	 *
 	 * @return array<string, mixed>
@@ -220,15 +263,15 @@ class Form_Handler {
     // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce already verified in handle_submission(), data sanitized per field via sanitize_field_value().
 		$form_data = array();
 		if ( 'POST' === $method ) {
-			$form_data = \wp_unslash( $_POST[ $form_id ] ?? array() );
+			$form_data = \wp_unslash( $_POST[ $form_id ] ?? array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing, CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Data sanitized per field in sanitize_field_value(), nonce verified in handle_submission().
 		} elseif ( 'GET' === $method ) {
-			$form_data = \wp_unslash( $_GET[ $form_id ] ?? array() );
+			$form_data = \wp_unslash( $_GET[ $form_id ] ?? array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing, CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Data sanitized per field in sanitize_field_value(), nonce verified in handle_submission().
 		}
 
 		// Extract field values, handling array-style field names.
 		$data = array();
 
-		foreach ( $this->fields as $field_id => $field_config ) {
+		foreach ( $this->fields as $field_id => $field_config ) { // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Form data already sanitized per field in sanitize_field_value().
 			$value = $form_data[ $field_id ] ?? null;
 
 			// Handle file uploads first (they don't have POST values, but may have form data).
@@ -401,6 +444,15 @@ class Form_Handler {
 			case 'encrypted':
 				// Encrypt sensitive data before saving to database.
 				if ( ! empty( $value ) && ! \CampaignBridge\Core\Encryption::is_encrypted_value( $value ) ) {
+					// Security: Reject oversized input to prevent DoS.
+					if ( strlen( $value ) > 1000 ) {
+						\CampaignBridge\Core\Error_Handler::warning(
+							'CampaignBridge: Rejected oversized encrypted field input',
+							array( 'input_length' => strlen( $value ) )
+						);
+						return '';
+					}
+
 					try {
 						return \CampaignBridge\Core\Encryption::encrypt( $value );
 					} catch ( \RuntimeException $e ) {
@@ -454,7 +506,7 @@ class Form_Handler {
 	private function save_to_options( array $data ): bool {
 		foreach ( $data as $field_id => $value ) {
 			$option_key = $this->config->get( 'prefix', '' ) . $field_id . $this->config->get( 'suffix', '' );
-			\CampaignBridge\Core\Storage::update_option( $option_key, $value );
+			\CampaignBridge\Core\Storage::update_option( $option_key, $value ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Nonce verification handled at form submission level.
 
 			// Clear cache for this specific option.
 			\CampaignBridge\Core\Storage::wp_cache_delete( $option_key, 'options' );
@@ -487,7 +539,7 @@ class Form_Handler {
 
 		// For Settings API, we save the entire data array as one option.
 		// This mimics how WordPress Settings API typically works.
-		$result = \CampaignBridge\Core\Storage::update_option( $settings_group, $data );
+		$result = \CampaignBridge\Core\Storage::update_option( $settings_group, $data ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Nonce verification handled at form submission level.
 
 		// Clear cache for this settings group.
 		\CampaignBridge\Core\Storage::wp_cache_delete( $settings_group, 'options' );

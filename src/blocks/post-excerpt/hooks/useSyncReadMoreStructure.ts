@@ -63,7 +63,7 @@ export function useSyncReadMoreStructure(
     }
 
     const state = select(blockEditorStore);
-    const current = state.getBlocks(clientId);
+    const current = (state as any).getBlocks(clientId);
 
     const wasOn = prevKeyRef.current.startsWith('1|');
     const isOn = structureKey.startsWith('1|');
@@ -83,13 +83,13 @@ export function useSyncReadMoreStructure(
     const buttonsWrap = current.find(b => b.name === 'core/buttons');
     const btn = buttonsWrap?.innerBlocks?.find(b => b.name === 'core/button');
     if (btn?.attributes?.text) {
-      userLabel = String(btn.attributes.text).trim() || userLabel;
+      userLabel = (String(btn.attributes.text).trim() || userLabel) as any;
     } else {
       const para = current.find(b => b.name === 'core/paragraph');
       if (para?.attributes?.content) {
         const t = anchorText(para.attributes.content);
         if (t) {
-          userLabel = t;
+          userLabel = t as any;
         }
       }
     }
@@ -99,12 +99,12 @@ export function useSyncReadMoreStructure(
       const buttons = desired[0];
       const button = buttons?.innerBlocks?.[0];
       if (button) {
-        button.attributes = { ...button.attributes, text: userLabel };
+        (button.attributes as any) = { ...button.attributes, text: userLabel };
       }
     } else {
       const para = desired[0];
       if (para) {
-        para.attributes = {
+        (para.attributes as any) = {
           ...para.attributes,
           content: `<a href="#">${esc(userLabel)}</a>`,
         };

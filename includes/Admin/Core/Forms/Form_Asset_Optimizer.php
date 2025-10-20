@@ -134,10 +134,10 @@ class Form_Asset_Optimizer {
 		// Optimize dependencies - remove unnecessary ones.
 		$optimized_deps = $this->optimize_dependencies( $deps, 'script' );
 
-		wp_enqueue_script( $handle, $src, $optimized_deps, $version, $in_footer );
+		\wp_enqueue_script( $handle, $src, $optimized_deps, $version, $in_footer ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Assets.AssetEnqueue.DirectAssetEnqueue -- Form_Asset_Optimizer provides specialized asset optimization functionality.
 
 		// Add resource hints for performance.
-		if ( ! is_admin() ) {
+		if ( ! \is_admin() ) {
 			$this->add_resource_hints( $src, 'script' );
 		}
 
@@ -172,10 +172,11 @@ class Form_Asset_Optimizer {
 		// Optimize dependencies.
 		$optimized_deps = $this->optimize_dependencies( $deps, 'style' );
 
-		wp_enqueue_style( $handle, $src, $optimized_deps, $version, $media );
+		// phpcs:ignore CampaignBridge.Standard.Sniffs.Assets.AssetEnqueue.DirectAssetEnqueue -- Form_Asset_Optimizer provides specialized asset optimization functionality.
+		\wp_enqueue_style( $handle, $src, $optimized_deps, $version, $media );
 
 		// Add resource hints for performance.
-		if ( ! is_admin() ) {
+		if ( ! \is_admin() ) {
 			$this->add_resource_hints( $src, 'style' );
 		}
 
@@ -206,9 +207,9 @@ class Form_Asset_Optimizer {
 			// Skip core dependencies that are likely already loaded.
 			if ( in_array( $dep, $core_deps[ $type ] ?? array(), true ) ) {
 				// Only skip if the dependency is actually registered/enqueued globally.
-				if ( 'script' === $type && wp_script_is( $dep, 'enqueued' ) ) {
+				if ( 'script' === $type && \wp_script_is( $dep, 'enqueued' ) ) {
 					continue;
-				} elseif ( 'style' === $type && wp_style_is( $dep, 'enqueued' ) ) {
+				} elseif ( 'style' === $type && \wp_style_is( $dep, 'enqueued' ) ) {
 					continue;
 				}
 			}
@@ -232,7 +233,7 @@ class Form_Asset_Optimizer {
 		}
 
 		// Extract domain from URL.
-		$parsed_url = wp_parse_url( $url );
+		$parsed_url = \wp_parse_url( $url );
 		if ( ! isset( $parsed_url['host'] ) ) {
 			return;
 		}
@@ -241,7 +242,7 @@ class Form_Asset_Optimizer {
 
 		// Add preload hint for critical assets.
 		if ( $this->is_critical_asset( $url, $type ) ) {
-			add_filter(
+			\add_filter(
 				'wp_resource_hints',
 				function ( $hints ) use ( $url, $type ) {
 					$hint_type             = 'script' === $type ? 'script' : 'style';
@@ -253,7 +254,7 @@ class Form_Asset_Optimizer {
 
 		// Add DNS prefetch for external domains.
 		if ( ! $this->is_same_domain( $domain ) ) {
-			add_filter(
+			\add_filter(
 				'wp_resource_hints',
 				function ( $hints ) use ( $domain ) {
 					$hints['dns-prefetch'][] = $domain;
@@ -293,7 +294,7 @@ class Form_Asset_Optimizer {
 	 * @return bool True if same domain.
 	 */
 	private function is_same_domain( string $domain ): bool {
-		$site_domain = wp_parse_url( get_site_url(), PHP_URL_HOST );
+		$site_domain = \wp_parse_url( \get_site_url(), PHP_URL_HOST );
 		return $domain === $site_domain;
 	}
 
@@ -336,7 +337,7 @@ class Form_Asset_Optimizer {
 	 * @return void
 	 */
 	public function preload_critical_css( array $css_handles = array() ): void {
-		if ( is_admin() || wp_doing_ajax() ) {
+		if ( \is_admin() || \wp_doing_ajax() ) {
 			return;
 		}
 
@@ -353,20 +354,20 @@ class Form_Asset_Optimizer {
 
 		foreach ( $css_handles as $handle ) {
 			// Check if style is registered.
-			if ( ! wp_style_is( $handle, 'registered' ) ) {
+			if ( ! \wp_style_is( $handle, 'registered' ) ) {
 				continue;
 			}
 
 			// Get style source URL.
-			$src = wp_styles()->registered[ $handle ]->src;
+			$src = \wp_styles()->registered[ $handle ]->src;
 
 			if ( ! $src ) {
 				continue;
 			}
 
 			// Convert relative URLs to absolute.
-			if ( ! wp_parse_url( $src, PHP_URL_HOST ) ) {
-				$src = site_url( $src );
+			if ( ! \wp_parse_url( $src, PHP_URL_HOST ) ) {
+				$src = \site_url( $src );
 			}
 
 			// Add preload link if not already added.
@@ -388,7 +389,7 @@ class Form_Asset_Optimizer {
 	 * @return void
 	 */
 	public function preload_critical_js( array $js_handles = array() ): void {
-		if ( is_admin() || wp_doing_ajax() ) {
+		if ( \is_admin() || \wp_doing_ajax() ) {
 			return;
 		}
 
@@ -406,20 +407,20 @@ class Form_Asset_Optimizer {
 
 		foreach ( $js_handles as $handle ) {
 			// Check if script is registered.
-			if ( ! wp_script_is( $handle, 'registered' ) ) {
+			if ( ! \wp_script_is( $handle, 'registered' ) ) {
 				continue;
 			}
 
 			// Get script source URL.
-			$src = wp_scripts()->registered[ $handle ]->src;
+			$src = \wp_scripts()->registered[ $handle ]->src;
 
 			if ( ! $src ) {
 				continue;
 			}
 
 			// Convert relative URLs to absolute.
-			if ( ! wp_parse_url( $src, PHP_URL_HOST ) ) {
-				$src = site_url( $src );
+			if ( ! \wp_parse_url( $src, PHP_URL_HOST ) ) {
+				$src = \site_url( $src );
 			}
 
 			// Add preload link if not already added.
@@ -451,7 +452,7 @@ class Form_Asset_Optimizer {
 		);
 
 		// Add to wp_head action.
-		add_action(
+		\add_action(
 			'wp_head',
 			function () use ( $link_tag ) {
 				echo wp_kses(
@@ -478,8 +479,8 @@ class Form_Asset_Optimizer {
 	 * @return bool True if cross-origin.
 	 */
 	private function is_cross_origin( string $url ): bool {
-		$url_host  = wp_parse_url( $url, PHP_URL_HOST );
-		$site_host = wp_parse_url( get_site_url(), PHP_URL_HOST );
+		$url_host  = \wp_parse_url( $url, PHP_URL_HOST );
+		$site_host = \wp_parse_url( \get_site_url(), PHP_URL_HOST );
 
 		return $url_host && $site_host && $url_host !== $site_host;
 	}

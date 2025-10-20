@@ -123,8 +123,8 @@ class Post_Type_Email_Template {
 		self::register_post_type();
 		self::register_meta_fields();
 
-		add_action( 'add_meta_boxes', array( __CLASS__, 'add_custom_fields_meta_box' ) );
-		add_filter( 'post_updated_messages', array( __CLASS__, 'custom_post_messages' ) );
+		\add_action( 'add_meta_boxes', array( __CLASS__, 'add_custom_fields_meta_box' ) );
+		\add_filter( 'post_updated_messages', array( __CLASS__, 'custom_post_messages' ) );
 	}
 
 	/**
@@ -170,7 +170,7 @@ class Post_Type_Email_Template {
 		$labels = self::get_post_type_labels();
 		$args   = self::get_post_type_args( $labels );
 
-		register_post_type( self::POST_TYPE, $args );
+		\register_post_type( self::POST_TYPE, $args );
 	}
 
 	/**
@@ -180,10 +180,10 @@ class Post_Type_Email_Template {
 	 */
 	public static function add_custom_fields_meta_box(): void {
 		// Enable the built-in custom fields meta box.
-		add_post_type_support( self::POST_TYPE, 'custom-fields' );
+		\add_post_type_support( self::POST_TYPE, 'custom-fields' );
 
 		// Force show custom fields meta box in block editor.
-		add_filter(
+		\add_filter(
 			'get_user_option_meta-box-hidden_' . self::POST_TYPE,
 			function ( $hidden ) {
 				if ( ! is_array( $hidden ) ) {
@@ -201,7 +201,7 @@ class Post_Type_Email_Template {
 		);
 
 		// Ensure custom fields appear in the meta box order.
-		add_filter(
+		\add_filter(
 			'get_user_option_meta-box-order_' . self::POST_TYPE,
 			function ( $order ) {
 				if ( ! $order ) {
@@ -234,7 +234,7 @@ class Post_Type_Email_Template {
 					'type'              => $config['type'],
 					'sanitize_callback' => $sanitize_callback,
 					'auth_callback'     => function () {
-						return current_user_can( 'edit_posts' );
+						return \current_user_can( 'edit_posts' );
 					},
 				)
 			);
@@ -304,16 +304,19 @@ class Post_Type_Email_Template {
 			return $messages;
 		}
 
+		// Sanitize revision parameter for safe use in messages.
+		$revision_id = isset( $_GET['revision'] ) ? absint( wp_unslash( $_GET['revision'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
 		$messages[ self::POST_TYPE ] = array(
 			0  => '', // Unused. Messages start at index 1.
 			1  => __( 'Email template updated.', 'campaignbridge' ),
 			2  => __( 'Email template updated.', 'campaignbridge' ),
 			3  => __( 'Email template deleted.', 'campaignbridge' ),
 			4  => __( 'Email template updated.', 'campaignbridge' ),
-			5  => isset( $_GET['revision'] ) ? sprintf( // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			5  => $revision_id ? sprintf(
 				// translators: %s is the revision date.
 				__( 'Email template restored to revision from %s', 'campaignbridge' ),
-				wp_post_revision_title( (int) $_GET['revision'], false ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				wp_post_revision_title( $revision_id, false )
 			) : false,
 			6  => __( 'Email template published.', 'campaignbridge' ),
 			7  => __( 'Email template saved.', 'campaignbridge' ),
@@ -378,9 +381,34 @@ class Post_Type_Email_Template {
 	 * Create a new email template.
 	 *
 	 * @param array<string, mixed> $template_data Template data.
+	 * @param string               $nonce         Nonce for security verification.
 	 * @return int|\WP_Error Template ID on success, WP_Error on failure.
 	 */
-	public static function create_template( array $template_data ): int|\WP_Error {
+	public static function create_template( array $template_data, string $nonce = '' ): int|\WP_Error {
+		// Security checks for template creation.
+		if ( ! \current_user_can( 'edit_posts' ) ) {
+			return new \WP_Error(
+				'insufficient_permissions',
+				__( 'You do not have permission to create email templates.', 'campaignbridge' )
+			);
+		}
+
+		// Verify nonce if provided.
+		if ( ! empty( $nonce ) && ! wp_verify_nonce( $nonce, 'create_email_template' ) ) {
+			return new \WP_Error(
+				'invalid_nonce',
+				__( 'Security check failed.', 'campaignbridge' )
+			);
+		}
+
+			// If no nonce provided, ensure we're in an admin context where verification occurred upstream.
+		if ( empty( $nonce ) && ! \is_admin() ) {
+			return new \WP_Error(
+				'invalid_context',
+				__( 'Templates can only be created from admin context.', 'campaignbridge' )
+			);
+		}
+
 		$post_data = array(
 			'post_title'   => sanitize_text_field( $template_data['title'] ?? '' ),
 			'post_content' => wp_kses_post( $template_data['content'] ?? '' ),

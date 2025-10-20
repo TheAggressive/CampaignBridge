@@ -5,8 +5,12 @@ import { decodeEntities } from '@wordpress/html-entities';
 export default function Edit({ context }) {
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
-  const post = useSelect(select =>
-    postId ? select('core').getEntityRecord('postType', postType, postId) : null
+  const post = useSelect(
+    select =>
+      postId
+        ? (select('core') as any).getEntityRecord('postType', postType, postId)
+        : null,
+    [postType, postId]
   );
   const title = decodeEntities(
     (post && post.title && post.title.rendered) || ''

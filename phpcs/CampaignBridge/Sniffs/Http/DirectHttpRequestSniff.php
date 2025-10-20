@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-namespace Standards\CampaignBridge\Sniffs;
+namespace CampaignBridge\Standard\Sniffs\Http;
 
 use PHP_CodeSniffer\Sniffs\Sniff;
 use PHP_CodeSniffer\Files\File;
@@ -175,7 +175,7 @@ class DirectHttpRequestSniff implements Sniff {
 		$phpcs_file->addWarning(
 			$warning,
 			$stack_ptr,
-			'CampaignBridge.Sniffs.DirectHttpRequest.DirectHttpFunction'
+			'CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction'
 		);
 	}
 }

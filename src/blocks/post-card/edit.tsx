@@ -125,9 +125,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     const fetchPostTypes = async () => {
       try {
         setIsLoadingTypes(true);
-        const response = await apiFetch({
+        const response = (await apiFetch({
           path: API_ENDPOINTS.POST_TYPES,
-        });
+        })) as { items?: any[] };
 
         if (Array.isArray(response?.items) && response.items.length) {
           setTypeItems(
@@ -160,11 +160,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
     try {
       setIsLoadingPosts(true);
-      const response = await apiFetch({
+      const response = (await apiFetch({
         path: `${API_ENDPOINTS.POSTS}?post_type=${encodeURIComponent(
           selectedPostType
         )}`,
-      });
+      })) as { items?: any[] };
 
       setPostItems(Array.isArray(response?.items) ? response.items : []);
     } catch (error) {

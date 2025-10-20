@@ -188,7 +188,7 @@ class Error_Handler {
 		if ( WP_DEBUG ) {
 			file_put_contents( $this->log_file, $log_line, FILE_APPEND | LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Logging only.
 		} else {
-			error_log( $log_line ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Sniffs.DirectLogging.DirectLoggingFunction -- Production logging within Error_Handler.
+			error_log( $log_line ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- Production logging within Error_Handler.
 		}
 	}
 
@@ -224,9 +224,25 @@ class Error_Handler {
 	 * @return int
 	 */
 	private function get_log_level(): int {
-		// Security: Only allow admin users to access log level settings.
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return self::LOG_LEVEL_ERROR; // Default to most restrictive level for non-admins.
+		// During early WordPress loading, be permissive to prevent initialization errors.
+		$has_user_context = function_exists( 'wp_get_current_user' ) && function_exists( 'current_user_can' );
+
+		if ( $has_user_context ) {
+			$current_user = \wp_get_current_user();
+			$user_loaded  = ( $current_user instanceof \WP_User ) && $current_user->exists();
+
+			if ( $user_loaded ) {
+				// Security: Only allow admin users to access log level settings.
+				if ( ! \current_user_can( 'manage_options' ) ) {
+					return self::LOG_LEVEL_ERROR; // Default to most restrictive level for non-admins.
+				}
+			} else {
+				// User not loaded yet - use restrictive logging during initialization.
+				return self::LOG_LEVEL_ERROR;
+			}
+		} else {
+			// WordPress functions not available - use restrictive logging.
+			return self::LOG_LEVEL_ERROR;
 		}
 
 		$level = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_log_level', 'INFO' );
@@ -247,8 +263,8 @@ class Error_Handler {
 	 */
 	public function register_error_handler(): void {
 		// Use WordPress hooks instead of PHP error handlers for better security.
-		add_action( 'wp_php_error', array( $this, 'handle_wp_php_error' ), 10, 2 );
-		add_action( 'wp_die_handler', array( $this, 'handle_wp_die' ) );
+		\add_action( 'wp_php_error', array( $this, 'handle_wp_php_error' ), 10, 2 );
+		\add_action( 'wp_die_handler', array( $this, 'handle_wp_die' ) );
 	}
 
 	/**

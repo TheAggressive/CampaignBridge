@@ -1,4 +1,5 @@
-<?php
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Assets.AssetEnqueue.DirectAssetEnqueue -- Internal Asset_Manager method doing the actual enqueuing work.
+
 /**
  * Asset Manager - Centralized asset loading with dependency and version management
  *
@@ -155,13 +156,13 @@ class Asset_Manager {
 	private static function enqueue_asset_script_internal( string $handle, string $asset_path, array $asset_data = array() ): void {
 		$asset_info = self::prepare_asset_enqueue( $asset_path, $asset_data, '.js' );
 
-		\wp_enqueue_script(
-			$handle,
-			$asset_info['url'],
-			$asset_info['dependencies'],
-			$asset_info['version'],
-			$asset_info['in_footer'] ?? true
-		);
+				\wp_enqueue_script(
+					$handle,
+					$asset_info['url'],
+					$asset_info['dependencies'],
+					$asset_info['version'],
+					$asset_info['in_footer'] ?? true
+				);
 	}
 
 	/**

@@ -54,7 +54,7 @@ class Editor_Settings_Routes extends Abstract_Rest_Controller {
 	 * @return void
 	 */
 	public function register(): void {
-		register_rest_route(
+		\register_rest_route(
 			Rest_Constants::API_NAMESPACE,
 			self::ENDPOINT_PATH,
 			array(

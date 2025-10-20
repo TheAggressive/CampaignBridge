@@ -56,7 +56,7 @@ class Form_Notice_Handler {
 	 */
 	private function display_notice( string $message, string $type ): void {
 		// Add notice directly to WordPress admin_notices.
-		add_action(
+		\add_action(
 			'admin_notices',
 			function () use ( $message, $type ) {
 				$classes = array(
