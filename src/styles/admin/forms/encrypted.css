@@ -34,6 +34,10 @@
 
   /* ===== DISPLAY INPUT ===== */
   &__display {
+    position: static; /* Visible by default */
+    left: auto;
+    visibility: visible;
+    opacity: 1;
     max-width: 100%; /* Responsive behavior */
     font-family: var(--form-font-family);
     font-size: var(--form-font-size-input);

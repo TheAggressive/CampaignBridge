@@ -329,6 +329,8 @@ export class EncryptedFieldsHandler {
       ) {
         this.uiManager.updateFieldAfterSave(elements, response.data);
         this.uiManager.switchToDisplayMode(elements);
+        // After saving, restore to revealed state (user had revealed data to edit)
+        this.uiManager.updateButtonsAfterReveal(elements);
         this.uiManager.showSuccessFeedback(button);
         this.accessibility.announceToScreenReader('Changes saved successfully');
       } else {

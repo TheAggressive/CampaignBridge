@@ -72,10 +72,13 @@ export class UIManager {
   switchToDisplayMode(elements: FieldElements): void {
     if (elements.editInput) this.hideElement(elements.editInput);
     if (elements.editControls) this.hideElement(elements.editControls);
-    if (elements.displayInput)
-      this.showElement(elements.displayInput, CLASSES.DISPLAY);
-    if (elements.controls)
-      this.showElement(elements.controls, CLASSES.CONTROLS);
+    if (elements.displayInput) {
+      // Ensure display input is visible (remove any hidden classes)
+      this.hideElement(elements.displayInput); // This removes visibility classes
+    }
+    if (elements.controls) {
+      elements.controls.classList.remove(CLASSES.CONTROLS_HIDDEN);
+    }
   }
 
   /**
