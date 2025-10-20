@@ -19,11 +19,6 @@
   gap: var(--form-spacing-sm);
   align-self: flex-start; /* Don't stretch to fill container width */
   max-width: 100%; /* Allow responsive behavior */
-
-  /* Background and border for visual grouping */
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--form-radius);
   padding: var(--form-spacing-sm);
 
   /* Smooth transitions */
@@ -85,7 +80,6 @@
 
     /* Button styling */
     button {
-      @apply inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium;
       background-color: var(--color-secondary);
       border: 1px solid var(--color-border);
       color: var(--color-secondary-foreground);
@@ -96,11 +90,11 @@
 
       /* Icon sizing and centering */
       .dashicons {
-        width: 14px;
-        height: 14px;
-        font-size: 14px;
-        vertical-align: middle;
-        margin-top: -1px; /* Fine-tune vertical alignment */
+        width: 16px !important;
+        height: 16px !important;
+        font-size: 1rem !important;
+        vertical-align: middle !important;
+        margin-top: -4px !important; /* Fine-tune vertical alignment */
       }
 
       /* Hover states */

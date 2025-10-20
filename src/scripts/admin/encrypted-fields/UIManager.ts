@@ -96,18 +96,20 @@ export class UIManager {
       elements.displayInput.classList.remove(CLASSES.DISPLAY_HIDDEN);
     }
 
-    // Reset button states - only show reveal button for masked state
+    // Reset button states - restore masked state (reveal button visible)
     if (elements.controls) {
       elements.controls.classList.remove(CLASSES.CONTROLS_HIDDEN);
     }
     if (elements.revealBtn) {
-      // Reveal button is visible by default, no special class needed
-      this.accessibility.manageFocus(elements, 'reveal');
+      // Remove hidden class to show reveal button
+      elements.revealBtn.classList.remove(CLASSES.REVEAL_BTN_HIDDEN);
     }
     if (elements.hideBtn) this.hideElement(elements.hideBtn);
-    if (elements.editBtn) this.hideElement(elements.editBtn);
+    if (elements.editBtn) {
+      // Edit button is visible by default, no special class needed
+    }
 
-    // Update accessibility
+    // Update accessibility for masked state
     this.accessibility.updateAriaForMasked(elements);
   }
 
