@@ -73,5 +73,14 @@ export default (env = {}, argv = {}) => {
       }),
     ],
     stats: 'minimal',
+    // Suppress postcss-calc warnings that are harmless
+    ignoreWarnings: [
+      warning => {
+        return (
+          warning.name === 'ModuleWarning' &&
+          warning.message.includes('postcss-calc: Lexical error')
+        );
+      },
+    ],
   });
 };

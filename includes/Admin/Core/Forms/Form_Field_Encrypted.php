@@ -43,9 +43,10 @@ class Form_Field_Encrypted extends Form_Field_Input {
 	/**
 	 * Constructor
 	 *
-	 * @param array<string, mixed> $config Field configuration.
+	 * @param array<string, mixed> $config    Field configuration.
+	 * @param Form_Validator       $validator Form validator instance.
 	 */
-	public function __construct( array $config ) {
+	public function __construct( array $config, Form_Validator $validator ) {
 		// Set field type to password for security.
 		$config['type'] = 'password';
 
@@ -54,7 +55,7 @@ class Form_Field_Encrypted extends Form_Field_Input {
 		$this->show_reveal = $config['show_reveal'] ?? true;
 		$this->show_edit   = $config['show_edit'] ?? true;
 
-		parent::__construct( $config );
+		parent::__construct( $config, $validator );
 	}
 
 	/**

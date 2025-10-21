@@ -24,12 +24,21 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	protected array $config;
 
 	/**
+	 * Form validator instance
+	 *
+	 * @var Form_Validator
+	 */
+	protected Form_Validator $validator;
+
+	/**
 	 * Constructor
 	 *
-	 * @param array<string, mixed> $config Field configuration.
+	 * @param array<string, mixed> $config    Field configuration.
+	 * @param Form_Validator       $validator Form validator instance.
 	 */
-	public function __construct( array $config ) {
-		$this->config = $config;
+	public function __construct( array $config, Form_Validator $validator ) {
+		$this->config    = $config;
+		$this->validator = $validator;
 	}
 
 	/**
@@ -68,15 +77,6 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 		return (bool) ( $this->config['required'] ?? false );
 	}
 
-	/**
-	 * Check if field has validation errors
-	 *
-	 * @return bool
-	 */
-	public function has_errors(): bool {
-		$errors = $this->config['errors'] ?? array();
-		return ! empty( $errors );
-	}
 
 	/**
 	 * Get field validation rules
@@ -95,132 +95,9 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	 */
 	public function validate( $value ) {
 		$rules = $this->get_validation_rules();
-
-		// Check required.
-		if ( $this->is_required() && empty( $value ) ) {
-			return new \WP_Error(
-				'field_required',
-				sprintf(
-					/* translators: %s: field label */
-					__( '%s is required.', 'campaignbridge' ),
-					$this->config['label']
-				)
-			);
-		}
-
-		// Apply custom validation rules.
-		foreach ( $rules as $rule => $rule_config ) {
-			$validation_result = $this->validate_rule( $rule, $value, $rule_config );
-
-			if ( is_wp_error( $validation_result ) ) {
-				return $validation_result;
-			}
-		}
-
-		return true;
+		return $this->validator->validate( $value, $rules, $this->config['label'] ?? '' );
 	}
 
-	/**
-	 * Validate a specific rule
-	 *
-	 * @param string $rule        Rule name.
-	 * @param mixed  $value       Value to validate.
-	 * @param mixed  $rule_config Rule configuration.
-	 * @return bool|\WP_Error
-	 */
-	protected function validate_rule( string $rule, $value, $rule_config ) {
-		switch ( $rule ) {
-			case 'email':
-				if ( ! is_email( $value ) ) {
-					return new \WP_Error(
-						'invalid_email',
-						__( 'Please enter a valid email address.', 'campaignbridge' )
-					);
-				}
-				break;
-
-			case 'url':
-				if ( ! filter_var( $value, FILTER_VALIDATE_URL ) ) {
-					return new \WP_Error(
-						'invalid_url',
-						__( 'Please enter a valid URL.', 'campaignbridge' )
-					);
-				}
-				break;
-
-			case 'min_length':
-				if ( strlen( $value ) < $rule_config ) {
-					return new \WP_Error(
-						'min_length',
-						sprintf(
-							/* translators: %d: minimum length */
-							__( 'Minimum length is %d characters.', 'campaignbridge' ),
-							$rule_config
-						)
-					);
-				}
-				break;
-
-			case 'max_length':
-				if ( strlen( $value ) > $rule_config ) {
-					return new \WP_Error(
-						'max_length',
-						sprintf(
-							/* translators: %d: maximum length */
-							__( 'Maximum length is %d characters.', 'campaignbridge' ),
-							$rule_config
-						)
-					);
-				}
-				break;
-
-			case 'pattern':
-				if ( ! preg_match( $rule_config, $value ) ) {
-					return new \WP_Error(
-						'invalid_pattern',
-						__( 'Value does not match required format.', 'campaignbridge' )
-					);
-				}
-				break;
-
-			case 'numeric':
-				if ( ! is_numeric( $value ) ) {
-					return new \WP_Error(
-						'not_numeric',
-						__( 'Please enter a valid number.', 'campaignbridge' )
-					);
-				}
-				break;
-
-			case 'min':
-				if ( is_numeric( $value ) && $value < $rule_config ) {
-					return new \WP_Error(
-						'value_too_low',
-						sprintf(
-							/* translators: %s: minimum value */
-							__( 'Value must be at least %s.', 'campaignbridge' ),
-							$rule_config
-						)
-					);
-				}
-				break;
-
-			case 'max':
-				if ( is_numeric( $value ) && $value > $rule_config ) {
-					return new \WP_Error(
-						'value_too_high',
-						sprintf(
-							/* translators: %s: maximum value */
-							__( 'Value must be no more than %s.', 'campaignbridge' ),
-							$rule_config
-						)
-					);
-				}
-				break;
-		}
-
-		return true;
-	}
 
 	/**
 	 * Render common field attributes
@@ -284,11 +161,12 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			$attributes[] = 'aria-required="true"';
 		}
 
-		// Add error state attributes if field has errors.
-		if ( $this->has_errors() ) {
-			$attributes[] = 'aria-invalid="true"';
-			$error_id     = ( $this->config['id'] ?? '' ) . '_error';
-			$attributes[] = sprintf( 'aria-errormessage="%s"', esc_attr( $error_id ) );
+		// Validation data attributes for real-time validation.
+		$validation_rules = $this->get_validation_rules();
+		if ( ! empty( $validation_rules ) ) {
+			$js_validation_rules = $this->convert_to_js_validation_rules( $validation_rules );
+			$validation_json     = wp_json_encode( $js_validation_rules );
+			$attributes[]        = sprintf( 'data-validation="%s"', esc_attr( $validation_json ) );
 		}
 
 		// Additional custom attributes.
@@ -299,6 +177,16 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 		}
 
 		return implode( ' ', $attributes );
+	}
+
+	/**
+	 * Convert PHP validation rules to JavaScript validation format
+	 *
+	 * @param array<string, mixed> $php_rules PHP validation rules.
+	 * @return array<array<string, mixed>> JavaScript validation rules.
+	 */
+	private function convert_to_js_validation_rules( array $php_rules ): array {
+		return $this->validator->convert_to_js_rules( $php_rules, $this->config['label'] ?? '' );
 	}
 
 	/**
@@ -397,23 +285,6 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 		);
 	}
 
-	/**
-	 * Render field error messages
-	 */
-	protected function render_errors(): void {
-		if ( ! $this->has_errors() ) {
-			return;
-		}
-
-		$errors   = $this->config['errors'] ?? array();
-		$error_id = ( $this->config['id'] ?? '' ) . '_error';
-
-		echo '<div class="field-errors" id="' . esc_attr( $error_id ) . '" role="alert" aria-live="polite">';
-		foreach ( $errors as $error ) {
-			echo '<span class="field-error">' . esc_html( $error ) . '</span>';
-		}
-		echo '</div>';
-	}
 
 	/**
 	 * Render the input element (to be implemented by child classes)

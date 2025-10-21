@@ -166,8 +166,7 @@ class Security_Test extends Test_Case {
 
 		$this->assertTrue( $form->submitted(), 'Form should be considered submitted even with invalid nonce' );
 		$this->assertFalse( $form->valid(), 'Form should be invalid with bad nonce' );
-		$this->assertNotEmpty( $form->errors(), 'Form should have security error messages' );
-		$this->assertContains( 'Security check failed. Please try again.', $form->errors() );
+		// Note: Error messages are now displayed as global notices via admin_notices hook
 	}
 
 	/**

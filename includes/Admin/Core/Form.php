@@ -54,6 +54,23 @@ class Form {
 	private Form_Cache $cache;
 
 	/**
+	 * Track rendered fields for validation
+	 *
+	 * @var array<string>
+	 */
+	protected array $rendered_fields = array();
+
+	/**
+	 * Track form lifecycle for validation
+	 *
+	 * @var array<string, bool>
+	 */
+	private array $form_lifecycle = array(
+		'form_start_called' => false,
+		'form_end_called'   => false,
+	);
+
+	/**
 	 * Query optimizer for database performance
 	 *
 	 * @var Form_Query_Optimizer
@@ -146,7 +163,7 @@ class Form {
 	/**
 	 * Ensure the form is initialized (lazy initialization)
 	 */
-	private function ensure_initialized(): void {
+	public function ensure_initialized(): void {
 		if ( ! $this->initialized ) {
 			// Initialize services FIRST to capture all fields that were added.
 			$this->initialize_services();
@@ -155,6 +172,21 @@ class Form {
 			$this->init();
 
 			$this->initialized = true;
+		}
+	}
+
+	/**
+	 * Ensure renderer is initialized (lazy initialization)
+	 */
+	public function ensure_renderer(): void {
+		if ( ! $this->renderer ) {
+			$this->renderer = $this->container->create_form_renderer(
+				$this,
+				$this->config,
+				$this->config->get_fields(),
+				$this->data_manager->get_data(),
+				$this->handler
+			);
 		}
 	}
 
@@ -241,16 +273,7 @@ class Form {
 		assert( null !== $this->data_manager, 'Data manager must be initialized' );
 		assert( null !== $this->handler, 'Handler must be initialized' );
 
-		// Create renderer lazily with current data.
-		if ( ! $this->renderer ) {
-			$this->renderer = $this->container->create_form_renderer(
-				$this,
-				$this->config,
-				$this->config->get_fields(),
-				$this->data_manager->get_data(),
-				$this->handler
-			);
-		}
+		$this->ensure_renderer();
 
 		// Handle form submission if this is a POST request and form hasn't been submitted yet.
 		if ( 'POST' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) ) && ! $this->handler->is_submitted() ) {
@@ -258,9 +281,6 @@ class Form {
 		}
 
 		$this->renderer->render_form_open();
-
-		// Render messages.
-		$this->renderer->render_messages();
 
 		$this->renderer->render_fields();
 		$this->renderer->render_submit_button();
@@ -289,24 +309,46 @@ class Form {
 		return $this->handler->is_valid();
 	}
 
+
+
 	/**
-	 * Get form errors
+	 * Get the form handler instance (for internal use by Form_Builder)
 	 *
-	 * @return array<int|string, mixed>
+	 * @return \CampaignBridge\Admin\Core\Forms\Form_Handler
 	 */
-	public function errors(): array {
+	public function get_handler(): \CampaignBridge\Admin\Core\Forms\Form_Handler {
+		$this->ensure_initialized();
 		assert( null !== $this->handler, 'Handler must be initialized' );
-		return $this->handler->get_errors();
+		return $this->handler;
 	}
 
 	/**
-	 * Get form success messages
+	 * Get the form renderer instance (for internal use by Form_Builder)
 	 *
-	 * @return array<int|string, mixed>
+	 * @return \CampaignBridge\Admin\Core\Forms\Form_Renderer
 	 */
-	public function messages(): array {
-		assert( null !== $this->handler, 'Handler must be initialized' );
-		return $this->handler->get_messages();
+	public function get_renderer(): \CampaignBridge\Admin\Core\Forms\Form_Renderer {
+		$this->ensure_renderer();
+		return $this->renderer;
+	}
+
+	/**
+	 * Get the list of rendered fields
+	 *
+	 * @return array<string> Array of rendered field names.
+	 */
+	public function get_rendered_fields(): array {
+		return $this->rendered_fields;
+	}
+
+	/**
+	 * Add a field to the rendered fields list
+	 *
+	 * @param string $field_name The name of the rendered field.
+	 * @return void
+	 */
+	public function add_rendered_field( string $field_name ): void {
+		$this->rendered_fields[] = $field_name;
 	}
 
 	/**

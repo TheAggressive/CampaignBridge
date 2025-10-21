@@ -108,18 +108,19 @@ class Admin {
 		// Encrypted fields functionality.
 		Asset_Manager::enqueue_asset_script(
 			'campaignbridge-encrypted-fields',
-			'dist/scripts/admin/encrypted-fields.asset.php'
+			'dist/scripts/admin/forms/encrypted-fields/index.asset.php'
 		);
 
-		\wp_localize_script(
-			'cb-admin-global-scripts',
-			'campaignBridge',
-			array(
-				'ajaxUrl'   => \admin_url( 'admin-ajax.php' ),
-				'restUrl'   => \rest_url( 'campaignbridge/v1/' ),
-				'restNonce' => \wp_create_nonce( 'wp_rest' ),
-				'pluginUrl' => \CampaignBridge_Plugin::url(),
-			)
+		// Real-time form validation functionality.
+		Asset_Manager::enqueue_asset_script(
+			'campaignbridge-form-validation',
+			'dist/scripts/admin/forms/validation/index.asset.php'
+		);
+
+		// Form loading state functionality.
+		Asset_Manager::enqueue_asset_script(
+			'campaignbridge-form-loading',
+			'dist/scripts/admin/forms/form-loading/index.asset.php'
 		);
 
 		// Localize encrypted fields data.

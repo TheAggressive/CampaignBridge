@@ -58,7 +58,15 @@ class Form_Field_Builder {
 	 * @return self
 	 */
 	public function required(): self {
+		// Set the HTML required attribute.
 		$this->form_builder->get_config()->update_field( $this->field_name, array( 'required' => true ) );
+
+		// Also add to validation rules for JavaScript validation.
+		$field_config           = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
+		$validation             = $field_config['validation'] ?? array();
+		$validation['required'] = true;
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'validation' => $validation ) );
+
 		return $this;
 	}
 

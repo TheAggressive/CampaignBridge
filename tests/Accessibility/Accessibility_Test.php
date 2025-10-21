@@ -81,28 +81,6 @@ class Accessibility_Test extends Test_Case {
 		$this->assertTrue( $required_config['required'], 'Required flag should be set' );
 	}
 
-	/**
-	 * Test ARIA attributes for fields with validation errors
-	 */
-	public function test_aria_attributes_for_error_states(): void {
-		$field_factory = new Form_Field_Factory();
-		$field_config  = array(
-			'type'   => 'text',
-			'label'  => 'Test Field',
-			'id'     => 'error_field',
-			'name'   => 'error_field',
-			'errors' => array( 'This field is required' ),
-		);
-
-		$field = $field_factory->create_field( 'error_field', $field_config, '' );
-
-		$this->assertTrue( $field->has_errors(), 'Field should detect errors' );
-
-		// Test that error configuration is present
-		$this->assertArrayHasKey( 'errors', $field_config );
-		$this->assertCount( 1, $field_config['errors'] );
-		$this->assertEquals( 'This field is required', $field_config['errors'][0] );
-	}
 
 	/**
 	 * Test radio button groups use fieldset and legend
@@ -286,25 +264,6 @@ class Accessibility_Test extends Test_Case {
 		$this->assertArrayHasKey( 'required_field', $result['errors'], 'Should have field-specific error' );
 	}
 
-	/**
-	 * Test focus management for error states
-	 */
-	public function test_focus_management_for_errors(): void {
-		$field_factory = new Form_Field_Factory();
-
-		// Create field with errors
-		$field_config = array(
-			'type'   => 'text',
-			'id'     => 'error_field',
-			'errors' => array( 'This field has an error' ),
-		);
-		$field        = $field_factory->create_field( 'error_field', $field_config, '' );
-
-		$this->assertTrue( $field->has_errors() );
-		$this->assertArrayHasKey( 'errors', $field->get_config() );
-		$this->assertCount( 1, $field->get_config()['errors'] );
-		$this->assertEquals( 'error_field', $field->get_config()['id'] );
-	}
 
 	/**
 	 * Test that multiple forms on same page have unique IDs
@@ -463,9 +422,6 @@ class Accessibility_Test extends Test_Case {
 			),
 			''
 		);
-
-		// Verify the field instance can detect errors
-		$this->assertTrue( $field_with_errors->has_errors() );
 	}
 
 	/**

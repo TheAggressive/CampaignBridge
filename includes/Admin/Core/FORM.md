@@ -88,14 +88,30 @@ $form = Form::settings_api('my_settings')
     ->error('Please correct the errors and try again.')
     ->submit('Save Settings');
 
-// In your admin page callback (universal notice system)
+// In your admin page template
 function render_settings_page() {
     global $form;
 
-    // ✨ Success/error messages are displayed automatically everywhere!
-    // When you configure ->success() or ->error(), they automatically appear
-    // as WordPress admin notices when the form is submitted. No extra code needed!
-    $form->render();
+    // ✨ Success/error messages are displayed automatically!
+    // The form_start() method automatically includes settings_errors()
+    // so validation messages appear in the standard WordPress location
+
+    echo $form->form_start();
+
+    echo '<div class="wrap">';
+    echo '<h1>My Settings</h1>';
+
+    // Form fields go here
+    echo $form->render_field('site_name');
+    echo $form->render_field('admin_email');
+    echo $form->render_field('description');
+    echo $form->render_field('theme');
+
+    // Form actions
+    echo $form->render_submit();
+    echo '</div>';
+
+    echo $form->form_end();
 }
 
 // 🎉 Universal Compatibility: The form system works in any WordPress context
@@ -240,7 +256,12 @@ if ($form->submitted()) {
 }
 
 // Render the form
-$form->render();
+echo $form->form_start();
+// Your form content here
+echo $form->render_field('username');
+echo $form->render_field('email');
+echo $form->render_submit();
+echo $form->form_end();
 ```
 
 ## Universal Notice System
@@ -258,7 +279,11 @@ $form = Form::make('my_form')
     ->submit('Save');
 
 // ✨ Fully automatic - no external dependencies needed!
-$form->render(); // Success/error messages appear automatically as WordPress admin notices
+echo $form->form_start();
+echo $form->render_field('field1');
+echo $form->render_submit();
+echo $form->form_end();
+// Success/error messages appear automatically as WordPress admin notices
 ```
 
 ### Self-Contained Notice Implementation
@@ -273,7 +298,11 @@ $form = Form::make('any_form')
     ->submit('Save');
 
 // Works in any context - admin screens, frontend, standalone pages, custom contexts
-$form->render(); // Success/error messages display automatically as WordPress admin notices
+echo $form->form_start();
+echo $form->render_field('field1');
+echo $form->render_submit();
+echo $form->form_end();
+// Success/error messages display automatically as WordPress admin notices
 ```
 
 **Implementation**: The form system uses `Form_Notice_Handler` to display notices directly through WordPress's `admin_notices` action hook.

@@ -7,7 +7,7 @@
  */
 
 // Initialize on DOM ready
-import { EncryptedFieldsHandler } from './encrypted-fields/EncryptedFieldsHandler';
+import { EncryptedFieldsHandler } from './EncryptedFieldsHandler';
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {

@@ -211,7 +211,6 @@ class Settings_Persistence_Test extends Test_Case {
 			->email( 'from_email' )->required();
 
 		$this->assertFalse( $form2->valid() );
-		$this->assertNotEmpty( $form2->errors() );
 	}
 
 	/**

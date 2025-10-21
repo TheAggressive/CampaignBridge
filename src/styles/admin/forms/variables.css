@@ -52,10 +52,7 @@
     --form-radius-sm: var(--border-radius-sm);
 
     /* Status colors using global brand colors */
-    --form-success: var(--color-success);
-    --form-warning: var(--color-warning);
     --form-error: var(--color-error);
-    --form-info: var(--color-info);
 
     /* Destructive colors (alias for error colors for consistency) */
     --color-destructive: var(--color-error);

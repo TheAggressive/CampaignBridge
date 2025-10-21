@@ -58,6 +58,7 @@ class Form_Builder {
 		$this->field_manager = new Form_Field_Manager( $config, $this );
 	}
 
+
 	/**
 	 * Automatically close any open field
 	 *
@@ -441,34 +442,58 @@ class Form_Builder {
 	/**
 	 * Add a select field
 	 *
-	 * @param string $name Field name.
-	 * @param string $label Field label.
+	 * @param string               $name    Field name.
+	 * @param string               $label   Field label.
+	 * @param array<string, mixed> $options Field options (optional).
 	 * @return Form_Field_Builder
 	 */
-	public function select( string $name, string $label = '' ): Form_Field_Builder {
-		return $this->add_field( $name, 'select', $label );
+	public function select( string $name, string $label = '', array $options = array() ): Form_Field_Builder {
+		$field_builder = $this->add_field( $name, 'select', $label );
+
+		// Set options if provided.
+		if ( ! empty( $options ) ) {
+			$field_builder->options( $options );
+		}
+
+		return $field_builder;
 	}
 
 	/**
 	 * Add a radio field
 	 *
-	 * @param string $name Field name.
-	 * @param string $label Field label.
+	 * @param string               $name    Field name.
+	 * @param string               $label   Field label.
+	 * @param array<string, mixed> $options Field options (optional).
 	 * @return Form_Field_Builder
 	 */
-	public function radio( string $name, string $label = '' ): Form_Field_Builder {
-		return $this->add_field( $name, 'radio', $label );
+	public function radio( string $name, string $label = '', array $options = array() ): Form_Field_Builder {
+		$field_builder = $this->add_field( $name, 'radio', $label );
+
+		// Set options if provided.
+		if ( ! empty( $options ) ) {
+			$field_builder->options( $options );
+		}
+
+		return $field_builder;
 	}
 
 	/**
 	 * Add a checkbox field
 	 *
-	 * @param string $name Field name.
-	 * @param string $label Field label.
+	 * @param string               $name    Field name.
+	 * @param string               $label   Field label.
+	 * @param array<string, mixed> $options Field options (optional).
 	 * @return Form_Field_Builder
 	 */
-	public function checkbox( string $name, string $label = '' ): Form_Field_Builder {
-		return $this->add_field( $name, 'checkbox', $label );
+	public function checkbox( string $name, string $label = '', array $options = array() ): Form_Field_Builder {
+		$field_builder = $this->add_field( $name, 'checkbox', $label );
+
+		// Set options if provided.
+		if ( ! empty( $options ) ) {
+			$field_builder->options( $options );
+		}
+
+		return $field_builder;
 	}
 
 	/**
@@ -696,23 +721,6 @@ class Form_Builder {
 		return $this->form->valid();
 	}
 
-	/**
-	 * Get form errors
-	 *
-	 * @return array<int|string, mixed>
-	 */
-	public function errors(): array {
-		return $this->form->errors();
-	}
-
-	/**
-	 * Get form success messages
-	 *
-	 * @return array<int|string, mixed>
-	 */
-	public function messages(): array {
-		return $this->form->messages();
-	}
 
 	/**
 	 * Get form data
@@ -761,5 +769,81 @@ class Form_Builder {
 	 */
 	public function get_fields(): array {
 		return $this->config->get_fields();
+	}
+
+	/**
+	 * Render form opening tag and initialize form
+	 *
+	 * Includes form opening, security setup, and message rendering.
+	 *
+	 * @return void
+	 */
+	public function form_start(): void {
+		$this->form->ensure_initialized();
+
+		// Auto-detect multipart encoding based on field types.
+		$this->config->auto_detect_multipart_encoding();
+
+		$this->form->ensure_renderer();
+
+		// Render form opening tag.
+		$this->form->get_renderer()->render_form_open();
+
+		// Note: Validation moved to form_end() so it happens after render_field() calls.
+	}
+
+	/**
+	 * Render a specific field by name
+	 *
+	 * @param string $field_name The name of the field to render.
+	 * @throws \InvalidArgumentException If the field does not exist.
+	 * @return void
+	 */
+	public function render_field( string $field_name ): void {
+		$fields = $this->config->get_fields();
+
+		if ( ! isset( $fields[ $field_name ] ) ) {
+			throw new \InvalidArgumentException( esc_html( "Field '{$field_name}' does not exist in form configuration" ) );
+		}
+
+		$this->form->ensure_renderer();
+
+		$this->form->get_renderer()->render_field( $field_name, $fields[ $field_name ] );
+
+		// Track that this field was rendered for validation purposes.
+		$this->form->add_rendered_field( $field_name );
+	}
+
+	/**
+	 * Render form closing tag
+	 *
+	 * Closes the form element. Submit button should be rendered separately
+	 * using the render_submit() method.
+	 *
+	 * @return void
+	 */
+	public function form_end(): void {
+		// Handle form submission/validation on POST requests.
+		// We validate on every POST to check for errors, regardless of previous submission status.
+		$request_method = strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) );
+
+		if ( 'POST' === $request_method ) {
+			$this->form->get_handler()->handle_submission();
+		}
+
+		$this->form->ensure_renderer();
+
+		// Render form closing tag.
+		$this->form->get_renderer()->render_form_close();
+	}
+
+	/**
+	 * Render submit button
+	 *
+	 * @return void
+	 */
+	public function render_submit(): void {
+		$this->form->ensure_renderer();
+		$this->form->get_renderer()->render_submit_button();
 	}
 }

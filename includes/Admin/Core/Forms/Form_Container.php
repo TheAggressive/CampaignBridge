@@ -152,8 +152,8 @@ class Form_Container {
 		// Form_Field_Factory factory (shared).
 		$this->register(
 			'form_field_factory',
-			function () {
-				return new Form_Field_Factory();
+			function ( $container ) {
+				return new Form_Field_Factory( $container->get( 'form_validator' ) );
 			},
 			true
 		);
@@ -235,7 +235,7 @@ class Form_Container {
 		}
 
 		$security = $this->get( "security_{$form_id}" );
-		return new Form_Renderer( $config->all(), $fields, $data, $handler, $security );
+		return new Form_Renderer( $config->all(), $fields, $data, $handler, $security, $this->get( 'form_validator' ) );
 	}
 
 	/**

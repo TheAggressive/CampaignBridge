@@ -56,9 +56,11 @@ class Notices {
 	 * @return void
 	 */
 	public static function init() {
-		add_action( 'admin_notices', array( __CLASS__, 'render' ) );
-		add_action( 'network_admin_notices', array( __CLASS__, 'render' ) );
+		// Hook into admin notices.
+		\add_action( 'admin_notices', array( __CLASS__, 'render' ) );
+		\add_action( 'network_admin_notices', array( __CLASS__, 'render' ) );
 	}
+
 
 	/**
 	 * Queue a notice.
@@ -134,13 +136,15 @@ class Notices {
 			$class = self::get_notice_css_class( $notice['type'] );
 			printf(
 				'<div class="%1$s is-dismissible"><p>%2$s</p></div>',
-				esc_attr( $class ),
-				wp_kses_post( $notice['message'] )
+				\esc_attr( $class ),
+				\wp_kses_post( $notice['message'] )
 			);
 		}
 
+		// Clear notices after displaying.
 		self::$notices = array();
 	}
+
 
 	/**
 	 * Get the CSS class for a notice type.

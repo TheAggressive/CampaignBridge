@@ -80,7 +80,6 @@ class Form_Field_Radio extends Form_Field_Base {
 
 		$this->render_html( 'before' );
 		$this->render_input();
-		$this->render_errors();
 		$this->render_description();
 		$this->render_html( 'after' );
 
@@ -105,7 +104,6 @@ class Form_Field_Radio extends Form_Field_Base {
 		echo '<td>';
 		$this->render_html( 'before' );
 		$this->render_input();
-		$this->render_errors();
 		$this->render_description();
 		$this->render_html( 'after' );
 		echo '</td>';

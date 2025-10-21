@@ -5,24 +5,31 @@
  * Uses global design tokens and Tailwind CSS v4 integration.
  */
 
-@layer components {
-  /* ===== IMPORT ORDER ===== */
-  /* 1. Global design tokens (must be imported first) */
-  @import '../../variables.css';
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
 
-  /* 2. Form-specific design tokens (extends global tokens) */
-  @import './variables.css';
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
 
-  /* 3. Component styles (uses both global and form-specific tokens) */
-  @import './form.css';
-  @import './field.css';
-  @import './button.css';
-  @import './encrypted.css';
+/* ===== IMPORT ORDER ===== */
+/* 1. Global design tokens (must be imported first) */
+@import '../../variables.css';
 
-  /* 4. Specific field type styles (legacy - gradually migrate to components.css) */
-  @import './base.css';
-  @import './checkbox.css';
-  @import './radio.css';
-  @import './switch.css';
-  @import './file.css';
-}
+/* 2. Form-specific design tokens (extends global tokens) */
+@import './variables.css';
+
+/* 3. Component styles (uses both global and form-specific tokens) */
+@import './form.css';
+@import './field.css';
+@import './button.css';
+@import './encrypted.css';
+
+/* 4. Validation system (real-time feedback) */
+@import './validation/validation.css';
+
+/* 5. Specific field type styles */
+@import './checkbox.css';
+@import './radio.css';
+@import './switch.css';
+@import './file.css';

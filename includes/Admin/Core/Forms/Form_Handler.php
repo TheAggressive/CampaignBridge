@@ -73,26 +73,6 @@ class Form_Handler {
 	 */
 	private bool $is_valid = false;
 
-	/**
-	 * Form errors
-	 *
-	 * @var array<int|string, mixed>
-	 */
-	public array $errors = array();
-
-	/**
-	 * Field-specific errors
-	 *
-	 * @var array<int|string, mixed>
-	 */
-	private array $field_errors = array();
-
-	/**
-	 * Form messages
-	 *
-	 * @var array<int|string, mixed>
-	 */
-	public array $messages = array();
 
 	/**
 	 * Constructor
@@ -148,7 +128,12 @@ class Form_Handler {
 
 		// Verify security.
 		if ( ! $this->security->verify_request() ) { // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Security verification called immediately after nonce check.
-			$this->errors[] = \__( 'Security check failed. Please try again.', 'campaignbridge' );
+			$this->notice_handler->trigger_error(
+				$this->config,
+				array(
+					'security' => \__( 'Security check failed. Please try again.', 'campaignbridge' ),
+				)
+			);
 			return;
 		}
 
@@ -158,12 +143,25 @@ class Form_Handler {
 		// Run before validation hook.
 		$this->run_hook( 'before_validate', $form_data );
 
-		// Validate.
-		$validation_result = $this->validator->validate( $form_data, $this->fields );
+		// Validate all configured fields (config is source of truth).
+		$rendered_fields = $this->form ? $this->form->get_rendered_fields() : array();
+
+		$validation_result = $this->validator->validate_form( $form_data, $this->fields, $rendered_fields );
 
 		if ( ! $validation_result['valid'] ) {
-			$this->errors       = array_merge( $this->errors, $validation_result['errors'] );
-			$this->field_errors = $validation_result['errors']; // Field-specific errors keyed by field ID.
+			// Trigger global notices for all validation errors.
+			foreach ( $validation_result['errors'] as $field_id => $error_message ) {
+				if ( is_string( $error_message ) ) {
+					// Handle special case for unused fields error - use warning notice.
+					if ( 'unused_fields' === $field_id ) {
+						$this->notice_handler->trigger_warning( $error_message );
+					} else {
+						// Regular field errors use error notices.
+						$this->notice_handler->trigger_error( $this->config, array( $field_id => $error_message ) );
+					}
+				}
+			}
+
 			$this->run_hook( 'after_validate', $form_data, $validation_result['errors'] );
 			return;
 		}
@@ -189,19 +187,13 @@ class Form_Handler {
 				$this->form->reload_data();
 			}
 
-			$success_message  = $this->config->get( 'success_message', \__( 'Saved successfully!', 'campaignbridge' ) );
-			$this->messages[] = $success_message;
-
-			// Auto-trigger Screen_Context notice.
+			// Auto-trigger global success notice.
 			$this->notice_handler->trigger_success( $this->config, $form_data );
 
 			// Run success hook.
 			$this->run_hook( 'on_success', $form_data );
 		} else {
-			$error_message  = $this->config->get( 'error_message', \__( 'An error occurred.', 'campaignbridge' ) );
-			$this->errors[] = $error_message;
-
-			// Auto-trigger Screen_Context notice.
+			// Auto-trigger global error notice.
 			$this->notice_handler->trigger_error( $this->config, $form_data );
 
 			// Run error hook.
@@ -358,7 +350,12 @@ class Form_Handler {
 			$upload_result = $file_uploader->process_multiple_uploads( $file_data, $field_config );
 
 			if ( is_wp_error( $upload_result ) ) {
-				$this->errors[] = $upload_result->get_error_message();
+				$this->notice_handler->trigger_error(
+					$this->config,
+					array(
+						'file_upload' => $upload_result->get_error_message(),
+					)
+				);
 				return null;
 			}
 
@@ -369,7 +366,12 @@ class Form_Handler {
 			$upload_result = $file_uploader->process_upload( $file_data, $field_config );
 
 			if ( is_wp_error( $upload_result ) ) {
-				$this->errors[] = $upload_result->get_error_message();
+				$this->notice_handler->trigger_error(
+					$this->config,
+					array(
+						'file_upload' => $upload_result->get_error_message(),
+					)
+				);
 				return null;
 			}
 
@@ -393,7 +395,7 @@ class Form_Handler {
 	 */
 	private function create_field_instance( string $field_id, array $field_config, $value ): ?Form_Field_Interface {
 		try {
-			$factory = new Form_Field_Factory();
+			$factory = new Form_Field_Factory( $this->validator );
 			return $factory->create_field( $field_id, $field_config, $value );
 		} catch ( \Exception $e ) {
 			return null;
@@ -506,7 +508,7 @@ class Form_Handler {
 	private function save_to_options( array $data ): bool {
 		foreach ( $data as $field_id => $value ) {
 			$option_key = $this->config->get( 'prefix', '' ) . $field_id . $this->config->get( 'suffix', '' );
-			\CampaignBridge\Core\Storage::update_option( $option_key, $value ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Nonce verification handled at form submission level.
+			$result     = \CampaignBridge\Core\Storage::update_option( $option_key, $value ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Nonce verification handled at form submission level.
 
 			// Clear cache for this specific option.
 			\CampaignBridge\Core\Storage::wp_cache_delete( $option_key, 'options' );
@@ -625,32 +627,5 @@ class Form_Handler {
 	 */
 	public function is_valid(): bool {
 		return $this->is_valid;
-	}
-
-	/**
-	 * Get form errors
-	 *
-	 * @return array<int|string, mixed> Array of validation errors.
-	 */
-	public function get_errors(): array {
-		return $this->errors;
-	}
-
-	/**
-	 * Get field-specific errors
-	 *
-	 * @return array<int|string, mixed> Array of field-specific errors.
-	 */
-	public function get_field_errors(): array {
-		return $this->field_errors;
-	}
-
-	/**
-	 * Get form success messages
-	 *
-	 * @return array<int|string, mixed> Array of success messages.
-	 */
-	public function get_messages(): array {
-		return $this->messages;
 	}
 }

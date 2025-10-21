@@ -152,6 +152,9 @@ class Plugin {
 		 */
 	private function init_core_systems(): void {
 
+		// Initialize Notices system for admin feedback.
+		Notices::init();
+
 		// Initialize Blocks system.
 		Blocks::init();
 

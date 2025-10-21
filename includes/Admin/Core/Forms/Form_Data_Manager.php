@@ -124,7 +124,8 @@ class Form_Data_Manager {
 			} else {
 				// Regular field - load normally.
 				$option_key              = $this->config['prefix'] . $field_id . $this->config['suffix'];
-				$this->data[ $field_id ] = \CampaignBridge\Core\Storage::get_option( $option_key, $field_config['default'] ?? '' );
+				$saved_value             = \CampaignBridge\Core\Storage::get_option( $option_key, null );
+				$this->data[ $field_id ] = $saved_value ?? $field_config['default'] ?? '';
 			}
 		}
 	}

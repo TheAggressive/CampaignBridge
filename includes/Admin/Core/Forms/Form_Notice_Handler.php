@@ -8,10 +8,10 @@
 namespace CampaignBridge\Admin\Core\Forms;
 
 /**
- * Form Notice Handler - Manages form success/error messages and displays them directly
+ * Form Notice Handler - Delegates to the global Notices system
  *
- * This class handles form notifications independently without external dependencies.
- * It displays notices directly through WordPress admin_notices action.
+ * This class provides a bridge between form-specific notice handling and the
+ * global CampaignBridge Notices system for consistent user feedback.
  *
  * @package CampaignBridge\Admin\Core\Forms
  */
@@ -24,19 +24,31 @@ class Form_Notice_Handler {
 	 * @param array<string, mixed> $data   Form data.
 	 */
 	public function trigger_success( Form_Config $config, array $data ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
-		$message = $config->get( 'success_message' );
-		$this->display_notice( $message, 'success' );
+		$message = $config->get( 'success_message', \__( 'Saved successfully!', 'campaignbridge' ) );
+		add_settings_error( 'campaignbridge_form', 'success', $message, 'success' );
 	}
 
 	/**
 	 * Trigger an error notice
 	 *
 	 * @param Form_Config          $config Form configuration.
-	 * @param array<string, mixed> $data   Form data.
+	 * @param array<string, mixed> $errors Form errors.
 	 */
-	public function trigger_error( Form_Config $config, array $data ): void {
-		$message = $config->get( 'error_message' );
-		$this->display_notice( $message, 'error' );
+	public function trigger_error( Form_Config $config, array $errors ): void {
+		if ( is_array( $errors ) ) {
+			foreach ( $errors as $field_id => $error_message ) {
+				if ( is_string( $error_message ) ) {
+					if ( 'unused_fields' === $field_id ) {
+						add_settings_error( 'campaignbridge_form', $field_id, $error_message, 'warning' );
+					} else {
+						add_settings_error( 'campaignbridge_form', $field_id, $error_message, 'error' );
+					}
+				}
+			}
+		} else {
+			$message = $config->get( 'error_message', \__( 'An error occurred.', 'campaignbridge' ) );
+			add_settings_error( 'campaignbridge_form', 'error', $message, 'error' );
+		}
 	}
 
 	/**
@@ -45,35 +57,6 @@ class Form_Notice_Handler {
 	 * @param string $message The warning message to display.
 	 */
 	public function trigger_warning( string $message ): void {
-		$this->display_notice( $message, 'warning' );
-	}
-
-	/**
-	 * Display form notice directly via WordPress admin_notices
-	 *
-	 * @param string $message The message to display.
-	 * @param string $type    The message type (success/error).
-	 */
-	private function display_notice( string $message, string $type ): void {
-		// Add notice directly to WordPress admin_notices.
-		\add_action(
-			'admin_notices',
-			function () use ( $message, $type ) {
-				$classes = array(
-					'success' => 'notice-success',
-					'error'   => 'notice-error',
-					'warning' => 'notice-warning',
-					'info'    => 'notice-info',
-				);
-				$class   = $classes[ $type ] ?? 'notice-info';
-
-				echo '<div class="notice ' . esc_attr( $class ) . ' is-dismissible">';
-				echo '<p>' . esc_html( $message ) . '</p>';
-				echo '<button type="button" class="notice-dismiss">';
-				echo '<span class="screen-reader-text">' . esc_html__( 'Dismiss this notice.', 'campaignbridge' ) . '</span>';
-				echo '</button>';
-				echo '</div>';
-			}
-		);
+		\add_settings_error( 'campaignbridge_form', 'warning', $message, 'warning' );
 	}
 }

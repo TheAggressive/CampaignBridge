@@ -50,6 +50,13 @@ class Form_Renderer {
 	private Form_Security $security;
 
 	/**
+	 * Form validator instance
+	 *
+	 * @var Form_Validator
+	 */
+	private Form_Validator $validator;
+
+	/**
 	 * Constructor
 	 *
 	 * @param array<string, mixed> $config   Form configuration.
@@ -57,13 +64,15 @@ class Form_Renderer {
 	 * @param array<string, mixed> $data     Form data.
 	 * @param Form_Handler         $handler  Form handler instance.
 	 * @param Form_Security        $security Security instance.
+	 * @param Form_Validator       $validator Form validator instance.
 	 */
-	public function __construct( array $config, array $fields, array $data, Form_Handler $handler, Form_Security $security ) {
-		$this->config   = $config;
-		$this->fields   = $fields;
-		$this->data     = $data;
-		$this->handler  = $handler;
-		$this->security = $security;
+	public function __construct( array $config, array $fields, array $data, Form_Handler $handler, Form_Security $security, Form_Validator $validator ) {
+		$this->config    = $config;
+		$this->fields    = $fields;
+		$this->data      = $data;
+		$this->handler   = $handler;
+		$this->security  = $security;
+		$this->validator = $validator;
 	}
 
 	/**
@@ -78,25 +87,18 @@ class Form_Renderer {
 	 * Render messages and errors
 	 */
 	public function render_messages(): void {
-		$messages = $this->handler->get_messages();
-		$errors   = $this->handler->get_errors();
+		// Render global notices from CampaignBridge\Notices that were queued during form processing.
+		$this->render_global_notices();
+	}
 
-		// Only show success messages if there are no errors
-		// This prevents confusing UX where both success and error messages appear.
-		if ( ! empty( $messages ) && empty( $errors ) ) {
-			echo '<div class="notice notice-success is-dismissible" role="status" aria-live="polite" aria-atomic="true">';
-			foreach ( $messages as $message ) {
-				printf( '<p>%s</p>', \esc_html( $message ) );
-			}
-			echo '</div>';
-		}
-
-		if ( ! empty( $errors ) ) {
-			echo '<div class="notice notice-error is-dismissible" role="alert" aria-live="assertive" aria-atomic="true">';
-			foreach ( $errors as $error ) {
-				printf( '<p>%s</p>', \esc_html( $error ) );
-			}
-			echo '</div>';
+	/**
+	 * Render global notices that were queued during form processing
+	 */
+	private function render_global_notices(): void {
+		// Get any notices that were queued by the form processing.
+		if ( class_exists( '\\CampaignBridge\\Notices' ) && method_exists( '\\CampaignBridge\\Notices', 'render' ) ) {
+			// Temporarily render any queued notices.
+			\CampaignBridge\Notices::render();
 		}
 	}
 
@@ -134,18 +136,12 @@ class Form_Renderer {
 	 * @param string               $field_id     Field ID.
 	 * @param array<string, mixed> $field_config Field configuration.
 	 */
-	private function render_field( string $field_id, array $field_config ): void {
+	public function render_field( string $field_id, array $field_config ): void {
 		$layout = $this->config['layout'];
 
 		// If using render_sequence for custom layouts, render the field normally.
 		if ( 'custom' === $layout && isset( $this->config['render_sequence'] ) ) {
 			$this->render_div_field( $field_id, $field_config );
-			return;
-		}
-
-		// Legacy custom layout behavior (no render_sequence).
-		if ( 'custom' === $layout ) {
-			$this->run_hook( 'render_layout', $field_id, $field_config );
 			return;
 		}
 
@@ -173,25 +169,33 @@ class Form_Renderer {
 		$form_id       = $this->config['form_id'] ?? 'form';
 		$field_id_attr = $form_id . '_' . $field_name;
 
-		printf( '<tr><th scope="row"><label for="%s">%s%s</label></th><td>', \esc_attr( $field_id_attr ), \esc_html( $label ), $required ? ' <span class="required">*</span>' : '' );
+		// Field wrapper classes.
+		$wrapper_classes = array( 'campaignbridge-field-wrapper' );
 
+		// For table layout, we still need the validation wrapper for proper styling.
+		printf( '<tr><th scope="row"><label for="%s" class="campaignbridge-field__label">%s%s</label></th><td>', \esc_attr( $field_id_attr ), \esc_html( $label ), $required ? '<span class="campaignbridge-field__required">*</span>' : '' );
+
+		// Wrap field input in validation container with validation state classes.
+		printf( '<div class="%s">', esc_attr( implode( ' ', $wrapper_classes ) ) );
 		$this->render_field_input( $field_name, $field_config, $value );
+
+		// Error container for validation.
+		printf( '<div class="campaignbridge-field__errors" id="%s_errors" role="alert" aria-live="polite">', \esc_attr( $field_id_attr ) );
 
 		// Render field-specific errors if any.
 		if ( isset( $field_config['errors'] ) && ! empty( $field_config['errors'] ) ) {
-			$error_id = $field_id_attr . '_error';
-			echo '<div class="field-errors" id="' . esc_attr( $error_id ) . '" role="alert" aria-live="polite">';
 			foreach ( $field_config['errors'] as $error ) {
-				echo '<span class="field-error">' . esc_html( $error ) . '</span>';
+				echo '<div class="campaignbridge-field__error">' . esc_html( $error ) . '</div>';
 			}
-			echo '</div>';
 		}
+
+		echo '</div>';
 
 		if ( isset( $field_config['description'] ) ) {
-			printf( '<p class="description">%s</p>', \esc_html( $field_config['description'] ) );
+			printf( '<p class="campaignbridge-field__description">%s</p>', \esc_html( $field_config['description'] ) );
 		}
 
-		echo '</td></tr>';
+		echo '</div></td></tr>';
 	}
 
 	/**
@@ -211,22 +215,34 @@ class Form_Renderer {
 		$form_id       = $this->config['form_id'] ?? 'form';
 		$field_id_attr = $form_id . '_' . $field_name;
 
-		printf( '<div class="campaignbridge-form-field"><label for="%s">%s%s</label>', \esc_attr( $field_id_attr ), \esc_html( $label ), $required ? ' <span class="required">*</span>' : '' );
+		// Field wrapper classes.
+		$wrapper_classes = array( 'campaignbridge-field-wrapper' );
 
+		// Wrap field in validation container with validation state classes.
+		printf( '<div class="%s">', esc_attr( implode( ' ', $wrapper_classes ) ) );
+
+		// Label.
+		$required_indicator = $required ? '<span class="campaignbridge-field__required">*</span>' : '';
+		printf( '<label for="%s" class="campaignbridge-field__label">%s%s</label>', \esc_attr( $field_id_attr ), \esc_html( $label ), wp_kses_post( $required_indicator ) );
+
+		// Input field.
 		$this->render_field_input( $field_name, $field_config, $value );
+
+		// Error container for validation.
+		printf( '<div class="campaignbridge-field__errors" id="%s_errors" role="alert" aria-live="polite">', \esc_attr( $field_id_attr ) );
 
 		// Render field-specific errors if any.
 		if ( isset( $field_config['errors'] ) && ! empty( $field_config['errors'] ) ) {
-			$error_id = $field_id_attr . '_error';
-			echo '<div class="field-errors" id="' . esc_attr( $error_id ) . '" role="alert" aria-live="polite">';
 			foreach ( $field_config['errors'] as $error ) {
-				echo '<span class="field-error">' . esc_html( $error ) . '</span>';
+				echo '<div class="campaignbridge-field__error">' . esc_html( $error ) . '</div>';
 			}
-			echo '</div>';
 		}
 
+		echo '</div>';
+
+		// Description.
 		if ( isset( $field_config['description'] ) ) {
-			printf( '<p class="description">%s</p>', \esc_html( $field_config['description'] ) );
+			printf( '<p class="campaignbridge-field__description">%s</p>', \esc_html( $field_config['description'] ) );
 		}
 
 		echo '</div>';
@@ -245,18 +261,6 @@ class Form_Renderer {
 					$this->render_field( $item['name'], $this->fields[ $item['name'] ] );
 				}
 			}
-		} else {
-			// Fallback: execute all custom renderers if no sequence exists.
-			if ( isset( $this->config['custom_renderers'] ) && is_array( $this->config['custom_renderers'] ) ) {
-				foreach ( $this->config['custom_renderers'] as $renderer ) {
-					if ( is_callable( $renderer ) ) {
-						call_user_func( $renderer );
-					}
-				}
-			}
-
-			// Also run the legacy render_layout hook for backward compatibility.
-			$this->run_hook( 'render_layout' );
 		}
 	}
 
@@ -298,11 +302,9 @@ class Form_Renderer {
 		$config['id']    = $form_id . '_' . $field_name;
 		$config['value'] = $value;
 
-		// Add field-specific errors if any exist.
-		$field_errors = $this->handler->get_field_errors();
-		if ( isset( $field_errors[ $field_name ] ) ) {
-			$config['errors'] = array( $field_errors[ $field_name ] );
-		}
+		// Add CSS class for styling.
+		$existing_class  = $config['class'] ?? '';
+		$config['class'] = trim( $existing_class . ' campaignbridge-field__input' );
 
 		// Map field types to renderer classes.
 		$type_map = array(
@@ -331,13 +333,16 @@ class Form_Renderer {
 
 		$renderer_class = $type_map[ $type ] ?? Form_Field_Input::class;
 
-		return new $renderer_class( $config );
+		return new $renderer_class( $config, $this->validator );
 	}
 
 	/**
 	 * Render form opening tag
 	 */
 	public function render_form_open(): void {
+		// Automatically display form validation errors using WordPress settings_errors.
+		\settings_errors( 'campaignbridge_form' );
+
 		$method  = strtolower( $this->config['method'] );
 		$action  = \esc_url( $this->config['action'] ?? '' );
 		$enctype = $this->config['enctype'];
@@ -345,6 +350,12 @@ class Form_Renderer {
 
 		$attributes  = $this->config['attributes'];
 		$attr_string = '';
+
+		// Add form ID for JavaScript targeting.
+		$form_id = $this->config['form_id'] ?? '';
+		if ( ! empty( $form_id ) ) {
+			$attr_string .= sprintf( ' id="%s"', \esc_attr( $form_id ) );
+		}
 
 		foreach ( $attributes as $key => $value ) {
 			$attr_string .= sprintf( ' %s="%s"', \esc_attr( $key ), \esc_attr( $value ) );
@@ -362,11 +373,34 @@ class Form_Renderer {
 		// Add security nonce.
 		$this->security->render_security_fields();
 
+		// Enqueue form loading script for better UX.
+		$this->enqueue_loading_script();
+
 		// Render form description if set.
 		$description = $this->config['description'] ?? '';
 		if ( ! empty( $description ) ) {
 			printf( '<p class="description">%s</p>', \esc_html( $description ) );
 		}
+	}
+
+	/**
+	 * Enqueue form loading script for submission UX.
+	 */
+	private function enqueue_loading_script(): void {
+		$form_id      = $this->config['form_id'] ?? 'form';
+		$loading_text = \__( 'Saving...', 'campaignbridge' );
+		$submit_text  = $this->config['submit_button']['text'] ?? \__( 'Save Changes', 'campaignbridge' );
+
+		// Localize script with form-specific data.
+		\wp_localize_script(
+			'campaignbridge-form-loading',
+			'campaignbridgeFormLoading',
+			array(
+				'formId'      => $form_id,
+				'loadingText' => $loading_text,
+				'submitText'  => $submit_text,
+			)
+		);
 	}
 
 	/**
@@ -390,22 +424,11 @@ class Form_Renderer {
 		printf( '<p class="submit"><input type="submit" name="%s" id="%s" class="button button-%s" value="%s" /></p>', \esc_attr( $submit_name ), \esc_attr( $submit_id ), \esc_attr( $type ), \esc_attr( $text ) );
 	}
 
+
 	/**
 	 * Render form closing tag
 	 */
 	public function render_form_close(): void {
 		echo '</form>';
-	}
-
-	/**
-	 * Run a hook if it exists
-	 *
-	 * @param string $hook_name Hook name.
-	 * @param mixed  ...$args   Arguments to pass to hook.
-	 */
-	private function run_hook( string $hook_name, ...$args ): void {
-		if ( isset( $this->config['hooks'][ $hook_name ] ) && is_callable( $this->config['hooks'][ $hook_name ] ) ) {
-			call_user_func( $this->config['hooks'][ $hook_name ], ...$args );
-		}
 	}
 }
