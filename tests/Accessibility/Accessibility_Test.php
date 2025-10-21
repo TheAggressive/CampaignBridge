@@ -39,7 +39,8 @@ class Accessibility_Test extends Test_Case {
 	 * Test that all form fields have proper labels
 	 */
 	public function test_all_form_fields_have_labels(): void {
-		$field_factory = new Form_Field_Factory();
+		$validator     = new Form_Validator();
+		$field_factory = new Form_Field_Factory( $validator );
 
 		// Test field with explicit label
 		$explicit_config = array(
@@ -64,7 +65,8 @@ class Accessibility_Test extends Test_Case {
 	 * Test that required fields have proper accessibility attributes
 	 */
 	public function test_required_fields_have_accessibility_attributes(): void {
-		$field_factory   = new Form_Field_Factory();
+		$validator       = new Form_Validator();
+		$field_factory   = new Form_Field_Factory( $validator );
 		$required_config = array(
 			'type'     => 'text',
 			'label'    => 'Required Field',
@@ -97,7 +99,8 @@ class Accessibility_Test extends Test_Case {
 			),
 		);
 
-		$field_factory = new Form_Field_Factory();
+		$validator     = new Form_Validator();
+		$field_factory = new Form_Field_Factory( $validator );
 		$radio_field   = $field_factory->create_field( 'radio_test', $radio_config, '' );
 
 		// Verify the field has proper accessibility structure
@@ -119,7 +122,8 @@ class Accessibility_Test extends Test_Case {
 			'name'  => 'checkbox_test',
 		);
 
-		$field_factory  = new Form_Field_Factory();
+		$validator      = new Form_Validator();
+		$field_factory  = new Form_Field_Factory( $validator );
 		$checkbox_field = $field_factory->create_field( 'checkbox_test', $checkbox_config, '' );
 
 		// Checkboxes should have proper labeling
@@ -147,7 +151,8 @@ class Accessibility_Test extends Test_Case {
 	 * Test unique form and field IDs for accessibility
 	 */
 	public function test_unique_ids_for_accessibility(): void {
-		$field_factory = new Form_Field_Factory();
+		$validator     = new Form_Validator();
+		$field_factory = new Form_Field_Factory( $validator );
 
 		// Create fields with a form ID prefix context
 		$field1 = $field_factory->create_field( 'unique_form[field1]', array( 'type' => 'text' ), '' );
@@ -172,7 +177,8 @@ class Accessibility_Test extends Test_Case {
 	 * Test keyboard navigation support
 	 */
 	public function test_keyboard_navigation_support(): void {
-		$field_factory = new Form_Field_Factory();
+		$validator     = new Form_Validator();
+		$field_factory = new Form_Field_Factory( $validator );
 
 		// Create text field
 		$text_field  = $field_factory->create_field( 'keyboard_test[text_field]', array( 'type' => 'text' ), '' );
@@ -227,7 +233,8 @@ class Accessibility_Test extends Test_Case {
 		);
 
 		$fields        = $form_config->get_fields();
-		$field_factory = new Form_Field_Factory();
+		$validator     = new Form_Validator();
+		$field_factory = new Form_Field_Factory( $validator );
 		$field         = $field_factory->create_field( 'field_with_desc', $fields['field_with_desc'], '' );
 		$field_config  = $field->get_config();
 
@@ -258,7 +265,7 @@ class Accessibility_Test extends Test_Case {
 		$fields    = $form_config->get_fields();
 
 		// Test validation with empty required field
-		$result = $validator->validate( array( 'required_field' => '' ), $fields );
+		$result = $validator->validate_form( array( 'required_field' => '' ), $fields );
 
 		$this->assertFalse( $result['valid'], 'Validation should fail for empty required field' );
 		$this->assertArrayHasKey( 'required_field', $result['errors'], 'Should have field-specific error' );
@@ -269,7 +276,8 @@ class Accessibility_Test extends Test_Case {
 	 * Test that multiple forms on same page have unique IDs
 	 */
 	public function test_multiple_forms_unique_ids(): void {
-		$field_factory = new Form_Field_Factory();
+		$validator     = new Form_Validator();
+		$field_factory = new Form_Field_Factory( $validator );
 
 		// Create fields for different forms with same field names
 		$field1 = $field_factory->create_field( 'form_a[field1]', array( 'type' => 'text' ), '' );
@@ -359,7 +367,8 @@ class Accessibility_Test extends Test_Case {
 		$this->assertTrue( $text_field['required'] );
 
 		// Test field normalization by creating field instance
-		$field_factory     = new Form_Field_Factory();
+		$validator         = new Form_Validator();
+		$field_factory     = new Form_Field_Factory( $validator );
 		$normalized_field  = $field_factory->create_field( 'test_form[text_field]', $text_field, '' );
 		$normalized_config = $normalized_field->get_config();
 		$this->assertEquals( 'test_form[text_field]', $normalized_config['id'] );
@@ -394,7 +403,8 @@ class Accessibility_Test extends Test_Case {
 		);
 
 		// Create a field instance to test ARIA attributes
-		$field_factory = new Form_Field_Factory();
+		$validator     = new Form_Validator();
+		$field_factory = new Form_Field_Factory( $validator );
 		$field_config  = array(
 			'type'             => 'text',
 			'label'            => 'Test Field',
@@ -442,7 +452,8 @@ class Accessibility_Test extends Test_Case {
 	 * Test radio button accessibility with fieldset and legend
 	 */
 	public function test_radio_button_accessibility_structure(): void {
-		$field_factory = new Form_Field_Factory();
+		$validator     = new Form_Validator();
+		$field_factory = new Form_Field_Factory( $validator );
 		$radio_config  = array(
 			'type'    => 'radio',
 			'label'   => 'Choose Option',
@@ -487,7 +498,8 @@ class Accessibility_Test extends Test_Case {
 		$fields = $form_config1->get_fields();
 
 		// Create normalized field to test ID generation
-		$field_factory     = new Form_Field_Factory();
+		$validator         = new Form_Validator();
+		$field_factory     = new Form_Field_Factory( $validator );
 		$normalized_field  = $field_factory->create_field( 'form_one[test_field]', $fields['test_field'], '' );
 		$normalized_config = $normalized_field->get_config();
 

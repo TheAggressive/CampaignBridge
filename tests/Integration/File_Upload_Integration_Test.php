@@ -77,7 +77,8 @@ class File_Upload_Integration_Test extends Test_Case {
 		$this->assertTrue( $fields['required_file']['required'] );
 
 		// Debug: check what the field instance looks like
-		$field_factory  = new \CampaignBridge\Admin\Core\Forms\Form_Field_Factory();
+		$validator      = new \CampaignBridge\Admin\Core\Forms\Form_Validator();
+		$field_factory  = new \CampaignBridge\Admin\Core\Forms\Form_Field_Factory( $validator );
 		$field_instance = $field_factory->create_field( 'required_file', $fields['required_file'], null );
 		$this->assertTrue( $field_instance->is_required() );
 
@@ -87,23 +88,30 @@ class File_Upload_Integration_Test extends Test_Case {
 			'optional_file' => null,
 		);
 
-		$result = $validator->validate( $data, $fields );
+		$result = $validator->validate_form( $data, $fields );
 		$this->assertFalse( $result['valid'] ); // Should return false for validation failure
 		$this->assertArrayHasKey( 'required_file', $result['errors'] );
 
 		// Test valid file data - should pass validation
+		// Create a temporary file for testing
+		$temp_file = tempnam( sys_get_temp_dir(), 'test_file' );
+		file_put_contents( $temp_file, 'test content' );
+
 		$data = array(
 			'required_file' => array(
-				'file'     => '/path/to/file.txt',
+				'file'     => $temp_file,
 				'url'      => 'http://example.com/file.txt',
 				'filename' => 'file.txt',
 			),
 			'optional_file' => null,
 		);
 
-		$result = $validator->validate( $data, $fields );
+		$result = $validator->validate_form( $data, $fields );
 		$this->assertTrue( $result['valid'] );
 		$this->assertEmpty( $result['errors'] );
+
+		// Clean up
+		unlink( $temp_file );
 	}
 
 	/**
