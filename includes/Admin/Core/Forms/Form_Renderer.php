@@ -172,6 +172,17 @@ class Form_Renderer {
 		// Field wrapper classes.
 		$wrapper_classes = array( 'campaignbridge-field-wrapper' );
 
+		// For repeater fields, add layout classes to wrapper if detected in field classes.
+		if ( strpos( $field_name, '___' ) !== false && isset( $field_config['class'] ) ) {
+			$field_class_string  = $field_config['class'];
+			if ( strpos( $field_class_string, 'campaignbridge-repeater-horizontal' ) !== false ) {
+				$wrapper_classes[] = 'campaignbridge-repeater-horizontal';
+			}
+			if ( strpos( $field_class_string, 'campaignbridge-repeater-vertical' ) !== false ) {
+				$wrapper_classes[] = 'campaignbridge-repeater-vertical';
+			}
+		}
+
 		// For table layout, we still need the validation wrapper for proper styling.
 		printf( '<tr><th scope="row"><label for="%s" class="campaignbridge-field__label">%s%s</label></th><td>', \esc_attr( $field_id_attr ), \esc_html( $label ), $required ? '<span class="campaignbridge-field__required">*</span>' : '' );
 
@@ -217,6 +228,17 @@ class Form_Renderer {
 
 		// Field wrapper classes.
 		$wrapper_classes = array( 'campaignbridge-field-wrapper' );
+
+		// For repeater fields, add layout classes to wrapper if detected in field classes.
+		if ( strpos( $field_name, '___' ) !== false && isset( $field_config['class'] ) ) {
+			$field_class_string  = $field_config['class'];
+			if ( strpos( $field_class_string, 'campaignbridge-repeater-horizontal' ) !== false ) {
+				$wrapper_classes[] = 'campaignbridge-repeater-horizontal';
+			}
+			if ( strpos( $field_class_string, 'campaignbridge-repeater-vertical' ) !== false ) {
+				$wrapper_classes[] = 'campaignbridge-repeater-vertical';
+			}
+		}
 
 		// Wrap field in validation container with validation state classes.
 		printf( '<div class="%s">', esc_attr( implode( ' ', $wrapper_classes ) ) );

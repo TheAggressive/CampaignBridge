@@ -1,0 +1,60 @@
+/**
+ * CampaignBridge Repeater Component Patterns
+ *
+ * Shared styles for repeater functionality across all field types.
+ * Provides consistent inline rendering for grouped repeater fields.
+ */
+
+/* Declare the layers you'll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* ===== GROUPED REPEATER PATTERNS ===== */
+
+/* Base styles for grouped repeater items */
+.campaignbridge-repeater-grouped {
+  /* Ensure proper spacing for grouped fields */
+  .campaignbridge-checkbox-label,
+  .campaignbridge-switch-label,
+  .campaignbridge-radio-label {
+    margin-bottom: 0;
+  }
+}
+
+/* Horizontal layout (default) - inline flow */
+.campaignbridge-repeater-horizontal {
+  display: inline-block;
+  margin-right: 1rem;
+  margin-bottom: 0.5rem;
+
+  &:last-child {
+    margin-right: 0;
+  }
+}
+
+/* Vertical layout - stacked flow */
+.campaignbridge-repeater-vertical {
+  display: block;
+  margin-bottom: 0.75rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Additional repeater-specific utilities */
+.campaignbridge-repeater-container {
+  /* Container for grouped repeater fields */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.campaignbridge-repeater-item {
+  /* Individual repeater item wrapper */
+  display: inline-flex;
+  align-items: center;
+}

@@ -55,6 +55,13 @@ class Form_Field_Repeater {
 	private ?string $default_checked = null;
 
 	/**
+	 * Layout direction for grouped fields ('horizontal' or 'vertical')
+	 *
+	 * @var string
+	 */
+	private string $group_layout = 'horizontal';
+
+	/**
 	 * Constructor
 	 *
 	 * @param Form_Builder          $form_builder         Parent form builder.
@@ -145,6 +152,26 @@ class Form_Field_Repeater {
 	}
 
 	/**
+	 * Group fields inline instead of individual rows
+	 *
+	 * @param string $layout Layout direction ('horizontal' or 'vertical'). Defaults to 'horizontal'.
+	 * @return Form_Field_Repeater
+	 */
+	public function group( string $layout = 'horizontal' ): Form_Field_Repeater {
+		$this->grouped      = true;
+		$this->group_layout = $layout;
+
+		// Validate layout option.
+		if ( ! in_array( $layout, array( 'horizontal', 'vertical' ), true ) ) {
+			$this->group_layout = 'horizontal'; // Default fallback.
+		}
+
+		// When grouped, automatically use div layout for inline rendering.
+		$this->form_builder->div();
+		return $this;
+	}
+
+	/**
 	 * Create switch/toggle fields
 	 *
 	 * @return Form_Builder
@@ -204,6 +231,12 @@ class Form_Field_Repeater {
 
 			// Add the field using public API.
 			$field = $this->form_builder->add( $field_name, $type, (string) $label );
+
+			// Add CSS classes for grouped repeater styling and layout direction.
+			if ( $this->grouped ) {
+				$field->class( 'campaignbridge-repeater-grouped' );
+				$field->class( 'campaignbridge-repeater-' . $this->group_layout );
+			}
 
 			// For checkbox type, disable hidden field (repeater handles unchecked state).
 			if ( 'checkbox' === $type ) {

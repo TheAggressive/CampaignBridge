@@ -25,10 +25,13 @@
 @import './button.css';
 @import './encrypted.css';
 
-/* 4. Validation system (real-time feedback) */
+/* 4. Reusable component patterns (shared across field types) */
+@import './repeater.css';
+
+/* 5. Validation system (real-time feedback) */
 @import './validation/validation.css';
 
-/* 5. Specific field type styles */
+/* 6. Specific field type styles */
 @import './checkbox.css';
 @import './radio.css';
 @import './switch.css';
