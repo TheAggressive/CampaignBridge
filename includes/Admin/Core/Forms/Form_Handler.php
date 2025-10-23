@@ -140,8 +140,19 @@ class Form_Handler {
 		// Get submitted data.
 		$form_data = $this->get_submitted_data();
 
-		// Run before validation hook.
-		$this->run_hook( 'before_validate', $form_data );
+		// Run before validation hook with exception handling.
+		try {
+			$form_data = $this->run_hook( 'before_validate', $form_data );
+		} catch ( \Exception $e ) {
+			// Convert exception to validation error.
+			$this->notice_handler->trigger_error(
+				$this->config,
+				array(
+					'validation' => $e->getMessage(),
+				)
+			);
+			return;
+		}
 
 		// Validate all configured fields (config is source of truth).
 		$rendered_fields = $this->form ? $this->form->get_rendered_fields() : array();
@@ -154,7 +165,7 @@ class Form_Handler {
 				if ( is_string( $error_message ) ) {
 					// Handle special case for unused fields error - use warning notice.
 					if ( 'unused_fields' === $field_id ) {
-						$this->notice_handler->trigger_warning( $error_message );
+						$this->notice_handler->trigger_warning( $this->config, $error_message );
 					} else {
 						// Regular field errors use error notices.
 						$this->notice_handler->trigger_error( $this->config, array( $field_id => $error_message ) );
@@ -172,8 +183,19 @@ class Form_Handler {
 		// merge submitted data with existing data to preserve unchanged fields.
 		$form_data = $this->merge_with_existing_data( $form_data );
 
-		// Run before save hook.
-		$this->run_hook( 'before_save', $form_data );
+		// Run before save hook with exception handling.
+		try {
+			$form_data = $this->run_hook( 'before_save', $form_data );
+		} catch ( \Exception $e ) {
+			// Convert exception to validation error.
+			$this->notice_handler->trigger_error(
+				$this->config,
+				array(
+					'save' => $e->getMessage(),
+				)
+			);
+			return;
+		}
 
 		// Save data.
 		$save_result = $this->save_data( $form_data );
@@ -603,12 +625,14 @@ class Form_Handler {
 	 *
 	 * @param string $hook_name Hook name.
 	 * @param mixed  ...$args   Arguments to pass to hook.
+	 * @return mixed The result of the hook call, or the first argument if no hook.
 	 */
-	private function run_hook( string $hook_name, ...$args ): void {
+	private function run_hook( string $hook_name, ...$args ) {
 		$hooks = $this->config->get( 'hooks', array() );
 		if ( isset( $hooks[ $hook_name ] ) && is_callable( $hooks[ $hook_name ] ) ) {
-			call_user_func( $hooks[ $hook_name ], ...$args );
+			return call_user_func( $hooks[ $hook_name ], ...$args );
 		}
+		return $args[0] ?? null;
 	}
 
 	/**

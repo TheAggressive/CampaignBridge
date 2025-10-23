@@ -1,247 +1,311 @@
 <?php
 /**
- * Admin Notices Management System for CampaignBridge.
+ * CampaignBridge Per-User Notice System
  *
- * This class provides a comprehensive system for managing and displaying
- * admin notices throughout the CampaignBridge plugin. It handles notice
- * queuing, rendering, and lifecycle management with support for multiple
- * notice types and automatic cleanup.
+ * Simple, immediate notice display with optional per-user persistence.
  *
- * This class ensures consistent and professional user feedback
- * throughout the CampaignBridge admin interface.
+ * Usage:
+ *   Notices::init();                    // Initialize hooks
+ *   Notices::success('Saved!');         // Immediate display
+ *   Notices::error('Error!');           // Immediate display
+ *   Notices::warning('Warning', ['persist' => true]); // Persist for current user
+ *   Notices::clear();                   // Clear all notices for current user
  *
  * @package CampaignBridge
- * @since 0.1.0
  */
 
 declare(strict_types=1);
 
-// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName
-
 namespace CampaignBridge;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	return;
+	exit;
 }
 
-/**
- * Admin notices helper.
- *
- * Queues notices and renders them on admin screens.
- */
-class Notices {
-	/**
-	 * Notice type constants.
-	 */
-	private const NOTICE_SUCCESS = 'success';
-	private const NOTICE_WARNING = 'warning';
-	private const NOTICE_ERROR   = 'error';
-	private const NOTICE_INFO    = 'info';
+final class Notices {
+
+	// Notice types
+	public const SUCCESS = 'success';
+	public const ERROR   = 'error';
+	public const WARNING = 'warning';
+	public const INFO    = 'info';
+
+	// User meta key for per-user notice persistence (private, prefixed with underscore)
+	private const USER_META_KEY = '_campaignbridge_notices';
+
+	// Current request notices (for immediate display)
+	private static array $current = array();
+
+	// Whether we've rendered this request
+	private static bool $rendered = false;
 
 	/**
-	 * Maximum notice message length.
+	 * Initialize the notice system.
 	 */
-	private const MAX_MESSAGE_LENGTH = 1000;
-
-	/**
-	 * Notice queue.
-	 *
-	 * @var array<int,array{message:string,type:string}>
-	 */
-	private static $notices = array();
-
-	/**
-	 * Hook renderers for standard and network admin.
-	 *
-	 * @return void
-	 */
-	public static function init() {
-		// Hook into admin notices.
-		\add_action( 'admin_notices', array( __CLASS__, 'render' ) );
-		\add_action( 'network_admin_notices', array( __CLASS__, 'render' ) );
-	}
-
-
-	/**
-	 * Queue a notice.
-	 *
-	 * @param string $message HTML/text message (will be kses-escaped on render).
-	 * @param string $type    Notice type: success|warning|error|info.
-	 * @return void
-	 */
-	public static function add( string $message, string $type = self::NOTICE_INFO ): void {
-		// Validate and sanitize input.
-		$message = self::sanitize_message( $message );
-		$type    = self::validate_notice_type( $type );
-
-		if ( ! empty( $message ) && ! empty( $type ) ) {
-			self::$notices[] = array(
-				'message' => $message,
-				'type'    => $type,
-			);
-		}
+	public static function init(): void {
+		add_action( 'admin_notices', array( __CLASS__, 'render' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_dismiss_script' ) );
+		add_action( 'wp_ajax_dismiss_persistent_notice', array( __CLASS__, 'handle_dismiss_ajax' ) );
 	}
 
 	/**
-	 * Queue a success notice.
+	 * Add a notice.
 	 *
-	 * @param string $message Message text or HTML.
-	 * @return void
+	 * @param string $message The message.
+	 * @param string $type    The type (success|error|warning|info).
+	 * @param array  $options Options: persist (bool) - persist globally.
 	 */
-	public static function success( string $message ): void {
-		self::add( $message, self::NOTICE_SUCCESS );
-	}
-
-	/**
-	 * Queue a warning notice.
-	 *
-	 * @param string $message Message text or HTML.
-	 * @return void
-	 */
-	public static function warning( string $message ): void {
-		self::add( $message, self::NOTICE_WARNING );
-	}
-
-	/**
-	 * Queue an error notice.
-	 *
-	 * @param string $message Message text or HTML.
-	 * @return void
-	 */
-	public static function error( string $message ): void {
-		self::add( $message, self::NOTICE_ERROR );
-	}
-
-	/**
-	 * Queue an informational notice.
-	 *
-	 * @param string $message Message text or HTML.
-	 * @return void
-	 */
-	public static function info( string $message ): void {
-		self::add( $message, self::NOTICE_INFO );
-	}
-
-	/**
-	 * Render all queued notices and clear the queue.
-	 *
-	 * @return void
-	 */
-	public static function render(): void {
-		if ( empty( self::$notices ) ) {
+	public static function add( string $message, string $type = self::INFO, array $options = array() ): void {
+		$type = self::validate_type( $type );
+		if ( ! $type ) {
 			return;
 		}
 
-		foreach ( self::$notices as $notice ) {
-			$class = self::get_notice_css_class( $notice['type'] );
+		$message = self::sanitize( $message );
+		if ( ! $message ) {
+			return;
+		}
+
+		$notice = array(
+			'message' => $message,
+			'type'    => $type,
+			'persist' => ! empty( $options['persist'] ),
+		);
+
+		self::$current[] = $notice;
+
+		// Immediately save persistent notices to ensure they survive page loads
+		if ( $notice['persist'] ) {
+			self::save_persistent_notice( $notice );
+		}
+	}
+
+	// Helper methods
+	public static function success( string $msg, array $opts = array() ): void {
+		self::add( $msg, self::SUCCESS, $opts ); }
+	public static function error( string $msg, array $opts = array() ): void {
+		self::add( $msg, self::ERROR, $opts ); }
+	public static function warning( string $msg, array $opts = array() ): void {
+		self::add( $msg, self::WARNING, $opts ); }
+	public static function info( string $msg, array $opts = array() ): void {
+		self::add( $msg, self::INFO, $opts ); }
+
+	/**
+	 * Render all current notices.
+	 */
+	public static function render(): void {
+		// Load persisted notices and merge with current
+		$persisted = self::load_persisted();
+		$notices   = array_merge( $persisted, self::$current );
+
+		if ( empty( $notices ) ) {
+			return;
+		}
+
+		// Clear current notices after rendering (they've been displayed)
+		$notices_to_render = $notices;
+		self::$current     = array();
+
+		// Track which notices we've rendered in this call to avoid duplicates
+		$rendered_in_this_call = array();
+
+		foreach ( $notices_to_render as $notice ) {
+			$notice_key = md5( $notice['type'] . '|' . $notice['message'] );
+
+			// Skip if we've already rendered this exact notice in this call
+			if ( in_array( $notice_key, $rendered_in_this_call, true ) ) {
+				continue;
+			}
+
+			$rendered_in_this_call[] = $notice_key;
+
+			$class = 'notice notice-' . $notice['type'] . ' is-dismissible';
+
+			// Add data attribute for dismissible persistent notices
+			$data_attr = '';
+			if ( ! empty( $notice['persist'] ) ) {
+				$data_attr = ' data-notice-key="' . esc_attr( $notice_key ) . '" data-persistent-notice="1"';
+			}
+
 			printf(
-				'<div class="%1$s is-dismissible"><p>%2$s</p></div>',
-				\esc_attr( $class ),
-				\wp_kses_post( $notice['message'] )
+				'<div class="%s"%s><p>%s</p></div>',
+				esc_attr( $class ),
+				$data_attr,
+				wp_kses_post( $notice['message'] )
 			);
 		}
-
-		// Clear notices after displaying.
-		self::$notices = array();
-	}
-
-
-	/**
-	 * Get the CSS class for a notice type.
-	 *
-	 * @param string $type Notice type.
-	 * @return string CSS class string.
-	 */
-	private static function get_notice_css_class( string $type ): string {
-		$class = 'notice';
-
-		switch ( $type ) {
-			case self::NOTICE_SUCCESS:
-				$class .= ' notice-success';
-				break;
-			case self::NOTICE_WARNING:
-				$class .= ' notice-warning';
-				break;
-			case self::NOTICE_ERROR:
-				$class .= ' notice-error';
-				break;
-			default:
-				$class .= ' notice-info';
-		}
-
-		return $class;
 	}
 
 	/**
-	 * Sanitize and validate a notice message.
-	 *
-	 * @param string $message Raw message content.
-	 * @return string Sanitized message.
+	 * Load persisted notices from user meta.
 	 */
-	private static function sanitize_message( string $message ): string {
-		// Trim whitespace and limit length.
-		$message = trim( $message );
-
-		if ( strlen( $message ) > self::MAX_MESSAGE_LENGTH ) {
-			$message = substr( $message, 0, self::MAX_MESSAGE_LENGTH ) . '...';
+	private static function load_persisted(): array {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return array(); // No user context
 		}
 
-		// Basic sanitization - we'll use wp_kses_post in render() for final output.
-		return wp_strip_all_tags( $message );
+		$notices = get_user_meta( $user_id, self::USER_META_KEY, true );
+		return is_array( $notices ) ? $notices : array();
 	}
+
+	/**
+	 * Save a persistent notice immediately.
+	 */
+	private static function save_persistent_notice( array $notice ): void {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return; // No user context, can't save
+		}
+
+		$existing = self::load_persisted();
+
+		// Add the new notice to existing persisted notices
+		$existing[] = $notice;
+
+		// Remove duplicates based on message and type
+		$unique = array();
+		foreach ( $existing as $n ) {
+			$key = $n['type'] . '|' . $n['message'];
+			if ( ! isset( $unique[ $key ] ) ) {
+				$unique[ $key ] = $n;
+			}
+		}
+
+		$existing = array_values( $unique );
+
+		// Save to user meta (persists until cleared)
+		update_user_meta( $user_id, self::USER_META_KEY, $existing );
+	}
+
 
 	/**
 	 * Validate notice type.
-	 *
-	 * @param string $type Notice type to validate.
-	 * @return string Valid notice type or empty string if invalid.
 	 */
-	private static function validate_notice_type( string $type ): string {
-		$valid_types = array(
-			self::NOTICE_SUCCESS,
-			self::NOTICE_WARNING,
-			self::NOTICE_ERROR,
-			self::NOTICE_INFO,
-		);
-
-		return in_array( $type, $valid_types, true ) ? $type : '';
+	private static function validate_type( string $type ): string {
+		$type = strtolower( trim( $type ) );
+		return in_array( $type, array( self::SUCCESS, self::ERROR, self::WARNING, self::INFO ), true ) ? $type : '';
 	}
 
 	/**
-	 * Get the count of queued notices.
+	 * Sanitize message.
+	 */
+	private static function sanitize( string $message ): string {
+		$message = trim( $message );
+		return strlen( $message ) > 2000 ? substr( $message, 0, 2000 ) . '...' : $message;
+	}
+
+	/**
+	 * Enqueue JavaScript for dismissing persistent notices.
+	 */
+	public static function enqueue_dismiss_script(): void {
+		wp_enqueue_script( 'jquery' ); // Ensure jQuery is loaded
+
+		$script = "
+		jQuery(document).ready(function($) {
+			// Handle dismiss clicks on persistent notices
+			$(document).on('click', '.notice[data-persistent-notice] .notice-dismiss', function() {
+				var \$notice = $(this).closest('.notice');
+				var noticeKey = \$notice.data('notice-key');
+
+				if (noticeKey) {
+					// Send AJAX request to dismiss the notice
+					$.post(ajaxurl, {
+						action: 'dismiss_persistent_notice',
+						notice_key: noticeKey,
+						nonce: '" . wp_create_nonce( 'dismiss_persistent_notice' ) . "'
+					}, function(response) {
+						if (response.success) {
+							// Notice dismissed successfully, fade it out
+							\$notice.fadeOut(300, function() {
+								\$notice.remove();
+							});
+						}
+					});
+				}
+			});
+		});
+		";
+
+		wp_add_inline_script( 'jquery', $script );
+	}
+
+	/**
+	 * Handle AJAX request to dismiss a persistent notice.
+	 */
+	public static function handle_dismiss_ajax(): void {
+		// Verify nonce for security
+		if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'dismiss_persistent_notice' ) ) {
+			wp_send_json_error( 'Security check failed' );
+		}
+
+		$notice_key = sanitize_text_field( $_POST['notice_key'] ?? '' );
+
+		if ( empty( $notice_key ) ) {
+			wp_send_json_error( 'Invalid notice key' );
+		}
+
+		// Dismiss the notice
+		self::dismiss_persistent_notice( $notice_key );
+
+		wp_send_json_success( 'Notice dismissed' );
+	}
+
+	/**
+	 * Dismiss a persistent notice by key.
 	 *
-	 * @return int Number of notices in queue.
+	 * @param string $notice_key The notice key to dismiss.
+	 */
+	public static function dismiss_persistent_notice( string $notice_key ): void {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return;
+		}
+
+		$existing = self::load_persisted();
+		$filtered = array();
+
+		foreach ( $existing as $notice ) {
+			$key = md5( $notice['type'] . '|' . $notice['message'] );
+			if ( $key !== $notice_key ) {
+				$filtered[] = $notice;
+			}
+		}
+
+		update_user_meta( $user_id, self::USER_META_KEY, $filtered );
+	}
+
+	/**
+	 * Clear all notices (current + persisted).
+	 */
+	public static function clear(): void {
+		self::$current  = array();
+		self::$rendered = false;
+
+		$user_id = get_current_user_id();
+		if ( $user_id ) {
+			delete_user_meta( $user_id, self::USER_META_KEY );
+		}
+	}
+
+	/**
+	 * Get count of current notices.
 	 */
 	public static function count(): int {
-		return count( self::$notices );
+		return count( array_merge( self::load_persisted(), self::$current ) );
 	}
 
 	/**
-	 * Check if there are any queued notices.
-	 *
-	 * @return bool True if notices exist, false otherwise.
+	 * Check if there are notices.
 	 */
 	public static function has_notices(): bool {
-		return ! empty( self::$notices );
+		return self::count() > 0;
 	}
 
 	/**
-	 * Clear all queued notices without rendering.
-	 *
-	 * @return int Number of notices cleared.
-	 */
-	public static function clear(): int {
-		$count         = count( self::$notices );
-		self::$notices = array();
-		return $count;
-	}
-
-	/**
-	 * Get all queued notices (for debugging or external processing).
-	 *
-	 * @return array<int,array{message:string,type:string}> Array of notices.
+	 * Get all notices.
 	 */
 	public static function get_all(): array {
-		return self::$notices;
+		return array_merge( self::load_persisted(), self::$current );
 	}
 }

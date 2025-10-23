@@ -33,10 +33,8 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'providers' )
 		->default( $cb_provider )
 		->required()
 	->password( 'mailchimp_api_key', 'Mailchimp API Key' )
-		->showWhen( 'provider', 'mailchimp' )
 		->description( 'Get your API key from <a href="https://admin.mailchimp.com/account/api/" target="_blank">Mailchimp Account Settings</a>' )
 	->text( 'mailchimp_audience', 'Default Audience' )
-		->showWhen( 'provider', 'mailchimp' )
 		->description( 'Optional. Default audience for new campaigns.' )
 	->before_save(
 		function ( $data ) {

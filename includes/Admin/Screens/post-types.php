@@ -33,7 +33,7 @@ foreach ( $campaignbridge_post_types as $post_type_key => $info ) {
 // Create the form using the Form API.
 $form = Form::make( 'post_types' )
 	->description( 'Select which public post types can be used in CampaignBridge.' )
-	->repeater( 'included_post_types', $checkboxes, $campaignbridge_enabled_types )->switch()
+	->repeater( 'included_post_types', $checkboxes, $campaignbridge_enabled_types )->group()->switch()
 
 	// Save to options table - the Form API now handles multiple fields reliably.
 	->save_to_options( 'campaignbridge_' )
@@ -43,19 +43,11 @@ $form = Form::make( 'post_types' )
 ?>
 
 <div class="campaignbridge-post-types">
-	<div class="campaignbridge-post-types__header">
-		<h1><?php esc_html_e( 'Post Types', 'campaignbridge' ); ?></h1>
-		<?php settings_errors( 'campaignbridge_post_types' ); ?>
-	</div>
-
 	<div class="campaignbridge-post-types__content">
 		<!-- Available Post Types Section -->
 		<div class="campaignbridge-post-types__section">
 			<div class="campaignbridge-post-types__section-header">
 				<h2><?php esc_html_e( 'Included post types', 'campaignbridge' ); ?></h2>
-				<p class="campaignbridge-post-types__description">
-					<?php esc_html_e( 'Select which public post types can be used in CampaignBridge.', 'campaignbridge' ); ?>
-				</p>
 			</div>
 
 			<div class="campaignbridge-post-types__form">

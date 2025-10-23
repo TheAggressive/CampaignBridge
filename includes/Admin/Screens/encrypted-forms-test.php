@@ -77,7 +77,6 @@ $encrypted_test_form = \CampaignBridge\Admin\Core\Form::make( 'encrypted_forms_t
 
 ?>
 <div class="wrap">
-	<h1>🔐 Encrypted Forms Test</h1>
 
 	<div class="encrypted-test-intro">
 		<p>🎯 This test demonstrates the <strong>encrypted form fields</strong> with different security contexts and permission levels.</p>
@@ -393,7 +392,7 @@ $encrypted_test_form = \CampaignBridge\Admin\Core\Form::make( 'encrypted_forms_t
 	margin: 10px 0;
 }
 
-.campaignbridge-encrypted-display {
+.campaignbridge-encrypted-field__display {
 	background: #f8f9fa;
 	border: 1px solid #ddd;
 	padding: 8px 12px;
@@ -402,30 +401,30 @@ $encrypted_test_form = \CampaignBridge\Admin\Core\Form::make( 'encrypted_forms_t
 	color: #666;
 }
 
-.campaignbridge-encrypted-controls {
+.campaignbridge-encrypted-field__controls {
 	margin-top: 8px;
 }
 
-.campaignbridge-encrypted-controls .button {
+.campaignbridge-encrypted-field__controls .button {
 	margin-right: 8px;
 }
 
-.campaignbridge-encrypted-edit {
+.campaignbridge-encrypted-field__edit {
 	margin-top: 8px;
 }
 
-.campaignbridge-edit-controls {
+.campaignbridge-encrypted-field__edit-controls {
 	margin-top: 8px;
 }
 
-.campaignbridge-permission-denied {
+.campaignbridge-encrypted-field--permission-denied {
 	background: #f8d7da;
 	border: 1px solid #f5c6cb;
 	padding: 15px;
 	border-radius: 4px;
 }
 
-.campaignbridge-permission-denied .regular-text {
+.campaignbridge-encrypted-field--permission-denied .regular-text {
 	background: #f8f9fa;
 	border-color: #dc3545;
 	color: #dc3545;

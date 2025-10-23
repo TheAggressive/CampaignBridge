@@ -207,6 +207,9 @@ class Screen_Registry {
 		echo '<div class="wrap campaignbridge-screen">';
 		echo '<h1>' . esc_html( $config['page_title'] ) . '</h1>';
 
+		// Start output buffering to capture screen content and process forms.
+		ob_start();
+
 		if ( ! empty( $config['description'] ) ) {
 			echo '<p class="description">' . esc_html( $config['description'] ) . '</p>';
 		}
@@ -217,8 +220,45 @@ class Screen_Registry {
 			$this->render_tabbed_screen( $screen_name, $controller, $config );
 		}
 
+		// Get the buffered screen content.
+		$screen_content = ob_get_clean();
+
+		// Now that forms have been processed, display notices seamlessly right after the h1.
+		settings_errors( 'campaignbridge_form' );
+
+		// Output the screen content. Since we control all HTML generation server-side and
+		// properly escape all dynamic values, we can safely output without additional sanitization.
+		// This avoids maintenance burden of maintaining HTML whitelists.
+		echo $screen_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+		// Fire custom hook for individual screens to display notices after content processing.
+		// Security: Only allow hooks for valid screen names to prevent abuse.
+		if ( $this->is_valid_screen_name( $screen_name ) ) {
+			do_action( 'campaignbridge_form_notices', $screen_name );
+		}
+
 		echo '</div>';
 	}
+
+
+
+	/**
+	 * Validate if a screen name is legitimate to prevent hook abuse.
+	 *
+	 * @param string $screen_name The screen name to validate.
+	 * @return bool True if valid, false otherwise.
+	 */
+	private function is_valid_screen_name( string $screen_name ): bool {
+		// Only allow alphanumeric characters, hyphens, and underscores.
+		if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $screen_name ) ) {
+			return false;
+		}
+
+		// Check if this screen name exists in our registered screens.
+		$screen_file = $this->screens_path . $screen_name . '.php';
+		return file_exists( $screen_file );
+	}
+
 
 	/**
 	 * Render simple screen (no tabs).
@@ -259,30 +299,75 @@ class Screen_Registry {
 	 * @return void
 	 */
 	private function render_tabbed_screen( string $screen_name, $controller, array $config = array() ): void {
+		$tabs = $this->prepare_tabs_for_screen( $screen_name, $config );
+
+		if ( empty( $tabs ) ) {
+			$this->render_no_tabs_error( $screen_name );
+			return;
+		}
+
+		$active_tab = $this->determine_active_tab( $tabs );
+		$this->render_tab_navigation( $tabs, $active_tab );
+		$this->render_active_tab_content( $tabs, $active_tab, $screen_name, $controller, $config );
+	}
+
+	/**
+	 * Prepare tabs for rendering.
+	 *
+	 * @param string               $screen_name The name of the screen.
+	 * @param array<string, mixed> $config The configuration array.
+	 * @return array<string, mixed> Prepared tabs array.
+	 */
+	private function prepare_tabs_for_screen( string $screen_name, array $config ): array {
 		$screen_folder = $this->screens_path . $screen_name;
 
 		// Auto-discover tabs with configuration support.
 		$tabs = $this->discover_tabs( $screen_folder, $config );
 
 		// Filter tabs based on user capabilities.
-		$tabs = $this->filter_tabs_by_capability( $tabs );
+		return $this->filter_tabs_by_capability( $tabs );
+	}
 
-		if ( empty( $tabs ) ) {
-			echo '<div class="notice notice-error"><p>No accessible tabs found in: ' . esc_html( $screen_name ) . '/</p></div>';
-			return;
-		}
+	/**
+	 * Render error when no tabs are available.
+	 *
+	 * @param string $screen_name The name of the screen.
+	 * @return void
+	 */
+	private function render_no_tabs_error( string $screen_name ): void {
+		echo '<div class="notice notice-error"><p>No accessible tabs found in: ' . esc_html( $screen_name ) . '/</p></div>';
+	}
 
-		// Get active tab.
+	/**
+	 * Determine which tab should be active.
+	 *
+	 * @param array<string, mixed> $tabs Available tabs.
+	 * @return string The active tab slug.
+	 */
+	private function determine_active_tab( array $tabs ): string {
+		// Get active tab from GET parameter.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- GET parameter for tab navigation, not form processing.
-		$active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : array_key_first( $tabs );
+		$requested_tab = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : null;
 
 		// Validate tab exists and user has access.
-		if ( ! isset( $tabs[ $active_tab ] ) ) {
-			$active_tab = array_key_first( $tabs );
+		if ( $requested_tab && isset( $tabs[ $requested_tab ] ) ) {
+			return $requested_tab;
 		}
 
-		// Render tab navigation.
+		// Fallback to first tab.
+		return array_key_first( $tabs );
+	}
+
+	/**
+	 * Render tab navigation.
+	 *
+	 * @param array<string, mixed> $tabs Available tabs.
+	 * @param string               $active_tab The active tab slug.
+	 * @return void
+	 */
+	private function render_tab_navigation( array $tabs, string $active_tab ): void {
 		echo '<nav class="nav-tab-wrapper wp-clearfix">';
+
 		foreach ( $tabs as $tab_slug => $tab_info ) {
 			$active_class = $active_tab === $tab_slug ? ' nav-tab-active' : '';
 			$url          = add_query_arg( 'tab', $tab_slug );
@@ -298,34 +383,48 @@ class Screen_Registry {
 				esc_html( $tab_info['title'] )
 			);
 		}
+
 		echo '</nav>';
+	}
 
-		// Render active tab content.
-		if ( isset( $tabs[ $active_tab ] ) ) {
-			echo '<div class="tab-content">';
-
-			// Determine which controller to use for this tab.
-			$tab_controller = $this->get_tab_controller( $tabs[ $active_tab ], $controller );
-
-			// Create $screen context for tab.
-			global $screen;
-			$screen = new Screen_Context( $screen_name, 'tabbed', $active_tab, $tab_controller );
-
-			// Load data from tab controller first, then screen controller.
-			$this->load_tab_data( $tab_controller, $controller, $screen );
-
-			// Load custom data from _config.php.
-			if ( isset( $config['data'] ) && is_array( $config['data'] ) ) {
-				foreach ( $config['data'] as $key => $value ) {
-					$screen->set( $key, $value );
-				}
-			}
-
-			// Include tab file.
-			include $tabs[ $active_tab ]['file'];
-
-			echo '</div>';
+	/**
+	 * Render the content of the active tab.
+	 *
+	 * @param array<string, mixed> $tabs Available tabs.
+	 * @param string               $active_tab The active tab slug.
+	 * @param string               $screen_name The name of the screen.
+	 * @param mixed                $controller The controller instance.
+	 * @param array<string, mixed> $config The configuration array.
+	 * @return void
+	 */
+	private function render_active_tab_content( array $tabs, string $active_tab, string $screen_name, $controller, array $config ): void {
+		if ( ! isset( $tabs[ $active_tab ] ) ) {
+			return;
 		}
+
+		echo '<div class="tab-content">';
+
+		// Determine which controller to use for this tab.
+		$tab_controller = $this->get_tab_controller( $tabs[ $active_tab ], $controller );
+
+		// Create $screen context for tab.
+		global $screen;
+		$screen = new Screen_Context( $screen_name, 'tabbed', $active_tab, $tab_controller );
+
+		// Load data from tab controller first, then screen controller.
+		$this->load_tab_data( $tab_controller, $controller, $screen );
+
+		// Load custom data from _config.php.
+		if ( isset( $config['data'] ) && is_array( $config['data'] ) ) {
+			foreach ( $config['data'] as $key => $value ) {
+				$screen->set( $key, $value );
+			}
+		}
+
+		// Include tab file.
+		include $tabs[ $active_tab ]['file'];
+
+		echo '</div>';
 	}
 
 	/**
@@ -336,71 +435,130 @@ class Screen_Registry {
 	 * @return array<string, mixed> The tabs.
 	 */
 	private function discover_tabs( string $folder_path, array $config = array() ): array {
-		$tabs = array();
-
 		if ( ! is_dir( $folder_path ) ) {
-			return $tabs;
+			return array();
 		}
 
-		// Get tab configuration if available.
-		$tab_config = isset( $config['tabs'] ) && is_array( $config['tabs'] ) ? $config['tabs'] : array();
+		$php_files  = $this->get_php_files_from_folder( $folder_path );
+		$tab_config = $config['tabs'] ?? array();
+		$tabs       = array();
 
-		$files = glob( $folder_path . '/*.php' );
-		if ( ! is_array( $files ) ) {
-			return $tabs;
-		}
-
-		foreach ( $files as $file ) {
-			$filename = basename( $file );
-
-			// Skip files starting with _ (like _config.php).
-			if ( strpos( $filename, '_' ) === 0 ) {
-				continue;
-			}
-
-			$tab_name = pathinfo( $filename, PATHINFO_FILENAME );
-
-			// Start with auto-generated defaults.
-			$tab_info = array(
-				'name'       => $tab_name,
-				'title'      => $this->generate_title( $tab_name ),
-				'slug'       => $this->generate_slug( $tab_name ),
-				'file'       => $file,
-				'capability' => isset( $config['capability'] ) ? $config['capability'] : 'manage_options',
-				'order'      => 10, // Default order.
-				'controller' => null, // Will be set from config or auto-discovery.
-			);
-
-			// Merge with custom configuration if available..
-			if ( isset( $tab_config[ $tab_name ] ) && is_array( $tab_config[ $tab_name ] ) ) {
-				$custom_config = $tab_config[ $tab_name ];
-
-				// Override with custom settings.
-				if ( isset( $custom_config['label'] ) ) {
-					$tab_info['title'] = $custom_config['label'];
-				}
-				if ( isset( $custom_config['capability'] ) ) {
-					$tab_info['capability'] = $custom_config['capability'];
-				}
-				if ( isset( $custom_config['order'] ) ) {
-					$tab_info['order'] = intval( $custom_config['order'] );
-				}
-				if ( isset( $custom_config['description'] ) ) {
-					$tab_info['description'] = $custom_config['description'];
-				}
-				if ( isset( $custom_config['controller'] ) ) {
-					$tab_info['controller'] = $custom_config['controller'];
-				}
-			}
+		foreach ( $php_files as $file ) {
+			$tab_name = $this->get_tab_name_from_file( $file );
+			$tab_info = $this->create_tab_info( $tab_name, $file, $config, $tab_config );
 
 			$tabs[ $tab_name ] = $tab_info;
 		}
 
-		// Sort tabs by order.
+		return $this->sort_tabs_by_order( $tabs );
+	}
+
+	/**
+	 * Get PHP files from a folder, excluding config files.
+	 *
+	 * @param string $folder_path The path to the folder.
+	 * @return array<int, string> Array of PHP file paths.
+	 */
+	private function get_php_files_from_folder( string $folder_path ): array {
+		$files = glob( $folder_path . '/*.php' );
+
+		if ( ! is_array( $files ) ) {
+			return array();
+		}
+
+		// Filter out files starting with underscore (config files).
+		return array_filter(
+			$files,
+			function ( $file ) {
+				$filename = basename( $file );
+				return strpos( $filename, '_' ) !== 0;
+			}
+		);
+	}
+
+	/**
+	 * Extract tab name from PHP file path.
+	 *
+	 * @param string $file_path The file path.
+	 * @return string The tab name.
+	 */
+	private function get_tab_name_from_file( string $file_path ): string {
+		$filename = basename( $file_path );
+		return pathinfo( $filename, PATHINFO_FILENAME );
+	}
+
+	/**
+	 * Create tab information array.
+	 *
+	 * @param string               $tab_name   The tab name.
+	 * @param string               $file_path  The file path.
+	 * @param array<string, mixed> $config     The screen config.
+	 * @param array<string, mixed> $tab_config The tab-specific config.
+	 * @return array<string, mixed> The tab information.
+	 */
+	private function create_tab_info( string $tab_name, string $file_path, array $config, array $tab_config ): array {
+		// Start with auto-generated defaults.
+		$tab_info = array(
+			'name'       => $tab_name,
+			'title'      => $this->generate_title( $tab_name ),
+			'slug'       => $this->generate_slug( $tab_name ),
+			'file'       => $file_path,
+			'capability' => $config['capability'] ?? 'manage_options',
+			'order'      => 10,
+			'controller' => null,
+		);
+
+		// Apply custom configuration if available.
+		if ( isset( $tab_config[ $tab_name ] ) && is_array( $tab_config[ $tab_name ] ) ) {
+			$tab_info = $this->apply_custom_tab_config( $tab_info, $tab_config[ $tab_name ] );
+		}
+
+		return $tab_info;
+	}
+
+	/**
+	 * Apply custom tab configuration.
+	 *
+	 * @param array<string, mixed> $tab_info      The default tab info.
+	 * @param array<string, mixed> $custom_config The custom config.
+	 * @return array<string, mixed> The updated tab info.
+	 */
+	private function apply_custom_tab_config( array $tab_info, array $custom_config ): array {
+		$mappings = array(
+			'label'       => 'title',
+			'capability'  => 'capability',
+			'order'       => 'order',
+			'description' => 'description',
+			'controller'  => 'controller',
+		);
+
+		foreach ( $mappings as $config_key => $tab_key ) {
+			if ( isset( $custom_config[ $config_key ] ) ) {
+				$value = $custom_config[ $config_key ];
+
+				// Special handling for order (ensure it's an integer).
+				if ( 'order' === $tab_key ) {
+					$value = intval( $value );
+				}
+
+				$tab_info[ $tab_key ] = $value;
+			}
+		}
+
+		return $tab_info;
+	}
+
+	/**
+	 * Sort tabs by their order value.
+	 *
+	 * @param array<string, mixed> $tabs The tabs array.
+	 * @return array<string, mixed> The sorted tabs.
+	 */
+	private function sort_tabs_by_order( array $tabs ): array {
 		uasort(
 			$tabs,
 			function ( $a, $b ) {
-				return $a['order'] <=> $b['order'];
+				return ( $a['order'] ?? 10 ) <=> ( $b['order'] ?? 10 );
 			}
 		);
 

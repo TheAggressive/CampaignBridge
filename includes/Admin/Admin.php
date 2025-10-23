@@ -123,6 +123,11 @@ class Admin {
 			'dist/scripts/admin/forms/form-loading/index.asset.php'
 		);
 
+		Asset_Manager::enqueue_asset_script(
+			'campaignbridge-conditional-fields',
+			'dist/scripts/admin/forms/conditional-fields/index.asset.php'
+		);
+
 		// Localize encrypted fields data.
 		\wp_localize_script(
 			'campaignbridge-encrypted-fields',

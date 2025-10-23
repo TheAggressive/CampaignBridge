@@ -25,7 +25,7 @@ class Form_Notice_Handler {
 	 */
 	public function trigger_success( Form_Config $config, array $data ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
 		$message = $config->get( 'success_message', \__( 'Saved successfully!', 'campaignbridge' ) );
-		add_settings_error( 'campaignbridge_form', 'success', $message, 'success' );
+		add_settings_error( 'campaignbridge_form', 'success', wp_kses( $message, array() ), 'success' );
 	}
 
 	/**
@@ -38,25 +38,46 @@ class Form_Notice_Handler {
 		if ( is_array( $errors ) ) {
 			foreach ( $errors as $field_id => $error_message ) {
 				if ( is_string( $error_message ) ) {
+					// Sanitize error message to prevent XSS.
+					$sanitized_message = wp_kses(
+						$error_message,
+						array(
+							'strong' => array(),
+							'em'     => array(),
+							'code'   => array(),
+						)
+					);
+
 					if ( 'unused_fields' === $field_id ) {
-						add_settings_error( 'campaignbridge_form', $field_id, $error_message, 'warning' );
+						add_settings_error( 'campaignbridge_form', $field_id, $sanitized_message, 'warning' );
 					} else {
-						add_settings_error( 'campaignbridge_form', $field_id, $error_message, 'error' );
+						add_settings_error( 'campaignbridge_form', $field_id, $sanitized_message, 'error' );
 					}
 				}
 			}
 		} else {
 			$message = $config->get( 'error_message', \__( 'An error occurred.', 'campaignbridge' ) );
-			add_settings_error( 'campaignbridge_form', 'error', $message, 'error' );
+			add_settings_error( 'campaignbridge_form', 'error', wp_kses( $message, array() ), 'error' );
 		}
 	}
 
 	/**
 	 * Trigger a warning notice
 	 *
-	 * @param string $message The warning message to display.
+	 * @param Form_Config $config  Form configuration.
+	 * @param string      $message The warning message to display.
 	 */
-	public function trigger_warning( string $message ): void {
-		\add_settings_error( 'campaignbridge_form', 'warning', $message, 'warning' );
+	public function trigger_warning( Form_Config $config, string $message ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+		// Sanitize warning message to prevent XSS.
+		$sanitized_message = wp_kses(
+			$message,
+			array(
+				'strong' => array(),
+				'em'     => array(),
+				'code'   => array(),
+			)
+		);
+
+		add_settings_error( 'campaignbridge_form', 'warning', $sanitized_message, 'warning' );
 	}
 }

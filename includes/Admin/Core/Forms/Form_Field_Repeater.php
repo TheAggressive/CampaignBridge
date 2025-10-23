@@ -55,6 +55,13 @@ class Form_Field_Repeater {
 	private ?string $default_checked = null;
 
 	/**
+	 * Whether fields should be grouped inline
+	 *
+	 * @var bool
+	 */
+	private bool $grouped = false;
+
+	/**
 	 * Layout direction for grouped fields ('horizontal' or 'vertical')
 	 *
 	 * @var string

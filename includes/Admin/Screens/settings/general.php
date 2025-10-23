@@ -82,9 +82,6 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 			}
 		}
 	);
-
-// Use Screen Context for displaying form messages (automatic)
-$form->use_screen_notices( $screen );
 ?>
 
 <div class="general-settings-tab">

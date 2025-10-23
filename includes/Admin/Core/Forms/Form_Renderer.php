@@ -84,25 +84,6 @@ class Form_Renderer {
 	}
 
 	/**
-	 * Render messages and errors
-	 */
-	public function render_messages(): void {
-		// Render global notices from CampaignBridge\Notices that were queued during form processing.
-		$this->render_global_notices();
-	}
-
-	/**
-	 * Render global notices that were queued during form processing
-	 */
-	private function render_global_notices(): void {
-		// Get any notices that were queued by the form processing.
-		if ( class_exists( '\\CampaignBridge\\Notices' ) && method_exists( '\\CampaignBridge\\Notices', 'render' ) ) {
-			// Temporarily render any queued notices.
-			\CampaignBridge\Notices::render();
-		}
-	}
-
-	/**
 	 * Render all form fields
 	 */
 	public function render_fields(): void {
@@ -174,7 +155,7 @@ class Form_Renderer {
 
 		// For repeater fields, add layout classes to wrapper if detected in field classes.
 		if ( strpos( $field_name, '___' ) !== false && isset( $field_config['class'] ) ) {
-			$field_class_string  = $field_config['class'];
+			$field_class_string = $field_config['class'];
 			if ( strpos( $field_class_string, 'campaignbridge-repeater-horizontal' ) !== false ) {
 				$wrapper_classes[] = 'campaignbridge-repeater-horizontal';
 			}
@@ -231,7 +212,7 @@ class Form_Renderer {
 
 		// For repeater fields, add layout classes to wrapper if detected in field classes.
 		if ( strpos( $field_name, '___' ) !== false && isset( $field_config['class'] ) ) {
-			$field_class_string  = $field_config['class'];
+			$field_class_string = $field_config['class'];
 			if ( strpos( $field_class_string, 'campaignbridge-repeater-horizontal' ) !== false ) {
 				$wrapper_classes[] = 'campaignbridge-repeater-horizontal';
 			}
@@ -362,9 +343,6 @@ class Form_Renderer {
 	 * Render form opening tag
 	 */
 	public function render_form_open(): void {
-		// Automatically display form validation errors using WordPress settings_errors.
-		\settings_errors( 'campaignbridge_form' );
-
 		$method  = strtolower( $this->config['method'] );
 		$action  = \esc_url( $this->config['action'] ?? '' );
 		$enctype = $this->config['enctype'];

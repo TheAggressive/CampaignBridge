@@ -16,45 +16,45 @@
 
 /* Base styles for grouped repeater items */
 .campaignbridge-repeater-grouped {
-  /* Ensure proper spacing for grouped fields */
-  .campaignbridge-checkbox-label,
-  .campaignbridge-switch-label,
-  .campaignbridge-radio-label {
-    margin-bottom: 0;
-  }
+	/* Ensure proper spacing for grouped fields */
+	.campaignbridge-checkbox-label,
+	.campaignbridge-switch-label,
+	.campaignbridge-radio-label {
+	margin-bottom: 0;
+	}
 }
 
 /* Horizontal layout (default) - inline flow */
 .campaignbridge-repeater-horizontal {
-  display: inline-block;
-  margin-right: 1rem;
-  margin-bottom: 0.5rem;
+	display: inline-block;
+	margin-right: 1rem;
+	margin-bottom: 0.5rem;
 
-  &:last-child {
-    margin-right: 0;
-  }
+	&:last-child {
+	margin-right: 0;
+	}
 }
 
 /* Vertical layout - stacked flow */
 .campaignbridge-repeater-vertical {
-  display: block;
-  margin-bottom: 0.75rem;
+	display: block;
+	margin-bottom: 0.75rem;
 
-  &:last-child {
-    margin-bottom: 0;
-  }
+	&:last-child {
+	margin-bottom: 0;
+	}
 }
 
 /* Additional repeater-specific utilities */
 .campaignbridge-repeater-container {
-  /* Container for grouped repeater fields */
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+	/* Container for grouped repeater fields */
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
 }
 
 .campaignbridge-repeater-item {
-  /* Individual repeater item wrapper */
-  display: inline-flex;
-  align-items: center;
+	/* Individual repeater item wrapper */
+	display: inline-flex;
+	align-items: center;
 }
