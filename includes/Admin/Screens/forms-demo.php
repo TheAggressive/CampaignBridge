@@ -190,60 +190,49 @@ $settings_form = \CampaignBridge\Admin\Core\Form_Factory::settings_api( 'compreh
 		->default( get_bloginfo( 'name' ) )
 		->required()
 		->description( 'Your website name' )
-		->end()
 
 	->email( 'admin_email', 'Admin Email' )
 		->default( get_option( 'admin_email' ) )
 		->required()
 		->description( 'Primary admin email' )
-		->end()
 
 	->url( 'site_url', 'Website URL' )
 		->default( get_site_url() )
 		->description( 'Your website URL' )
-		->end()
 
 	->password( 'api_key', 'API Key' )
 		->description( 'External API key (optional)' )
-		->end()
 
 	->number( 'max_users', 'Max Users' )
 		->default( 100 )
 		->min( 1 )
 		->max( 10000 )
 		->description( 'Maximum allowed users' )
-		->end()
 
 	->tel( 'support_phone', 'Support Phone' )
 		->placeholder( '+1 (555) 123-4567' )
 		->description( 'Customer support phone' )
-		->end()
 
 	->search( 'search_term', 'Search' )
 		->placeholder( 'Search documentation...' )
 		->description( 'Quick search functionality' )
-		->end()
 
 	// Advanced inputs
 	->switch( 'enable_feature', 'Enable New Feature' )
 		->description( 'Turn on the new feature' )
 		->default( false )
-		->end()
 
 	->toggle( 'debug_mode', 'Debug Mode' )
 		->description( 'Enable detailed logging' )
 		->default( true )
-		->end()
 
 	->range( 'volume', 'Volume Level' )
 		->description( 'Set system volume (0-100)' )
 		->min( 0 )->max( 100 )->default( 75 )
-		->end()
 
 	->slider( 'brightness', 'Screen Brightness' )
 		->description( 'Display brightness percentage' )
 		->min( 10 )->max( 100 )->step( 5 )->default( 80 )
-		->end()
 
 	->color( 'theme_color', 'Theme Color' )
 		->description( 'Primary theme color' )
@@ -272,7 +261,6 @@ $settings_form = \CampaignBridge\Admin\Core\Form_Factory::settings_api( 'compreh
 		)
 		->default( 'light' )
 		->description( 'Choose your theme' )
-		->end()
 
 	->radio( 'notification_freq', 'Notification Frequency' )
 		->options(
@@ -285,12 +273,10 @@ $settings_form = \CampaignBridge\Admin\Core\Form_Factory::settings_api( 'compreh
 		)
 		->default( 'daily' )
 		->description( 'How often to receive notifications' )
-		->end()
 
 	->checkbox( 'enable_cache', 'Enable Caching' )
 		->description( 'Cache data for better performance' )
 		->default( true )
-		->end()
 
 	->checkbox( 'enabled_features', 'Enabled Features' )
 		->options(
@@ -304,7 +290,6 @@ $settings_form = \CampaignBridge\Admin\Core\Form_Factory::settings_api( 'compreh
 		)
 		->default( array( 'logging', 'notifications', 'backups' ) )
 		->description( 'Select which features to enable' )
-		->end()
 
 	// Content fields
 	->textarea( 'site_description', 'Site Description' )
@@ -312,22 +297,18 @@ $settings_form = \CampaignBridge\Admin\Core\Form_Factory::settings_api( 'compreh
 		->placeholder( 'Describe your website...' )
 		->max_length( 500 )
 		->description( 'Brief site description (max 500 chars)' )
-		->end()
 
 	->wysiwyg( 'welcome_message', 'Welcome Message' )
 		->description( 'HTML welcome message for new users' )
-		->end()
 
 	// File uploads
 	->file( 'site_logo', 'Site Logo' )
 		->accept( 'image/*' )
 		->description( 'Upload your site logo (JPG, PNG, GIF - max 2MB)' )
-		->end()
 
 	->file( 'documents', 'Documents' )
 		->accept( '.pdf,.doc,.docx,.txt' )
 		->description( 'Upload supporting documents' )
-		->end()
 
 	->submit( 'Save All Settings' );
 
@@ -363,16 +344,16 @@ $custom_form = \CampaignBridge\Admin\Core\Form::make( 'custom_layout_demo' )
 			echo '<div class="form-section">';
 		}
 	)
-	->text( 'first_name', 'First Name' )->required()->end()
-	->text( 'last_name', 'Last Name' )->required()->end()
+	->text( 'first_name', 'First Name' )->required()
+	->text( 'last_name', 'Last Name' )->required()
 	->render_custom(
 		function () {
 			// Close first section, start second
 			echo '</div><div class="form-section">';
 		}
 	)
-	->email( 'email', 'Email' )->required()->end()
-	->tel( 'phone', 'Phone' )->end()
+	->email( 'email', 'Email' )->required()
+	->tel( 'phone', 'Phone' )
 	->render_custom(
 		function () {
 			// Close second section, start third
@@ -388,10 +369,8 @@ $custom_form = \CampaignBridge\Admin\Core\Form::make( 'custom_layout_demo' )
 				'support'     => 'Support',
 			)
 		)
-		->end()
 	->checkbox( 'subscribe_newsletter', 'Subscribe to Newsletter' )
 		->default( true )
-		->end()
 	->render_custom(
 		function () {
 			// Close layout
@@ -406,10 +385,10 @@ $custom_form = \CampaignBridge\Admin\Core\Form::make( 'custom_layout_demo' )
 // ============================================================================
 $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 	->div() // Use div layout instead of table.
-	->text( 'name', 'Name' )->required()->placeholder( 'Your name' )->end()
-	->email( 'email', 'Email' )->required()->placeholder( 'your@email.com' )->end()
-	->textarea( 'message', 'Message' )->rows( 4 )->placeholder( 'Your message...' )->end()
-	->checkbox( 'agree', 'I agree to terms' )->required()->end()
+	->text( 'name', 'Name' )->required()->placeholder( 'Your name' )
+	->email( 'email', 'Email' )->required()->placeholder( 'your@email.com' )
+	->textarea( 'message', 'Message' )->rows( 4 )->placeholder( 'Your message...' )
+	->checkbox( 'agree', 'I agree to terms' )->required()
 	->submit( 'Send Message' );
 ?>
 
@@ -455,9 +434,6 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 		</div>
 		<div class="demo-form">
 			<?php
-			if ( $contact_form->submitted() && $contact_form->valid() ) {
-				echo '<div class="notice notice-success"><p>Contact form submitted successfully!</p></div>';
-			}
 			$contact_form->render();
 			?>
 		</div>
@@ -479,7 +455,7 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 	->text('site_name')->required()
 	->email('admin_email')->required()
 	->switch('enable_feature')->default(false)
-	->range('volume')->min(0)->max(100)->end()
+	->range('volume')->min(0)->max(100)
 	->color('theme_color')->default('#007cba')
 	->date('launch_date')->required()
 	->select('theme')->options([...])
@@ -490,11 +466,6 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 		</div>
 		<div class="demo-form">
 			<?php
-			if ( $settings_form->submitted() && $settings_form->valid() ) {
-				echo '<div class="notice notice-success"><p>✅ Comprehensive settings saved! Check all the different input types above.</p></div>';
-			} elseif ( $settings_form->submitted() ) {
-				echo '<div class="notice notice-error"><p>❌ Form validation failed. Please check your inputs.</p></div>';
-			}
 			$settings_form->render();
 			?>
 		</div>
@@ -565,9 +536,9 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 		<div class="demo-code">
 			<pre><code>$div_form = Form::make('div_layout_demo')
 	->div() // Modern div layout
-	->text('name')->required()->end()
-	->email('email')->required()->end()
-	->textarea('message')->rows(4)->end()
+	->text('name')->required()
+	->email('email')->required()
+	->textarea('message')->rows(4)
 	->submit('Send Message');</code></pre>
 		</div>
 		<div class="demo-form">
@@ -625,8 +596,8 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 	->save_to_settings_api('my_form')
 	->table()
 	->success('Settings saved successfully!')
-	->text('name')->required()->end()
-	->email('email')->required()->end()
+	->text('name')->required()
+	->email('email')->required()
 	->submit('Save');</code></pre>
 			</div>
 

@@ -200,21 +200,34 @@ class Form_Field_Builder {
 	}
 
 	/**
-	 * Set numeric min/max
+	 * Set minimum and maximum values for numeric inputs, or create a range input field
 	 *
-	 * @param int $min Minimum value.
-	 * @param int $max Maximum value.
+	 * @param string|int $arg1 Field name (for creation) or minimum value (for setting).
+	 * @param string|int $arg2 Field label (for creation) or maximum value (for setting).
 	 * @return Form_Field_Builder
+	 * @throws \InvalidArgumentException If invalid arguments are provided.
 	 */
-	public function range( int $min, int $max ): self {
-		$this->form_builder->get_config()->update_field(
-			$this->field_name,
-			array(
-				'min' => $min,
-				'max' => $max,
-			)
-		);
-		return $this;
+	public function range( $arg1, $arg2 = '' ): self {
+		// Detect if this is a field creation call (string arguments) vs min/max setting (int arguments).
+		if ( is_string( $arg1 ) && is_string( $arg2 ) ) {
+			// This is a field creation call - auto-end and create new field.
+			$form_builder = $this->end();
+			return $form_builder->range( $arg1, $arg2 );
+		} elseif ( is_int( $arg1 ) && is_int( $arg2 ) ) {
+			// This is a min/max setting call.
+			$this->form_builder->get_config()->update_field(
+				$this->field_name,
+				array(
+					'min' => $arg1,
+					'max' => $arg2,
+				)
+			);
+			return $this;
+		} else {
+			throw new \InvalidArgumentException(
+				'Invalid arguments for range() method. Use range(string $name, string $label) to create a field or range(int $min, int $max) to set min/max values.'
+			);
+		}
 	}
 
 	/**
@@ -381,6 +394,14 @@ class Form_Field_Builder {
 	 * @throws \BadMethodCallException If method does not exist.
 	 */
 	public function __call( string $method, array $args ) {
+		// Check if this is a field creation method by examining Form_Builder's methods
+		// Field creation methods return Form_Field_Builder.
+		if ( $this->is_field_creation_method( $method ) ) {
+			// Automatically end the current field configuration and create the new field.
+			$form_builder = $this->end();
+			return $form_builder->{$method}( ...$args );
+		}
+
 		// First, check if this method exists on the parent Form_Builder.
 		if ( method_exists( $this->form_builder, $method ) ) {
 			// Proxy to Form_Builder for seamless chaining.
@@ -397,5 +418,30 @@ class Form_Field_Builder {
 		throw new \BadMethodCallException(
 			esc_html( "Method '{$method}' does not exist on " . __CLASS__ . ' or ' . get_class( $this->form_builder ) )
 		);
+	}
+
+	/**
+	 * Check if a method is a field creation method (returns Form_Field_Builder).
+	 *
+	 * @param string $method Method name to check.
+	 * @return bool True if method creates fields.
+	 */
+	private function is_field_creation_method( string $method ): bool {
+		static $field_creation_methods = null;
+
+		// Cache the result to avoid repeated reflection.
+		if ( null === $field_creation_methods ) {
+			$field_creation_methods = array();
+			$reflection             = new \ReflectionClass( $this->form_builder );
+
+			foreach ( $reflection->getMethods( \ReflectionMethod::IS_PUBLIC ) as $reflection_method ) {
+				$return_type = $reflection_method->getReturnType();
+				if ( $return_type && $return_type->getName() === self::class ) {
+					$field_creation_methods[] = $reflection_method->getName();
+				}
+			}
+		}
+
+		return in_array( $method, $field_creation_methods, true );
 	}
 }
