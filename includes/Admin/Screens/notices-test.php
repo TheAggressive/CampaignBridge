@@ -30,6 +30,7 @@ if ( isset( $_POST['test_notices'] ) && wp_verify_nonce( $_POST['_wpnonce'] ?? '
 			Notices::warning( '⚠️ Warning: Please review your configuration before proceeding.' );
 			Notices::error( '❌ Error: Failed to connect to the external API. Please check your credentials.' );
 			Notices::success( '<strong>HTML Success:</strong> You can use <em>emphasis</em>, <code>code</code>, and <a href="#" target="_blank">links</a> in notices.' );
+			Notices::debug( '🐛 Debug: This debug notice only shows when WP_DEBUG is enabled.' );
 			break;
 
 		case 'add_single_notice':
@@ -45,6 +46,9 @@ if ( isset( $_POST['test_notices'] ) && wp_verify_nonce( $_POST['_wpnonce'] ?? '
 					break;
 				case 'error':
 					Notices::error( $message );
+					break;
+				case 'debug':
+					Notices::debug( $message );
 					break;
 				case 'info':
 				default:
@@ -139,6 +143,7 @@ if ( isset( $_POST['test_notices'] ) && wp_verify_nonce( $_POST['_wpnonce'] ?? '
 							<option value="info">Info ℹ️</option>
 							<option value="warning">Warning ⚠️</option>
 							<option value="error">Error ❌</option>
+							<option value="debug">Debug 🐛</option>
 						</select>
 					</td>
 				</tr>
@@ -281,6 +286,12 @@ if (update_option('my_setting', $new_value)) {
 					<td><code>Notices::error()</code></td>
 					<td><code>notice notice-error</code></td>
 					<td>Reporting failures or errors</td>
+				</tr>
+				<tr>
+					<td><span style="color: #666;">●</span> Debug</td>
+					<td><code>Notices::debug()</code></td>
+					<td><code>notice notice-debug</code></td>
+					<td>Debug information (WP_DEBUG only)</td>
 				</tr>
 			</tbody>
 		</table>

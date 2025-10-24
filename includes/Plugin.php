@@ -20,8 +20,8 @@ declare(strict_types=1);
 namespace CampaignBridge;
 
 use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\Core\Encryption;
 use CampaignBridge\Core\Service_Container;
+use CampaignBridge\Notices;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\REST\Routes as RestRoutes;
 
