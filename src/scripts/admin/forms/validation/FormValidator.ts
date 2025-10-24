@@ -466,10 +466,6 @@ export function initializeFormValidation(): void {
   // Auto-initialize validation for fields with data attributes
   const fields = document.querySelectorAll('[data-validation]');
 
-  console.log(
-    `[CampaignBridge Validation] Found ${fields.length} fields with validation`
-  );
-
   fields.forEach(field => {
     const fieldId = field.id;
     const validationData = field.getAttribute('data-validation');
@@ -480,10 +476,6 @@ export function initializeFormValidation(): void {
       const rules: ValidationRule[] = JSON.parse(validationData);
       const validator = FormValidator.getInstance();
 
-      console.log(
-        `[CampaignBridge Validation] Initializing field ${fieldId} with ${rules.length} rules:`,
-        rules
-      );
       validator.initializeField(fieldId, rules);
     } catch (error) {
       console.error(
@@ -492,10 +484,4 @@ export function initializeFormValidation(): void {
       );
     }
   });
-
-  if (fields.length > 0) {
-    console.log(
-      '[CampaignBridge Validation] Real-time validation is now active!'
-    );
-  }
 }

@@ -31,9 +31,6 @@
 /* 5. Validation system (real-time feedback) */
 @import './validation/validation.css';
 
-/* 6. Conditional fields system (show/hide based on other fields) */
-@import './conditional-fields.css';
-
 /* 7. Specific field type styles */
 @import './checkbox.css';
 @import './radio.css';
