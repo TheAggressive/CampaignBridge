@@ -106,18 +106,18 @@ final class Notices {
 		$notices_to_render = $notices;
 		self::$current     = array();
 
-		// Track which notices we've rendered in this call to avoid duplicates
-		$rendered_in_this_call = array();
+		// Track which notices we've rendered across all calls in this request
+		static $rendered_notices = array();
 
 		foreach ( $notices_to_render as $notice ) {
 			$notice_key = md5( $notice['type'] . '|' . $notice['message'] );
 
-			// Skip if we've already rendered this exact notice in this call
-			if ( in_array( $notice_key, $rendered_in_this_call, true ) ) {
+			// Skip if we've already rendered this exact notice in this request
+			if ( in_array( $notice_key, $rendered_notices, true ) ) {
 				continue;
 			}
 
-			$rendered_in_this_call[] = $notice_key;
+			$rendered_notices[] = $notice_key;
 
 			$class = 'notice notice-' . $notice['type'] . ' is-dismissible';
 

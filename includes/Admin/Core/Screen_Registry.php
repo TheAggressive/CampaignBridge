@@ -231,6 +231,9 @@ class Screen_Registry {
 		// This avoids maintenance burden of maintaining HTML whitelists.
 		echo $screen_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
+		// Render any notices that were added during screen processing (forms, etc.)
+		\CampaignBridge\Notices::render();
+
 		// Fire custom hook for individual screens to display notices after content processing.
 		// Security: Only allow hooks for valid screen names to prevent abuse.
 		if ( $this->is_valid_screen_name( $screen_name ) ) {
