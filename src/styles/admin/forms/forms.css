@@ -28,7 +28,6 @@
 /* 4. Reusable component patterns (shared across field types) */
 @import './repeater.css';
 
-/* 5. Validation system (real-time feedback) */
 @import './validation/validation.css';
 
 /* 7. Specific field type styles */

@@ -12,12 +12,12 @@ global $screen;
 
 // Add additional dependencies to the existing .asset.php dependencies.
 $screen->asset_enqueue_script(
-	'cb-block-editor-script',
+	'campaignbridge-block-editor-script',
 	'dist/scripts/editor/editor.asset.php',
 );
 
 $screen->enqueue_style(
-	'cb-block-editor-styles',
+	'campaignbridge-block-editor-styles',
 	'dist/styles/editor/editor.css',
 	array( 'wp-editor', 'wp-block-library', 'wp-edit-blocks', 'wp-components', 'wp-edit-post' )
 );

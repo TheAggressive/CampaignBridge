@@ -1545,11 +1545,11 @@ Global admin assets are loaded for all CampaignBridge screens:
 
 ```php
 // In Admin.php - global assets loaded for all screens
-wp_enqueue_style('cb-admin-global', \CampaignBridge_Plugin::url() . 'dist/styles/styles.css');
-wp_enqueue_script('cb-admin-global', \CampaignBridge_Plugin::url() . 'dist/scripts/admin/settings.js');
+wp_enqueue_style('campaignbridge-admin-global-styles', \CampaignBridge_Plugin::url() . 'dist/styles/styles.css');
+wp_enqueue_script('campaignbridge-admin-global-scripts', \CampaignBridge_Plugin::url() . 'dist/scripts/admin/settings.js');
 
 // With localization for JavaScript
-wp_localize_script('cb-admin-global', 'campaignBridge', [
+wp_localize_script('campaignbridge-admin-global-scripts', 'campaignBridge', [
     'ajaxUrl'   => admin_url('admin-ajax.php'),
     'restUrl'   => rest_url('campaignbridge/v1/'),
     'restNonce' => wp_create_nonce('wp_rest'),

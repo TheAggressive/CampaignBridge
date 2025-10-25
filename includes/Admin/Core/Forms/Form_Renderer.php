@@ -80,7 +80,7 @@ class Form_Renderer {
 	 */
 	public function enqueue_form_styles(): void {
 		// Load the compiled form styles (includes all components in single optimized file).
-		\CampaignBridge\Admin\Asset_Manager::enqueue_asset( 'campaignbridge-forms', 'dist/styles/admin/forms/forms.asset.php' );
+		\CampaignBridge\Admin\Asset_Manager::enqueue_asset( 'campaignbridge-admin-form-styles', 'dist/styles/admin/forms/forms.asset.php' );
 	}
 
 	/**

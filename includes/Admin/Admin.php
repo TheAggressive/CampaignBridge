@@ -100,10 +100,10 @@ class Admin {
 		}
 
 		// Global admin assets using Asset_Manager.
-		Asset_Manager::enqueue_asset( 'cb-admin-global-styles', 'dist/styles/styles.asset.php' );
+		Asset_Manager::enqueue_asset( 'campaignbridge-admin-global-styles', 'dist/styles/styles.asset.php' );
 
 		// Global form styles - load on all admin pages since many screens use forms.
-		Asset_Manager::enqueue_asset( 'cb-admin-form-styles', 'dist/styles/admin/forms/forms.asset.php' );
+		Asset_Manager::enqueue_asset( 'campaignbridge-admin-form-styles', 'dist/styles/admin/forms/forms.asset.php' );
 
 		// Encrypted fields functionality.
 		Asset_Manager::enqueue_asset_script(

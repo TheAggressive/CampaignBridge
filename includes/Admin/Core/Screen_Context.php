@@ -123,7 +123,7 @@ class Screen_Context {
 
 		// For traditional assets without .asset.php files, we need to create a mock asset data.
 		$asset_data = array(
-			'dependencies' => array_merge( array( 'cb-admin-global-styles' ), $deps ),
+			'dependencies' => array_merge( array( 'campaignbridge-admin-global-styles' ), $deps ),
 			'version'      => $version ?? \CampaignBridge_Plugin::VERSION,
 		);
 
@@ -201,7 +201,7 @@ class Screen_Context {
 	 * @return bool True if the asset was enqueued, false otherwise.
 	 */
 	public function asset_enqueue_style( string $handle, string $asset_file_path, array $additional_deps = array() ): bool {
-		$asset_data = $this->prepare_asset_data( $asset_file_path, $additional_deps, array( 'cb-admin-global-styles' ) );
+		$asset_data = $this->prepare_asset_data( $asset_file_path, $additional_deps, array( 'campaignbridge-admin-global-styles' ) );
 
 		// Use Asset_Manager to enqueue.
 		\CampaignBridge\Admin\Asset_Manager::enqueue_asset_style( 'cb-' . $handle, $asset_file_path, $asset_data );
