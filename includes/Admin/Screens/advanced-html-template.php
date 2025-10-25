@@ -18,11 +18,34 @@ $form = Form::make( 'advanced_profile' )
 	->save_to_options( 'advanced_profile_' )
 	->success( 'Profile updated successfully!' )
 	->error( 'Please correct the errors below.' )
+	->before_validate(
+		function ( $data ) {
+			$errors = array();
+
+			// Test custom validation error
+			if ( ! empty( $data['first_name'] ) && strlen( $data['first_name'] ) < 2 ) {
+					$errors['first_name'] = 'First name must be at least 2 characters long.';
+			}
+
+			// Test another custom validation error
+			if ( ! empty( $data['email'] ) && strpos( $data['email'], 'test' ) !== false ) {
+				$errors['email'] = 'Test email addresses are not allowed.';
+			}
+
+			// If we have errors, throw exception to trigger validation error
+			if ( ! empty( $errors ) ) {
+				throw new \Exception( 'Custom validation failed: ' . implode( ', ', $errors ) );
+			}
+
+			return $data;
+		}
+	)
 
 // Personal Info Tab.
 	->text( 'first_name', 'First Name' )->required()
 	->text( 'last_name', 'Last Name' )->required()
 	->email( 'email', 'Email Address' )->required()
+	->text( 'phone', 'Phone Number' )->required()->pattern( '/^\(\d{3}\) \d{3}-\d{4}$/', 'Please enter phone in format (123) 456-7890' )
 	->select(
 		'gender',
 		'Gender',
@@ -44,6 +67,7 @@ $form = Form::make( 'advanced_profile' )
 
 // Missing fields for the advanced template.
 	->date( 'birth_date', 'Birth Date' )
+	->number( 'age', 'Age' )->required()->min( 18 )->max( 120 )
 
 // Preferences Tab.
 	->checkbox( 'newsletter', 'Subscribe to newsletter' )
@@ -57,7 +81,9 @@ $form = Form::make( 'advanced_profile' )
 			'auto'  => 'Auto',
 		)
 	)
-	->textarea( 'bio', 'Biography' )->rows( 4 );
+	->textarea( 'bio', 'Biography' )->rows( 4 )
+	// Add a field that will always fail validation to guarantee an error notice
+	->text( 'test_error_field', 'Test Error Field' )->required()->pattern( '/^this-will-never-match$/', 'This validation always fails to demonstrate error notices.' );
 
 ?>
 
@@ -75,9 +101,21 @@ $form = Form::make( 'advanced_profile' )
 		<?php $form->render_field( 'last_name' ); ?>
 	</div>
 
-	<!-- Gender -->
-	<div class="gender-row">
+	<!-- Contact Info Row -->
+	<div class="contact-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+		<?php $form->render_field( 'email' ); ?>
+		<?php $form->render_field( 'phone' ); ?>
+	</div>
+
+	<!-- Age and Gender Row -->
+	<div class="details-row" style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+		<?php $form->render_field( 'age' ); ?>
 		<?php $form->render_field( 'gender' ); ?>
+	</div>
+
+	<!-- Test Error Field (will always show error) -->
+	<div class="error-test-row" style="margin-top: 1rem;">
+		<?php $form->render_field( 'test_error_field' ); ?>
 	</div>
 
 	</div>

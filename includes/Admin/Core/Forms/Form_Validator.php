@@ -161,11 +161,20 @@ class Form_Validator {
 
 		// Handle pattern validation.
 		if ( ! empty( $php_rules['pattern'] ) ) {
+			// Handle both string and array formats.
+			if ( is_array( $php_rules['pattern'] ) ) {
+				$pattern = $php_rules['pattern']['pattern'] ?? '';
+				$message = $php_rules['pattern']['message'] ?? \__( 'Value does not match required format.', 'campaignbridge' );
+			} else {
+				$pattern = $php_rules['pattern'];
+				$message = \__( 'Value does not match required format.', 'campaignbridge' );
+			}
+
 			$js_rules[] = array(
 				'name'    => 'pattern',
 				'type'    => 'pattern',
-				'pattern' => $php_rules['pattern'],
-				'message' => \__( 'Value does not match required format.', 'campaignbridge' ),
+				'pattern' => $pattern,
+				'message' => $message,
 			);
 		}
 
@@ -503,10 +512,19 @@ class Form_Validator {
 			},
 
 			'pattern'    => function ( $value, $rule_config, $field_label ) {
-				if ( ! preg_match( $rule_config, $value ) ) {
+				// Handle both string and array formats for backward compatibility.
+				if ( is_array( $rule_config ) ) {
+					$pattern = $rule_config['pattern'] ?? '';
+					$message = $rule_config['message'] ?? __( 'Value does not match required format.', 'campaignbridge' );
+				} else {
+					$pattern = $rule_config;
+					$message = __( 'Value does not match required format.', 'campaignbridge' );
+				}
+
+				if ( ! preg_match( $pattern, $value ) ) {
 					return new \WP_Error(
 						'invalid_pattern',
-						__( 'Value does not match required format.', 'campaignbridge' )
+						$message
 					);
 				}
 				return true;

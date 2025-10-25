@@ -25,7 +25,7 @@ class Form_Notice_Handler {
 	 */
 	public function trigger_success( Form_Config $config, array $data ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
 		$message = $config->get( 'success_message', \__( 'Saved successfully!', 'campaignbridge' ) );
-		add_settings_error( 'campaignbridge_form', 'success', wp_kses( $message, array() ), 'success' );
+		add_settings_error( 'campaignbridge_form', 'success', wp_kses_post( $message ), 'success' );
 	}
 
 	/**
@@ -35,29 +35,50 @@ class Form_Notice_Handler {
 	 * @param array<string, mixed> $errors Form errors.
 	 */
 	public function trigger_error( Form_Config $config, array $errors ): void {
-		if ( is_array( $errors ) ) {
-			foreach ( $errors as $field_id => $error_message ) {
-				if ( is_string( $error_message ) ) {
-					// Sanitize error message to prevent XSS.
-					$sanitized_message = wp_kses(
-						$error_message,
-						array(
-							'strong' => array(),
-							'em'     => array(),
-							'code'   => array(),
-						)
-					);
-
-					if ( 'unused_fields' === $field_id ) {
-						add_settings_error( 'campaignbridge_form', $field_id, $sanitized_message, 'warning' );
-					} else {
-						add_settings_error( 'campaignbridge_form', $field_id, $sanitized_message, 'error' );
-					}
-				}
-			}
-		} else {
+		if ( empty( $errors ) ) {
 			$message = $config->get( 'error_message', \__( 'An error occurred.', 'campaignbridge' ) );
-			add_settings_error( 'campaignbridge_form', 'error', wp_kses( $message, array() ), 'error' );
+			add_settings_error( 'campaignbridge_form', 'error', wp_kses_post( $message ), 'error' );
+			return;
+		}
+
+		// Separate validation errors from special error types.
+		$validation_errors = array();
+		$special_errors    = array();
+
+		foreach ( $errors as $field_id => $error_message ) {
+			if ( ! is_string( $error_message ) || empty( $error_message ) ) {
+				continue;
+			}
+
+			// Handle special error types.
+			if ( 'unused_fields' === $field_id ) {
+				$special_errors[ $field_id ] = $error_message;
+			} else {
+				$validation_errors[ $field_id ] = $error_message;
+			}
+		}
+
+		// Process validation errors as a single combined notice.
+		if ( ! empty( $validation_errors ) ) {
+			$unique_messages  = array_unique( array_values( $validation_errors ) );
+			$combined_message = implode( '<br>', array_map( 'esc_html', $unique_messages ) );
+
+			add_settings_error(
+				'campaignbridge_form',
+				'form_validation_errors',
+				$combined_message,
+				'error'
+			);
+		}
+
+		// Process special errors individually.
+		foreach ( $special_errors as $field_id => $error_message ) {
+			add_settings_error(
+				'campaignbridge_form',
+				$field_id,
+				wp_kses_post( $error_message ),
+				'warning'
+			);
 		}
 	}
 
@@ -68,16 +89,6 @@ class Form_Notice_Handler {
 	 * @param string      $message The warning message to display.
 	 */
 	public function trigger_warning( Form_Config $config, string $message ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
-		// Sanitize warning message to prevent XSS.
-		$sanitized_message = wp_kses(
-			$message,
-			array(
-				'strong' => array(),
-				'em'     => array(),
-				'code'   => array(),
-			)
-		);
-
-		add_settings_error( 'campaignbridge_form', 'warning', $sanitized_message, 'warning' );
+		add_settings_error( 'campaignbridge_form', 'warning', wp_kses_post( $message ), 'warning' );
 	}
 }

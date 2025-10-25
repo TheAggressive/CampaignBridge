@@ -257,9 +257,6 @@ class Form {
 
 		// Load form data if editing.
 		$this->data_manager->load_form_data();
-
-		// Handle submission.
-		$this->handler->handle_submission();
 	}
 
 	/**

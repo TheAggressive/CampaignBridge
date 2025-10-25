@@ -167,6 +167,24 @@ class Form_Field_Builder {
 	}
 
 	/**
+	 * Set pattern validation
+	 *
+	 * @param string $pattern Regular expression pattern.
+	 * @param string $message Custom error message.
+	 * @return Form_Field_Builder
+	 */
+	public function pattern( string $pattern, string $message = '' ): self {
+		$field_config          = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
+		$validation            = $field_config['validation'] ?? array();
+		$validation['pattern'] = array(
+			'pattern' => $pattern,
+			'message' => $message ?: 'Please enter a valid value.',
+		);
+		$this->form_builder->get_config()->update_field( $this->field_name, array( 'validation' => $validation ) );
+		return $this;
+	}
+
+	/**
 	 * Set minimum value (for number, range, slider inputs)
 	 *
 	 * @param int $min Minimum value.
