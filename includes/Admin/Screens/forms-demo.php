@@ -181,6 +181,37 @@ $contact_form = \CampaignBridge\Admin\Core\Form_Factory::contact( 'contact_demo'
 		}
 	);
 
+// Add simple validation demo
+add_action(
+	'admin_footer',
+	function () {
+		if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'campaignbridge-forms-demo' ) {
+			return;
+		}
+		?>
+	<script>
+	document.addEventListener('DOMContentLoaded', function() {
+		// Simple validation demo - add data attributes to trigger validation
+		setTimeout(function() {
+			const nameField = document.querySelector('input[name="contact_demo[name]"]');
+			const emailField = document.querySelector('input[name="contact_demo[email]"]');
+
+			if (nameField) {
+				nameField.setAttribute('data-validation', '[{"type": "required"}]');
+				nameField.id = 'demo_name';
+			}
+
+			if (emailField) {
+				emailField.setAttribute('data-validation', '[{"type": "required"}, {"type": "email"}]');
+				emailField.id = 'demo_email';
+			}
+		}, 500);
+	});
+	</script>
+		<?php
+	}
+);
+
 // ============================================================================
 // DEMO 2: FLUENT API - Settings Form (All Field Types)
 // ============================================================================
@@ -422,10 +453,10 @@ $div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 		DEMO 1: SIMPLE CONTACT FORM
 		============================================================================ -->
 	<div class="demo-section">
-		<div class="demo-header">
-			<h2>📧 Demo 1: Simple Contact Form</h2>
-			<p>Ultra-simple contact form using the pre-built Form_Factory::contact() method</p>
-		</div>
+	<div class="demo-header">
+		<h2>📧 Demo 1: Contact Form with Validation</h2>
+		<p>Simple contact form with real-time validation. Try leaving fields empty or entering invalid email to see the validation styles!</p>
+	</div>
 		<div class="demo-code">
 			<pre><code>$contact_form = Form_Factory::contact('contact_demo')
 	->after_save(function($data) {
