@@ -26,15 +26,15 @@
 	:root {
 	/* ===== BRAND COLORS ===== */
 	/* Using Tailwind CSS color variables for easy customization */
-	--brand-primary: var(--color-purple-600); /* Tailwind blue-600 */
-	--brand-primary-hover: var(--color-blue-700); /* Tailwind blue-700 */
-	--brand-primary-active: var(--color-blue-800); /* Tailwind blue-800 */
-	--brand-primary-muted: var(--color-blue-50); /* Tailwind blue-50 */
+	--brand-primary: var(--color-purple-600);
+	--brand-primary-hover: var(--color-blue-700);
+	--brand-primary-active: var(--color-blue-800);
+  --brand-primary-muted: var(--color-blue-50);
 
 	/* Secondary brand colors */
-	--brand-secondary: var(--color-indigo-500); /* Tailwind indigo-500 */
-	--brand-secondary-hover: var(--color-indigo-600); /* Tailwind indigo-600 */
-	--brand-secondary-active: var(--color-indigo-700); /* Tailwind indigo-700 */
+	--brand-secondary: var(--color-indigo-500);
+	--brand-secondary-hover: var(--color-indigo-600);
+	--brand-secondary-active: var(--color-indigo-700);
 
 	/* ===== SEMANTIC COLORS ===== */
 	/* Main semantic colors (using our brand colors) */

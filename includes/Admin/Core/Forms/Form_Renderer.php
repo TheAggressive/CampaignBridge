@@ -306,8 +306,33 @@ class Form_Renderer {
 		$config['value'] = $value;
 
 		// Add CSS class for styling.
-		$existing_class  = $config['class'] ?? '';
-		$config['class'] = trim( $existing_class . ' campaignbridge-field__input' );
+		$existing_class = $config['class'] ?? '';
+		$field_type     = $field_config['type'] ?? 'text';
+
+		// Determine base class based on field type.
+		$base_class_map = array(
+			'text'           => 'campaignbridge-field__input',
+			'email'          => 'campaignbridge-field__input',
+			'url'            => 'campaignbridge-field__input',
+			'password'       => 'campaignbridge-field__input',
+			'number'         => 'campaignbridge-field__input',
+			'tel'            => 'campaignbridge-field__input',
+			'search'         => 'campaignbridge-field__input',
+			'date'           => 'campaignbridge-field__input',
+			'time'           => 'campaignbridge-field__input',
+			'datetime-local' => 'campaignbridge-field__input',
+			'color'          => 'campaignbridge-field__input',
+			'range'          => 'campaignbridge-field__input',
+			'textarea'       => 'campaignbridge-field__textarea',
+			'select'         => 'campaignbridge-field__select',
+			'radio'          => 'campaignbridge-field__radio',
+			'checkbox'       => 'campaignbridge-field__checkbox',
+		);
+
+		$base_class = $base_class_map[ $field_type ] ?? 'campaignbridge-field__input';
+		$type_class = 'campaignbridge-field__' . $field_type;
+
+		$config['class'] = trim( $existing_class . ' ' . $base_class . ' ' . $type_class );
 
 		// Map field types to renderer classes.
 		$type_map = array(

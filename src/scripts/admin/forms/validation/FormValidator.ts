@@ -112,6 +112,12 @@ export class FormValidator {
       return { isValid: true, errors: [] };
     }
 
+    // Add validating state
+    const fieldContainer = field.closest('.campaignbridge-field-wrapper');
+    if (fieldContainer) {
+      fieldContainer.classList.add('campaignbridge-field-wrapper--validating');
+    }
+
     const value = field.value;
     const errors: string[] = [];
 
@@ -358,18 +364,18 @@ export class FormValidator {
 
     if (!fieldContainer) return;
 
-    // Remove existing validation classes
+    // Remove existing validation classes (including validating state)
     fieldContainer.classList.remove(
-      'campaignbridge-field--valid',
-      'campaignbridge-field--invalid',
-      'campaignbridge-field--validating'
+      'campaignbridge-field-wrapper--valid',
+      'campaignbridge-field-wrapper--invalid',
+      'campaignbridge-field-wrapper--validating'
     );
 
     // Add appropriate validation class
     if (result.isValid && this.config.showSuccessStates) {
-      fieldContainer.classList.add('campaignbridge-field--valid');
+      fieldContainer.classList.add('campaignbridge-field-wrapper--valid');
     } else if (!result.isValid) {
-      fieldContainer.classList.add('campaignbridge-field--invalid');
+      fieldContainer.classList.add('campaignbridge-field-wrapper--invalid');
     }
 
     // Update error messages

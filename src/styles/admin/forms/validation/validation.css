@@ -18,19 +18,16 @@
 
 .campaignbridge-field-wrapper {
   /* Modern invalid state - complementary to WordPress admin theme */
-  &--invalid,
-  &.campaignbridge-field--invalid {
+  &--invalid {
     .campaignbridge-field__input,
     .campaignbridge-field__textarea,
     .campaignbridge-field__select {
-      border-color: #dc3232; /* WordPress error red */
       box-shadow: 0 0 0 1px #dc3232;
     }
 
     .campaignbridge-field__input:focus,
     .campaignbridge-field__textarea:focus,
     .campaignbridge-field__select:focus {
-      border-color: #dc3232;
       box-shadow:
         0 0 0 1px #dc3232,
         0 0 0 3px rgba(220, 50, 50, 0.1);
@@ -43,19 +40,16 @@
   }
 
   /* Modern valid state - complementary to WordPress admin theme */
-  &--valid,
-  &.campaignbridge-field--valid {
+  &--valid {
     .campaignbridge-field__input,
     .campaignbridge-field__textarea,
     .campaignbridge-field__select {
-      border-color: #46b450; /* WordPress success green */
       box-shadow: 0 0 0 1px #46b450;
     }
 
     .campaignbridge-field__input:focus,
     .campaignbridge-field__textarea:focus,
     .campaignbridge-field__select:focus {
-      border-color: #46b450;
       box-shadow:
         0 0 0 1px #46b450,
         0 0 0 3px rgba(70, 180, 80, 0.1);
@@ -67,204 +61,61 @@
     }
   }
 
-  /* Modern validating state with shimmer loading effect */
-  &--validating {
-    .campaignbridge-field__input,
-    .campaignbridge-field__textarea,
-    .campaignbridge-field__select {
-      border-color: #007cba; /* WordPress admin blue */
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(0, 124, 186, 0.1),
-        transparent
-      );
-      background-size: 200% 100%;
-      animation: shimmer 2s infinite;
-      position: relative;
-      box-shadow: 0 0 0 1px rgba(0, 124, 186, 0.2);
-    }
+  /* Modern validating state - No shimmer effect */
 
-    .campaignbridge-field__input:focus,
-    .campaignbridge-field__textarea:focus,
-    .campaignbridge-field__select:focus {
-      border-color: #007cba;
-      box-shadow:
-        0 0 0 1px #007cba,
-        0 0 0 3px rgba(0, 124, 186, 0.1);
-      outline: 1px solid transparent;
-    }
+  /* Error message container */
+  &__errors,
+  .campaignbridge-field__errors {
+    @apply space-y-1;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
 
-    .campaignbridge-field__input::after,
-    .campaignbridge-field__textarea::after,
-    .campaignbridge-field__select::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(59, 130, 246, 0.1),
-        transparent
-      );
-      background-size: 200% 100%;
-      animation: loading 1.5s infinite;
-      pointer-events: none;
+    .campaignbridge-field-wrapper--invalid & {
+      opacity: 1;
+      max-height: 100px;
     }
   }
-}
 
-/* Error message container */
-&__errors,
-.campaignbridge-field__errors {
-  @apply space-y-1;
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: all 0.3s ease-in-out;
+  /* Individual error message */
+  &__error,
+  .campaignbridge-field__error {
+    @apply rounded px-2 py-1 text-sm;
+    color: #dc3232; /* WordPress error red */
+    border: 1px solid #dc3232;
+    background-color: #fff;
+    font-size: var(--form-font-size-help);
+    /* No slide-in animation */
 
-  .campaignbridge-field-wrapper--invalid & {
-    opacity: 1;
-    max-height: 100px;
+    /* No emoji icon */
   }
-}
 
-/* Individual error message */
-&__error,
-.campaignbridge-field__error {
-  @apply rounded px-2 py-1 text-sm;
-  color: #dc3232; /* WordPress error red */
-  border: 1px solid #dc3232;
-  background-color: #fff;
-  font-size: var(--form-font-size-help);
-  animation: slideIn 0.3s ease-out;
+  /* Success indicator */
+  &__success-indicator {
+    @apply absolute right-3 transform;
+    top: 50%;
+    --tw-translate-y: -50%;
+    @apply text-green-500 opacity-0 transition-opacity duration-200;
 
-  &::before {
-    content: '⚠️';
-    @apply mr-2;
+    .campaignbridge-field-wrapper--valid & {
+      opacity: 1;
+    }
   }
-}
 
-/* Success indicator */
-&__success-indicator {
-  @apply absolute right-3 transform;
-  top: 50%;
-  --tw-translate-y: -50%;
-  @apply text-green-500 opacity-0 transition-opacity duration-200;
-
-  .campaignbridge-field-wrapper--valid & {
-    opacity: 1;
-  }
-}
-
-/* Validation feedback animations */
-&--invalid {
-  animation: shake 0.5s ease-in-out;
-}
-
-&--valid {
-  animation: validPulse 0.6s ease-out;
+  /* Validation feedback - No animations */
 }
 
 /* ===== ANIMATIONS ===== */
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  10%,
-  30%,
-  50%,
-  70%,
-  90% {
-    transform: translateX(-2px);
-  }
-  20%,
-  40%,
-  60%,
-  80% {
-    transform: translateX(2px);
-  }
-}
-
-@keyframes slideIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes validPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-  }
-}
-
-@keyframes loading {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
+/* No animations defined */
 
 /* ===== FIELD TYPE SPECIFIC VALIDATION ===== */
 
-/* Email field validation */
-.campaignbridge-field__email {
-  .campaignbridge-field-wrapper--invalid &,
-  .campaignbridge-field--invalid & {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23dc3232'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 1rem;
-  }
-}
+/* Email field validation - No icon */
 
-/* URL field validation */
-.campaignbridge-field__url {
-  .campaignbridge-field-wrapper--invalid &,
-  .campaignbridge-field--invalid & {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23dc3232'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 0 00-5.656-5.656l-1.1 1.1'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 1rem;
-  }
-}
+/* URL field validation - No icon */
 
-/* Password field validation */
-.campaignbridge-field-wrapper__password {
-  .campaignbridge-field-wrapper--valid &,
-  .campaignbridge-field--valid & {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2346b450'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 1rem;
-  }
-}
+/* Password field validation - No icon */
 
 /* ===== RESPONSIVE VALIDATION ===== */
 @media (max-width: 640px) {
@@ -303,25 +154,16 @@
 }
 
 /* ===== ACCESSIBILITY ENHANCEMENTS ===== */
-@media (prefers-reduced-motion: reduce) {
-  .campaignbridge-field-wrapper {
-    &--invalid,
-    &--valid,
-    &__error {
-      animation: none;
-    }
-  }
-}
+/* No animations to disable */
 
 /* Focus management for validation states */
-.campaignbridge-field-wrapper--invalid
-  .campaignbridge-field-wrapper__input:focus,
-.campaignbridge-field-wrapper--invalid
-  .campaignbridge-field-wrapper__textarea:focus,
-.campaignbridge-field-wrapper--invalid
-  .campaignbridge-field-wrapper__select:focus {
-  @apply ring-2 ring-red-500;
-  --tw-ring-opacity: 0.5;
+.campaignbridge-field-wrapper--invalid .campaignbridge-field__input:focus,
+.campaignbridge-field-wrapper--invalid .campaignbridge-field__textarea:focus,
+.campaignbridge-field-wrapper--invalid .campaignbridge-field__select:focus {
+  box-shadow:
+    0 0 0 1px #dc3232,
+    0 0 0 3px rgba(220, 50, 50, 0.2);
+  outline: 1px solid transparent;
 }
 
 /* High contrast mode support */
