@@ -1,0 +1,49 @@
+/**
+ * Base conditional field styles
+ */
+
+/* Hidden state */
+.campaignbridge-field--hidden {
+  display: none !important;
+}
+
+/* Visible state */
+.campaignbridge-field--visible {
+  display: block !important;
+}
+
+/* Animation transitions */
+.campaignbridge-field {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Conditional field wrapper */
+.campaignbridge-conditional-field {
+  position: relative;
+}
+
+/* Loading state during evaluation */
+.campaignbridge-conditional-field--loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Required field indicators for conditionals */
+.campaignbridge-conditional-field[data-required='true']
+  .campaignbridge-field__label::after {
+  content: ' *';
+  color: #dc3232;
+  font-weight: bold;
+}
+
+/* Error states for conditional fields */
+.campaignbridge-conditional-field.campaignbridge-field--error {
+  border-left: 4px solid #dc3232;
+  padding-left: 10px;
+}
+
+/* Success states for conditional fields */
+.campaignbridge-conditional-field.campaignbridge-field--success {
+  border-left: 4px solid #46b450;
+  padding-left: 10px;
+}

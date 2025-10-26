@@ -239,27 +239,81 @@ class Form_Handler {
 
 			$existing_data = $this->form->data();
 
-			// Special handling for encrypted fields: preserve existing encrypted values if submitted value is empty.
+			// Merge submitted data with existing data using field-specific logic.
+			$merged_data = array();
+
 			foreach ( $this->fields as $field_id => $field_config ) {
-				if ( ( $field_config['type'] ?? '' ) === 'encrypted' ) {
-					$submitted_value = $submitted_data[ $field_id ] ?? null;
-					$existing_value  = $existing_data[ $field_id ] ?? null;
+				$submitted_value = $submitted_data[ $field_id ] ?? null;
+				$existing_value  = $existing_data[ $field_id ] ?? null;
 
-					// If submitted value is empty but existing value is encrypted, preserve existing value.
-					if ( empty( $submitted_value ) && ! empty( $existing_value ) && \CampaignBridge\Core\Encryption::is_encrypted_value( $existing_value ) ) {
-						$submitted_data[ $field_id ] = $existing_value;
-					}
-				}
+				// Use field-specific merge logic based on field type.
+				$merged_data[ $field_id ] = $this->merge_field_values( $field_id, $submitted_value, $existing_value, $field_config );
 			}
-
-			// Merge submitted data with existing data, giving priority to submitted data.
-			$merged_data = array_merge( $existing_data, $submitted_data );
 
 			return $merged_data;
 		}
 
 		// If no existing data available, just return submitted data.
 		return $submitted_data;
+	}
+
+	/**
+	 * Merge field values using type-specific logic
+	 *
+	 * @param string               $field_id       Field ID.
+	 * @param mixed                $submitted_value Submitted value (null if not submitted).
+	 * @param mixed                $existing_value Existing value.
+	 * @param array<string, mixed> $field_config   Field configuration.
+	 * @return mixed Merged value.
+	 */
+	private function merge_field_values( string $field_id, $submitted_value, $existing_value, array $field_config ) {
+		$field_type = $field_config['type'] ?? 'text';
+
+		// Use static merge methods based on field type.
+		switch ( $field_type ) {
+			case 'encrypted':
+				return $this->merge_encrypted_field_value( $submitted_value, $existing_value );
+			case 'checkbox':
+			case 'switch':
+				return $this->merge_checkbox_field_value( $submitted_value, $existing_value );
+			default:
+				// Default behavior: submitted value takes priority, fallback to existing.
+				return $submitted_value ?? $existing_value;
+		}
+	}
+
+	/**
+	 * Merge encrypted field values
+	 *
+	 * @param mixed $submitted_value Submitted value.
+	 * @param mixed $existing_value  Existing value.
+	 * @return mixed Merged value.
+	 */
+	private function merge_encrypted_field_value( $submitted_value, $existing_value ) {
+		// Preserve existing encrypted values if submitted value is empty.
+		if ( empty( $submitted_value ) && ! empty( $existing_value ) && \CampaignBridge\Core\Encryption::is_encrypted_value( $existing_value ) ) {
+			return $existing_value;
+		}
+
+		// Otherwise use default behavior.
+		return $submitted_value ?? $existing_value;
+	}
+
+	/**
+	 * Merge checkbox/switch field values
+	 *
+	 * @param mixed $submitted_value Submitted value.
+	 * @param mixed $existing_value  Existing value.
+	 * @return mixed Merged value.
+	 */
+	private function merge_checkbox_field_value( $submitted_value, $existing_value ) {
+		// If checkbox/switch was not submitted, it was unchecked.
+		if ( null === $submitted_value ) {
+			return false;
+		}
+
+		// Otherwise use default behavior.
+		return $submitted_value ?? $existing_value;
 	}
 
 	/**
@@ -464,6 +518,7 @@ class Form_Handler {
 			case 'number':
 				return \is_numeric( $value ) ? (float) $value : 0;
 			case 'checkbox':
+			case 'switch':
 				return \is_array( $value ) ? array_map( '\sanitize_text_field', $value ) : (bool) $value;
 			case 'encrypted':
 				// Encrypt sensitive data before saving to database.
@@ -530,7 +585,7 @@ class Form_Handler {
 	private function save_to_options( array $data ): bool {
 		foreach ( $data as $field_id => $value ) {
 			$option_key = $this->config->get( 'prefix', '' ) . $field_id . $this->config->get( 'suffix', '' );
-			$result     = \CampaignBridge\Core\Storage::update_option( $option_key, $value ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Nonce verification handled at form submission level.
+			\CampaignBridge\Core\Storage::update_option( $option_key, $value ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification
 
 			// Clear cache for this specific option.
 			\CampaignBridge\Core\Storage::wp_cache_delete( $option_key, 'options' );

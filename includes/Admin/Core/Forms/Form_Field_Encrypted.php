@@ -361,4 +361,24 @@ class Form_Field_Encrypted extends Form_Field_Input {
 
 		return implode( ' ', $parts );
 	}
+
+	/**
+	 * Merge submitted value with existing value for encrypted fields
+	 *
+	 * Preserves existing encrypted values if submitted value is empty to prevent
+	 * accidental loss of encrypted data.
+	 *
+	 * @param mixed $submitted_value Value submitted in form (null if not submitted).
+	 * @param mixed $existing_value  Existing saved value.
+	 * @return mixed Merged value.
+	 */
+	public function merge_values( $submitted_value, $existing_value ) {
+		// Preserve existing encrypted values if submitted value is empty.
+		if ( empty( $submitted_value ) && ! empty( $existing_value ) && Encryption::is_encrypted_value( $existing_value ) ) {
+			return $existing_value;
+		}
+
+		// Otherwise use default behavior: submitted value takes priority.
+		return $submitted_value ?? $existing_value;
+	}
 }

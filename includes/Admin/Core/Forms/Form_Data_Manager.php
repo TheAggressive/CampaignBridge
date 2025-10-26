@@ -123,8 +123,9 @@ class Form_Data_Manager {
 				$this->data[ $field_id ] = is_array( $saved_array ) && in_array( $key, $saved_array, true );
 			} else {
 				// Regular field - load normally.
-				$option_key              = $this->config['prefix'] . $field_id . $this->config['suffix'];
-				$saved_value             = \CampaignBridge\Core\Storage::get_option( $option_key, null );
+				$option_key  = $this->config['prefix'] . $field_id . $this->config['suffix'];
+				$saved_value = \CampaignBridge\Core\Storage::get_option( $option_key, null );
+
 				$this->data[ $field_id ] = $saved_value ?? $field_config['default'] ?? '';
 			}
 		}

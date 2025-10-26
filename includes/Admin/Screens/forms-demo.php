@@ -11,219 +11,38 @@
  */
 
 // Include the form system
-require_once __DIR__ . '/../Core/Form.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Builder.php';
-require_once __DIR__ . '/../Core/Forms/Form_Renderer.php';
-require_once __DIR__ . '/../Core/Forms/Form_Handler.php';
-require_once __DIR__ . '/../Core/Forms/Form_Data_Manager.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Interface.php';
-require_once __DIR__ . '/../Core/Forms/Form_Security.php';
-require_once __DIR__ . '/../Core/Forms/Form_Validator.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Factory.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Base.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Input.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Textarea.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Select.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Checkbox.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Radio.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_File.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Wysiwyg.php';
-require_once __DIR__ . '/../Core/Forms/Form_Field_Switch.php';
+use CampaignBridge\Admin\Core\Form;
+use CampaignBridge\Core\Storage;
 
-// Ensure WordPress environment is available
-if ( ! function_exists( 'wp_parse_args' ) ) {
-	// Provide fallback implementations for WordPress functions when not in WP context
-	function wp_parse_args( $args, $defaults = array() ) {
-		if ( is_object( $args ) ) {
-			$args = get_object_vars( $args );
-		}
-		if ( ! is_array( $args ) ) {
-			$args = array();
-		}
-		return array_merge( $defaults, $args );
-	}
-}
-
-if ( ! function_exists( 'wp_unslash' ) ) {
-	function wp_unslash( $value ) {
-		return is_string( $value ) ? stripslashes( $value ) : $value;
-	}
-}
-
-if ( ! function_exists( 'wp_kses_post' ) ) {
-	function wp_kses_post( $content ) {
-		return $content; // Basic fallback - in real WP this would sanitize
-	}
-}
-
-if ( ! function_exists( 'wp_editor' ) ) {
-	function wp_editor( $content, $editor_id, $settings = array() ) {
-		echo '<textarea id="' . esc_attr( $editor_id ) . '" name="' . esc_attr( $editor_id ) . '">' . esc_textarea( $content ) . '</textarea>';
-	}
-}
-
-if ( ! function_exists( 'esc_attr' ) ) {
-	function esc_attr( $text ) {
-		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
-	}
-}
-
-if ( ! function_exists( 'esc_html' ) ) {
-	function esc_html( $text ) {
-		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
-	}
-}
-
-if ( ! function_exists( 'esc_textarea' ) ) {
-	function esc_textarea( $text ) {
-		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
-	}
-}
-
-if ( ! function_exists( 'esc_url' ) ) {
-	function esc_url( $url, $protocols = null, $_context = 'display' ) {
-		return filter_var( $url, FILTER_SANITIZE_URL );
-	}
-}
-
-if ( ! function_exists( 'get_option' ) ) {
-	function get_option( $option, $default = false ) {
-		return $default;
-	}
-}
-
-if ( ! function_exists( '__' ) ) {
-	function __( $text, $domain = 'default' ) {
-		return $text;
-	}
-}
-
-if ( ! function_exists( '_e' ) ) {
-	function _e( $text, $domain = 'default' ) {
-		echo $text;
-	}
-}
-
-if ( ! function_exists( 'wp_create_nonce' ) ) {
-	function wp_create_nonce( $action ) {
-		return md5( $action . 'nonce_salt' );
-	}
-}
-
-if ( ! function_exists( 'wp_verify_nonce' ) ) {
-	function wp_verify_nonce( $nonce, $action ) {
-		return $nonce === wp_create_nonce( $action );
-	}
-}
-
-if ( ! function_exists( 'wp_nonce_field' ) ) {
-	function wp_nonce_field( $action = -1, $name = '_wpnonce', $referer = true, $echo = true ) {
-		$nonce  = wp_create_nonce( $action );
-		$output = '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $nonce ) . '" />';
-		if ( $referer ) {
-			$output .= '<input type="hidden" name="_wp_http_referer" value="' . esc_attr( $_SERVER['REQUEST_URI'] ?? '' ) . '" />';
-		}
-		if ( $echo ) {
-			echo $output;
-		}
-		return $output;
-	}
-}
-
-if ( ! function_exists( 'get_bloginfo' ) ) {
-	function get_bloginfo( $show = '' ) {
-		$defaults = array(
-			'name'        => 'Demo Site',
-			'description' => 'Demo site description',
-			'url'         => 'https://example.com',
-			'admin_email' => 'admin@example.com',
-		);
-		return $defaults[ $show ] ?? 'Demo Value';
-	}
-}
-
-if ( ! function_exists( 'get_site_url' ) ) {
-	function get_site_url() {
-		return 'https://example.com';
-	}
-}
-
-if ( ! function_exists( 'get_option' ) ) {
-	function get_option( $option, $default = false ) {
-		$defaults = array(
-			'admin_email' => 'admin@example.com',
-		);
-		return $defaults[ $option ] ?? $default;
-	}
-}
-
-	// Set up basic $_SERVER variables for testing
-if ( ! isset( $_SERVER['REQUEST_METHOD'] ) ) {
-	$_SERVER['REQUEST_METHOD'] = 'GET';
-}
-
-if ( ! isset( $_SERVER['REQUEST_URI'] ) ) {
-	$_SERVER['REQUEST_URI'] = '/test';
-}
-
-if ( ! isset( $_SERVER['HTTP_USER_AGENT'] ) ) {
-	$_SERVER['HTTP_USER_AGENT'] = 'Demo User Agent';
-}
 
 // ============================================================================
 // DEMO 1: FLUENT API - Contact Form (Super Simple)
 // ============================================================================
-$contact_form = \CampaignBridge\Admin\Core\Form_Factory::contact( 'contact_demo' )
+$contact_form = \CampaignBridge\Admin\Core\Form::make( 'contact_demo' )
+	->text( 'name', 'Your Name' )->required()
+	->email( 'email', 'Email Address' )->required()
+	->textarea( 'message', 'Message' )->required()
 	->after_save(
 		function ( $data ) {
 			// Simulate sending email
-			error_log( 'Contact form submitted: ' . $data['name'] . ' <' . $data['email'] . '>' );
+			print_r( 'Contact form submitted: ' . $data['name'] . ' <' . $data['email'] . '>' );
 		}
 	);
 
-// Add simple validation demo
-add_action(
-	'admin_footer',
-	function () {
-		if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'campaignbridge-forms-demo' ) {
-			return;
-		}
-		?>
-	<script>
-	document.addEventListener('DOMContentLoaded', function() {
-		// Simple validation demo - add data attributes to trigger validation
-		setTimeout(function() {
-			const nameField = document.querySelector('input[name="contact_demo[name]"]');
-			const emailField = document.querySelector('input[name="contact_demo[email]"]');
 
-			if (nameField) {
-				nameField.setAttribute('data-validation', '[{"type": "required"}]');
-				nameField.id = 'demo_name';
-			}
-
-			if (emailField) {
-				emailField.setAttribute('data-validation', '[{"type": "required"}, {"type": "email"}]');
-				emailField.id = 'demo_email';
-			}
-		}, 500);
-	});
-	</script>
-		<?php
-	}
-);
 
 // ============================================================================
 // DEMO 2: FLUENT API - Settings Form (All Field Types)
 // ============================================================================
-$settings_form = \CampaignBridge\Admin\Core\Form_Factory::settings_api( 'comprehensive_settings' )
-	// Basic inputs
+$settings_form = \CampaignBridge\Admin\Core\Form::make( 'comprehensive_settings' )
+	->save_to_options( 'cb_demo_' )
 	->text( 'site_name', 'Site Name' )
 		->default( get_bloginfo( 'name' ) )
 		->required()
 		->description( 'Your website name' )
 
 	->email( 'admin_email', 'Admin Email' )
-		->default( get_option( 'admin_email' ) )
+		->default( Storage::get_option( 'admin_email' ) )
 		->required()
 		->description( 'Primary admin email' )
 
@@ -343,10 +162,14 @@ $settings_form = \CampaignBridge\Admin\Core\Form_Factory::settings_api( 'compreh
 
 	->submit( 'Save All Settings' );
 
-// ============================================================================
-// DEMO 3: FLUENT API - User Registration Form
-// ============================================================================
-$register_form = \CampaignBridge\Admin\Core\Form_Factory::register( 'user_registration_demo' )
+	// ============================================================================
+	// DEMO 3: FLUENT API - User Registration Form
+	// ============================================================================
+	$register_form = \CampaignBridge\Admin\Core\Form::make( 'user_registration_demo' )
+	->text( 'username', 'Username' )->required()
+	->email( 'email', 'Email Address' )->required()
+	->password( 'password', 'Password' )->required()
+	->password( 'password_confirm', 'Confirm Password' )->required()
 	->before_validate(
 		function ( $data ) {
 			if ( $data['password'] !== $data['password_confirm'] ) {
@@ -363,10 +186,10 @@ $register_form = \CampaignBridge\Admin\Core\Form_Factory::register( 'user_regist
 		}
 	);
 
-// ============================================================================
-// DEMO 4: FLUENT API - Custom Form with Custom Layout
-// ============================================================================
-$custom_form = \CampaignBridge\Admin\Core\Form::make( 'custom_layout_demo' )
+	// ============================================================================
+	// DEMO 4: FLUENT API - Custom Form with Custom Layout
+	// ============================================================================
+	$custom_form = \CampaignBridge\Admin\Core\Form::make( 'custom_layout_demo' )
 	->method( 'POST' )
 	->render_custom(
 		function () {
@@ -411,17 +234,17 @@ $custom_form = \CampaignBridge\Admin\Core\Form::make( 'custom_layout_demo' )
 	->submit( 'Submit Custom Form' );
 
 
-// ============================================================================
-// DEMO 6: FLUENT API - Div Layout (Modern Alternative to Table)
-// ============================================================================
-$div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
+	// ============================================================================
+	// DEMO 6: FLUENT API - Div Layout (Modern Alternative to Table)
+	// ============================================================================
+	$div_form = \CampaignBridge\Admin\Core\Form::make( 'div_layout_demo' )
 	->div() // Use div layout instead of table.
 	->text( 'name', 'Name' )->required()->placeholder( 'Your name' )
 	->email( 'email', 'Email' )->required()->placeholder( 'your@email.com' )
 	->textarea( 'message', 'Message' )->rows( 4 )->placeholder( 'Your message...' )
 	->checkbox( 'agree', 'I agree to terms' )->required()
 	->submit( 'Send Message' );
-?>
+	?>
 
 <div class="wrap">
 	<h1>Complete Form System Demo - All Forms, All Approaches</h1>

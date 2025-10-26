@@ -98,7 +98,6 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 		return $this->validator->validate( $value, $rules, $this->config['label'] ?? '' );
 	}
 
-
 	/**
 	 * Render common field attributes
 	 *

@@ -28,13 +28,7 @@ class Form_Field_Checkbox extends Form_Field_Base {
 		if ( empty( $options ) ) {
 			$checked = ! empty( $value ) ? ' checked' : '';
 
-			printf(
-				'<input type="checkbox" value="1" %s%s />',
-				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				$checked // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			);
-
-			// Add hidden input to ensure value is submitted when unchecked.
+			// Add hidden input BEFORE checkbox to ensure unchecked state, but allow checkbox to override.
 			// Skip for repeater fields (they handle unchecked state differently).
 			if ( ! isset( $this->config['skip_hidden_field'] ) || ! $this->config['skip_hidden_field'] ) {
 				printf(
@@ -42,6 +36,12 @@ class Form_Field_Checkbox extends Form_Field_Base {
 					esc_attr( $this->config['name'] )
 				);
 			}
+
+			printf(
+				'<input type="checkbox" value="1" %s%s />',
+				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$checked // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			);
 
 			return;
 		}
@@ -119,5 +119,24 @@ class Form_Field_Checkbox extends Form_Field_Base {
 		}
 
 		parent::render_table_row();
+	}
+
+	/**
+	 * Merge submitted value with existing value for checkbox fields
+	 *
+	 * Handles the special case where unchecked checkboxes are not submitted.
+	 *
+	 * @param mixed $submitted_value Value submitted in form (null if not submitted).
+	 * @param mixed $existing_value  Existing saved value.
+	 * @return mixed Merged value.
+	 */
+	public function merge_values( $submitted_value, $existing_value ) {
+		// If checkbox was not submitted, it was unchecked.
+		if ( null === $submitted_value ) {
+			return false;
+		}
+
+		// Otherwise use default behavior: submitted value takes priority.
+		return $submitted_value ?? $existing_value;
 	}
 }

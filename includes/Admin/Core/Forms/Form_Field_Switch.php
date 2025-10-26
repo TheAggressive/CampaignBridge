@@ -33,13 +33,24 @@ class Form_Field_Switch extends Form_Field_Base {
 			$switch_classes .= ' ' . $this->config['class'];
 		}
 
+		// Add hidden input BEFORE checkbox to ensure unchecked state, but allow checkbox to override.
+		// Skip for repeater fields (they handle unchecked state differently).
+		$hidden_input = '';
+		if ( ! isset( $this->config['skip_hidden_field'] ) || ! $this->config['skip_hidden_field'] ) {
+			$hidden_input = sprintf(
+				'<input type="hidden" name="%s" value="0" />',
+				esc_attr( $field_name )
+			);
+		}
+
 		printf(
-			'<div class="%s">
+			'%s<div class="%s">
 				<input type="checkbox" id="%s" name="%s" value="1" %s %s />
 				<label for="%s" class="campaignbridge-switch__label">
 					<span class="campaignbridge-switch__slider"></span>
 				</label>
 			</div>',
+			$hidden_input, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			esc_attr( $switch_classes ),
 			esc_attr( $field_id ),
 			esc_attr( $field_name ),
@@ -47,5 +58,24 @@ class Form_Field_Switch extends Form_Field_Base {
 			$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			esc_attr( $field_id )
 		);
+	}
+
+	/**
+	 * Merge submitted value with existing value for switch fields
+	 *
+	 * Handles the special case where unchecked switches are not submitted.
+	 *
+	 * @param mixed $submitted_value Value submitted in form (null if not submitted).
+	 * @param mixed $existing_value  Existing saved value.
+	 * @return mixed Merged value.
+	 */
+	public function merge_values( $submitted_value, $existing_value ) {
+		// If switch was not submitted, it was unchecked.
+		if ( null === $submitted_value ) {
+			return false;
+		}
+
+		// Otherwise use default behavior: submitted value takes priority.
+		return $submitted_value ?? $existing_value;
 	}
 }

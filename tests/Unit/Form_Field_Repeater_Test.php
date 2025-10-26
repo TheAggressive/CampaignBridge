@@ -383,4 +383,95 @@ class Form_Field_Repeater_Test extends Test_Case {
 		$this->assertEquals( 'select', $fields['field']['type'] );
 		$this->assertEquals( $choices, $fields['field']['options'] );
 	}
+
+	/**
+	 * Test form data merge logic for different field types.
+	 */
+	public function test_form_data_merge_logic(): void {
+		$form = Form::make( 'merge_test' );
+		$form->text( 'regular_field', 'Regular' )
+			->encrypted( 'encrypted_field', 'Encrypted' )
+			->checkbox( 'checkbox_field', 'Checkbox' )
+			->switch( 'switch_field', 'Switch' );
+
+		// Get the form handler to test merge logic
+		$handler = $form->get_handler();
+
+		// Test data scenarios
+		$existing_data = array(
+			'regular_field'   => 'old_value',
+			'encrypted_field' => \CampaignBridge\Core\Encryption::encrypt( 'old_encrypted' ),
+			'checkbox_field'  => true,
+			'switch_field'    => true,
+		);
+
+		$field_config = array(
+			'regular_field'   => array( 'type' => 'text' ),
+			'encrypted_field' => array( 'type' => 'encrypted' ),
+			'checkbox_field'  => array( 'type' => 'checkbox' ),
+			'switch_field'    => array( 'type' => 'switch' ),
+		);
+
+		// Test 1: Regular field - submitted value takes priority
+		$method = $this->get_reflection_method( $handler, 'merge_field_values' );
+		$result = $method->invoke( $handler, 'regular_field', 'new_value', $existing_data['regular_field'], $field_config['regular_field'] );
+		$this->assertEquals( 'new_value', $result );
+
+		// Test 2: Encrypted field - preserves encrypted value when empty submitted
+		$result = $method->invoke( $handler, 'encrypted_field', '', $existing_data['encrypted_field'], $field_config['encrypted_field'] );
+		$this->assertEquals( $existing_data['encrypted_field'], $result );
+
+		// Test 3: Encrypted field - uses submitted value when not empty
+		$result = $method->invoke( $handler, 'encrypted_field', 'new_encrypted', $existing_data['encrypted_field'], $field_config['encrypted_field'] );
+		$this->assertEquals( 'new_encrypted', $result );
+
+		// Test 4: Checkbox/Switch - returns false when not submitted
+		$result = $method->invoke( $handler, 'checkbox_field', null, $existing_data['checkbox_field'], $field_config['checkbox_field'] );
+		$this->assertFalse( $result );
+
+		// Test 5: Checkbox/Switch - uses submitted value when submitted
+		$result = $method->invoke( $handler, 'switch_field', '1', $existing_data['switch_field'], $field_config['switch_field'] );
+		$this->assertEquals( '1', $result );
+	}
+
+	/**
+	 * Test field-specific merge logic for different field types.
+	 */
+	public function test_field_specific_merge_logic(): void {
+		$validator = new \CampaignBridge\Admin\Core\Forms\Form_Validator();
+
+		// Test switch field merge logic
+		$switch_field = new \CampaignBridge\Admin\Core\Forms\Form_Field_Switch( array( 'type' => 'switch' ), $validator );
+
+		// Switch not submitted (unchecked) should return false
+		$result = $switch_field->merge_values( null, true );
+		$this->assertFalse( $result );
+
+		// Switch submitted as checked should return submitted value
+		$result = $switch_field->merge_values( '1', false );
+		$this->assertEquals( '1', $result );
+
+		// Test checkbox field merge logic
+		$checkbox_field = new \CampaignBridge\Admin\Core\Forms\Form_Field_Checkbox( array( 'type' => 'checkbox' ), $validator );
+
+		// Checkbox not submitted (unchecked) should return false
+		$result = $checkbox_field->merge_values( null, true );
+		$this->assertFalse( $result );
+
+		// Checkbox submitted as checked should return submitted value
+		$result = $checkbox_field->merge_values( '1', false );
+		$this->assertEquals( '1', $result );
+
+		// Test encrypted field merge logic
+		$encrypted_field = new \CampaignBridge\Admin\Core\Forms\Form_Field_Encrypted( array( 'type' => 'encrypted' ), $validator );
+		$encrypted_value = \CampaignBridge\Core\Encryption::encrypt( 'test_value' );
+
+		// Encrypted field with empty submission should preserve existing value
+		$result = $encrypted_field->merge_values( '', $encrypted_value );
+		$this->assertEquals( $encrypted_value, $result );
+
+		// Encrypted field with new value should use new value
+		$result = $encrypted_field->merge_values( 'new_value', $encrypted_value );
+		$this->assertEquals( 'new_value', $result );
+	}
 }

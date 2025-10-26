@@ -823,14 +823,6 @@ class Form_Builder {
 	 * @return void
 	 */
 	public function form_end(): void {
-		// Handle form submission/validation on POST requests.
-		// We validate on every POST to check for errors, regardless of previous submission status.
-		$request_method = strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) );
-
-		if ( 'POST' === $request_method ) {
-			$this->form->get_handler()->handle_submission();
-		}
-
 		$this->form->ensure_renderer();
 
 		// Render form closing tag.

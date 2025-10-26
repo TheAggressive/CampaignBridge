@@ -245,8 +245,8 @@ class Form_Field_Repeater {
 				$field->class( 'campaignbridge-repeater-' . $this->group_layout );
 			}
 
-			// For checkbox type, disable hidden field (repeater handles unchecked state).
-			if ( 'checkbox' === $type ) {
+			// For checkbox and switch types, disable hidden field (repeater handles unchecked state).
+			if ( in_array( $type, array( 'checkbox', 'switch' ), true ) ) {
 				$this->form_builder->get_config()->update_field( $field_name, array( 'skip_hidden_field' => true ) );
 			}
 

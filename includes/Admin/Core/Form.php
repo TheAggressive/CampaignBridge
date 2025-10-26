@@ -60,15 +60,6 @@ class Form {
 	 */
 	protected array $rendered_fields = array();
 
-	/**
-	 * Track form lifecycle for validation
-	 *
-	 * @var array<string, bool>
-	 */
-	private array $form_lifecycle = array(
-		'form_start_called' => false,
-		'form_end_called'   => false,
-	);
 
 	/**
 	 * Query optimizer for database performance
@@ -177,17 +168,16 @@ class Form {
 
 	/**
 	 * Ensure renderer is initialized (lazy initialization)
+	 * Always recreates renderer to ensure it has the latest data after form submission.
 	 */
 	public function ensure_renderer(): void {
-		if ( ! $this->renderer ) {
-			$this->renderer = $this->container->create_form_renderer(
-				$this,
-				$this->config,
-				$this->config->get_fields(),
-				$this->data_manager->get_data(),
-				$this->handler
-			);
-		}
+		$this->renderer = $this->container->create_form_renderer(
+			$this,
+			$this->config,
+			$this->config->get_fields(),
+			$this->data_manager->get_data(),
+			$this->handler
+		);
 	}
 
 	/**
@@ -270,12 +260,13 @@ class Form {
 		assert( null !== $this->data_manager, 'Data manager must be initialized' );
 		assert( null !== $this->handler, 'Handler must be initialized' );
 
-		$this->ensure_renderer();
-
 		// Handle form submission if this is a POST request and form hasn't been submitted yet.
 		if ( 'POST' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) ) && ! $this->handler->is_submitted() ) {
 			$this->handler->handle_submission();
 		}
+
+		// Ensure renderer is initialized AFTER submission handling to get updated data.
+		$this->ensure_renderer();
 
 		$this->renderer->render_form_open();
 
@@ -305,8 +296,6 @@ class Form {
 		assert( null !== $this->handler, 'Handler must be initialized' );
 		return $this->handler->is_valid();
 	}
-
-
 
 	/**
 	 * Get the form handler instance (for internal use by Form_Builder)

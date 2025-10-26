@@ -48,6 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Nonce verification for all form submissions
   - File upload security with MIME type validation and malicious content detection
 
+- **Form Data Preservation**: Fixed critical data preservation issues
+  - Switch fields now use hidden inputs for reliable checked/unchecked state
+  - Fixed array concatenation bug in form data merging (array_merge → array_replace)
+  - Switch fields now properly sanitize as booleans like checkboxes
+  - Repeater fields with switches maintain state correctly across form submissions
+
 - **Accessibility Improvements**: WCAG 2.1 AA compliance enhancements
   - ARIA attributes for form fields and error states
   - Proper `<fieldset>` and `<legend>` for radio button groups
