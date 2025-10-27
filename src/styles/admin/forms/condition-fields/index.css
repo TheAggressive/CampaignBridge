@@ -12,24 +12,19 @@
   display: block;
 }
 
-/* Smooth transitions for conditional fields */
+/* Instant transitions for conditional fields */
 .campaignbridge-conditional-field {
-  transition:
-    opacity 0.3s ease-in-out,
-    max-height 0.3s ease-in-out;
+  transition: none;
 }
 
 /* Initially hidden state */
 .campaignbridge-conditional-field.campaignbridge-conditional-hidden {
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
+  display: none !important;
 }
 
-/* Visible state with animation */
+/* Visible state */
 .campaignbridge-conditional-field.campaignbridge-conditional-visible {
-  opacity: 1;
-  max-height: 1000px; /* Large enough for most content */
+  display: block;
 }
 
 /* Conditional field wrapper */

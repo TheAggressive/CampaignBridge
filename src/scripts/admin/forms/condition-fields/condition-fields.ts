@@ -179,6 +179,7 @@ export class ConditionalEngine {
   private updateFields(fieldStates: {
     [fieldId: string]: { visible: boolean; required: boolean };
   }): void {
+    // Update each field based on its new state
     Object.entries(fieldStates).forEach(([fieldId, state]) => {
       const fieldName = `${this.formId}[${fieldId}]`;
       const field = this.form.querySelector(
@@ -190,7 +191,7 @@ export class ConditionalEngine {
           '.campaignbridge-conditional-field'
         ) as HTMLElement;
 
-        // Update visibility
+        // Update visibility based on the state
         if (state.visible) {
           this.showField(field, conditionalWrapper);
         } else {
@@ -242,16 +243,12 @@ export class ConditionalEngine {
       targetElement.classList.add('campaignbridge-field');
     }
 
-    targetElement.classList.remove('campaignbridge-field--hidden');
-    targetElement.classList.add(
-      'campaignbridge-field--visible',
-      'campaignbridge-field--showing'
+    targetElement.classList.remove(
+      'campaignbridge-field--hidden',
+      'campaignbridge-field--hiding'
     );
+    targetElement.classList.add('campaignbridge-field--visible');
     targetElement.style.display = '';
-
-    setTimeout(() => {
-      targetElement.classList.remove('campaignbridge-field--showing');
-    }, 300);
   }
 
   private hideField(
@@ -272,20 +269,17 @@ export class ConditionalEngine {
     if (conditionalWrapper) {
       conditionalWrapper.classList.remove('campaignbridge-conditional-visible');
       conditionalWrapper.classList.add('campaignbridge-conditional-hidden');
+      conditionalWrapper.style.display = 'none';
       return;
     }
 
-    // Legacy handling for non-wrapped fields
-    targetElement.classList.remove('campaignbridge-field--visible');
-    targetElement.classList.add(
-      'campaignbridge-field--hidden',
-      'campaignbridge-field--hiding'
+    // Legacy handling for non-wrapped fields - hide instantly
+    targetElement.classList.remove(
+      'campaignbridge-field--visible',
+      'campaignbridge-field--showing'
     );
-
-    setTimeout(() => {
-      targetElement.classList.remove('campaignbridge-field--hiding');
-      targetElement.style.display = 'none';
-    }, 300);
+    targetElement.classList.add('campaignbridge-field--hidden');
+    targetElement.style.display = 'none';
   }
 
   private getFormData(): any {
