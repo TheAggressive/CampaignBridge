@@ -51,6 +51,7 @@ class Form_Security {
 		// Verify nonce.
 		$nonce_action = 'campaignbridge_form_' . $this->form_id;
 		$nonce_name   = $this->form_id . '_wpnonce';
+		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput
 		if ( ! isset( $_POST[ $nonce_name ] ) || ! \wp_verify_nonce( sanitize_text_field( \wp_unslash( $_POST[ $nonce_name ] ) ), $nonce_action ) ) {
 			return false;
 		}
@@ -302,7 +303,6 @@ class Form_Security {
 	}
 
 	/**
-	 *
 	 * Validate file upload security.
 	 *
 	 * @param array<string, mixed> $file     File data from $_FILES.
@@ -312,6 +312,47 @@ class Form_Security {
 	 */
 	public function validate_file_upload( array $file, array $field_config, bool $skip_upload_check = false ) {
 		// Check for upload errors.
+		$upload_error = $this->validate_upload_error( $file );
+		if ( is_wp_error( $upload_error ) ) {
+			return $upload_error;
+		}
+
+		// Verify file is actually uploaded via HTTP POST.
+		$upload_check = $this->validate_upload_method( $file, $skip_upload_check );
+		if ( is_wp_error( $upload_check ) ) {
+			return $upload_check;
+		}
+
+		// Validate filename security.
+		$filename_validation = $this->validate_filename( $file );
+		if ( is_wp_error( $filename_validation ) ) {
+			return $filename_validation;
+		}
+
+		$filename = $file['name'];
+
+		// Check file size.
+		$size_validation = $this->validate_file_size( $file, $field_config, $filename );
+		if ( is_wp_error( $size_validation ) ) {
+			return $size_validation;
+		}
+
+		// Validate MIME type.
+		$mime_validation = $this->validate_mime_type( $file, $field_config, $filename );
+		if ( is_wp_error( $mime_validation ) ) {
+			return $mime_validation;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Validate upload error codes.
+	 *
+	 * @param array<string, mixed> $file File data.
+	 * @return bool|\WP_Error True if no error, WP_Error if upload failed.
+	 */
+	private function validate_upload_error( array $file ) {
 		if ( UPLOAD_ERR_OK !== $file['error'] ) {
 			// Log security-relevant upload errors (excluding benign cases like no file selected).
 			if ( UPLOAD_ERR_NO_FILE !== $file['error'] ) {
@@ -330,8 +371,18 @@ class Form_Security {
 			);
 		}
 
-		// Verify file is actually uploaded via HTTP POST (can be skipped for testing).
-		if ( ! $skip_upload_check && ! is_uploaded_file( $file['tmp_name'] ) ) {
+		return true;
+	}
+
+	/**
+	 * Validate upload method (ensure file was uploaded via HTTP POST).
+	 *
+	 * @param array<string, mixed> $file File data.
+	 * @param bool                 $skip_check Skip validation.
+	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
+	 */
+	private function validate_upload_method( array $file, bool $skip_check ) {
+		if ( ! $skip_check && ! is_uploaded_file( $file['tmp_name'] ) ) {
 			$this->log_security_event(
 				'invalid_upload_method',
 				array(
@@ -346,7 +397,16 @@ class Form_Security {
 			);
 		}
 
-		// Validate filename for security.
+		return true;
+	}
+
+	/**
+	 * Validate filename security.
+	 *
+	 * @param array<string, mixed> $file File data.
+	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
+	 */
+	private function validate_filename( array $file ) {
 		$filename = $file['name'] ?? '';
 		if ( empty( $filename ) ) {
 			return new \WP_Error(
@@ -370,7 +430,18 @@ class Form_Security {
 			);
 		}
 
-		// Check file size with additional validation.
+		return true;
+	}
+
+	/**
+	 * Validate file size.
+	 *
+	 * @param array<string, mixed> $file File data.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param string               $filename Filename for logging.
+	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
+	 */
+	private function validate_file_size( array $file, array $field_config, string $filename ) {
 		$max_size = $field_config['max_size'] ?? \wp_max_upload_size();
 		if ( $file['size'] > $max_size ) {
 			$this->log_security_event(
@@ -400,7 +471,18 @@ class Form_Security {
 			);
 		}
 
-		// MIME type validation - reject if not in allowed types.
+		return true;
+	}
+
+	/**
+	 * Validate MIME type.
+	 *
+	 * @param array<string, mixed> $file File data.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param string               $filename Filename for logging.
+	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
+	 */
+	private function validate_mime_type( array $file, array $field_config, string $filename ) {
 		$allowed_types = $field_config['allowed_types'] ?? array();
 		if ( ! empty( $allowed_types ) ) {
 			// Check both the provided MIME type and the detected MIME type from filename.
@@ -540,7 +622,7 @@ class Form_Security {
 	 *
 	 * @return string Client IP address.
 	 */
-	private function get_client_ip(): string {
+	public static function get_client_ip(): string {
 		$headers = array(
 			'HTTP_CF_CONNECTING_IP',
 			'HTTP_CLIENT_IP',

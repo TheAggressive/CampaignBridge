@@ -70,14 +70,14 @@ if ( isset( $_POST['test_notices'] ) && wp_verify_nonce( $_POST['_wpnonce'] ?? '
 
 			// Test transient directly
 			$test_key = 'cb_test_transient_' . time();
-			set_transient( $test_key, 'test_value', 60 );
-			$test_value = get_transient( $test_key );
+			\CampaignBridge\Core\Storage::set_transient( $test_key, 'test_value', 60 );
+			$test_value = \CampaignBridge\Core\Storage::get_transient( $test_key );
 			if ( $test_value === 'test_value' ) {
 				Notices::success( '✅ Transients are working correctly.' );
 			} else {
 				Notices::error( '❌ Transients are NOT working - persistence will fail.' );
 			}
-			delete_transient( $test_key );
+			\CampaignBridge\Core\Storage::delete_transient( $test_key );
 			break;
 	}
 }
@@ -242,7 +242,7 @@ try {
 }
 
 // In settings pages
-if (update_option('my_setting', $new_value)) {
+if (\CampaignBridge\Core\Storage::update_option('my_setting', $new_value)) {
 	Notices::success('Settings updated successfully!');
 } else {
 	Notices::error('Failed to update settings.');

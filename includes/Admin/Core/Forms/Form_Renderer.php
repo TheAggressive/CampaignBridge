@@ -140,52 +140,27 @@ class Form_Renderer {
 	 * @param array<string, mixed> $field_config Field configuration.
 	 */
 	private function render_table_field( string $field_id, array $field_config ): void {
-		// Note: prefix/suffix are for options storage, not HTML field names.
-		$field_name = $field_id;
-		$value      = $this->data[ $field_id ] ?? $field_config['default'] ?? '';
-		$label      = $field_config['label'] ?? ucfirst( str_replace( '_', ' ', $field_id ) );
-		$required   = $field_config['required'] ?? false;
+		$field_data      = $this->prepare_field_data( $field_id, $field_config );
+		$wrapper_classes = $this->build_field_wrapper_classes( $field_data['field_name'], $field_config );
 
-		// Get form ID for namespacing the field ID to match the input element.
-		$form_id       = $this->config['form_id'] ?? 'form';
-		$field_id_attr = $form_id . '_' . $field_name;
-
-		// Field wrapper classes.
-		$wrapper_classes = array( 'campaignbridge-field-wrapper' );
-
-		// For repeater fields, add layout classes to wrapper if detected in field classes.
-		if ( strpos( $field_name, '___' ) !== false && isset( $field_config['class'] ) ) {
-			$field_class_string = $field_config['class'];
-			if ( strpos( $field_class_string, 'campaignbridge-repeater-horizontal' ) !== false ) {
-				$wrapper_classes[] = 'campaignbridge-repeater-horizontal';
-			}
-			if ( strpos( $field_class_string, 'campaignbridge-repeater-vertical' ) !== false ) {
-				$wrapper_classes[] = 'campaignbridge-repeater-vertical';
-			}
+		// For table layout, add conditional class to tr for FOUC prevention.
+		$row_classes = array( 'campaignbridge-field' );
+		if ( isset( $field_config['conditional'] ) ) {
+			$row_classes[] = 'campaignbridge-conditional-hidden';
 		}
 
-		// For table layout, we still need the validation wrapper for proper styling.
-		printf( '<tr><th scope="row"><label for="%s" class="campaignbridge-field__label">%s%s</label></th><td>', \esc_attr( $field_id_attr ), \esc_html( $label ), $required ? '<span class="campaignbridge-field__required">*</span>' : '' );
+		printf(
+			'<tr class="%s"><th scope="row"><label for="%s" class="campaignbridge-field__label">%s%s</label></th><td>',
+			\esc_attr( implode( ' ', $row_classes ) ),
+			\esc_attr( $field_data['field_id_attr'] ),
+			\esc_html( $field_data['label'] ),
+			$field_data['required'] ? '<span class="campaignbridge-field__required">*</span>' : ''
+		);
 
 		// Wrap field input in validation container with validation state classes.
 		printf( '<div class="%s">', esc_attr( implode( ' ', $wrapper_classes ) ) );
-		$this->render_field_input( $field_name, $field_config, $value );
 
-		// Error container for validation.
-		printf( '<div class="campaignbridge-field__errors" id="%s_errors" role="alert" aria-live="polite">', \esc_attr( $field_id_attr ) );
-
-		// Render field-specific errors if any.
-		if ( isset( $field_config['errors'] ) && ! empty( $field_config['errors'] ) ) {
-			foreach ( $field_config['errors'] as $error ) {
-				echo '<div class="campaignbridge-field__error">' . esc_html( $error ) . '</div>';
-			}
-		}
-
-		echo '</div>';
-
-		if ( isset( $field_config['description'] ) ) {
-			printf( '<p class="campaignbridge-field__description">%s</p>', \esc_html( $field_config['description'] ) );
-		}
+		$this->render_field_content( $field_data, $field_config, array(), 'table' );
 
 		echo '</div></td></tr>';
 	}
@@ -197,6 +172,38 @@ class Form_Renderer {
 	 * @param array<string, mixed> $field_config Field configuration.
 	 */
 	private function render_div_field( string $field_id, array $field_config ): void {
+		$field_data      = $this->prepare_field_data( $field_id, $field_config );
+		$wrapper_classes = $this->build_field_wrapper_classes( $field_data['field_name'], $field_config );
+
+		// Add conditional class to wrapper for FOUC prevention.
+		if ( isset( $field_config['conditional'] ) ) {
+			$wrapper_classes[] = 'campaignbridge-conditional-hidden';
+		}
+
+		// Label.
+		$required_indicator = $field_data['required'] ? '<span class="campaignbridge-field__required">*</span>' : '';
+		printf(
+			'<div class="%s"><label for="%s" class="campaignbridge-field__label">%s%s</label>',
+			esc_attr( implode( ' ', $wrapper_classes ) ),
+			\esc_attr( $field_data['field_id_attr'] ),
+			\esc_html( $field_data['label'] ),
+			wp_kses_post( $required_indicator )
+		);
+
+		// Render field content.
+		$this->render_field_content( $field_data, $field_config, array(), 'div' );
+
+		echo '</div>';
+	}
+
+	/**
+	 * Prepare field data for rendering
+	 *
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @return array<string, mixed> Prepared field data.
+	 */
+	private function prepare_field_data( string $field_id, array $field_config ): array {
 		// Note: prefix/suffix are for options storage, not HTML field names.
 		$field_name = $field_id;
 		$value      = $this->data[ $field_id ] ?? $field_config['default'] ?? '';
@@ -207,7 +214,23 @@ class Form_Renderer {
 		$form_id       = $this->config['form_id'] ?? 'form';
 		$field_id_attr = $form_id . '_' . $field_name;
 
-		// Field wrapper classes.
+		return array(
+			'field_name'    => $field_name,
+			'value'         => $value,
+			'label'         => $label,
+			'required'      => $required,
+			'field_id_attr' => $field_id_attr,
+		);
+	}
+
+	/**
+	 * Build field wrapper classes
+	 *
+	 * @param string               $field_name   Field name.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @return array<string> Field wrapper classes.
+	 */
+	private function build_field_wrapper_classes( string $field_name, array $field_config ): array {
 		$wrapper_classes = array( 'campaignbridge-field-wrapper' );
 
 		// For repeater fields, add layout classes to wrapper if detected in field classes.
@@ -221,17 +244,56 @@ class Form_Renderer {
 			}
 		}
 
-		// Wrap field in validation container with validation state classes.
-		printf( '<div class="%s">', esc_attr( implode( ' ', $wrapper_classes ) ) );
+		return $wrapper_classes;
+	}
 
-		// Label.
-		$required_indicator = $required ? '<span class="campaignbridge-field__required">*</span>' : '';
-		printf( '<label for="%s" class="campaignbridge-field__label">%s%s</label>', \esc_attr( $field_id_attr ), \esc_html( $label ), wp_kses_post( $required_indicator ) );
+	/**
+	 * Render unified field content (input, errors, description)
+	 *
+	 * @param array<string, mixed> $field_data     Prepared field data.
+	 * @param array<string, mixed> $field_config   Field configuration.
+	 * @param array<string>        $wrapper_classes Additional wrapper classes.
+	 * @param string               $layout         Layout type ('table' or 'div').
+	 */
+	private function render_field_content( array $field_data, array $field_config, array $wrapper_classes, string $layout ): void {
+		// For table layout, wrapper classes are already applied at the td level.
+		if ( 'table' === $layout ) {
+			// Input field.
+			$this->render_field_input( $field_data['field_name'], $field_config, $field_data['value'] );
 
-		// Input field.
-		$this->render_field_input( $field_name, $field_config, $value );
+			// Error container for validation.
+			$this->render_field_errors( $field_data['field_id_attr'], $field_config );
 
-		// Error container for validation.
+			// Description.
+			$this->render_field_description( $field_config );
+		} else {
+			// For div layout, wrap input in additional div if wrapper classes provided.
+			if ( ! empty( $wrapper_classes ) ) {
+				printf( '<div class="%s">', esc_attr( implode( ' ', $wrapper_classes ) ) );
+			}
+
+			// Input field.
+			$this->render_field_input( $field_data['field_name'], $field_config, $field_data['value'] );
+
+			// Error container for validation.
+			$this->render_field_errors( $field_data['field_id_attr'], $field_config );
+
+			// Description.
+			$this->render_field_description( $field_config );
+
+			if ( ! empty( $wrapper_classes ) ) {
+				echo '</div>';
+			}
+		}
+	}
+
+	/**
+	 * Render field errors container
+	 *
+	 * @param string               $field_id_attr Field ID attribute.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 */
+	private function render_field_errors( string $field_id_attr, array $field_config ): void {
 		printf( '<div class="campaignbridge-field__errors" id="%s_errors" role="alert" aria-live="polite">', \esc_attr( $field_id_attr ) );
 
 		// Render field-specific errors if any.
@@ -242,13 +304,17 @@ class Form_Renderer {
 		}
 
 		echo '</div>';
+	}
 
-		// Description.
+	/**
+	 * Render field description
+	 *
+	 * @param array<string, mixed> $field_config Field configuration.
+	 */
+	private function render_field_description( array $field_config ): void {
 		if ( isset( $field_config['description'] ) ) {
 			printf( '<p class="campaignbridge-field__description">%s</p>', \esc_html( $field_config['description'] ) );
 		}
-
-		echo '</div>';
 	}
 
 	/**
@@ -296,20 +362,80 @@ class Form_Renderer {
 	private function create_field_renderer( string $field_name, array $field_config, $value ): Form_Field_Interface {
 		$type = $field_config['type'] ?? 'text';
 
-		// Get form ID for namespacing field names and IDs.
+		// Prepare field configuration for rendering.
+		$config = $this->prepare_field_config( $field_name, $field_config, $value );
+
+		// Add conditional field marker.
+		$config = $this->mark_conditional_field( $config, $field_config );
+
+		// Assign CSS classes.
+		$config = $this->assign_field_classes( $config, $field_config );
+
+		// Get renderer class and instantiate.
+		$renderer_class = $this->get_field_renderer_class( $type );
+
+		return new $renderer_class( $config, $this->validator );
+	}
+
+	/**
+	 * Prepare field configuration for rendering
+	 *
+	 * @param string               $field_name   Field name.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param mixed                $value        Field value.
+	 * @return array<string, mixed> Prepared config.
+	 */
+	private function prepare_field_config( string $field_name, array $field_config, $value ): array {
 		$form_id = $this->config['form_id'] ?? 'form';
 
-		// Prepare config with field name and value.
-		$config          = $field_config;
-		$config['name']  = $form_id . '[' . $field_name . ']';
-		$config['id']    = $form_id . '_' . $field_name;
-		$config['value'] = $value;
+		return array(
+			'name'  => $form_id . '[' . $field_name . ']',
+			'id'    => $form_id . '_' . $field_name,
+			'value' => $value,
+		) + $field_config;
+	}
 
-		// Add CSS class for styling.
+	/**
+	 * Mark conditional fields for client-side processing
+	 *
+	 * @param array<string, mixed> $config       Field config.
+	 * @param array<string, mixed> $field_config Original field configuration.
+	 * @return array<string, mixed> Updated config.
+	 */
+	private function mark_conditional_field( array $config, array $field_config ): array {
+		if ( isset( $field_config['conditional'] ) ) {
+			$config['data-conditional-field'] = 'true';
+		}
+
+		return $config;
+	}
+
+	/**
+	 * Assign CSS classes to field configuration
+	 *
+	 * @param array<string, mixed> $config       Field config.
+	 * @param array<string, mixed> $field_config Original field configuration.
+	 * @return array<string, mixed> Updated config with classes.
+	 */
+	private function assign_field_classes( array $config, array $field_config ): array {
 		$existing_class = $config['class'] ?? '';
 		$field_type     = $field_config['type'] ?? 'text';
 
-		// Determine base class based on field type.
+		$base_class = $this->get_field_base_class( $field_type );
+		$type_class = 'campaignbridge-field__' . $field_type;
+
+		$config['class'] = trim( $existing_class . ' ' . $base_class . ' ' . $type_class );
+
+		return $config;
+	}
+
+	/**
+	 * Get base CSS class for field type
+	 *
+	 * @param string $field_type Field type.
+	 * @return string Base CSS class.
+	 */
+	private function get_field_base_class( string $field_type ): string {
 		$base_class_map = array(
 			'text'           => 'campaignbridge-field__input',
 			'email'          => 'campaignbridge-field__input',
@@ -329,12 +455,16 @@ class Form_Renderer {
 			'checkbox'       => 'campaignbridge-field__checkbox',
 		);
 
-		$base_class = $base_class_map[ $field_type ] ?? 'campaignbridge-field__input';
-		$type_class = 'campaignbridge-field__' . $field_type;
+		return $base_class_map[ $field_type ] ?? 'campaignbridge-field__input';
+	}
 
-		$config['class'] = trim( $existing_class . ' ' . $base_class . ' ' . $type_class );
-
-		// Map field types to renderer classes.
+	/**
+	 * Get field renderer class for field type
+	 *
+	 * @param string $field_type Field type.
+	 * @return string Renderer class name.
+	 */
+	private function get_field_renderer_class( string $field_type ): string {
 		$type_map = array(
 			'text'           => Form_Field_Input::class,
 			'email'          => Form_Field_Input::class,
@@ -359,15 +489,19 @@ class Form_Renderer {
 			'encrypted'      => Form_Field_Encrypted::class,
 		);
 
-		$renderer_class = $type_map[ $type ] ?? Form_Field_Input::class;
-
-		return new $renderer_class( $config, $this->validator );
+		return $type_map[ $field_type ] ?? Form_Field_Input::class;
 	}
 
 	/**
 	 * Render form opening tag
 	 */
 	public function render_form_open(): void {
+
+		// Inject FOUC prevention CSS immediately if form has conditional fields
+		if ( $this->has_conditional_fields() ) {
+			$this->inject_conditional_css();
+		}
+
 		$method  = strtolower( $this->config['method'] );
 		$action  = \esc_url( $this->config['action'] ?? '' );
 		$enctype = $this->config['enctype'];
@@ -380,6 +514,23 @@ class Form_Renderer {
 		$form_id = $this->config['form_id'] ?? '';
 		if ( ! empty( $form_id ) ) {
 			$attr_string .= sprintf( ' id="%s"', \esc_attr( $form_id ) );
+		}
+
+		// Handle conditional fields setup.
+		if ( $this->has_conditional_fields() ) {
+			$attr_string .= ' data-conditional="true"';
+			$attr_string .= ' data-conditional-action="campaignbridge_evaluate_conditions"';
+
+			// Enqueue conditional JavaScript and CSS.
+			\CampaignBridge\Admin\Asset_Manager::enqueue_asset_style(
+				'campaignbridge-condition-fields',
+				'dist/styles/admin/forms/condition-fields/index.asset.php'
+			);
+
+			\CampaignBridge\Admin\Asset_Manager::enqueue_asset_script(
+				'campaignbridge-condition-fields',
+				'dist/scripts/admin/forms/condition-fields/index.asset.php'
+			);
 		}
 
 		foreach ( $attributes as $key => $value ) {
@@ -406,6 +557,40 @@ class Form_Renderer {
 		if ( ! empty( $description ) ) {
 			printf( '<p class="description">%s</p>', \esc_html( $description ) );
 		}
+	}
+
+	/**
+	 * Inject critical CSS for FOUC prevention directly into the page head
+	 *
+	 * This ensures conditional fields are hidden immediately when HTML is parsed,
+	 * preventing any flash of content before JavaScript or external CSS loads.
+	 */
+	private function inject_conditional_css(): void {
+		$css = '
+		<style id="campaignbridge-conditional-fouc-prevention">
+			/* FOUC Prevention: Hide conditional field containers immediately */
+			.campaignbridge-conditional-hidden,
+			.campaignbridge-conditional-hidden.campaignbridge-field-wrapper,
+			.campaignbridge-conditional-hidden.campaignbridge-field {
+				display: none !important;
+				visibility: hidden !important;
+				opacity: 0 !important;
+				height: 0 !important;
+				width: 0 !important;
+				overflow: hidden !important;
+				position: absolute !important;
+				clip: rect(0, 0, 0, 0) !important;
+			}
+
+			/* Hide table rows with conditional fields */
+			tr.campaignbridge-conditional-hidden {
+				display: none !important;
+				visibility: hidden !important;
+			}
+		</style>';
+
+		// Inject CSS immediately at the current position in HTML.
+		echo $css; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**
@@ -455,5 +640,28 @@ class Form_Renderer {
 	 */
 	public function render_form_close(): void {
 		echo '</form>';
+	}
+
+	/**
+	 * Check if form has conditional fields
+	 *
+	 * @return bool True if form has conditional fields.
+	 */
+	public function has_conditional_fields(): bool {
+		foreach ( $this->fields as $field_config ) {
+			if ( isset( $field_config['conditional'] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Get the form fields configuration
+	 *
+	 * @return array<string, mixed> Form fields configuration.
+	 */
+	public function get_fields(): array {
+		return $this->fields;
 	}
 }

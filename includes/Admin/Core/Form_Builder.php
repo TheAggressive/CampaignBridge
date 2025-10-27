@@ -58,7 +58,6 @@ class Form_Builder {
 		$this->field_manager = new Form_Field_Manager( $config, $this );
 	}
 
-
 	/**
 	 * Automatically close any open field
 	 *
@@ -105,23 +104,22 @@ class Form_Builder {
 	}
 
 	/**
-	 * Save to WordPress options
-	 *
-	 * @param string $prefix Option prefix.
-	 * @return self
-	 */
-	/**
 	 * Save form data to WordPress Options API
 	 *
-	 * @param string $prefix Optional prefix for option keys to prevent naming conflicts.
+	 * @param string $prefix Optional prefix for option keys. Defaults to 'campaignbridge_{form_id}_' if empty.
 	 * @return self
 	 */
 	public function save_to_options( string $prefix = '' ): self {
 		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'options' );
-		if ( $prefix ) {
-			$this->config->set_prefix( $prefix );
+
+		// If no prefix provided, use default: campaignbridge_{form_id}_.
+		if ( empty( $prefix ) ) {
+			$form_id = $this->config->get( 'form_id', 'form' );
+			$prefix  = 'campaignbridge_' . $form_id . '_';
 		}
+
+		$this->config->set_prefix( $prefix );
 		return $this;
 	}
 
@@ -196,6 +194,17 @@ class Form_Builder {
 	}
 
 	/**
+	 * Auto-detect optimal layout based on context
+	 *
+	 * @return self
+	 */
+	public function auto_layout(): self {
+		$layout = $this->detect_optimal_layout();
+		$this->config->set_layout( $layout );
+		return $this;
+	}
+
+	/**
 	 * Set custom layout
 	 *
 	 * @param callable $renderer Custom render function.
@@ -227,8 +236,14 @@ class Form_Builder {
 	 * @param string $message Success message.
 	 * @return self
 	 */
-	public function success( string $message ): self {
+	public function success( string $message = '' ): self {
 		$this->auto_close_field(); // Close any open field.
+
+		// Auto-generate success message if not provided.
+		if ( empty( $message ) ) {
+			$message = $this->generate_smart_success_message();
+		}
+
 		$this->config->set_success_message( $message );
 		return $this;
 	}
@@ -239,8 +254,14 @@ class Form_Builder {
 	 * @param string $message Error message.
 	 * @return self
 	 */
-	public function error( string $message ): self {
+	public function error( string $message = '' ): self {
 		$this->auto_close_field(); // Close any open field.
+
+		// Auto-generate error message if not provided.
+		if ( empty( $message ) ) {
+			$message = $this->generate_smart_error_message();
+		}
+
 		$this->config->set_error_message( $message );
 		return $this;
 	}
@@ -274,8 +295,14 @@ class Form_Builder {
 	 * @param string $type Button type (primary, secondary).
 	 * @return self
 	 */
-	public function submit( string $text = 'Save', string $type = 'primary' ): self {
+	public function submit( string $text = '', string $type = 'primary' ): self {
 		$this->auto_close_field(); // Close any open field.
+
+		// Auto-generate submit text if not provided.
+		if ( empty( $text ) ) {
+			$text = $this->generate_smart_submit_text();
+		}
+
 		$this->config->set_submit_button( $text, $type );
 		return $this;
 	}
@@ -697,8 +724,23 @@ class Form_Builder {
 		// Automatically close any open field before starting a new one.
 		$this->auto_close_field();
 
+		// Smart field type auto-detection.
+		$detected_type = $this->auto_detect_field_type( $name, $type );
+		if ( $detected_type !== $type ) {
+			$type = $detected_type;
+		}
+
 		$field_builder       = $this->field_manager->add_field( $name, $type, $label );
 		$this->current_field = $field_builder;
+
+		// Auto-generate label if not provided.
+		if ( empty( $label ) ) {
+			$label = $this->generate_smart_label( $name );
+			$field_builder->label( $label );
+		}
+
+		// Auto-add smart validation rules.
+		$this->add_smart_validation( $name, $type, $field_builder );
 
 		return $field_builder;
 	}
@@ -837,5 +879,249 @@ class Form_Builder {
 	public function render_submit(): void {
 		$this->form->ensure_renderer();
 		$this->form->get_renderer()->render_submit_button();
+	}
+
+	/**
+	 * Auto-detect field type based on field name patterns
+	 *
+	 * @param string $name Field name.
+	 * @param string $current_type Current field type.
+	 * @return string Detected or original field type.
+	 */
+	private function auto_detect_field_type( string $name, string $current_type ): string {
+		// Only auto-detect if type is 'text' (generic).
+		if ( 'text' !== $current_type ) {
+			return $current_type;
+		}
+
+		$name_lower = strtolower( $name );
+
+		// Field type detection patterns.
+		$patterns = array(
+			'email'    => array( 'email' ),
+			'url'      => array( 'url', 'link' ),
+			'password' => array( 'password', 'pass' ),
+			'tel'      => array( 'phone', 'tel', 'mobile' ),
+			'number'   => array( 'count', 'amount', 'quantity' ),
+		);
+
+		foreach ( $patterns as $type => $keywords ) {
+			foreach ( $keywords as $keyword ) {
+				if ( str_contains( $name_lower, $keyword ) ) {
+					return $type;
+				}
+			}
+		}
+
+		return $current_type;
+	}
+
+	/**
+	 * Generate smart label from field name
+	 *
+	 * @param string $name Field name.
+	 * @return string Generated label.
+	 */
+	private function generate_smart_label( string $name ): string {
+		// Convert snake_case or camelCase to Title Case.
+		$label = preg_replace( '/([a-z])([A-Z])/', '$1 $2', $name );
+		$label = str_replace( '_', ' ', $label );
+		$label = ucwords( strtolower( $label ) );
+
+		// Special cases.
+		$replacements = array(
+			'Api'   => 'API',
+			'Url'   => 'URL',
+			'Id'    => 'ID',
+			'Smtp'  => 'SMTP',
+			'Http'  => 'HTTP',
+			'Https' => 'HTTPS',
+			'Json'  => 'JSON',
+			'Xml'   => 'XML',
+			'Html'  => 'HTML',
+			'Css'   => 'CSS',
+			'Js'    => 'JS',
+		);
+
+		foreach ( $replacements as $search => $replace ) {
+			$label = str_replace( $search, $replace, $label );
+		}
+
+		return $label;
+	}
+
+	/**
+	 * Detect optimal layout based on context
+	 *
+	 * @return string Layout type.
+	 */
+	private function detect_optimal_layout(): string {
+		$form_id = $this->config->get( 'form_id', '' );
+
+		// Admin screens typically work better with div layout for flexibility.
+		if ( is_admin() ) {
+			return 'div';
+		}
+
+		// Settings forms often work better with table layout for alignment.
+		if ( str_contains( $form_id, 'settings' ) || str_contains( $form_id, 'config' ) ) {
+			return 'table';
+		}
+
+		// Default to div layout for modern, flexible styling.
+		return 'div';
+	}
+
+	/**
+	 * Generate smart submit button text based on form context
+	 *
+	 * @return string Submit button text.
+	 */
+	private function generate_smart_submit_text(): string {
+		$form_id     = $this->config->get( 'form_id', '' );
+		$save_method = $this->config->get( 'save_method', 'options' );
+
+		// Settings forms.
+		if ( str_contains( $form_id, 'settings' ) || str_contains( $form_id, 'config' ) ) {
+			return __( 'Save Settings', 'campaignbridge' );
+		}
+
+		// Profile/user forms.
+		if ( str_contains( $form_id, 'profile' ) || str_contains( $form_id, 'user' ) ) {
+			return __( 'Update Profile', 'campaignbridge' );
+		}
+
+		// API/Integration forms.
+		if ( str_contains( $form_id, 'api' ) || str_contains( $form_id, 'integration' ) ) {
+			return __( 'Save Configuration', 'campaignbridge' );
+		}
+
+		// Post meta forms.
+		if ( 'post_meta' === $save_method ) {
+			return __( 'Save Changes', 'campaignbridge' );
+		}
+
+		// Default fallback.
+		return __( 'Save', 'campaignbridge' );
+	}
+
+	/**
+	 * Generate smart success message based on form context
+	 *
+	 * @return string Success message.
+	 */
+	private function generate_smart_success_message(): string {
+		$form_id = $this->config->get( 'form_id', '' );
+
+		// Settings forms.
+		if ( str_contains( $form_id, 'settings' ) || str_contains( $form_id, 'config' ) ) {
+			return __( 'Settings saved successfully!', 'campaignbridge' );
+		}
+
+		// Profile/user forms.
+		if ( str_contains( $form_id, 'profile' ) || str_contains( $form_id, 'user' ) ) {
+			return __( 'Profile updated successfully!', 'campaignbridge' );
+		}
+
+		// API/Integration forms.
+		if ( str_contains( $form_id, 'api' ) || str_contains( $form_id, 'integration' ) ) {
+			return __( 'Configuration saved successfully!', 'campaignbridge' );
+		}
+
+		// Default fallback.
+		return __( 'Saved successfully!', 'campaignbridge' );
+	}
+
+	/**
+	 * Generate smart error message based on form context
+	 *
+	 * @return string Error message.
+	 */
+	private function generate_smart_error_message(): string {
+		$form_id = $this->config->get( 'form_id', '' );
+
+		// Settings forms.
+		if ( str_contains( $form_id, 'settings' ) || str_contains( $form_id, 'config' ) ) {
+			return __( 'Failed to save settings. Please try again.', 'campaignbridge' );
+		}
+
+		// Profile/user forms.
+		if ( str_contains( $form_id, 'profile' ) || str_contains( $form_id, 'user' ) ) {
+			return __( 'Failed to update profile. Please try again.', 'campaignbridge' );
+		}
+
+		// API/Integration forms.
+		if ( str_contains( $form_id, 'api' ) || str_contains( $form_id, 'integration' ) ) {
+			return __( 'Failed to save configuration. Please try again.', 'campaignbridge' );
+		}
+
+		// Default fallback.
+		return __( 'An error occurred. Please try again.', 'campaignbridge' );
+	}
+
+	/**
+	 * Add smart validation rules based on field type and name
+	 *
+	 * @param string             $name Field name.
+	 * @param string             $type Field type.
+	 * @param Form_Field_Builder $field_builder Field builder instance.
+	 * @return void
+	 */
+	private function add_smart_validation( string $name, string $type, Form_Field_Builder $field_builder ): void {
+		$name_lower = strtolower( $name );
+
+		// Type-based validation rules.
+		$type_rules = array(
+			'email'    => array( array( 'email', true ) ),
+			'url'      => array( array( 'url', true ) ),
+			'password' => array( array( 'min_length', 8 ) ), // Only for non-confirm passwords.
+		);
+
+		// Apply type-based rules.
+		if ( isset( $type_rules[ $type ] ) ) {
+			foreach ( $type_rules[ $type ] as $rule ) {
+				if ( 'password' === $type && str_contains( $name_lower, 'confirm' ) ) {
+					continue; // Skip password rules for confirm fields.
+				}
+				$field_builder->validation( $rule[0], $rule[1] );
+			}
+		}
+
+		// Name-based validation rules.
+		$name_rules = array(
+			array( 'required', 'mandatory', array( 'required', true ) ),
+			array( 'api_key', 'apikey', array( 'min_length', 10 ) ),
+			array(
+				'timeout',
+				null,
+				array(
+					array( 'numeric', true ),
+					array( 'min', 1 ),
+					array( 'max', 300 ),
+				),
+			),
+		);
+
+		// Apply name-based rules.
+		foreach ( $name_rules as $rule_config ) {
+			list( $keyword1, $keyword2, $validations ) = $rule_config;
+
+			$matches = str_contains( $name_lower, $keyword1 );
+			if ( $keyword2 ) {
+				$matches = $matches || str_contains( $name_lower, $keyword2 );
+			}
+
+			if ( $matches ) {
+				if ( is_array( $validations[0] ) ) {
+					// Multiple validations.
+					foreach ( $validations as $validation ) {
+						$field_builder->validation( $validation[0], $validation[1] );
+					}
+				} else {
+					// Single validation.
+					$field_builder->validation( $validations[0], $validations[1] );
+				}
+			}
+		}
 	}
 }

@@ -139,16 +139,25 @@ class Form_Field_Builder {
 	}
 
 	/**
+	 * Add a specific validation rule
+	 *
+	 * @param string $rule Validation rule name.
+	 * @param mixed  $value Validation rule value.
+	 * @return self
+	 */
+	public function validation( string $rule, $value ): self {
+		$this->add_validation_rule( $rule, $value );
+		return $this;
+	}
+
+	/**
 	 * Set minimum length validation
 	 *
 	 * @param int $length Minimum length.
-	 * @return Form_Field_Builder
+	 * @return self
 	 */
 	public function min_length( int $length ): self {
-		$field_config             = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
-		$validation               = $field_config['validation'] ?? array();
-		$validation['min_length'] = $length;
-		$this->form_builder->get_config()->update_field( $this->field_name, array( 'validation' => $validation ) );
+		$this->add_validation_rule( 'min_length', $length );
 		return $this;
 	}
 
@@ -156,13 +165,10 @@ class Form_Field_Builder {
 	 * Set maximum length validation
 	 *
 	 * @param int $length Maximum length.
-	 * @return Form_Field_Builder
+	 * @return self
 	 */
 	public function max_length( int $length ): self {
-		$field_config             = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
-		$validation               = $field_config['validation'] ?? array();
-		$validation['max_length'] = $length;
-		$this->form_builder->get_config()->update_field( $this->field_name, array( 'validation' => $validation ) );
+		$this->add_validation_rule( 'max_length', $length );
 		return $this;
 	}
 
@@ -171,17 +177,31 @@ class Form_Field_Builder {
 	 *
 	 * @param string $pattern Regular expression pattern.
 	 * @param string $message Custom error message.
-	 * @return Form_Field_Builder
+	 * @return self
 	 */
 	public function pattern( string $pattern, string $message = '' ): self {
-		$field_config          = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
-		$validation            = $field_config['validation'] ?? array();
-		$validation['pattern'] = array(
-			'pattern' => $pattern,
-			'message' => $message ?: 'Please enter a valid value.',
+		$this->add_validation_rule(
+			'pattern',
+			array(
+				'pattern' => $pattern,
+				'message' => $message ? $message : 'Please enter a valid value.',
+			)
 		);
-		$this->form_builder->get_config()->update_field( $this->field_name, array( 'validation' => $validation ) );
 		return $this;
+	}
+
+	/**
+	 * Add a validation rule to the field
+	 *
+	 * @param string $rule  Validation rule name.
+	 * @param mixed  $value Validation rule value.
+	 */
+	private function add_validation_rule( string $rule, $value ): void {
+		$field_config               = $this->form_builder->get_config()->get_field( $this->field_name ) ?? array();
+		$validation                 = $field_config['validation'] ?? array();
+		$validation[ $rule ]        = $value;
+		$field_config['validation'] = $validation;
+		$this->form_builder->get_config()->update_field( $this->field_name, $field_config );
 	}
 
 	/**
@@ -218,34 +238,21 @@ class Form_Field_Builder {
 	}
 
 	/**
-	 * Set minimum and maximum values for numeric inputs, or create a range input field
+	 * Set minimum and maximum values for numeric inputs
 	 *
-	 * @param string|int $arg1 Field name (for creation) or minimum value (for setting).
-	 * @param string|int $arg2 Field label (for creation) or maximum value (for setting).
-	 * @return Form_Field_Builder
-	 * @throws \InvalidArgumentException If invalid arguments are provided.
+	 * @param int $min Minimum value.
+	 * @param int $max Maximum value.
+	 * @return self
 	 */
-	public function range( $arg1, $arg2 = '' ): self {
-		// Detect if this is a field creation call (string arguments) vs min/max setting (int arguments).
-		if ( is_string( $arg1 ) && is_string( $arg2 ) ) {
-			// This is a field creation call - auto-end and create new field.
-			$form_builder = $this->end();
-			return $form_builder->range( $arg1, $arg2 );
-		} elseif ( is_int( $arg1 ) && is_int( $arg2 ) ) {
-			// This is a min/max setting call.
-			$this->form_builder->get_config()->update_field(
-				$this->field_name,
-				array(
-					'min' => $arg1,
-					'max' => $arg2,
-				)
-			);
-			return $this;
-		} else {
-			throw new \InvalidArgumentException(
-				'Invalid arguments for range() method. Use range(string $name, string $label) to create a field or range(int $min, int $max) to set min/max values.'
-			);
-		}
+	public function range( int $min, int $max ): self {
+		$this->form_builder->get_config()->update_field(
+			$this->field_name,
+			array(
+				'min' => $min,
+				'max' => $max,
+			)
+		);
+		return $this;
 	}
 
 	/**
@@ -341,6 +348,57 @@ class Form_Field_Builder {
 		$field_attributes = array_merge( $field_attributes, $attributes );
 		$this->form_builder->get_config()->update_field( $this->field_name, array( 'attributes' => $field_attributes ) );
 		return $this;
+	}
+
+	/**
+	 * Show field when conditions are met
+	 *
+	 * @param array<array<string, mixed>> $conditions Array of condition arrays.
+	 * @return self
+	 */
+	public function show_when( array $conditions ): self {
+		$this->set_conditional_logic( 'show_when', $conditions );
+		return $this;
+	}
+
+	/**
+	 * Hide field when conditions are met
+	 *
+	 * @param array<array<string, mixed>> $conditions Array of condition arrays.
+	 * @return self
+	 */
+	public function hide_when( array $conditions ): self {
+		$this->set_conditional_logic( 'hide_when', $conditions );
+		return $this;
+	}
+
+	/**
+	 * Make field required when conditions are met
+	 *
+	 * @param array<array<string, mixed>> $conditions Array of condition arrays.
+	 * @return self
+	 */
+	public function required_when( array $conditions ): self {
+		$this->set_conditional_logic( 'required_when', $conditions );
+		return $this;
+	}
+
+	/**
+	 * Set conditional logic for the field
+	 *
+	 * @param string                      $type       Conditional type ('show_when', 'hide_when', 'required_when').
+	 * @param array<array<string, mixed>> $conditions Array of condition arrays.
+	 */
+	private function set_conditional_logic( string $type, array $conditions ): void {
+		$this->form_builder->get_config()->update_field(
+			$this->field_name,
+			array(
+				'conditional' => array(
+					'type'       => $type,
+					'conditions' => $conditions,
+				),
+			)
+		);
 	}
 
 	/**

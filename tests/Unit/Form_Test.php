@@ -73,7 +73,10 @@ class Form_Test extends Test_Case {
 		// Expect trigger_warning to be called with the correct message
 		$notice_handler_mock->expects( $this->once() )
 			->method( 'trigger_warning' )
-			->with( $this->stringContains( 'configured to use custom saving but no save callback is provided' ) );
+			->with(
+				$this->isInstanceOf( Form_Config::class ),
+				$this->stringContains( 'configured to use custom saving but no save callback is provided' )
+			);
 
 		// Override the notice handler in our test container
 		$this->container->set_override( 'form_notice_handler', $notice_handler_mock );
@@ -113,7 +116,8 @@ class Form_Test extends Test_Case {
 
 		// Expect trigger_warning to NOT be called
 		$notice_handler_mock->expects( $this->never() )
-			->method( 'trigger_warning' );
+			->method( 'trigger_warning' )
+			->withAnyParameters();
 
 		// Override the notice handler in our test container
 		$this->container->set_override( 'form_notice_handler', $notice_handler_mock );
@@ -202,7 +206,8 @@ class Form_Test extends Test_Case {
 
 			// Expect trigger_warning to NOT be called
 			$notice_handler_mock->expects( $this->never() )
-				->method( 'trigger_warning' );
+				->method( 'trigger_warning' )
+				->withAnyParameters();
 
 			// Override the notice handler in our test container
 			$this->container->set_override( 'form_notice_handler', $notice_handler_mock );

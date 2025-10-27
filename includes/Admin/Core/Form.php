@@ -11,6 +11,7 @@
 namespace CampaignBridge\Admin\Core;
 
 use CampaignBridge\Admin\Core\Form_Builder;
+use CampaignBridge\Admin\Core\Form_Registry;
 use CampaignBridge\Admin\Core\Forms\Form_Config;
 use CampaignBridge\Admin\Core\Forms\Form_Container;
 use CampaignBridge\Admin\Core\Forms\Form_Cache;
@@ -171,6 +172,8 @@ class Form {
 	 * Always recreates renderer to ensure it has the latest data after form submission.
 	 */
 	public function ensure_renderer(): void {
+		$this->ensure_initialized();
+
 		$this->renderer = $this->container->create_form_renderer(
 			$this,
 			$this->config,
@@ -227,6 +230,7 @@ class Form {
 				$form_id        = $this->config->get( 'form_id', 'form' );
 
 				$notice_handler->trigger_warning(
+					$this->config,
 					sprintf(
 						/* translators: %s: Form ID */
 						__( 'Form "%s" is configured to use custom saving but no save callback is provided. Data will not be persisted. Please provide a callback to the save_to_custom() method.', 'campaignbridge' ),
@@ -256,6 +260,20 @@ class Form {
 	 */
 	public function render(): void {
 		$this->ensure_initialized();
+
+		// Handle form submission and prepare for rendering.
+		$this->prepare_for_rendering();
+
+		// Perform the actual rendering.
+		$this->perform_rendering();
+	}
+
+	/**
+	 * Prepare form for rendering (handle submission, register AJAX, etc.)
+	 *
+	 * @return void
+	 */
+	private function prepare_for_rendering(): void {
 		// Ensure services are initialized.
 		assert( null !== $this->data_manager, 'Data manager must be initialized' );
 		assert( null !== $this->handler, 'Handler must be initialized' );
@@ -268,8 +286,19 @@ class Form {
 		// Ensure renderer is initialized AFTER submission handling to get updated data.
 		$this->ensure_renderer();
 
-		$this->renderer->render_form_open();
+		// Auto-register form for AJAX access if it has conditional fields.
+		if ( $this->renderer->has_conditional_fields() ) {
+			Form_Registry::register( $this->config->get( 'form_id' ), $this->config );
+		}
+	}
 
+	/**
+	 * Perform the actual form rendering
+	 *
+	 * @return void
+	 */
+	private function perform_rendering(): void {
+		$this->renderer->render_form_open();
 		$this->renderer->render_fields();
 		$this->renderer->render_submit_button();
 		$this->renderer->render_form_close();
@@ -649,6 +678,21 @@ class Form {
 	 */
 	public function get_cache(): Form_Cache {
 		return $this->cache;
+	}
+
+	/**
+	 * Cache the current form configuration.
+	 *
+	 * @param int $expiry Cache expiry time in seconds (default: 1 hour).
+	 * @return bool True on success, false on failure.
+	 */
+	/**
+	 * Get the form configuration (for debugging/testing purposes).
+	 *
+	 * @return Form_Config The form configuration.
+	 */
+	public function get_config(): Form_Config {
+		return $this->config;
 	}
 
 	/**

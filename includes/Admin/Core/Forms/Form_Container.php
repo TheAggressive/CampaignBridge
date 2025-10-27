@@ -149,6 +149,15 @@ class Form_Container {
 			true
 		);
 
+		// Form_Conditional_Manager factory (not shared, needs per-form data).
+		$this->register(
+			'form_conditional_manager',
+			function ( array $fields = array(), array $data = array() ) {
+				return new Form_Conditional_Manager( $fields, $data );
+			},
+			false
+		);
+
 		// Form_Field_Factory factory (shared).
 		$this->register(
 			'form_field_factory',
@@ -177,9 +186,9 @@ class Form_Container {
 	/**
 	 * Create a configured Form_Handler
 	 *
-	 * @param \CampaignBridge\Admin\Core\Form $form    Form instance.
-	 * @param Form_Config                     $config  Form configuration.
-	 * @param array<string, mixed>            $fields  Form fields.
+	 * @param \CampaignBridge\Admin\Core\Form $form      Form instance.
+	 * @param Form_Config                     $config    Form configuration.
+	 * @param array<string, mixed>            $fields    Form fields.
 	 * @param Form_Validator                  $validator Validator instance.
 	 *
 	 * @return Form_Handler
@@ -192,6 +201,7 @@ class Form_Container {
 	): Form_Handler {
 		$security       = new Form_Security( $config->get( 'form_id', 'form' ) );
 		$notice_handler = new Form_Notice_Handler();
+
 		return new Form_Handler( $form, $config, $fields, $security, $validator, $notice_handler );
 	}
 
@@ -235,7 +245,14 @@ class Form_Container {
 		}
 
 		$security = $this->get( "security_{$form_id}" );
-		return new Form_Renderer( $config->all(), $fields, $data, $handler, $security, $this->get( 'form_validator' ) );
+
+		// Get validator.
+		$validator = $this->get( 'form_validator' );
+
+		// Create handler.
+		$handler = $this->create_form_handler( $form, $config, $fields, $validator );
+
+		return new Form_Renderer( $config->all(), $fields, $data, $handler, $security, $validator );
 	}
 
 	/**
@@ -275,5 +292,16 @@ class Form_Container {
 		}
 
 		return $this->get( Form_Asset_Optimizer::class );
+	}
+
+	/**
+	 * Create a form conditional manager instance.
+	 *
+	 * @param array $fields    Form fields configuration.
+	 * @param array $form_data Current form data.
+	 * @return Form_Conditional_Manager
+	 */
+	public function create_form_conditional_manager( array $fields, array $form_data = array() ): Form_Conditional_Manager {
+		return new Form_Conditional_Manager( $fields, $form_data );
 	}
 }

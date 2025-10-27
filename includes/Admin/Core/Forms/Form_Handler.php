@@ -60,6 +60,13 @@ class Form_Handler {
 	private Form_Notice_Handler $notice_handler;
 
 	/**
+	 * Conditional manager instance
+	 *
+	 * @var Form_Conditional_Manager|null
+	 */
+	private ?Form_Conditional_Manager $conditional_manager = null;
+
+	/**
 	 * Whether form was submitted
 	 *
 	 * @var bool
@@ -107,120 +114,205 @@ class Form_Handler {
 	 * Only processes if the correct form was submitted via the expected method.
 	 */
 	public function handle_submission(): void {
+		if ( ! $this->is_form_submitted() ) {
+			return;
+		}
+
+		$this->is_submitted = true;
+
+		if ( ! $this->verify_security() ) {
+			return;
+		}
+
+		try {
+			$form_data = $this->process_form_data();
+
+			if ( ! $this->validate_form_data( $form_data ) ) {
+				return;
+			}
+
+			$this->is_valid = true;
+
+			$form_data = $this->prepare_data_for_saving( $form_data );
+
+			if ( $this->save_form_data( $form_data ) ) {
+				$this->handle_successful_save( $form_data );
+			} else {
+				$this->handle_failed_save( $form_data );
+			}
+		} catch ( \Exception $e ) {
+			$this->handle_processing_error( $e );
+		}
+	}
+
+	/**
+	 * Check if this form was submitted
+	 *
+	 * @return bool True if form was submitted.
+	 */
+	private function is_form_submitted(): bool {
 		$form_id        = $this->config->get( 'form_id', 'form' );
 		$method         = strtoupper( $this->config->get( 'method', 'POST' ) );
 		$request_method = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) );
 
 		if ( $request_method !== $method ) {
-			return;
+			return false;
 		}
 
 		// Check if this specific form was submitted by checking for its nonce field.
 		$nonce_name = $form_id . '_wpnonce';
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce is verified immediately after this check.
-		if ( ! isset( $_POST[ $nonce_name ] ) ) {
-			// This form was not submitted, skip processing.
-			return;
-		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing,CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Nonce presence check before verification.
+		return isset( $_POST[ $nonce_name ] );
+	}
 
-		$this->is_submitted = true; // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Form submission flag set after nonce presence verification.
-
-		// Verify security.
-		if ( ! $this->security->verify_request() ) { // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Security verification called immediately after nonce check.
+	/**
+	 * Verify form security
+	 *
+	 * @return bool True if security checks pass.
+	 */
+	private function verify_security(): bool { // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Security verification is handled by Form_Security with proper sanitization.
+		if ( ! $this->security->verify_request() ) {
 			$this->notice_handler->trigger_error(
 				$this->config,
 				array(
 					'security' => \__( 'Security check failed. Please try again.', 'campaignbridge' ),
 				)
 			);
-			return;
+			return false;
 		}
 
-		// Get submitted data.
-		$form_data = $this->get_submitted_data();
+		return true;
+	}
 
-		// Run before validation hook with exception handling.
+	/**
+	 * Process submitted form data
+	 *
+	 * @return array<string, mixed> Processed form data.
+	 */
+	private function process_form_data(): array {
+		$form_data = $this->get_submitted_data();
+		return $this->filter_conditional_field_data( $form_data );
+	}
+
+	/**
+	 * Validate form data
+	 *
+	 * @param array<string, mixed> $form_data Form data to validate.
+	 * @return bool True if validation passes.
+	 */
+	private function validate_form_data( array $form_data ): bool {
+		// Run before validation hook.
 		try {
 			$form_data = $this->run_hook( 'before_validate', $form_data );
 		} catch ( \Exception $e ) {
-			// Convert exception to validation error.
 			$this->notice_handler->trigger_error(
 				$this->config,
-				array(
-					'validation' => $e->getMessage(),
-				)
+				array( 'validation' => $e->getMessage() )
 			);
-			return;
+			return false;
 		}
 
-		// Validate all configured fields (config is source of truth).
-		$rendered_fields = $this->form ? $this->form->get_rendered_fields() : array();
-
+		// Validate all configured fields.
+		$rendered_fields   = $this->form ? $this->form->get_rendered_fields() : array();
 		$validation_result = $this->validator->validate_form( $form_data, $this->fields, $rendered_fields );
 
 		if ( ! $validation_result['valid'] ) {
-			// Trigger global notices for all validation errors.
-			foreach ( $validation_result['errors'] as $field_id => $error_message ) {
-				if ( is_string( $error_message ) ) {
-					// Handle special case for unused fields error - use warning notice.
-					if ( 'unused_fields' === $field_id ) {
-						$this->notice_handler->trigger_warning( $this->config, $error_message );
-					} else {
-						// Regular field errors use error notices.
-						$this->notice_handler->trigger_error( $this->config, array( $field_id => $error_message ) );
-					}
-				}
-			}
-
-			$this->run_hook( 'after_validate', $form_data, $validation_result['errors'] );
-			return;
+			$this->handle_validation_errors( $validation_result['errors'], $form_data );
+			return false;
 		}
 
-		$this->is_valid = true;
+		return true;
+	}
 
-		// For partial form submissions (like when updating individual encrypted fields),
-		// merge submitted data with existing data to preserve unchanged fields.
+	/**
+	 * Handle validation errors
+	 *
+	 * @param array<string, mixed> $errors    Validation errors.
+	 * @param array<string, mixed> $form_data Form data.
+	 */
+	private function handle_validation_errors( array $errors, array $form_data ): void {
+		foreach ( $errors as $field_id => $error_message ) {
+			if ( is_string( $error_message ) ) {
+				// Handle special case for unused fields error - use warning notice.
+				if ( 'unused_fields' === $field_id ) {
+					$this->notice_handler->trigger_warning( $this->config, $error_message );
+				} else {
+					$this->notice_handler->trigger_error( $this->config, array( $field_id => $error_message ) );
+				}
+			}
+		}
+
+		$this->run_hook( 'after_validate', $form_data, $errors );
+	}
+
+	/**
+	 * Prepare data for saving
+	 *
+	 * @param array<string, mixed> $form_data Form data.
+	 * @return array<string, mixed> Data prepared for saving.
+	 */
+	private function prepare_data_for_saving( array $form_data ): array {
+		// For partial form submissions, merge with existing data.
 		$form_data = $this->merge_with_existing_data( $form_data );
 
-		// Run before save hook with exception handling.
+		// Run before save hook.
 		try {
 			$form_data = $this->run_hook( 'before_save', $form_data );
 		} catch ( \Exception $e ) {
-			// Convert exception to validation error.
-			$this->notice_handler->trigger_error(
-				$this->config,
-				array(
-					'save' => $e->getMessage(),
-				)
-			);
-			return;
+			throw new \RuntimeException( 'Save preparation failed: ' . esc_html( $e->getMessage() ) );
 		}
 
-		// Save data.
+		return $form_data;
+	}
+
+	/**
+	 * Save form data
+	 *
+	 * @param array<string, mixed> $form_data Data to save.
+	 * @return bool True if save successful.
+	 */
+	private function save_form_data( array $form_data ): bool {
 		$save_result = $this->save_data( $form_data );
-
-		// Run after save hook.
 		$this->run_hook( 'after_save', $form_data, $save_result );
+		return $save_result;
+	}
 
-		if ( $save_result ) {
-			// Reload form data to reflect saved changes immediately.
-			if ( $this->form ) {
-				$this->form->reload_data();
-			}
-
-			// Auto-trigger global success notice.
-			$this->notice_handler->trigger_success( $this->config, $form_data );
-
-			// Run success hook.
-			$this->run_hook( 'on_success', $form_data );
-		} else {
-			// Auto-trigger global error notice.
-			$this->notice_handler->trigger_error( $this->config, $form_data );
-
-			// Run error hook.
-			$this->run_hook( 'on_error', $form_data );
+	/**
+	 * Handle successful save
+	 *
+	 * @param array<string, mixed> $form_data Saved data.
+	 */
+	private function handle_successful_save( array $form_data ): void {
+		// Reload form data to reflect saved changes immediately.
+		if ( $this->form ) {
+			$this->form->reload_data();
 		}
+
+		$this->notice_handler->trigger_success( $this->config, $form_data );
+		$this->run_hook( 'on_success', $form_data );
+	}
+
+	/**
+	 * Handle failed save
+	 *
+	 * @param array<string, mixed> $form_data Data that failed to save.
+	 */
+	private function handle_failed_save( array $form_data ): void {
+		$this->notice_handler->trigger_error( $this->config, $form_data );
+		$this->run_hook( 'on_error', $form_data );
+	}
+
+	/**
+	 * Handle processing errors
+	 *
+	 * @param \Exception $e The exception that occurred.
+	 */
+	private function handle_processing_error( \Exception $e ): void {
+		$this->notice_handler->trigger_error(
+			$this->config,
+			array( 'processing' => $e->getMessage() )
+		);
 	}
 
 	/**
@@ -322,58 +414,111 @@ class Form_Handler {
 	 * @return array<string, mixed>
 	 */
 	private function get_submitted_data(): array {
-		$data    = array();
+		$form_data = $this->get_raw_form_data();
+		return $this->process_raw_form_data( $form_data );
+	}
+
+	/**
+	 * Get raw form data from superglobals
+	 *
+	 * @return array<string, mixed> Raw form data.
+	 *
+	 * @phpcs:disable CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput
+	 * @SuppressWarnings(PHPMD.Superglobals)
+	 */
+	private function get_raw_form_data(): array {
 		$method  = strtoupper( $this->config->get( 'method', 'POST' ) );
 		$form_id = $this->config->get( 'form_id', 'form' );
 
-		// Get form data from the namespaced array.
-
-    // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce already verified in handle_submission(), data sanitized per field via sanitize_field_value().
-		$form_data = array();
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce already verified in handle_submission(), data sanitized per field via sanitize_field_value().
 		if ( 'POST' === $method ) {
-			$form_data = \wp_unslash( $_POST[ $form_id ] ?? array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing, CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Data sanitized per field in sanitize_field_value(), nonce verified in handle_submission().
+			return \wp_unslash( $_POST[ $form_id ] ?? array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing, CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Data sanitized per field in sanitize_field_value(), nonce verified in handle_submission().
 		} elseif ( 'GET' === $method ) {
-			$form_data = \wp_unslash( $_GET[ $form_id ] ?? array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing, CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Data sanitized per field in sanitize_field_value(), nonce verified in handle_submission().
+			return \wp_unslash( $_GET[ $form_id ] ?? array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing, CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Data sanitized per field in sanitize_field_value(), nonce verified in handle_submission().
 		}
 
-		// Extract field values, handling array-style field names.
+		return array();
+	}
+
+	/**
+	 * Process raw form data into structured data
+	 *
+	 * @param array<string, mixed> $form_data Raw form data.
+	 * @return array<string, mixed> Processed form data.
+	 */
+	private function process_raw_form_data( array $form_data ): array {
 		$data = array();
 
 		foreach ( $this->fields as $field_id => $field_config ) { // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Form data already sanitized per field in sanitize_field_value().
 			$value = $form_data[ $field_id ] ?? null;
 
-			// Handle file uploads first (they don't have POST values, but may have form data).
-			$field_type = $field_config['type'] ?? 'text';
-			if ( 'file' === $field_type ) {
-				$value = $this->process_file_upload( $field_id, $field_config );
-
-				// Store the processed file value.
-				if ( isset( $value ) ) {
-					$data[ $field_id ] = $value;
-				}
+			if ( $this->is_file_field( $field_config ) ) {
+				$data[ $field_id ] = $this->process_file_field( $field_id, $field_config );
 			} elseif ( null !== $value ) {
-				// Handle repeater field names with ___ separator (field_id___key).
-				if ( strpos( $field_id, '___' ) !== false ) {
-					list( $base_name, $key ) = explode( '___', $field_id, 2 );
-
-					// Initialize array if not exists.
-					if ( ! isset( $data[ $base_name ] ) ) {
-						$data[ $base_name ] = array();
-					}
-
-					// For multiple selections, only include checked values.
-					if ( $this->is_multiple_field_checked( $value, $field_config ) ) {
-						// For multiple fields, store the key (e.g., 'post') not the value ('1').
-						$data[ $base_name ][] = sanitize_key( $key );
-					}
+				if ( $this->is_repeater_field( $field_id ) ) {
+					$this->process_repeater_field( $field_id, $value, $field_config, $data );
 				} else {
-					// Regular field.
 					$data[ $field_id ] = $this->sanitize_field_value( $value, $field_config );
 				}
 			}
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Check if field is a file field
+	 *
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @return bool True if file field.
+	 */
+	private function is_file_field( array $field_config ): bool {
+		return ( $field_config['type'] ?? 'text' ) === 'file';
+	}
+
+	/**
+	 * Check if field is a repeater field
+	 *
+	 * @param string $field_id Field ID.
+	 * @return bool True if repeater field.
+	 */
+	private function is_repeater_field( string $field_id ): bool {
+		return strpos( $field_id, '___' ) !== false;
+	}
+
+	/**
+	 * Process file field
+	 *
+	 * @param string               $field_id     Field ID.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @return mixed Processed file value or null.
+	 */
+	private function process_file_field( string $field_id, array $field_config ) {
+		$value = $this->process_file_upload( $field_id, $field_config );
+		return isset( $value ) ? $value : null;
+	}
+
+	/**
+	 * Process repeater field
+	 *
+	 * @param string               $field_id     Field ID.
+	 * @param mixed                $value        Field value.
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param array<string, mixed> &$data        Data array to modify.
+	 */
+	private function process_repeater_field( string $field_id, $value, array $field_config, array &$data ): void {
+		list( $base_name, $key ) = explode( '___', $field_id, 2 );
+
+		// Initialize array if not exists.
+		if ( ! isset( $data[ $base_name ] ) ) {
+			$data[ $base_name ] = array();
+		}
+
+		// For multiple selections, only include checked values.
+		if ( $this->is_multiple_field_checked( $value, $field_config ) ) {
+			// For multiple fields, store the key (e.g., 'post') not the value ('1').
+			$data[ $base_name ][] = sanitize_key( $key );
+		}
 	}
 
 	/**
@@ -706,5 +851,44 @@ class Form_Handler {
 	 */
 	public function is_valid(): bool {
 		return $this->is_valid;
+	}
+
+	/**
+	 * Set the conditional manager instance
+	 *
+	 * @param Form_Conditional_Manager $conditional_manager Conditional manager instance.
+	 * @return void
+	 */
+	public function set_conditional_manager( Form_Conditional_Manager $conditional_manager ): void {
+		$this->conditional_manager = $conditional_manager;
+	}
+
+	/**
+	 * Filter out data from hidden conditional fields for security and data integrity
+	 *
+	 * @param array<string, mixed> $form_data Submitted form data.
+	 * @return array<string, mixed> Filtered form data with hidden conditional fields removed.
+	 */
+	private function filter_conditional_field_data( array $form_data ): array {
+		// If we don't have a conditional manager, return data as-is.
+		if ( ! $this->conditional_manager ) {
+			return $form_data;
+		}
+
+		$filtered_data = array();
+
+		foreach ( $form_data as $field_id => $value ) {
+			// Skip data from hidden conditional fields.
+			if ( isset( $this->fields[ $field_id ] ) && isset( $this->fields[ $field_id ]['conditional'] ) ) {
+				if ( ! $this->conditional_manager->should_show_field( $field_id ) ) {
+					// Field is conditionally hidden, don't include its data.
+					continue;
+				}
+			}
+
+			$filtered_data[ $field_id ] = $value;
+		}
+
+		return $filtered_data;
 	}
 }

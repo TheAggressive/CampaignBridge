@@ -18,6 +18,7 @@ use WP_REST_Response;
 use WP_Error;
 use CampaignBridge\REST\Helpers\Response_Formatter;
 use CampaignBridge\REST\Helpers\Input_Validator;
+use CampaignBridge\Admin\REST\Form_Rest_Controller;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; }
@@ -50,6 +51,13 @@ class Routes extends Abstract_Rest_Controller {
 	private static array $providers = array();
 
 	/**
+	 * Form REST controller instance.
+	 *
+	 * @var Form_Rest_Controller
+	 */
+	private static Form_Rest_Controller $form_controller;
+
+	/**
 	 * Editor settings routes instance.
 	 *
 	 * @var Editor_Settings_Routes
@@ -67,6 +75,10 @@ class Routes extends Abstract_Rest_Controller {
 		self::$option_name            = $option_name;
 		self::$providers              = $providers;
 		self::$editor_settings_routes = new Editor_Settings_Routes( $option_name );
+		self::$form_controller        = new Form_Rest_Controller();
+
+		// Register AJAX handlers
+		\add_action( 'wp_ajax_campaignbridge_evaluate_conditions', array( self::$form_controller, 'handle_ajax_evaluate_conditions' ) );
 	}
 
 	/**
@@ -93,6 +105,9 @@ class Routes extends Abstract_Rest_Controller {
 
 		// Register editor settings routes.
 		self::$editor_settings_routes->register();
+
+		// Register form evaluation routes.
+		self::$form_controller->register_routes();
 	}
 
 	/**

@@ -2,48 +2,37 @@
  * Base conditional field styles
  */
 
-/* Hidden state */
-.campaignbridge-field--hidden {
-  display: none !important;
+/* Conditional field wrapper - initially hidden for FOUC prevention */
+.campaignbridge-conditional-field {
+  display: none;
 }
 
-/* Visible state */
-.campaignbridge-field--visible {
-  display: block !important;
+/* Visible conditional field */
+.campaignbridge-conditional-field.campaignbridge-conditional-visible {
+  display: block;
 }
 
-/* Animation transitions */
-.campaignbridge-field {
-  transition: all 0.3s ease-in-out;
+/* Smooth transitions for conditional fields */
+.campaignbridge-conditional-field {
+  transition:
+    opacity 0.3s ease-in-out,
+    max-height 0.3s ease-in-out;
+}
+
+/* Initially hidden state */
+.campaignbridge-conditional-field.campaignbridge-conditional-hidden {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+
+/* Visible state with animation */
+.campaignbridge-conditional-field.campaignbridge-conditional-visible {
+  opacity: 1;
+  max-height: 1000px; /* Large enough for most content */
 }
 
 /* Conditional field wrapper */
 .campaignbridge-conditional-field {
   position: relative;
-}
-
-/* Loading state during evaluation */
-.campaignbridge-conditional-field--loading {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* Required field indicators for conditionals */
-.campaignbridge-conditional-field[data-required='true']
-  .campaignbridge-field__label::after {
-  content: ' *';
-  color: #dc3232;
-  font-weight: bold;
-}
-
-/* Error states for conditional fields */
-.campaignbridge-conditional-field.campaignbridge-field--error {
-  border-left: 4px solid #dc3232;
-  padding-left: 10px;
-}
-
-/* Success states for conditional fields */
-.campaignbridge-conditional-field.campaignbridge-field--success {
-  border-left: 4px solid #46b450;
-  padding-left: 10px;
 }

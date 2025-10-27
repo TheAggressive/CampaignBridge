@@ -181,10 +181,10 @@ class Form_Conditional_Manager {
 		// Evaluate based on operator.
 		switch ( $operator ) {
 			case 'equals':
-				return $field_value == $value; // phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
+				return $field_value === $value;
 
 			case 'not_equals':
-				return $field_value != $value; // phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
+				return $field_value !== $value;
 
 			case 'is_checked':
 				return ! empty( $field_value );
@@ -252,5 +252,49 @@ class Form_Conditional_Manager {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Validate all fields with conditional logic
+	 *
+	 * @param array<string, mixed> $form_data Form data to validate.
+	 * @return array<string, mixed> Validation result with 'valid' and 'errors'.
+	 */
+	public function validate_conditional_fields( array $form_data ): array {
+		$errors   = array();
+		$is_valid = true;
+
+		foreach ( $this->fields as $field_id => $field_config ) {
+			// Skip validation for hidden conditional fields.
+			if ( ! $this->should_show_field( $field_id ) ) {
+				continue;
+			}
+
+			$value = $form_data[ $field_id ] ?? '';
+
+			$field_validation = $this->validate_conditional_requirements( $field_id, $field_config, $value );
+			if ( \is_wp_error( $field_validation ) ) {
+				$errors[ $field_id ] = $field_validation->get_error_message();
+				$is_valid            = false;
+			}
+		}
+
+		return array(
+			'valid'  => $is_valid,
+			'errors' => $errors,
+		);
+	}
+
+	/**
+	 * Generate JavaScript localization data for conditional fields
+	 *
+	 * @param string $form_id Form ID for JavaScript targeting.
+	 * @return array<string, mixed> Localized data for wp_localize_script.
+	 */
+	public function get_localization_data( string $form_id ): array {
+		return array(
+			'formId'       => $form_id,
+			'conditionals' => $this->get_conditional_fields(),
+		);
 	}
 }

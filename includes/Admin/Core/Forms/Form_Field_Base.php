@@ -168,6 +168,13 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			$attributes[]        = sprintf( 'data-validation="%s"', esc_attr( $validation_json ) );
 		}
 
+		// Data attributes.
+		foreach ( $this->config as $key => $value ) {
+			if ( str_starts_with( $key, 'data-' ) && ! empty( $value ) ) {
+				$attributes[] = sprintf( '%s="%s"', esc_attr( $key ), esc_attr( $value ) );
+			}
+		}
+
 		// Additional custom attributes.
 		if ( ! empty( $this->config['attributes'] ) ) {
 			foreach ( $this->config['attributes'] as $key => $value ) {

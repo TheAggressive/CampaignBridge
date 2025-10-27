@@ -1,43 +1,42 @@
 /**
  * Client-side conditional field engine for CampaignBridge forms
+ *
+ * Uses API-driven approach - sends form data to server for evaluation
+ * instead of client-side logic duplication.
  */
-export interface ConditionalRule {
-  field: string;
-  operator: string;
-  value?: any;
-}
-
-export interface ConditionalConfig {
-  type: 'show_when' | 'hide_when' | 'required_when';
-  conditions: ConditionalRule[];
-}
-
-export interface FieldConditional {
-  [fieldId: string]: ConditionalConfig;
-}
-
 export class ConditionalEngine {
   private form: HTMLFormElement | null;
-  private conditionals: FieldConditional;
   private formId: string;
+  private apiEndpoint: string;
+  private ajaxAction: string;
+  private evaluationInProgress: boolean = false;
 
-  constructor(formId: string, conditionals: FieldConditional) {
+  constructor(formId: string) {
     this.formId = formId;
-    this.conditionals = conditionals;
+    // Use WordPress AJAX URL
+    this.apiEndpoint = (window as any).ajaxurl || '/wp-admin/admin-ajax.php';
     this.form = document.getElementById(formId) as HTMLFormElement;
 
     if (!this.form) {
-      console.error('Form not found with ID:', formId);
       return;
     }
+
+    // Get AJAX action from data attribute
+    this.ajaxAction =
+      this.form.getAttribute('data-conditional-action') ||
+      'campaignbridge_evaluate_conditions';
 
     this.init();
   }
 
   private init(): void {
-    // Wait for form to be fully rendered, then evaluate initial conditions
+    // Wait for form to be fully rendered
     this.waitForFormReady(() => {
-      this.evaluateAllConditions();
+      // Initially hide all conditional fields to prevent FOUC
+      this.hideAllConditionalFields();
+
+      // Then evaluate conditions to show the ones that should be visible
+      this.evaluateConditions();
     });
 
     // Bind events for future changes
@@ -46,21 +45,11 @@ export class ConditionalEngine {
 
   private waitForFormReady(callback: () => void): void {
     const checkReady = () => {
-      // Check if all conditional fields exist in DOM
-      const conditionalFields = Object.keys(this.conditionals);
-      const allFieldsExist = conditionalFields.every(fieldId => {
-        const fieldName = `${this.formId}[${fieldId}]`;
-        const field = this.form.querySelector(`[name="${fieldName}"]`);
-        const container = field?.closest(
-          '.campaignbridge-field-wrapper, .campaignbridge-field, .form-field, tr'
-        );
-        return field && container;
-      });
-
-      if (allFieldsExist) {
+      // Simple check - wait for form to have inputs
+      if (this.form && this.form.querySelector('input, select, textarea')) {
         callback();
       } else {
-        setTimeout(checkReady, 50);
+        setTimeout(checkReady, 100);
       }
     };
 
@@ -68,65 +57,148 @@ export class ConditionalEngine {
   }
 
   private bindEvents(): void {
-    // Use event delegation for dynamic content
+    // Bind change events to all form inputs
     this.form.addEventListener('change', event => {
-      const target = event.target as HTMLElement;
-      if (target.matches('input, select, textarea')) {
-        // Small delay to ensure checkbox state is updated
-        setTimeout(() => {
-          this.evaluateAllConditions();
-        }, 10);
+      const target = event.target as HTMLInputElement;
+      if (target && target.name) {
+        // Debounce evaluation to avoid excessive API calls
+        this.debouncedEvaluate();
       }
     });
 
-    this.form.addEventListener('click', event => {
-      const target = event.target as HTMLElement;
-      if (target.matches('input[type="checkbox"], input[type="radio"]')) {
-        setTimeout(() => {
-          this.evaluateAllConditions();
-        }, 10);
+    // Also bind input events for text fields (real-time feedback)
+    this.form.addEventListener('input', event => {
+      const target = event.target as HTMLInputElement;
+      if (
+        target &&
+        (target.type === 'text' ||
+          target.type === 'email' ||
+          target.type === 'url')
+      ) {
+        this.debouncedEvaluate();
       }
     });
   }
 
-  private evaluateAllConditions(): void {
+  private debouncedEvaluate = this.debounce(() => {
+    this.evaluateConditions();
+  }, 300);
+
+  /**
+   * Hide all conditional fields initially to prevent FOUC
+   */
+  private hideAllConditionalFields(): void {
+    // Find elements with conditional-hidden class (containers that should be hidden)
+    const hiddenElements = this.form.querySelectorAll(
+      '.campaignbridge-conditional-hidden'
+    );
+    hiddenElements.forEach(element => {
+      const targetElement = element as HTMLElement;
+
+      // Check if already hidden by CSS
+      const computedStyle = window.getComputedStyle(targetElement);
+      const isAlreadyHidden = computedStyle.display === 'none';
+
+      if (!isAlreadyHidden) {
+        targetElement.style.display = 'none';
+      }
+    });
+  }
+
+  /**
+   * Evaluate conditions by sending form data to server via AJAX
+   */
+  private evaluateConditions(): void {
+    if (this.evaluationInProgress) {
+      return; // Prevent concurrent evaluations
+    }
+
+    this.evaluationInProgress = true;
+
     const formData = this.getFormData();
 
-    Object.keys(this.conditionals).forEach(fieldId => {
-      const conditional = this.conditionals[fieldId];
-      // Fields are named like "form_id[field_name]"
+    // Get nonce from the form's hidden input
+    const nonceInput = this.form.querySelector(
+      `input[name="${this.formId}_wpnonce"]`
+    ) as HTMLInputElement;
+    const nonce = nonceInput ? nonceInput.value : '';
+
+    // Use jQuery AJAX for WordPress compatibility
+    (window as any).jQuery.ajax({
+      url: this.apiEndpoint,
+      method: 'POST',
+      data: {
+        action: this.ajaxAction,
+        form_id: this.formId,
+        data: formData,
+        nonce: nonce,
+      },
+      success: (result: any) => {
+        // Security: Validate response structure
+        if (typeof result !== 'object' || result === null) {
+          return;
+        }
+
+        // Update field visibility and requirements based on server response
+        if (
+          result.success &&
+          result.fields &&
+          typeof result.fields === 'object'
+        ) {
+          this.updateFields(result.fields);
+        }
+      },
+      error: (xhr: any, status: string, error: string) => {
+        console.error('[ConditionalEngine] AJAX Error:', {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          responseText: xhr.responseText,
+          error: error,
+        });
+
+        // Security: Don't retry on auth errors
+        if (xhr.status === 401 || xhr.status === 403) {
+          console.error(
+            '[ConditionalEngine] Authentication/Security error - not retrying'
+          );
+          return;
+        }
+
+        // Could implement retry logic here for network errors
+        // For now, just log the error
+      },
+      complete: () => {
+        this.evaluationInProgress = false;
+      },
+    });
+  }
+
+  /**
+   * Update field visibility and requirements based on server response
+   */
+  private updateFields(fieldStates: {
+    [fieldId: string]: { visible: boolean; required: boolean };
+  }): void {
+    Object.entries(fieldStates).forEach(([fieldId, state]) => {
       const fieldName = `${this.formId}[${fieldId}]`;
       const field = this.form.querySelector(
         `[name="${fieldName}"]`
       ) as HTMLElement;
-      const fieldContainer = field?.closest(
-        '.campaignbridge-field-wrapper, .campaignbridge-field, .form-field, tr'
-      ) as HTMLElement;
 
-      if (field && fieldContainer) {
-        const shouldShow = this.evaluateCondition(conditional, formData);
-        const isRequired = conditional.type === 'required_when' && shouldShow;
+      if (field) {
+        const conditionalWrapper = field.closest(
+          '.campaignbridge-conditional-field'
+        ) as HTMLElement;
 
         // Update visibility
-        if (shouldShow) {
-          this.showField(field);
+        if (state.visible) {
+          this.showField(field, conditionalWrapper);
         } else {
-          this.hideField(field);
+          this.hideField(field, conditionalWrapper);
         }
 
-        // Update required state for required_when conditionals
-        fieldContainer.setAttribute(
-          'data-conditional-required',
-          isRequired ? 'true' : 'false'
-        );
-        field.setAttribute(
-          'data-conditional-required',
-          isRequired ? 'true' : 'false'
-        );
-
-        // Handle HTML required attribute for browser validation
-        // Hidden fields should never be required to prevent validation errors
-        if (shouldShow && isRequired) {
+        // Update required attribute
+        if (state.visible && state.required) {
           field.setAttribute('required', 'required');
           field.setAttribute('aria-required', 'true');
         } else {
@@ -137,132 +209,82 @@ export class ConditionalEngine {
     });
   }
 
-  private evaluateCondition(
-    conditional: ConditionalConfig,
-    formData: any
-  ): boolean {
-    if (!conditional.conditions || !Array.isArray(conditional.conditions)) {
-      return true;
-    }
+  private showField(
+    field: HTMLElement,
+    conditionalWrapper?: HTMLElement
+  ): void {
+    const targetElement =
+      conditionalWrapper ||
+      (field.closest(
+        '.campaignbridge-field-wrapper, .campaignbridge-field, .form-field, tr'
+      ) as HTMLElement);
 
-    const logicType = conditional.type || 'show_when';
-
-    // Evaluate if all conditions are met
-    let allConditionsMet = true;
-    for (const rule of conditional.conditions) {
-      const fieldValue = formData[rule.field] || '';
-      const operator = rule.operator || 'equals';
-      const expectedValue = rule.value || '';
-
-      const matches = this.evaluateRule(fieldValue, operator, expectedValue);
-
-      // All conditions in the array must match (AND logic)
-      if (!matches) {
-        allConditionsMet = false;
-        break;
-      }
-    }
-
-    // Apply logic based on condition type
-    switch (logicType) {
-      case 'show_when':
-        return allConditionsMet; // Show when conditions are met
-      case 'hide_when':
-        return !allConditionsMet; // Hide when conditions are met (inverse)
-      case 'required_when':
-        return true; // Visibility not affected by required_when
-      default:
-        return true;
-    }
-  }
-
-  private evaluateRule(
-    fieldValue: any,
-    operator: string,
-    expectedValue: any
-  ): boolean {
-    switch (operator) {
-      case 'equals':
-        return fieldValue == expectedValue; // eslint-disable-line eqeqeq
-      case 'not_equals':
-        return fieldValue != expectedValue; // eslint-disable-line eqeqeq
-      case 'is_checked':
-        return (
-          fieldValue !== '' &&
-          fieldValue !== null &&
-          fieldValue !== undefined &&
-          fieldValue !== false &&
-          fieldValue !== '0'
-        );
-      case 'not_checked':
-        return (
-          fieldValue === '' ||
-          fieldValue === null ||
-          fieldValue === undefined ||
-          fieldValue === false ||
-          fieldValue === '0'
-        );
-      case 'contains':
-        return String(fieldValue).indexOf(String(expectedValue)) !== -1;
-      case 'greater_than':
-        return parseFloat(fieldValue) > parseFloat(expectedValue);
-      case 'less_than':
-        return parseFloat(fieldValue) < parseFloat(expectedValue);
-      default:
-        return false;
-    }
-  }
-
-  private showField(field: HTMLElement): void {
-    const fieldContainer = field.closest(
-      '.campaignbridge-field-wrapper, .campaignbridge-field, .form-field, tr'
-    ) as HTMLElement;
-
-    if (!fieldContainer) {
+    if (!targetElement) {
       return;
     }
 
-    // Ensure the container has the base campaignbridge-field class for CSS targeting
-    if (
-      !fieldContainer.classList.contains('campaignbridge-field') &&
-      !fieldContainer.classList.contains('form-field') &&
-      fieldContainer.tagName !== 'TR'
-    ) {
-      fieldContainer.classList.add('campaignbridge-field');
+    // Remove FOUC prevention class and show the element
+    targetElement.classList.remove('campaignbridge-conditional-hidden');
+    targetElement.style.display = '';
+
+    // Handle conditional wrapper specially
+    if (conditionalWrapper) {
+      conditionalWrapper.classList.add('campaignbridge-conditional-visible');
+      return;
     }
 
-    fieldContainer.classList.remove('campaignbridge-field--hidden');
-    fieldContainer.classList.add(
+    // Legacy handling for non-wrapped fields
+    if (
+      !targetElement.classList.contains('campaignbridge-field') &&
+      !targetElement.classList.contains('form-field') &&
+      targetElement.tagName !== 'TR'
+    ) {
+      targetElement.classList.add('campaignbridge-field');
+    }
+
+    targetElement.classList.remove('campaignbridge-field--hidden');
+    targetElement.classList.add(
       'campaignbridge-field--visible',
       'campaignbridge-field--showing'
     );
-    fieldContainer.style.display = ''; // Ensure it's visible
+    targetElement.style.display = '';
 
-    // Remove showing class after animation completes
     setTimeout(() => {
-      fieldContainer.classList.remove('campaignbridge-field--showing');
+      targetElement.classList.remove('campaignbridge-field--showing');
     }, 300);
   }
 
-  private hideField(field: HTMLElement): void {
-    const fieldContainer = field.closest(
-      '.campaignbridge-field-wrapper, .campaignbridge-field, .form-field, tr'
-    ) as HTMLElement;
+  private hideField(
+    field: HTMLElement,
+    conditionalWrapper?: HTMLElement
+  ): void {
+    const targetElement =
+      conditionalWrapper ||
+      (field.closest(
+        '.campaignbridge-field-wrapper, .campaignbridge-field, .form-field, tr'
+      ) as HTMLElement);
 
-    if (!fieldContainer) {
+    if (!targetElement) {
       return;
     }
 
-    fieldContainer.classList.remove('campaignbridge-field--visible');
-    fieldContainer.classList.add(
+    // Handle conditional wrapper specially
+    if (conditionalWrapper) {
+      conditionalWrapper.classList.remove('campaignbridge-conditional-visible');
+      conditionalWrapper.classList.add('campaignbridge-conditional-hidden');
+      return;
+    }
+
+    // Legacy handling for non-wrapped fields
+    targetElement.classList.remove('campaignbridge-field--visible');
+    targetElement.classList.add(
       'campaignbridge-field--hidden',
       'campaignbridge-field--hiding'
     );
 
-    // Remove hiding class after animation completes
     setTimeout(() => {
-      fieldContainer.classList.remove('campaignbridge-field--hiding');
-      fieldContainer.style.display = 'none'; // Ensure it's hidden after animation
+      targetElement.classList.remove('campaignbridge-field--hiding');
+      targetElement.style.display = 'none';
     }, 300);
   }
 
@@ -323,5 +345,19 @@ export class ConditionalEngine {
       return match[1];
     }
     return fullName; // Fallback for non-array style names
+  }
+
+  /**
+   * Utility method to debounce function calls
+   */
+  private debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+  ): (...args: Parameters<T>) => void {
+    let timeout: NodeJS.Timeout;
+    return (...args: Parameters<T>) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
   }
 }

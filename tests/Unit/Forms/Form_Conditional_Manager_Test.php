@@ -298,4 +298,76 @@ class Form_Conditional_Manager_Test extends WP_UnitTestCase {
 		$this->assertFalse( $manager1->has_conditional_fields() );
 		$this->assertTrue( $manager2->has_conditional_fields() );
 	}
+
+	/**
+	 * Test validate_conditional_fields filters hidden fields
+	 */
+	public function test_validate_conditional_fields_filters_hidden_fields(): void {
+		$fields = array(
+			'enable_feature' => array(
+				'type' => 'checkbox',
+			),
+			'hidden_field'   => array(
+				'type'        => 'text',
+				'required'    => true,
+				'conditional' => array(
+					'type'       => 'show_when',
+					'conditions' => array(
+						array(
+							'field'    => 'enable_feature',
+							'operator' => 'is_checked',
+						),
+					),
+				),
+			),
+		);
+
+		$manager = new Form_Conditional_Manager( $fields, array() ); // Feature not enabled
+
+		// Validate with feature disabled - hidden field should not be validated
+		$result = $manager->validate_conditional_fields(
+			array(
+				'hidden_field' => '', // This should not cause validation error since field is hidden
+			)
+		);
+
+		$this->assertTrue( $result['valid'] ); // Should be valid since hidden field is not validated
+		$this->assertEmpty( $result['errors'] ); // No errors should be present
+	}
+
+	/**
+	 * Test validate_conditional_fields validates visible required fields
+	 */
+	public function test_validate_conditional_fields_validates_visible_required_fields(): void {
+		$fields = array(
+			'enable_feature'        => array(
+				'type' => 'checkbox',
+			),
+			'required_when_visible' => array(
+				'type'        => 'text',
+				'required'    => false,
+				'conditional' => array(
+					'type'       => 'required_when',
+					'conditions' => array(
+						array(
+							'field'    => 'enable_feature',
+							'operator' => 'is_checked',
+						),
+					),
+				),
+			),
+		);
+
+		$manager = new Form_Conditional_Manager( $fields, array( 'enable_feature' => '1' ) );
+
+		// Feature enabled - field should be required
+		$result = $manager->validate_conditional_fields(
+			array(
+				'required_when_visible' => '', // Empty when required
+			)
+		);
+
+		$this->assertFalse( $result['valid'] );
+		$this->assertArrayHasKey( 'required_when_visible', $result['errors'] );
+	}
 }

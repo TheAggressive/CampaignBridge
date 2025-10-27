@@ -6,13 +6,13 @@ import { ConditionalEngine } from './condition-fields';
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-  const conditionalData = (window as any).campaignbridgeConditionals;
+  // Find all forms with conditional fields (marked by data-conditional attribute)
+  const conditionalForms = document.querySelectorAll('form[data-conditional]');
 
-  if (
-    conditionalData &&
-    conditionalData.formId &&
-    conditionalData.conditionals
-  ) {
-    new ConditionalEngine(conditionalData.formId, conditionalData.conditionals);
-  }
+  conditionalForms.forEach(form => {
+    const formId = form.getAttribute('id');
+    if (formId) {
+      new ConditionalEngine(formId);
+    }
+  });
 });

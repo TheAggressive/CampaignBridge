@@ -15,13 +15,17 @@ use CampaignBridge\Admin\Core\Form;
 <div class="wrap">
 	<h1><?php esc_html_e( 'Conditional Forms Test', 'campaignbridge' ); ?></h1>
 
-	<p><?php esc_html_e( 'This page demonstrates the conditional form functionality. Try enabling/disabling options to see fields appear and disappear in real-time.', 'campaignbridge' ); ?></p>
+	<p><?php esc_html_e( 'This page demonstrates the conditional form functionality with smart features:', 'campaignbridge' ); ?>
+		<strong><?php esc_html_e( 'Auto-layout (div), Auto-prefix (campaignbridge_conditional_test_form_), Auto-success message, Auto-submit text ("Save Configuration").', 'campaignbridge' ); ?></strong>
+		<?php esc_html_e( 'Try enabling/disabling options to see fields appear and disappear in real-time.', 'campaignbridge' ); ?></p>
 
 	<div class="campaignbridge-form-container">
 		<?php
 		$form = Form::make( 'conditional_test_form' )
-			->div()
-			->save_to_options( 'conditional_test_' );
+			->auto_layout() // Smart layout detection (uses div for admin)
+			->save_to_options() // Uses default: campaignbridge_conditional_test_form_
+			->success() // Auto-generated: "Configuration saved successfully!"
+			->submit(); // Auto-generated: "Save Configuration"
 
 		$form->checkbox( 'enable_api' )
 			->label( 'Enable API Integration' )
@@ -46,8 +50,7 @@ use CampaignBridge\Admin\Core\Form;
 			)
 			->description( 'Select which type of API you want to configure' );
 
-		$form->text( 'api_endpoint' )
-			->label( 'API Endpoint URL' )
+		$form->text( 'api_endpoint' ) // Auto-detected: url (contains "endpoint")
 			->placeholder( 'https://api.example.com/v1/' )
 			->show_when(
 				array(
@@ -284,6 +287,7 @@ use CampaignBridge\Admin\Core\Form;
 			->description( 'Email address for notifications' );
 
 		$form->submit( 'Save Configuration', 'primary' );
+
 
 		$form->render();
 		?>
