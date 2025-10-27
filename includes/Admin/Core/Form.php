@@ -18,6 +18,7 @@ use CampaignBridge\Admin\Core\Forms\Form_Cache;
 use CampaignBridge\Admin\Core\Forms\Form_Query_Optimizer;
 use CampaignBridge\Admin\Core\Forms\Form_Asset_Optimizer;
 use CampaignBridge\Admin\Core\Forms\Form_Security;
+use CampaignBridge\Admin\Core\Forms\Form_Conditional_Manager;
 
 /**
  * Form Facade - The most developer friendly form API
@@ -693,6 +694,19 @@ class Form {
 	 */
 	public function get_config(): Form_Config {
 		return $this->config;
+	}
+
+	/**
+	 * Get the conditional manager instance for advanced conditional logic control.
+	 *
+	 * Useful for debugging or customizing conditional behavior:
+	 * - Disable caching: $form->get_conditional_manager()->set_caching_enabled(false);
+	 * - Clear cache: $form->get_conditional_manager()->clear_cache();
+	 *
+	 * @return Form_Conditional_Manager|null The conditional manager or null if not initialized.
+	 */
+	public function get_conditional_manager(): ?Form_Conditional_Manager {
+		return $this->handler?->get_conditional_manager();
 	}
 
 	/**

@@ -77,7 +77,7 @@ class Routes extends Abstract_Rest_Controller {
 		self::$editor_settings_routes = new Editor_Settings_Routes( $option_name );
 		self::$form_controller        = new Form_Rest_Controller();
 
-		// Register AJAX handlers
+		// Register AJAX handlers.
 		\add_action( 'wp_ajax_campaignbridge_evaluate_conditions', array( self::$form_controller, 'handle_ajax_evaluate_conditions' ) );
 	}
 
@@ -105,9 +105,6 @@ class Routes extends Abstract_Rest_Controller {
 
 		// Register editor settings routes.
 		self::$editor_settings_routes->register();
-
-		// Register form evaluation routes.
-		self::$form_controller->register_routes();
 	}
 
 	/**

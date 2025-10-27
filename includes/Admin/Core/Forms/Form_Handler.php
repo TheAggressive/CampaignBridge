@@ -891,4 +891,13 @@ class Form_Handler {
 
 		return $filtered_data;
 	}
+
+	/**
+	 * Get the conditional manager instance.
+	 *
+	 * @return Form_Conditional_Manager|null The conditional manager or null if not set.
+	 */
+	public function get_conditional_manager(): ?Form_Conditional_Manager {
+		return $this->conditional_manager;
+	}
 }

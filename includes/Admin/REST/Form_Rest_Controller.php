@@ -41,15 +41,6 @@ class Form_Rest_Controller {
 		$this->container = new Form_Container();
 	}
 
-	/**
-	 * Register AJAX handlers.
-	 *
-	 * @return void
-	 */
-	public function register_routes(): void {
-		// Only register AJAX handler for conditional field evaluation
-		// REST API routes removed as we're using AJAX instead
-	}
 
 	/**
 	 * Handle AJAX request for conditional evaluation.
@@ -58,43 +49,49 @@ class Form_Rest_Controller {
 	 */
 	public function handle_ajax_evaluate_conditions(): void {
 		try {
-			// Security: Verify user is logged in and has permissions
+			// Security: Verify user is logged in and has permissions.
 			if ( ! is_user_logged_in() ) {
 				wp_send_json_error( 'Authentication required', 401 );
 				return;
 			}
 
-			// Security: Check for required POST data
-			if ( empty( $_POST['form_id'] ) || empty( $_POST['nonce'] ) ) {
+			// Security: Get POST data using filter_input.
+			$form_id_input = filter_input( INPUT_POST, 'form_id', FILTER_DEFAULT );
+			$nonce_input   = filter_input( INPUT_POST, 'nonce', FILTER_DEFAULT );
+
+			$sanitized_form_id = $form_id_input ? sanitize_text_field( wp_unslash( $form_id_input ) ) : '';
+			$sanitized_nonce   = $nonce_input ? sanitize_text_field( wp_unslash( $nonce_input ) ) : '';
+
+			if ( empty( $sanitized_form_id ) || empty( $sanitized_nonce ) ) {
 				wp_send_json_error( 'Missing required data', 400 );
 				return;
 			}
 
-			$form_id = sanitize_text_field( wp_unslash( $_POST['form_id'] ) );
+			$form_id = $sanitized_form_id;
 
-			// Security: Verify nonce with specific action
+			// Security: Verify nonce with specific action.
 			$nonce_action = 'campaignbridge_form_' . $form_id;
-			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), $nonce_action ) ) {
+			if ( ! wp_verify_nonce( $sanitized_nonce, $nonce_action ) ) {
 				wp_send_json_error( 'Security check failed', 403 );
 				return;
 			}
 
-			// Security: Get and validate form data
-			$form_data = isset( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : array();
+			// Security: Get and validate form data.
+			$form_data_input = filter_input( INPUT_POST, 'data', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
+			$form_data       = $form_data_input ? wp_unslash( $form_data_input ) : array();
 
 			if ( ! is_array( $form_data ) ) {
 				$form_data = array();
 			}
 
-			// Security: Rate limiting - max 20 requests per minute per user
+			// Security: Rate limiting - max 20 requests per minute per user.
 			$rate_limit_key = 'conditional_eval_' . get_current_user_id();
-			$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) ?: 0;
+			$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) ? \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) : 0;
 
 			if ( $requests >= 20 ) {
-				// Log rate limit violation for security monitoring
-				\CampaignBridge\Core\Error_Handler::log(
+				// Log rate limit violation for security monitoring.
+				\CampaignBridge\Core\Error_Handler::warning(
 					'Rate limit exceeded for conditional evaluation',
-					'warning',
 					array(
 						'user_id'  => get_current_user_id(),
 						'user_ip'  => \CampaignBridge\Admin\Core\Forms\Form_Security::get_client_ip(),
@@ -107,15 +104,15 @@ class Form_Rest_Controller {
 
 			\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute
 
-			// Security: Validate and sanitize form data
+			// Security: Validate and sanitize form data.
 			$sanitized_data = array();
 			foreach ( $form_data as $key => $value ) {
-				// Security: Only allow alphanumeric keys with underscores and dashes
+				// Security: Only allow alphanumeric keys with underscores and dashes.
 				if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $key ) ) {
-					continue; // Skip invalid keys
+					continue; // Skip invalid keys.
 				}
 
-				// Security: Sanitize based on expected data types
+				// Security: Sanitize based on expected data types.
 				if ( is_array( $value ) ) {
 					$sanitized_data[ $key ] = array_map( 'sanitize_text_field', $value );
 				} else {
@@ -124,13 +121,13 @@ class Form_Rest_Controller {
 			}
 			$form_data = $sanitized_data;
 
-			// Security: Validate form_id format
+			// Security: Validate form_id format.
 			if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $form_id ) || strlen( $form_id ) > 100 ) {
 				wp_send_json_error( 'Invalid form ID', 400 );
 				return;
 			}
 
-			// Performance: Cache form config lookups
+			// Performance: Cache form config lookups.
 			$cache_key   = 'form_config_' . $form_id;
 			$form_config = \CampaignBridge\Core\Storage::wp_cache_get( $cache_key, 'campaignbridge' );
 
@@ -148,8 +145,8 @@ class Form_Rest_Controller {
 
 			$fields = $form_config->get_fields();
 
-			// Performance: Cache conditional evaluations for identical form data
-			$data_hash      = md5( serialize( $form_data ) );
+			// Performance: Cache conditional evaluations for identical form data.
+			$data_hash      = md5( wp_json_encode( $form_data ) );
 			$eval_cache_key = 'conditional_eval_' . $form_id . '_' . $data_hash;
 			$cached_result  = \CampaignBridge\Core\Storage::wp_cache_get( $eval_cache_key, 'campaignbridge' );
 
@@ -160,7 +157,7 @@ class Form_Rest_Controller {
 
 			$conditional_manager = $this->container->create_form_conditional_manager( $fields, $form_data );
 
-			// Evaluate all field visibility and requirements
+			// Evaluate all field visibility and requirements.
 			$result = array(
 				'success' => true,
 				'fields'  => array(),
@@ -173,10 +170,10 @@ class Form_Rest_Controller {
 				);
 			}
 
-			// Cache the result for 30 seconds (short cache for dynamic forms)
+			// Cache the result for 30 seconds (short cache for dynamic forms).
 			\CampaignBridge\Core\Storage::wp_cache_set( $eval_cache_key, $result, 'campaignbridge', 30 );
 
-			// Security: Add security headers
+			// Security: Add security headers.
 			if ( ! headers_sent() ) {
 				header( 'X-Content-Type-Options: nosniff' );
 				header( 'X-Frame-Options: SAMEORIGIN' );
@@ -185,10 +182,9 @@ class Form_Rest_Controller {
 			wp_send_json( $result );
 
 		} catch ( \Throwable $e ) {
-			// Log security-relevant errors
-			\CampaignBridge\Core\Error_Handler::log(
+			// Log security-relevant errors.
+			\CampaignBridge\Core\Error_Handler::error(
 				'Conditional evaluation error: ' . $e->getMessage(),
-				'error',
 				array(
 					'user_id' => get_current_user_id(),
 					'user_ip' => \CampaignBridge\Admin\Core\Forms\Form_Security::get_client_ip(),
@@ -209,15 +205,15 @@ class Form_Rest_Controller {
 	public function evaluate_conditions( WP_REST_Request $request ): void {
 		try {
 			$form_id   = $request->get_param( 'form_id' );
-			$form_data = $request->get_param( 'data' ) ?: array();
+			$form_data = $request->get_param( 'data' ) ? $request->get_param( 'data' ) : array();
 
 			if ( ! is_array( $form_data ) ) {
 				$form_data = array();
 			}
 
-			// Security: Rate limiting - max 20 requests per minute per user
+			// Security: Rate limiting - max 20 requests per minute per user.
 			$rate_limit_key = 'conditional_eval_' . get_current_user_id();
-			$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) ?: 0;
+			$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) ? \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) : 0;
 
 			if ( $requests >= 20 ) {
 				wp_send_json_error( 'Too many requests. Please wait before trying again.', 429 );
@@ -226,51 +222,51 @@ class Form_Rest_Controller {
 
 			\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute
 
-			// Security: Validate and sanitize form data
+			// Security: Validate and sanitize form data.
 			$sanitized_data = array();
 
-			// Security: Limit form data size to prevent DoS
+			// Security: Limit form data size to prevent DoS.
 			if ( count( $form_data ) > 100 ) {
 				wp_send_json_error( 'Too many form fields.', 400 );
 				return;
 			}
 
 			foreach ( $form_data as $key => $value ) {
-				// Security: Only allow alphanumeric keys with underscores and dashes
+				// Security: Only allow alphanumeric keys with underscores and dashes.
 				if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $key ) || strlen( $key ) > 100 ) {
 					continue;
 				}
 
-				// Security: Validate value types and sizes
+				// Security: Validate value types and sizes.
 				if ( is_string( $value ) ) {
 					if ( strlen( $value ) > 10000 ) { // 10KB max per field
-						continue; // Skip oversized values
+						continue; // Skip oversized values.
 					}
 					$sanitized_data[ $key ] = sanitize_text_field( $value );
 				} elseif ( is_numeric( $value ) ) {
-					$sanitized_data[ $key ] = $value; // Numbers are safe
+					$sanitized_data[ $key ] = $value; // Numbers are safe.
 				} elseif ( is_bool( $value ) ) {
-					$sanitized_data[ $key ] = $value; // Booleans are safe
+					$sanitized_data[ $key ] = $value; // Booleans are safe.
 				} elseif ( is_array( $value ) ) {
-					// Security: Arrays should be small and simple
+					// Security: Arrays should be small and simple.
 					if ( count( $value ) > 50 ) {
-						continue; // Skip oversized arrays
+						continue; // Skip oversized arrays.
 					}
 					$sanitized_data[ $key ] = array_map( 'sanitize_text_field', $value );
 				} else {
-					continue; // Skip unsupported types
+					continue; // Skip unsupported types.
 				}
 			}
 
 			$form_data = $sanitized_data;
 
-			// Security: Validate form ID
+			// Security: Validate form ID.
 			if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $form_id ) || strlen( $form_id ) > 100 ) {
 				wp_send_json_error( 'Invalid form ID', 400 );
 				return;
 			}
 
-			// Performance: Cache form config lookups
+			// Performance: Cache form config lookups.
 			$cache_key   = 'form_config_' . $form_id;
 			$form_config = \CampaignBridge\Core\Storage::wp_cache_get( $cache_key, 'campaignbridge' );
 
@@ -288,8 +284,8 @@ class Form_Rest_Controller {
 
 			$fields = $form_config->get_fields();
 
-			// Performance: Cache conditional evaluations for identical form data
-			$data_hash      = md5( serialize( $form_data ) );
+			// Performance: Cache conditional evaluations for identical form data.
+			$data_hash      = md5( wp_json_encode( $form_data ) );
 			$eval_cache_key = 'conditional_eval_' . $form_id . '_' . $data_hash;
 			$cached_result  = \CampaignBridge\Core\Storage::wp_cache_get( $eval_cache_key, 'campaignbridge' );
 
@@ -300,7 +296,7 @@ class Form_Rest_Controller {
 
 			$conditional_manager = $this->container->create_form_conditional_manager( $fields, $form_data );
 
-			// Evaluate all field visibility and requirements
+			// Evaluate all field visibility and requirements..
 			$result = array(
 				'success' => true,
 				'fields'  => array(),
@@ -313,16 +309,15 @@ class Form_Rest_Controller {
 				);
 			}
 
-			// Cache the result for 30 seconds (short cache for dynamic forms)
+			// Cache the result for 30 seconds (short cache for dynamic forms).
 			\CampaignBridge\Core\Storage::wp_cache_set( $eval_cache_key, $result, 'campaignbridge', 30 );
 
 			wp_send_json( $result );
 
 		} catch ( \Throwable $e ) {
-			// Log security-relevant errors
-			\CampaignBridge\Core\Error_Handler::log(
+			// Log security-relevant errors..
+			\CampaignBridge\Core\Error_Handler::error(
 				'Conditional evaluation error: ' . $e->getMessage(),
-				'error',
 				array(
 					'user_id' => get_current_user_id(),
 					'user_ip' => \CampaignBridge\Admin\Core\Forms\Form_Security::get_client_ip(),

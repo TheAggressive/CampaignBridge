@@ -33,14 +33,32 @@ class Form_Conditional_Manager {
 	private array $form_data;
 
 	/**
+	 * Cache for visibility calculations to improve performance
+	 *
+	 * @var array<string, bool>
+	 */
+	private array $visibility_cache = array();
+
+	/**
+	 * Whether to enable caching for visibility calculations
+	 *
+	 * Disable for debugging complex conditional logic.
+	 *
+	 * @var bool
+	 */
+	private bool $caching_enabled = true;
+
+	/**
 	 * Constructor
 	 *
-	 * @param array<string, mixed> $fields    Form fields configuration.
-	 * @param array<string, mixed> $form_data Current form data.
+	 * @param array<string, mixed> $fields          Form fields configuration.
+	 * @param array<string, mixed> $form_data       Current form data.
+	 * @param bool                 $caching_enabled Whether to enable caching for debugging.
 	 */
-	public function __construct( array $fields, array $form_data = array() ) {
-		$this->fields    = $fields;
-		$this->form_data = $form_data;
+	public function __construct( array $fields, array $form_data = array(), bool $caching_enabled = true ) {
+		$this->fields          = $fields;
+		$this->form_data       = $form_data;
+		$this->caching_enabled = $caching_enabled;
 	}
 
 	/**
@@ -51,45 +69,193 @@ class Form_Conditional_Manager {
 	 */
 	public function with_form_data( array $form_data ): self {
 		$this->form_data = $form_data;
+		$this->clear_cache(); // Clear cache when form data changes.
 		return $this;
+	}
+
+	/**
+	 * Clear the visibility calculation cache
+	 *
+	 * Call this when form data changes to ensure fresh calculations.
+	 */
+	public function clear_cache(): void {
+		$this->visibility_cache = array();
+	}
+
+	/**
+	 * Enable or disable caching for visibility calculations
+	 *
+	 * Useful for debugging complex conditional logic where you want to see
+	 * fresh calculations on every evaluation.
+	 *
+	 * @param bool $enabled Whether to enable caching.
+	 * @return self
+	 */
+	public function set_caching_enabled( bool $enabled ): self {
+		$this->caching_enabled = $enabled;
+
+		// Clear cache when disabling to ensure fresh state.
+		if ( ! $enabled ) {
+			$this->clear_cache();
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Check if caching is currently enabled
+	 *
+	 * @return bool True if caching is enabled.
+	 */
+	public function is_caching_enabled(): bool {
+		return $this->caching_enabled;
 	}
 
 	/**
 	 * Check if a field should be visible based on conditional logic
 	 *
+	 * This method evaluates cascading conditions - a field is only visible if:
+	 * 1. Its own conditions are met, AND
+	 * 2. All parent fields it depends on are also visible
+	 *
 	 * @param string $field_id Field ID to check.
 	 * @return bool True if field should be visible.
 	 */
 	public function should_show_field( string $field_id ): bool {
+		return $this->should_show_field_with_tracking( $field_id, array(), 0 );
+	}
+
+	/**
+	 * Check if a field should be visible with circular dependency tracking
+	 *
+	 * Internal method that tracks visited fields to prevent infinite recursion.
+	 *
+	 * @param string   $field_id Field ID to check.
+	 * @param string[] $visited  Fields already visited in this evaluation chain.
+	 * @param int      $depth    Current recursion depth.
+	 * @return bool True if field should be visible.
+	 */
+	private function should_show_field_with_tracking( string $field_id, array $visited, int $depth ): bool {
+		// Check cache first (but only if not in a dependency chain to avoid stale data).
+		$cache_key = $this->get_cache_key( $field_id );
+		if ( $this->caching_enabled && empty( $visited ) && isset( $this->visibility_cache[ $cache_key ] ) ) {
+			return $this->visibility_cache[ $cache_key ];
+		}
+
+		// Add current field to visited list to detect circular dependencies.
+		$visited[] = $field_id;
+
 		$field_config = $this->fields[ $field_id ] ?? array();
 
 		if ( ! isset( $field_config['conditional'] ) ) {
-			return true; // No conditions, field is visible by default.
+			$visibility = true; // No conditions, field is visible by default.
+		} else {
+			$conditional = $field_config['conditional'];
+
+			if ( ! isset( $conditional['type'] ) || ! isset( $conditional['conditions'] ) ) {
+				$visibility = true;
+			} else {
+				$type       = $conditional['type'];
+				$conditions = $conditional['conditions'];
+
+				// First check if all dependent fields (parent conditions) are visible.
+				if ( ! $this->are_parent_conditions_met( $conditions, $visited, $depth ) ) {
+					$visibility = false; // Parent conditions not met, field should be hidden.
+				} else {
+					// Evaluate the field's own conditions.
+					$result = $this->evaluate_conditions( $conditions );
+
+					// Apply logic based on type.
+					switch ( $type ) {
+						case 'show_when':
+							$visibility = $result; // Show when conditions are met.
+							break;
+						case 'hide_when':
+							$visibility = ! $result; // Hide when conditions are met (inverse).
+							break;
+						case 'required_when':
+							$visibility = true; // Visibility is not affected by required_when.
+							break;
+						default:
+							$visibility = true;
+					}
+				}
+			}
 		}
 
-		$conditional = $field_config['conditional'];
-
-		if ( ! isset( $conditional['type'] ) || ! isset( $conditional['conditions'] ) ) {
-			return true;
+		// Cache the result (only for top-level calls, not recursive ones).
+		if ( $this->caching_enabled && ( empty( $visited ) || count( $visited ) === 1 ) ) {
+			$this->visibility_cache[ $cache_key ] = $visibility;
 		}
 
-		$type       = $conditional['type'];
-		$conditions = $conditional['conditions'];
+		return $visibility;
+	}
 
-		// Evaluate the conditions.
-		$result = $this->evaluate_conditions( $conditions );
+	/**
+	 * Generate a cache key for visibility calculations
+	 *
+	 * @param string $field_id Field ID.
+	 * @return string Cache key.
+	 */
+	private function get_cache_key( string $field_id ): string {
+		// Include form data hash to ensure cache validity when data changes.
+		return $field_id . '_' . md5( wp_json_encode( $this->form_data ) );
+	}
 
-		// Apply logic based on type.
-		switch ( $type ) {
-			case 'show_when':
-				return $result; // Show when conditions are met.
-			case 'hide_when':
-				return ! $result; // Hide when conditions are met (inverse).
-			case 'required_when':
-				return true; // Visibility is not affected by required_when.
-			default:
-				return true;
+	/**
+	 * Check if all parent conditions for a field are met (cascading visibility)
+	 *
+	 * This ensures that fields are only shown when their entire dependency chain is visible.
+	 * For example, if field C depends on field B which depends on field A,
+	 * field C is only visible if A, B, and C's conditions are all met.
+	 *
+	 * Includes circular dependency protection and depth limiting for robustness.
+	 *
+	 * @param array<array<string, mixed>> $conditions Array of condition arrays.
+	 * @param array<string>               $visited    Fields already visited in this evaluation chain.
+	 * @param int                         $depth      Current recursion depth.
+	 * @return bool True if all parent conditions are met.
+	 */
+	private function are_parent_conditions_met( array $conditions, array $visited = array(), int $depth = 0 ): bool {
+		// Prevent infinite recursion from circular dependencies.
+		if ( $depth > 10 ) {
+			\CampaignBridge\Core\Error_Handler::warning(
+				'Conditional evaluation exceeded maximum depth (circular dependency?)',
+				array(
+					'depth'     => $depth,
+					'visited'   => $visited,
+					'form_data' => $this->form_data,
+				)
+			);
+			return false;
 		}
+
+		foreach ( $conditions as $condition ) {
+			if ( ! isset( $condition['field'] ) ) {
+				continue;
+			}
+
+			$parent_field_id = $condition['field'];
+
+			// Prevent circular dependencies.
+			if ( in_array( $parent_field_id, $visited, true ) ) {
+				\CampaignBridge\Core\Error_Handler::warning(
+					'Circular dependency detected in conditional logic',
+					array(
+						'field'   => $parent_field_id,
+						'visited' => $visited,
+					)
+				);
+				return false;
+			}
+
+			// Recursively check if the parent field itself is visible.
+			if ( ! $this->should_show_field_with_tracking( $parent_field_id, $visited, $depth + 1 ) ) {
+				return false; // Parent field is not visible, so this field should be hidden.
+			}
+		}
+
+		return true; // All parent conditions are met.
 	}
 
 	/**

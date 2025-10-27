@@ -22,10 +22,14 @@ use CampaignBridge\Admin\Core\Form;
 	<div class="campaignbridge-form-container">
 		<?php
 		$form = Form::make( 'conditional_test_form' )
-			->auto_layout() // Smart layout detection (uses div for admin)
-			->save_to_options() // Uses default: campaignbridge_conditional_test_form_
-			->success() // Auto-generated: "Configuration saved successfully!"
-			->submit(); // Auto-generated: "Save Configuration"
+			->auto_layout() // Smart layout detection (uses div for admin).
+			->save_to_options() // Uses default: campaignbridge_conditional_test_form_.
+			->success() // Auto-generated: "Configuration saved successfully!".
+			->submit(); // Auto-generated: "Save Configuration".
+
+		// Advanced: Control conditional logic caching for debugging
+		// Uncomment to disable caching when debugging complex conditional logic:
+		// $form->get_conditional_manager()->set_caching_enabled(false);
 
 		$form->checkbox( 'enable_api' )
 			->label( 'Enable API Integration' )

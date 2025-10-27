@@ -335,6 +335,143 @@ class Form_Conditional_Manager_Test extends WP_UnitTestCase {
 		$this->assertEmpty( $result['errors'] ); // No errors should be present
 	}
 
+	public function test_cascading_conditional_logic(): void {
+		// Test the scenario described by the user:
+		// enable_advanced -> auth_method -> username/password
+		// When enable_advanced is unchecked, all child fields should be hidden
+
+		$fields = array(
+			'enable_advanced' => array(
+				'type' => 'checkbox',
+			),
+			'auth_method'     => array(
+				'type'        => 'select',
+				'conditional' => array(
+					'type'       => 'show_when',
+					'conditions' => array(
+						array(
+							'field'    => 'enable_advanced',
+							'operator' => 'is_checked',
+						),
+					),
+				),
+			),
+			'username'        => array(
+				'type'        => 'text',
+				'conditional' => array(
+					'type'       => 'show_when',
+					'conditions' => array(
+						array(
+							'field'    => 'auth_method',
+							'operator' => 'equals',
+							'value'    => 'basic',
+						),
+					),
+				),
+			),
+			'password'        => array(
+				'type'        => 'password',
+				'conditional' => array(
+					'type'       => 'show_when',
+					'conditions' => array(
+						array(
+							'field'    => 'auth_method',
+							'operator' => 'equals',
+							'value'    => 'basic',
+						),
+					),
+				),
+			),
+		);
+
+		$manager = new Form_Conditional_Manager( $fields );
+
+		// Test 1: When enable_advanced is NOT checked, all fields should be hidden
+		$this->assertTrue( $manager->should_show_field( 'enable_advanced' ) ); // No conditions
+		$this->assertFalse( $manager->should_show_field( 'auth_method' ) ); // Depends on enable_advanced
+		$this->assertFalse( $manager->should_show_field( 'username' ) ); // Depends on auth_method
+		$this->assertFalse( $manager->should_show_field( 'password' ) ); // Depends on auth_method
+
+		// Test 2: When enable_advanced IS checked but auth_method is not 'basic', username/password should be hidden
+		$manager->with_form_data(
+			array(
+				'enable_advanced' => '1',
+				'auth_method'     => 'bearer',
+			)
+		);
+		$this->assertTrue( $manager->should_show_field( 'enable_advanced' ) );
+		$this->assertTrue( $manager->should_show_field( 'auth_method' ) ); // enable_advanced is checked
+		$this->assertFalse( $manager->should_show_field( 'username' ) ); // auth_method != 'basic'
+		$this->assertFalse( $manager->should_show_field( 'password' ) ); // auth_method != 'basic'
+
+		// Test 3: When enable_advanced IS checked AND auth_method is 'basic', username/password should be shown
+		$manager->with_form_data(
+			array(
+				'enable_advanced' => '1',
+				'auth_method'     => 'basic',
+			)
+		);
+		$this->assertTrue( $manager->should_show_field( 'enable_advanced' ) );
+		$this->assertTrue( $manager->should_show_field( 'auth_method' ) );
+		$this->assertTrue( $manager->should_show_field( 'username' ) ); // All conditions met
+		$this->assertTrue( $manager->should_show_field( 'password' ) ); // All conditions met
+
+		// Test 4: When enable_advanced is unchecked again, everything should be hidden
+		$manager->with_form_data(
+			array(
+				'enable_advanced' => '0',
+				'auth_method'     => 'basic',
+			)
+		);
+		$this->assertTrue( $manager->should_show_field( 'enable_advanced' ) );
+		$this->assertFalse( $manager->should_show_field( 'auth_method' ) ); // Parent condition not met
+		$this->assertFalse( $manager->should_show_field( 'username' ) ); // Parent condition not met
+		$this->assertFalse( $manager->should_show_field( 'password' ) ); // Parent condition not met
+	}
+
+	public function test_caching_functionality(): void {
+		$fields = array(
+			'enable_api'   => array(
+				'type' => 'checkbox',
+			),
+			'api_provider' => array(
+				'type'        => 'select',
+				'conditional' => array(
+					'type'       => 'show_when',
+					'conditions' => array(
+						array(
+							'field'    => 'enable_api',
+							'operator' => 'is_checked',
+						),
+					),
+				),
+			),
+		);
+
+		$manager = new Form_Conditional_Manager( $fields, array(), true ); // Caching enabled
+
+		// First call should calculate and cache
+		$this->assertFalse( $manager->should_show_field( 'api_provider' ) );
+
+		// Second call should use cache
+		$this->assertFalse( $manager->should_show_field( 'api_provider' ) );
+
+		// Change form data - should invalidate cache
+		$manager->with_form_data( array( 'enable_api' => '1' ) );
+
+		// Should recalculate and return true
+		$this->assertTrue( $manager->should_show_field( 'api_provider' ) );
+
+		// Disable caching
+		$manager->set_caching_enabled( false );
+
+		// Should still work but not use cache
+		$this->assertTrue( $manager->should_show_field( 'api_provider' ) );
+
+		// Verify caching state
+		$this->assertFalse( $manager->is_caching_enabled() );
+	}
+
 	/**
 	 * Test validate_conditional_fields validates visible required fields
 	 */
