@@ -10,12 +10,13 @@ export class ConditionalEngine {
   private apiEndpoint: string;
   private ajaxAction: string;
   private evaluationInProgress: boolean = false;
-  private lastFormData: any = null; // Cache last form data to avoid redundant requests
-  private lastResult: any = null; // Cache last evaluation result
+  private initialized: boolean = false;
+  private debouncedEvaluate: () => void;
+  private evaluationCache: Map<string, any> = new Map(); // Cache evaluation results
+  private lastFormData: any = null; // Track last sent data for delta updates
 
   constructor(formId: string) {
     this.formId = formId;
-    // Use WordPress AJAX URL
     this.apiEndpoint = (window as any).ajaxurl || '/wp-admin/admin-ajax.php';
     this.form = document.getElementById(formId) as HTMLFormElement;
 
@@ -23,15 +24,19 @@ export class ConditionalEngine {
       return;
     }
 
-    // Get AJAX action from data attribute
     this.ajaxAction =
       this.form.getAttribute('data-conditional-action') ||
       'campaignbridge_evaluate_conditions';
-
     this.init();
   }
 
   private init(): void {
+    // Prevent multiple initializations
+    if (this.initialized) {
+      return;
+    }
+    this.initialized = true;
+
     // Wait for form to be fully rendered
     this.waitForFormReady(() => {
       // Initially hide all conditional fields to prevent FOUC
@@ -46,45 +51,35 @@ export class ConditionalEngine {
   }
 
   private waitForFormReady(callback: () => void): void {
+    let callbackCalled = false;
+
     const checkReady = () => {
-      // Simple check - wait for form to have inputs
+      // Check immediately if form is ready
       if (this.form && this.form.querySelector('input, select, textarea')) {
-        callback();
-      } else {
-        setTimeout(checkReady, 100);
+        if (!callbackCalled) {
+          callbackCalled = true;
+          callback();
+        }
+        return;
       }
+
+      // If not ready, check again in 50ms (faster polling)
+      setTimeout(checkReady, 50);
     };
 
     checkReady();
   }
 
   private bindEvents(): void {
-    // Bind change events to all form inputs
-    this.form.addEventListener('change', event => {
-      const target = event.target as HTMLInputElement;
-      if (target && target.name) {
-        // Debounce evaluation to avoid excessive API calls
-        this.debouncedEvaluate();
-      }
-    });
-
-    // Also bind input events for text fields (on blur for better performance)
-    this.form.addEventListener('blur', event => {
-      const target = event.target as HTMLInputElement;
-      if (
-        target &&
-        (target.type === 'text' ||
-          target.type === 'email' ||
-          target.type === 'url')
-      ) {
-        this.debouncedEvaluate();
-      }
+    // Simple change event binding - evaluate on any form change
+    this.form.addEventListener('change', () => {
+      this.debouncedEvaluate();
     });
   }
 
   private debouncedEvaluate = this.debounce(() => {
     this.evaluateConditions();
-  }, 150); // Reduced from 300ms to 150ms for better responsiveness
+  }, 100); // Optimized 100ms debounce for snappier UX
 
   /**
    * Hide all conditional fields initially to prevent FOUC
@@ -108,7 +103,7 @@ export class ConditionalEngine {
   }
 
   /**
-   * Evaluate conditions by sending form data to server via AJAX
+   * Evaluate conditions with intelligent caching for better performance
    */
   private evaluateConditions(): void {
     if (this.evaluationInProgress) {
@@ -116,77 +111,86 @@ export class ConditionalEngine {
     }
 
     const formData = this.getFormData();
-    const formDataJson = JSON.stringify(formData);
+    const cacheKey = JSON.stringify(formData);
 
-    // Check if form data hasn't changed since last evaluation
-    if (this.lastFormData === formDataJson && this.lastResult) {
-      // Use cached result instead of making another AJAX call
-      this.updateFields(this.lastResult.fields);
+    // Check client-side cache first
+    if (this.evaluationCache.has(cacheKey)) {
+      const cachedResult = this.evaluationCache.get(cacheKey);
+      this.updateFields(cachedResult.fields);
       return;
     }
 
+    // Send full form data for accurate conditional evaluation
+    const deltaData = formData;
+
     this.evaluationInProgress = true;
+    this.lastFormData = formData;
 
-    // Get nonce from the form's hidden input
-    const nonceInput = this.form.querySelector(
-      `input[name="${this.formId}_wpnonce"]`
-    ) as HTMLInputElement;
-    const nonce = nonceInput ? nonceInput.value : '';
-
-    // Use jQuery AJAX for WordPress compatibility
+    // Send data to server for evaluation
     (window as any).jQuery.ajax({
       url: this.apiEndpoint,
       method: 'POST',
       data: {
         action: this.ajaxAction,
         form_id: this.formId,
-        data: formData,
-        nonce: nonce,
+        data: deltaData,
+        nonce: this.getNonce(),
       },
       success: (result: any) => {
-        // Security: Validate response structure
-        if (typeof result !== 'object' || result === null) {
-          return;
-        }
-
-        // Cache the successful result
         if (result.success && result.fields) {
-          this.lastFormData = formDataJson;
-          this.lastResult = result;
-        }
+          // Cache successful results
+          this.evaluationCache.set(cacheKey, result);
 
-        // Update field visibility and requirements based on server response
-        if (
-          result.success &&
-          result.fields &&
-          typeof result.fields === 'object'
-        ) {
+          // Limit cache size to prevent memory leaks
+          if (this.evaluationCache.size > 10) {
+            const firstKey = this.evaluationCache.keys().next().value;
+            this.evaluationCache.delete(firstKey);
+          }
+
           this.updateFields(result.fields);
         }
       },
-      error: (xhr: any, status: string, error: string) => {
-        console.error('[ConditionalEngine] AJAX Error:', {
-          status: xhr.status,
-          statusText: xhr.statusText,
-          responseText: xhr.responseText,
-          error: error,
-        });
+      error: (xhr: any, textStatus: string, errorThrown: string) => {
+        console.error(
+          '[ConditionalEngine] AJAX Error:',
+          xhr.status,
+          textStatus,
+          errorThrown
+        );
 
-        // Security: Don't retry on auth errors
-        if (xhr.status === 401 || xhr.status === 403) {
+        // Show user-friendly error message for critical failures
+        if (xhr.status === 403) {
           console.error(
-            '[ConditionalEngine] Authentication/Security error - not retrying'
+            '[ConditionalEngine] Authentication failed - conditional fields may not update properly'
           );
-          return;
+        } else if (xhr.status >= 500) {
+          console.error(
+            '[ConditionalEngine] Server error - conditional fields may not update properly'
+          );
         }
 
-        // Could implement retry logic here for network errors
-        // For now, just log the error
+        // Continue with cached or default state if available
+        // The form will still be usable even if conditional logic fails
       },
       complete: () => {
         this.evaluationInProgress = false;
       },
     });
+  }
+
+  private getNonce(): string {
+    const nonceInput = this.form.querySelector(
+      `input[name="${this.formId}_wpnonce"]`
+    ) as HTMLInputElement;
+    return nonceInput ? nonceInput.value : '';
+  }
+
+  /**
+   * Clear evaluation cache (useful for debugging or when form structure changes)
+   */
+  public clearCache(): void {
+    this.evaluationCache.clear();
+    this.lastFormData = null;
   }
 
   /**

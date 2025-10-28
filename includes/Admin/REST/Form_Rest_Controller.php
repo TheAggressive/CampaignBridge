@@ -76,6 +76,23 @@ class Form_Rest_Controller {
 				return;
 			}
 
+			// Security: Verify user has permission to access this form.
+			if ( ! current_user_can( 'read' ) ) {
+				wp_send_json_error( 'Insufficient permissions', 403 );
+				return;
+			}
+
+			// Security: Validate request origin for additional protection.
+			$referer = wp_get_referer();
+			if ( $referer && ! wp_validate_redirect( $referer, false ) ) {
+				// Allow admin-ajax.php requests from admin area
+				$admin_ajax_url = admin_url( 'admin-ajax.php' );
+				if ( strpos( $referer, $admin_ajax_url ) !== 0 ) {
+					wp_send_json_error( 'Invalid request origin', 403 );
+					return;
+				}
+			}
+
 			// Security: Get and validate form data.
 			$form_data_input = filter_input( INPUT_POST, 'data', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
 			$form_data       = $form_data_input ? wp_unslash( $form_data_input ) : array();
@@ -88,7 +105,7 @@ class Form_Rest_Controller {
 			$rate_limit_key = 'conditional_eval_' . get_current_user_id();
 			$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) ? \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) : 0;
 
-			if ( $requests >= 20 ) {
+			if ( $requests >= 100 ) {
 				// Log rate limit violation for security monitoring.
 				\CampaignBridge\Core\Error_Handler::warning(
 					'Rate limit exceeded for conditional evaluation',
@@ -164,10 +181,14 @@ class Form_Rest_Controller {
 			);
 
 			foreach ( $fields as $field_id => $field_config ) {
+				$visible  = $conditional_manager->should_show_field( $field_id );
+				$required = $conditional_manager->should_require_field( $field_id );
+
 				$result['fields'][ $field_id ] = array(
-					'visible'  => $conditional_manager->should_show_field( $field_id ),
-					'required' => $conditional_manager->should_require_field( $field_id ),
+					'visible'  => $visible,
+					'required' => $required,
 				);
+
 			}
 
 			// Cache the result for 30 seconds (short cache for dynamic forms).

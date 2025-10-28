@@ -212,6 +212,12 @@ class Form {
 			$validator
 		);
 
+		// Set up conditional manager if form has conditional fields.
+		if ( $this->has_conditional_fields() ) {
+			$conditional_manager = $this->container->create_form_conditional_manager( $fields );
+			$this->handler->set_conditional_manager( $conditional_manager );
+		}
+
 		// Validate form configuration for potential issues.
 		$this->validate_configuration();
 	}
@@ -694,6 +700,23 @@ class Form {
 	 */
 	public function get_config(): Form_Config {
 		return $this->config;
+	}
+
+	/**
+	 * Check if form has conditional fields
+	 *
+	 * @return bool True if form has conditional fields.
+	 */
+	private function has_conditional_fields(): bool {
+		$fields = $this->config->get_fields();
+
+		foreach ( $fields as $field_config ) {
+			if ( isset( $field_config['conditional'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

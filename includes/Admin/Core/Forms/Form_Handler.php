@@ -192,6 +192,12 @@ class Form_Handler {
 	 */
 	private function process_form_data(): array {
 		$form_data = $this->get_submitted_data();
+
+		// Update conditional manager with submitted data for accurate evaluation.
+		if ( $this->conditional_manager ) {
+			$this->conditional_manager->with_form_data( $form_data );
+		}
+
 		return $this->filter_conditional_field_data( $form_data );
 	}
 
