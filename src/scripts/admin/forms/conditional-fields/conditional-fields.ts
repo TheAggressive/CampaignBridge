@@ -10,6 +10,8 @@ export class ConditionalEngine {
   private apiEndpoint: string;
   private ajaxAction: string;
   private evaluationInProgress: boolean = false;
+  private lastFormData: any = null; // Cache last form data to avoid redundant requests
+  private lastResult: any = null; // Cache last evaluation result
 
   constructor(formId: string) {
     this.formId = formId;
@@ -66,8 +68,8 @@ export class ConditionalEngine {
       }
     });
 
-    // Also bind input events for text fields (real-time feedback)
-    this.form.addEventListener('input', event => {
+    // Also bind input events for text fields (on blur for better performance)
+    this.form.addEventListener('blur', event => {
       const target = event.target as HTMLInputElement;
       if (
         target &&
@@ -82,7 +84,7 @@ export class ConditionalEngine {
 
   private debouncedEvaluate = this.debounce(() => {
     this.evaluateConditions();
-  }, 300);
+  }, 150); // Reduced from 300ms to 150ms for better responsiveness
 
   /**
    * Hide all conditional fields initially to prevent FOUC
@@ -113,9 +115,17 @@ export class ConditionalEngine {
       return; // Prevent concurrent evaluations
     }
 
-    this.evaluationInProgress = true;
-
     const formData = this.getFormData();
+    const formDataJson = JSON.stringify(formData);
+
+    // Check if form data hasn't changed since last evaluation
+    if (this.lastFormData === formDataJson && this.lastResult) {
+      // Use cached result instead of making another AJAX call
+      this.updateFields(this.lastResult.fields);
+      return;
+    }
+
+    this.evaluationInProgress = true;
 
     // Get nonce from the form's hidden input
     const nonceInput = this.form.querySelector(
@@ -137,6 +147,12 @@ export class ConditionalEngine {
         // Security: Validate response structure
         if (typeof result !== 'object' || result === null) {
           return;
+        }
+
+        // Cache the successful result
+        if (result.success && result.fields) {
+          this.lastFormData = formDataJson;
+          this.lastResult = result;
         }
 
         // Update field visibility and requirements based on server response
@@ -179,6 +195,9 @@ export class ConditionalEngine {
   private updateFields(fieldStates: {
     [fieldId: string]: { visible: boolean; required: boolean };
   }): void {
+    // Track changes for accessibility announcements.
+    const changes: string[] = [];
+
     // Update each field based on its new state
     Object.entries(fieldStates).forEach(([fieldId, state]) => {
       const fieldName = `${this.formId}[${fieldId}]`;
@@ -191,6 +210,12 @@ export class ConditionalEngine {
           '.campaignbridge-conditional-field'
         ) as HTMLElement;
 
+        // Get current visibility state.
+        const wasVisible = !conditionalWrapper?.classList.contains(
+          'campaignbridge-conditional-hidden'
+        );
+        const isVisible = state.visible;
+
         // Update visibility based on the state
         if (state.visible) {
           this.showField(field, conditionalWrapper);
@@ -198,16 +223,30 @@ export class ConditionalEngine {
           this.hideField(field, conditionalWrapper);
         }
 
-        // Update required attribute
-        if (state.visible && state.required) {
-          field.setAttribute('required', 'required');
-          field.setAttribute('aria-required', 'true');
-        } else {
-          field.removeAttribute('required');
-          field.removeAttribute('aria-required');
+        // Update required attribute and announce changes
+        this.updateFieldRequirements(field, state, fieldId, changes);
+
+        // Handle focus management when fields disappear
+        if (wasVisible && !isVisible) {
+          this.handleFieldHidden(field, fieldId);
+        }
+
+        // Track changes for announcements
+        if (wasVisible !== isVisible) {
+          const fieldLabel = this.getFieldLabel(field, fieldId);
+          if (isVisible) {
+            changes.push(`${fieldLabel} is now available`);
+          } else {
+            changes.push(`${fieldLabel} is now hidden`);
+          }
         }
       }
     });
+
+    // Announce changes to screen readers
+    if (changes.length > 0) {
+      this.announceChanges(changes);
+    }
   }
 
   private showField(
@@ -227,6 +266,9 @@ export class ConditionalEngine {
     // Remove FOUC prevention class and show the element
     targetElement.classList.remove('campaignbridge-conditional-hidden');
     targetElement.style.display = '';
+
+    // Remove inert attribute to make element focusable and accessible again
+    targetElement.inert = false;
 
     // Handle conditional wrapper specially
     if (conditionalWrapper) {
@@ -270,6 +312,7 @@ export class ConditionalEngine {
       conditionalWrapper.classList.remove('campaignbridge-conditional-visible');
       conditionalWrapper.classList.add('campaignbridge-conditional-hidden');
       conditionalWrapper.style.display = 'none';
+      conditionalWrapper.inert = true;
       return;
     }
 
@@ -280,6 +323,103 @@ export class ConditionalEngine {
     );
     targetElement.classList.add('campaignbridge-field--hidden');
     targetElement.style.display = 'none';
+    targetElement.inert = true;
+  }
+
+  /**
+   * Update field requirements with accessibility announcements
+   */
+  private updateFieldRequirements(
+    field: HTMLElement,
+    state: { visible: boolean; required: boolean },
+    fieldId: string,
+    changes: string[]
+  ): void {
+    const wasRequired = field.hasAttribute('aria-required');
+
+    if (state.visible && state.required) {
+      field.setAttribute('required', 'required');
+      field.setAttribute('aria-required', 'true');
+
+      // Announce requirement change
+      if (!wasRequired) {
+        const fieldLabel = this.getFieldLabel(field, fieldId);
+        changes.push(`${fieldLabel} is now required`);
+      }
+    } else {
+      field.removeAttribute('required');
+      field.removeAttribute('aria-required');
+
+      // Announce requirement change
+      if (wasRequired) {
+        const fieldLabel = this.getFieldLabel(field, fieldId);
+        changes.push(`${fieldLabel} is no longer required`);
+      }
+    }
+  }
+
+  /**
+   * Handle focus management when a field is hidden
+   */
+  private handleFieldHidden(field: HTMLElement, fieldId: string): void {
+    // If the hidden field currently has focus, move focus to a logical next element
+    if (document.activeElement === field) {
+      // Find the next focusable element
+      const focusableElements = this.form.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+
+      const currentIndex = Array.from(focusableElements).indexOf(
+        field as Element
+      );
+      if (currentIndex !== -1 && currentIndex < focusableElements.length - 1) {
+        (focusableElements[currentIndex + 1] as HTMLElement).focus();
+      }
+    }
+  }
+
+  /**
+   * Get human-readable field label for announcements
+   */
+  private getFieldLabel(field: HTMLElement, fieldId: string): string {
+    // Try to find associated label
+    const label =
+      this.form.querySelector(`label[for="${field.id}"]`) ||
+      field.closest('tr')?.querySelector('th label') ||
+      field.closest('.campaignbridge-field')?.querySelector('label');
+
+    if (label) {
+      return (label as HTMLElement).textContent?.trim() || fieldId;
+    }
+
+    // Fallback to field ID with spaces
+    return fieldId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  /**
+   * Announce changes to screen readers
+   */
+  private announceChanges(changes: string[]): void {
+    // Create or update a live region for announcements
+    let liveRegion = this.form.querySelector(
+      '.campaignbridge-a11y-announcements'
+    ) as HTMLElement;
+
+    if (!liveRegion) {
+      liveRegion = document.createElement('div');
+      liveRegion.className = 'campaignbridge-a11y-announcements';
+      liveRegion.setAttribute('aria-live', 'polite');
+      liveRegion.setAttribute('aria-atomic', 'true');
+      liveRegion.style.position = 'absolute';
+      liveRegion.style.left = '-10000px';
+      liveRegion.style.width = '1px';
+      liveRegion.style.height = '1px';
+      liveRegion.style.overflow = 'hidden';
+      this.form.appendChild(liveRegion);
+    }
+
+    // Announce the changes
+    liveRegion.textContent = changes.join('. ') + '.';
   }
 
   private getFormData(): any {
@@ -339,6 +479,14 @@ export class ConditionalEngine {
       return match[1];
     }
     return fullName; // Fallback for non-array style names
+  }
+
+  /**
+   * Clear cached evaluation results
+   */
+  private clearCache(): void {
+    this.lastFormData = null;
+    this.lastResult = null;
   }
 
   /**

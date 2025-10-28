@@ -309,8 +309,8 @@ class Form_Rest_Controller {
 				);
 			}
 
-			// Cache the result for 30 seconds (short cache for dynamic forms).
-			\CampaignBridge\Core\Storage::wp_cache_set( $eval_cache_key, $result, 'campaignbridge', 30 );
+			// Cache the result for 5 minutes (increased from 30 seconds for better performance).
+			\CampaignBridge\Core\Storage::wp_cache_set( $eval_cache_key, $result, 'campaignbridge', 300 );
 
 			wp_send_json( $result );
 

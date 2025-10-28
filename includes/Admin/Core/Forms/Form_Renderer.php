@@ -497,7 +497,7 @@ class Form_Renderer {
 	 */
 	public function render_form_open(): void {
 
-		// Inject FOUC prevention CSS immediately if form has conditional fields
+		// Inject FOUC prevention CSS immediately if form has conditional fields.
 		if ( $this->has_conditional_fields() ) {
 			$this->inject_conditional_css();
 		}
@@ -520,16 +520,18 @@ class Form_Renderer {
 		if ( $this->has_conditional_fields() ) {
 			$attr_string .= ' data-conditional="true"';
 			$attr_string .= ' data-conditional-action="campaignbridge_evaluate_conditions"';
+			$attr_string .= ' aria-live="polite"';
+			$attr_string .= ' aria-atomic="false"';
 
 			// Enqueue conditional JavaScript and CSS.
 			\CampaignBridge\Admin\Asset_Manager::enqueue_asset_style(
 				'campaignbridge-condition-fields',
-				'dist/styles/admin/forms/condition-fields/index.asset.php'
+				'dist/styles/admin/forms/conditional-fields/index.asset.php'
 			);
 
 			\CampaignBridge\Admin\Asset_Manager::enqueue_asset_script(
 				'campaignbridge-condition-fields',
-				'dist/scripts/admin/forms/condition-fields/index.asset.php'
+				'dist/scripts/admin/forms/conditional-fields/index.asset.php'
 			);
 		}
 

@@ -2,7 +2,7 @@
  * Entry point for conditional fields functionality
  */
 
-import { ConditionalEngine } from './condition-fields';
+import { ConditionalEngine } from './conditional-fields';
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

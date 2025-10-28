@@ -497,14 +497,88 @@ class Form_Conditional_Manager_Test extends WP_UnitTestCase {
 
 		$manager = new Form_Conditional_Manager( $fields, array( 'enable_feature' => '1' ) );
 
-		// Feature enabled - field should be required
+		// Feature enabled - field should be required.
 		$result = $manager->validate_conditional_fields(
 			array(
-				'required_when_visible' => '', // Empty when required
+				'required_when_visible' => '', // Empty when required.
 			)
 		);
 
 		$this->assertFalse( $result['valid'] );
 		$this->assertArrayHasKey( 'required_when_visible', $result['errors'] );
+	}
+
+	/**
+	 * Test checkbox conditional logic with proper checked/unchecked values
+	 */
+	public function test_checkbox_conditional_logic(): void {
+		$fields = array(
+			'enable_feature'      => array(
+				'type' => 'checkbox',
+			),
+			'feature_setting'     => array(
+				'type'        => 'text',
+				'conditional' => array(
+					'type'       => 'show_when',
+					'conditions' => array(
+						array(
+							'field'    => 'enable_feature',
+							'operator' => 'is_checked',
+						),
+					),
+				),
+			),
+			'hidden_when_checked' => array(
+				'type'        => 'text',
+				'conditional' => array(
+					'type'       => 'hide_when',
+					'conditions' => array(
+						array(
+							'field'    => 'enable_feature',
+							'operator' => 'is_checked',
+						),
+					),
+				),
+			),
+		);
+
+		$manager = new Form_Conditional_Manager( $fields );
+
+		// Feature disabled ('0') - feature_setting should be hidden, hidden_when_checked should be visible
+		$this->assertFalse( $manager->should_show_field( 'feature_setting' ) );
+		$this->assertTrue( $manager->should_show_field( 'hidden_when_checked' ) );
+
+		// Feature enabled ('1') - feature_setting should be visible, hidden_when_checked should be hidden
+		$manager->with_form_data( array( 'enable_feature' => '1' ) );
+		$this->assertTrue( $manager->should_show_field( 'feature_setting' ) );
+		$this->assertFalse( $manager->should_show_field( 'hidden_when_checked' ) );
+
+		// Test not_checked operator
+		$fields_not_checked = array(
+			'disable_feature'  => array(
+				'type' => 'checkbox',
+			),
+			'when_not_checked' => array(
+				'type'        => 'text',
+				'conditional' => array(
+					'type'       => 'show_when',
+					'conditions' => array(
+						array(
+							'field'    => 'disable_feature',
+							'operator' => 'not_checked',
+						),
+					),
+				),
+			),
+		);
+
+		$manager_not_checked = new Form_Conditional_Manager( $fields_not_checked );
+
+		// Feature enabled ('1') - when_not_checked should be hidden
+		$this->assertFalse( $manager_not_checked->should_show_field( 'when_not_checked' ) );
+
+		// Feature disabled ('0') - when_not_checked should be visible
+		$manager_not_checked->with_form_data( array( 'disable_feature' => '0' ) );
+		$this->assertTrue( $manager_not_checked->should_show_field( 'when_not_checked' ) );
 	}
 }

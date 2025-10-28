@@ -353,10 +353,12 @@ class Form_Conditional_Manager {
 				return $field_value !== $value;
 
 			case 'is_checked':
-				return ! empty( $field_value );
+				// For checkboxes, one, true values, or positive integers indicate checked state.
+				return '1' === $field_value || 1 === $field_value || true === $field_value;
 
 			case 'not_checked':
-				return empty( $field_value );
+				// For checkboxes, zero, false values, or empty strings indicate unchecked state.
+				return '0' === $field_value || 0 === $field_value || false === $field_value || empty( $field_value );
 
 			case 'contains':
 				return strpos( (string) $field_value, (string) $value ) !== false;
