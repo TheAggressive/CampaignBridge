@@ -31,7 +31,7 @@ class Form_Field_Textarea extends Form_Field_Base {
 
 		printf(
 			'<textarea %s>%s</textarea>',
-			$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$attributes,
 			esc_textarea( $value )
 		);
 	}

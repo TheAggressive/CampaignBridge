@@ -232,7 +232,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 	public function render_table_row(): void {
 		$wrapper_class = ( $this->config['wrapper_class'] ?? '' ) ? ' class="' . esc_attr( $this->config['wrapper_class'] ) . '"' : '';
 
-		printf( '<tr%s>', $wrapper_class ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<tr%s>', $wrapper_class );
 
 		// Label column.
 		echo '<th scope="row">';
@@ -285,9 +285,9 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 
 		printf(
 			'<label%s>%s%s</label>',
-			$for_attr, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$for_attr,
 			esc_html( $label ),
-			$required_mark // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$required_mark
 		);
 	}
 

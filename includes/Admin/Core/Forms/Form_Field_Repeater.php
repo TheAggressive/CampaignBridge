@@ -100,8 +100,7 @@ class Form_Field_Repeater {
 				throw new \InvalidArgumentException(
 					sprintf(
 						'Choice key must be a string in repeater() method. Got: %s',
-						// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_gettype, WordPress.Security.EscapeOutput.ExceptionNotEscaped
-						gettype( $key )
+						esc_html( gettype( $key ) )
 					)
 				);
 			}

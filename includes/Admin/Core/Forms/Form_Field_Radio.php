@@ -57,8 +57,8 @@ class Form_Field_Radio extends Form_Field_Base {
 				esc_attr( $radio_id ),
 				esc_attr( $this->config['name'] ),
 				esc_attr( $option_value ),
-				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				$checked, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$attributes,
+				$checked,
 				esc_html( $option_label )
 			);
 		}

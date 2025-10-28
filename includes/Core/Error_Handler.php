@@ -9,6 +9,8 @@
  * @since 0.1.0
  */
 
+// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_error_log,WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- This class intentionally uses direct logging functions as approved wrappers
+
 declare(strict_types=1);
 
 namespace CampaignBridge\Core;

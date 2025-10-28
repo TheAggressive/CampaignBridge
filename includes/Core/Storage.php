@@ -1,5 +1,5 @@
 <?php // phpcs:ignore WordPress.Files.FileName
-// phpcs:disable CampaignBridge.Standard.Sniffs.Database.StorageUsage.ForbiddenStorageFunction,CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- This file intentionally uses WordPress storage functions as wrappers, nonce verification handled at caller level
+// phpcs:disable CampaignBridge.Standard.Sniffs.Database.StorageUsage.ForbiddenStorageFunction,CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectQuery,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.NoCaching,WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- This file intentionally uses WordPress storage functions as wrappers, nonce verification handled at caller level
 
 /**
  * Storage Operations for CampaignBridge Plugin

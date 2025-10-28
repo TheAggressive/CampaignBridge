@@ -84,7 +84,8 @@ class Tab_Field_Renderer {
 
 		$attributes_string = self::build_attributes_string( $attributes );
 
-		echo '<input ' . $attributes_string . ' />'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attributes_string is built by build_attributes_string() with proper escaping
+		echo '<input ' . $attributes_string . ' />';
 	}
 
 	/**
@@ -108,12 +109,11 @@ class Tab_Field_Renderer {
 
 		$attributes_string = self::build_attributes_string( $attributes );
 
-		echo '<select ' . $attributes_string . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attributes_string is built by build_attributes_string() with proper escaping
+		echo '<select ' . $attributes_string . '>';
 		foreach ( $options as $option_value => $option_label ) {
 			$selected = selected( $value, $option_value, false );
-			echo '<option value="' . esc_attr( $option_value ) . '" ' . $selected . '>' . esc_html( $option_label ) . '</option>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		}
+			echo '<option value="' . esc_attr( $option_value ) . '" ' . $selected . '>' . esc_html( $option_label ) . '</option>'; 		}
 
 		echo '</select>';
 	}
@@ -140,8 +140,8 @@ class Tab_Field_Renderer {
 
 		$attributes_string = self::build_attributes_string( $attributes );
 
-		echo '<textarea ' . $attributes_string . '>' . esc_textarea( $value ) . '</textarea>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-	}
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attributes_string is built by build_attributes_string() with proper escaping
+		echo '<textarea ' . $attributes_string . '>' . esc_textarea( $value ) . '</textarea>'; 	}
 
 	/**
 	 * Render checkbox field.
@@ -170,8 +170,8 @@ class Tab_Field_Renderer {
 
 		$attributes_string = self::build_attributes_string( $attributes );
 
-		echo '<input ' . $attributes_string . ' />'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attributes_string is built by build_attributes_string() with proper escaping
+		echo '<input ' . $attributes_string . ' />';
 		// Add hidden field for unchecked state.
 		echo '<input type="hidden" name="' . esc_attr( Settings_Manager::get_option_name() . '[' . $field_name . ']' ) . '" value="0" />';
 	}
@@ -208,8 +208,8 @@ class Tab_Field_Renderer {
 			$attributes_string = self::build_attributes_string( $radio_attributes );
 
 			echo '<label>';
-			echo '<input ' . $attributes_string . ' /> '; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo esc_html( $option_label );
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attributes_string is built by build_attributes_string() with proper escaping
+			echo '<input ' . $attributes_string . ' /> '; 			echo esc_html( $option_label );
 			echo '</label><br />';
 		}
 	}
@@ -236,7 +236,8 @@ class Tab_Field_Renderer {
 
 		$attributes_string = self::build_attributes_string( $attributes );
 
-		echo '<input ' . $attributes_string . ' />'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attributes_string is built by build_attributes_string() with proper escaping
+		echo '<input ' . $attributes_string . ' />';
 	}
 
 	/**
@@ -261,7 +262,8 @@ class Tab_Field_Renderer {
 
 		$attributes_string = self::build_attributes_string( $attributes );
 
-		echo '<input ' . $attributes_string . ' />'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attributes_string is built by build_attributes_string() with proper escaping
+		echo '<input ' . $attributes_string . ' />';
 	}
 
 	/**

@@ -88,6 +88,12 @@ class StorageUsageSniff implements Sniff {
 				return;
 			}
 
+			// Check if this is being called on an approved wrapper class
+			if ( $this->isApprovedWrapperClassCall( $phpcs_file, $stack_ptr ) ) {
+				// This is a call on an approved wrapper class, don't report.
+				return;
+			}
+
 			// This is a direct WordPress function call, report violation.
 			$this->reportViolation( $phpcs_file, $stack_ptr, $function_name );
 		}
@@ -122,6 +128,56 @@ class StorageUsageSniff implements Sniff {
 	 * @return bool True if this is a Storage class call, false otherwise.
 	 */
 	private function isStorageClassCall( File $phpcs_file, int $stack_ptr ): bool {
+		return $this->isClassCallOnApprovedClass(
+			$phpcs_file,
+			$stack_ptr,
+			array(
+				'Storage',
+				'CampaignBridge\\Core\\Storage',
+				'\\CampaignBridge\\Core\\Storage',
+			)
+		);
+	}
+
+	/**
+	 * Checks if the function call is being made on an approved wrapper class.
+	 *
+	 * @param File $phpcs_file The file being scanned.
+	 * @param int  $stack_ptr  The position of the current token in the stack.
+	 *
+	 * @return bool True if this is an approved wrapper class call, false otherwise.
+	 */
+	private function isApprovedWrapperClassCall( File $phpcs_file, int $stack_ptr ): bool {
+		$approved_classes = array(
+			// Storage class
+			'Storage',
+			'CampaignBridge\\Core\\Storage',
+			'\\CampaignBridge\\Core\\Storage',
+
+			// Error Handler class
+			'Error_Handler',
+			'CampaignBridge\\Core\\Error_Handler',
+			'\\CampaignBridge\\Core\\Error_Handler',
+
+			// Form Security class
+			'Form_Security',
+			'CampaignBridge\\Admin\\Core\\Forms\\Form_Security',
+			'\\CampaignBridge\\Admin\\Core\\Forms\\Form_Security',
+		);
+
+		return $this->isClassCallOnApprovedClass( $phpcs_file, $stack_ptr, $approved_classes );
+	}
+
+	/**
+	 * Checks if the function call is being made on one of the approved classes.
+	 *
+	 * @param File   $phpcs_file      The file being scanned.
+	 * @param int    $stack_ptr       The position of the current token in the stack.
+	 * @param array  $approved_classes List of approved class names.
+	 *
+	 * @return bool True if this is a call on an approved class, false otherwise.
+	 */
+	private function isClassCallOnApprovedClass( File $phpcs_file, int $stack_ptr, array $approved_classes ): bool {
 		$tokens = $phpcs_file->getTokens();
 
 		// Look backwards for double colon (::).
@@ -168,16 +224,8 @@ class StorageUsageSniff implements Sniff {
 			$full_class_name = $class_name;
 		}
 
-		// Check if it's the Storage class.
-		return in_array(
-			$full_class_name,
-			array(
-				'Storage',
-				'CampaignBridge\\Core\\Storage',
-				'\\CampaignBridge\\Core\\Storage',
-			),
-			true
-		);
+		// Check if it's an approved class.
+		return in_array( $full_class_name, $approved_classes, true );
 	}
 
 	/**

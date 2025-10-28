@@ -52,7 +52,7 @@ class Form_Field_Input extends Form_Field_Base {
 			'<input type="%s" value="%s" %s />',
 			esc_attr( $type ),
 			esc_attr( $value ),
-			$attributes // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$attributes
 		);
 	}
 }

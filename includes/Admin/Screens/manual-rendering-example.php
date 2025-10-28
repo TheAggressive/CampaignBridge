@@ -77,12 +77,3 @@ $form->form_start();
 
 <?php
 $form->form_end();
-
-// ============================================================================
-// DEBUG OUTPUT
-// ============================================================================
-
-if ( ! empty( sanitize_text_field( wp_unslash( $_GET['debug'] ?? '' ) ) ) && current_user_can( 'manage_options' ) ) {
-	echo '<h3>Debug: Form Data</h3>';
-	echo '<pre>' . esc_html( print_r( get_option( 'manual_example_data' ), true ) ) . '</pre>';
-}

@@ -45,7 +45,7 @@ class Form_Field_Wysiwyg extends Form_Field_Base {
 		printf(
 			'<textarea id="%s" %s>%s</textarea>',
 			esc_attr( $editor_id ),
-			$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$attributes,
 			esc_textarea( $value )
 		);
 

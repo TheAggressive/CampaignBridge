@@ -50,12 +50,12 @@ class Form_Field_Switch extends Form_Field_Base {
 					<span class="campaignbridge-switch__slider"></span>
 				</label>
 			</div>',
-			$hidden_input, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$hidden_input,
 			esc_attr( $switch_classes ),
 			esc_attr( $field_id ),
 			esc_attr( $field_name ),
-			$checked, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$checked,
+			$attributes,
 			esc_attr( $field_id )
 		);
 	}

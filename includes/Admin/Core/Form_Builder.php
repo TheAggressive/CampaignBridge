@@ -823,10 +823,11 @@ class Form_Builder {
 	public function form_start(): void {
 		$this->form->ensure_initialized();
 
+		// Handle form submission processing (same as automatic render()).
+		$this->form->prepare_for_rendering();
+
 		// Auto-detect multipart encoding based on field types.
 		$this->config->auto_detect_multipart_encoding();
-
-		$this->form->ensure_renderer();
 
 		// Render form opening tag.
 		$this->form->get_renderer()->render_form_open();

@@ -39,8 +39,8 @@ class Form_Field_Checkbox extends Form_Field_Base {
 
 			printf(
 				'<input type="checkbox" value="1" %s%s />',
-				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				$checked // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$attributes,
+				$checked
 			);
 
 			return;
@@ -65,8 +65,8 @@ class Form_Field_Checkbox extends Form_Field_Base {
 				esc_attr( $checkbox_id ),
 				esc_attr( $checkbox_name ),
 				esc_attr( $option_value ),
-				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				$checked, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$attributes,
+				$checked,
 				esc_html( $option_label )
 			);
 		}

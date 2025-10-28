@@ -280,7 +280,7 @@ class Form {
 	 *
 	 * @return void
 	 */
-	private function prepare_for_rendering(): void {
+	public function prepare_for_rendering(): void {
 		// Ensure services are initialized.
 		assert( null !== $this->data_manager, 'Data manager must be initialized' );
 		assert( null !== $this->handler, 'Handler must be initialized' );
@@ -675,7 +675,7 @@ class Form {
 		}
 
 		// Method not found.
-		throw new \BadMethodCallException( "Method '{$method}' does not exist on " . __CLASS__ ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		throw new \BadMethodCallException( "Method '" . esc_html( $method ) . "' does not exist on " . __CLASS__ );
 	}
 
 	/**

@@ -192,6 +192,7 @@ final class Notices {
 				$data_attr = ' data-notice-key="' . esc_attr( $notice_key ) . '" data-persistent-notice="1" data-dismiss-nonce="' . esc_attr( wp_create_nonce( 'dismiss_notice_' . $notice_key ) ) . '"';
 			}
 
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $data_attr is built with esc_attr() for attribute values
 			printf(
 				'<div class="%s"%s><p>%s</p></div>',
 				esc_attr( $class ),

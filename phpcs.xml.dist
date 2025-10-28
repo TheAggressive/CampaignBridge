@@ -42,6 +42,7 @@
     <severity>warning</severity>
   </rule>
 
+
   <!-- Exclude build and dependency directories -->
   <exclude-pattern>vendor/*</exclude-pattern>
   <exclude-pattern>node_modules/*</exclude-pattern>

@@ -27,7 +27,7 @@ class Form_Field_Select extends Form_Field_Base {
 		if ( empty( $options ) ) {
 			printf(
 				'<select %s><option value="">%s</option></select>',
-				$attributes, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$attributes,
 				esc_html__( 'No options available', 'campaignbridge' )
 			);
 			return;
@@ -39,7 +39,7 @@ class Form_Field_Select extends Form_Field_Base {
 			$this->config['name'] .= '[]'; // Handle array values for multiple select.
 		}
 
-		printf( '<select %s>', $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<select %s>', $attributes );
 
 		// Add placeholder option if no value is selected.
 		if ( empty( $value ) && ! empty( $this->config['placeholder'] ) ) {
@@ -61,7 +61,7 @@ class Form_Field_Select extends Form_Field_Base {
 			printf(
 				'<option value="%s"%s>%s</option>',
 				esc_attr( $option_value ),
-				$selected, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$selected,
 				esc_html( $option_label )
 			);
 		}

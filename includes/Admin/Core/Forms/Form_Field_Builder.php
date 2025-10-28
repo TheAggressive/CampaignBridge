@@ -237,23 +237,6 @@ class Form_Field_Builder {
 		return $this;
 	}
 
-	/**
-	 * Set minimum and maximum values for numeric inputs
-	 *
-	 * @param int $min Minimum value.
-	 * @param int $max Maximum value.
-	 * @return self
-	 */
-	public function range( int $min, int $max ): self {
-		$this->form_builder->get_config()->update_field(
-			$this->field_name,
-			array(
-				'min' => $min,
-				'max' => $max,
-			)
-		);
-		return $this;
-	}
 
 	/**
 	 * Set maximum file size (for file inputs)

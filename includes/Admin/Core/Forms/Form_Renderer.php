@@ -542,10 +542,10 @@ class Form_Renderer {
 		printf(
 			'<form method="%s" action="%s" enctype="%s" class="%s"%s>',
 			\esc_attr( $method ),
-			$action, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$action,
 			\esc_attr( $enctype ),
 			\esc_attr( $classes ),
-			$attr_string // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$attr_string
 		);
 
 		// Add security nonce.
@@ -592,7 +592,7 @@ class Form_Renderer {
 		</style>';
 
 		// Inject CSS immediately at the current position in HTML.
-		echo $css; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $css;
 	}
 
 	/**

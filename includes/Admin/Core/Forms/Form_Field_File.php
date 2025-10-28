@@ -47,7 +47,7 @@ class Form_Field_File extends Form_Field_Base {
 			$attributes = preg_replace( '/name="([^"]*)"/', 'name="$1[]"', $attributes );
 		}
 
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $attributes is built by render_common_attributes() with proper escaping
 		printf( '<input type="file" %s />', $attributes );
 
 		// Show current file if editing.

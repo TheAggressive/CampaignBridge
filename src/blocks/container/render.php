@@ -108,16 +108,16 @@ ob_start();
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
 	<tbody>
 	<tr>
-		<td align="center"<?php echo $outer_td_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+		<td align="center"<?php echo $outer_td_style; ?>
 			<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="<?php echo (int) $max_width; ?>"
 																									<?php
-																									echo $inner_table_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+																									echo $inner_table_style;
 																									?>
 																									>
 				<tbody>
 				<tr>
-					<td align="left"<?php echo $inner_td_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-						<?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					<td align="left"<?php echo $inner_td_style; ?>
+						<?php echo $content; ?>
 					</td>
 				</tr>
 				</tbody>
