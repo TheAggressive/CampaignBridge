@@ -16,10 +16,10 @@ global $screen;
 if ( ! isset( $screen ) ) {
 	$screen = null; // Fallback for PHPStan.
 }
-$cb_provider           = $screen ? $screen->get( 'provider', \CampaignBridge\Core\Storage::get_option( 'cb_provider', 'html' ) ) : \CampaignBridge\Core\Storage::get_option( 'cb_provider', 'html' );
-$cb_mailchimp_api_key  = $screen ? $screen->get( 'mailchimp_api_key', \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' );
-$cb_mailchimp_audience = $screen ? $screen->get( 'mailchimp_audience', \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_audience', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_audience', '' );
-$cb_is_connected       = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
+$campaignbridge_provider           = $screen ? $screen->get( 'provider', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_provider', 'html' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_provider', 'html' );
+$campaignbridge_mailchimp_api_key  = $screen ? $screen->get( 'mailchimp_api_key', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
+$campaignbridge_mailchimp_audience = $screen ? $screen->get( 'mailchimp_audience', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' );
+$campaignbridge_is_connected       = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
 
 // Create the form using the Form API.
 $form = \CampaignBridge\Admin\Core\Form::make( 'providers' )
@@ -30,7 +30,7 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'providers' )
 				'mailchimp' => 'Mailchimp',
 			)
 		)
-		->default( $cb_provider )
+		->default( $campaignbridge_provider )
 		->required()
 	->password( 'mailchimp_api_key', 'Mailchimp API Key' )
 		->description( 'Get your API key from <a href="https://admin.mailchimp.com/account/api/" target="_blank">Mailchimp Account Settings</a>' )
@@ -39,14 +39,14 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'providers' )
 	->before_save(
 		function ( $data ) {
 			// Save to options.
-			\CampaignBridge\Core\Storage::update_option( 'cb_provider', $data['provider'] );
+					\CampaignBridge\Core\Storage::update_option( 'campaignbridge_provider', $data['provider'] );
 
 			if ( 'mailchimp' === $data['provider'] ) {
 				if ( ! empty( $data['mailchimp_api_key'] ) ) {
-					\CampaignBridge\Core\Storage::update_option( 'cb_mailchimp_api_key', $data['mailchimp_api_key'] );
+					\CampaignBridge\Core\Storage::update_option( 'campaignbridge_mailchimp_api_key', $data['mailchimp_api_key'] );
 				}
 				if ( ! empty( $data['mailchimp_audience'] ) ) {
-					\CampaignBridge\Core\Storage::update_option( 'cb_mailchimp_audience', $data['mailchimp_audience'] );
+					\CampaignBridge\Core\Storage::update_option( 'campaignbridge_mailchimp_audience', $data['mailchimp_audience'] );
 				}
 			}
 
@@ -69,11 +69,11 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'providers' )
 	$form->render();
 
 	// Show connection status if Mailchimp is selected.
-	if ( 'mailchimp' === $cb_provider ) {
+	if ( 'mailchimp' === $campaignbridge_provider ) {
 		echo '<div class="connection-status" style="margin-top: 20px;">';
 		echo '<h3>' . esc_html__( 'Connection Status', 'campaignbridge' ) . '</h3>';
 
-		if ( $cb_is_connected ) {
+		if ( $campaignbridge_is_connected ) {
 			echo '<span class="status-badge connected">';
 			echo '<span class="dashicons dashicons-yes-alt"></span> ';
 			echo '<strong>' . esc_html__( 'Connected', 'campaignbridge' ) . '</strong>';

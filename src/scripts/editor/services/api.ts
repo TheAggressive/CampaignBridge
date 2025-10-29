@@ -7,7 +7,7 @@ import apiFetch from '@wordpress/api-fetch';
  */
 export async function listTemplates(): Promise<Array<Record<string, any>>> {
   return apiFetch({
-    path: `/wp/v2/cb_email_template?per_page=100&status=publish&context=view&_fields=id,title,status,date`,
+    path: `/wp/v2/campaignbridge_email_template?per_page=100&status=publish&context=view&_fields=id,title,status,date`,
   });
 }
 
@@ -21,7 +21,7 @@ export async function createDraft(
   title?: string
 ): Promise<Record<string, any>> {
   return apiFetch({
-    path: `/wp/v2/cb_email_template`,
+    path: `/wp/v2/campaignbridge_email_template`,
     method: 'POST',
     data: {
       status: 'publish',
@@ -41,7 +41,7 @@ export async function createDraft(
  */
 export async function getPostRaw(id: number): Promise<Record<string, any>> {
   return apiFetch({
-    path: `/wp/v2/cb_email_template/${id}?context=edit&_embed`,
+    path: `/wp/v2/campaignbridge_email_template/${id}?context=edit&_embed`,
   });
 }
 
@@ -66,7 +66,7 @@ export async function savePostContent(
   options: Record<string, any> = {}
 ) {
   return apiFetch({
-    path: `/wp/v2/cb_email_template/${id}`,
+    path: `/wp/v2/campaignbridge_email_template/${id}`,
     method: 'POST',
     data: {
       content,

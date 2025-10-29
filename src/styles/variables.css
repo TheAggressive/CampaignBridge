@@ -29,7 +29,7 @@
 	--brand-primary: var(--color-purple-600);
 	--brand-primary-hover: var(--color-blue-700);
 	--brand-primary-active: var(--color-blue-800);
-  --brand-primary-muted: var(--color-blue-50);
+	--brand-primary-muted: var(--color-blue-50);
 
 	/* Secondary brand colors */
 	--brand-secondary: var(--color-indigo-500);

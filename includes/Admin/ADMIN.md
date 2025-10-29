@@ -636,9 +636,9 @@ return [
  */
 
 // Get data from controller or options
-$from_name = $screen->get('from_name', get_option('cb_from_name', get_bloginfo('name')));
-$from_email = $screen->get('from_email', get_option('cb_from_email', get_option('admin_email')));
-$reply_to = $screen->get('reply_to', get_option('cb_reply_to', ''));
+$from_name = $screen->get('from_name', get_option('campaignbridge_from_name', get_bloginfo('name')));
+$from_email = $screen->get('from_email', get_option('campaignbridge_from_email', get_option('admin_email')));
+$reply_to = $screen->get('reply_to', get_option('campaignbridge_reply_to', ''));
 
 // Load data and display form using the Form API
 require_once __DIR__ . '/../../Core/Form.php';
@@ -655,9 +655,9 @@ $form = \CampaignBridge\Admin\Core\Form::make('general_settings')
         ->default($reply_to)
         ->description(__('Optional. Email address where replies should be sent.', 'campaignbridge'))
     ->before_save(function($data) {
-        update_option('cb_from_name', $data['from_name']);
-        update_option('cb_from_email', $data['from_email']);
-        update_option('cb_reply_to', $data['reply_to']);
+        update_option('campaignbridge_from_name', $data['from_name']);
+        update_option('campaignbridge_from_email', $data['from_email']);
+        update_option('campaignbridge_reply_to', $data['reply_to']);
         return $data;
     })
     ->success(__('General settings saved successfully!', 'campaignbridge'))
@@ -678,9 +678,9 @@ $form->render();
  */
 
 // Get data from controller or options
-$api_key = $screen->get('api_key', get_option('cb_api_key', ''));
-$api_endpoint = $screen->get('api_endpoint', get_option('cb_api_endpoint', ''));
-$debug_mode = $screen->get('debug_mode', get_option('cb_debug_mode', false));
+$api_key = $screen->get('api_key', get_option('campaignbridge_api_key', ''));
+$api_endpoint = $screen->get('api_endpoint', get_option('campaignbridge_api_endpoint', ''));
+$debug_mode = $screen->get('debug_mode', get_option('campaignbridge_debug_mode', false));
 
 // Load data and display form using the Form API
 require_once __DIR__ . '/../../Core/Form.php';
@@ -695,9 +695,9 @@ $form = \CampaignBridge\Admin\Core\Form::make('api_settings')
         ->default($debug_mode)
         ->description(__('Log API requests and responses for debugging.', 'campaignbridge'))
     ->before_save(function($data) {
-        update_option('cb_api_key', $data['api_key']);
-        update_option('cb_api_endpoint', $data['api_endpoint']);
-        update_option('cb_debug_mode', $data['debug_mode'] ?? false);
+        update_option('campaignbridge_api_key', $data['api_key']);
+        update_option('campaignbridge_api_endpoint', $data['api_endpoint']);
+        update_option('campaignbridge_debug_mode', $data['debug_mode'] ?? false);
         return $data;
     })
     ->success(__('API settings saved successfully!', 'campaignbridge'))
@@ -836,9 +836,9 @@ class General_Settings_Controller {
 
     public function get_data(): array {
         return array(
-            'from_name'    => get_option('cb_from_name', get_bloginfo('name')),
-            'from_email'   => get_option('cb_from_email', get_option('admin_email')),
-            'reply_to'     => get_option('cb_reply_to', ''),
+            'from_name'    => get_option('campaignbridge_from_name', get_bloginfo('name')),
+            'from_email'   => get_option('campaignbridge_from_email', get_option('admin_email')),
+            'reply_to'     => get_option('campaignbridge_reply_to', ''),
             'general_data' => $this->get_general_settings_data(),
         );
     }
@@ -852,8 +852,8 @@ class General_Settings_Controller {
 
     private function save_general_settings(): void {
         // Tab-specific logic
-        update_option('cb_from_name', sanitize_text_field($_POST['from_name']));
-        update_option('cb_from_email', sanitize_email($_POST['from_email']));
+        update_option('campaignbridge_from_name', sanitize_text_field($_POST['from_name']));
+        update_option('campaignbridge_from_email', sanitize_email($_POST['from_email']));
 
         wp_redirect(add_query_arg('updated', '1', $_SERVER['REQUEST_URI']));
         exit;

@@ -69,7 +69,7 @@ if ( isset( $_POST['test_notices'] ) && wp_verify_nonce( $_POST['_wpnonce'] ?? '
 			Notices::success( 'Notice added! Navigate to another admin page to test persistence.' );
 
 			// Test transient directly
-			$test_key = 'cb_test_transient_' . time();
+			$test_key = 'campaignbridge_test_transient_' . time();
 			\CampaignBridge\Core\Storage::set_transient( $test_key, 'test_value', 60 );
 			$test_value = \CampaignBridge\Core\Storage::get_transient( $test_key );
 			if ( $test_value === 'test_value' ) {

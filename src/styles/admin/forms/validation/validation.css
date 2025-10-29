@@ -17,93 +17,93 @@
 /* ===== VALIDATION STATES ===== */
 
 .campaignbridge-field-wrapper {
-  /* Modern invalid state - complementary to WordPress admin theme */
-  &--invalid {
-    .campaignbridge-field__input,
-    .campaignbridge-field__textarea,
-    .campaignbridge-field__select {
-      box-shadow: 0 0 0 1px #dc3232;
-    }
+	/* Modern invalid state - complementary to WordPress admin theme */
+	&--invalid {
+	.campaignbridge-field__input,
+	.campaignbridge-field__textarea,
+	.campaignbridge-field__select {
+		box-shadow: 0 0 0 1px #dc3232;
+	}
 
-    .campaignbridge-field__input:focus,
-    .campaignbridge-field__textarea:focus,
-    .campaignbridge-field__select:focus {
-      box-shadow:
-        0 0 0 1px #dc3232,
-        0 0 0 3px rgba(220, 50, 50, 0.1);
-      outline: 1px solid transparent;
-    }
+	.campaignbridge-field__input:focus,
+	.campaignbridge-field__textarea:focus,
+	.campaignbridge-field__select:focus {
+		box-shadow:
+		0 0 0 1px #dc3232,
+		0 0 0 3px rgba(220, 50, 50, 0.1);
+		outline: 1px solid transparent;
+	}
 
-    .campaignbridge-field__label {
-      color: #dc3232; /* WordPress error red */
-    }
-  }
+	.campaignbridge-field__label {
+		color: #dc3232; /* WordPress error red */
+	}
+	}
 
-  /* Modern valid state - complementary to WordPress admin theme */
-  &--valid {
-    .campaignbridge-field__input,
-    .campaignbridge-field__textarea,
-    .campaignbridge-field__select {
-      box-shadow: 0 0 0 1px #46b450;
-    }
+	/* Modern valid state - complementary to WordPress admin theme */
+	&--valid {
+	.campaignbridge-field__input,
+	.campaignbridge-field__textarea,
+	.campaignbridge-field__select {
+		box-shadow: 0 0 0 1px #46b450;
+	}
 
-    .campaignbridge-field__input:focus,
-    .campaignbridge-field__textarea:focus,
-    .campaignbridge-field__select:focus {
-      box-shadow:
-        0 0 0 1px #46b450,
-        0 0 0 3px rgba(70, 180, 80, 0.1);
-      outline: 1px solid transparent;
-    }
+	.campaignbridge-field__input:focus,
+	.campaignbridge-field__textarea:focus,
+	.campaignbridge-field__select:focus {
+		box-shadow:
+		0 0 0 1px #46b450,
+		0 0 0 3px rgba(70, 180, 80, 0.1);
+		outline: 1px solid transparent;
+	}
 
-    .campaignbridge-field__label {
-      color: #46b450; /* WordPress success green */
-    }
-  }
+	.campaignbridge-field__label {
+		color: #46b450; /* WordPress success green */
+	}
+	}
 
-  /* Modern validating state - No shimmer effect */
+	/* Modern validating state - No shimmer effect */
 
-  /* Error message container */
-  &__errors,
-  .campaignbridge-field__errors {
-    @apply space-y-1;
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: all 0.3s ease-in-out;
+	/* Error message container */
+	&__errors,
+	.campaignbridge-field__errors {
+	@apply space-y-1;
+	opacity: 0;
+	max-height: 0;
+	overflow: hidden;
+	transition: all 0.3s ease-in-out;
 
-    .campaignbridge-field-wrapper--invalid & {
-      opacity: 1;
-      max-height: 100px;
-    }
-  }
+	.campaignbridge-field-wrapper--invalid & {
+		opacity: 1;
+		max-height: 100px;
+	}
+	}
 
-  /* Individual error message */
-  &__error,
-  .campaignbridge-field__error {
-    @apply rounded px-2 py-1 text-sm;
-    color: #dc3232; /* WordPress error red */
-    border: 1px solid #dc3232;
-    background-color: #fff;
-    font-size: var(--form-font-size-help);
-    /* No slide-in animation */
+	/* Individual error message */
+	&__error,
+	.campaignbridge-field__error {
+	@apply rounded px-2 py-1 text-sm;
+	color: #dc3232; /* WordPress error red */
+	border: 1px solid #dc3232;
+	background-color: #fff;
+	font-size: var(--form-font-size-help);
+	/* No slide-in animation */
 
-    /* No emoji icon */
-  }
+	/* No emoji icon */
+	}
 
-  /* Success indicator */
-  &__success-indicator {
-    @apply absolute right-3 transform;
-    top: 50%;
-    --tw-translate-y: -50%;
-    @apply text-green-500 opacity-0 transition-opacity duration-200;
+	/* Success indicator */
+	&__success-indicator {
+	@apply absolute right-3 transform;
+	top: 50%;
+	--tw-translate-y: -50%;
+	@apply text-green-500 opacity-0 transition-opacity duration-200;
 
-    .campaignbridge-field-wrapper--valid & {
-      opacity: 1;
-    }
-  }
+	.campaignbridge-field-wrapper--valid & {
+		opacity: 1;
+	}
+	}
 
-  /* Validation feedback - No animations */
+	/* Validation feedback - No animations */
 }
 
 /* ===== ANIMATIONS ===== */
@@ -119,38 +119,38 @@
 
 /* ===== RESPONSIVE VALIDATION ===== */
 @media (max-width: 640px) {
-  .campaignbridge-field-wrapper {
-    &__error {
-      @apply px-2 py-1 text-xs;
-    }
+	.campaignbridge-field-wrapper {
+	&__error {
+		@apply px-2 py-1 text-xs;
+	}
 
-    &__errors {
-      max-height: 80px;
-    }
-  }
+	&__errors {
+		max-height: 80px;
+	}
+	}
 }
 
 /* ===== DARK MODE SUPPORT ===== */
 @media (prefers-color-scheme: dark) {
-  .campaignbridge-field-wrapper {
-    &--invalid {
-      .campaignbridge-field__label {
-        color: #ff6b6b; /* Lighter red for dark mode */
-      }
-    }
+	.campaignbridge-field-wrapper {
+	&--invalid {
+		.campaignbridge-field__label {
+		color: #ff6b6b; /* Lighter red for dark mode */
+		}
+	}
 
-    &--valid {
-      .campaignbridge-field__label {
-        color: #51cf66; /* Lighter green for dark mode */
-      }
-    }
+	&--valid {
+		.campaignbridge-field__label {
+		color: #51cf66; /* Lighter green for dark mode */
+		}
+	}
 
-    &__error {
-      border-color: #dc3232;
-      background-color: #2d2d2d; /* Dark background */
-      color: #ff6b6b; /* Lighter red text for dark mode */
-    }
-  }
+	&__error {
+		border-color: #dc3232;
+		background-color: #2d2d2d; /* Dark background */
+		color: #ff6b6b; /* Lighter red text for dark mode */
+	}
+	}
 }
 
 /* ===== ACCESSIBILITY ENHANCEMENTS ===== */
@@ -160,38 +160,38 @@
 .campaignbridge-field-wrapper--invalid .campaignbridge-field__input:focus,
 .campaignbridge-field-wrapper--invalid .campaignbridge-field__textarea:focus,
 .campaignbridge-field-wrapper--invalid .campaignbridge-field__select:focus {
-  box-shadow:
-    0 0 0 1px #dc3232,
-    0 0 0 3px rgba(220, 50, 50, 0.2);
-  outline: 1px solid transparent;
+	box-shadow:
+	0 0 0 1px #dc3232,
+	0 0 0 3px rgba(220, 50, 50, 0.2);
+	outline: 1px solid transparent;
 }
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
-  .campaignbridge-field-wrapper {
-    &--invalid {
-      .campaignbridge-field__input,
-      .campaignbridge-field__textarea,
-      .campaignbridge-field__select {
-        border-color: #dc3232 !important;
-        border-width: 2px !important;
-      }
-    }
+	.campaignbridge-field-wrapper {
+	&--invalid {
+		.campaignbridge-field__input,
+		.campaignbridge-field__textarea,
+		.campaignbridge-field__select {
+		border-color: #dc3232 !important;
+		border-width: 2px !important;
+		}
+	}
 
-    &--valid {
-      .campaignbridge-field__input,
-      .campaignbridge-field__textarea,
-      .campaignbridge-field__select {
-        border-color: #46b450 !important;
-        border-width: 2px !important;
-      }
-    }
+	&--valid {
+		.campaignbridge-field__input,
+		.campaignbridge-field__textarea,
+		.campaignbridge-field__select {
+		border-color: #46b450 !important;
+		border-width: 2px !important;
+		}
+	}
 
-    &__error {
-      border-color: #dc3232 !important;
-      border-width: 2px !important;
-      background-color: #fff !important;
-      color: #dc3232 !important;
-    }
-  }
+	&__error {
+		border-color: #dc3232 !important;
+		border-width: 2px !important;
+		background-color: #fff !important;
+		color: #dc3232 !important;
+	}
+	}
 }

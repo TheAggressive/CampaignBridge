@@ -165,14 +165,14 @@ class Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 
 		// Test option key prefixing
 		$this->assertEquals(
-			'cb_from_name',
+			'campaignbridge_from_name',
 			$prefixes_class::get_option_key( 'from_name' ),
-			'New option key should get cb_ prefix'
+			'New option key should get campaignbridge_ prefix'
 		);
 
 		$this->assertEquals(
-			'cb_from_name',
-			$prefixes_class::get_option_key( 'cb_from_name' ),
+			'campaignbridge_from_name',
+			$prefixes_class::get_option_key( 'campaignbridge_from_name' ),
 			'Already prefixed option key should not get double-prefixed'
 		);
 
@@ -217,8 +217,8 @@ class Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 
 		// Test valid prefixed keys
 		$this->assertTrue(
-			$prefixes_class::is_properly_prefixed( 'cb_from_name', 'option' ),
-			'cb_from_name should be valid for options'
+			$prefixes_class::is_properly_prefixed( 'campaignbridge_from_name', 'option' ),
+			'campaignbridge_from_name should be valid for options'
 		);
 
 		$this->assertTrue(
@@ -232,8 +232,8 @@ class Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 		);
 
 		$this->assertTrue(
-			$prefixes_class::is_properly_prefixed( 'cb_subject', 'post_meta' ),
-			'cb_subject should be valid for post meta'
+			$prefixes_class::is_properly_prefixed( 'campaignbridge_subject', 'post_meta' ),
+			'campaignbridge_subject should be valid for post meta'
 		);
 
 		// Test invalid keys

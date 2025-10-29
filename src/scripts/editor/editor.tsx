@@ -23,7 +23,7 @@ import { registerCampaignBridgeBlocks } from './utils/registerCampaignBridgeBloc
  *
  * @constant {string}
  */
-export const POST_TYPE = 'cb_email_template';
+export const POST_TYPE = 'campaignbridge_email_template';
 
 // Type definitions
 

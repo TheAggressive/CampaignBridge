@@ -392,6 +392,26 @@ class Form_Conditional_Manager {
 	}
 
 	/**
+	 * Evaluate all fields and return their conditional status
+	 *
+	 * @param string $form_id Form ID (for future use).
+	 * @param int    $user_id User ID (for future use).
+	 * @return array<string, array<string, bool>> Field status array.
+	 */
+	public function evaluate_all_fields( string $form_id, int $user_id ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+		$result = array();
+
+		foreach ( array_keys( $this->fields ) as $field_id ) {
+			$result[ $field_id ] = array(
+				'visible'  => $this->should_show_field( $field_id ),
+				'required' => $this->should_require_field( $field_id ),
+			);
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Validate conditional requirements for a field
 	 *
 	 * @param string               $field_id    Field ID.

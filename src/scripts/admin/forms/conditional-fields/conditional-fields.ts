@@ -2,7 +2,8 @@
  * Client-side conditional field engine for CampaignBridge forms
  *
  * Uses API-driven approach - sends form data to server for evaluation
- * instead of client-side logic duplication.
+ * instead of client-side logic duplication. Includes enhanced UX with
+ * loading states, error handling, and accessibility features.
  */
 export class ConditionalEngine {
   private form: HTMLFormElement | null;
@@ -14,6 +15,10 @@ export class ConditionalEngine {
   private debouncedEvaluate: () => void;
   private evaluationCache: Map<string, any> = new Map(); // Cache evaluation results
   private lastFormData: any = null; // Track last sent data for delta updates
+  private loadingIndicator: HTMLElement | null = null;
+  private errorContainer: HTMLElement | null = null;
+  private retryButton: HTMLElement | null = null;
+  private evaluationTimeout: number | null = null;
 
   constructor(formId: string) {
     this.formId = formId;
@@ -36,6 +41,10 @@ export class ConditionalEngine {
       return;
     }
     this.initialized = true;
+
+    // Create UI elements for better UX
+    this.createLoadingIndicator();
+    this.createErrorContainer();
 
     // Wait for form to be fully rendered
     this.waitForFormReady(() => {
@@ -103,7 +112,7 @@ export class ConditionalEngine {
   }
 
   /**
-   * Evaluate conditions with intelligent caching for better performance
+   * Evaluate conditions with intelligent caching and enhanced UX
    */
   private evaluateConditions(): void {
     if (this.evaluationInProgress) {
@@ -120,16 +129,32 @@ export class ConditionalEngine {
       return;
     }
 
+    // Show loading indicator for better UX
+    this.showLoading();
+    this.hideError(); // Hide any previous errors
+
     // Send full form data for accurate conditional evaluation
     const deltaData = formData;
 
     this.evaluationInProgress = true;
     this.lastFormData = formData;
 
+    // Set timeout for the request
+    this.evaluationTimeout = window.setTimeout(() => {
+      if (this.evaluationInProgress) {
+        this.evaluationInProgress = false;
+        this.hideLoading();
+        this.showError(
+          'Request timed out. Please check your connection and try again.'
+        );
+      }
+    }, 30000); // 30 second timeout
+
     // Send data to server for evaluation
     (window as any).jQuery.ajax({
       url: this.apiEndpoint,
       method: 'POST',
+      timeout: 25000, // 25 seconds (jQuery timeout)
       data: {
         action: this.ajaxAction,
         form_id: this.formId,
@@ -137,6 +162,8 @@ export class ConditionalEngine {
         nonce: this.getNonce(),
       },
       success: (result: any) => {
+        this.hideLoading();
+
         if (result.success && result.fields) {
           // Cache successful results
           this.evaluationCache.set(cacheKey, result);
@@ -148,9 +175,16 @@ export class ConditionalEngine {
           }
 
           this.updateFields(result.fields);
+        } else {
+          // Handle server-side validation errors
+          this.showError(
+            'Server returned an invalid response. Please try again.'
+          );
         }
       },
       error: (xhr: any, textStatus: string, errorThrown: string) => {
+        this.hideLoading();
+
         console.error(
           '[ConditionalEngine] AJAX Error:',
           xhr.status,
@@ -158,22 +192,39 @@ export class ConditionalEngine {
           errorThrown
         );
 
-        // Show user-friendly error message for critical failures
-        if (xhr.status === 403) {
-          console.error(
-            '[ConditionalEngine] Authentication failed - conditional fields may not update properly'
-          );
+        let errorMessage = 'Failed to update form. Please try again.';
+
+        // Provide specific error messages based on status
+        if (xhr.status === 400) {
+          errorMessage =
+            'Invalid form data. Please check your input and try again.';
+        } else if (xhr.status === 403) {
+          errorMessage = 'You do not have permission to update this form.';
+        } else if (xhr.status === 429) {
+          errorMessage =
+            'Too many requests. Please wait a moment before trying again.';
         } else if (xhr.status >= 500) {
-          console.error(
-            '[ConditionalEngine] Server error - conditional fields may not update properly'
-          );
+          errorMessage = 'Server error occurred. Please try again later.';
+        } else if (textStatus === 'timeout') {
+          errorMessage =
+            'Request timed out. Please check your connection and try again.';
         }
 
-        // Continue with cached or default state if available
-        // The form will still be usable even if conditional logic fails
+        this.showError(errorMessage);
+
+        // For critical errors, also announce to screen readers
+        if (xhr.status >= 500) {
+          this.announceToScreenReader(
+            'Form update failed due to server error. Some fields may not update correctly.'
+          );
+        }
       },
       complete: () => {
         this.evaluationInProgress = false;
+        if (this.evaluationTimeout) {
+          clearTimeout(this.evaluationTimeout);
+          this.evaluationTimeout = null;
+        }
       },
     });
   }
@@ -483,6 +534,142 @@ export class ConditionalEngine {
       return match[1];
     }
     return fullName; // Fallback for non-array style names
+  }
+
+  /**
+   * Create loading indicator for better UX
+   */
+  private createLoadingIndicator(): void {
+    if (!this.form) return;
+
+    this.loadingIndicator = document.createElement('div');
+    this.loadingIndicator.className = 'campaignbridge-conditional-loading';
+    this.loadingIndicator.innerHTML = `
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <span class="loading-text">Updating form...</span>
+      </div>
+    `;
+    this.loadingIndicator.style.cssText = `
+      display: none;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 1000;
+      font-size: 12px;
+      color: #666;
+    `;
+
+    this.form.style.position = 'relative';
+    this.form.appendChild(this.loadingIndicator);
+  }
+
+  /**
+   * Create error container for handling failures gracefully
+   */
+  private createErrorContainer(): void {
+    if (!this.form) return;
+
+    this.errorContainer = document.createElement('div');
+    this.errorContainer.className = 'campaignbridge-conditional-error';
+    this.errorContainer.style.cssText = `
+      display: none;
+      background: #ffe6e6;
+      border: 1px solid #d63638;
+      border-radius: 4px;
+      padding: 12px 16px;
+      margin: 10px 0;
+      color: #d63638;
+      font-size: 13px;
+    `;
+
+    this.retryButton = document.createElement('button');
+    this.retryButton.type = 'button';
+    this.retryButton.className = 'button button-small';
+    this.retryButton.textContent = 'Retry';
+    this.retryButton.style.marginLeft = '10px';
+    this.retryButton.addEventListener('click', () => {
+      this.hideError();
+      this.evaluateConditions();
+    });
+
+    this.errorContainer.appendChild(this.retryButton);
+
+    // Insert error container at the top of the form
+    const firstElement = this.form.firstElementChild;
+    if (firstElement) {
+      this.form.insertBefore(this.errorContainer, firstElement);
+    } else {
+      this.form.appendChild(this.errorContainer);
+    }
+  }
+
+  /**
+   * Show loading indicator
+   */
+  private showLoading(): void {
+    if (this.loadingIndicator) {
+      this.loadingIndicator.style.display = 'block';
+    }
+  }
+
+  /**
+   * Hide loading indicator
+   */
+  private hideLoading(): void {
+    if (this.loadingIndicator) {
+      this.loadingIndicator.style.display = 'none';
+    }
+  }
+
+  /**
+   * Show error message
+   */
+  private showError(message: string): void {
+    if (this.errorContainer) {
+      this.errorContainer.textContent = message;
+      this.errorContainer.appendChild(this.retryButton!);
+      this.errorContainer.style.display = 'block';
+
+      // Announce to screen readers
+      this.announceToScreenReader(`Error: ${message}`);
+    }
+  }
+
+  /**
+   * Hide error message
+   */
+  private hideError(): void {
+    if (this.errorContainer) {
+      this.errorContainer.style.display = 'none';
+    }
+  }
+
+  /**
+   * Announce message to screen readers
+   */
+  private announceToScreenReader(message: string): void {
+    const announcement = document.createElement('div');
+    announcement.setAttribute('aria-live', 'polite');
+    announcement.setAttribute('aria-atomic', 'true');
+    announcement.style.position = 'absolute';
+    announcement.style.left = '-10000px';
+    announcement.style.width = '1px';
+    announcement.style.height = '1px';
+    announcement.style.overflow = 'hidden';
+    announcement.textContent = message;
+
+    document.body.appendChild(announcement);
+
+    // Remove after announcement
+    setTimeout(() => {
+      document.body.removeChild(announcement);
+    }, 1000);
   }
 
   /**

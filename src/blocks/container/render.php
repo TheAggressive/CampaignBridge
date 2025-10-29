@@ -10,11 +10,11 @@
  * @return string
  */
 
-if ( ! function_exists( 'cb_email_attr' ) ) {
+if ( ! function_exists( 'campaignbridge_email_attr' ) ) {
 	/**
 	 * Compile inline style attribute from key=>value pairs.
 	 */
-	function cb_email_attr( $styles ) {
+	function campaignbridge_email_attr( $styles ) {
 		$out = array();
 		foreach ( $styles as $k => $v ) {
 			if ( $v === '' || $v === null ) {
@@ -63,7 +63,7 @@ $op             = array_merge(
 	),
 	(array) $attrs['outerPadding']
 );
-$outer_td_style = cb_email_attr(
+$outer_td_style = campaignbridge_email_attr(
 	array(
 		'background' => $background_hex,
 		'color'      => $text_hex,
@@ -73,7 +73,7 @@ $outer_td_style = cb_email_attr(
 );
 
 // Inner table (fixed width, centered)
-$inner_table_style = cb_email_attr(
+$inner_table_style = campaignbridge_email_attr(
 	array(
 		'width'            => $max_width . 'px',
 		'max-width'        => '100%',
@@ -95,7 +95,7 @@ $ip             = array_merge(
 	),
 	(array) $attrs['padding']
 );
-$inner_td_style = cb_email_attr(
+$inner_td_style = campaignbridge_email_attr(
 	array(
 		'padding'              => "{$ip['top']}px {$ip['right']}px {$ip['bottom']}px {$ip['left']}px",
 		'mso-line-height-rule' => 'exactly',

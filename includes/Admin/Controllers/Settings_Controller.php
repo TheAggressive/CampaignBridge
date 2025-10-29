@@ -81,20 +81,20 @@ class Settings_Controller {
 	private function load_settings_data(): void {
 		$this->data = array(
 			// General settings data.
-			'from_name'           => \CampaignBridge\Core\Storage::get_option( 'cb_from_name', get_bloginfo( 'name' ) ),
-			'from_email'          => \CampaignBridge\Core\Storage::get_option( 'cb_from_email', get_option( 'admin_email' ) ),
-			'reply_to'            => \CampaignBridge\Core\Storage::get_option( 'cb_reply_to', get_option( 'admin_email' ) ),
+			'from_name'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_name', get_bloginfo( 'name' ) ),
+			'from_email'          => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_email', get_option( 'admin_email' ) ),
+			'reply_to'            => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_reply_to', get_option( 'admin_email' ) ),
 
 			// Mailchimp integration data.
-			'mailchimp_api_key'   => \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' ),
-			'mailchimp_audience'  => \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_audience', '' ),
+			'mailchimp_api_key'   => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ),
+			'mailchimp_audience'  => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ),
 			'mailchimp_connected' => $this->is_mailchimp_connected(),
 
 			// Advanced settings data.
-			'debug_mode'          => \CampaignBridge\Core\Storage::get_option( 'cb_debug_mode', false ),
-			'log_level'           => \CampaignBridge\Core\Storage::get_option( 'cb_log_level', 'info' ),
-			'cache_duration'      => \CampaignBridge\Core\Storage::get_option( 'cb_cache_duration', 3600 ),
-			'rate_limit'          => \CampaignBridge\Core\Storage::get_option( 'cb_rate_limit', 100 ),
+			'debug_mode'          => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_debug_mode', false ),
+			'log_level'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_log_level', 'info' ),
+			'cache_duration'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cache_duration', 3600 ),
+			'rate_limit'          => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_rate_limit', 100 ),
 
 			// System info.
 			'plugin_version'      => defined( 'CAMPAIGNBRIDGE_VERSION' ) ? \CampaignBridge_Plugin::VERSION : '1.0.0',
@@ -104,7 +104,7 @@ class Settings_Controller {
 			// Statistics.
 			'total_subscribers'   => $this->get_total_subscribers(),
 			'total_campaigns'     => $this->get_total_campaigns(),
-			'last_sync'           => \CampaignBridge\Core\Storage::get_option( 'cb_last_sync', 'Never' ),
+			'last_sync'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_last_sync', 'Never' ),
 		);
 	}
 
@@ -118,7 +118,7 @@ class Settings_Controller {
 			'mailchimp' => array(
 				'connected' => $this->is_mailchimp_connected(),
 				'status'    => $this->get_mailchimp_status(),
-				'last_test' => \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_last_test', 'Never tested' ),
+				'last_test' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_last_test', 'Never tested' ),
 			),
 			'sendgrid'  => array(
 				'connected' => false,
@@ -132,7 +132,7 @@ class Settings_Controller {
 	 * Check if Mailchimp is properly connected
 	 */
 	private function is_mailchimp_connected(): bool {
-		$api_key = \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' );
+		$api_key = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
 		return ! empty( $api_key ) && strlen( $api_key ) > 20;
 	}
 
@@ -172,7 +172,7 @@ class Settings_Controller {
 	private function handle_reset_all_settings(): void {
 		// Double security: sanitize input before nonce verification.
 		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
-		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'cb_reset_all' ) ) {
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_reset_all' ) ) {
 			wp_die( 'Security check failed' );
 		}
 
@@ -186,14 +186,14 @@ class Settings_Controller {
 
 		// Reset all plugin options.
 		$options_to_reset = array(
-			'cb_from_name',
-			'cb_from_email',
-			'cb_mailchimp_api_key',
-			'cb_mailchimp_audience',
-			'cb_debug_mode',
-			'cb_log_level',
-			'cb_cache_duration',
-			'cb_rate_limit',
+			'campaignbridge_from_name',
+			'campaignbridge_from_email',
+			'campaignbridge_mailchimp_api_key',
+			'campaignbridge_mailchimp_audience',
+			'campaignbridge_debug_mode',
+			'campaignbridge_log_level',
+			'campaignbridge_cache_duration',
+			'campaignbridge_rate_limit',
 		);
 
 		foreach ( $options_to_reset as $option ) {
@@ -223,7 +223,7 @@ class Settings_Controller {
 	private function handle_export_settings(): void {
 		// Double security: sanitize input before nonce verification.
 		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
-		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'cb_export_settings' ) ) {
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_export_settings' ) ) {
 			wp_die( 'Security check failed' );
 		}
 
@@ -233,10 +233,10 @@ class Settings_Controller {
 		}
 
 		$settings = array(
-			'from_name'      => \CampaignBridge\Core\Storage::get_option( 'cb_from_name' ),
-			'from_email'     => \CampaignBridge\Core\Storage::get_option( 'cb_from_email' ),
-			'debug_mode'     => \CampaignBridge\Core\Storage::get_option( 'cb_debug_mode' ),
-			'cache_duration' => \CampaignBridge\Core\Storage::get_option( 'cb_cache_duration' ),
+			'from_name'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_name' ),
+			'from_email'     => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_email' ),
+			'debug_mode'     => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_debug_mode' ),
+			'cache_duration' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cache_duration' ),
 			'exported_at'    => current_time( 'mysql' ),
 			'exported_by'    => wp_get_current_user()->user_login,
 		);
@@ -255,7 +255,7 @@ class Settings_Controller {
 	private function handle_import_settings(): void {
 		// Double security: sanitize input before nonce verification.
 		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
-		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'cb_import_settings' ) ) {
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_import_settings' ) ) {
 			wp_die( 'Security check failed' );
 		}
 
@@ -347,7 +347,7 @@ class Settings_Controller {
 		$valid_options = array( 'from_name', 'from_email', 'debug_mode', 'cache_duration' );
 		foreach ( $valid_options as $option ) {
 			if ( isset( $settings[ $option ] ) ) {
-				\CampaignBridge\Core\Storage::update_option( 'cb_' . $option, $settings[ $option ] );
+				\CampaignBridge\Core\Storage::update_option( 'campaignbridge_' . $option, $settings[ $option ] );
 			}
 		}
 

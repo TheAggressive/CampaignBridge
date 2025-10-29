@@ -16,7 +16,7 @@ require_once __DIR__ . '/../../Core/Form.php';
 $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 	->table()
 	->success( 'Settings saved successfully!' )
-	->save_to_options( 'cb_' ) // Save to options with prefix
+	->save_to_options( 'campaignbridge_' ) // Save to options with prefix
 	->text( 'from_name', 'From Name' )
 		->default( get_bloginfo( 'name' ) )
 		->required()

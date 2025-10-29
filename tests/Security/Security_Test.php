@@ -331,10 +331,10 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		// Set up sensitive data (should be encrypted when stored)
-		update_option( 'cb_mailchimp_api_key', $this->test_data['api_key'] );
+		update_option( 'campaignbridge_mailchimp_api_key', $this->test_data['api_key'] );
 
 		// Test that the API key exists in settings
-		$saved_key = get_option( 'cb_mailchimp_api_key' );
+		$saved_key = get_option( 'campaignbridge_mailchimp_api_key' );
 		$this->assertEquals( $this->test_data['api_key'], $saved_key );
 
 		// Test that admin can decrypt for display
@@ -352,11 +352,11 @@ class Security_Test extends Test_Case {
 
 		// User 1 creates private data (using user-specific key)
 		wp_set_current_user( $user1_id );
-		update_option( "cb_user_{$user1_id}_data", 'User 1 Data' );
+		update_option( "campaignbridge_user_{$user1_id}_data", 'User 1 Data' );
 
 		// User 2 should not see User 1's data
 		wp_set_current_user( $user2_id );
-		$user2_data = get_option( "cb_user_{$user2_id}_data" );
+		$user2_data = get_option( "campaignbridge_user_{$user2_id}_data" );
 
 		$this->assertNotEquals( 'User 1 Data', $user2_data );
 	}
@@ -370,10 +370,10 @@ class Security_Test extends Test_Case {
 
 		// Simulate user-specific cache/storage
 		wp_set_current_user( $user1_id );
-		update_option( "cb_user_{$user1_id}_session", 'User 1 Secret' );
+		update_option( "campaignbridge_user_{$user1_id}_session", 'User 1 Secret' );
 
 		wp_set_current_user( $user2_id );
-		$user2_data = get_option( "cb_user_{$user2_id}_session" );
+		$user2_data = get_option( "campaignbridge_user_{$user2_id}_session" );
 
 		$this->assertNotEquals( 'User 1 Secret', $user2_data );
 	}
@@ -474,8 +474,8 @@ class Security_Test extends Test_Case {
 		$test_options = array(
 			'test_test_field',
 			'test_content',
-			'cb_mailchimp_api_key',
-			'cb_user_data',
+			'campaignbridge_mailchimp_api_key',
+			'campaignbridge_user_data',
 			'test_security_test_field',
 		);
 
@@ -486,7 +486,7 @@ class Security_Test extends Test_Case {
 		// Clean up user-specific options
 		$users = get_users( array( 'role__in' => array( 'subscriber', 'editor', 'administrator' ) ) );
 		foreach ( $users as $user ) {
-			delete_option( "cb_user_{$user->ID}_data" );
+			delete_option( "campaignbridge_user_{$user->ID}_data" );
 		}
 	}
 }

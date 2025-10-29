@@ -10,7 +10,7 @@ import { AUTOSAVE_CONSTANTS, useAutoSave } from './useAutoSave';
  * - Throttled success notices via callbacks you pass in
  *
  * @param {Object}   opts
- * @param {string}   opts.postType          e.g. 'cb_email_template'
+ * @param {string}   opts.postType          e.g. 'campaignbridge_email_template'
  * @param {number}   opts.postId
  * @param {string[]} opts.keys              meta keys this manager will handle
  * @param {function} [opts.onSuccess]       (msg) => void
@@ -27,7 +27,6 @@ export function useAutoSaveMetaManager({
 }) {
   // --- lightweight input assert (non-breaking, helps find wrong callers)
   if (!postType || !postId) {
-     
     console.error('[useAutoSaveMetaManager] Missing postType or postId', {
       postType,
       postId,
@@ -82,7 +81,6 @@ export function useAutoSaveMetaManager({
     async (partial /*, { signal } = {} */) => {
       try {
         if (!postType || !postId || !ready) {
-           
           console.warn('[useAutoSaveMetaManager] Skipping save (not ready)', {
             postType,
             postId,
@@ -119,7 +117,6 @@ export function useAutoSaveMetaManager({
           lastNoticeAtRef.current = now;
         }
       } catch (err) {
-         
         console.error('Meta save failed:', err);
         setSaveStatus(AUTOSAVE_CONSTANTS.SAVE_STATUS.ERROR);
         onError?.('Failed to save changes');

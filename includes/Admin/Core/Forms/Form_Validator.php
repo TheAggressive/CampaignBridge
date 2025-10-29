@@ -296,7 +296,7 @@ class Form_Validator {
 	}
 
 	/**
-   * 
+	 *
 	 * Validate a single field
 	 *
 	 * @param string               $field_id    Field ID.

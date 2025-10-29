@@ -89,7 +89,7 @@ class Status_Controller {
 			'mailchimp' => [
 				'connected' => $this->is_mailchimp_connected(),
 				'status'    => $this->get_mailchimp_status(),
-				'last_test' => \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_last_test', 'Never tested' ),
+				'last_test' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_last_test', 'Never tested' ),
 			],
 			'sendgrid'  => [
 				'connected' => false,
@@ -120,7 +120,7 @@ class Status_Controller {
    * @return bool
 	 */
 	private function is_mailchimp_connected(): bool {
-		$api_key = \CampaignBridge\Core\Storage::get_option( 'cb_mailchimp_api_key', '' );
+		$api_key = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
 		return ! empty( $api_key ) && strlen( $api_key ) > 20;
 	}
 
@@ -194,8 +194,11 @@ class Status_Controller {
    * @return void
 	 */
 	private function handle_refresh_stats(): void {
-		if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'cb_refresh_stats' ) ) {
-			wp_die( 'Security check failed' );
+		// Verify nonce using standardized method.
+		try {
+			\CampaignBridge\Admin\Core\Forms\Form_Security::verify_request_nonce( '_wpnonce', 'campaignbridge_refresh_stats' );
+		} catch ( \RuntimeException $e ) {
+			wp_die( esc_html( $e->getMessage() ) );
 		}
 
 		// Check user capabilities
@@ -204,7 +207,7 @@ class Status_Controller {
 		}
 
 		// Clear any cached stats
-		\CampaignBridge\Core\Storage::delete_transient( 'cb_dashboard_stats' );
+		\CampaignBridge\Core\Storage::delete_transient( 'campaignbridge_dashboard_stats' );
 
 		// Reload fresh data
 		$this->load_campaign_stats();
@@ -223,8 +226,11 @@ class Status_Controller {
    * @return void
 	 */
 	private function handle_clear_cache(): void {
-		if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'cb_clear_cache' ) ) {
-			wp_die( 'Security check failed' );
+		// Verify nonce using standardized method.
+		try {
+			\CampaignBridge\Admin\Core\Forms\Form_Security::verify_request_nonce( '_wpnonce', 'campaignbridge_clear_cache' );
+		} catch ( \RuntimeException $e ) {
+			wp_die( esc_html( $e->getMessage() ) );
 		}
 
 		// Check user capabilities

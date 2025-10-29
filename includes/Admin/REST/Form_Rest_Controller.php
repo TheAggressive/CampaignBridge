@@ -43,118 +43,25 @@ class Form_Rest_Controller {
 
 
 	/**
-	 * Handle AJAX request for conditional evaluation.
+	 * Handle AJAX request for conditional evaluation
 	 *
 	 * @return void
 	 */
 	public function handle_ajax_evaluate_conditions(): void {
 		try {
-			// Security: Verify user is logged in and has permissions.
-			if ( ! is_user_logged_in() ) {
-				wp_send_json_error( 'Authentication required', 401 );
-				return;
-			}
-
 			// Security: Get POST data using filter_input.
-			$form_id_input = filter_input( INPUT_POST, 'form_id', FILTER_DEFAULT );
-			$nonce_input   = filter_input( INPUT_POST, 'nonce', FILTER_DEFAULT );
-
-			$sanitized_form_id = $form_id_input ? sanitize_text_field( wp_unslash( $form_id_input ) ) : '';
-			$sanitized_nonce   = $nonce_input ? sanitize_text_field( wp_unslash( $nonce_input ) ) : '';
-
-			if ( empty( $sanitized_form_id ) || empty( $sanitized_nonce ) ) {
-				wp_send_json_error( 'Missing required data', 400 );
-				return;
-			}
-
-			$form_id = $sanitized_form_id;
-
-			// Security: Verify nonce with specific action.
-			$nonce_action = 'campaignbridge_form_' . $form_id;
-			if ( ! wp_verify_nonce( $sanitized_nonce, $nonce_action ) ) {
-				wp_send_json_error( 'Security check failed', 403 );
-				return;
-			}
-
-			// Security: Verify user has permission to access this form.
-			if ( ! current_user_can( 'read' ) ) {
-				wp_send_json_error( 'Insufficient permissions', 403 );
-				return;
-			}
-
-			// Security: Validate request origin for additional protection.
-			$referer = wp_get_referer();
-			if ( $referer && ! wp_validate_redirect( $referer, false ) ) {
-				// Allow admin-ajax.php requests from admin area
-				$admin_ajax_url = admin_url( 'admin-ajax.php' );
-				if ( strpos( $referer, $admin_ajax_url ) !== 0 ) {
-					wp_send_json_error( 'Invalid request origin', 403 );
-					return;
-				}
-			}
-
-			// Security: Get and validate form data.
+			$form_id_input   = filter_input( INPUT_POST, 'form_id', FILTER_DEFAULT );
+			$nonce_input     = filter_input( INPUT_POST, 'nonce', FILTER_DEFAULT );
 			$form_data_input = filter_input( INPUT_POST, 'data', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
-			$form_data       = $form_data_input ? wp_unslash( $form_data_input ) : array();
 
-			if ( ! is_array( $form_data ) ) {
-				$form_data = array();
-			}
+			$form_id   = $form_id_input ? sanitize_text_field( wp_unslash( $form_id_input ) ) : '';
+			$nonce     = $nonce_input ? sanitize_text_field( wp_unslash( $nonce_input ) ) : '';
+			$form_data = $form_data_input ? wp_unslash( $form_data_input ) : array();
 
-			// Security: Rate limiting - max 20 requests per minute per user.
-			$rate_limit_key = 'conditional_eval_' . get_current_user_id();
-			$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) ? \CampaignBridge\Core\Storage::get_transient( $rate_limit_key ) : 0;
+			$user_id = get_current_user_id();
 
-			if ( $requests >= 100 ) {
-				// Log rate limit violation for security monitoring.
-				\CampaignBridge\Core\Error_Handler::warning(
-					'Rate limit exceeded for conditional evaluation',
-					array(
-						'user_id'  => get_current_user_id(),
-						'user_ip'  => \CampaignBridge\Admin\Core\Forms\Form_Security::get_client_ip(),
-						'requests' => $requests,
-					)
-				);
-				wp_send_json_error( 'Too many requests. Please wait before trying again.', 429 );
-				return;
-			}
-
-			\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute
-
-			// Security: Validate and sanitize form data.
-			$sanitized_data = array();
-			foreach ( $form_data as $key => $value ) {
-				// Security: Only allow alphanumeric keys with underscores and dashes.
-				if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $key ) ) {
-					continue; // Skip invalid keys.
-				}
-
-				// Security: Sanitize based on expected data types.
-				if ( is_array( $value ) ) {
-					$sanitized_data[ $key ] = array_map( 'sanitize_text_field', $value );
-				} else {
-					$sanitized_data[ $key ] = sanitize_text_field( $value );
-				}
-			}
-			$form_data = $sanitized_data;
-
-			// Security: Validate form_id format.
-			if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $form_id ) || strlen( $form_id ) > 100 ) {
-				wp_send_json_error( 'Invalid form ID', 400 );
-				return;
-			}
-
-			// Performance: Cache form config lookups.
-			$cache_key   = 'form_config_' . $form_id;
-			$form_config = \CampaignBridge\Core\Storage::wp_cache_get( $cache_key, 'campaignbridge' );
-
-			if ( false === $form_config ) {
-				$form_config = $this->get_form_config( $form_id );
-				if ( $form_config ) {
-					\CampaignBridge\Core\Storage::wp_cache_set( $cache_key, $form_config, 'campaignbridge', 300 ); // 5 minutes
-				}
-			}
-
+			// Get form configuration.
+			$form_config = $this->get_form_config( $form_id );
 			if ( ! $form_config ) {
 				wp_send_json_error( 'Form not found', 404 );
 				return;
@@ -162,58 +69,36 @@ class Form_Rest_Controller {
 
 			$fields = $form_config->get_fields();
 
-			// Performance: Cache conditional evaluations for identical form data.
-			$data_hash      = md5( wp_json_encode( $form_data ) );
-			$eval_cache_key = 'conditional_eval_' . $form_id . '_' . $data_hash;
-			$cached_result  = \CampaignBridge\Core\Storage::wp_cache_get( $eval_cache_key, 'campaignbridge' );
+			// Use the streamlined conditional manager.
+			$conditional_manager = new \CampaignBridge\Admin\Core\Forms\Form_Conditional_Manager( $fields, $form_data );
+			$result              = $conditional_manager->evaluate_all_fields( $form_id, $user_id );
 
-			if ( false !== $cached_result ) {
-				wp_send_json( $cached_result );
-				return;
-			}
-
-			$conditional_manager = $this->container->create_form_conditional_manager( $fields, $form_data );
-
-			// Evaluate all field visibility and requirements.
-			$result = array(
-				'success' => true,
-				'fields'  => array(),
+			wp_send_json(
+				array(
+					'success' => true,
+					'fields'  => $result,
+				)
 			);
 
-			foreach ( $fields as $field_id => $field_config ) {
-				$visible  = $conditional_manager->should_show_field( $field_id );
-				$required = $conditional_manager->should_require_field( $field_id );
+		} catch ( \InvalidArgumentException $e ) {
+			// Validation errors - return 400 Bad Request.
+			wp_send_json_error( $e->getMessage(), 400 );
 
-				$result['fields'][ $field_id ] = array(
-					'visible'  => $visible,
-					'required' => $required,
-				);
-
-			}
-
-			// Cache the result for 30 seconds (short cache for dynamic forms).
-			\CampaignBridge\Core\Storage::wp_cache_set( $eval_cache_key, $result, 'campaignbridge', 30 );
-
-			// Security: Add security headers.
-			if ( ! headers_sent() ) {
-				header( 'X-Content-Type-Options: nosniff' );
-				header( 'X-Frame-Options: SAMEORIGIN' );
-			}
-
-			wp_send_json( $result );
+		} catch ( \RuntimeException $e ) {
+			// Authentication/authorization errors - return 403 Forbidden.
+			wp_send_json_error( $e->getMessage(), 403 );
 
 		} catch ( \Throwable $e ) {
-			// Log security-relevant errors.
+			// Log unexpected errors.
 			\CampaignBridge\Core\Error_Handler::error(
 				'Conditional evaluation error: ' . $e->getMessage(),
 				array(
 					'user_id' => get_current_user_id(),
-					'user_ip' => \CampaignBridge\Admin\Core\Forms\Form_Security::get_client_ip(),
 					'form_id' => $form_id ?? 'unknown',
 				)
 			);
 
-			wp_send_json_error( 'Server error occurred. Please try again.', 500 );
+			wp_send_json_error( 'An unexpected error occurred. Please try again.', 500 );
 		}
 	}
 

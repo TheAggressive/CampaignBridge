@@ -30,7 +30,7 @@ class Post_Type_Email_Template {
 	 *
 	 * @var string
 	 */
-	public const POST_TYPE = 'cb_email_template';
+	public const POST_TYPE = 'campaignbridge_email_template';
 
 	/**
 	 * Meta field keys are defined in META_FIELD_CONFIG for consistency.
@@ -46,65 +46,65 @@ class Post_Type_Email_Template {
 	 */
 	private const META_FIELD_CONFIG = array(
 		// String fields.
-		'cb_subject'             => array(
+		'campaignbridge_subject'             => array(
 			'type'     => 'string',
 			'sanitize' => 'sanitize_text_field',
 		),
-		'cb_preheader'           => array(
+		'campaignbridge_preheader'           => array(
 			'type'     => 'string',
 			'sanitize' => 'sanitize_text_field',
 		),
-		'cb_sender_name'         => array(
+		'campaignbridge_sender_name'         => array(
 			'type'     => 'string',
 			'sanitize' => 'sanitize_text_field',
 		),
-		'cb_sender_email'        => array(
+		'campaignbridge_sender_email'        => array(
 			'type'     => 'string',
 			'sanitize' => 'sanitize_email',
 		),
-		'cb_view_online_url'     => array(
+		'campaignbridge_view_online_url'     => array(
 			'type'     => 'string',
 			'sanitize' => 'esc_url_raw',
 		),
-		'cb_unsubscribe_url'     => array(
+		'campaignbridge_unsubscribe_url'     => array(
 			'type'     => 'string',
 			'sanitize' => 'esc_url_raw',
 		),
-		'cb_utm_template'        => array(
+		'campaignbridge_utm_template'        => array(
 			'type'     => 'string',
 			'sanitize' => 'sanitize_text_field',
 		),
-		'cb_audience_tags'       => array(
+		'campaignbridge_audience_tags'       => array(
 			'type'     => 'string',
 			'sanitize' => 'sanitize_text_field',
 		),
-		'cb_footer_pattern'      => array(
+		'campaignbridge_footer_pattern'      => array(
 			'type'     => 'string',
 			'sanitize' => 'sanitize_text_field',
 		),
 
 		// Boolean fields.
-		'cb_view_online_enabled' => array(
+		'campaignbridge_view_online_enabled' => array(
 			'type'     => 'boolean',
 			'sanitize' => 'wp_validate_boolean',
 		),
-		'cb_utm_enabled'         => array(
+		'campaignbridge_utm_enabled'         => array(
 			'type'     => 'boolean',
 			'sanitize' => 'wp_validate_boolean',
 		),
-		'cb_footer_enabled'      => array(
+		'campaignbridge_footer_enabled'      => array(
 			'type'     => 'boolean',
 			'sanitize' => 'wp_validate_boolean',
 		),
 
 		// HTML field.
-		'cb_address_html'        => array(
+		'campaignbridge_address_html'        => array(
 			'type'     => 'string',
 			'sanitize' => 'wp_kses_post',
 		),
 
 		// Category field with enum validation.
-		'cb_template_category'   => array(
+		'campaignbridge_template_category'   => array(
 			'type'         => 'string',
 			'sanitize'     => array( __CLASS__, 'sanitize_category_field' ),
 			'valid_values' => array( 'general', 'newsletter', 'promotional', 'welcome', 'custom' ),
@@ -248,7 +248,7 @@ class Post_Type_Email_Template {
 	 * @return string The sanitized value.
 	 */
 	private static function sanitize_category_field( string $value ): string {
-		$category_config = self::get_meta_field_config( 'cb_template_category' );
+		$category_config = self::get_meta_field_config( 'campaignbridge_template_category' );
 		$valid_values    = $category_config['valid_values'] ?? array();
 		return in_array( $value, $valid_values, true ) ? $value : 'general';
 	}
@@ -366,7 +366,7 @@ class Post_Type_Email_Template {
 				'post_status'    => 'publish',
 				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 					array(
-						'key'   => 'cb_template_category',
+						'key'   => 'campaignbridge_template_category',
 						'value' => $category,
 					),
 				),
@@ -447,7 +447,7 @@ class Post_Type_Email_Template {
 		 * @return array<string, string> Array of category labels keyed by category slug.
 		 */
 	public static function get_template_categories(): array {
-		$category_config = self::get_meta_field_config( 'cb_template_category' );
+		$category_config = self::get_meta_field_config( 'campaignbridge_template_category' );
 		$valid_values    = $category_config['valid_values'] ?? array();
 
 		$categories = array();
@@ -509,8 +509,8 @@ class Post_Type_Email_Template {
 		if ( null === $reverse_map ) {
 			$reverse_map = array();
 			foreach ( array_keys( self::META_FIELD_CONFIG ) as $field_key ) {
-				// Extract the base name from the field key (remove 'cb_' prefix).
-				$base_name                 = str_replace( 'cb_', '', $field_key );
+				// Extract the base name from the field key (remove 'campaignbridge_' prefix).
+				$base_name                 = str_replace( 'campaignbridge_', '', $field_key );
 				$reverse_map[ $base_name ] = $field_key;
 			}
 		}

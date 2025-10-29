@@ -24,8 +24,8 @@ $contact_form = \CampaignBridge\Admin\Core\Form::make( 'contact_demo' )
 	->textarea( 'message', 'Message' )->required()
 	->after_save(
 		function ( $data ) {
-			// Simulate sending email
-			print_r( 'Contact form submitted: ' . $data['name'] . ' <' . $data['email'] . '>' );
+			// Simulate sending email - log instead of output.
+			\CampaignBridge\Core\Error_Handler::error( 'Contact form submitted: ' . $data['name'] . ' <' . $data['email'] . '>' );
 		}
 	);
 
@@ -35,7 +35,7 @@ $contact_form = \CampaignBridge\Admin\Core\Form::make( 'contact_demo' )
 // DEMO 2: FLUENT API - Settings Form (All Field Types)
 // ============================================================================
 $settings_form = \CampaignBridge\Admin\Core\Form::make( 'comprehensive_settings' )
-	->save_to_options( 'cb_demo_' )
+	->save_to_options( 'campaignbridge_demo_' )
 	->text( 'site_name', 'Site Name' )
 		->default( get_bloginfo( 'name' ) )
 		->required()

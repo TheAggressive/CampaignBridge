@@ -33,7 +33,7 @@ class Storage_Prefixes {
 	/**
 	 * Short prefix for individual settings (more readable).
 	 */
-	public const SETTINGS_PREFIX = 'cb_';
+	public const SETTINGS_PREFIX = 'campaignbridge_';
 
 	/**
 	 * Cache group prefix.
@@ -53,46 +53,45 @@ class Storage_Prefixes {
 	 * Transient prefixes for different data types.
 	 */
 	public const TRANSIENT_PREFIXES = array(
-		'cb_mc_',           // Mailchimp related.
-		'cb_campaignbridge_', // General plugin transients.
-		'campaignbridge_',  // Legacy transients.
-		'form_rate_limit_', // Form security rate limiting.
+		'campaignbridge_mc_',           // Mailchimp related.
+		'campaignbridge_',              // General plugin transients.
+		'campaignbridge_form_rate_limit_', // Form security rate limiting.
 	);
 
 	/**
 	 * Post meta key prefixes.
 	 */
 	public const POST_META_PREFIXES = array(
-		'cb_template_',     // Email template meta.
-		'cb_subject',       // Subject line.
-		'cb_preheader',     // Preheader text.
-		'cb_audience_tags', // Audience tags.
+		'campaignbridge_template_',     // Email template meta.
+		'campaignbridge_subject',       // Subject line.
+		'campaignbridge_preheader',     // Preheader text.
+		'campaignbridge_audience_tags', // Audience tags.
 	);
 
 	/**
 	 * User meta key prefixes.
 	 */
 	public const USER_META_PREFIXES = array(
-		'campaignbridge_',  // General user meta.
-		'cb_email_',        // Email related user meta.
-		'cb_template_',     // Template related user meta.
+		'campaignbridge_',           // General user meta.
+		'campaignbridge_email_',     // Email related user meta.
+		'campaignbridge_template_',  // Template related user meta.
 	);
 
 	/**
 	 * Option keys that use individual storage (not in main settings array).
 	 */
 	public const INDIVIDUAL_OPTIONS = array(
-		'cb_from_name',
-		'cb_from_email',
-		'cb_reply_to',
-		'cb_mailchimp_api_key',
-		'cb_mailchimp_audience',
-		'cb_debug_mode',
-		'cb_log_level',
-		'cb_cache_duration',
-		'cb_rate_limit',
-		'cb_last_sync',
-		'cb_mailchimp_last_test',
+		'campaignbridge_from_name',
+		'campaignbridge_from_email',
+		'campaignbridge_reply_to',
+		'campaignbridge_mailchimp_api_key',
+		'campaignbridge_mailchimp_audience',
+		'campaignbridge_debug_mode',
+		'campaignbridge_log_level',
+		'campaignbridge_cache_duration',
+		'campaignbridge_rate_limit',
+		'campaignbridge_last_sync',
+		'campaignbridge_mailchimp_last_test',
 		'campaignbridge_post_types', // Legacy.
 	);
 
@@ -191,7 +190,7 @@ class Storage_Prefixes {
 	private static function has_known_prefix( string $key ): bool {
 		$known_prefixes = array(
 			self::PLUGIN_PREFIX,    // 'campaignbridge_'
-			self::SETTINGS_PREFIX,  // 'cb_'
+			self::SETTINGS_PREFIX,  // 'campaignbridge_'
 		);
 
 		foreach ( $known_prefixes as $prefix ) {
