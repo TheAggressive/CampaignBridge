@@ -6,7 +6,7 @@ A comprehensive WordPress plugin for creating and managing professional email ca
 
 ### 🎨 Email Template System
 - **Block-Based Email Design**: Create beautiful email templates using WordPress block editor
-- **Custom Post Type**: Dedicated `campaignbridge_email_template` post type for template management
+- **Custom Post Type**: Dedicated `cb_templates` post type for template management
 - **Template Categories**: Organize templates by purpose (newsletter, promotional, welcome, etc.)
 - **Responsive Design**: Email-safe HTML generation with CSS inlining
 

@@ -30,7 +30,7 @@ class CampaignBridge_Uninstaller {
 	 * Plugin constants.
 	 */
 	private const PLUGIN_SLUG = 'campaignbridge';
-	private const CPT_SLUG    = 'campaignbridge_email_template';
+	private const CPT_SLUG    = 'cb_templates';
 
 	/**
 	 * Initialize the uninstaller.

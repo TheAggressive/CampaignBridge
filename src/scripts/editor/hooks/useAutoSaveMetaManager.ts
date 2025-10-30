@@ -10,7 +10,7 @@ import { AUTOSAVE_CONSTANTS, useAutoSave } from './useAutoSave';
  * - Throttled success notices via callbacks you pass in
  *
  * @param {Object}   opts
- * @param {string}   opts.postType          e.g. 'campaignbridge_email_template'
+ * @param {string}   opts.postType          e.g. 'cb_templates'
  * @param {number}   opts.postId
  * @param {string[]} opts.keys              meta keys this manager will handle
  * @param {function} [opts.onSuccess]       (msg) => void

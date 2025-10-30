@@ -23,7 +23,7 @@ class Test_Factory {
 			'post_title'   => 'Test Email Template ' . uniqid(),
 			'post_content' => '<!-- wp:paragraph --><p>Test email content</p><!-- /wp:paragraph -->',
 			'post_status'  => 'publish',
-			'post_type'    => 'campaignbridge_email_template',
+			'post_type'    => 'cb_templates',
 			'meta_input'   => array(
 				'_campaignbridge_subject'           => 'Test Subject Line',
 				'_campaignbridge_template_category' => 'newsletter',
@@ -44,7 +44,7 @@ class Test_Factory {
 		$defaults = array(
 			'post_title'  => 'Test Campaign ' . uniqid(),
 			'post_status' => 'publish',
-			'post_type'   => 'campaignbridge_campaign',
+			'post_type'   => 'cb_campaign',
 			'meta_input'  => array(
 				'_campaignbridge_campaign_status'     => 'draft',
 				'_campaignbridge_campaign_recipients' => 'subscribers',
@@ -219,7 +219,7 @@ class Test_Factory {
 			'post_title'   => 'Block Email Template ' . uniqid(),
 			'post_content' => $default_content,
 			'post_status'  => 'publish',
-			'post_type'    => 'campaignbridge_email_template',
+			'post_type'    => 'cb_templates',
 			'meta_input'   => array(
 				'_campaignbridge_subject'           => 'Block Template Subject',
 				'_campaignbridge_template_category' => 'newsletter',
