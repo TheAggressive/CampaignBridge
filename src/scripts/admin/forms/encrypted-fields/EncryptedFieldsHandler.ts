@@ -148,7 +148,7 @@ export class EncryptedFieldsHandler {
         );
       }
     } catch (error) {
-      console.error('Decryption failed:', error);
+      this.logError('Decryption failed', { error: error.message, fieldId });
       this.apiClient.showError(
         (error as Error).message || 'Network error occurred'
       );
@@ -340,7 +340,7 @@ export class EncryptedFieldsHandler {
         );
       }
     } catch (error) {
-      console.error('Save failed:', error);
+      this.logError('Save failed', { error: error.message, fieldId });
       this.apiClient.showError(
         (error as Error).message || 'Network error occurred'
       );
@@ -399,6 +399,21 @@ export class EncryptedFieldsHandler {
    */
   getStateSummary() {
     return this.stateManager.getStateSummary();
+  }
+
+  /**
+   * Log error with context
+   */
+  private logError(message: string, context: any = {}): void {
+    const errorData = {
+      message,
+      context,
+      timestamp: new Date().toISOString(),
+      component: 'EncryptedFieldsHandler',
+    };
+
+    // Use console.error for client-side logging (could be enhanced to send to server)
+    console.error('[EncryptedFields]', errorData);
   }
 
   /**

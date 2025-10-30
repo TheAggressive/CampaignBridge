@@ -4,10 +4,13 @@ This document explains how to use the real-time form validation system for insta
 
 ## Features
 
-- **Real-time validation** with debounced input checking
+- **Real-time validation** with debounced input checking and result caching
 - **Comprehensive rule system** supporting all common validation types
-- **Accessibility support** with ARIA attributes and screen reader announcements
-- **Visual feedback** with smooth CSS transitions and animations
+- **Validation groups** for targeted validation of field subsets
+- **Memory management** with automatic cleanup of event listeners and caches
+- **Specific error types** with detailed validation error classes
+- **Enhanced accessibility** with ARIA attributes, screen reader announcements, and keyboard navigation
+- **Performance optimized** with DOM caching and validation result caching
 - **TypeScript-first** with full type safety
 - **Framework agnostic** works with any form field implementation
 
@@ -25,7 +28,28 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 ```
 
-### 2. Add validation rules to your form fields
+### 2. Use validation groups for targeted validation
+
+```javascript
+import { FormValidator } from '../validation';
+
+// Create validator instance
+const validator = FormValidator.getInstance();
+
+// Validate only login-related fields
+const loginResults = await validator.validateGroup('login');
+
+// Validate multiple groups
+const results = await validator.validateGroup(['personal', 'contact']);
+
+// Get all available groups
+const groups = validator.getValidationGroups();
+
+// Get fields in specific group
+const fields = validator.getFieldsByGroup('billing');
+```
+
+### 3. Add validation rules to your form fields
 
 ```php
 // In your PHP form field configuration
@@ -43,7 +67,8 @@ $field = new Form_Field_Input([
         [
             'name' => 'email',
             'type' => 'email',
-            'message' => 'Please enter a valid email address'
+            'message' => 'Please enter a valid email address',
+            'groups' => ['contact', 'login']  // Optional: assign to validation groups
         ]
     ]
 ]);
@@ -64,6 +89,73 @@ document.getElementById('validate-btn').addEventListener('click', async () => {
     }
 });
 ```
+
+## Advanced Features
+
+### Memory Management
+
+The validator includes comprehensive memory management to prevent memory leaks:
+
+```javascript
+import { FormValidator } from '../validation';
+
+const validator = FormValidator.getInstance();
+
+// Clean up a specific field
+validator.removeField('email-field');
+
+// Clean up the entire validator instance
+validator.destroy();
+
+// Reset the singleton instance (useful for testing)
+FormValidator.resetInstance();
+```
+
+### Specific Error Types
+
+The system provides detailed error types for better error handling:
+
+```javascript
+import {
+    ValidationError,
+    RequiredFieldError,
+    InvalidFormatError,
+    LengthError,
+    NumericRangeError,
+    CustomValidationError
+} from '../validation/types';
+
+try {
+    // Validation logic
+} catch (error) {
+    if (error instanceof RequiredFieldError) {
+        console.log('Field is required:', error.fieldId);
+    } else if (error instanceof InvalidFormatError) {
+        console.log('Invalid format for field:', error.fieldId, error.expectedFormat);
+    } else if (error instanceof ValidationError) {
+        console.log('General validation error:', error.message);
+    }
+}
+```
+
+### Performance Optimizations
+
+The validator includes several performance optimizations:
+
+- **DOM Caching**: Element references are cached to avoid repeated DOM queries
+- **Validation Result Caching**: Recent validation results are cached for 5 seconds
+- **Debounced Validation**: Input validation is debounced to reduce validation frequency
+- **Event Listener Management**: All event listeners are tracked and can be cleaned up
+
+### Enhanced Accessibility
+
+The system provides comprehensive accessibility support:
+
+- **ARIA Attributes**: Proper `aria-invalid`, `aria-describedby`, and `aria-live` attributes
+- **Screen Reader Announcements**: Success and error states are announced to screen readers
+- **Keyboard Navigation**: Enhanced keyboard support with Enter/Escape key handling
+- **Field Type Hints**: Automatic `autocomplete` and `aria-label` attributes for different field types
+- **Live Regions**: Form-level validation status announcements
 
 ## Validation Rules
 

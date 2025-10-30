@@ -83,7 +83,7 @@ export class ApiClient {
       // Enhanced security: Add nonce and validate data
       const nonce = campaignbridgeAdmin?.nonce || '';
       if (!nonce) {
-        console.error('ApiClient: Security token not available');
+        this.logError('Security token not available', { action: 'decrypt' });
       }
       const secureData: Record<string, any> = {
         ...data,
@@ -191,6 +191,21 @@ export class ApiClient {
       wpError.code === 'failed_to_fetch' ||
       retryableCodes.includes(wpError.code || '')
     );
+  }
+
+  /**
+   * Log error with context
+   */
+  private logError(message: string, context: any = {}): void {
+    const errorData = {
+      message,
+      context,
+      timestamp: new Date().toISOString(),
+      component: 'ApiClient',
+    };
+
+    // Use console.error for client-side logging
+    console.error('[EncryptedFields:ApiClient]', errorData);
   }
 
   /**

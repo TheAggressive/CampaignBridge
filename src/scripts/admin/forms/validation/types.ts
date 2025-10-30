@@ -44,6 +44,9 @@ export interface ValidationRule {
   /** Stop validation chain on this rule failure */
   stopOnFail?: boolean;
 
+  /** Validation group(s) this rule belongs to */
+  groups?: string | string[];
+
   /** Additional rule-specific options */
   options?: Record<string, any>;
 }
@@ -234,6 +237,113 @@ export type ValidatableFieldType =
   | 'file'
   | 'textarea'
   | 'select';
+
+/**
+ * Validation error classes for specific error types
+ */
+export class ValidationError extends Error {
+  public readonly fieldId: string;
+  public readonly ruleName: string;
+  public readonly ruleType: string;
+
+  constructor(
+    message: string,
+    fieldId: string,
+    ruleName: string,
+    ruleType: string
+  ) {
+    super(message);
+    this.name = 'ValidationError';
+    this.fieldId = fieldId;
+    this.ruleName = ruleName;
+    this.ruleType = ruleType;
+  }
+}
+
+export class RequiredFieldError extends ValidationError {
+  constructor(fieldId: string, fieldLabel?: string) {
+    const label = fieldLabel || 'This field';
+    super(
+      `${label} is required`,
+      fieldId,
+      'required',
+      'required'
+    );
+    this.name = 'RequiredFieldError';
+  }
+}
+
+export class InvalidFormatError extends ValidationError {
+  constructor(fieldId: string, expectedFormat: string, ruleName: string) {
+    super(
+      `Invalid format. Expected: ${expectedFormat}`,
+      fieldId,
+      ruleName,
+      'pattern'
+    );
+    this.name = 'InvalidFormatError';
+  }
+}
+
+export class LengthError extends ValidationError {
+  constructor(
+    fieldId: string,
+    actualLength: number,
+    requiredLength: number,
+    isMin: boolean
+  ) {
+    const comparison = isMin ? 'minimum' : 'maximum';
+    super(
+      `${comparison === 'minimum' ? 'Too short' : 'Too long'}. ${comparison} length is ${requiredLength} characters (current: ${actualLength})`,
+      fieldId,
+      isMin ? 'minLength' : 'maxLength',
+      isMin ? 'minLength' : 'maxLength'
+    );
+    this.name = 'LengthError';
+  }
+}
+
+export class NumericRangeError extends ValidationError {
+  constructor(
+    fieldId: string,
+    value: number,
+    limit: number,
+    isMin: boolean
+  ) {
+    const comparison = isMin ? 'minimum' : 'maximum';
+    super(
+      `Value ${value} is ${isMin ? 'below' : 'above'} the ${comparison} limit of ${limit}`,
+      fieldId,
+      isMin ? 'min' : 'max',
+      isMin ? 'min' : 'max'
+    );
+    this.name = 'NumericRangeError';
+  }
+}
+
+export class CustomValidationError extends ValidationError {
+  constructor(fieldId: string, message: string, ruleName: string) {
+    super(
+      message,
+      fieldId,
+      ruleName,
+      'custom'
+    );
+    this.name = 'CustomValidationError';
+  }
+}
+
+export class ValidationSystemError extends Error {
+  public readonly code: string;
+  public readonly context?: Record<string, any>;
+
+  constructor(message: string, code: string, context?: Record<string, any>) {
+    super(message);
+    this.name = 'ValidationSystemError';
+    this.code = code;
+    this.context = context;
+  }
+}
 
 
 
