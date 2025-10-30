@@ -9,6 +9,9 @@ export { ConditionalEngine } from './conditional-fields';
 export { performanceMonitor } from './performance-monitor';
 export { DataSanitizer, FormValidator } from './validation';
 
+// Mock implementations for testing
+export { MockConditionalCache, MockPerformanceMonitor } from './types';
+
 // Type exports organized by module
 export type { CacheStats } from './cache';
 export type {
@@ -25,6 +28,16 @@ export type {
   FieldStateMap,
   FormData,
   IConditionalAccessibility,
+  IConditionalApiClient,
+  IConditionalApiService,
+  IConditionalCache,
+  IConditionalDataCollector,
+  IConditionalEngine,
+  IConditionalStateManager,
+  IConditionalUIManager,
+  IConditionalValidator,
+  IConfigManager,
+  IPerformanceMonitor,
 } from './types';
 export type {
   FieldValidationRules,

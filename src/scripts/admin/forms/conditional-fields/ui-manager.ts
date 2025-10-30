@@ -61,59 +61,7 @@ export class ConditionalUIManager {
     accessibilityManager: IConditionalAccessibility
   ): void {
     const startTime = performance.now();
-    const changes: string[] = [];
-    let operationsCount = 0;
-
-    // Set up form landmarks for accessibility
-    accessibilityManager.setupFormLandmarks();
-
-    Object.entries(fieldStates).forEach(([fieldId, state]) => {
-      const fieldName = `${this.formId}[${fieldId}]`;
-      const field = this.form.querySelector(
-        `[name="${fieldName}"]`
-      ) as HTMLElement;
-
-      if (field) {
-        const conditionalWrapper = field.closest(
-          '.campaignbridge-conditional-field'
-        ) as HTMLElement;
-        const wasVisible = !conditionalWrapper?.classList.contains(
-          'campaignbridge-conditional-hidden'
-        );
-        const isVisible = state.visible;
-
-        // Update visibility
-        if (state.visible) {
-          this.showField(field, conditionalWrapper);
-        } else {
-          this.hideField(field, conditionalWrapper);
-        }
-
-        // Update requirements
-        this.updateFieldRequirements(
-          field,
-          state,
-          fieldId,
-          changes,
-          accessibilityManager
-        );
-
-        // Handle focus management when fields disappear
-        if (wasVisible && !isVisible) {
-          accessibilityManager.handleFieldHidden(field, fieldId);
-        }
-
-        // Track changes for announcements
-        if (wasVisible !== isVisible) {
-          const fieldLabel = accessibilityManager.getFieldLabel(field, fieldId);
-          if (isVisible) {
-            changes.push(`${fieldLabel} is now available`);
-          } else {
-            changes.push(`${fieldLabel} is now hidden`);
-          }
-        }
-      }
-    });
+    const changes = this.processFieldUpdates(fieldStates, accessibilityManager);
 
     // Announce changes to screen readers
     if (changes.length > 0) {
@@ -122,10 +70,127 @@ export class ConditionalUIManager {
 
     // Record performance metrics
     const duration = performance.now() - startTime;
+    const operationsCount = Object.keys(fieldStates).length;
     performanceMonitor.recordDomOperation(
       'field_update',
       operationsCount,
       duration
+    );
+  }
+
+  /**
+   * Process field updates and return change announcements
+   */
+  private processFieldUpdates(
+    fieldStates: FieldStateMap,
+    accessibilityManager: IConditionalAccessibility
+  ): string[] {
+    const changes: string[] = [];
+
+    // Set up form landmarks for accessibility
+    accessibilityManager.setupFormLandmarks();
+
+    Object.entries(fieldStates).forEach(([fieldId, state]) => {
+      const fieldResult = this.processSingleFieldUpdate(
+        fieldId,
+        state,
+        accessibilityManager
+      );
+
+      if (fieldResult.changeMessage) {
+        changes.push(fieldResult.changeMessage);
+      }
+    });
+
+    return changes;
+  }
+
+  /**
+   * Process a single field update
+   */
+  private processSingleFieldUpdate(
+    fieldId: string,
+    state: FieldState,
+    accessibilityManager: IConditionalAccessibility
+  ): { changeMessage?: string } {
+    const field = this.findFieldElement(fieldId);
+    if (!field) return {};
+
+    const conditionalWrapper = field.closest(
+      '.campaignbridge-conditional-field'
+    ) as HTMLElement;
+
+    const wasVisible = this.isFieldVisible(conditionalWrapper);
+    const isVisible = state.visible;
+
+    // Update field visibility and requirements
+    this.updateFieldVisibilityAndRequirements(
+      field,
+      conditionalWrapper,
+      state,
+      fieldId,
+      accessibilityManager
+    );
+
+    // Handle focus management when fields disappear
+    if (wasVisible && !isVisible) {
+      accessibilityManager.handleFieldHidden(field, fieldId);
+    }
+
+    // Return change message for announcements
+    if (wasVisible !== isVisible) {
+      const fieldLabel = accessibilityManager.getFieldLabel(field, fieldId);
+      return {
+        changeMessage: isVisible
+          ? `${fieldLabel} is now available`
+          : `${fieldLabel} is now hidden`,
+      };
+    }
+
+    return {};
+  }
+
+  /**
+   * Find field element by field ID
+   */
+  private findFieldElement(fieldId: string): HTMLElement | null {
+    const fieldName = `${this.formId}[${fieldId}]`;
+    return this.form.querySelector(`[name="${fieldName}"]`) as HTMLElement;
+  }
+
+  /**
+   * Check if a field is currently visible
+   */
+  private isFieldVisible(conditionalWrapper: HTMLElement | null): boolean {
+    return !conditionalWrapper?.classList.contains(
+      'campaignbridge-conditional-hidden'
+    );
+  }
+
+  /**
+   * Update field visibility and requirements in one operation
+   */
+  private updateFieldVisibilityAndRequirements(
+    field: HTMLElement,
+    conditionalWrapper: HTMLElement | null,
+    state: FieldState,
+    fieldId: string,
+    accessibilityManager: IConditionalAccessibility
+  ): void {
+    // Update visibility
+    if (state.visible) {
+      this.showField(field, conditionalWrapper);
+    } else {
+      this.hideField(field, conditionalWrapper);
+    }
+
+    // Update requirements
+    this.updateFieldRequirements(
+      field,
+      state,
+      fieldId,
+      [], // Changes array not needed here
+      accessibilityManager
     );
   }
 

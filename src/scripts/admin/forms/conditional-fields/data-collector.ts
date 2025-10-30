@@ -38,7 +38,22 @@ export class ConditionalDataCollector {
   public getFormData(): Record<string, string> {
     const data: Record<string, string> = {};
     const inputs = this.form.querySelectorAll('input, select, textarea');
+    const checkboxNames = this.collectCheckboxNames(inputs);
 
+    inputs.forEach(input => {
+      const fieldData = this.processInputElement(input, checkboxNames);
+      if (fieldData) {
+        data[fieldData.fieldId] = fieldData.value;
+      }
+    });
+
+    return data;
+  }
+
+  /**
+   * Collect all checkbox input names to handle hidden fields properly
+   */
+  private collectCheckboxNames(inputs: NodeListOf<Element>): Set<string> {
     const checkboxNames = new Set<string>();
 
     inputs.forEach(el => {
@@ -48,61 +63,93 @@ export class ConditionalDataCollector {
       }
     });
 
-    inputs.forEach(el => {
-      const input = el as
-        | HTMLInputElement
-        | HTMLSelectElement
-        | HTMLTextAreaElement;
-      const fullName = (input as HTMLInputElement).name;
+    return checkboxNames;
+  }
 
-      if (
-        (input as HTMLInputElement).type === 'hidden' &&
-        checkboxNames.has(fullName)
-      ) {
-        return;
-      }
+  /**
+   * Process a single input element and return field data if valid
+   */
+  private processInputElement(
+    input: Element,
+    checkboxNames: Set<string>
+  ): { fieldId: string; value: string } | null {
+    const htmlInput = input as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement;
+    const fullName = (htmlInput as HTMLInputElement).name;
 
-      let value: any = (input as HTMLInputElement).value;
+    if (!fullName) return null;
 
-      if ((input as HTMLInputElement).type === 'checkbox') {
-        value = (input as HTMLInputElement).checked ? '1' : '0';
-      } else if ((input as HTMLInputElement).type === 'radio') {
-        if (!(input as HTMLInputElement).checked) {
-          return;
-        }
-      }
+    // Skip hidden fields that correspond to checkboxes
+    if (
+      this.shouldSkipHiddenCheckboxField(htmlInput, fullName, checkboxNames)
+    ) {
+      return null;
+    }
 
-      if (fullName) {
-        const fieldId = this.parseFieldName(fullName);
-        if (fieldId) {
-          // Validate and sanitize the value
-          const validationResult = this.validator.validateField(
-            fieldId,
-            value,
-            {}
-          );
+    const value = this.extractInputValue(htmlInput);
+    if (value === null) return null; // Radio button not checked
 
-          if (validationResult.isValid) {
-            // Use sanitized value if available, otherwise sanitize manually
-            const sanitizedValue =
-              validationResult.sanitizedValue !== undefined
-                ? validationResult.sanitizedValue
-                : DataSanitizer.sanitizeHtml(String(value));
+    const fieldId = this.parseFieldName(fullName);
+    if (!fieldId) return null;
 
-            data[fieldId] = String(sanitizedValue);
-          } else {
-            // Log validation error but still include the data (fail gracefully)
-            console.warn(
-              `Field validation failed for ${fieldId}:`,
-              validationResult.errorMessage
-            );
-            data[fieldId] = DataSanitizer.sanitizeHtml(String(value));
-          }
-        }
-      }
-    });
+    return {
+      fieldId,
+      value: this.validateAndSanitizeValue(fieldId, value),
+    };
+  }
 
-    return data;
+  /**
+   * Check if this hidden field should be skipped (checkbox handling)
+   */
+  private shouldSkipHiddenCheckboxField(
+    input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+    fullName: string,
+    checkboxNames: Set<string>
+  ): boolean {
+    return (
+      (input as HTMLInputElement).type === 'hidden' &&
+      checkboxNames.has(fullName)
+    );
+  }
+
+  /**
+   * Extract the value from an input element
+   */
+  private extractInputValue(
+    input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+  ): any {
+    const htmlInput = input as HTMLInputElement;
+
+    if (htmlInput.type === 'checkbox') {
+      return htmlInput.checked ? '1' : '0';
+    } else if (htmlInput.type === 'radio') {
+      return htmlInput.checked ? htmlInput.value : null;
+    } else {
+      return htmlInput.value;
+    }
+  }
+
+  /**
+   * Validate and sanitize a field value
+   */
+  private validateAndSanitizeValue(fieldId: string, value: any): string {
+    const validationResult = this.validator.validateField(fieldId, value, {});
+
+    if (validationResult.isValid) {
+      // Use sanitized value if available, otherwise sanitize manually
+      return validationResult.sanitizedValue !== undefined
+        ? String(validationResult.sanitizedValue)
+        : DataSanitizer.sanitizeHtml(String(value));
+    } else {
+      // Log validation error but still include the data (fail gracefully)
+      console.warn(
+        `Field validation failed for ${fieldId}:`,
+        validationResult.errorMessage
+      );
+      return DataSanitizer.sanitizeHtml(String(value));
+    }
   }
 
   /**

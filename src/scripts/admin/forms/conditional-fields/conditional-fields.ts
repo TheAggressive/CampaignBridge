@@ -179,53 +179,72 @@ export class ConditionalEngine {
    * Evaluate conditions with intelligent caching and enhanced UX
    */
   private async evaluateConditions(): Promise<void> {
-    if (this.apiService.isEvaluationInProgress()) {
-      return; // Prevent concurrent evaluations
+    if (this.shouldSkipEvaluation()) {
+      return;
     }
 
-    const formData = this.stateManager.collectFormData(
+    const formData = this.collectCurrentFormData();
+
+    // Try to use cached result first
+    const cachedResult = this.tryGetCachedResult(formData);
+    if (cachedResult) {
+      this.applyCachedResult(cachedResult);
+      return;
+    }
+
+    // Perform fresh evaluation
+    await this.performFreshEvaluation(formData);
+  }
+
+  /**
+   * Check if evaluation should be skipped
+   */
+  private shouldSkipEvaluation(): boolean {
+    return this.apiService.isEvaluationInProgress();
+  }
+
+  /**
+   * Collect current form data with validation
+   */
+  private collectCurrentFormData(): Record<string, any> {
+    return this.stateManager.collectFormData(
       this.form,
       this.config.formId,
       this.config.validationRules
     );
+  }
 
-    // Check client-side cache first
-    const cachedResult = this.stateManager.getCachedResult(formData);
-    if (cachedResult) {
-      this.uiManager.updateFields(cachedResult.fields!, this.accessibility);
-      return;
-    }
+  /**
+   * Try to get cached result for form data
+   */
+  private tryGetCachedResult(formData: Record<string, any>): any {
+    return this.stateManager.getCachedResult(formData);
+  }
 
-    // Show loading indicator and hide previous errors
-    this.uiManager.showLoading();
-    this.uiManager.hideError();
+  /**
+   * Apply cached result to UI
+   */
+  private applyCachedResult(cachedResult: any): void {
+    this.uiManager.updateFields(cachedResult.fields!, this.accessibility);
+  }
 
-    // Prepare API request
-    const requestPayload: ConditionalApiRequest = {
-      action: this.config.ajaxAction!,
-      form_id: this.config.formId,
-      data: formData,
-      nonce: this.getNonce(),
-    };
+  /**
+   * Perform fresh evaluation with API call
+   */
+  private async performFreshEvaluation(
+    formData: Record<string, any>
+  ): Promise<void> {
+    this.prepareUIForEvaluation();
+
+    const requestPayload = this.buildApiRequest(formData);
 
     try {
-      const result: EvaluationResult = await this.apiService.evaluateConditions(
-        this.config.apiEndpoint!,
-        requestPayload
-      );
+      const result = await this.makeApiCall(requestPayload);
 
       this.uiManager.hideLoading();
 
-      if (result.success && result.fields) {
-        // Cache successful result
-        this.stateManager.cacheResult(formData, {
-          success: true,
-          fields: result.fields,
-        });
-        this.stateManager.updateLastFormData(formData);
-
-        // Update UI
-        this.uiManager.updateFields(result.fields, this.accessibility);
+      if (this.isValidSuccessResponse(result)) {
+        this.handleSuccessfulEvaluation(formData, result);
       } else {
         this.handleEvaluationError(
           result.error || 'Server returned an invalid response'
@@ -233,10 +252,76 @@ export class ConditionalEngine {
       }
     } catch (error) {
       this.uiManager.hideLoading();
-      this.handleEvaluationError(
-        error instanceof Error ? error.message : 'An unexpected error occurred'
-      );
+      this.handleApiError(error);
     }
+  }
+
+  /**
+   * Prepare UI for evaluation (show loading, hide errors)
+   */
+  private prepareUIForEvaluation(): void {
+    this.uiManager.showLoading();
+    this.uiManager.hideError();
+  }
+
+  /**
+   * Build API request payload
+   */
+  private buildApiRequest(
+    formData: Record<string, any>
+  ): ConditionalApiRequest {
+    return {
+      action: this.config.ajaxAction!,
+      form_id: this.config.formId,
+      data: formData,
+      nonce: this.getNonce(),
+    };
+  }
+
+  /**
+   * Make API call to evaluate conditions
+   */
+  private async makeApiCall(
+    requestPayload: ConditionalApiRequest
+  ): Promise<EvaluationResult> {
+    return await this.apiService.evaluateConditions(
+      this.config.apiEndpoint!,
+      requestPayload
+    );
+  }
+
+  /**
+   * Check if response is a valid success response
+   */
+  private isValidSuccessResponse(result: EvaluationResult): boolean {
+    return result.success && result.fields;
+  }
+
+  /**
+   * Handle successful evaluation
+   */
+  private handleSuccessfulEvaluation(
+    formData: Record<string, any>,
+    result: EvaluationResult
+  ): void {
+    // Cache successful result
+    this.stateManager.cacheResult(formData, {
+      success: true,
+      fields: result.fields,
+    });
+    this.stateManager.updateLastFormData(formData);
+
+    // Update UI
+    this.uiManager.updateFields(result.fields!, this.accessibility);
+  }
+
+  /**
+   * Handle API errors
+   */
+  private handleApiError(error: unknown): void {
+    this.handleEvaluationError(
+      error instanceof Error ? error.message : 'An unexpected error occurred'
+    );
   }
 
   private getNonce(): string {

@@ -159,33 +159,81 @@ export class ConditionalApiService {
     textStatus: string,
     errorThrown: string
   ): ConditionalFieldError {
+    this.logAjaxError(xhr, textStatus, errorThrown);
+
+    const status = this.getErrorStatus(xhr);
+
+    return this.createErrorForStatus(status, textStatus, errorThrown);
+  }
+
+  /**
+   * Log AJAX error details for debugging
+   */
+  private logAjaxError(
+    xhr: any,
+    textStatus: string,
+    errorThrown: string
+  ): void {
     console.error(
       '[ConditionalApiService] AJAX Error:',
-      xhr.status,
+      xhr?.status,
       textStatus,
       errorThrown
     );
+  }
 
-    const status = xhr?.status ?? 0;
+  /**
+   * Extract status code from error response
+   */
+  private getErrorStatus(xhr: any): number {
+    return xhr?.status ?? 0;
+  }
 
-    if (status === 400) {
-      return new ApiValidationError(
-        'Invalid form data. Please check your input and try again.',
-        { status, textStatus, errorThrown }
-      );
-    } else if (status === 403) {
-      return new NetworkError(
-        status,
-        'You do not have permission to update this form.'
-      );
-    } else if (status === 429) {
-      return new RateLimitError();
-    } else if (status >= 500) {
+  /**
+   * Create appropriate error based on HTTP status
+   */
+  private createErrorForStatus(
+    status: number,
+    textStatus: string,
+    errorThrown: string
+  ): ConditionalFieldError {
+    switch (status) {
+      case 400:
+        return new ApiValidationError(
+          'Invalid form data. Please check your input and try again.',
+          { status, textStatus, errorThrown }
+        );
+
+      case 403:
+        return new NetworkError(
+          status,
+          'You do not have permission to update this form.'
+        );
+
+      case 429:
+        return new RateLimitError();
+
+      default:
+        return this.createErrorForStatusRange(status, textStatus, errorThrown);
+    }
+  }
+
+  /**
+   * Handle status ranges and fallback cases
+   */
+  private createErrorForStatusRange(
+    status: number,
+    textStatus: string,
+    errorThrown: string
+  ): ConditionalFieldError {
+    if (status >= 500) {
       return new NetworkError(
         status,
         'Server error occurred. Please try again later.'
       );
-    } else if (textStatus === 'timeout') {
+    }
+
+    if (textStatus === 'timeout') {
       return new ApiTimeoutError(this.requestTimeout);
     }
 
