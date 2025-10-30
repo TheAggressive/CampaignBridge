@@ -63,7 +63,6 @@ class Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 	 * @var array<string>
 	 */
 	private const ALLOWED_DIRECTORIES = array(
-		'includes/Admin_Legacy/',
 		'vendor/',
 		'node_modules/',
 		'tests/',

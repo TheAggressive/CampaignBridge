@@ -4,7 +4,6 @@ parameters:
       - includes/
       - campaignbridge.php      # Include main plugin file
     excludePaths:
-      - includes/Admin_Legacy/  # Legacy admin code (deprecated)
       - vendor/                 # Third-party dependencies
       - node_modules/           # Node.js dependencies
       - assets/?                # Compiled assets (optional)

@@ -26,7 +26,7 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 		->end()
 
 	->email( 'from_email', 'From Email' )
-		->default( get_option( 'admin_email' ) )
+		->default( \CampaignBridge\Core\Storage::get_option( 'admin_email' ) )
 		->required()
 		->description( 'The email address that appears in the "From" field.' )
 		->class( 'regular-text' )
@@ -34,7 +34,7 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 		->end()
 
 	->email( 'reply_to', 'Reply-To Email' )
-		->default( get_option( 'admin_email' ) )
+		->default( \CampaignBridge\Core\Storage::get_option( 'admin_email' ) )
 		->description( 'Optional. Email address where replies should be sent.' )
 		->class( 'regular-text' )
 		->autocomplete( 'email' )
@@ -52,7 +52,7 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 	->after_validate(
 		function ( $data, $errors ) {
 			if ( ! empty( $errors ) && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'General settings validation failed: ' . print_r( $errors, true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging.
+				\CampaignBridge\Core\Error_Handler::warning( 'General settings validation failed', array( 'errors' => $errors ) );
 			}
 		}
 	)
@@ -78,7 +78,7 @@ $form = \CampaignBridge\Admin\Core\Form::make( 'general_settings' )
 				);
 				do_action( 'campaignbridge_general_settings_saved', $data );
 			} else {
-				error_log( 'Failed to save general settings' );
+				\CampaignBridge\Core\Error_Handler::error( 'Failed to save general settings' );
 			}
 		}
 	);

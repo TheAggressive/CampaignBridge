@@ -181,7 +181,7 @@ $settings_form = \CampaignBridge\Admin\Core\Form::make( 'comprehensive_settings'
 	->after_save(
 		function ( $data, $result ) {
 			if ( $result ) {
-				error_log( 'New user registered: ' . $data['username'] );
+				\CampaignBridge\Core\Error_Handler::info( 'New user registered', array( 'username' => $data['username'] ?? 'unknown' ) );
 			}
 		}
 	);
@@ -283,7 +283,7 @@ $settings_form = \CampaignBridge\Admin\Core\Form::make( 'comprehensive_settings'
 		<div class="demo-code">
 			<pre><code>$contact_form = Form_Factory::contact('contact_demo')
 	->after_save(function($data) {
-		error_log('Contact: ' . $data['name']);
+		\CampaignBridge\Core\Error_Handler::info( 'Contact form submission', array( 'name' => $data['name'] ?? 'unknown' ) );
 	});</code></pre>
 		</div>
 		<div class="demo-form">

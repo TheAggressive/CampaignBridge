@@ -10,6 +10,9 @@
 
 namespace CampaignBridge\Admin\Core\Forms;
 
+use CampaignBridge\Admin\Core\Forms\Validation_Messages;
+use CampaignBridge\Admin\Core\Forms\Field_Sanitizer;
+
 /**
  * Form Validator - Centralized validation logic
  *
@@ -33,6 +36,8 @@ class Form_Validator {
 
 	/**
 	 * Constructor - Register default validation rules
+	 *
+	 * @param Form_Conditional_Manager|null $conditional_manager Optional conditional manager instance.
 	 */
 	public function __construct( ?Form_Conditional_Manager $conditional_manager = null ) {
 		$this->conditional_manager = $conditional_manager;
@@ -73,8 +78,7 @@ class Form_Validator {
 			return new \WP_Error(
 				'field_required',
 				sprintf(
-					/* translators: %s: field label */
-					\__( '%s is required.', 'campaignbridge' ),
+					Validation_Messages::get( 'field_required' ),
 					$field_label
 				)
 			);
@@ -122,60 +126,44 @@ class Form_Validator {
 	public function convert_to_js_rules( array $php_rules, string $field_label = '' ): array {
 		$js_rules = array();
 
-		// Define mapping of PHP rules to JS rule configurations
+		// Define mapping of PHP rules to JS rule configurations.
 		$rule_mappings = array(
-			'required' => array( 'message' => \__( 'This field is required.', 'campaignbridge' ) ),
-			'email'    => array( 'message' => \__( 'Please enter a valid email address.', 'campaignbridge' ) ),
-			'url'      => array( 'message' => \__( 'Please enter a valid URL.', 'campaignbridge' ) ),
-			'numeric'  => array( 'message' => \__( 'Please enter a valid number.', 'campaignbridge' ) ),
-			'date'     => array( 'message' => \__( 'Please enter a valid date.', 'campaignbridge' ) ),
+			'required' => array( 'message' => Validation_Messages::get( 'this_field_required' ) ),
+			'email'    => array( 'message' => Validation_Messages::get( 'invalid_email' ) ),
+			'url'      => array( 'message' => Validation_Messages::get( 'invalid_url' ) ),
+			'numeric'  => array( 'message' => Validation_Messages::get( 'invalid_number' ) ),
+			'date'     => array( 'message' => Validation_Messages::get( 'invalid_date' ) ),
 		);
 
-		// Handle simple rules with fixed messages
+		// Handle simple rules with fixed messages.
 		foreach ( $rule_mappings as $rule_name => $config ) {
 			if ( ! empty( $php_rules[ $rule_name ] ) ) {
 				$js_rules[] = $this->create_js_rule( $rule_name, $config['message'] );
 			}
 		}
 
-		// Handle rules with values and dynamic messages
+		// Handle rules with values and dynamic messages.
 		if ( ! empty( $php_rules['min_length'] ) ) {
-			$value   = (int) $php_rules['min_length'];
-			$message = sprintf(
-				/* translators: %d: minimum length */
-				\__( 'Minimum length is %d characters.', 'campaignbridge' ),
-				$value
-			);
+			$value      = (int) $php_rules['min_length'];
+			$message    = sprintf( Validation_Messages::get( 'min_length' ), $value );
 			$js_rules[] = $this->create_js_rule( 'minLength', $message, $value );
 		}
 
 		if ( ! empty( $php_rules['max_length'] ) ) {
-			$value   = (int) $php_rules['max_length'];
-			$message = sprintf(
-				/* translators: %d: maximum length */
-				\__( 'Maximum length is %d characters.', 'campaignbridge' ),
-				$value
-			);
+			$value      = (int) $php_rules['max_length'];
+			$message    = sprintf( Validation_Messages::get( 'max_length' ), $value );
 			$js_rules[] = $this->create_js_rule( 'maxLength', $message, $value );
 		}
 
 		if ( isset( $php_rules['min'] ) ) {
-			$value   = (int) $php_rules['min'];
-			$message = sprintf(
-				/* translators: %d: minimum value */
-				\__( 'Minimum value is %d.', 'campaignbridge' ),
-				$value
-			);
+			$value      = (int) $php_rules['min'];
+			$message    = sprintf( Validation_Messages::get( 'minimum_value' ), $value );
 			$js_rules[] = $this->create_js_rule( 'min', $message, $value );
 		}
 
 		if ( isset( $php_rules['max'] ) ) {
-			$value   = (int) $php_rules['max'];
-			$message = sprintf(
-				/* translators: %d: maximum value */
-				\__( 'Maximum value is %d.', 'campaignbridge' ),
-				$value
-			);
+			$value      = (int) $php_rules['max'];
+			$message    = sprintf( Validation_Messages::get( 'maximum_value' ), $value );
 			$js_rules[] = $this->create_js_rule( 'max', $message, $value );
 		}
 
@@ -183,10 +171,10 @@ class Form_Validator {
 		if ( ! empty( $php_rules['pattern'] ) ) {
 			if ( is_array( $php_rules['pattern'] ) ) {
 				$pattern = $php_rules['pattern']['pattern'] ?? '';
-				$message = $php_rules['pattern']['message'] ?? \__( 'Value does not match required format.', 'campaignbridge' );
+				$message = $php_rules['pattern']['message'] ?? Validation_Messages::get( 'invalid_pattern' );
 			} else {
 				$pattern = $php_rules['pattern'];
-				$message = \__( 'Value does not match required format.', 'campaignbridge' );
+				$message = Validation_Messages::get( 'invalid_pattern' );
 			}
 
 			$js_rules[] = array(
@@ -296,12 +284,12 @@ class Form_Validator {
 	}
 
 	/**
-	 *
 	 * Validate a single field
 	 *
 	 * @param string               $field_id    Field ID.
 	 * @param mixed                $value       Field value.
 	 * @param array<string, mixed> $field_config Field configuration.
+	 * @param array<string, mixed> $form_data    Optional form data for context.
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
 	public function validate_field( string $field_id, $value, array $field_config, array $form_data = array() ): bool|\WP_Error {
@@ -339,8 +327,7 @@ class Form_Validator {
 			return new \WP_Error(
 				'field_required',
 				sprintf(
-					/* translators: %s: field label */
-					\__( '%s is required.', 'campaignbridge' ),
+					Validation_Messages::get( 'field_required' ),
 					$field_config['label'] ?? 'This field'
 				)
 			);
@@ -354,19 +341,19 @@ class Form_Validator {
 		// Type-specific validation.
 		switch ( $field_type ) {
 			case 'email':
-				if ( ! is_email( $value ) ) {
+				if ( ! $this->is_valid_email( $value ) ) {
 					return new \WP_Error(
 						'invalid_email',
-						\__( 'Please enter a valid email address.', 'campaignbridge' )
+						Validation_Messages::get( 'invalid_email' )
 					);
 				}
 				break;
 
 			case 'url':
-				if ( ! filter_var( $value, FILTER_VALIDATE_URL ) ) {
+				if ( ! $this->is_valid_url( $value ) ) {
 					return new \WP_Error(
 						'invalid_url',
-						\__( 'Please enter a valid URL.', 'campaignbridge' )
+						Validation_Messages::get( 'invalid_url' )
 					);
 				}
 				break;
@@ -375,7 +362,7 @@ class Form_Validator {
 				if ( ! is_numeric( $value ) ) {
 					return new \WP_Error(
 						'invalid_number',
-						\__( 'Please enter a valid number.', 'campaignbridge' )
+						Validation_Messages::get( 'invalid_number' )
 					);
 				}
 
@@ -385,22 +372,14 @@ class Form_Validator {
 				if ( isset( $field_config['min'] ) && $value < $field_config['min'] ) {
 					return new \WP_Error(
 						'number_too_small',
-						sprintf(
-							/* translators: %s: minimum value */
-							\__( 'Value must be at least %s.', 'campaignbridge' ),
-							$field_config['min']
-						)
+						sprintf( Validation_Messages::get( 'number_too_small' ), $field_config['min'] )
 					);
 				}
 
 				if ( isset( $field_config['max'] ) && $value > $field_config['max'] ) {
 					return new \WP_Error(
 						'number_too_large',
-						sprintf(
-							/* translators: %s: maximum value */
-							\__( 'Value must be no more than %s.', 'campaignbridge' ),
-							$field_config['max']
-						)
+						sprintf( Validation_Messages::get( 'number_too_large' ), $field_config['max'] )
 					);
 				}
 				break;
@@ -409,7 +388,7 @@ class Form_Validator {
 				if ( ! $this->is_valid_date( $value ) ) {
 					return new \WP_Error(
 						'invalid_date',
-						\__( 'Please enter a valid date.', 'campaignbridge' )
+						Validation_Messages::get( 'invalid_date' )
 					);
 				}
 				break;
@@ -422,7 +401,7 @@ class Form_Validator {
 						if ( ! isset( $value[ $key ] ) ) {
 							return new \WP_Error(
 								'invalid_file_data',
-								\__( 'Invalid file data structure.', 'campaignbridge' )
+								Validation_Messages::get( 'invalid_file_data' )
 							);
 						}
 					}
@@ -431,7 +410,7 @@ class Form_Validator {
 					if ( ! file_exists( $value['file'] ) ) {
 						return new \WP_Error(
 							'file_not_found',
-							\__( 'Uploaded file could not be found.', 'campaignbridge' )
+							Validation_Messages::get( 'file_not_found' )
 						);
 					}
 
@@ -442,8 +421,7 @@ class Form_Validator {
 							return new \WP_Error(
 								'file_too_large',
 								sprintf(
-									/* translators: %s: maximum file size */
-									\__( 'File size exceeds maximum allowed size of %s.', 'campaignbridge' ),
+									Validation_Messages::get( 'file_too_large' ),
 									size_format( $field_config['max_size'] )
 								)
 							);
@@ -455,7 +433,7 @@ class Form_Validator {
 				} elseif ( $field_config['required'] ?? false ) {
 					return new \WP_Error(
 						'file_required',
-						\__( 'Please select a file to upload.', 'campaignbridge' )
+						Validation_Messages::get( 'file_required' )
 					);
 				}
 				break;
@@ -470,53 +448,37 @@ class Form_Validator {
 	private function register_default_rules(): void {
 		$this->validation_rules = array(
 			'email'      => $this->create_simple_validator(
-				fn( $value ) => is_email( $value ),
+				fn( $value ) => $this->is_valid_email( $value ),
 				'invalid_email',
-				\__( 'Please enter a valid email address.', 'campaignbridge' )
+				Validation_Messages::get( 'invalid_email' )
 			),
 
 			'url'        => $this->create_simple_validator(
-				fn( $value ) => filter_var( $value, FILTER_VALIDATE_URL ),
+				fn( $value ) => $this->is_valid_url( $value ),
 				'invalid_url',
-				\__( 'Please enter a valid URL.', 'campaignbridge' )
+				Validation_Messages::get( 'invalid_url' )
 			),
 
-			'min_length' => function ( $value, $rule_config, $field_label ) {
-				if ( strlen( $value ) < $rule_config ) {
-					return new \WP_Error(
-						'min_length',
-						sprintf(
-							/* translators: %d: minimum length */
-							\__( 'Minimum length is %d characters.', 'campaignbridge' ),
-							$rule_config
-						)
-					);
-				}
-				return true;
-			},
+			'min_length' => $this->create_length_validator(
+				fn( $value, $rule_config ) => strlen( $value ) < $rule_config,
+				'min_length',
+				Validation_Messages::get( 'min_length' )
+			),
 
-			'max_length' => function ( $value, $rule_config, $field_label ) {
-				if ( strlen( $value ) > $rule_config ) {
-					return new \WP_Error(
-						'max_length',
-						sprintf(
-							/* translators: %d: maximum length */
-							__( 'Maximum length is %d characters.', 'campaignbridge' ),
-							$rule_config
-						)
-					);
-				}
-				return true;
-			},
+			'max_length' => $this->create_length_validator(
+				fn( $value, $rule_config ) => strlen( $value ) > $rule_config,
+				'max_length',
+				Validation_Messages::get( 'max_length' )
+			),
 
 			'pattern'    => function ( $value, $rule_config, $field_label ) {
 				// Handle both string and array formats for backward compatibility.
 				if ( is_array( $rule_config ) ) {
 					$pattern = $rule_config['pattern'] ?? '';
-					$message = $rule_config['message'] ?? __( 'Value does not match required format.', 'campaignbridge' );
+					$message = $rule_config['message'] ?? Validation_Messages::get( 'invalid_pattern' );
 				} else {
 					$pattern = $rule_config;
-					$message = __( 'Value does not match required format.', 'campaignbridge' );
+					$message = Validation_Messages::get( 'invalid_pattern' );
 				}
 
 				if ( ! preg_match( $pattern, $value ) ) {
@@ -531,27 +493,25 @@ class Form_Validator {
 			'numeric'    => $this->create_simple_validator(
 				fn( $value ) => is_numeric( $value ),
 				'not_numeric',
-				\__( 'Please enter a valid number.', 'campaignbridge' )
+				Validation_Messages::get( 'not_numeric' )
 			),
 
 			'min'        => $this->create_numeric_validator(
 				fn( $value, $rule_config ) => is_numeric( $value ) && $value < $rule_config,
 				'value_too_low',
-				/* translators: %s: minimum value */
-				\__( 'Value must be at least %s.', 'campaignbridge' )
+				Validation_Messages::get( 'value_too_low' )
 			),
 
 			'max'        => $this->create_numeric_validator(
 				fn( $value, $rule_config ) => is_numeric( $value ) && $value > $rule_config,
 				'value_too_high',
-				/* translators: %s: maximum value */
-				\__( 'Value must be no more than %s.', 'campaignbridge' )
+				Validation_Messages::get( 'value_too_high' )
 			),
 
 			'date'       => $this->create_simple_validator(
 				fn( $value ) => $this->is_valid_date( $value ),
 				'invalid_date',
-				\__( 'Please enter a valid date.', 'campaignbridge' )
+				Validation_Messages::get( 'invalid_date' )
 			),
 		);
 	}
@@ -626,6 +586,30 @@ class Form_Validator {
 	}
 
 	/**
+	 * Validate email address
+	 *
+	 * Centralized email validation logic to eliminate duplication.
+	 *
+	 * @param string $email Email address to validate.
+	 * @return bool True if valid email, false otherwise.
+	 */
+	private function is_valid_email( string $email ): bool {
+		return (bool) is_email( $email );
+	}
+
+	/**
+	 * Validate URL
+	 *
+	 * Centralized URL validation logic to eliminate duplication.
+	 *
+	 * @param string $url URL to validate.
+	 * @return bool True if valid URL, false otherwise.
+	 */
+	private function is_valid_url( string $url ): bool {
+		return (bool) filter_var( $url, FILTER_VALIDATE_URL );
+	}
+
+	/**
 	 * Validate date string
 	 *
 	 * @param string $date Date string to validate.
@@ -644,29 +628,6 @@ class Form_Validator {
 	 * @return mixed Sanitized value.
 	 */
 	public function sanitize_value( $value, array $field_config ) {
-		$field_type = $field_config['type'] ?? 'text';
-
-		switch ( $field_type ) {
-			case 'email':
-				return sanitize_email( $value );
-
-			case 'url':
-				return esc_url_raw( $value );
-
-			case 'number':
-				return is_numeric( $value ) ? floatval( $value ) : 0;
-
-			case 'textarea':
-				return sanitize_textarea_field( $value );
-
-			case 'checkbox':
-				return ! empty( $value ) ? 1 : 0;
-
-			case 'wysiwyg':
-				return wp_kses_post( $value );
-
-			default:
-				return sanitize_text_field( $value );
-		}
+		return Field_Sanitizer::sanitize( $value, $field_config );
 	}
 }

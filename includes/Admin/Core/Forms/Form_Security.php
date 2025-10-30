@@ -188,7 +188,7 @@ class Form_Security {
 	 * Sanitize input based on field configuration.
 	 *
 	 * Validates input against potential attacks before applying field-specific sanitization
-	 * using appropriate WordPress sanitization functions.
+	 * using the unified Field_Sanitizer.
 	 *
 	 * @param mixed                $value        The value to sanitize.
 	 * @param array<string, mixed> $field_config Field configuration containing type and validation rules.
@@ -208,33 +208,12 @@ class Form_Security {
 			return ''; // Return empty string for dangerous content.
 		}
 
+		// Handle special cases that need security-specific logic.
 		$field_type = $field_config['type'] ?? 'text';
 
 		switch ( $field_type ) {
-			case 'email':
-				return sanitize_email( $value );
-
-			case 'url':
-				return \esc_url_raw( $value );
-
-			case 'number':
-				return is_numeric( $value ) ? floatval( $value ) : 0;
-
 			case 'integer':
 				return absint( $value );
-
-			case 'textarea':
-				return $this->sanitize_rich_content( $value );
-
-			case 'wysiwyg':
-				return $this->sanitize_rich_content( $value );
-
-			case 'checkbox':
-				// Handle checkbox arrays (multiple selections).
-				if ( is_array( $value ) ) {
-					return array_map( 'sanitize_text_field', $value );
-				}
-				return ! empty( $value ) ? 1 : 0;
 
 			case 'multiselect':
 				if ( is_array( $value ) ) {
@@ -242,12 +221,13 @@ class Form_Security {
 				}
 				return array();
 
-			case 'file':
-				// File inputs are handled separately.
-				return $value;
+			case 'textarea':
+			case 'wysiwyg':
+				return $this->sanitize_rich_content( $value );
 
 			default:
-				return sanitize_text_field( $value );
+				// Use unified Field_Sanitizer for all other field types.
+				return \CampaignBridge\Admin\Core\Forms\Field_Sanitizer::sanitize( $value, $field_config );
 		}
 	}
 

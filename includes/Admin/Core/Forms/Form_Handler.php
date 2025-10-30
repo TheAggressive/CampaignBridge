@@ -658,50 +658,40 @@ class Form_Handler {
 	private function sanitize_field_value( $value, array $field_config ) {
 		$type = $field_config['type'] ?? 'text';
 
-		switch ( $type ) {
-			case 'email':
-				return \sanitize_email( $value );
-			case 'url':
-				return \esc_url_raw( $value );
-			case 'textarea':
-			case 'wysiwyg':
-				return \wp_kses_post( $value );
-			case 'number':
-				return \is_numeric( $value ) ? (float) $value : 0;
-			case 'checkbox':
-			case 'switch':
-				return \is_array( $value ) ? array_map( '\sanitize_text_field', $value ) : (bool) $value;
-			case 'encrypted':
-				// Encrypt sensitive data before saving to database.
-				if ( ! empty( $value ) && ! \CampaignBridge\Core\Encryption::is_encrypted_value( $value ) ) {
-					// Security: Reject oversized input to prevent DoS.
-					if ( strlen( $value ) > 1000 ) {
-						\CampaignBridge\Core\Error_Handler::warning(
-							'CampaignBridge: Rejected oversized encrypted field input',
-							array( 'input_length' => strlen( $value ) )
-						);
-						return '';
-					}
-
-					try {
-						return \CampaignBridge\Core\Encryption::encrypt( $value );
-					} catch ( \RuntimeException $e ) {
-						// Log error but don't expose details to user.
-						if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-							\CampaignBridge\Core\Error_Handler::error(
-								'CampaignBridge: Failed to encrypt form field',
-								array( 'error' => $e->getMessage() )
-							);
-						}
-						// Return empty string rather than unencrypted data.
-						return '';
-					}
+		// Handle encrypted fields specially (encryption is done here).
+		if ( 'encrypted' === $type ) {
+			// Encrypt sensitive data before saving to database.
+			if ( ! empty( $value ) && ! \CampaignBridge\Core\Encryption::is_encrypted_value( $value ) ) {
+				// Security: Reject oversized input to prevent DoS.
+				if ( strlen( $value ) > 1000 ) {
+					\CampaignBridge\Core\Error_Handler::warning(
+						'Encrypted field input too large',
+						array(
+							'field'        => array_keys( $field_config ),
+							'input_length' => strlen( $value ),
+						)
+					);
+					return '';
 				}
-				// If already encrypted or empty, return as-is.
-				return $value;
-			default:
-				return \sanitize_text_field( $value );
+
+				try {
+					return \CampaignBridge\Core\Encryption::encrypt( $value );
+				} catch ( \RuntimeException $e ) {
+					// Log error but don't expose details to user.
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						\CampaignBridge\Core\Error_Handler::error(
+							'Failed to encrypt form field',
+							array( 'error' => $e->getMessage() )
+						);
+					}
+					return '';
+				}
+			}
+			return $value;
 		}
+
+		// Use unified Field_Sanitizer for all other field types.
+		return \CampaignBridge\Admin\Core\Forms\Field_Sanitizer::sanitize( $value, $field_config );
 	}
 
 	/**

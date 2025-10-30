@@ -9,6 +9,8 @@
 
 namespace CampaignBridge\Admin\Core\Forms;
 
+use CampaignBridge\Admin\Core\Forms\Validation_Messages;
+
 /**
  * Form Conditional Manager Class
  *
@@ -394,11 +396,15 @@ class Form_Conditional_Manager {
 	/**
 	 * Evaluate all fields and return their conditional status
 	 *
-	 * @param string $form_id Form ID (for future use).
-	 * @param int    $user_id User ID (for future use).
-	 * @return array<string, array<string, bool>> Field status array.
+	 * Parameters are accepted for API consistency with REST endpoints, but are
+	 * not currently used in the implementation. They are reserved for future
+	 * enhancements such as user-specific or form-specific conditional logic.
+	 *
+	 * @param string $form_id Form ID (reserved for future use - form-specific conditional logic).
+	 * @param int    $user_id User ID (reserved for future use - user-specific conditional logic).
+	 * @return array<string, array<string, bool>> Field status array with 'visible' and 'required' keys.
 	 */
-	public function evaluate_all_fields( string $form_id, int $user_id ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+	public function evaluate_all_fields( string $form_id, int $user_id ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Parameters reserved for future enhancements
 		$result = array();
 
 		foreach ( array_keys( $this->fields ) as $field_id ) {
@@ -412,6 +418,24 @@ class Form_Conditional_Manager {
 	}
 
 	/**
+	 * Check if a field is conditionally required based on current form data
+	 *
+	 * @param array<string, mixed> $field_config Field configuration.
+	 * @return bool True if field is conditionally required, false otherwise.
+	 */
+	private function is_conditionally_required( array $field_config ): bool {
+		if ( ! isset( $field_config['conditional'] ) ) {
+			return false;
+		}
+
+		$conditional = $field_config['conditional'];
+
+		return 'required_when' === ( $conditional['type'] ?? '' )
+			&& isset( $conditional['conditions'] )
+			&& $this->evaluate_conditions( $conditional['conditions'] );
+	}
+
+	/**
 	 * Validate conditional requirements for a field
 	 *
 	 * @param string               $field_id    Field ID.
@@ -420,22 +444,17 @@ class Form_Conditional_Manager {
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
 	public function validate_conditional_requirements( string $field_id, array $field_config, $field_value ) {
-		// Check required_when conditions.
-		if ( isset( $field_config['conditional'] ) ) {
-			$conditional = $field_config['conditional'];
-
-			if ( 'required_when' === $conditional['type'] && $this->evaluate_conditions( $conditional['conditions'] ) ) {
-				// Field is conditionally required and conditions are met.
-				if ( empty( $field_value ) ) {
-					return new \WP_Error(
-						'field_required',
-						sprintf(
-							/* translators: %s: field label */
-							__( '%s is required.', 'campaignbridge' ),
-							$field_config['label'] ?? 'This field'
-						)
-					);
-				}
+		// Check if field is conditionally required.
+		if ( $this->is_conditionally_required( $field_config ) ) {
+			// Field is conditionally required and conditions are met.
+			if ( empty( $field_value ) ) {
+				return new \WP_Error(
+					'field_required',
+					sprintf(
+						Validation_Messages::get( 'field_required' ),
+						$field_config['label'] ?? 'This field'
+					)
+				);
 			}
 		}
 
