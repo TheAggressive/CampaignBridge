@@ -3,6 +3,15 @@
  */
 
 import { ConditionalApiClient } from './api-client';
+import { configManager } from './config';
+import {
+  ApiTimeoutError,
+  ApiValidationError,
+  ConditionalFieldError,
+  NetworkError,
+  RateLimitError,
+} from './errors';
+import { performanceMonitor } from './performance-monitor';
 import type {
   ConditionalApiRequest,
   ConditionalEngineConfig,
@@ -16,7 +25,8 @@ export class ConditionalApiService {
   private evaluationInProgress = false;
 
   constructor(config: ConditionalEngineConfig) {
-    this.requestTimeout = config.requestTimeout ?? 30000;
+    const globalConfig = configManager.getConfig();
+    this.requestTimeout = config.requestTimeout ?? globalConfig.requestTimeout;
   }
 
   /**
@@ -31,6 +41,7 @@ export class ConditionalApiService {
     }
 
     this.evaluationInProgress = true;
+    const startTime = performance.now();
 
     try {
       // Set timeout for the request
@@ -44,8 +55,16 @@ export class ConditionalApiService {
 
       // Race between timeout and evaluation
       const result = await Promise.race([evaluationPromise, timeoutPromise]);
+      const duration = performance.now() - startTime;
 
       this.clearTimeout();
+
+      // Record performance metrics
+      performanceMonitor.recordApiCall(
+        apiEndpoint,
+        duration,
+        result.success ?? false
+      );
 
       if (result.success && result.fields) {
         return {
@@ -53,9 +72,13 @@ export class ConditionalApiService {
           fields: result.fields,
         };
       } else {
+        const validationError = new ApiValidationError(
+          result.message ?? 'Server returned an invalid response',
+          { result }
+        );
         return {
           success: false,
-          error: result.message ?? 'Server returned an invalid response',
+          error: validationError.message,
         };
       }
     } catch (error: any) {
@@ -64,20 +87,28 @@ export class ConditionalApiService {
       const { xhr, textStatus, errorThrown } = error || {};
 
       if (xhr) {
-        return this.handleAjaxError(xhr, textStatus, errorThrown);
-      }
-
-      if (error === 'timeout') {
+        const ajaxError = this.handleAjaxError(xhr, textStatus, errorThrown);
         return {
           success: false,
-          error:
-            'Request timed out. Please check your connection and try again.',
+          error: ajaxError.message,
         };
       }
 
+      if (error === 'timeout') {
+        const timeoutError = new ApiTimeoutError(this.requestTimeout);
+        return {
+          success: false,
+          error: timeoutError.message,
+        };
+      }
+
+      const networkError = new NetworkError(
+        0,
+        error instanceof Error ? error.message : 'An unexpected error occurred'
+      );
       return {
         success: false,
-        error: error?.message ?? 'An unexpected error occurred',
+        error: networkError.message,
       };
     } finally {
       this.evaluationInProgress = false;
@@ -127,7 +158,7 @@ export class ConditionalApiService {
     xhr: any,
     textStatus: string,
     errorThrown: string
-  ): EvaluationResult {
+  ): ConditionalFieldError {
     console.error(
       '[ConditionalApiService] AJAX Error:',
       xhr.status,
@@ -135,27 +166,29 @@ export class ConditionalApiService {
       errorThrown
     );
 
-    let errorMessage = 'Failed to update form. Please try again.';
     const status = xhr?.status ?? 0;
 
     if (status === 400) {
-      errorMessage =
-        'Invalid form data. Please check your input and try again.';
+      return new ApiValidationError(
+        'Invalid form data. Please check your input and try again.',
+        { status, textStatus, errorThrown }
+      );
     } else if (status === 403) {
-      errorMessage = 'You do not have permission to update this form.';
+      return new NetworkError(
+        status,
+        'You do not have permission to update this form.'
+      );
     } else if (status === 429) {
-      errorMessage =
-        'Too many requests. Please wait a moment before trying again.';
+      return new RateLimitError();
     } else if (status >= 500) {
-      errorMessage = 'Server error occurred. Please try again later.';
+      return new NetworkError(
+        status,
+        'Server error occurred. Please try again later.'
+      );
     } else if (textStatus === 'timeout') {
-      errorMessage =
-        'Request timed out. Please check your connection and try again.';
+      return new ApiTimeoutError(this.requestTimeout);
     }
 
-    return {
-      success: false,
-      error: errorMessage,
-    };
+    return new NetworkError(status, 'Failed to update form. Please try again.');
   }
 }

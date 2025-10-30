@@ -8,6 +8,9 @@
 
 import { ConditionalAccessibility } from './accessibility';
 import { ConditionalApiService } from './api-service';
+import { conditionalCache } from './cache';
+import { configManager } from './config';
+import { performanceMonitor } from './performance-monitor';
 import { ConditionalStateManager } from './state-manager';
 import type {
   ConditionalApiRequest,
@@ -21,6 +24,7 @@ export class ConditionalEngine {
   private config: ConditionalEngineConfig;
   private initialized: boolean = false;
   private debouncedEvaluate: () => void;
+  private performanceInterval: number | null = null;
 
   // Focused responsibility managers
   private stateManager: ConditionalStateManager;
@@ -28,7 +32,9 @@ export class ConditionalEngine {
   private uiManager: ConditionalUIManager;
   private accessibility: ConditionalAccessibility;
 
-  private debugEnabled = (window as any).CAMPAIGNBRIDGE_DEBUG === true;
+  private get debugEnabled(): boolean {
+    return this.config.enableDebugLogging ?? false;
+  }
 
   constructor(formId: string) {
     this.form = document.getElementById(formId) as HTMLFormElement;
@@ -37,16 +43,25 @@ export class ConditionalEngine {
       throw new Error(`Form with ID "${formId}" not found`);
     }
 
+    const globalConfig = configManager.getConfig();
+
     this.config = {
       formId,
       apiEndpoint: (window as any).ajaxurl || '/wp-admin/admin-ajax.php',
       ajaxAction:
         this.form.getAttribute('data-conditional-action') ||
         'campaignbridge_evaluate_conditions',
-      debounceDelay: 100,
-      requestTimeout: 30000,
-      cacheSize: 10,
+      debounceDelay: globalConfig.debounceDelay,
+      requestTimeout: globalConfig.requestTimeout,
+      cacheSize: globalConfig.cacheSize,
+      maxRetries: globalConfig.maxRetries,
+      enableDebugLogging: globalConfig.enableDebugLogging,
+      enablePerformanceMonitoring: globalConfig.enablePerformanceMonitoring,
+      validationRules: undefined, // Will be set below
     };
+
+    // Now that config is set, extract validation rules
+    this.config.validationRules = this.getValidationRulesFromForm();
 
     // Initialize focused responsibility managers
     this.stateManager = new ConditionalStateManager(this.config);
@@ -69,9 +84,8 @@ export class ConditionalEngine {
     }
     this.initialized = true;
 
-    // Initialize UI and accessibility managers
+    // Initialize UI manager (accessibility initializes automatically)
     this.uiManager.initialize();
-    this.accessibility.initialize();
 
     // Wait for form to be fully rendered
     this.waitForFormReady(() => {
@@ -89,6 +103,47 @@ export class ConditionalEngine {
     this.uiManager.setRetryCallback(() => {
       this.evaluateConditions();
     });
+
+    // Set up periodic performance monitoring
+    this.setupPerformanceMonitoring();
+  }
+
+  /**
+   * Extract validation rules from form data attributes
+   */
+  private getValidationRulesFromForm():
+    | Record<string, import('./validation').ValidationRule>
+    | undefined {
+    const rules: Record<string, import('./validation').ValidationRule> = {};
+
+    // Look for data-validation attributes on form fields
+    const inputs = this.form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      const fieldName = input.getAttribute('name');
+      if (!fieldName) return;
+
+      const fieldId = fieldName.replace(
+        new RegExp(`^${this.config.formId}\\[(.+)\\]$`),
+        '$1'
+      );
+      if (!fieldId || fieldId === fieldName) return;
+
+      const validationAttr = input.getAttribute('data-validation');
+      if (validationAttr) {
+        try {
+          const validationRule = JSON.parse(validationAttr);
+          rules[fieldId] = validationRule;
+        } catch (error) {
+          // Invalid JSON, skip this field
+          console.warn(
+            `Invalid validation rule for field ${fieldId}:`,
+            validationAttr
+          );
+        }
+      }
+    });
+
+    return Object.keys(rules).length > 0 ? rules : undefined;
   }
 
   private waitForFormReady(callback: () => void): void {
@@ -130,7 +185,8 @@ export class ConditionalEngine {
 
     const formData = this.stateManager.collectFormData(
       this.form,
-      this.config.formId
+      this.config.formId,
+      this.config.validationRules
     );
 
     // Check client-side cache first
@@ -243,9 +299,52 @@ export class ConditionalEngine {
   }
 
   /**
+   * Set up periodic performance monitoring
+   */
+  private setupPerformanceMonitoring(): void {
+    if (!this.config.enablePerformanceMonitoring) {
+      return;
+    }
+
+    // Record memory usage every 30 seconds
+    this.performanceInterval = window.setInterval(() => {
+      performanceMonitor.recordMemoryUsage();
+    }, 30000);
+  }
+
+  /**
+   * Get performance statistics for debugging
+   */
+  public getPerformanceStats(): ReturnType<typeof performanceMonitor.getStats> {
+    return performanceMonitor.getStats();
+  }
+
+  /**
+   * Generate performance report
+   */
+  public getPerformanceReport(
+    hours: number = 1
+  ): ReturnType<typeof performanceMonitor.generateReport> {
+    return performanceMonitor.generateReport(hours);
+  }
+
+  /**
+   * Get cache performance statistics
+   */
+  public getCacheStats(): ReturnType<typeof conditionalCache.getStats> {
+    return this.stateManager.getCacheStats();
+  }
+
+  /**
    * Cleanup resources when the engine is destroyed
    */
   public destroy(): void {
+    // Clear performance monitoring interval
+    if (this.performanceInterval) {
+      clearInterval(this.performanceInterval);
+      this.performanceInterval = null;
+    }
+
     this.uiManager.destroy();
     this.accessibility.destroy();
     this.apiService.cancelEvaluation();

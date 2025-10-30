@@ -35,6 +35,10 @@ export interface ConditionalEngineConfig {
   debounceDelay?: number;
   requestTimeout?: number;
   cacheSize?: number;
+  maxRetries?: number;
+  enableDebugLogging?: boolean;
+  enablePerformanceMonitoring?: boolean;
+  validationRules?: Record<string, import('./validation').ValidationRule>;
 }
 
 export interface EvaluationResult {
@@ -46,4 +50,30 @@ export interface EvaluationResult {
 export interface AccessibilityAnnouncement {
   message: string;
   priority?: 'polite' | 'assertive';
+}
+
+export interface IConditionalAccessibility {
+  handleFieldHidden(field: HTMLElement, fieldId: string): void;
+  getFieldLabel(field: HTMLElement, fieldId: string): string;
+  announceFieldChanges(changes: string[]): void;
+  updateFieldAccessibility(
+    field: HTMLElement,
+    state: FieldState,
+    fieldId: string
+  ): void;
+  announceValidationErrors(errors: string[]): void;
+  clearValidationErrors(): void;
+  enhanceFieldAria(
+    field: HTMLElement,
+    state: FieldState,
+    fieldId: string
+  ): void;
+  setupFormLandmarks(): void;
+  setKeyboardNavigation(enabled: boolean): void;
+  getAccessibilityStatus(): {
+    keyboardNavigation: boolean;
+    skipLinks: number;
+    liveRegions: number;
+    errorAnnouncer: boolean;
+  };
 }

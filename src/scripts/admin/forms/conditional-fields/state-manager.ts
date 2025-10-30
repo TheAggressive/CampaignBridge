@@ -2,6 +2,7 @@
  * Manages conditional field state, caching, and form data collection
  */
 
+import { conditionalCache } from './cache';
 import { ConditionalDataCollector } from './data-collector';
 import type {
   ConditionalApiResponse,
@@ -10,34 +11,24 @@ import type {
 } from './types';
 
 export class ConditionalStateManager {
-  private evaluationCache = new Map<string, ConditionalApiResponse>();
   private lastFormData: FormData | null = null;
-  private readonly maxCacheSize: number;
 
   constructor(config: ConditionalEngineConfig) {
-    this.maxCacheSize = config.cacheSize ?? 10;
+    // Cache is now managed by ConditionalCache singleton
   }
 
   /**
    * Get cached evaluation result for form data
    */
   public getCachedResult(formData: FormData): ConditionalApiResponse | null {
-    const cacheKey = JSON.stringify(formData);
-    return this.evaluationCache.get(cacheKey) ?? null;
+    return conditionalCache.get(formData) ?? null;
   }
 
   /**
    * Cache evaluation result
    */
   public cacheResult(formData: FormData, result: ConditionalApiResponse): void {
-    const cacheKey = JSON.stringify(formData);
-    this.evaluationCache.set(cacheKey, result);
-
-    // Maintain cache size limit
-    if (this.evaluationCache.size > this.maxCacheSize) {
-      const firstKey = this.evaluationCache.keys().next().value;
-      this.evaluationCache.delete(firstKey);
-    }
+    conditionalCache.set(formData, result);
   }
 
   /**
@@ -61,26 +52,33 @@ export class ConditionalStateManager {
   /**
    * Collect form data using the data collector
    */
-  public collectFormData(form: HTMLFormElement, formId: string): FormData {
+  public collectFormData(
+    form: HTMLFormElement,
+    formId: string,
+    validationRules?: Record<string, import('./validation').ValidationRule>
+  ): FormData {
     const collector = new ConditionalDataCollector(form, formId);
+
+    // Apply custom validation rules if provided
+    if (validationRules) {
+      collector.setValidationRules(validationRules);
+    }
+
     return collector.getFormData();
+  }
+
+  /**
+   * Get cache performance statistics
+   */
+  public getCacheStats(): import('./cache').CacheStats {
+    return conditionalCache.getStats();
   }
 
   /**
    * Clear all cached data
    */
   public clearCache(): void {
-    this.evaluationCache.clear();
+    conditionalCache.clear();
     this.lastFormData = null;
-  }
-
-  /**
-   * Get cache statistics for debugging
-   */
-  public getCacheStats(): { size: number; maxSize: number } {
-    return {
-      size: this.evaluationCache.size,
-      maxSize: this.maxCacheSize,
-    };
   }
 }

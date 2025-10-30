@@ -4,7 +4,17 @@
 
 import { ConditionalEngine } from './conditional-fields';
 
+export { conditionalCache } from './cache';
 export { ConditionalEngine } from './conditional-fields';
+export { performanceMonitor } from './performance-monitor';
+export { DataSanitizer, FormValidator } from './validation';
+
+// Type exports organized by module
+export type { CacheStats } from './cache';
+export type {
+  PerformanceMetric,
+  PerformanceReport,
+} from './performance-monitor';
 export type {
   AccessibilityAnnouncement,
   ConditionalApiRequest,
@@ -14,7 +24,13 @@ export type {
   FieldState,
   FieldStateMap,
   FormData,
+  IConditionalAccessibility,
 } from './types';
+export type {
+  FieldValidationRules,
+  ValidationResult,
+  ValidationRule,
+} from './validation';
 
 // Expose ConditionalEngine globally for WordPress compatibility
 (window as any).ConditionalEngine = ConditionalEngine;

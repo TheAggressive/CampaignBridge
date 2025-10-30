@@ -2,14 +2,24 @@
  * Manages UI state and DOM manipulation for conditional fields
  */
 
-import type { ConditionalEngineConfig, FieldStateMap } from './types';
+import { performanceMonitor } from './performance-monitor';
+import type {
+  ConditionalEngineConfig,
+  FieldStateMap,
+  IConditionalAccessibility,
+} from './types';
 
 export class ConditionalUIManager {
   private form: HTMLFormElement;
   private formId: string;
   private loadingIndicator: HTMLElement | null = null;
   private errorContainer: HTMLElement | null = null;
-  private retryButton: HTMLElement | null = null;
+  private retryButton: HTMLButtonElement | null = null;
+  private eventListeners: Array<{
+    element: EventTarget;
+    type: string;
+    handler: EventListener;
+  }> = [];
 
   constructor(form: HTMLFormElement, config: ConditionalEngineConfig) {
     this.form = form;
@@ -48,9 +58,14 @@ export class ConditionalUIManager {
    */
   public updateFields(
     fieldStates: FieldStateMap,
-    accessibilityManager: any
+    accessibilityManager: IConditionalAccessibility
   ): void {
+    const startTime = performance.now();
     const changes: string[] = [];
+    let operationsCount = 0;
+
+    // Set up form landmarks for accessibility
+    accessibilityManager.setupFormLandmarks();
 
     Object.entries(fieldStates).forEach(([fieldId, state]) => {
       const fieldName = `${this.formId}[${fieldId}]`;
@@ -104,6 +119,14 @@ export class ConditionalUIManager {
     if (changes.length > 0) {
       accessibilityManager.announceFieldChanges(changes);
     }
+
+    // Record performance metrics
+    const duration = performance.now() - startTime;
+    performanceMonitor.recordDomOperation(
+      'field_update',
+      operationsCount,
+      duration
+    );
   }
 
   /**
@@ -195,7 +218,7 @@ export class ConditionalUIManager {
     state: { visible: boolean; required: boolean },
     fieldId: string,
     changes: string[],
-    accessibilityManager: any
+    accessibilityManager: IConditionalAccessibility
   ): void {
     const wasRequired = field.hasAttribute('required');
     const isRequired = state.required;
@@ -231,7 +254,67 @@ export class ConditionalUIManager {
   public hideLoading(): void {
     if (this.loadingIndicator) {
       this.loadingIndicator.style.display = 'none';
+      this.form.removeAttribute('aria-busy');
     }
+  }
+
+  /**
+   * Show validation errors with accessibility announcements
+   */
+  public showValidationErrors(
+    errors: string[],
+    accessibilityManager: IConditionalAccessibility
+  ): void {
+    // Clear existing errors first
+    this.hideError();
+
+    if (errors.length === 0) {
+      return;
+    }
+
+    // Create error container if it doesn't exist
+    if (!this.errorContainer) {
+      this.createErrorContainer();
+    }
+
+    if (this.errorContainer) {
+      this.errorContainer.innerHTML = `
+        <div class="campaignbridge-error-message" role="alert" aria-live="assertive">
+          <strong>Error:</strong>
+          <ul>
+            ${errors.map(error => `<li>${this.escapeHtml(error)}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+
+      this.errorContainer.style.display = 'block';
+
+      // Announce errors to screen readers
+      accessibilityManager.announceValidationErrors(errors);
+    }
+  }
+
+  /**
+   * Clear validation errors
+   */
+  public clearValidationErrors(
+    accessibilityManager: IConditionalAccessibility
+  ): void {
+    if (this.errorContainer) {
+      this.errorContainer.style.display = 'none';
+      this.errorContainer.innerHTML = '';
+    }
+
+    accessibilityManager.clearValidationErrors();
+  }
+
+  /**
+   * Escape HTML for safe display
+   */
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**
@@ -310,7 +393,7 @@ export class ConditionalUIManager {
       return;
     }
 
-    this.retryButton = document.createElement('button');
+    this.retryButton = document.createElement('button') as HTMLButtonElement;
     this.retryButton.type = 'button';
     this.retryButton.className = 'button campaignbridge-conditional-retry';
     this.retryButton.textContent = 'Retry';
@@ -326,26 +409,50 @@ export class ConditionalUIManager {
   }
 
   /**
+   * Add event listener with tracking for cleanup
+   */
+  private addEventListener(
+    element: EventTarget,
+    type: string,
+    handler: EventListener
+  ): void {
+    element.addEventListener(type, handler);
+    this.eventListeners.push({ element, type, handler });
+  }
+
+  /**
    * Set retry button callback
    */
   public setRetryCallback(callback: () => void): void {
     if (this.retryButton) {
-      this.retryButton.addEventListener('click', callback);
+      this.addEventListener(this.retryButton, 'click', callback);
     }
   }
 
   /**
-   * Cleanup UI elements
+   * Cleanup UI elements and event listeners
    */
   public destroy(): void {
+    // Remove all tracked event listeners
+    this.eventListeners.forEach(({ element, type, handler }) => {
+      element.removeEventListener(type, handler);
+    });
+    this.eventListeners = [];
+
+    // Remove DOM elements safely
     [this.loadingIndicator, this.errorContainer, this.retryButton].forEach(
       element => {
         if (element && element.parentNode) {
-          element.parentNode.removeChild(element);
+          try {
+            element.parentNode.removeChild(element);
+          } catch (error) {
+            // Element might have already been removed, ignore
+          }
         }
       }
     );
 
+    // Clear references
     this.loadingIndicator = null;
     this.errorContainer = null;
     this.retryButton = null;
