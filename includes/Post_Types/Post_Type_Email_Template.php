@@ -30,7 +30,7 @@ class Post_Type_Email_Template {
 	 *
 	 * @var string
 	 */
-	public const POST_TYPE = 'campaignbridge_email_template';
+	public const POST_TYPE = 'campaignbridge_templates';
 
 	/**
 	 * Meta field keys are defined in META_FIELD_CONFIG for consistency.

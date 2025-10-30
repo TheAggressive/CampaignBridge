@@ -1,0 +1,353 @@
+/**
+ * Manages UI state and DOM manipulation for conditional fields
+ */
+
+import type { ConditionalEngineConfig, FieldStateMap } from './types';
+
+export class ConditionalUIManager {
+  private form: HTMLFormElement;
+  private formId: string;
+  private loadingIndicator: HTMLElement | null = null;
+  private errorContainer: HTMLElement | null = null;
+  private retryButton: HTMLElement | null = null;
+
+  constructor(form: HTMLFormElement, config: ConditionalEngineConfig) {
+    this.form = form;
+    this.formId = config.formId;
+  }
+
+  /**
+   * Initialize UI elements
+   */
+  public initialize(): void {
+    this.createLoadingIndicator();
+    this.createErrorContainer();
+    this.hideAllConditionalFields();
+  }
+
+  /**
+   * Hide all conditional fields initially to prevent FOUC
+   */
+  public hideAllConditionalFields(): void {
+    const hiddenElements = this.form.querySelectorAll(
+      '.campaignbridge-conditional-hidden'
+    );
+    hiddenElements.forEach(element => {
+      const targetElement = element as HTMLElement;
+      const computedStyle = window.getComputedStyle(targetElement);
+      const isAlreadyHidden = computedStyle.display === 'none';
+
+      if (!isAlreadyHidden) {
+        targetElement.style.display = 'none';
+      }
+    });
+  }
+
+  /**
+   * Update field visibility and requirements based on server response
+   */
+  public updateFields(
+    fieldStates: FieldStateMap,
+    accessibilityManager: any
+  ): void {
+    const changes: string[] = [];
+
+    Object.entries(fieldStates).forEach(([fieldId, state]) => {
+      const fieldName = `${this.formId}[${fieldId}]`;
+      const field = this.form.querySelector(
+        `[name="${fieldName}"]`
+      ) as HTMLElement;
+
+      if (field) {
+        const conditionalWrapper = field.closest(
+          '.campaignbridge-conditional-field'
+        ) as HTMLElement;
+        const wasVisible = !conditionalWrapper?.classList.contains(
+          'campaignbridge-conditional-hidden'
+        );
+        const isVisible = state.visible;
+
+        // Update visibility
+        if (state.visible) {
+          this.showField(field, conditionalWrapper);
+        } else {
+          this.hideField(field, conditionalWrapper);
+        }
+
+        // Update requirements
+        this.updateFieldRequirements(
+          field,
+          state,
+          fieldId,
+          changes,
+          accessibilityManager
+        );
+
+        // Handle focus management when fields disappear
+        if (wasVisible && !isVisible) {
+          accessibilityManager.handleFieldHidden(field, fieldId);
+        }
+
+        // Track changes for announcements
+        if (wasVisible !== isVisible) {
+          const fieldLabel = accessibilityManager.getFieldLabel(field, fieldId);
+          if (isVisible) {
+            changes.push(`${fieldLabel} is now available`);
+          } else {
+            changes.push(`${fieldLabel} is now hidden`);
+          }
+        }
+      }
+    });
+
+    // Announce changes to screen readers
+    if (changes.length > 0) {
+      accessibilityManager.announceFieldChanges(changes);
+    }
+  }
+
+  /**
+   * Show a conditional field
+   */
+  private showField(
+    field: HTMLElement,
+    conditionalWrapper?: HTMLElement
+  ): void {
+    const targetElement =
+      conditionalWrapper ||
+      (field.closest(
+        '.campaignbridge-field-wrapper, .campaignbridge-field, .form-field, tr'
+      ) as HTMLElement);
+
+    if (!targetElement) {
+      return;
+    }
+
+    // Remove FOUC prevention class and show the element
+    targetElement.classList.remove('campaignbridge-conditional-hidden');
+    targetElement.style.display = '';
+
+    // Remove inert attribute to make element focusable and accessible again
+    targetElement.inert = false;
+
+    // Handle conditional wrapper specially
+    if (conditionalWrapper) {
+      conditionalWrapper.classList.add('campaignbridge-conditional-visible');
+      return;
+    }
+
+    // Legacy handling for non-wrapped fields
+    if (
+      !targetElement.classList.contains('campaignbridge-field') &&
+      !targetElement.classList.contains('form-field') &&
+      targetElement.tagName !== 'TR'
+    ) {
+      targetElement.classList.add('campaignbridge-field');
+    }
+
+    targetElement.classList.remove(
+      'campaignbridge-field--hidden',
+      'campaignbridge-field--hiding'
+    );
+    targetElement.classList.add('campaignbridge-field--visible');
+  }
+
+  /**
+   * Hide a conditional field
+   */
+  private hideField(
+    field: HTMLElement,
+    conditionalWrapper?: HTMLElement
+  ): void {
+    const targetElement =
+      conditionalWrapper ||
+      (field.closest(
+        '.campaignbridge-field-wrapper, .campaignbridge-field, .form-field, tr'
+      ) as HTMLElement);
+
+    if (!targetElement) {
+      return;
+    }
+
+    // Handle conditional wrapper specially
+    if (conditionalWrapper) {
+      conditionalWrapper.classList.remove('campaignbridge-conditional-visible');
+      conditionalWrapper.classList.add('campaignbridge-conditional-hidden');
+      conditionalWrapper.style.display = 'none';
+      conditionalWrapper.inert = true;
+      return;
+    }
+
+    // Legacy handling for non-wrapped fields - hide instantly
+    targetElement.classList.remove(
+      'campaignbridge-field--visible',
+      'campaignbridge-field--showing'
+    );
+    targetElement.classList.add('campaignbridge-field--hidden');
+    targetElement.style.display = 'none';
+  }
+
+  /**
+   * Update field requirements and announce changes
+   */
+  private updateFieldRequirements(
+    field: HTMLElement,
+    state: { visible: boolean; required: boolean },
+    fieldId: string,
+    changes: string[],
+    accessibilityManager: any
+  ): void {
+    const wasRequired = field.hasAttribute('required');
+    const isRequired = state.required;
+
+    if (isRequired !== wasRequired) {
+      if (isRequired) {
+        changes.push(
+          `${accessibilityManager.getFieldLabel(field, fieldId)} is now required`
+        );
+      } else {
+        changes.push(
+          `${accessibilityManager.getFieldLabel(field, fieldId)} is no longer required`
+        );
+      }
+    }
+
+    // Update accessibility attributes
+    accessibilityManager.updateFieldAccessibility(field, state, fieldId);
+  }
+
+  /**
+   * Show loading indicator
+   */
+  public showLoading(): void {
+    if (this.loadingIndicator) {
+      this.loadingIndicator.style.display = 'block';
+    }
+  }
+
+  /**
+   * Hide loading indicator
+   */
+  public hideLoading(): void {
+    if (this.loadingIndicator) {
+      this.loadingIndicator.style.display = 'none';
+    }
+  }
+
+  /**
+   * Show error message
+   */
+  public showError(message: string): void {
+    if (this.errorContainer) {
+      this.errorContainer.textContent = message;
+      this.errorContainer.style.display = 'block';
+    }
+
+    // Create retry button if it doesn't exist
+    if (!this.retryButton) {
+      this.createRetryButton();
+    }
+
+    if (this.retryButton) {
+      this.retryButton.style.display = 'inline-block';
+    }
+  }
+
+  /**
+   * Hide error message
+   */
+  public hideError(): void {
+    if (this.errorContainer) {
+      this.errorContainer.style.display = 'none';
+    }
+
+    if (this.retryButton) {
+      this.retryButton.style.display = 'none';
+    }
+  }
+
+  /**
+   * Create loading indicator element
+   */
+  private createLoadingIndicator(): void {
+    if (this.loadingIndicator) {
+      return;
+    }
+
+    this.loadingIndicator = document.createElement('div');
+    this.loadingIndicator.className = 'campaignbridge-conditional-loading';
+    this.loadingIndicator.innerHTML = '<span class="spinner">Loading...</span>';
+    this.loadingIndicator.style.display = 'none';
+
+    this.form.appendChild(this.loadingIndicator);
+  }
+
+  /**
+   * Create error container element
+   */
+  private createErrorContainer(): void {
+    if (this.errorContainer) {
+      return;
+    }
+
+    this.errorContainer = document.createElement('div');
+    this.errorContainer.className =
+      'campaignbridge-conditional-error notice notice-error';
+    this.errorContainer.style.display = 'none';
+
+    // Insert after form or at the end
+    const formParent = this.form.parentNode;
+    if (formParent) {
+      formParent.insertBefore(this.errorContainer, this.form.nextSibling);
+    }
+  }
+
+  /**
+   * Create retry button for error recovery
+   */
+  private createRetryButton(): void {
+    if (this.retryButton) {
+      return;
+    }
+
+    this.retryButton = document.createElement('button');
+    this.retryButton.type = 'button';
+    this.retryButton.className = 'button campaignbridge-conditional-retry';
+    this.retryButton.textContent = 'Retry';
+    this.retryButton.style.display = 'none';
+
+    // Insert after error container
+    if (this.errorContainer && this.errorContainer.parentNode) {
+      this.errorContainer.parentNode.insertBefore(
+        this.retryButton,
+        this.errorContainer.nextSibling
+      );
+    }
+  }
+
+  /**
+   * Set retry button callback
+   */
+  public setRetryCallback(callback: () => void): void {
+    if (this.retryButton) {
+      this.retryButton.addEventListener('click', callback);
+    }
+  }
+
+  /**
+   * Cleanup UI elements
+   */
+  public destroy(): void {
+    [this.loadingIndicator, this.errorContainer, this.retryButton].forEach(
+      element => {
+        if (element && element.parentNode) {
+          element.parentNode.removeChild(element);
+        }
+      }
+    );
+
+    this.loadingIndicator = null;
+    this.errorContainer = null;
+    this.retryButton = null;
+  }
+}

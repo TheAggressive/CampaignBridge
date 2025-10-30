@@ -77,7 +77,7 @@ class Conditional_Test {
 
 			<p><?php esc_html_e( 'This page demonstrates the conditional form functionality. Try enabling/disabling options to see fields appear and disappear.', 'campaignbridge' ); ?></p>
 
-			<div class="campaignbridge-form-container">
+			<div class="campaignbridge-form-container" data-conditional data-conditional-engine="v2">
 				<?php $this->render_test_form(); ?>
 			</div>
 
