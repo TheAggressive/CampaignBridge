@@ -88,6 +88,11 @@ export class ConditionalDataCollector {
       return null;
     }
 
+    // Skip encrypted field display inputs (they have modified names and are readonly)
+    if (this.shouldSkipEncryptedDisplayInput(htmlInput, fullName)) {
+      return null;
+    }
+
     const value = this.extractInputValue(htmlInput);
     if (value === null) return null; // Radio button not checked
 
@@ -112,6 +117,31 @@ export class ConditionalDataCollector {
       (input as HTMLInputElement).type === 'hidden' &&
       checkboxNames.has(fullName)
     );
+  }
+
+  /**
+   * Check if this input should be skipped (encrypted field display input)
+   */
+  private shouldSkipEncryptedDisplayInput(
+    input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+    fullName: string
+  ): boolean {
+    const htmlInput = input as HTMLInputElement;
+
+    // Skip encrypted field display inputs - they have modified names and are readonly
+    if (htmlInput.readOnly && fullName.includes('_edit_input')) {
+      return true;
+    }
+
+    // Skip if this is a readonly input within an encrypted field container
+    if (
+      htmlInput.readOnly &&
+      input.closest('.campaignbridge-encrypted-field__display')
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

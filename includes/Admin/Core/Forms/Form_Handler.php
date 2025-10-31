@@ -125,15 +125,24 @@ class Form_Handler {
 		}
 
 		try {
-			$form_data = $this->process_form_data();
+			$raw_form_data       = $this->get_raw_form_data();
+			$processed_form_data = $this->process_raw_form_data( $raw_form_data );
 
-			if ( ! $this->validate_form_data( $form_data ) ) {
+			// Update conditional manager with submitted data for accurate evaluation.
+			if ( $this->conditional_manager ) {
+				$this->conditional_manager->with_form_data( $processed_form_data );
+			}
+
+			$filtered_form_data = $this->filter_conditional_field_data( $processed_form_data );
+
+			// Validate using raw form data (before encryption for encrypted fields)
+			if ( ! $this->validate_raw_form_data( $raw_form_data ) ) {
 				return;
 			}
 
 			$this->is_valid = true;
 
-			$form_data = $this->prepare_data_for_saving( $form_data );
+			$form_data = $this->prepare_data_for_saving( $filtered_form_data );
 
 			if ( $this->save_form_data( $form_data ) ) {
 				$this->handle_successful_save( $form_data );
@@ -185,32 +194,17 @@ class Form_Handler {
 		return true;
 	}
 
-	/**
-	 * Process submitted form data
-	 *
-	 * @return array<string, mixed> Processed form data.
-	 */
-	private function process_form_data(): array {
-		$form_data = $this->get_submitted_data();
-
-		// Update conditional manager with submitted data for accurate evaluation.
-		if ( $this->conditional_manager ) {
-			$this->conditional_manager->with_form_data( $form_data );
-		}
-
-		return $this->filter_conditional_field_data( $form_data );
-	}
 
 	/**
-	 * Validate form data
+	 * Validate raw form data (before processing/encryption)
 	 *
-	 * @param array<string, mixed> $form_data Form data to validate.
+	 * @param array<string, mixed> $raw_form_data Raw form data to validate.
 	 * @return bool True if validation passes.
 	 */
-	private function validate_form_data( array $form_data ): bool {
+	private function validate_raw_form_data( array $raw_form_data ): bool {
 		// Run before validation hook.
 		try {
-			$form_data = $this->run_hook( 'before_validate', $form_data );
+			$validated_data = $this->run_hook( 'before_validate', $raw_form_data );
 		} catch ( \Exception $e ) {
 			$this->notice_handler->trigger_error(
 				$this->config,
@@ -219,12 +213,12 @@ class Form_Handler {
 			return false;
 		}
 
-		// Validate all configured fields.
+		// Validate all configured fields using raw data.
 		$rendered_fields   = $this->form ? $this->form->get_rendered_fields() : array();
-		$validation_result = $this->validator->validate_form( $form_data, $this->fields, $rendered_fields );
+		$validation_result = $this->validator->validate_form( $validated_data, $this->fields, $rendered_fields );
 
 		if ( ! $validation_result['valid'] ) {
-			$this->handle_validation_errors( $validation_result['errors'], $form_data );
+			$this->handle_validation_errors( $validation_result['errors'], $validated_data );
 			return false;
 		}
 

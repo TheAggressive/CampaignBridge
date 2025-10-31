@@ -296,6 +296,12 @@ class Form_Validator {
 		$field_type       = $field_config['type'] ?? 'text';
 		$validation_rules = $field_config['validation'] ?? array();
 
+		// For encrypted fields, skip validation entirely since they handle sensitive data
+		// and validation rules may not apply to encrypted values.
+		if ( 'encrypted' === $field_type ) {
+			return true;
+		}
+
 		// Type-specific validation.
 		$type_validation = $this->validate_field_type( $value, $field_type, $field_config );
 		if ( is_wp_error( $type_validation ) ) {
