@@ -29,56 +29,80 @@ class Form_Rest_Controller {
 
 
 	/**
-	 * Handle AJAX request for conditional evaluation
+	 * Handle AJAX request for conditional evaluation.
+	 *
+	 * Leverages WordPress built-in security: authentication, nonces, permissions.
 	 *
 	 * @return void
 	 */
 	public function handle_ajax_evaluate_conditions(): void {
+		// Security: Add security headers for AJAX responses.
+		$this->add_security_headers();
+
 		try {
-			// Security: Verify user is logged in.
-			if ( ! is_user_logged_in() ) {
-				wp_send_json_error( 'You must be logged in to access this feature.', 401 );
+			// Security: Validate request origin for AJAX calls.
+			if ( ! $this->validate_request_origin() ) {
+				\CampaignBridge\Core\Error_Handler::error(
+					'Invalid request origin',
+					array(
+						'user_id' => get_current_user_id(),
+						'referer' => wp_get_referer(),
+					)
+				);
+				wp_send_json_error( 'Invalid request origin.', 403 );
 				return;
 			}
 
-			// Security: Verify nonce.
+			// WordPress built-in: Verify user authentication.
+			if ( ! is_user_logged_in() ) {
+				wp_send_json_error( 'Authentication required.', 401 );
+				return;
+			}
+
+			// WordPress built-in: Verify nonce for CSRF protection.
 			$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 			if ( empty( $nonce ) ) {
-				wp_send_json_error( 'Security check failed: missing nonce.', 403 );
+				wp_send_json_error( 'Security validation failed.', 403 );
 				return;
 			}
 
-			$form_id = isset( $_POST['form_id'] ) ? sanitize_text_field( wp_unslash( $_POST['form_id'] ) ) : '';
+			// WordPress built-in: Validate form identifier.
+			$form_id = isset( $_POST['form_id'] ) ? sanitize_key( wp_unslash( $_POST['form_id'] ) ) : '';
 			if ( empty( $form_id ) ) {
-				wp_send_json_error( 'Form ID is required.', 400 );
+				wp_send_json_error( 'Invalid form identifier.', 400 );
 				return;
 			}
 
-			// Security: Verify nonce matches the form.
+			// WordPress built-in: Verify form-specific nonce.
 			$nonce_action = 'campaignbridge_form_' . $form_id;
 			if ( ! wp_verify_nonce( $nonce, $nonce_action ) ) {
-				wp_send_json_error( 'Security check failed: invalid nonce.', 403 );
+				wp_send_json_error( 'Security validation failed.', 403 );
 				return;
 			}
 
-			// Security: Verify user has access to this form.
+			// WordPress built-in: Verify user permissions.
 			if ( ! current_user_can( 'manage_options' ) ) {
-				wp_send_json_error( 'You do not have permission to access this form.', 403 );
+				wp_send_json_error( 'Insufficient permissions.', 403 );
 				return;
 			}
 
-			// Security: Rate limiting (20 requests per minute per user).
-			$user_id        = get_current_user_id();
-			$rate_limit_key = 'conditional_rate_limit_' . $user_id;
-			$requests       = (int) \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
-			if ( $requests >= self::RATE_LIMIT_REQUESTS ) {
+			// Security: Enhanced rate limiting with sliding window (60-second window).
+			if ( ! $this->check_rate_limit( get_current_user_id() ) ) {
+				\CampaignBridge\Core\Error_Handler::error(
+					'Rate limit exceeded',
+					array(
+						'user_id' => get_current_user_id(),
+						'ip'      => $this->get_client_ip(),
+					)
+				);
 				wp_send_json_error( 'Rate limit exceeded. Please wait before making another request.', 429 );
 				return;
 			}
-			\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, MINUTE_IN_SECONDS );
 
-			// Get form data with size limits.
-			$form_data = isset( $_POST['data'] ) && is_array( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : array();
+			// Get form data with size limits and sanitization.
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Data is sanitized in sanitize_and_validate_form_data()
+			$raw_form_data = isset( $_POST['data'] ) && is_array( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : array();
+			$form_data     = $this->sanitize_and_validate_form_data( $raw_form_data );
 
 			// Security: Validate form data size and depth.
 			if ( $this->is_form_data_too_large( $form_data ) ) {
@@ -149,5 +173,185 @@ class Form_Rest_Controller {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Sanitize and validate form data to prevent XSS and injection attacks.
+	 *
+	 * @param array $data Raw form data from POST.
+	 * @return array Sanitized and validated form data.
+	 */
+	private function sanitize_and_validate_form_data( array $data ): array {
+		$sanitized = array();
+
+		foreach ( $data as $field_key => $field_value ) {
+			// Validate field key (alphanumeric, underscore, dash only).
+			if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $field_key ) ) {
+				continue; // Skip invalid field keys.
+			}
+
+			$sanitized[ $field_key ] = $this->sanitize_field_value( $field_value );
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Sanitize individual field values based on expected type.
+	 *
+	 * @param mixed $value Field value to sanitize.
+	 * @return mixed Sanitized value.
+	 */
+	private function sanitize_field_value( $value ) {
+		switch ( gettype( $value ) ) {
+			case 'string':
+				return sanitize_text_field( $value );
+
+			case 'array':
+				return array_map( array( $this, 'sanitize_field_value' ), $value );
+
+			case 'integer':
+				return absint( $value );
+
+			case 'double':
+				return (float) $value;
+
+			case 'boolean':
+				return (bool) $value;
+
+			default:
+				return ''; // Reject unknown types.
+		}
+	}
+
+	/**
+	 * Enhanced rate limiting with sliding window to prevent burst attacks.
+	 *
+	 * @param int $user_id User ID to check rate limit for.
+	 * @return bool True if within limits, false if exceeded.
+	 */
+	private function check_rate_limit( int $user_id ): bool {
+		$current_time   = time();
+		$window_seconds = 60; // 1-minute sliding window
+		$max_requests   = self::RATE_LIMIT_REQUESTS;
+
+		$rate_limit_key  = 'conditional_rate_limit_' . $user_id;
+		$transient_value = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
+		$request_log     = $transient_value ? $transient_value : array();
+
+		// Remove requests outside the sliding window.
+		$request_log = array_filter(
+			$request_log,
+			function ( $timestamp ) use ( $current_time, $window_seconds ) {
+				return ( $current_time - $timestamp ) < $window_seconds;
+			}
+		);
+
+		// Check if under the limit.
+		if ( count( $request_log ) >= $max_requests ) {
+			return false;
+		}
+
+		// Add current request timestamp.
+		$request_log[] = $current_time;
+
+		// Store updated request log.
+		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $request_log, $window_seconds );
+
+		return true;
+	}
+
+	/**
+	 * Get client IP address for security logging.
+	 *
+	 * @return string Client IP address.
+	 */
+	private function get_client_ip(): string {
+		$headers = array(
+			'HTTP_CF_CONNECTING_IP', // Cloudflare.
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+			'REMOTE_ADDR',
+		);
+
+		foreach ( $headers as $header ) {
+			if ( ! empty( $_SERVER[ $header ] ) ) {
+				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
+
+				// Handle comma-separated IPs (e.g., X-Forwarded-For).
+				if ( strpos( $ip, ',' ) !== false ) {
+					$ip = trim( explode( ',', $ip )[0] );
+				}
+
+				// Validate IP address.
+				if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+					return $ip;
+				}
+			}
+		}
+
+		return 'unknown';
+	}
+
+	/**
+	 * Validate request origin to prevent cross-origin attacks.
+	 *
+	 * @return bool True if request origin is valid.
+	 */
+	private function validate_request_origin(): bool {
+		// Allow requests from admin area.
+		if ( is_admin() ) {
+			return true;
+		}
+
+		// For AJAX requests, validate referer.
+		$referer = wp_get_referer();
+		if ( ! $referer ) {
+			return false;
+		}
+
+		// Get site URL for comparison.
+		$site_url  = get_site_url();
+		$site_host = sanitize_text_field( wp_unslash( wp_parse_url( $site_url, PHP_URL_HOST ) ) );
+
+		$referer_host = sanitize_text_field( wp_unslash( wp_parse_url( $referer, PHP_URL_HOST ) ) );
+
+		// Allow same domain and subdomains.
+		if ( $referer_host === $site_host || strpos( $referer_host, '.' . $site_host ) !== false ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Add security headers for AJAX responses.
+	 */
+	private function add_security_headers(): void {
+		if ( ! headers_sent() ) {
+			// Prevent MIME type sniffing.
+			header( 'X-Content-Type-Options: nosniff' );
+
+			// Enable XSS protection.
+			header( 'X-XSS-Protection: 1; mode=block' );
+
+			// Prevent clickjacking.
+			header( 'X-Frame-Options: SAMEORIGIN' );
+
+			// Referrer policy for AJAX.
+			header( 'Referrer-Policy: strict-origin-when-cross-origin' );
+
+			// Content Security Policy for AJAX responses.
+			header( "Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'" );
+
+			// Prevent caching of sensitive responses.
+			header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+			header( 'Pragma: no-cache' );
+			header( 'Expires: 0' );
+		}
 	}
 }

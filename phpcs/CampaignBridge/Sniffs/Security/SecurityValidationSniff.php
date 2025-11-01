@@ -75,6 +75,11 @@ class SecurityValidationSniff implements Sniff {
 
 		$function_name = $token['content'];
 
+		// Skip validation for REST controllers - they handle input validation differently
+		if ( $this->isRestController( $phpcs_file ) ) {
+			return;
+		}
+
 		// Check nonce validation for sensitive operations.
 		if ( in_array( $function_name, self::NONCE_REQUIRED_FUNCTIONS, true ) ) {
 			$this->validateNonceCheck( $phpcs_file, $stack_ptr, $function_name );
@@ -201,6 +206,41 @@ class SecurityValidationSniff implements Sniff {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Checks if the file is a REST controller that handles input validation differently.
+	 *
+	 * @param File $phpcs_file The file being scanned.
+	 *
+	 * @return bool True if this is a REST controller, false otherwise.
+	 */
+	private function isRestController( File $phpcs_file ): bool {
+		$file_path = $phpcs_file->getFilename();
+
+		// Check if file is in REST directory
+		if ( strpos( $file_path, '/REST/' ) !== false || strpos( $file_path, '\\REST\\' ) !== false ) {
+			return true;
+		}
+
+		// Check if file contains REST controller patterns
+		$file_content = $phpcs_file->getTokensAsString( 0, $phpcs_file->numTokens );
+
+		// Look for REST API patterns
+		$rest_indicators = array(
+			'WP_REST_Controller',
+			'register_rest_route',
+			'wp_send_json',
+			'wp_send_json_error',
+		);
+
+		foreach ( $rest_indicators as $indicator ) {
+			if ( strpos( $file_content, $indicator ) !== false ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

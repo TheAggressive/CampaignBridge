@@ -1,5 +1,4 @@
 <?php // phpcs:ignore WordPress.Files.FileName
-// phpcs:disable CampaignBridge.Standard.Sniffs.Database.StorageUsage.ForbiddenStorageFunction,CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectQuery,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.NoCaching,WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- This file intentionally uses WordPress storage functions as wrappers, nonce verification handled at caller level
 
 /**
  * Storage Operations for CampaignBridge Plugin
@@ -62,6 +61,7 @@ class Storage {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function update_option( string $key, $value ): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Storage layer, nonce verification handled at application layer
 		$prefixed_key = Storage_Prefixes::get_option_key( $key );
 		return update_option( $prefixed_key, $value );
 	}
@@ -86,6 +86,7 @@ class Storage {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function delete_option( string $key ): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Storage layer, nonce verification handled at application layer
 		$prefixed_key = Storage_Prefixes::get_option_key( $key );
 		return delete_option( $prefixed_key );
 	}
@@ -469,22 +470,20 @@ class Storage {
 	/**
 	 * Sanitize meta value for safe database storage.
 	 *
-	 * FOOL-PROOF: Automatically handles all data types to prevent security issues.
-	 * No matter what data is passed, it gets sanitized appropriately.
+	 * Uses WordPress built-in sanitization functions for battle-tested security.
 	 *
 	 * @param mixed $value The value to sanitize.
 	 * @return mixed Sanitized value safe for database storage.
 	 */
 	private static function sanitize_meta_value( $value ) {
-		// Handle different data types.
 		switch ( gettype( $value ) ) {
 			case 'string':
-				// Sanitize strings, but preserve HTML for rich content.
-				return wp_kses_post( $value );
+				// WordPress built-in: Strip HTML tags and encode special characters.
+				return sanitize_text_field( $value );
 
 			case 'integer':
 			case 'double':
-				// Numbers are safe as-is.
+				// Numbers are safe for database storage.
 				return $value;
 
 			case 'boolean':
@@ -492,7 +491,7 @@ class Storage {
 				return $value ? 1 : 0;
 
 			case 'array':
-				// Recursively sanitize array values, then serialize.
+				// Recursively sanitize array values and serialize.
 				$sanitized_array = array();
 				foreach ( $value as $key => $item ) {
 					$sanitized_key                     = is_string( $key ) ? sanitize_key( $key ) : $key;
@@ -501,26 +500,25 @@ class Storage {
 				return maybe_serialize( $sanitized_array );
 
 			case 'object':
-				// Objects get serialized after basic sanitization check.
+				// Only allow objects with __toString method.
 				if ( method_exists( $value, '__toString' ) ) {
-					// If object has __toString, use that.
 					return sanitize_text_field( (string) $value );
 				}
-				// Otherwise serialize the object.
+				// Fallback: serialize safe objects.
 				return maybe_serialize( $value );
 
 			case 'NULL':
 			case 'null':
-				// Null values become empty strings.
 				return '';
 
 			case 'resource':
 			case 'resource (closed)':
-				// Resources cannot be serialized - reject them.
+			case 'unknown type':
+				// Reject unsafe types.
 				return '';
 
 			default:
-				// Unknown types get converted to string and sanitized.
+				// Convert unknown types to string and sanitize.
 				return sanitize_text_field( (string) $value );
 		}
 	}
