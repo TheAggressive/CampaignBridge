@@ -1,0 +1,296 @@
+/**
+ * CampaignBridge Encrypted Form Fields
+ *
+ * Specialized styling for encrypted form fields with reveal/edit functionality.
+ * Follows BEM CSS class naming conventions and uses design tokens.
+ */
+
+/* Declare the layers you'll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* ===== ENCRYPTED FIELD CONTAINER ===== */
+.campaignbridge-encrypted-field {
+  display: flex;
+  align-items: center;
+  gap: var(--form-spacing-sm);
+  align-self: flex-start; /* Don't stretch to fill container width */
+  max-width: 100%; /* Allow responsive behavior */
+  padding: var(--form-spacing-sm);
+
+  /* Smooth transitions */
+  transition: var(--form-transition);
+
+  &:focus-within {
+    border-color: var(--form-focus-ring-color);
+    box-shadow:
+      0 0 0 var(--form-focus-ring-offset) var(--color-background),
+      0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+        var(--form-focus-ring-color);
+  }
+
+  /* ===== DISPLAY INPUT ===== */
+  &__display {
+    position: static; /* Visible by default */
+    left: auto;
+    visibility: visible;
+    opacity: 1;
+    max-width: 100%; /* Responsive behavior */
+    font-family: var(--form-font-family);
+    font-size: var(--form-font-size-input);
+    font-weight: var(--form-font-weight-input);
+
+    /* Input styling consistent with other form inputs */
+    background-color: var(--color-background);
+    border: 1px solid var(--color-input);
+    border-radius: var(--form-radius-sm);
+    color: var(--color-foreground);
+    padding: var(--form-spacing-input);
+    transition: var(--form-transition);
+
+    /* Font features for better readability */
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.025em;
+
+    /* Focus state */
+    &:focus {
+      outline: none;
+      border-color: var(--form-focus-ring-color);
+      box-shadow:
+        0 0 0 var(--form-focus-ring-offset) var(--color-background),
+        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+          var(--form-focus-ring-color);
+    }
+
+    /* Readonly state styling */
+    &[readonly] {
+      background-color: var(--color-muted);
+      color: var(--color-muted-foreground);
+      cursor: not-allowed;
+
+      /* Visual indicator for masked content */
+      font-family: 'Courier New', monospace;
+    }
+  }
+
+  /* ===== CONTROL BUTTONS ===== */
+  &__controls {
+    display: flex;
+    gap: var(--form-spacing-xs);
+    flex-shrink: 0;
+
+    /* Button styling */
+    button {
+      background-color: var(--color-secondary);
+      border: 1px solid var(--color-border);
+      color: var(--color-secondary-foreground);
+      cursor: pointer;
+      transition: var(--form-transition);
+      font-size: var(--form-font-size-button);
+      font-weight: var(--form-font-weight-button);
+
+      /* Icon sizing and centering */
+      .dashicons {
+        width: 16px !important;
+        height: 16px !important;
+        font-size: 1rem !important;
+        vertical-align: middle !important;
+        margin-top: -4px !important; /* Fine-tune vertical alignment */
+      }
+
+      /* Hover states */
+      &:hover {
+        background-color: var(--color-accent);
+        border-color: var(--color-accent);
+        color: var(--color-accent-foreground);
+      }
+
+      /* Focus states */
+      &:focus {
+        outline: none;
+        border-color: var(--form-focus-ring-color);
+        box-shadow:
+          0 0 0 var(--form-focus-ring-offset) var(--color-background),
+          0 0 0
+            calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+            var(--form-focus-ring-color);
+      }
+
+      /* Disabled state */
+      &:disabled {
+        @apply cursor-not-allowed opacity-50;
+      }
+    }
+  }
+
+  /* ===== EDITABLE INPUT ===== */
+  &__edit {
+    background-color: var(--color-background);
+    border: 2px solid var(--color-ring);
+    border-radius: var(--form-radius-sm);
+    color: var(--color-foreground);
+    font-family: var(--form-font-family);
+    font-size: var(--form-font-size-input);
+    padding: var(--form-spacing-input);
+    transition: var(--form-transition);
+
+    /* Focus state for editing */
+    &:focus {
+      outline: none;
+      border-color: var(--form-focus-ring-color);
+      box-shadow:
+        0 0 0 var(--form-focus-ring-offset) var(--color-background),
+        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+          var(--form-focus-ring-color);
+    }
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+      font-style: italic;
+    }
+  }
+
+  /* ===== EDIT CONTROLS ===== */
+  &__edit-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--form-spacing-sm);
+
+    button {
+      @apply rounded-md px-4 py-2 text-sm font-medium;
+      font-size: var(--form-font-size-button);
+      font-weight: var(--form-font-weight-button);
+      transition: var(--form-transition);
+
+      /* Save button styling */
+      &[class*='__save-btn'] {
+        background-color: var(--color-primary);
+        border: 1px solid var(--color-primary);
+        color: var(--color-primary-foreground);
+
+        &:hover {
+          background-color: var(--color-primary-hover, var(--color-primary));
+          border-color: var(--color-primary-hover, var(--color-primary));
+        }
+      }
+
+      /* Cancel button styling */
+      &[class*='__cancel-btn'] {
+        background-color: var(--color-secondary);
+        border: 1px solid var(--color-border);
+        color: var(--color-secondary-foreground);
+
+        &:hover {
+          background-color: var(--color-accent);
+          border-color: var(--color-accent);
+        }
+      }
+
+      /* Focus states */
+      &:focus {
+        outline: none;
+        box-shadow:
+          0 0 0 var(--form-focus-ring-offset) var(--color-background),
+          0 0 0
+            calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+            var(--form-focus-ring-color);
+      }
+
+      &:disabled {
+        @apply cursor-not-allowed opacity-50;
+      }
+    }
+  }
+
+  /* ===== PERMISSION DENIED STATE ===== */
+  &--permission-denied {
+    background-color: var(--color-muted);
+    border-color: var(--color-destructive);
+    opacity: 0.8;
+
+    /* Display input in permission denied state */
+    input {
+      background-color: var(--color-muted);
+      color: var(--color-muted-foreground);
+      cursor: not-allowed;
+    }
+
+    /* Hide controls in permission denied state */
+    &__controls {
+      display: none;
+    }
+  }
+
+  /* ===== VISIBILITY STATES ===== */
+
+  /* Initially hidden elements */
+  &__hide-btn {
+    display: none !important;
+  }
+
+  &__edit {
+    position: absolute;
+    left: -9999px;
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  &__edit-controls {
+    position: absolute;
+    left: -9999px;
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  /* Elements that can be hidden by JavaScript */
+  &__controls--hidden {
+    display: none !important;
+  }
+
+  &__display--hidden {
+    display: none !important;
+  }
+
+  &__reveal-btn--hidden {
+    display: none !important;
+  }
+
+  /* Visible states (controlled by JavaScript) */
+  &__hide-btn--visible {
+    display: inline-block !important;
+  }
+
+  &__edit--visible {
+    position: static;
+    left: auto;
+    visibility: visible;
+    opacity: 1;
+  }
+
+  &__edit-controls--visible {
+    position: static;
+    left: auto;
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+/* ===== PERMISSION NOTICE ===== */
+.campaignbridge-permission-notice {
+  @apply mt-2 flex items-center gap-2 rounded-md px-3 py-2 text-sm;
+  background-color: var(--color-destructive-light, #fee2e2);
+  border: 1px solid var(--color-destructive);
+  color: var(--color-destructive);
+  font-size: var(--form-font-size-help);
+
+  .dashicons {
+    color: var(--color-destructive);
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}

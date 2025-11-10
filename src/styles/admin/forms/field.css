@@ -1,0 +1,339 @@
+/**
+ * CampaignBridge Form Fields
+ *
+ * Field wrapper and input component styles.
+ * Follows BEM CSS class naming conventions.
+ */
+
+/* Declare the layers you'll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* ===== MODERN FIELD SYSTEM ===== */
+
+/* Modern field wrapper */
+.campaignbridge-field {
+  @apply relative space-y-2;
+
+  /* Modern field label with better typography and interactions */
+  &__label {
+    @apply mb-3 block text-sm font-semibold text-slate-700;
+    letter-spacing: -0.025em; /* Tighter letter spacing */
+    line-height: 1.375; /* Better line height */
+
+    @apply cursor-pointer transition-colors duration-200 select-none;
+
+    /* Interactive hover state */
+    &:hover {
+      @apply text-slate-900;
+    }
+  }
+
+  /* Floating label variant - modern UX pattern */
+  &--floating-label {
+    &__input {
+      @apply pt-6 pb-2; /* Extra padding for floating label */
+    }
+
+    &__label {
+      @apply absolute top-3 left-4 z-10 text-sm font-medium transition-all duration-200 ease-out;
+      @apply pointer-events-none text-slate-500;
+      transform-origin: left top;
+
+      /* When input is focused or has value */
+      .campaignbridge-field__input:focus + &,
+      .campaignbridge-field__input:not(:placeholder-shown) + & {
+        @apply top-1 text-xs text-blue-600;
+        transform: translateY(-2px) scale(0.875);
+      }
+    }
+
+    /* Modern floating label animation */
+    &__input::placeholder {
+      @apply opacity-0 transition-opacity duration-200;
+    }
+
+    &__input:focus::placeholder {
+      @apply opacity-100;
+    }
+  }
+
+  /* Required field indicator */
+  &__required {
+    @apply ml-1 text-red-500;
+  }
+
+  /* Modern help text with better styling and accessibility */
+  &__description {
+    @apply mt-2 text-xs leading-relaxed text-slate-500;
+    max-width: 42ch; /* Limit line length for readability */
+  }
+
+  /* Screen reader only text for accessibility */
+  &__sr-only {
+    @apply absolute -m-px h-px w-px overflow-hidden border-0 p-0 whitespace-nowrap;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  /* Error announcements for screen readers */
+  &__error-announcement {
+    @apply sr-only;
+    aria-live: assertive;
+    aria-atomic: true;
+  }
+
+  /* Focus trap for modal dialogs */
+  &__focus-trap {
+    @apply focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none;
+  }
+
+  /* Error states */
+  &--error {
+    .campaignbridge-field__input,
+    .campaignbridge-field__textarea,
+    .campaignbridge-field__select {
+      @apply border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500;
+      --tw-ring-opacity: 0.2;
+    }
+  }
+
+  /* Success states */
+  &--success {
+    .campaignbridge-field__input,
+    .campaignbridge-field__textarea,
+    .campaignbridge-field__select {
+      @apply border-green-500 focus:border-green-500 focus:ring-2 focus:ring-green-500;
+      --tw-ring-opacity: 0.2;
+    }
+  }
+
+  /* Modern base input styles - consistent with encrypted inputs */
+  &__input,
+  &__textarea,
+  &__select {
+    /* Layout and sizing */
+    @apply relative w-full;
+    max-width: 100%;
+
+    /* Typography - consistent with encrypted inputs */
+    font-family: var(--form-font-family);
+    font-size: var(--form-font-size-input);
+    font-weight: var(--form-font-weight-input);
+    font-variant-numeric: tabular-nums; /* Better number alignment */
+    letter-spacing: 0.025em; /* Improved readability */
+
+    /* Colors and backgrounds */
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+
+    /* Borders and spacing */
+    border: 1px solid var(--color-input);
+    border-radius: var(--form-radius);
+    padding: var(--form-field-padding-y) var(--form-field-padding-x);
+
+    /* Focus and interaction states */
+    transition: var(--form-transition);
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--color-muted);
+    }
+
+    /* Hover state */
+    &:hover {
+      border-color: var(--color-ring);
+    }
+
+    /* Focus state - consistent with encrypted inputs */
+    &:focus {
+      outline: none;
+      border-color: var(--form-focus-ring-color);
+      box-shadow:
+        0 0 0 var(--form-focus-ring-offset) var(--color-background),
+        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+          var(--form-focus-ring-color),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Disabled state */
+    &:disabled {
+      @apply cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400;
+      box-shadow: none;
+      transform: none !important;
+    }
+
+    /* Size variants */
+    &--sm {
+      padding: calc(var(--form-field-padding-y) * 0.75)
+        calc(var(--form-field-padding-x) * 0.75);
+      font-size: var(--font-size-xs);
+    }
+
+    &--lg {
+      padding: calc(var(--form-field-padding-y) * 1.25)
+        calc(var(--form-field-padding-x) * 1.25);
+      font-size: var(--font-size-base);
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+      border-width: 2px;
+      box-shadow: none;
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+      animation: none;
+      transform: none !important;
+    }
+  }
+
+  &__textarea {
+    @apply min-h-20 resize-y;
+  }
+
+  &__select {
+    @apply appearance-none bg-no-repeat;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-size: 1.5rem 1.5rem;
+
+    @apply pr-10;
+  }
+
+  /* Loading skeleton state */
+  &--loading {
+    &__input,
+    &__textarea,
+    &__select {
+      @apply cursor-wait border-slate-200 bg-slate-100;
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      color: transparent;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    &__label {
+      @apply text-slate-400;
+    }
+  }
+
+  /* Modern progress indicator */
+  &__progress {
+    @apply absolute bottom-0 left-0 h-0.5 bg-blue-500 transition-all duration-300 ease-out;
+    border-radius: 0 0 0.75rem 0.75rem;
+  }
+
+  /* Show progress bar during validation */
+  &--validating &__progress {
+    width: 100%;
+    animation: progress-fill 2s ease-out;
+  }
+}
+
+/* ===== SKELETON LOADING ANIMATION ===== */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes progress-fill {
+  0% {
+    width: 0%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+/* ===== SPECIALIZED INPUT TYPES ===== */
+
+/* Minimal overrides for specific input types only where needed */
+
+/* Search input - extra left padding for search icon */
+&__search {
+  @apply pl-11;
+}
+
+/* File input - special styling for file inputs */
+&__file {
+  @apply cursor-pointer;
+  @apply file:mr-4 file:rounded-lg file:border-0 file:px-4 file:py-2;
+  @apply file:bg-slate-50 file:text-sm file:font-medium file:text-slate-700;
+  @apply file:transition-colors file:hover:bg-slate-100;
+}
+
+/* Color input - minimal styling */
+&__color {
+  @apply h-11 w-20 cursor-pointer p-1;
+}
+
+/* Range input - custom styling */
+&__range {
+  @apply h-2 cursor-pointer appearance-none rounded-lg bg-slate-200;
+
+  &::-webkit-slider-thumb {
+    @apply h-5 w-5 cursor-pointer appearance-none rounded-full bg-blue-600;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &::-moz-range-thumb {
+    @apply h-5 w-5 cursor-pointer rounded-full border-0 bg-blue-600;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+/* WYSIWYG editor styling */
+&__wysiwyg {
+  .wp-editor-container {
+    border: 1px solid var(--color-border);
+    border-radius: var(--form-radius);
+
+    &:focus-within {
+      border-color: var(--color-ring);
+      box-shadow:
+        0 0 0 var(--form-focus-ring-offset) var(--color-background),
+        0 0 0 calc(var(--form-focus-ring-width) + var(--form-focus-ring-offset))
+          var(--form-focus-ring-color);
+    }
+  }
+
+  .wp-editor-tabs {
+    background-color: var(--color-muted);
+    border-color: var(--color-border);
+
+    @apply border-b;
+  }
+
+  .wp-switch-editor {
+    &:hover {
+      background-color: var(--color-accent);
+    }
+  }
+
+  .wp-editor-tools {
+    background-color: var(--color-muted);
+    border-color: var(--color-border);
+
+    @apply border-b;
+  }
+
+  .wp-editor-area {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    border-color: var(--color-border);
+  }
+}

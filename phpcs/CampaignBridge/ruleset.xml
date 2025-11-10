@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<ruleset name="CampaignBridge Custom Rules">
+    <description>CampaignBridge custom PHPCS rules for plugin-specific standards.</description>
+
+
+    <!-- Register our custom sniffs -->
+    <rule ref="phpcs/CampaignBridge/Sniffs/Database/StorageUsageSniff.php">
+        <severity>error</severity>
+    </rule>
+
+    <rule ref="phpcs/CampaignBridge/Sniffs/Hooks/HookUsageSniff.php">
+        <severity>warning</severity>
+    </rule>
+
+    <rule ref="phpcs/CampaignBridge/Sniffs/Security/SecurityValidationSniff.php">
+        <severity>warning</severity>
+    </rule>
+
+    <rule ref="phpcs/CampaignBridge/Sniffs/Database/DatabaseOperationSniff.php">
+        <severity>error</severity>
+    </rule>
+
+    <rule ref="phpcs/CampaignBridge/Sniffs/Logging/DirectLoggingSniff.php">
+        <severity>warning</severity>
+    </rule>
+
+    <rule ref="phpcs/CampaignBridge/Sniffs/Database/DirectDatabaseQuerySniff.php">
+        <severity>warning</severity>
+    </rule>
+
+    <rule ref="phpcs/CampaignBridge/Sniffs/Http/DirectHttpRequestSniff.php">
+        <severity>warning</severity>
+    </rule>
+
+    <rule ref="phpcs/CampaignBridge/Sniffs/Assets/AssetEnqueueSniff.php">
+        <severity>warning</severity>
+    </rule>
+</ruleset>

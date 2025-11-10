@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/container",
+  "title": "Email Container",
+  "category": "widgets",
+  "icon": "email",
+  "description": "Root email container (centered table). Colors come from core color support; paddings are attributes.",
+  "textdomain": "campaignbridge",
+  "supports": {
+    "multiple": false,
+    "innerBlocks": true,
+    "lock": true,
+    "reusable": false,
+    "html": false,
+    "color": {
+      "background": true,
+      "text": true,
+      "gradients": false
+    }
+  },
+  "attributes": {
+    "maxWidth": { "type": "number", "default": 600 },
+    "outerPadding": {
+      "type": "object",
+      "default": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    "padding": {
+      "type": "object",
+      "default": { "top": 0, "right": 24, "bottom": 0, "left": 24 }
+    }
+  },
+  "editorScript": "file:./index.js",
+  "render": "file:./render.php"
+}

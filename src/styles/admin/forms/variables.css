@@ -1,0 +1,68 @@
+/**
+ * CampaignBridge Form Design Tokens
+ *
+ * Form-specific design tokens that extend global tokens.
+ * Inherits from global variables.css and adds form-specific overrides.
+ */
+
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@layer base {
+  :root {
+    /* ===== FORM-SPECIFIC TOKENS ===== */
+
+    /* Form inherits global design tokens but can override for form-specific needs */
+
+    /* Form-specific spacing refinements */
+    --form-spacing-xs: var(--spacing-xs);
+    --form-spacing-sm: var(--spacing-sm);
+    --form-spacing-input: var(--form-field-padding-x);
+    --form-spacing-field-gap: var(--spacing-sm);
+    --form-spacing-section-gap: var(--spacing-2xl);
+
+    /* Form-specific typography */
+    --form-font-family: var(--font-family-sans);
+    --form-font-size-input: var(--font-size-base);
+    --form-font-weight-input: var(--font-weight-normal);
+    --form-font-size-button: var(--font-size-sm);
+    --form-font-weight-button: var(--font-weight-medium);
+    --form-font-size-label: var(--font-size-sm);
+    --form-font-size-help: var(--font-size-xs);
+    --form-font-weight-label: var(--font-weight-medium);
+
+    /* Form-specific dimensions */
+    --form-field-height: 2.5rem; /* 40px - input height */
+    --form-field-padding-x: var(--spacing-md);
+    --form-field-padding-y: var(--spacing-sm);
+
+    /* Form-specific focus styles */
+    --form-focus-ring-width: var(--focus-ring-width);
+    --form-focus-ring-color: var(--focus-ring-color);
+    --form-focus-ring-offset: var(--focus-ring-offset);
+
+    /* Form-specific transitions */
+    --form-transition: var(--transition-normal);
+
+    /* Form-specific radius (can be different from global) */
+    --form-radius: var(--border-radius-md);
+    --form-radius-sm: var(--border-radius-sm);
+
+    /* Status colors using global brand colors */
+    --form-error: var(--color-error);
+
+    /* Destructive colors (alias for error colors for consistency) */
+    --color-destructive: var(--color-error);
+    --color-destructive-light: var(--color-error-light);
+
+    /* Background variants using global colors */
+    --form-bg-success: var(--color-success-light);
+    --form-bg-warning: var(--color-warning-light);
+    --form-bg-error: var(--color-error-light);
+    --form-bg-info: var(--color-info-light);
+  }
+}

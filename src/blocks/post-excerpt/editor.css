@@ -1,0 +1,43 @@
+/* Our own inline wrapper (useInnerBlocksProps) */
+.editor-styles-wrapper
+  .wp-block-campaignbridge-post-excerpt.has-inline-readmore
+  .is-inline-readmore-wrap {
+  display: inline !important;
+  vertical-align: baseline !important;
+}
+
+/* The inner layout wrapper Gutenberg inserts; make it inline in our inline mode */
+.editor-styles-wrapper
+  .wp-block-campaignbridge-post-excerpt.has-inline-readmore
+  .is-inline-readmore-wrap
+  > .block-editor-block-list__layout {
+  display: inline !important;
+}
+
+/* Ensure actual child blocks render inline visually in the editor */
+.editor-styles-wrapper .wp-block-paragraph.is-inline-readmore {
+  display: inline !important;
+  margin: 0 !important;
+  vertical-align: baseline !important;
+}
+
+.editor-styles-wrapper .wp-block-paragraph.is-inline-readmore a {
+  white-space: nowrap !important;
+  line-height: inherit !important;
+}
+
+.editor-styles-wrapper .wp-block-buttons.is-inline-readmore {
+  display: inline-flex !important;
+  gap: 0 !important;
+  margin: 0 !important;
+  vertical-align: baseline !important;
+}
+
+.editor-styles-wrapper .wp-block-button {
+  margin: 0 !important;
+}
+
+.editor-styles-wrapper .wp-block-button__link {
+  white-space: nowrap !important;
+  line-height: inherit !important;
+}

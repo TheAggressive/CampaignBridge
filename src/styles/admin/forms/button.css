@@ -1,0 +1,142 @@
+/**
+ * CampaignBridge Form Buttons
+ *
+ * Button component styles and variants.
+ * Follows BEM CSS class naming conventions.
+ */
+
+/* Declare the layers you'll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* ===== MODERN BUTTONS ===== */
+.campaignbridge-button {
+  @apply inline-flex items-center justify-center gap-2;
+  @apply rounded-xl px-6 py-3 text-sm font-semibold;
+  @apply transition-all duration-200 ease-out;
+  @apply focus:ring-2 focus:ring-offset-2 focus:outline-none;
+
+  /* Modern shadows and hover effects */
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    @apply pointer-events-none cursor-not-allowed opacity-50;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  --tw-ring-offset-color: var(--color-background);
+
+  /* Modern button variants with better colors and gradients */
+
+  /* Default variant - subtle secondary button */
+  &--default {
+    @apply border border-slate-300 bg-white text-slate-700;
+    @apply hover:border-slate-400 hover:bg-slate-50;
+    @apply focus:ring-slate-500;
+  }
+
+  /* Primary variant - modern blue gradient */
+  &--primary {
+    @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white;
+    @apply hover:from-blue-700 hover:to-blue-800;
+    @apply focus:ring-blue-500;
+  }
+
+  /* Secondary variant - elegant gray */
+  &--secondary {
+    @apply bg-slate-100 text-slate-700;
+    @apply hover:bg-slate-200;
+    @apply focus:ring-slate-500;
+  }
+
+  /* Outline variant - modern outline style */
+  &--outline {
+    @apply border-2 border-slate-300 bg-transparent text-slate-600;
+    @apply hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700;
+    @apply focus:ring-slate-500;
+  }
+
+  /* Danger variant - for destructive actions */
+  &--danger {
+    @apply bg-gradient-to-r from-red-600 to-red-700 text-white;
+    @apply hover:from-red-700 hover:to-red-800;
+    @apply focus:ring-red-500;
+  }
+
+  /* Success variant - for positive actions */
+  &--success {
+    @apply bg-gradient-to-r from-emerald-600 to-emerald-700 text-white;
+    @apply hover:from-emerald-700 hover:to-emerald-800;
+    @apply focus:ring-emerald-500;
+  }
+
+  /* Loading state - modern spinner */
+  &--loading {
+    @apply cursor-wait;
+
+    &::before {
+      content: '';
+
+      @apply mr-2 h-4 w-4 animate-spin rounded-full border-2;
+      border-color: rgba(255, 255, 255, 0.3);
+      border-top-color: rgb(255, 255, 255);
+    }
+  }
+
+  /* Size variants */
+  &--sm {
+    @apply px-4 py-2 text-xs;
+  }
+
+  &--lg {
+    @apply px-8 py-4 text-base;
+  }
+
+  /* Ghost variant - subtle transparent button */
+  &--ghost {
+    @apply bg-transparent text-slate-600;
+    @apply hover:bg-slate-100 hover:text-slate-700;
+    @apply focus:ring-slate-500;
+  }
+
+  /* Link variant - text-only button */
+  &--link {
+    @apply bg-transparent text-blue-600 underline underline-offset-2;
+    @apply hover:bg-blue-50 hover:no-underline;
+    @apply focus:ring-blue-500;
+  }
+
+  /* Size variants */
+  &--sm {
+    @apply h-9 px-3;
+  }
+
+  &--md {
+    @apply h-10 px-4 py-2;
+  }
+
+  &--lg {
+    @apply h-11 px-8;
+  }
+
+  &--icon {
+    @apply h-10 w-10;
+  }
+}

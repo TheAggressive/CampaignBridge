@@ -1,0 +1,81 @@
+/**
+ * CampaignBridge Checkbox Component
+ *
+ * Styled checkbox component for form fields.
+ * Follows BEM CSS class naming conventions.
+ */
+
+.campaignbridge-checkbox {
+  /* Use accent-color for modern browsers */
+  accent-color: var(--color-success); /* Green accent color */
+
+  /* Checkbox group container */
+  &-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Checkbox label */
+  &-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--color-foreground);
+    line-height: 1.25rem;
+    margin-bottom: 0;
+
+    /* Hover state for the label */
+    &:hover input:not(:checked):not(:indeterminate) {
+      border-color: #9ca3af; /* gray-400 */
+    }
+
+    /* Focus state */
+    &:focus-within {
+      outline: 2px solid var(--color-ring);
+      outline-offset: 2px;
+    }
+  }
+
+  /* Checkbox text content */
+  &-text {
+    flex: 1;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  /* Field wrapper for checkboxes */
+  &-field-wrapper {
+    .campaignbridge-checkbox-group {
+      margin-top: 0.5rem;
+    }
+  }
+}
+
+/* Layout variants */
+.campaignbridge-checkbox {
+  /* Horizontal layout */
+  &-group--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+  }
+
+  /* Compact layout */
+  &-group--compact {
+    gap: 0.5rem;
+
+    .campaignbridge-checkbox-text {
+      font-size: 0.8125rem;
+    }
+  }
+
+  /* Inline layout (no bullets, side by side) */
+  &-group--inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}

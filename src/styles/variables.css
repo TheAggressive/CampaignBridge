@@ -1,0 +1,249 @@
+/**
+ * CampaignBridge Global Design Tokens
+ *
+ * Core design system variables shared across the entire plugin.
+ * Integrates with Tailwind CSS v4 for consistent theming.
+ *
+ * USAGE:
+ * - Import this file first in any CSS file that needs design tokens
+ * - Override specific variables in component-specific CSS for customization
+ * - All variables follow consistent naming: --category-property-variant
+ *
+ * ARCHITECTURE:
+ * - Brand colors (--brand-*)
+ * - Semantic colors (--color-*)
+ * - Layout tokens (--spacing-*, --container-*)
+ * - Typography (--font-*)
+ * - Borders & radius (--border-*)
+ * - Shadows (--shadow-*)
+ * - Focus & interaction (--focus-*, --transition-*)
+ * - Z-index (--z-*)
+ * - Component dimensions (--height-*)
+ * - Breakpoints (--breakpoint-*)
+ */
+
+@layer base {
+  :root {
+    /* ===== BRAND COLORS ===== */
+
+    /* Using Tailwind CSS color variables for easy customization */
+    --brand-primary: var(--color-purple-600);
+    --brand-primary-hover: var(--color-blue-700);
+    --brand-primary-active: var(--color-blue-800);
+    --brand-primary-muted: var(--color-blue-50);
+
+    /* Secondary brand colors */
+    --brand-secondary: var(--color-indigo-500);
+    --brand-secondary-hover: var(--color-indigo-600);
+    --brand-secondary-active: var(--color-indigo-700);
+
+    /* ===== SEMANTIC COLORS ===== */
+
+    /* Main semantic colors (using our brand colors) */
+    --color-primary: var(--brand-primary);
+    --color-primary-foreground: #fff;
+    --color-secondary: var(--brand-secondary);
+    --color-secondary-foreground: #fff;
+
+    /* Base colors (using Tailwind's neutral palette) */
+    --color-background: var(--color-white);
+    --color-foreground: var(--color-slate-900);
+
+    /* Muted colors */
+    --color-muted: var(--color-slate-100);
+    --color-muted-foreground: var(--color-slate-500);
+
+    /* Accent colors */
+    --color-accent: var(--color-slate-100);
+    --color-accent-foreground: var(--color-slate-900);
+
+    /* Border colors */
+    --color-border: var(--color-slate-200);
+    --color-input: var(--color-slate-200);
+
+    /* Ring/focus colors */
+    --color-ring: var(--brand-primary);
+
+    /* Status colors (using Tailwind's semantic colors) */
+    --color-success: var(--color-green-600);
+    --color-success-light: var(--color-green-50);
+    --color-success-dark: var(--color-green-800);
+
+    --color-warning: var(--color-yellow-600);
+    --color-warning-light: var(--color-yellow-50);
+    --color-warning-dark: var(--color-yellow-800);
+
+    --color-error: var(--color-red-600);
+    --color-error-light: var(--color-red-50);
+    --color-error-dark: var(--color-red-800);
+
+    --color-info: var(--color-blue-600);
+    --color-info-light: var(--color-blue-50);
+    --color-info-dark: var(--color-blue-800);
+
+    /* ===== LAYOUT TOKENS ===== */
+
+    /* Spacing scale */
+    --spacing-xs: 0.25rem; /* 4px */
+    --spacing-sm: 0.5rem; /* 8px */
+    --spacing-md: 0.75rem; /* 12px */
+    --spacing-lg: 1rem; /* 16px */
+    --spacing-xl: 1.25rem; /* 20px */
+    --spacing-2xl: 1.5rem; /* 24px */
+    --spacing-3xl: 2rem; /* 32px */
+    --spacing-4xl: 2.5rem; /* 40px */
+    --spacing-5xl: 3rem; /* 48px */
+
+    /* Container widths */
+    --container-xs: 20rem; /* 320px */
+    --container-sm: 24rem; /* 384px */
+    --container-md: 28rem; /* 448px */
+    --container-lg: 32rem; /* 512px */
+    --container-xl: 36rem; /* 576px */
+    --container-2xl: 42rem; /* 672px */
+    --container-3xl: 48rem; /* 768px */
+    --container-4xl: 56rem; /* 896px */
+    --container-5xl: 64rem; /* 1024px */
+    --container-6xl: 72rem; /* 1152px */
+    --container-7xl: 80rem; /* 1280px */
+
+    /* ===== TYPOGRAPHY ===== */
+
+    /* Font families */
+    --font-family-sans:
+      ui-sans-serif, system-ui, -apple-system, blinkmacsystemfont, 'Segoe UI',
+      roboto, 'Helvetica Neue', arial, 'Noto Sans', sans-serif,
+      'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+      'Noto Color Emoji';
+    --font-family-mono:
+      ui-monospace, sfmono-regular, 'SF Mono', consolas, 'Liberation Mono',
+      menlo, monospace;
+
+    /* Font sizes */
+    --font-size-xs: 0.75rem; /* 12px */
+    --font-size-sm: 0.875rem; /* 14px */
+    --font-size-base: 1rem; /* 16px */
+    --font-size-lg: 1.125rem; /* 18px */
+    --font-size-xl: 1.25rem; /* 20px */
+    --font-size-2xl: 1.5rem; /* 24px */
+    --font-size-3xl: 1.875rem; /* 30px */
+    --font-size-4xl: 2.25rem; /* 36px */
+    --font-size-5xl: 3rem; /* 48px */
+
+    /* Font weights */
+    --font-weight-thin: 100;
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+    --font-weight-black: 900;
+
+    /* Line heights */
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 2;
+
+    /* ===== BORDERS & RADIUS ===== */
+
+    /* Border widths */
+    --border-width-none: 0;
+    --border-width-thin: 1px;
+    --border-width-thick: 2px;
+    --border-width-heavy: 4px;
+
+    /* Border radius */
+    --border-radius-none: 0;
+    --border-radius-sm: 0.125rem; /* 2px */
+    --border-radius-md: 0.375rem; /* 6px */
+    --border-radius-lg: 0.5rem; /* 8px */
+    --border-radius-xl: 0.75rem; /* 12px */
+    --border-radius-2xl: 1rem; /* 16px */
+    --border-radius-3xl: 1.5rem; /* 24px */
+    --border-radius-full: 9999px;
+
+    /* ===== SHADOWS ===== */
+    --shadow-none: none;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md:
+      0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg:
+      0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl:
+      0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+    /* ===== FOCUS & INTERACTION ===== */
+
+    /* Focus ring */
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+    --focus-ring-color: rgb(59 130 246 / 0.5); /* blue-500 with 50% opacity */
+
+    /* Transitions */
+    --transition-fast: 150ms ease-in-out;
+    --transition-normal: 200ms ease-in-out;
+    --transition-slow: 300ms ease-in-out;
+
+    /* ===== Z-INDEX SCALE ===== */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+    --z-toast: 1080;
+
+    /* ===== COMPONENT DIMENSIONS ===== */
+
+    /* Common component heights */
+    --height-input: 2.5rem; /* 40px */
+    --height-button-sm: 1.75rem; /* 28px */
+    --height-button-md: 2.25rem; /* 36px */
+    --height-button-lg: 2.75rem; /* 44px */
+
+    /* ===== BREAKPOINTS ===== */
+
+    /* These should match Tailwind's default breakpoints */
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1536px;
+  }
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+
+/* Future enhancement - dark mode variables */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode overrides would go here */
+  }
+}
+
+/* ===== REDUCED MOTION ===== */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-normal: 0ms;
+    --transition-slow: 0ms;
+  }
+}
+
+/* ===== HIGH CONTRAST ===== */
+
+/* Support for high contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --border-width-thin: 2px;
+    --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.2);
+  }
+}

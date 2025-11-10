@@ -1,0 +1,78 @@
+/**
+ * Conditional field styles with accessibility support
+ */
+
+/* Import all conditional field styles */
+@import './states.css';
+@import './animations.css';
+@import './validation.css';
+
+.campaignbridge-conditional-field {
+  /* Base conditional field - initially hidden for FOUC prevention */
+  display: none;
+  transition: none;
+
+  /* Visible conditional field */
+  &.campaignbridge-conditional-visible {
+    display: block;
+    visibility: visible;
+    position: static;
+    clip: auto;
+    height: auto;
+    width: auto;
+    overflow: visible;
+  }
+
+  /* Initially hidden state - fully hidden from all users */
+  &.campaignbridge-conditional-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    clip: rect(0, 0, 0, 0) !important;
+    height: 1px !important;
+    width: 1px !important;
+    overflow: hidden !important;
+  }
+
+  /* Fields with inert attribute are completely inaccessible */
+  &[inert],
+  &[inert] * {
+    visibility: hidden !important;
+  }
+}
+
+/* Screen reader announcements */
+.campaignbridge-a11y-announcements {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+/* Required field indicators for screen readers */
+.campaignbridge-field__required {
+  color: #d63638;
+  font-weight: 700;
+
+  &::before {
+    content: '*';
+  }
+}
+
+/* High contrast support for required indicators */
+@media (prefers-contrast: high) {
+  .campaignbridge-field__required {
+    background: #d63638;
+    color: white;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .campaignbridge-conditional-field {
+    transition: none !important;
+  }
+}

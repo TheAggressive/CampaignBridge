@@ -1,0 +1,307 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: includes/Admin/Core/Forms/Form_Field_Repeater.php
+
+		-
+			message: '#^Variable \$submitted_value on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: includes/Admin/Core/Forms/Form_Field_Switch.php
+
+		-
+			message: '#^Call to function is_wp_error\(\) with array will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: includes/Admin/Core/Forms/Form_File_Uploader.php
+
+		-
+			message: '#^Call to function is_wp_error\(\) with int\<0, max\> will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: includes/Admin/Core/Forms/Form_File_Uploader.php
+
+		-
+			message: '#^Method CampaignBridge\\Admin\\Core\\Forms\\Form_File_Uploader\:\:create_attachment\(\) never returns WP_Error so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: includes/Admin/Core/Forms/Form_File_Uploader.php
+
+		-
+			message: '#^Call to function method_exists\(\) with CampaignBridge\\Admin\\Core\\Form and ''data'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: includes/Admin/Core/Forms/Form_Handler.php
+
+		-
+			message: '#^Call to function method_exists\(\) with CampaignBridge\\Admin\\Core\\Form and ''reload_data'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: includes/Admin/Core/Forms/Form_Handler.php
+
+		-
+			message: '#^Variable \$submitted_value on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: includes/Admin/Core/Forms/Form_Handler.php
+
+		-
+			message: '#^Property CampaignBridge\\Admin\\Core\\Forms\\Form_Renderer\:\:\$handler is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: includes/Admin/Core/Forms/Form_Renderer.php
+
+		-
+			message: '#^File ends with a trailing whitespace\. This may cause problems when running the code in the web browser\. Remove the closing \?\> mark or remove the whitespace\.$#'
+			identifier: whitespace.fileEnd
+			count: 1
+			path: includes/Admin/Core/Forms/Form_Validation_Token_Manager.php
+
+		-
+			message: '#^Method CampaignBridge\\Admin\\REST\\Form_Rest_Controller\:\:is_form_data_too_large\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Admin/REST/Form_Rest_Controller.php
+
+		-
+			message: '#^Method CampaignBridge\\Admin\\REST\\Form_Rest_Controller\:\:sanitize_and_validate_form_data\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Admin/REST/Form_Rest_Controller.php
+
+		-
+			message: '#^Method CampaignBridge\\Admin\\REST\\Form_Rest_Controller\:\:sanitize_and_validate_form_data\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Admin/REST/Form_Rest_Controller.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 9
+			path: includes/Admin/REST/Form_Rest_Controller.php
+
+		-
+			message: '#^Call to an undefined method CampaignBridge\\Admin\\Core\\Form\:\:auto_layout\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: includes/Admin/Screens/conditional-test.php
+
+		-
+			message: '#^Call to an undefined method CampaignBridge\\Admin\\Core\\Form\:\:auto_layout\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: includes/Admin/Screens/form-fields-demo.php
+
+		-
+			message: '#^Variable \$screen might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: includes/Admin/Screens/form-fields-demo.php
+
+		-
+			message: '#^Call to an undefined method CampaignBridge\\Admin\\Core\\Form\:\:text\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: includes/Admin/Screens/settings/general.php
+
+		-
+			message: '#^Call to an undefined method CampaignBridge\\Admin\\Core\\Form\:\:select\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: includes/Admin/Screens/settings/providers.php
+
+		-
+			message: '#^Instanceof between WP_User and WP_User will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: includes/Core/Encryption.php
+
+		-
+			message: '#^Instanceof between WP_User and WP_User will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: includes/Core/Error_Handler.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: includes/Core/Storage.php
+
+		-
+			message: '#^Method CampaignBridge\\Core\\Storage\:\:batch_update_post_meta\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Core/Storage.php
+
+		-
+			message: '#^Parameter \#4 \$autoload of function add_option expects bool\|null, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/Core/Storage.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:add\(\) has parameter \$options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:debug\(\) has parameter \$opts with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:error\(\) has parameter \$opts with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:generate_notice_key\(\) has parameter \$notice with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:get_all\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:get_all_notices\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:info\(\) has parameter \$opts with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:load_persisted\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:save_persistent_notice\(\) has parameter \$notice with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:success\(\) has parameter \$opts with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Method CampaignBridge\\Notices\:\:warning\(\) has parameter \$opts with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Property CampaignBridge\\Notices\:\:\$current type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: includes/Notices.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 5
+			path: includes/Notices.php
+
+		-
+			message: '#^Static method CampaignBridge\\Post_Types\\Post_Type_Email_Template\:\:sanitize_category_field\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: includes/Post_Types/Post_Type_Email_Template.php
+
+		-
+			message: '#^Method CampaignBridge\\REST\\Abstract_Rest_Controller\:\:get_validated_post_type\(\) has parameter \$request with generic class WP_REST_Request but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: includes/REST/Abstract_Rest_Controller.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: includes/REST/Editor_Settings_Routes.php
+
+		-
+			message: '#^Method CampaignBridge\\REST\\Editor_Settings_Routes\:\:handle_request\(\) has parameter \$req with generic class WP_REST_Request but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: includes/REST/Editor_Settings_Routes.php
+
+		-
+			message: '#^Parameter \#2 \$block_editor_context of function get_block_editor_settings expects WP_Block_Editor_Context, WP_Post_Type given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/REST/Editor_Settings_Routes.php
+
+		-
+			message: '#^Property CampaignBridge\\REST\\Editor_Settings_Routes\:\:\$option_name is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: includes/REST/Editor_Settings_Routes.php
+
+		-
+			message: '#^Method CampaignBridge\\REST\\Routes\:\:r_decrypt_field\(\) has parameter \$request with generic class WP_REST_Request but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: includes/REST/Routes.php
+
+		-
+			message: '#^Method CampaignBridge\\REST\\Routes\:\:r_encrypt_field\(\) has parameter \$request with generic class WP_REST_Request but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: includes/REST/Routes.php
+
+		-
+			message: '#^Method CampaignBridge\\REST\\Routes\:\:r_posts\(\) has parameter \$req with generic class WP_REST_Request but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: includes/REST/Routes.php
+
+		-
+			message: '#^Static property CampaignBridge\\REST\\Routes\:\:\$option_name is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: includes/REST/Routes.php
+
+		-
+			message: '#^Static property CampaignBridge\\REST\\Routes\:\:\$providers is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: includes/REST/Routes.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-array\<string, mixed\> in isset\(\) does not exist\.$#'
+			identifier: isset.offset
+			count: 1
+			path: includes/Services/Email/BlockProcessor.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 2
+			path: includes/Services/Email/BlockProcessor.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: includes/Services/Email/BlockProcessor.php

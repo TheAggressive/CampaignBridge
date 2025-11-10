@@ -1,0 +1,16 @@
+{
+  "core": "WordPress/WordPress",
+  "plugins": ["."],
+  "port": 9000,
+  "phpmyadminPort": 9002,
+  "config": {
+    "WP_DEBUG": true,
+    "SCRIPT_DEBUG": true
+  },
+  "env": {
+    "tests": {
+      "port": 9081,
+      "phpmyadminPort": 9082
+    }
+  }
+}

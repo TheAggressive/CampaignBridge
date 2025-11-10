@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+	bootstrap="tests/Bootstrap.php"
+	executionOrder="depends,defects"
+	beStrictAboutOutputDuringTests="true"
+	failOnRisky="true"
+	failOnWarning="true"
+	colors="true"
+	stopOnFailure="false"
+	>
+	<testsuites>
+		<testsuite name="unit">
+			<directory suffix="Test.php">tests/Unit</directory>
+		</testsuite>
+		<testsuite name="integration">
+			<directory suffix="Test.php">tests/Integration</directory>
+		</testsuite>
+		<testsuite name="security">
+			<directory suffix="Test.php">tests/Security</directory>
+		</testsuite>
+		<testsuite name="performance">
+			<directory suffix="Test.php">tests/Performance</directory>
+		</testsuite>
+		<testsuite name="accessibility">
+			<directory suffix="Test.php">tests/Accessibility</directory>
+		</testsuite>
+	</testsuites>
+
+	<coverage>
+		<include>
+			<directory suffix=".php">includes</directory>
+		</include>
+		<exclude>
+			<directory>includes/vendor</directory>
+			<file>includes/index.php</file>
+		</exclude>
+		<report>
+			<html outputDirectory="coverage/html" lowUpperBound="50" highLowerBound="90"/>
+			<text outputFile="coverage/coverage.txt" showUncoveredFiles="false" showOnlySummary="true"/>
+			<clover outputFile="coverage/clover.xml"/>
+		</report>
+	</coverage>
+
+	<logging>
+		<junit outputFile="coverage/junit.xml"/>
+	</logging>
+
+	<php>
+		<const name="WP_TESTS_PHPUNIT_POLYFILLS_PATH" value="vendor/yoast/phpunit-polyfills"/>
+		<server name="SERVER_NAME" value="http://localhost:9000"/>
+		<env name="WP_TESTS_DOMAIN" value="localhost:9081"/>
+		<env name="WP_TESTS_EMAIL" value="admin@example.org"/>
+		<env name="WP_TESTS_TITLE" value="Test Blog"/>
+		<env name="WP_PHP_BINARY" value="php"/>
+		<env name="WP_TESTS_FORCE_KNOWN_BUGS" value="0"/>
+		<env name="WP_TESTS_MULTISITE" value="0"/>
+		<!-- Database connection handled by wp-tests-config.php -->
+		<!-- Memory and timeout settings for better stability -->
+		<ini name="memory_limit" value="256M"/>
+		<ini name="max_execution_time" value="300"/>
+		<!-- Disable process isolation for wp-env stability -->
+		<env name="WP_TESTS_FORCE_PROCESS_ISOLATION" value="0"/>
+	</php>
+</phpunit>

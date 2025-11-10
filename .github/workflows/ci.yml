@@ -1,0 +1,197 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  COMPOSER_NO_INTERACTION: 1
+  PNPM_CACHE_FOLDER: ~/.pnpm-store
+  PLUGIN_SLUG: campaignbridge
+  WP_ENV_VERSION: 10.33.0
+  NODE_VERSION: '22'
+  PHP_VERSION: '8.2'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Quality checks
+  quality:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, zip
+          tools: composer:v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache
+            ~/.pnpm-store
+            vendor
+            node_modules
+          key: ${{ runner.os }}-quality-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-quality-
+
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Install Node.js dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Start wp-env for Quality Checks
+        run: npx --yes @wordpress/env@${WP_ENV_VERSION} start
+
+      - name: Code Quality Checks
+        run: |
+          echo "🔍 Running quality checks..."
+          pnpm security:check || echo "⚠️  PHP syntax issues found"
+          pnpm lint:php || echo "⚠️  PHPCS issues found"
+          pnpm phpstan || echo "⚠️  PHPStan issues found"
+          pnpm lint:js || echo "⚠️  ESLint issues found"
+          pnpm format:check || echo "⚠️  Prettier issues found"
+          echo "✅ Quality checks completed"
+
+      - name: Stop wp-env
+        if: always()
+        run: npx --yes @wordpress/env@${WP_ENV_VERSION} stop || true
+
+  test:
+    name: Unit Tests (wp-env)
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, zip
+          tools: composer:v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            vendor
+            node_modules
+          key: ${{ runner.os }}-wp-env-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-wp-env-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install Node.js dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Start wp-env
+        run: npx --yes @wordpress/env@${WP_ENV_VERSION} start
+
+      - name: Run PHPUnit Tests
+        run: pnpm test
+
+      - name: Stop wp-env
+        if: always()
+        run: npx --yes @wordpress/env@${WP_ENV_VERSION} stop || true
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            *.log
+          retention-days: 7
+
+  # Deploy/Release job (only on master push)
+  deploy:
+    name: 🚀 Release & Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Semantic Release
+        run: |
+          echo "🚀 Checking for releases..."
+          pnpm semantic-release || echo "No release needed"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

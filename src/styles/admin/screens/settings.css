@@ -1,0 +1,169 @@
+/**
+ * CampaignBridge Settings Page Styles
+ *
+ * Styles for the settings configuration interface using WordPress admin design patterns.
+ * Follows BEM CSS class naming and styling conventions with proper nested structure.
+ */
+
+/* Import global design tokens */
+
+.campaignbridge-settings {
+  /* Verify status indicator */
+  &__verify-status {
+    margin-left: 0.5rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+
+    &--valid {
+      color: #10b981; /* emerald-500 */
+    }
+
+    &--invalid {
+      color: #ef4444; /* red-500 */
+    }
+  }
+
+  /* API key field container */
+  &__api-key-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+
+    .campaignbridge-settings__api-key-field {
+      flex: 1;
+      font-family:
+        ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono',
+        Menlo, monospace;
+      letter-spacing: 0.025em;
+    }
+  }
+
+  /* API key toggle button */
+  &__api-key-toggle {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* API Key Field Styling */
+  &__api-key-field {
+    position: relative;
+
+    .api-key-display {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .api-key-masked {
+      border-radius: 0.25rem;
+      border: 1px solid #d1d5db;
+      background-color: #f9fafb;
+      padding: 0.5rem 0.75rem;
+      color: #374151;
+      font-family:
+        ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono',
+        Menlo, monospace;
+      letter-spacing: 0.05em;
+    }
+
+    .api-key-toggle {
+      font-size: 0.875rem;
+    }
+
+    .api-key-edit {
+      border-radius: 0.5rem;
+      border: 1px solid #bfdbfe;
+      background-color: #eff6ff;
+      padding: 0.75rem;
+
+      .api-key-input {
+        margin-bottom: 0.5rem;
+      }
+
+      .button {
+        margin-right: 0.5rem;
+      }
+    }
+  }
+
+  /* Form table styles */
+  &__form-table {
+    th {
+      font-weight: 600;
+    }
+
+    .description {
+      font-style: italic;
+      color: #6b7280; /* gray-500 */
+      margin-top: 0.25rem;
+    }
+  }
+
+  /* Provider-specific settings container */
+  &__provider-fields {
+    background: #f9fafb; /* gray-50 */
+    border: 1px solid #e5e7eb; /* gray-200 */
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-top: 1rem;
+
+    h4 {
+      margin: 0 0 0.75rem 0;
+      color: #374151; /* gray-700 */
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+  }
+
+  /* Status message component */
+  &__status-message {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  /* Dropdown container layout */
+  &__dropdown-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+
+    select {
+      flex: 1;
+      min-width: 12.5rem;
+    }
+
+    button {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+  }
+
+  /* Message Components */
+  &__message {
+    margin-top: 0.5rem;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+
+    &--error {
+      border: 1px solid #fecaca;
+      background-color: #fef2f2;
+      color: #b91c1c;
+    }
+
+    &--success {
+      border: 1px solid #bbf7d0;
+      background-color: #f0fdf4;
+      color: #166534;
+    }
+
+    &--warning {
+      border: 1px solid #fef3c7;
+      background-color: #fffbeb;
+      color: #92400e;
+    }
+  }
+}

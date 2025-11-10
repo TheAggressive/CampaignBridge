@@ -1,0 +1,95 @@
+/**
+ * Animation styles for conditional field transitions
+ */
+
+/* Slide down animation */
+@keyframes conditionalSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Slide up animation */
+@keyframes conditionalSlideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+
+/* Fade in animation */
+@keyframes conditionalFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade out animation */
+@keyframes conditionalFadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/* Apply animations to conditional fields */
+.campaignbridge-field--showing {
+  animation: conditionalSlideDown 0.3s ease-out;
+}
+
+.campaignbridge-field--hiding {
+  animation: conditionalSlideUp 0.3s ease-out;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .campaignbridge-field--showing,
+  .campaignbridge-field--hiding {
+    animation: none;
+  }
+
+  .campaignbridge-field {
+    transition: none;
+  }
+}
+
+/* Loading spinner for conditional evaluation */
+.campaignbridge-conditional-loading::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: conditionalSpin 1s linear infinite;
+  margin-left: 8px;
+}
+
+@keyframes conditionalSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}

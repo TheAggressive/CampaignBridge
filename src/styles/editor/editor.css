@@ -1,0 +1,146 @@
+/* Declare the layers you'll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Editor-specific variables */
+:root {
+  --cb-sidebar-width: 8rem;
+  --cb-secondary-sidebar-width: 24rem;
+}
+
+/* Editor Shell wrapper (outside InterfaceSkeleton) */
+.cb-editor-shell {
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Let WordPress InterfaceSkeleton handle the layout - only override what we need */
+.cb-editor {
+  /* Make content section background transparent to let page background show through */
+  .components-interface-skeleton__content {
+    background: transparent;
+  }
+
+  &__canvas-tools {
+    @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
+  }
+}
+
+/* Basic sidebar styling - CSS-controlled widths */
+.cb-editor {
+  /* Content area styling within sidebar */
+  .cb-editor__sidebar-content {
+    height: 100%;
+    overflow-y: auto;
+
+    &-inner {
+      overflow-x: hidden !important;
+    }
+  }
+}
+
+/* Custom header styling */
+.cb-editor {
+  &__header {
+    /* Only override if you need custom header styling */
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: saturate(160%) blur(8px);
+    display: flex;
+    flex-direction: column-reverse;
+  }
+
+  &__title {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  &__divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 1px;
+  }
+}
+
+/* Template selector styling */
+.cb-editor {
+  &__templates-select {
+    .components-base-control__label {
+      display: none;
+    }
+
+    .components-base-control__field {
+      margin-bottom: 0;
+    }
+  }
+}
+
+/* Empty state styling */
+.cb-editor {
+  &__empty {
+    display: grid;
+    place-items: center;
+    height: calc(100vh - 48px);
+    padding: 24px;
+    background: transparent;
+  }
+
+  &__empty-card {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 6px;
+    padding: 24px 20px;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  &__empty-icon {
+    color: #6b7280;
+    margin-bottom: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  &__empty-title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  &__empty-desc {
+    margin: 0 0 16px;
+    color: #4b5563;
+  }
+
+  &__empty-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &__empty-primary.components-button {
+    height: 36px;
+    padding: 0 12px;
+  }
+}
+
+/* Snackbar within editor */
+.cb-editor {
+  &__snackbar {
+    .components-snackbar-list {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+    }
+  }
+}

@@ -1,0 +1,100 @@
+/**
+ * Validation styling specifically for conditional fields
+ */
+
+/* Hide validation errors for hidden fields */
+.campaignbridge-field[data-conditional-visible='false']
+  .campaignbridge-field__error,
+.campaignbridge-field[data-conditional-visible='false'] .field-error-message {
+  display: none !important;
+}
+
+/* Show validation errors for visible required fields */
+.campaignbridge-field[data-conditional-visible='true'][data-conditional-required='true']:invalid {
+  border-color: #dc3232;
+  box-shadow: 0 0 0 1px #dc3232;
+}
+
+/* Required field styling for conditionals */
+.campaignbridge-field[data-conditional-required='true']
+  .campaignbridge-field__input:invalid {
+  border-color: #dc3232;
+}
+
+/* Validation feedback for conditional fields */
+.campaignbridge-field[data-conditional-valid='true']
+  .campaignbridge-field__input {
+  border-color: #46b450;
+  box-shadow: 0 0 0 1px #46b450;
+}
+
+.campaignbridge-field[data-conditional-valid='false']
+  .campaignbridge-field__input {
+  border-color: #dc3232;
+  box-shadow: 0 0 0 1px #dc3232;
+}
+
+/* Conditional validation messages */
+.campaignbridge-field__conditional-error {
+  color: #dc3232;
+  font-size: 0.9em;
+  margin-top: 5px;
+  display: none;
+}
+
+.campaignbridge-field[data-conditional-error='true']
+  .campaignbridge-field__conditional-error {
+  display: block;
+}
+
+/* Required field indicators that appear conditionally */
+.campaignbridge-field__required-indicator {
+  display: none;
+  color: #dc3232;
+  font-weight: 700;
+  margin-left: 5px;
+}
+
+.campaignbridge-field[data-conditional-required='true']
+  .campaignbridge-field__required-indicator {
+  display: inline;
+}
+
+/* Focus states for conditional fields */
+.campaignbridge-field[data-conditional-visible='true']
+  .campaignbridge-field__input:focus {
+  border-color: #007cba;
+  box-shadow: 0 0 0 1px #007cba;
+}
+
+/* Disabled state for hidden fields */
+.campaignbridge-field[data-conditional-visible='false']
+  .campaignbridge-field__input {
+  background-color: #f7f7f7;
+  cursor: not-allowed;
+}
+
+/* Validation summary for conditional forms */
+.campaignbridge-conditional-validation-summary {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 10px 0;
+}
+
+.campaignbridge-conditional-validation-summary__title {
+  font-weight: 600;
+  color: #856404;
+  margin: 0 0 8px 0;
+}
+
+.campaignbridge-conditional-validation-summary__list {
+  margin: 0;
+  padding-left: 20px;
+  color: #856404;
+}
+
+.campaignbridge-conditional-validation-summary__list li {
+  margin-bottom: 4px;
+}

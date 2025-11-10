@@ -1,0 +1,84 @@
+/* Declare the layers you'll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@layer components {
+  /* Block: Post Types Switches Container */
+  .cb-post-types__switches-box {
+    @apply mt-4 mb-4 max-h-fit max-w-3xl overflow-auto rounded-lg border border-gray-200 bg-white p-6 shadow-sm;
+  }
+
+  /* Block: Post Types Switches Group */
+  .cb-post-types__switches-group {
+    @apply mb-8 last:mb-0;
+  }
+
+  /* Block: Post Types Switches Title */
+  .cb-post-types__switches-title {
+    @apply mb-6 font-semibold;
+  }
+
+  /* Block: Post Types Switches Grid */
+  .cb-post-types__switches-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  /* Block: Individual Switch Component */
+  .cb-post-types__switch {
+    @apply relative mr-4 mb-4 inline-flex items-center gap-4 font-medium;
+
+    /* Element: Hidden Input */
+    & input {
+      @apply pointer-events-none absolute h-0 w-0 appearance-none opacity-0;
+    }
+
+    /* Element: Slider Track */
+    & .cb-post-types__slider {
+      position: relative;
+      border-radius: 9999px;
+      height: 1rem;
+      width: 2.25rem;
+      background-color: #d1d5db;
+      transition: background-color 200ms;
+
+      /* Element: Slider Thumb */
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0.125rem;
+        left: 0.125rem;
+        height: 0.75rem;
+        width: 0.75rem;
+        border-radius: 9999px;
+        background-color: white;
+        box-shadow:
+          0 1px 3px 0 rgba(0, 0, 0, 0.1),
+          0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        transition: transform 200ms;
+      }
+    }
+
+    /* Modifier: Checked State */
+    & input:checked + .cb-post-types__slider {
+      @apply bg-emerald-600;
+
+      &::after {
+        @apply translate-x-5;
+      }
+    }
+
+    /* Modifier: Disabled State */
+    & input:disabled + .cb-post-types__slider {
+      @apply cursor-not-allowed opacity-50;
+    }
+
+    /* Modifier: Focus State */
+    & input:focus-visible + .cb-post-types__slider {
+      @apply outline-2 outline-offset-2 outline-emerald-600;
+    }
+  }
+}

@@ -1,0 +1,105 @@
+/**
+ * CampaignBridge Radio Button Component
+ *
+ * Styled radio button component for form fields.
+ * Follows BEM CSS class naming conventions.
+ */
+
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+.campaignbridge-radio {
+  /* Use accent-color for modern browsers */
+  accent-color: var(--color-success); /* Green accent color */
+
+  /* Radio group container */
+  &-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Legend for the radio group */
+  &-legend {
+    font-weight: var(--form-font-weight-label);
+    color: var(--color-foreground);
+    font-size: var(--form-font-size-label);
+    line-height: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Radio input - use native styling with accent-color */
+  &-input {
+    /* Let accent-color handle the native styling */
+    cursor: pointer;
+  }
+
+  /* Radio label */
+  &-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--color-foreground);
+    line-height: 1.25rem;
+    margin-bottom: 0;
+
+    /* Hover state for the label */
+    &:hover .campaignbridge-radio-input:not(:checked) {
+      border-color: var(--color-accent);
+    }
+
+    /* Focus state */
+    &:focus-within {
+      outline: 2px solid var(--color-ring);
+      outline-offset: 2px;
+    }
+  }
+
+  /* Radio text content */
+  &-text {
+    flex: 1;
+    margin: 0;
+  }
+
+  /* Field wrapper for radio buttons */
+  &-field-wrapper {
+    .campaignbridge-radio-group {
+      margin-top: 0.5rem;
+    }
+  }
+}
+
+/* Layout variants */
+.campaignbridge-radio {
+  /* Horizontal layout */
+  &-group--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+
+    .campaignbridge-radio-label {
+      flex-direction: row;
+      align-items: center;
+      margin-bottom: 0;
+    }
+  }
+
+  /* Compact layout */
+  &-group--compact {
+    gap: 0.5rem;
+
+    .campaignbridge-radio-label {
+      gap: 0.5rem;
+    }
+
+    .campaignbridge-radio-text {
+      font-size: 0.8125rem;
+    }
+  }
+}

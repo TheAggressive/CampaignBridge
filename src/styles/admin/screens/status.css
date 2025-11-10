@@ -1,0 +1,231 @@
+/**
+ * System Status Styles for CampaignBridge
+ *
+ * Dedicated stylesheet for the Status admin page.
+ *
+ * @package CampaignBridge
+ */
+
+/* Global design tokens are imported in styles.css */
+@import 'tailwindcss';
+
+@layer components {
+  .cb-status {
+    /* Status Overview */
+    &__overview {
+      @apply mt-4;
+
+      /* Reliable vertical rhythm between sections */
+      > * + * {
+        margin-top: calc(var(--spacing) * 8);
+      }
+    }
+
+    /* Status Section */
+    &__section {
+      @apply rounded-lg border border-gray-200 bg-white p-6 shadow-sm;
+
+      h2 {
+        @apply mt-0 mb-6 border-b border-gray-200 pb-2 text-xl font-semibold text-gray-900;
+      }
+    }
+
+    /* Status Grid */
+    &__grid {
+      @apply gap-6;
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+      display: grid;
+    }
+
+    @media (min-width: 48rem) {
+      &__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    /* Status Cards */
+    &__card {
+      border-radius: var(--radius-lg);
+      border-style: var(--tw-border-style);
+      border-width: 1px;
+      border-color: var(--color-gray-200);
+      background-color: var(--color-gray-50);
+      padding: calc(var(--spacing) * 4);
+
+      h3 {
+        margin-bottom: calc(var(--spacing) * 2);
+        font-size: var(--text-sm);
+        line-height: var(--tw-leading, var(--text-sm--line-height));
+        --tw-font-weight: var(--font-weight-medium);
+        font-weight: var(--font-weight-medium);
+        color: var(--color-gray-600);
+      }
+    }
+
+    &__value {
+      font-size: var(--text-2xl);
+      line-height: var(--tw-leading, var(--text-2xl--line-height));
+      --tw-font-weight: var(--font-weight-bold);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-gray-900);
+
+      &--ok {
+        color: var(--color-emerald-600);
+      }
+
+      &--warning {
+        color: var(--color-yellow-600);
+      }
+
+      &--error {
+        color: var(--color-red-600);
+      }
+    }
+
+    &__detail {
+      margin-top: calc(var(--spacing) * 1);
+      font-size: var(--text-sm);
+      line-height: var(--tw-leading, var(--text-sm--line-height));
+      color: var(--color-gray-600);
+    }
+
+    /* Status Details */
+    &__details {
+      margin-top: calc(var(--spacing) * 6);
+      border-top-style: var(--tw-border-style);
+      border-top-width: 1px;
+      border-color: var(--color-gray-200);
+      padding-top: calc(var(--spacing) * 6);
+
+      h4 {
+        margin-bottom: calc(var(--spacing) * 4);
+        font-size: var(--text-lg);
+        line-height: var(--tw-leading, var(--text-lg--line-height));
+        --tw-font-weight: var(--font-weight-medium);
+        font-weight: var(--font-weight-medium);
+        color: var(--color-gray-900);
+      }
+    }
+
+    /* Block and Template Lists */
+    &__block-list,
+    &__template-list {
+      margin-top: calc(var(--spacing) * 4);
+    }
+
+    &__block-item,
+    &__template-item {
+      border-style: var(--tw-border-style);
+      border-width: 1px;
+      border-color: var(--color-gray-200);
+      background-color: var(--color-gray-50);
+      padding: calc(var(--spacing) * 3);
+      border-radius: 0.25rem;
+      justify-content: space-between;
+      align-items: center;
+      display: flex;
+
+      code {
+        background-color: var(--color-white);
+        padding-inline: calc(var(--spacing) * 2);
+        padding-block: calc(var(--spacing) * 1);
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
+        line-height: var(--tw-leading, var(--text-sm--line-height));
+        color: var(--color-gray-700);
+        border-radius: 0.25rem;
+      }
+    }
+
+    &__block-status {
+      @apply text-lg;
+    }
+
+    &__template-item {
+      strong {
+        @apply text-gray-900;
+      }
+    }
+
+    &__template-meta {
+      @apply rounded-md bg-gray-100 p-2 text-sm text-gray-600;
+    }
+
+    /* Specificity overrides kept within the same layer and block */
+    & &__section h2 {
+      @apply mt-0 mb-6 border-b border-gray-200 pb-2 text-xl font-semibold text-gray-900;
+    }
+
+    & &__grid {
+      display: grid;
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+
+    @media (min-width: 48rem) {
+      & &__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    & &__card h3 {
+      margin-bottom: calc(var(--spacing) * 2);
+      font-size: var(--text-sm);
+      line-height: var(--tw-leading, var(--text-sm--line-height));
+      --tw-font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-gray-600);
+    }
+
+    & &__value {
+      font-size: var(--text-2xl);
+      line-height: var(--tw-leading, var(--text-2xl--line-height));
+      --tw-font-weight: var(--font-weight-bold);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-gray-900);
+    }
+
+    & &__detail {
+      margin-top: calc(var(--spacing) * 1);
+      font-size: var(--text-sm);
+      line-height: var(--tw-leading, var(--text-sm--line-height));
+      color: var(--color-gray-600);
+    }
+
+    & &__section {
+      @apply rounded-lg border border-gray-200 bg-white p-6 shadow-sm;
+    }
+
+    & &__card {
+      border-radius: var(--radius-lg);
+      border-style: var(--tw-border-style);
+      border-width: 1px;
+      border-color: var(--color-gray-200);
+      background-color: var(--color-gray-50);
+      padding: calc(var(--spacing) * 4);
+    }
+
+    & &__block-item,
+    & &__template-item {
+      border-style: var(--tw-border-style);
+      border-width: 1px;
+      border-color: var(--color-gray-200);
+      background-color: var(--color-gray-50);
+      padding: calc(var(--spacing) * 3);
+      border-radius: 0.25rem;
+      justify-content: space-between;
+      align-items: center;
+      display: flex;
+    }
+
+    & &__block-item code {
+      background-color: var(--color-white);
+      padding-inline: calc(var(--spacing) * 2);
+      padding-block: calc(var(--spacing) * 1);
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      line-height: var(--tw-leading, var(--text-sm--line-height));
+      color: var(--color-gray-700);
+      border-radius: 0.25rem;
+    }
+  }
+}

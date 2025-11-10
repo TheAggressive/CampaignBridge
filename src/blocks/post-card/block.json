@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/post-card",
+  "title": "Post Card",
+  "category": "widgets",
+  "icon": "media-document",
+  "description": "A container for displaying post content in email campaigns. Add post elements inside this card.",
+  "supports": {
+    "html": false,
+    "innerBlocks": true,
+    "spacing": {
+      "margin": true,
+      "padding": true
+    },
+    "color": {
+      "background": true,
+      "link": true
+    },
+    "border": {
+      "color": true,
+      "radius": true,
+      "style": true,
+      "width": true
+    },
+    "shadow": true,
+    "layout": {
+      "allowSwitching": false,
+      "allowInheriting": false,
+      "allowOrienting": false,
+      "allowEditing": false
+    }
+  },
+  "attributes": {
+    "slotId": { "type": "string", "default": "" },
+    "postType": { "type": "string", "default": "post" },
+    "postId": { "type": "number", "default": 0 },
+    "slotLinkEnabled": { "type": "boolean", "default": false },
+    "slotLinkTo": { "type": "string", "default": "post" }
+  },
+  "providesContext": {
+    "campaignbridge:postId": "postId",
+    "campaignbridge:postType": "postType"
+  },
+  "editorScript": "file:./index.js",
+  "render": "file:./render.php"
+}

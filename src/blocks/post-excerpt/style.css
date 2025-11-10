@@ -1,0 +1,29 @@
+/* Inline paragraph/link on frontend */
+.wp-block-paragraph.is-inline-readmore {
+  display: inline;
+  margin: 0;
+  vertical-align: baseline;
+}
+
+.wp-block-paragraph.is-inline-readmore a {
+  white-space: nowrap;
+  line-height: inherit;
+}
+
+/* Inline buttons wrapper on frontend */
+.wp-block-campaignbridge-post-excerpt.has-inline-readmore
+  .wp-block-buttons.is-inline-readmore {
+  display: inline-flex;
+  gap: 0;
+  margin: 0;
+  vertical-align: baseline;
+}
+
+.wp-block-campaignbridge-post-excerpt .wp-block-button {
+  margin: 0;
+}
+
+.wp-block-campaignbridge-post-excerpt .wp-block-button__link {
+  white-space: nowrap;
+  line-height: inherit;
+}

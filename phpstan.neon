@@ -1,0 +1,14 @@
+parameters:
+    level: 6
+    paths:
+      - includes/
+      - campaignbridge.php      # Include main plugin file
+    excludePaths:
+      - vendor/                 # Third-party dependencies
+      - node_modules/           # Node.js dependencies
+      - assets/?                # Compiled assets (optional)
+      - dist/?                  # Build output (optional)
+    scanDirectories:
+      - includes/               # Include for custom rules and classes
+    # Using official WordPress stubs via php-stubs/wordpress-stubs package
+

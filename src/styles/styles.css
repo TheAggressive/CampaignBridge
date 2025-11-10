@@ -1,0 +1,32 @@
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Global design tokens - must be imported first */
+@import './variables';
+
+/* ===== THEME CONFIGURATION ===== */
+@theme {
+  /* Brand colors using our global tokens */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+
+  /* WordPress admin integration colors */
+  --color-wp-border: #dcdcde;
+
+  /* Component-specific tokens using global variables */
+  --cb-max-width: var(--container-2xl);
+  --cb-iframe-width: 600px; /* Scaled up from 384px */
+  --cb-iframe-height: 100vh;
+  --cb-codebox-height: 70vh;
+  --cb-switches-max-height: var(--container-sm);
+}
+
+@layer components {
+  #campaignbridge-verify-status {
+    @apply font-bold;
+  }
+}

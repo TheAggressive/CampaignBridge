@@ -1,0 +1,140 @@
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/**
+ * CampaignBridge Switch/Toggle Component
+ *
+ * Styled toggle switch component for form fields.
+ * Follows BEM CSS class naming conventions.
+ */
+
+.campaignbridge-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--form-radius);
+
+  /* Hide the actual checkbox input */
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  /* Label that acts as the clickable area */
+  &__label {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 32px;
+    transition: background-color 0.15s ease-in-out;
+  }
+
+  /* The slider/button that moves */
+  &__slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-muted);
+    transition: var(--form-transition);
+    border-radius: calc(var(--form-radius) * 2);
+    border: 1px solid var(--color-border);
+
+    &::before {
+      position: absolute;
+      content: '';
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition:
+        transform 0.4s,
+        box-shadow 0.15s ease-in-out;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  /* Hover states */
+  &:hover &__slider {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+
+  /* Focus states */
+  input:focus-visible + &__label &__slider {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    outline: none;
+  }
+
+  /* Checked states */
+  input:checked + &__label &__slider {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+
+    &::before {
+      transform: translateX(26px);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  /* Checked hover states */
+  input:checked:hover + &__label &__slider {
+    background-color: hsl(var(--color-primary) / 0.9);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+  }
+
+  /* Disabled states */
+  input:disabled + &__label {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  /* Size variants */
+  &--small {
+    width: 36px;
+    height: 20px;
+
+    &__slider::before {
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+    }
+
+    input:checked + &__label &__slider::before {
+      transform: translateX(16px);
+    }
+  }
+
+  &--large {
+    width: 60px;
+    height: 28px;
+
+    &__slider::before {
+      height: 22px;
+      width: 22px;
+      left: 2px;
+      bottom: 2px;
+    }
+
+    input:checked + &__label &__slider::before {
+      transform: translateX(32px);
+    }
+  }
+}

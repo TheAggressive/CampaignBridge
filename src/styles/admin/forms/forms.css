@@ -1,0 +1,37 @@
+/**
+ * CampaignBridge Form Styles - Main Entry Point
+ *
+ * Imports all form-related stylesheets in the correct order.
+ * Uses global design tokens and Tailwind CSS v4 integration.
+ */
+
+/* Declare the layers you’ll use (order matters) */
+@layer theme, components, utilities;
+
+/* Import only what you want; skip base/preflight */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* ===== IMPORT ORDER ===== */
+
+/* 1. Global design tokens (must be imported first) */
+@import '../../variables.css';
+
+/* 2. Form-specific design tokens (extends global tokens) */
+@import './variables.css';
+
+/* 3. Component styles (uses both global and form-specific tokens) */
+@import './form.css';
+@import './field.css';
+@import './button.css';
+@import './encrypted.css';
+
+/* 4. Reusable component patterns (shared across field types) */
+@import './repeater.css';
+@import './validation/validation.css';
+
+/* 7. Specific field type styles */
+@import './checkbox.css';
+@import './radio.css';
+@import './switch.css';
+@import './file.css';

@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<ruleset name="CampaignBridge">
+  <description>CampaignBridge WordPress Coding Standards - Modern PHP with WordPress conventions.</description>
+
+  <!-- Storage abstraction layer - intentionally uses direct storage functions and security is handled at application layer -->
+  <exclude-pattern>includes/Core/Storage.php</exclude-pattern>
+
+  <!-- Base WordPress rules -->
+  <rule ref="WordPress"/>
+  <rule ref="WordPress-Extra"/>
+  <rule ref="WordPress-Docs"/>
+  <rule ref="WordPress.Security"/>
+
+  <!-- Custom CampaignBridge rules -->
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Hooks/HookUsageSniff.php">
+    <severity>warning</severity>
+  </rule>
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Security/SecurityValidationSniff.php">
+    <severity>warning</severity>
+  </rule>
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Database/DatabaseOperationSniff.php">
+    <severity>error</severity>
+  </rule>
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Logging/DirectLoggingSniff.php">
+    <severity>warning</severity>
+  </rule>
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Database/DirectDatabaseQuerySniff.php">
+    <severity>warning</severity>
+  </rule>
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Http/DirectHttpRequestSniff.php">
+    <severity>warning</severity>
+  </rule>
+
+  <rule ref="./phpcs/CampaignBridge/Sniffs/Assets/AssetEnqueueSniff.php">
+    <severity>warning</severity>
+  </rule>
+
+
+  <!-- Exclude build and dependency directories -->
+  <exclude-pattern>vendor/*</exclude-pattern>
+  <exclude-pattern>node_modules/*</exclude-pattern>
+  <exclude-pattern>dist/*</exclude-pattern>
+  <exclude-pattern>assets/*</exclude-pattern>
+
+
+  <!-- Exclude CSS files - formatted with Prettier using spaces (industry standard) -->
+  <exclude-pattern>*.css</exclude-pattern>
+  <exclude-pattern>src/styles/*</exclude-pattern>
+  <exclude-pattern>src/**/*.css</exclude-pattern>
+
+  <rule ref="WordPress.Files.FileName.InvalidClassFileName">
+    <severity>0</severity>
+  </rule>
+
+  <rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
+    <severity>0</severity>
+  </rule>
+
+  <!-- Custom error levels for specific rules -->
+  <rule ref="Generic.Files.LineLength.TooLong">
+    <severity>warning</severity>
+  </rule>
+
+  <!-- Allow WP_REST_Request type hints in REST API methods -->
+  <rule ref="Squiz.Commenting.FunctionComment.IncorrectTypeHint">
+    <exclude-pattern>includes/REST/*.php</exclude-pattern>
+  </rule>
+
+  <rule ref="WordPress.WP.I18n.MissingTranslatorsComment">
+    <severity>warning</severity>
+  </rule>
+
+  <!-- Database Best Practices -->
+  <rule ref="WordPress.DB.RestrictedClasses">
+    <severity>error</severity>
+  </rule>
+  <rule ref="WordPress.DB.RestrictedFunctions">
+    <severity>error</severity>
+  </rule>
+
+  <!-- Code Quality -->
+  <rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+    <severity>warning</severity>
+  </rule>
+  <rule ref="Generic.CodeAnalysis.UnconditionalIfStatement">
+    <severity>warning</severity>
+  </rule>
+  <rule ref="Generic.PHP.NoSilencedErrors">
+    <severity>warning</severity>
+  </rule>
+</ruleset>
+
+

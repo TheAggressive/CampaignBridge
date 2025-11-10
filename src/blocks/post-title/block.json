@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/post-title",
+  "title": "Post Title",
+  "category": "widgets",
+  "icon": "heading",
+  "description": "Displays the post title with customizable typography and styling.",
+  "supports": {
+    "html": false,
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true,
+      "textAlign": true,
+      "__experimentalFontFamily": true,
+      "__experimentalFontWeight": true,
+      "__experimentalFontStyle": true,
+      "__experimentalTextDecoration": true,
+      "__experimentalLetterSpacing": true
+    },
+    "color": {
+      "text": true,
+      "background": true,
+      "link": true
+    },
+    "spacing": {
+      "margin": true,
+      "padding": true
+    },
+    "shadow": true
+  },
+  "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
+  "editorScript": "file:./index.js",
+  "render": "file:./render.php"
+}
