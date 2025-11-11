@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          path: campaignbridge
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -54,24 +56,29 @@ jobs:
 
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+        working-directory: campaignbridge
 
       - name: Install Node.js dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: campaignbridge
 
       - name: Start wp-env
         run: npx --yes @wordpress/env@10.33.0 start
+        working-directory: campaignbridge
 
       - name: Run tests with coverage
         run: pnpm test:coverage
+        working-directory: campaignbridge
 
       - name: Stop wp-env
         if: always()
         run: npx --yes @wordpress/env@10.33.0 stop || true
+        working-directory: .
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          file: coverage/clover.xml
+          file: campaignbridge/coverage/clover.xml
           flags: unittests
           name: PHP Coverage
           fail_ci_if_error: false
@@ -90,13 +97,14 @@ jobs:
             echo "Coverage: ${COVERAGE}%"
             echo "COVERAGE_PERCENTAGE=${COVERAGE}" >> \$GITHUB_ENV
           fi
+        working-directory: campaignbridge
 
       - name: Comment PR with coverage
         if: github.event_name == 'pull_request' && env.COVERAGE_PERCENTAGE
         uses: dorny/test-reporter@v1
         with:
           name: PHPUnit Coverage
-          path: coverage/junit.xml
+          path: campaignbridge/coverage/junit.xml
           reporter: java-junit
           fail-on-error: false
 
@@ -105,5 +113,5 @@ jobs:
         with:
           name: coverage-report-${{ github.run_id }}
           path: |
-            coverage/
+            campaignbridge/coverage/
           retention-days: 30
