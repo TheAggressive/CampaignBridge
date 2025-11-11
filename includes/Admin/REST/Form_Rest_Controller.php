@@ -30,8 +30,8 @@ class Form_Rest_Controller {
 	/**
 	 * Sanitize form data.
 	 *
-	 * @param array $data Form data to sanitize.
-	 * @return array Sanitized form data.
+	 * @param array<string, mixed> $data Form data to sanitize.
+	 * @return array<string, mixed> Sanitized form data.
 	 */
 	public function sanitize_form_data( array $data ): array {
 		return $this->sanitize_and_validate_form_data( $data );
