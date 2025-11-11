@@ -124,12 +124,13 @@ jobs:
       - name: Run Tests with WordPress Core Suite
         run: |
           # Use standard WordPress testing environment set up by install-wp-tests.sh
-          ./vendor/bin/phpunit --coverage-html=coverage --coverage-text --verbose || exit 1
+          ./vendor/bin/phpunit --configuration=phpunit.xml.dist --coverage-html=coverage --coverage-text --verbose || exit 1
         env:
           WP_TESTS_DOMAIN: localhost
           WP_TESTS_EMAIL: admin@example.org
           WP_TESTS_TITLE: Test Blog
           WP_TESTS_DB_HOST: 127.0.0.1:3306
+          WP_TESTS_CONFIG_FILE: /tmp/wordpress-tests-lib/wp-tests-config.php
 
       - name: Upload Coverage
         if: matrix.coverage
