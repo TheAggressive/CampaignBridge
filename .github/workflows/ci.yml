@@ -133,6 +133,7 @@ jobs:
       - name: Stop wp-env
         if: always()
         run: npx --yes @wordpress/env@${WP_ENV_VERSION} stop || true
+        working-directory: .
 
   # Build production assets
   build:
@@ -249,6 +250,7 @@ jobs:
       - name: Stop wp-env
         if: always()
         run: npx --yes @wordpress/env@${WP_ENV_VERSION} stop || true
+        working-directory: .
 
       - name: Upload coverage to Codecov
         if: matrix.coverage
