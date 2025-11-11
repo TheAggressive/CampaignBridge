@@ -54,8 +54,11 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: mbstring, xml, zip, xdebug
-          tools: composer:v2, phpcs, phpstan
+          tools: composer:v2, phpcs, phpstan, cs2pr
           coverage: xdebug
+
+      - name: Install Subversion
+        run: sudo apt-get update && sudo apt-get install -y subversion
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
