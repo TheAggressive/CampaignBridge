@@ -83,18 +83,11 @@ jobs:
           version: 9
           run_install: false
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          path: ~/.local/share/pnpm/store/v3
+          key: ${{ runner.os }}-pnpm-quality-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Cache dependencies
         uses: actions/cache@v4
@@ -154,15 +147,10 @@ jobs:
           version: 9
           run_install: false
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
+          path: ~/.local/share/pnpm/store/v3
           key: ${{ runner.os }}-pnpm-build-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
@@ -220,15 +208,10 @@ jobs:
           version: 9
           run_install: false
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
+          path: ~/.local/share/pnpm/store/v3
           key: ${{ runner.os }}-pnpm-test-${{ matrix.php }}-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Cache test dependencies
@@ -301,15 +284,10 @@ jobs:
           version: 9
           run_install: false
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
+          path: ~/.local/share/pnpm/store/v3
           key: ${{ runner.os }}-pnpm-package-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Install dependencies
@@ -440,15 +418,10 @@ jobs:
           version: 9
           run_install: false
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
+          path: ~/.local/share/pnpm/store/v3
           key: ${{ runner.os }}-pnpm-pr-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Cache dependencies
