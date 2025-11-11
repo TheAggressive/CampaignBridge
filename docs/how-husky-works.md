@@ -427,3 +427,6 @@ Configures commit message validation rules:
 
 
 
+
+
+
