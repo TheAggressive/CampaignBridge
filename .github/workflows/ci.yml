@@ -87,13 +87,10 @@ jobs:
 
       - name: Setup WordPress Testing Suite
         run: |
-          # Download WordPress core for testing
-          wget -O wordpress.zip https://wordpress.org/latest.zip
-          unzip -q wordpress.zip
-          mv wordpress wordpress-core
+          # Setup WordPress testing environment using standard script
+          bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest true
 
-          # Database already created by MySQL service, just set permissions
-          MYSQL_PWD=root mysql -h 127.0.0.1 -P 3306 -u root -e "GRANT ALL PRIVILEGES ON wordpress_test.* TO 'root'@'localhost';"
+          # The script above handles database creation and WordPress setup
 
       - name: Code Quality Checks
         run: |
@@ -109,9 +106,7 @@ jobs:
 
       - name: Run Tests with WordPress Core Suite
         run: |
-          # Use WordPress core testing instead of wp-env
-          export WP_TESTS_DIR=/home/runner/work/CampaignBridge/CampaignBridge/wordpress-core/tests/phpunit
-          export WP_CORE_DIR=/home/runner/work/CampaignBridge/CampaignBridge/wordpress-core
+          # Use standard WordPress testing environment set up by install-wp-tests.sh
           ./vendor/bin/phpunit --coverage-html=coverage --coverage-text --verbose || exit 1
         env:
           WP_TESTS_DOMAIN: localhost
