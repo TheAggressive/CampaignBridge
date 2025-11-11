@@ -91,18 +91,75 @@ jobs:
       - name: Setup WordPress Testing Suite
         run: |
           # Setup WordPress testing environment using standard script
+          echo "Running install-wp-tests.sh..."
           bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest true
 
-          # Ensure wp-tests-config.php exists for PHPUnit
-          echo "Checking for wp-tests-config.php..."
+          # Check if setup was successful
+          echo "Checking WordPress test setup..."
+          ls -la /tmp/wordpress-tests-lib/ || echo "✗ Test library not created"
+
           if [ -f /tmp/wordpress-tests-lib/wp-tests-config.php ]; then
+            echo "✓ wp-tests-config.php found in test library"
             cp /tmp/wordpress-tests-lib/wp-tests-config.php ./wp-tests-config.php
             echo "✓ Copied wp-tests-config.php to project root"
             ls -la wp-tests-config.php
           else
-            echo "✗ ERROR: wp-tests-config.php not found in /tmp/wordpress-tests-lib/"
-            ls -la /tmp/wordpress-tests-lib/ || echo "Test library directory not found"
-            exit 1
+            echo "✗ wp-tests-config.php not created by install-wp-tests.sh"
+            echo "Checking if sample file exists..."
+            ls -la /tmp/wordpress-tests-lib/wp-tests-config-sample.php || echo "Sample file also missing"
+
+            # Try to create config manually
+            echo "Creating wp-tests-config.php manually..."
+            cat > ./wp-tests-config.php << 'EOF'
+<?php
+/* Path to the WordPress codebase you'd like to test. Add a forward slash in the end. */
+define( 'ABSPATH', '/tmp/wordpress/' );
+
+// Test with multisite enabled.
+// Alternatively, use the tests/phpunit/multisite.xml configuration file.
+// define( 'WP_TESTS_MULTISITE', true );
+
+// Force known bugs to be run.
+// Tests with an associated Trac ticket that is still open are normally skipped.
+// define( 'WP_TESTS_FORCE_KNOWN_BUGS', true );
+
+// Test with WordPress debug mode (default).
+define( 'WP_DEBUG', true );
+
+// ** MySQL settings ** //
+
+// This configuration file will be used by the copy of WordPress being tested.
+// wordpress_test is the name of the test database that will be created.
+// It will be dropped and recreated each time the test suite runs, so it should be a test-only database.
+
+// Hostname:port combination.
+define( 'DB_HOST', '127.0.0.1:3306' );
+
+// Database name (same as passed to install-wp-tests.sh)
+define( 'DB_NAME', 'wordpress_test' );
+
+define( 'DB_USER', 'root' );
+define( 'DB_PASSWORD', 'root' );
+
+// Database charset (set to utf8mb4 when testing 5.0+)
+define( 'DB_CHARSET', 'utf8mb4' );
+define( 'DB_COLLATE', '' );
+
+// ** Test settings ** //
+
+// These should be equivalent to the WordPress installation you're testing.
+define( 'WP_TESTS_DOMAIN', 'localhost' );
+define( 'WP_TESTS_EMAIL', 'admin@example.org' );
+define( 'WP_TESTS_TITLE', 'Test Blog' );
+
+// ** Settings to create the database tables ** //
+define( 'WP_TESTS_CONFIG_FILE_PATH', '/tmp/wordpress/wp-tests-config.php' );
+
+// Should be equivalent to the WordPress installation you're testing.
+define( 'WP_PHP_BINARY', 'php' );
+EOF
+            echo "✓ Created wp-tests-config.php manually"
+            ls -la wp-tests-config.php
           fi
 
       - name: Code Quality Checks
