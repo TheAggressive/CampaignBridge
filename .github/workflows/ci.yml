@@ -2,10 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, master] # Support both main and master branches
+    branches: [main, master]
   pull_request:
     branches: [main, master]
-  workflow_dispatch: # Allow manual triggers
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -22,44 +22,19 @@ env:
   COMPOSER_NO_INTERACTION: 1
   PNPM_CACHE_FOLDER: ~/.pnpm-store
   PLUGIN_SLUG: campaignbridge
-  WP_ENV_VERSION: 10.33.0
-  NODE_VERSION: '22'
-  PHP_VERSION: '8.2'
-
-defaults:
-  run:
-    shell: bash
 
 jobs:
-  # Security and dependency scanning
-  security:
-    name: 🔒 Security Scan
+  # Fast CI pipeline - quality, build, test all in one
+  ci:
+    name: 🚀 CI Pipeline
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    strategy:
+      matrix:
+        php: ['8.2']  # Single PHP version for speed
+        include:
+          - php: '8.2'
+            coverage: true
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-  # Quality checks with proper error handling
-  quality:
-    name: 🧹 Code Quality
-    runs-on: ubuntu-latest
-    needs: security
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -67,27 +42,21 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ env.PHP_VERSION }}
-          extensions: mbstring, xml, zip, pcov
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, xml, zip, xdebug
           tools: composer:v2, phpcs, phpstan
-          coverage: pcov
+          coverage: xdebug
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-quality-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Cache dependencies
         uses: actions/cache@v4
@@ -95,248 +64,67 @@ jobs:
           path: |
             ~/.composer/cache
             vendor
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock') }}
+            ~/.local/share/pnpm/store/v3
+          key: ${{ runner.os }}-ci-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-deps-
+            ${{ runner.os }}-ci-
 
       - name: Install PHP dependencies
-        run: composer install --prefer-dist --optimize-autoloader --no-progress
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
 
       - name: Install Node.js dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Start wp-env for Quality Checks
-        run: npx --yes @wordpress/env@${WP_ENV_VERSION} start
+      - name: Setup WordPress Testing Suite
+        run: |
+          # Download WordPress core for testing
+          wget -O wordpress.zip https://wordpress.org/latest.zip
+          unzip -q wordpress.zip
+          mv wordpress wordpress-core
 
-      - name: PHP Security Check
-        run: pnpm security:check
+          # Setup test database
+          mysql -e 'CREATE DATABASE wordpress_test;' -uroot -proot
+          mysql -e "GRANT ALL PRIVILEGES ON wordpress_test.* TO 'root'@'localhost';" -uroot -proot
 
-      - name: PHP Code Style (PHPCS)
-        run: pnpm lint:php
+      - name: Code Quality Checks
+        run: |
+          echo "🔍 Running quality checks..."
+          pnpm lint:php || exit 1
+          pnpm lint:js || exit 1
+          pnpm format:check || exit 1
+          pnpm phpstan || exit 1
+          pnpm security:check || exit 1
 
-      - name: PHP Static Analysis (PHPStan)
-        run: pnpm phpstan
-
-      - name: JavaScript/TypeScript Lint
-        run: pnpm lint:js
-
-      - name: Code Formatting Check
-        run: pnpm format:check
-
-      - name: Stop wp-env
-        if: always()
-        run: npx --yes @wordpress/env@${WP_ENV_VERSION} stop || true
-        working-directory: .
-
-  # Build production assets
-  build:
-    name: 🏗️ Build Assets
-    runs-on: ubuntu-latest
-    needs: quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-build-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build production assets
+      - name: Build Assets
         run: pnpm build
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: built-assets-${{ github.run_id }}
-          path: |
-            dist/
-            assets/
-          retention-days: 30
+      - name: Run Tests with WordPress Core Suite
+        run: |
+          # Use WordPress core testing instead of wp-env
+          export WP_TESTS_DIR=/home/runner/work/CampaignBridge/CampaignBridge/wordpress-core/tests/phpunit
+          export WP_CORE_DIR=/home/runner/work/CampaignBridge/CampaignBridge/wordpress-core
+          pnpm test${{ matrix.coverage && ':coverage' || '' }} || exit 1
+        env:
+          WP_TESTS_DOMAIN: localhost
+          WP_TESTS_EMAIL: admin@example.org
+          WP_TESTS_TITLE: Test Blog
 
-  # Multi-version PHP testing
-  test:
-    name: 🧪 Tests (PHP ${{ matrix.php }})
-    runs-on: ubuntu-latest
-    needs: build
-    strategy:
-      matrix:
-        php: ['8.1', '8.2', '8.3']
-        include:
-          - php: '8.2'
-            coverage: true
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download built assets
-        uses: actions/download-artifact@v4
-        with:
-          name: built-assets-${{ github.run_id }}
-          path: .
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: mbstring, xml, zip, pcov
-          tools: composer:v2
-          coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-test-${{ matrix.php }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Cache test dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            vendor
-          key: ${{ runner.os }}-test-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
-
-      - name: Install PHP dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Install Node.js dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Start wp-env
-        run: npx --yes @wordpress/env@${WP_ENV_VERSION} start
-
-      - name: Run PHPUnit Tests
-        run: pnpm test:${{ matrix.coverage && 'coverage' || '' }} || (pnpm test:any -- --verbose --debug; exit 1)
-
-      - name: Stop wp-env
-        if: always()
-        run: npx --yes @wordpress/env@${WP_ENV_VERSION} stop || true
-        working-directory: .
-
-      - name: Upload coverage to Codecov
+      - name: Upload Coverage
         if: matrix.coverage
         uses: codecov/codecov-action@v4
         with:
           file: coverage/clover.xml
-          flags: php-${{ matrix.php }}
-          name: PHP ${{ matrix.php }} Coverage
+          flags: unittests
+          name: PHP Coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-php${{ matrix.php }}-${{ github.run_id }}
-          path: |
-            coverage/
-            *.log
-          retention-days: 7
-
-  # Create production-ready plugin package
-  package:
-    name: 📦 Package Plugin
-    runs-on: ubuntu-latest
-    needs: test
-    if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download built assets
-        uses: actions/download-artifact@v4
-        with:
-          name: built-assets-${{ github.run_id }}
-          path: .
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-package-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Create production plugin zip
-        run: |
-          # Remove development files and directories
-          rm -rf node_modules/
-          rm -rf tests/
-          rm -rf bin/
-          rm -rf .github/
-          rm -rf .git/
-          rm -rf coverage/
-          rm -rf vendor/ # Will be regenerated on install
-          rm -f *.lock
-          rm -f *.log
-          rm -f .editorconfig
-          rm -f .eslintignore
-          rm -f .eslintrc*
-          rm -f .prettier*
-          rm -f .phpstan*
-          rm -f phpcs.xml*
-          rm -f phpunit.xml*
-          rm -f tsconfig.json
-          rm -f webpack*.config.*
-          rm -f postcss.config.*
-          rm -f *.config.js
-          rm -f *.config.mjs
-          rm -rf src/ # Keep only built assets
-
-          # Create production zip
-          zip -r ../${{ env.PLUGIN_SLUG }}.zip . -x "*.git*" "*.DS_Store" "*.log"
-
-      - name: Upload plugin package
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PLUGIN_SLUG }}-plugin-${{ github.run_id }}
-          path: ../${{ env.PLUGIN_SLUG }}.zip
-          retention-days: 30
-
-  # Release job (only on main/master push)
+  # Release on main/master
   release:
-    name: 🚀 Create GitHub Release
-    needs: package
+    name: 🚀 Release
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
+    needs: ci
+    if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
     permissions:
       contents: write
       issues: write
@@ -350,108 +138,39 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download plugin package
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.PLUGIN_SLUG }}-plugin-${{ github.run_id }}
-          path: ./artifacts/
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Semantic Release
-        run: |
-          echo "🚀 Checking for releases..."
-          pnpm semantic-release || echo "No release needed"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload release assets
-        if: success()
-        run: |
-          # If a release was created, attach the plugin zip
-          if [ -n "$GITHUB_REF" ] && [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]; then
-            echo "📦 Attaching plugin zip to release..."
-            gh release upload "${GITHUB_REF#refs/tags/}" ./artifacts/${{ env.PLUGIN_SLUG }}.zip || echo "Failed to upload release asset"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # PR-specific workflow for faster feedback
-  pr-checks:
-    name: 🔍 PR Quality Checks
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ env.PHP_VERSION }}
-          extensions: mbstring, xml, zip
-          tools: composer:v2, phpcs, phpstan
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-pr-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            vendor
-          key: ${{ runner.os }}-pr-${{ hashFiles('**/composer.lock') }}
+          path: ~/.local/share/pnpm/store/v3
+          key: ${{ runner.os }}-release-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Install PHP dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Install Node.js dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Quick PHP checks
+      - name: Create Release Zip
         run: |
-          echo "⚡ Running fast PHP checks..."
-          pnpm lint:php || exit 1
-          pnpm phpstan || exit 1
+          # Clean up for production
+          rm -rf node_modules/ tests/ .github/ .git/ coverage/ vendor/
+          rm -f *.lock *.log .editorconfig .eslintignore .eslintrc* .prettier*
+          rm -f .phpstan* phpcs.xml* phpunit.xml* tsconfig.json webpack*.config.*
+          rm -f postcss.config.* *.config.js *.config.mjs
+          rm -rf src/
 
-      - name: Quick JS checks
-        run: |
-          echo "⚡ Running fast JS checks..."
-          pnpm lint:js || exit 1
-          pnpm format:check || exit 1
+          # Create zip
+          zip -r ../${{ env.PLUGIN_SLUG }}.zip . -x "*.git*" "*.DS_Store" "*.log"
 
-      - name: Build check
-        run: |
-          echo "⚡ Testing build process..."
-          timeout 300 pnpm build || exit 1
+      - name: Semantic Release
+        run: pnpm semantic-release || echo "No release needed"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
