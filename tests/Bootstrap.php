@@ -97,7 +97,7 @@ class Bootstrap {
 	private function validate_tests_directory(): void {
 		if ( ! file_exists( "{$this->tests_dir}/includes/functions.php" ) ) {
 			throw new \Exception(
-				'Could not find ' . esc_html( $this->tests_dir ) . '/includes/functions.php, have you run bin/install-wp-tests.sh ?'
+				'Could not find ' . htmlspecialchars( $this->tests_dir ) . '/includes/functions.php, have you run bin/install-wp-tests.sh ?'
 			);
 		}
 	}
