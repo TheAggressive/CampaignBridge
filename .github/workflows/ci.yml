@@ -35,9 +35,6 @@ jobs:
   security:
     name: 🔒 Security Scan
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: campaignbridge
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,9 +61,6 @@ jobs:
     name: 🧹 Code Quality
     runs-on: ubuntu-latest
     needs: security
-    defaults:
-      run:
-        working-directory: campaignbridge
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -108,27 +102,35 @@ jobs:
 
       - name: Install PHP dependencies
         run: composer install --prefer-dist --optimize-autoloader --no-progress
+        working-directory: campaignbridge
 
       - name: Install Node.js dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: campaignbridge
 
       - name: Start wp-env for Quality Checks
         run: npx --yes @wordpress/env@${WP_ENV_VERSION} start
+        working-directory: campaignbridge
 
       - name: PHP Security Check
         run: pnpm security:check
+        working-directory: campaignbridge
 
       - name: PHP Code Style (PHPCS)
         run: pnpm lint:php
+        working-directory: campaignbridge
 
       - name: PHP Static Analysis (PHPStan)
         run: pnpm phpstan
+        working-directory: campaignbridge
 
       - name: JavaScript/TypeScript Lint
         run: pnpm lint:js
+        working-directory: campaignbridge
 
       - name: Code Formatting Check
         run: pnpm format:check
+        working-directory: campaignbridge
 
       - name: Stop wp-env
         if: always()
@@ -140,9 +142,6 @@ jobs:
     name: 🏗️ Build Assets
     runs-on: ubuntu-latest
     needs: quality
-    defaults:
-      run:
-        working-directory: campaignbridge
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -166,9 +165,11 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: campaignbridge
 
       - name: Build production assets
         run: pnpm build
+        working-directory: campaignbridge
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -184,9 +185,6 @@ jobs:
     name: 🧪 Tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     needs: build
-    defaults:
-      run:
-        working-directory: campaignbridge
     strategy:
       matrix:
         php: ['8.1', '8.2', '8.3']
@@ -237,15 +235,19 @@ jobs:
 
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+        working-directory: campaignbridge
 
       - name: Install Node.js dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: campaignbridge
 
       - name: Start wp-env
         run: npx --yes @wordpress/env@${WP_ENV_VERSION} start
+        working-directory: campaignbridge
 
       - name: Run PHPUnit Tests
         run: pnpm test:${{ matrix.coverage && 'coverage' || '' }} || (pnpm test:any -- --verbose --debug; exit 1)
+        working-directory: campaignbridge
 
       - name: Stop wp-env
         if: always()
@@ -276,9 +278,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    defaults:
-      run:
-        working-directory: campaignbridge
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -311,6 +310,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: campaignbridge
 
       - name: Create production plugin zip
         run: |
@@ -340,6 +340,7 @@ jobs:
 
           # Create production zip
           zip -r ../${{ env.PLUGIN_SLUG }}.zip . -x "*.git*" "*.DS_Store" "*.log"
+        working-directory: campaignbridge
 
       - name: Upload plugin package
         uses: actions/upload-artifact@v4
@@ -354,9 +355,6 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
-    defaults:
-      run:
-        working-directory: campaignbridge
     permissions:
       contents: write
       issues: write
@@ -392,14 +390,17 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+        working-directory: campaignbridge
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: campaignbridge
 
       - name: Semantic Release
         run: |
           echo "🚀 Checking for releases..."
           pnpm semantic-release || echo "No release needed"
+        working-directory: campaignbridge
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -419,9 +420,6 @@ jobs:
     name: 🔍 PR Quality Checks
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    defaults:
-      run:
-        working-directory: campaignbridge
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -459,23 +457,28 @@ jobs:
 
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+        working-directory: campaignbridge
 
       - name: Install Node.js dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: campaignbridge
 
       - name: Quick PHP checks
         run: |
           echo "⚡ Running fast PHP checks..."
           pnpm lint:php || exit 1
           pnpm phpstan || exit 1
+        working-directory: campaignbridge
 
       - name: Quick JS checks
         run: |
           echo "⚡ Running fast JS checks..."
           pnpm lint:js || exit 1
           pnpm format:check || exit 1
+        working-directory: campaignbridge
 
       - name: Build check
         run: |
           echo "⚡ Testing build process..."
           timeout 300 pnpm build || exit 1
+        working-directory: campaignbridge
