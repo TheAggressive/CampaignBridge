@@ -92,9 +92,8 @@ jobs:
           unzip -q wordpress.zip
           mv wordpress wordpress-core
 
-          # Setup test database
-          mysql -h 127.0.0.1 -P 3306 -u root -proot -e 'CREATE DATABASE wordpress_test;'
-          mysql -h 127.0.0.1 -P 3306 -u root -proot -e "GRANT ALL PRIVILEGES ON wordpress_test.* TO 'root'@'localhost';" -proot
+          # Database already created by MySQL service, just set permissions
+          MYSQL_PWD=root mysql -h 127.0.0.1 -P 3306 -u root -e "GRANT ALL PRIVILEGES ON wordpress_test.* TO 'root'@'localhost';"
 
       - name: Code Quality Checks
         run: |
@@ -113,7 +112,7 @@ jobs:
           # Use WordPress core testing instead of wp-env
           export WP_TESTS_DIR=/home/runner/work/CampaignBridge/CampaignBridge/wordpress-core/tests/phpunit
           export WP_CORE_DIR=/home/runner/work/CampaignBridge/CampaignBridge/wordpress-core
-          pnpm test${{ matrix.coverage && ':coverage' || '' }} || exit 1
+          ./vendor/bin/phpunit --coverage-html=coverage --coverage-text --verbose || exit 1
         env:
           WP_TESTS_DOMAIN: localhost
           WP_TESTS_EMAIL: admin@example.org

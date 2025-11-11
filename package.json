@@ -34,7 +34,7 @@
     "lint:php": "wp-env run tests-cli bash -lc 'XDEBUG_MODE=off ./vendor/bin/phpcs --standard=phpcs.xml.dist includes/ src/'",
     "lint:php:fix": "wp-env run tests-cli bash -lc 'XDEBUG_MODE=off ./vendor/bin/phpcbf --standard=phpcs.xml.dist includes/ src/'",
     "phpstan": "wp-env run tests-cli bash -c 'XDEBUG_MODE=off ./vendor/bin/phpstan analyse --memory-limit=2G --verbose'",
-    "security:check": "wp-env run tests-cli bash -c 'find includes/ -name \"*.php\" -exec php -l {} \\; && echo \"PHP syntax check passed\"'",
+    "security:check": "find includes/ -name \"*.php\" -exec php -l {} \\; && echo \"PHP syntax check passed\"",
     "qa": "pnpm lint:php && pnpm lint:js && pnpm format:check && pnpm phpstan && pnpm security:check && pnpm test",
     "// TESTING": "_",
     "test:setup": "bash bin/install-wp-tests.sh wordpress_test root '' 127.0.0.1:9002 latest",
