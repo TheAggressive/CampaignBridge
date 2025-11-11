@@ -63,8 +63,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: campaignbridge
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -403,8 +401,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: campaignbridge
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
