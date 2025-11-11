@@ -64,6 +64,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          path: campaignbridge
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -194,12 +196,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          path: campaignbridge
 
       - name: Download built assets
         uses: actions/download-artifact@v4
         with:
           name: built-assets-${{ github.run_id }}
-          path: .
+          path: campaignbridge
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -423,6 +427,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          path: campaignbridge
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
