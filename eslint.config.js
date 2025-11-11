@@ -16,6 +16,8 @@ export default [
       'dist/**',
       'assets/**',
       'vendor/**',
+      'coverage/**',
+      'tests/**',
     ],
   },
   {
