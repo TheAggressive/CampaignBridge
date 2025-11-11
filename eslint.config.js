@@ -18,6 +18,7 @@ export default [
       'vendor/**',
       'coverage/**',
       'tests/**',
+      'wordpress-core/**',
     ],
   },
   {
