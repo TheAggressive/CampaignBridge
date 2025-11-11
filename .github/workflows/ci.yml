@@ -99,7 +99,7 @@ jobs:
         run: |
           echo "🔍 Running quality checks..."
           ./vendor/bin/phpcs --standard=phpcs.xml.dist includes/ src/ || exit 1
-          pnpm lint:js || exit 1
+          npx eslint --max-warnings 0 src/ || exit 1
           pnpm format:check || exit 1
           ./vendor/bin/phpstan analyse --memory-limit=2G --verbose || exit 1
           find includes/ -name "*.php" -exec php -l {} \; && echo "PHP syntax check passed" || exit 1
