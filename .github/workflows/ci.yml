@@ -93,21 +93,17 @@ jobs:
           # Setup WordPress testing environment using standard script
           bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest true
 
-          # Ensure wp-tests-config.php exists in project root for PHPUnit
+          # Ensure wp-tests-config.php exists for PHPUnit
           echo "Checking for wp-tests-config.php..."
-          ls -la /tmp/wordpress-tests-lib/wp-tests-config.php || echo "Test config not found in temp dir"
-          if [ ! -f wp-tests-config.php ]; then
-            if [ -f /tmp/wordpress-tests-lib/wp-tests-config.php ]; then
-              cp /tmp/wordpress-tests-lib/wp-tests-config.php ./wp-tests-config.php
-              echo "Copied wp-tests-config.php to project root"
-            else
-              echo "ERROR: wp-tests-config.php not found in test library"
-              exit 1
-            fi
+          if [ -f /tmp/wordpress-tests-lib/wp-tests-config.php ]; then
+            cp /tmp/wordpress-tests-lib/wp-tests-config.php ./wp-tests-config.php
+            echo "✓ Copied wp-tests-config.php to project root"
+            ls -la wp-tests-config.php
           else
-            echo "wp-tests-config.php already exists in project root"
+            echo "✗ ERROR: wp-tests-config.php not found in /tmp/wordpress-tests-lib/"
+            ls -la /tmp/wordpress-tests-lib/ || echo "Test library directory not found"
+            exit 1
           fi
-          ls -la wp-tests-config.php || echo "Config file still missing"
 
       - name: Code Quality Checks
         run: |
@@ -130,7 +126,6 @@ jobs:
           WP_TESTS_EMAIL: admin@example.org
           WP_TESTS_TITLE: Test Blog
           WP_TESTS_DB_HOST: 127.0.0.1:3306
-          WP_TESTS_CONFIG_FILE: /tmp/wordpress-tests-lib/wp-tests-config.php
 
       - name: Upload Coverage
         if: matrix.coverage
