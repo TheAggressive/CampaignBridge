@@ -269,7 +269,7 @@ jobs:
   test-unit:
     name: 🧪 Unit Tests
     runs-on: ubuntu-latest
-    needs: [setup, lint-js, lint-php, phpcs, phpstan]
+    needs: setup
     timeout-minutes: 10
 
     steps:
@@ -480,6 +480,7 @@ jobs:
         with:
           path: dist
           key: ${{ runner.os }}-build-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -489,28 +490,38 @@ jobs:
       - name: Install production dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
+      - name: Verify build artifacts exist
+        run: |
+          echo "📦 Checking build artifacts..."
+          ls -la dist/
+          echo "✅ Build artifacts verified"
+
+      - name: Clean development files
+        run: |
+          echo "🧹 Removing development files..."
+          rm -rf node_modules src tests .github coverage bin .husky docs phpcs
+          rm -f *.lock *.config.* .* wp-tests-config.php .wp-env.json phpunit.xml* phpstan.neon phpcs.xml* patchwork.json
+          rm -f package.json composer.json webpack.* tsconfig.* eslint.* prettier.* commitlint.* phpstan.* postcss.config.js
+          echo "✅ Development files removed"
+
       - name: Create plugin package
         run: |
-          mkdir -p ${{ env.PLUGIN_SLUG }}
-          rsync -av --progress \
-            --exclude='.git*' \
-            --exclude='node_modules' \
-            --exclude='tests' \
-            --exclude='.github' \
-            --exclude='coverage' \
-            --exclude='src' \
-            --exclude='*.lock' \
-            --exclude='*.config.*' \
-            --exclude='bin' \
-            --exclude='wp-tests-config.php' \
-            ./ ${{ env.PLUGIN_SLUG }}/
-          zip -r ${{ env.PLUGIN_SLUG }}.zip ${{ env.PLUGIN_SLUG }}
+          echo "📦 Creating plugin package..."
+          cd ..
+          mv CampaignBridge ${{ env.PLUGIN_SLUG }}
+          zip -r ${{ env.PLUGIN_SLUG }}.zip ${{ env.PLUGIN_SLUG }} \
+            -x "**/.git/*" \
+            -x "**/.DS_Store" \
+            -x "**/Thumbs.db"
           ls -lh ${{ env.PLUGIN_SLUG }}.zip
+          mv ${{ env.PLUGIN_SLUG }}.zip CampaignBridge/
+          cd CampaignBridge
+          echo "✅ Package created: $(ls -lh ${{ env.PLUGIN_SLUG }}.zip)"
 
       - name: Upload plugin package
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PLUGIN_SLUG }}
+          name: ${{ env.PLUGIN_SLUG }}-package
           path: ${{ env.PLUGIN_SLUG }}.zip
           retention-days: 30
 
@@ -523,6 +534,10 @@ jobs:
     needs: [package]
     if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
     timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -543,12 +558,32 @@ jobs:
       - name: Download plugin package
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.PLUGIN_SLUG }}
+          name: ${{ env.PLUGIN_SLUG }}-package
+          path: ./
+
+      - name: Verify package exists
+        run: |
+          echo "📦 Verifying package..."
+          ls -lh ${{ env.PLUGIN_SLUG }}.zip
+          echo "✅ Package verified"
 
       - name: Semantic Release
+        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm semantic-release || echo "No release needed"
+        run: |
+          pnpm semantic-release || echo "No release needed"
+          echo "release_created=$?" >> $GITHUB_OUTPUT
+
+      - name: Upload release asset
+        if: steps.semantic.outputs.release_created == '0'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.PLUGIN_SLUG }}.zip
+          name: ${{ env.PLUGIN_SLUG }}.zip
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================================================
   # Summary
