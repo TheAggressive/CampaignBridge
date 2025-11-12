@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/TheAggressive/CampaignBridge/compare/v1.0.1...v1.0.2) (2025-11-12)
+
+
+### Bug Fixes
+
+* update dependencies in package.json and pnpm-lock.yaml ([a39d702](https://github.com/TheAggressive/CampaignBridge/commit/a39d7021c36654795f594d73943aa5432782d90f))
+
 ## [1.0.1](https://github.com/TheAggressive/CampaignBridge/compare/v1.0.0...v1.0.1) (2025-11-12)
 
 
