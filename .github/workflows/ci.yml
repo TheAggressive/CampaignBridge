@@ -305,7 +305,7 @@ jobs:
           sleep 10
 
       - name: Install dependencies in wp-env
-        run: pnpm wp-env run tests-cli -- bash -c "cd wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
+        run: pnpm wp-env run tests-cli -- bash -c "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
 
       - name: Run unit tests with coverage
         run: pnpm test:unit --coverage-clover=coverage-unit.xml
@@ -359,7 +359,7 @@ jobs:
           sleep 10
 
       - name: Install dependencies in wp-env
-        run: pnpm wp-env run tests-cli -- bash -c "cd wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
+        run: pnpm wp-env run tests-cli -- bash -c "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
 
       - name: Run integration tests
         run: pnpm test:integration
@@ -406,7 +406,7 @@ jobs:
           sleep 10
 
       - name: Install dependencies in wp-env
-        run: pnpm wp-env run tests-cli -- bash -c "cd wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
+        run: pnpm wp-env run tests-cli -- bash -c "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
 
       - name: Run security tests
         run: pnpm test:security
@@ -453,7 +453,7 @@ jobs:
           sleep 10
 
       - name: Install dependencies in wp-env
-        run: pnpm wp-env run tests-cli -- bash -c "cd wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
+        run: pnpm wp-env run tests-cli -- bash -c "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
 
       - name: Run accessibility tests
         run: pnpm test:accessibility
