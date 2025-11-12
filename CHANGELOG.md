@@ -1,3 +1,13 @@
+## [1.0.1](https://github.com/TheAggressive/CampaignBridge/compare/v1.0.0...v1.0.1) (2025-11-12)
+
+
+### Bug Fixes
+
+* enhance semantic-release configuration and CI workflow ([6fa78b7](https://github.com/TheAggressive/CampaignBridge/commit/6fa78b74d29b105f783694649ce99a7490ff447a))
+* streamline CI workflow for plugin packaging and artifact verification ([7c5becb](https://github.com/TheAggressive/CampaignBridge/commit/7c5becb22d6dbb22b7691d2760a1886dd20b5724))
+* update semantic-release configuration and CI environment ([aec3eb5](https://github.com/TheAggressive/CampaignBridge/commit/aec3eb5892523b458e44968393da8b60caf80f9d))
+* update semantic-release configuration to include git commit options ([dc24bfd](https://github.com/TheAggressive/CampaignBridge/commit/dc24bfd80b44bdcc2f88af3751c472c565f20b62))
+
 # 1.0.0 (2025-11-12)
 
 
