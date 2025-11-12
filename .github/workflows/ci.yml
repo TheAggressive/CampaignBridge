@@ -554,7 +554,7 @@ jobs:
 
           # Remove config files
           rm -f *.config.* webpack.* tsconfig.* postcss.config.js
-          rm -f phpunit.xml* phpstan.* phpcs.xml* patchwork.json
+          rm -f phpunit.xml* phpstan.* phpstan-* phpcs.xml* patchwork.json
           rm -f eslint.* prettier.* commitlint.* .prettierrc* .eslintrc*
 
           # Remove specific dotfiles (not .git!)
@@ -633,6 +633,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Download plugin package
         uses: actions/download-artifact@v4
         with:
@@ -646,22 +651,25 @@ jobs:
           echo "✅ Package verified"
 
       - name: Semantic Release
-        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pnpm semantic-release || echo "No release needed"
-          echo "release_created=$?" >> $GITHUB_OUTPUT
+          echo "🚀 Running semantic release..."
+          pnpm semantic-release
 
-      - name: Upload release asset
-        if: steps.semantic.outputs.release_created == '0'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ${{ env.PLUGIN_SLUG }}.zip
-          name: ${{ env.PLUGIN_SLUG }}.zip
-          tag_name: ${{ github.ref_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Check if release was created by looking at package.json
+          if [ -f "package.json" ]; then
+            VERSION=$(node -p "require('./package.json').version")
+            echo "✅ Release completed: v${VERSION}"
+
+            # Check if versioned zip was created
+            if [ -f "${{ env.PLUGIN_SLUG }}-${VERSION}.zip" ]; then
+              echo "✅ Versioned zip created: ${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
+              ls -lh "${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
+            fi
+          else
+            echo "ℹ️  No release created (no qualifying commits)"
+          fi
 
   # ============================================================================
   # Summary

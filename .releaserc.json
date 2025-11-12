@@ -13,7 +13,8 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "pnpm version:sync"
+        "prepareCmd": "pnpm version:sync",
+        "publishCmd": "mv campaignbridge.zip campaignbridge-${nextRelease.version}.zip"
       }
     ],
     [
@@ -28,8 +29,9 @@
       {
         "assets": [
           {
-            "path": "campaignbridge.zip",
-            "label": "CampaignBridge Plugin (v${nextRelease.version})"
+            "path": "campaignbridge-${nextRelease.version}.zip",
+            "name": "campaignbridge-${nextRelease.version}.zip",
+            "label": "CampaignBridge Plugin v${nextRelease.version}"
           }
         ]
       }
