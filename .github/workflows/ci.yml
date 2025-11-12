@@ -559,7 +559,7 @@ jobs:
 
           # Remove specific dotfiles (not .git!)
           rm -f .wp-env.json .prettierignore .eslintignore .gitattributes .editorconfig
-          rm -f .phpcs.xml .phpcs.xml.dist wp-tests-config.php
+          rm -f .phpcs.xml .phpcs.xml.dist
 
           # Remove dev dependency files
           rm -f package.json composer.json
