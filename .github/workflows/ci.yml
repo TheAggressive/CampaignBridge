@@ -178,31 +178,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
+          tools: composer:v2
 
-      - name: Restore caches
+      - name: Restore Composer cache
         uses: actions/cache@v4
         with:
-          path: |
-            vendor
-            node_modules
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+          path: vendor
+          key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
-      - name: Install dependencies
-        run: |
-          composer install --no-interaction --prefer-dist || true
-          pnpm install --frozen-lockfile || true
+      - name: Install dependencies (if cache miss)
+        run: composer install --no-interaction --prefer-dist || true
 
       - name: Run PHPCS
-        run: pnpm lint:php
+        run: ./vendor/bin/phpcs --standard=phpcs.xml.dist includes/ src/
 
   phpstan:
     name: 🔍 PHPStan
@@ -226,18 +217,8 @@ jobs:
       - name: Install dependencies (if cache miss)
         run: composer install --no-interaction --prefer-dist || true
 
-      - name: Restore node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
       - name: Run PHPStan
-        run: pnpm phpstan
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G --verbose
 
   # ============================================================================
   # JOB: Build Assets (Parallel with quality checks)
@@ -323,6 +304,9 @@ jobs:
           pnpm env:start
           sleep 10
 
+      - name: Install dependencies in wp-env
+        run: pnpm env run tests-cli "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
+
       - name: Run unit tests with coverage
         run: pnpm test:unit --coverage-clover=coverage-unit.xml
 
@@ -374,6 +358,9 @@ jobs:
           pnpm env:start
           sleep 10
 
+      - name: Install dependencies in wp-env
+        run: pnpm env run tests-cli "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
+
       - name: Run integration tests
         run: pnpm test:integration
 
@@ -418,6 +405,9 @@ jobs:
           pnpm env:start
           sleep 10
 
+      - name: Install dependencies in wp-env
+        run: pnpm env run tests-cli "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
+
       - name: Run security tests
         run: pnpm test:security
 
@@ -461,6 +451,9 @@ jobs:
         run: |
           pnpm env:start
           sleep 10
+
+      - name: Install dependencies in wp-env
+        run: pnpm env run tests-cli "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
 
       - name: Run accessibility tests
         run: pnpm test:accessibility
