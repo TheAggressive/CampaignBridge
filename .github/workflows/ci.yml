@@ -569,15 +569,31 @@ jobs:
       - name: Create plugin package
         run: |
           echo "📦 Creating plugin package..."
-          cd ..
-          mv CampaignBridge ${{ env.PLUGIN_SLUG }}
-          zip -r ${{ env.PLUGIN_SLUG }}.zip ${{ env.PLUGIN_SLUG }} \
+
+          # Create temp directory for packaging
+          TEMP_DIR="${{ env.PLUGIN_SLUG }}-temp"
+          mkdir -p "../${TEMP_DIR}/${{ env.PLUGIN_SLUG }}"
+
+          # Copy all files to temp directory
+          cp -r * "../${TEMP_DIR}/${{ env.PLUGIN_SLUG }}/"
+
+          # Create zip from temp directory
+          cd "../${TEMP_DIR}"
+          zip -r "${{ env.PLUGIN_SLUG }}.zip" "${{ env.PLUGIN_SLUG }}" \
             -x "**/.git/*" \
             -x "**/.DS_Store" \
             -x "**/Thumbs.db"
-          ls -lh ${{ env.PLUGIN_SLUG }}.zip
-          mv ${{ env.PLUGIN_SLUG }}.zip CampaignBridge/
+
+          # Move zip back to original directory
+          mv "${{ env.PLUGIN_SLUG }}.zip" "../CampaignBridge/"
+
+          # Clean up temp directory
+          cd ..
+          rm -rf "${TEMP_DIR}"
+
+          # Return to plugin directory
           cd CampaignBridge
+
           echo "✅ Package created: $(ls -lh ${{ env.PLUGIN_SLUG }}.zip)"
 
       - name: Upload plugin package
