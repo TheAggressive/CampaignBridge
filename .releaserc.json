@@ -21,8 +21,7 @@
       "@semantic-release/git",
       {
         "assets": ["CHANGELOG.md", "package.json", "campaignbridge.php"],
-        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
-        "gitCommitOptions": ["--no-verify"]
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
     [
