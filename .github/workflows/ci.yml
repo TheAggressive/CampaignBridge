@@ -650,11 +650,6 @@ jobs:
           ls -lh ${{ env.PLUGIN_SLUG }}.zip
           echo "✅ Package verified"
 
-      - name: Debug - List files before release
-        run: |
-          echo "📁 Files in workspace before semantic-release:"
-          ls -lah | head -20
-
       - name: Semantic Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -663,34 +658,21 @@ jobs:
           echo "🚀 Running semantic release..."
           pnpm semantic-release
 
-      - name: Debug - List files after release
-        run: |
-          echo "📁 Files in workspace after semantic-release:"
-          ls -lah | head -20
-          echo ""
-          echo "🔍 Looking for versioned zip files:"
-          ls -lh *.zip 2>/dev/null || echo "No zip files found"
-
-      - name: Verify release artifacts
+      - name: Rename and upload plugin zip
         if: success()
         run: |
-          # Check if release was created by looking at package.json
-          if [ -f "package.json" ]; then
-            VERSION=$(node -p "require('./package.json').version")
-            echo "✅ Release completed: v${VERSION}"
+          VERSION=$(node -p "require('./package.json').version")
 
-            # Check if versioned zip was created
-            if [ -f "${{ env.PLUGIN_SLUG }}-${VERSION}.zip" ]; then
-              echo "✅ Versioned zip exists: ${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
-              ls -lh "${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
-            else
-              echo "❌ Versioned zip not found: ${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
-              echo "This file should have been created by semantic-release"
-              exit 1
-            fi
-          else
-            echo "ℹ️  No release created (no qualifying commits)"
-          fi
+          echo "📦 Renaming zip to version v${VERSION}..."
+          mv "${{ env.PLUGIN_SLUG }}.zip" "${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
+
+          echo "📤 Uploading to GitHub release..."
+          gh release upload "v${VERSION}" "${{ env.PLUGIN_SLUG }}-${VERSION}.zip" --clobber
+
+          echo "✅ Release v${VERSION} complete with plugin zip!"
+          ls -lh "${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================================================
   # Summary

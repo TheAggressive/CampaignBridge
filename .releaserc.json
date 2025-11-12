@@ -13,8 +13,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "pnpm version:sync",
-        "publishCmd": "echo '📦 Renaming zip: campaignbridge.zip -> campaignbridge-${nextRelease.version}.zip' && ls -lh campaignbridge.zip && mv campaignbridge.zip campaignbridge-${nextRelease.version}.zip && echo '✅ Renamed successfully' && ls -lh campaignbridge-${nextRelease.version}.zip"
+        "prepareCmd": "pnpm version:sync"
       }
     ],
     [
@@ -24,17 +23,6 @@
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
-    [
-      "@semantic-release/github",
-      {
-        "assets": [
-          {
-            "path": "campaignbridge-${nextRelease.version}.zip",
-            "name": "campaignbridge-${nextRelease.version}.zip",
-            "label": "CampaignBridge Plugin v${nextRelease.version}"
-          }
-        ]
-      }
-    ]
+    "@semantic-release/github"
   ]
 }
