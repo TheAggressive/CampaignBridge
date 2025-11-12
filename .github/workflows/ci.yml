@@ -304,8 +304,11 @@ jobs:
           pnpm env:start
           sleep 10
 
+      - name: Debug - List plugins directory
+        run: pnpm wp-env run tests-cli -- ls -la /var/www/html/wp-content/plugins/
+
       - name: Install dependencies in wp-env
-        run: pnpm wp-env run tests-cli -- bash -c "cd /var/www/html/wp-content/plugins/campaignbridge && composer install --no-interaction --prefer-dist"
+        run: pnpm wp-env run tests-cli -- bash -c "cd /var/www/html/wp-content/plugins/CampaignBridge && composer install --no-interaction --prefer-dist"
 
       - name: Run unit tests with coverage
         run: pnpm test:unit --coverage-clover=coverage-unit.xml
