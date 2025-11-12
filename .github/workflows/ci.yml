@@ -650,6 +650,11 @@ jobs:
           ls -lh ${{ env.PLUGIN_SLUG }}.zip
           echo "✅ Package verified"
 
+      - name: Debug - List files before release
+        run: |
+          echo "📁 Files in workspace before semantic-release:"
+          ls -lah | head -20
+
       - name: Semantic Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -658,6 +663,17 @@ jobs:
           echo "🚀 Running semantic release..."
           pnpm semantic-release
 
+      - name: Debug - List files after release
+        run: |
+          echo "📁 Files in workspace after semantic-release:"
+          ls -lah | head -20
+          echo ""
+          echo "🔍 Looking for versioned zip files:"
+          ls -lh *.zip 2>/dev/null || echo "No zip files found"
+
+      - name: Verify release artifacts
+        if: success()
+        run: |
           # Check if release was created by looking at package.json
           if [ -f "package.json" ]; then
             VERSION=$(node -p "require('./package.json').version")
@@ -665,8 +681,12 @@ jobs:
 
             # Check if versioned zip was created
             if [ -f "${{ env.PLUGIN_SLUG }}-${VERSION}.zip" ]; then
-              echo "✅ Versioned zip created: ${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
+              echo "✅ Versioned zip exists: ${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
               ls -lh "${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
+            else
+              echo "❌ Versioned zip not found: ${{ env.PLUGIN_SLUG }}-${VERSION}.zip"
+              echo "This file should have been created by semantic-release"
+              exit 1
             fi
           else
             echo "ℹ️  No release created (no qualifying commits)"
