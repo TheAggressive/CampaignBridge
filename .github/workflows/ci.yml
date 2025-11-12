@@ -1,8 +1,8 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline (Optimized)
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, develop]
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -19,233 +19,574 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  COMPOSER_NO_INTERACTION: 1
-  PNPM_CACHE_FOLDER: ~/.pnpm-store
   PLUGIN_SLUG: campaignbridge
+  NODE_VERSION: '22'
+  PNPM_VERSION: '9'
+  PHP_VERSION: '8.2'
 
 jobs:
-  # Fast CI pipeline - quality, build, test all in one
-  ci:
-    name: 🚀 CI Pipeline
+  # ============================================================================
+  # JOB 1: Setup Dependencies (Runs once, shared by all jobs)
+  # ============================================================================
+  setup:
+    name: 📦 Setup Dependencies
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        php: ['8.2']  # Single PHP version for speed
-        include:
-          - php: '8.2'
-            coverage: true
+    timeout-minutes: 5
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wordpress_test
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    outputs:
+      pnpm-cache-key: ${{ steps.pnpm-cache.outputs.cache-hit }}
+      composer-cache-key: ${{ steps.composer-cache.outputs.cache-hit }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        id: pnpm-store
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm dependencies
+        id: pnpm-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install pnpm dependencies
+        if: steps.pnpm-cache.outputs.cache-hit != 'true'
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
-          extensions: mbstring, xml, zip, xdebug
-          tools: composer:v2, phpcs, phpstan, cs2pr
-          coverage: xdebug
+          php-version: ${{ env.PHP_VERSION }}
+          tools: composer:v2
 
-      - name: Install Subversion
-        run: sudo apt-get update && sudo apt-get install -y subversion
+      - name: Get Composer cache directory
+        id: composer-cache-dir
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - name: Cache dependencies
+      - name: Cache Composer dependencies
+        id: composer-cache
         uses: actions/cache@v4
         with:
           path: |
-            ~/.composer/cache
+            ${{ steps.composer-cache-dir.outputs.dir }}
             vendor
-            ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-ci-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
-            ${{ runner.os }}-ci-
+            ${{ runner.os }}-composer-
 
-      - name: Install PHP dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+      - name: Install Composer dependencies
+        if: steps.composer-cache.outputs.cache-hit != 'true'
+        run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Install Node.js dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Setup WordPress Testing Suite
+      - name: Cache vendor
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
+
+  # ============================================================================
+  # PARALLEL JOBS: Quality Checks (Fast fail)
+  # ============================================================================
+  lint-js:
+    name: 🔍 Lint JavaScript
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store/v3
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies (if cache miss)
+        run: pnpm install --frozen-lockfile --offline || pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm lint:js
+
+      - name: Run Prettier
+        run: pnpm format:check
+
+  lint-php:
+    name: 🔍 Lint PHP
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          tools: composer:v2
+
+      - name: Restore Composer cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
+
+      - name: Install dependencies (if cache miss)
+        run: composer install --no-interaction --prefer-dist || true
+
+      - name: PHP Syntax Check
+        run: find includes/ -name "*.php" -exec php -l {} \; > /dev/null && echo "✅ PHP syntax valid"
+
+  phpcs:
+    name: 🔍 PHPCS
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
         run: |
-          # Setup WordPress testing environment using standard script
-          echo "Running install-wp-tests.sh..."
-          bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest true
+          composer install --no-interaction --prefer-dist || true
+          pnpm install --frozen-lockfile || true
 
-          # Check if setup was successful
-          echo "Checking WordPress test setup..."
-          ls -la /tmp/wordpress-tests-lib/ || echo "✗ Test library not created"
+      - name: Run PHPCS
+        run: pnpm lint:php
 
-          if [ -f /tmp/wordpress-tests-lib/wp-tests-config.php ]; then
-            echo "✓ wp-tests-config.php found in test library"
-            cp /tmp/wordpress-tests-lib/wp-tests-config.php ./wp-tests-config.php
-            echo "✓ Copied wp-tests-config.php to project root"
-            ls -la wp-tests-config.php
-          else
-            echo "✗ wp-tests-config.php not created by install-wp-tests.sh"
-            echo "Checking if sample file exists..."
-            ls -la /tmp/wordpress-tests-lib/wp-tests-config-sample.php || echo "Sample file also missing"
+  phpstan:
+    name: 🔍 PHPStan
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 5
 
-            # Try to create config manually
-            echo "Creating wp-tests-config.php manually..."
-            cat > ./wp-tests-config.php << 'EOF'
-<?php
-/* Path to the WordPress codebase you'd like to test. Add a forward slash in the end. */
-define( 'ABSPATH', '/tmp/wordpress/' );
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          tools: composer:v2
 
-// Test with multisite enabled.
-// Alternatively, use the tests/phpunit/multisite.xml configuration file.
-// define( 'WP_TESTS_MULTISITE', true );
+      - name: Restore Composer cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
-// Force known bugs to be run.
-// Tests with an associated Trac ticket that is still open are normally skipped.
-// define( 'WP_TESTS_FORCE_KNOWN_BUGS', true );
+      - name: Install dependencies (if cache miss)
+        run: composer install --no-interaction --prefer-dist || true
 
-// Test with WordPress debug mode (default).
-define( 'WP_DEBUG', true );
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-// ** MySQL settings ** //
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-// This configuration file will be used by the copy of WordPress being tested.
-// wordpress_test is the name of the test database that will be created.
-// It will be dropped and recreated each time the test suite runs, so it should be a test-only database.
+      - name: Run PHPStan
+        run: pnpm phpstan
 
-// Hostname:port combination.
-define( 'DB_HOST', '127.0.0.1:3306' );
+  # ============================================================================
+  # JOB: Build Assets (Parallel with quality checks)
+  # ============================================================================
+  build:
+    name: 🔨 Build Assets
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 5
 
-// Database name (same as passed to install-wp-tests.sh)
-define( 'DB_NAME', 'wordpress_test' );
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-define( 'DB_USER', 'root' );
-define( 'DB_PASSWORD', 'root' );
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-// Database charset (set to utf8mb4 when testing 5.0+)
-define( 'DB_CHARSET', 'utf8mb4' );
-define( 'DB_COLLATE', '' );
+      - name: Install dependencies (if cache miss)
+        run: pnpm install --frozen-lockfile || true
 
-// ** Test settings ** //
-
-// These should be equivalent to the WordPress installation you're testing.
-define( 'WP_TESTS_DOMAIN', 'localhost' );
-define( 'WP_TESTS_EMAIL', 'admin@example.org' );
-define( 'WP_TESTS_TITLE', 'Test Blog' );
-
-// ** Settings to create the database tables ** //
-define( 'WP_TESTS_CONFIG_FILE_PATH', '/tmp/wordpress/wp-tests-config.php' );
-
-// Should be equivalent to the WordPress installation you're testing.
-define( 'WP_PHP_BINARY', 'php' );
-EOF
-            echo "✓ Created wp-tests-config.php manually"
-            ls -la wp-tests-config.php
-          fi
-
-      - name: Code Quality Checks
-        run: |
-          echo "🔍 Running quality checks..."
-          ./vendor/bin/phpcs --standard=phpcs.xml.dist includes/ src/ || exit 1
-          npx eslint --max-warnings 0 src/ || exit 1
-          pnpm format:check || exit 1
-          ./vendor/bin/phpstan analyse --memory-limit=2G --verbose || exit 1
-          find includes/ -name "*.php" -exec php -l {} \; && echo "PHP syntax check passed" || exit 1
-
-      - name: Build Assets
+      - name: Build assets
         run: pnpm build
 
-      - name: Run Tests with WordPress Core Suite
-        run: |
-          # Use standard WordPress testing environment set up by install-wp-tests.sh
-          ./vendor/bin/phpunit --configuration=phpunit.xml.dist --coverage-html=coverage --coverage-text --verbose || exit 1
-        env:
-          WP_TESTS_DOMAIN: localhost
-          WP_TESTS_EMAIL: admin@example.org
-          WP_TESTS_TITLE: Test Blog
-          WP_TESTS_DB_HOST: 127.0.0.1:3306
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: ${{ runner.os }}-build-${{ github.sha }}
 
-      - name: Upload Coverage
-        if: matrix.coverage
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist/
+          retention-days: 7
+
+  # ============================================================================
+  # PARALLEL JOBS: Test Suites (Run independently)
+  # ============================================================================
+  test-unit:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: [setup, lint-js, lint-php, phpcs, phpstan]
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, zip, xdebug
+          coverage: xdebug
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+          pnpm install --frozen-lockfile
+
+      - name: Start wp-env
+        run: |
+          pnpm env:start
+          sleep 10
+
+      - name: Run unit tests with coverage
+        run: pnpm test:unit --coverage-clover=coverage-unit.xml
+
+      - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
-          file: coverage/clover.xml
-          flags: unittests
-          name: PHP Coverage
-          fail_ci_if_error: false
+          files: ./coverage-unit.xml
+          flags: unit
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  # Release on main/master
+      - name: Stop wp-env
+        if: always()
+        run: pnpm env:stop
+
+  test-integration:
+    name: 🧪 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [setup, lint-js, lint-php, phpcs, phpstan]
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, zip
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+          pnpm install --frozen-lockfile
+
+      - name: Start wp-env
+        run: |
+          pnpm env:start
+          sleep 10
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Stop wp-env
+        if: always()
+        run: pnpm env:stop
+
+  test-security:
+    name: 🧪 Security Tests
+    runs-on: ubuntu-latest
+    needs: [setup, lint-js, lint-php, phpcs, phpstan]
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, zip
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+          pnpm install --frozen-lockfile
+
+      - name: Start wp-env
+        run: |
+          pnpm env:start
+          sleep 10
+
+      - name: Run security tests
+        run: pnpm test:security
+
+      - name: Stop wp-env
+        if: always()
+        run: pnpm env:stop
+
+  test-accessibility:
+    name: 🧪 Accessibility Tests
+    runs-on: ubuntu-latest
+    needs: [setup, lint-js, lint-php, phpcs, phpstan]
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, zip
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/composer.lock', '**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+          pnpm install --frozen-lockfile
+
+      - name: Start wp-env
+        run: |
+          pnpm env:start
+          sleep 10
+
+      - name: Run accessibility tests
+        run: pnpm test:accessibility
+
+      - name: Stop wp-env
+        if: always()
+        run: pnpm env:stop
+
+  # ============================================================================
+  # JOB: Package (After all tests pass)
+  # ============================================================================
+  package:
+    name: 📦 Package Plugin
+    runs-on: ubuntu-latest
+    needs: [build, test-unit, test-integration, test-security, test-accessibility]
+    if: success()
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore build artifacts
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          tools: composer:v2
+
+      - name: Install production dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Create plugin package
+        run: |
+          mkdir -p ${{ env.PLUGIN_SLUG }}
+          rsync -av --progress \
+            --exclude='.git*' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.github' \
+            --exclude='coverage' \
+            --exclude='src' \
+            --exclude='*.lock' \
+            --exclude='*.config.*' \
+            --exclude='bin' \
+            --exclude='wp-tests-config.php' \
+            ./ ${{ env.PLUGIN_SLUG }}/
+          zip -r ${{ env.PLUGIN_SLUG }}.zip ${{ env.PLUGIN_SLUG }}
+          ls -lh ${{ env.PLUGIN_SLUG }}.zip
+
+      - name: Upload plugin package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PLUGIN_SLUG }}
+          path: ${{ env.PLUGIN_SLUG }}.zip
+          retention-days: 30
+
+  # ============================================================================
+  # JOB: Release (Only on main/master)
+  # ============================================================================
   release:
     name: 🚀 Release
     runs-on: ubuntu-latest
-    needs: ci
+    needs: [package]
     if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      id-token: write
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
-          run_install: false
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-release-${{ hashFiles('**/pnpm-lock.yaml') }}
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create Release Zip
-        run: |
-          # Clean up for production
-          rm -rf node_modules/ tests/ .github/ .git/ coverage/ vendor/
-          rm -f *.lock *.log .editorconfig .eslintignore .eslintrc* .prettier*
-          rm -f .phpstan* phpcs.xml* phpunit.xml* tsconfig.json webpack*.config.*
-          rm -f postcss.config.* *.config.js *.config.mjs
-          rm -rf src/
-
-          # Create zip
-          zip -r ../${{ env.PLUGIN_SLUG }}.zip . -x "*.git*" "*.DS_Store" "*.log"
+      - name: Download plugin package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PLUGIN_SLUG }}
 
       - name: Semantic Release
-        run: pnpm semantic-release || echo "No release needed"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm semantic-release || echo "No release needed"
+
+  # ============================================================================
+  # Summary
+  # ============================================================================
+  summary:
+    name: ✅ CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint-js, lint-php, phpcs, phpstan, build, test-unit, test-integration, test-security, test-accessibility, package]
+    if: always()
+
+    steps:
+      - name: Check status
+        run: |
+          echo "## 📊 CI/CD Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| JavaScript Lint | ${{ needs.lint-js.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PHP Lint | ${{ needs.lint-php.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PHPCS | ${{ needs.phpcs.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PHPStan | ${{ needs.phpstan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.test-unit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.test-integration.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Tests | ${{ needs.test-security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Accessibility Tests | ${{ needs.test-accessibility.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | ${{ needs.package.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.lint-js.result }}" = "success" ] && \
+             [ "${{ needs.test-unit.result }}" = "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Pipeline completed successfully!" >> $GITHUB_STEP_SUMMARY
+          fi
+
