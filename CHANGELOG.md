@@ -1,3 +1,47 @@
+# 1.0.0 (2025-11-12)
+
+
+### Bug Fixes
+
+* add debug step to CI workflow for plugins directory listing ([7f830ff](https://github.com/TheAggressive/CampaignBridge/commit/7f830ffe3cf5cb6862488446ec445477b96f59ae))
+* add fallback creation of wp-tests-config.php ([b50990c](https://github.com/TheAggressive/CampaignBridge/commit/b50990cb73ef0fbd785e45d2118a0743df1e90e5))
+* add missing path: campaignbridge to all checkout steps ([6711eb6](https://github.com/TheAggressive/CampaignBridge/commit/6711eb69f008816d71d80cf2177c881c5a2b1660))
+* add wordpress-core directory to ESLint ignores ([5aa6f12](https://github.com/TheAggressive/CampaignBridge/commit/5aa6f12e1df8251ac98d996b8b678cb16978128a))
+* CI runs ESLint on src/ directory explicitly ([130d8d3](https://github.com/TheAggressive/CampaignBridge/commit/130d8d313c4cd75169ea0a2d5f5e215764c56150))
+* ensure wp-tests-config.php is available for PHPUnit ([0eac2a8](https://github.com/TheAggressive/CampaignBridge/commit/0eac2a8e3d61ad41677fa024533b562ad18bef2d))
+* ensure wp-tests-config.php is copied to project root ([04170f7](https://github.com/TheAggressive/CampaignBridge/commit/04170f78b500c6495373707cd6907706a0e4d068))
+* install subversion for WordPress test suite setup ([621107e](https://github.com/TheAggressive/CampaignBridge/commit/621107e0b1b49711db6fbd6fcce5f3bc04bd0fb5))
+* override working-directory for wp-env stop cleanup steps ([d026a35](https://github.com/TheAggressive/CampaignBridge/commit/d026a3521cdb8ff93c5e194ba21ba8ae4fabdfe6))
+* remove cd commands from wp-env scripts since CI runs from repository root ([8302c81](https://github.com/TheAggressive/CampaignBridge/commit/8302c81a766e9fe5377824c7dde529e55d41dfb1))
+* remove duplicate database creation and fix MySQL security warning ([b47aaf0](https://github.com/TheAggressive/CampaignBridge/commit/b47aaf04ad139d027d2989afc2a3c0b55b3ec15a))
+* remove remaining path: campaignbridge from checkout steps ([70915b1](https://github.com/TheAggressive/CampaignBridge/commit/70915b17e65222d4a8cebbd8b7c2d93a451f0b72))
+* resolve STORE_PATH context access error in GitHub Actions ([d02e0c6](https://github.com/TheAggressive/CampaignBridge/commit/d02e0c649f70d9799561858ae9d2e059fa214a00))
+* resolve wp-env plugin mounting issue in CI ([047a3d5](https://github.com/TheAggressive/CampaignBridge/commit/047a3d58410071fb8af9ed70b7f0b0c044f99f2c))
+* restore cd commands in wp-env scripts for proper directory navigation ([6e9633f](https://github.com/TheAggressive/CampaignBridge/commit/6e9633f830dc03a313d168e64ff6f2ffad01600c))
+* set WP_TESTS_CONFIG_FILE environment variable for PHPUnit ([7406bca](https://github.com/TheAggressive/CampaignBridge/commit/7406bca448c2205bc94f172b6166cee43e5b58f0))
+* update CI workflow to correct directory for dependency installation ([a85f052](https://github.com/TheAggressive/CampaignBridge/commit/a85f0528eabdcc7ea2ea868fe19d92bfe91eb1fc))
+* update CI workflow to run PHPUnit tests with correct commands ([5ae2c64](https://github.com/TheAggressive/CampaignBridge/commit/5ae2c649ba76e2db8f6d57c0cdab374265a0226d))
+* update CI workflow to use absolute path for dependency installation ([c78f8d5](https://github.com/TheAggressive/CampaignBridge/commit/c78f8d5afee8248aadacacdbbee1b451f60aca48))
+* update CI workflow to use correct command for dependency installation ([b3a102a](https://github.com/TheAggressive/CampaignBridge/commit/b3a102af180f84e95b39a50a9a45cac27cfb4006))
+* update CI workflows and ESLint configuration for improved coverage and directory structure ([a4597c6](https://github.com/TheAggressive/CampaignBridge/commit/a4597c65bb95a34a801dcac689c4e68c426b0914))
+* update coverage.yml to ensure correct paths for coverage reports ([ec87310](https://github.com/TheAggressive/CampaignBridge/commit/ec87310b00dd77f71049fe1aaabe79c58db5c028))
+* update coverage.yml to use xdebug for coverage reporting ([d786436](https://github.com/TheAggressive/CampaignBridge/commit/d786436dc2d47908f7d52ea295a98a0fec0addce))
+* update parameter and return type annotations in Form_Rest_Controller ([3bc1391](https://github.com/TheAggressive/CampaignBridge/commit/3bc139153b4f459145270e39d1ffe76f9599ce3c))
+* use htmlspecialchars instead of esc_html in test bootstrap validation ([316d173](https://github.com/TheAggressive/CampaignBridge/commit/316d17353e39dc5b01351faae24f7f748f65508f))
+* use standard WordPress testing setup script ([60a49df](https://github.com/TheAggressive/CampaignBridge/commit/60a49df058901007119a3ea6d80e5afbc39b2ab4))
+
+
+### Features
+
+* add MySQL service to CI workflow for database testing ([6af6c3b](https://github.com/TheAggressive/CampaignBridge/commit/6af6c3bbeba5d37fc06f3647d25efd87fe524b97))
+* clean repository version without secret history ([8885c4a](https://github.com/TheAggressive/CampaignBridge/commit/8885c4a1e84ceb5273402cf64ce7cb5466c78659))
+* introduce comprehensive CI/CD documentation and reorganization ([6fd9d2c](https://github.com/TheAggressive/CampaignBridge/commit/6fd9d2c1d1c5f7d73d21e09bb5a1a2514e2f2194))
+
+
+### Performance Improvements
+
+* replace wp-env with WordPress core testing suite for speed ([c3bc3d7](https://github.com/TheAggressive/CampaignBridge/commit/c3bc3d744185a20ebc11e1da26669f798a4633a0))
+
 # Changelog
 
 All notable changes to CampaignBridge will be documented in this file.
