@@ -55,6 +55,7 @@ class Encryption_Test extends WP_UnitTestCase {
 		// Clean up encryption-related options
 		delete_option( 'campaignbridge_master_key' );
 		delete_option( 'campaignbridge_key_metadata' );
+		delete_option( 'campaignbridge_retired_encryption_keys' );
 
 		// Clean up test admin user
 		if ( isset( $this->test_admin_user_id ) ) {
@@ -105,7 +106,7 @@ class Encryption_Test extends WP_UnitTestCase {
 			}
 		}
 
-		// Test that non-encrypted data is returned as-is (secure behavior)
+		// Plaintext and unknown formats must fail closed.
 		$non_encrypted_data = array(
 			'invalid_data', // Random string
 			'not_encrypted_data', // Non-encrypted data
@@ -113,8 +114,12 @@ class Encryption_Test extends WP_UnitTestCase {
 		);
 
 		foreach ( $non_encrypted_data as $data ) {
-			$result = Encryption::decrypt( $data );
-			$this->assertEquals( $data, $result, "Non-encrypted data should be returned as-is: $data" );
+			try {
+				Encryption::decrypt( $data );
+				$this->fail( "Expected RuntimeException for plaintext data: $data" );
+			} catch ( \RuntimeException $e ) {
+				$this->assertSame( 'Invalid encrypted data', $e->getMessage() );
+			}
 		}
 	}
 
@@ -207,6 +212,8 @@ class Encryption_Test extends WP_UnitTestCase {
 		// Get initial key metadata
 		$initial_meta = get_option( 'campaignbridge_key_metadata', array() );
 
+		$encrypted_before = Encryption::encrypt( 'data_encrypted_before_rotation' );
+
 		// Perform key rotation (force it for testing)
 		$result = Encryption::rotate_master_key( true );
 		$this->assertTrue( $result );
@@ -215,8 +222,10 @@ class Encryption_Test extends WP_UnitTestCase {
 		$new_meta = get_option( 'campaignbridge_key_metadata', array() );
 		$this->assertNotEquals( $initial_meta, $new_meta );
 
+		// Both old and new envelopes remain decryptable during staged re-encryption.
+		$this->assertSame( 'data_encrypted_before_rotation', Encryption::decrypt( $encrypted_before ) );
+
 		// Test that new data can be encrypted/decrypted with the rotated key
-		// Note: Key rotation intentionally invalidates old encrypted data for security
 		$test_data       = 'data_encrypted_after_rotation';
 		$encrypted_after = Encryption::encrypt( $test_data );
 		$decrypted_after = Encryption::decrypt( $encrypted_after );

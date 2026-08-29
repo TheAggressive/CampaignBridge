@@ -55,14 +55,8 @@ class Bootstrap {
 	private function get_wp_tests_dir(): string {
 		$tests_dir = getenv( 'WP_TESTS_DIR' );
 
-		// In wp-env, try the default location first
 		if ( ! $tests_dir ) {
-			$tests_dir = '/wordpress-phpunit';
-		}
-
-		// Fallback to temp directory
-		if ( ! file_exists( $tests_dir ) ) {
-			$tests_dir = rtrim( sys_get_temp_dir(), '/\\' ) . '/wordpress-tests-lib';
+			$tests_dir = $this->plugin_dir . '/vendor/wp-phpunit/wp-phpunit';
 		}
 
 		return $tests_dir;
@@ -83,6 +77,10 @@ class Bootstrap {
 	 * Setup PHPUnit polyfills configuration.
 	 */
 	private function setup_phpunit_polyfills(): void {
+		if ( false === getenv( 'WP_PHPUNIT__TESTS_CONFIG' ) ) {
+			putenv( 'WP_PHPUNIT__TESTS_CONFIG=' . $this->plugin_dir . '/tests/wp-tests-config.php' );
+		}
+
 		$polyfills_path = getenv( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' );
 		if ( false !== $polyfills_path ) {
 			define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', $polyfills_path );
@@ -97,7 +95,7 @@ class Bootstrap {
 	private function validate_tests_directory(): void {
 		if ( ! file_exists( "{$this->tests_dir}/includes/functions.php" ) ) {
 			throw new \Exception(
-				'Could not find ' . htmlspecialchars( $this->tests_dir ) . '/includes/functions.php, have you run bin/install-wp-tests.sh ?'
+				'Could not find the WordPress PHPUnit library. Run composer install.'
 			);
 		}
 	}
@@ -131,10 +129,6 @@ class Bootstrap {
 	 * Load WordPress bootstrap.
 	 */
 	private function load_wp_bootstrap(): void {
-		// Enable debugging for tests so logs go to files
-		if (!defined('WP_DEBUG')) {
-			define('WP_DEBUG', true);
-		}
 		require "{$this->tests_dir}/includes/bootstrap.php";
 	}
 

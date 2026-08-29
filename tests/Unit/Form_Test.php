@@ -126,7 +126,6 @@ class Form_Test extends Test_Case {
 
 		// Get the config array from Form_Config using reflection
 		$config_property = new \ReflectionProperty( Form_Config::class, 'config' );
-		$config_property->setAccessible( true );
 		$config_array = $config_property->getValue( $this->config );
 
 		// Create a Form instance using Form::make() which creates with default container,
@@ -135,7 +134,6 @@ class Form_Test extends Test_Case {
 
 		// Use reflection to set our test container
 		$container_property = new \ReflectionProperty( Form::class, 'container' );
-		$container_property->setAccessible( true );
 		$container_property->setValue( $form, $this->container );
 
 		// Force initialization to trigger validation by calling render
@@ -171,7 +169,6 @@ class Form_Test extends Test_Case {
 
 		// Get the config array from Form_Config using reflection
 		$config_property = new \ReflectionProperty( Form_Config::class, 'config' );
-		$config_property->setAccessible( true );
 		$config_array = $config_property->getValue( $this->config );
 
 		// Create a Form instance using Form::make() which creates with default container,
@@ -180,7 +177,6 @@ class Form_Test extends Test_Case {
 
 		// Use reflection to set our test container
 		$container_property = new \ReflectionProperty( Form::class, 'container' );
-		$container_property->setAccessible( true );
 		$container_property->setValue( $form, $this->container );
 
 		// Debug: Check if hook is present
@@ -264,7 +260,6 @@ class Form_Test extends Test_Case {
 
 			// Get the config array from Form_Config using reflection
 			$config_property = new \ReflectionProperty( Form_Config::class, 'config' );
-			$config_property->setAccessible( true );
 			$config_array = $config_property->getValue( $test_config );
 
 			// Create a Form instance using Form::make() with the test container
@@ -751,7 +746,6 @@ class Form_Test extends Test_Case {
 	private function invoke_private_method( object $object, string $method_name, array $args = array() ): mixed {
 		$reflection = new \ReflectionClass( $object );
 		$method     = $reflection->getMethod( $method_name );
-		$method->setAccessible( true );
 
 		return $method->invokeArgs( $object, $args );
 	}

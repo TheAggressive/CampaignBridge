@@ -165,7 +165,7 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 		if ( ! empty( $validation_rules ) ) {
 			$js_validation_rules = $this->convert_to_js_validation_rules( $validation_rules );
 			$validation_json     = wp_json_encode( $js_validation_rules );
-			$attributes[]        = sprintf( 'data-validation="%s"', esc_attr( $validation_json ) );
+			$attributes[]        = sprintf( 'data-validation="%s"', esc_attr( false === $validation_json ? '' : $validation_json ) );
 		}
 
 		// Data attributes.

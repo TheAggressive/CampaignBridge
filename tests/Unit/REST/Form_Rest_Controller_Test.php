@@ -239,7 +239,6 @@ class Form_Rest_Controller_Test extends \WP_UnitTestCase {
 	private function invoke_private_method( $object, $method_name, $args = array() ) {
 		$reflection = new \ReflectionClass( $object );
 		$method     = $reflection->getMethod( $method_name );
-		$method->setAccessible( true );
 
 		return $method->invokeArgs( $object, $args );
 	}

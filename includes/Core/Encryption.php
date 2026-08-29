@@ -52,6 +52,11 @@ class Encryption {
 	private const TAG_LENGTH = 16;
 
 	/**
+	 * Versioned ciphertext envelope prefix.
+	 */
+	private const ENVELOPE_PREFIX = 'cbenc:v1:';
+
+	/**
 	 * Option name for storing the master encryption key.
 	 */
 	private const MASTER_KEY_OPTION = 'campaignbridge_master_key';
@@ -60,6 +65,11 @@ class Encryption {
 	 * Option name for storing key rotation metadata.
 	 */
 	private const KEY_META_OPTION = 'campaignbridge_key_metadata';
+
+	/**
+	 * Retired keys retained for decrypting data written before rotation.
+	 */
+	private const RETIRED_KEYS_OPTION = 'campaignbridge_retired_encryption_keys';
 
 	/**
 	 * Minimum PHP version required for GCM support and security features.
@@ -80,7 +90,9 @@ class Encryption {
 			return '';
 		}
 
-		$key        = self::get_master_key();
+		$stored_key = self::get_master_key();
+		$key        = self::key_material( $stored_key );
+		$key_id     = self::key_id( $stored_key );
 		$iv         = random_bytes( self::IV_LENGTH );
 		$tag        = '';
 		$ciphertext = openssl_encrypt(
@@ -100,7 +112,7 @@ class Encryption {
 		$encrypted = $iv . $tag . $ciphertext;
 
 		// Return base64 encoded for safe storage.
-		return base64_encode( $encrypted ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		return self::ENVELOPE_PREFIX . $key_id . ':' . base64_encode( $encrypted ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 	}
 
 	/**
@@ -120,41 +132,16 @@ class Encryption {
 			return '';
 		}
 
-		// Check if the data appears to be encrypted (base64 encoded).
-		if ( ! self::is_encrypted_value( $encrypted ) ) {
-			// Data is not encrypted, return as-is (plain text).
-			return $encrypted;
-		}
-
 		try {
-			$decoded = base64_decode( $encrypted, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
-			if ( false === $decoded ) {
-				throw new \RuntimeException( 'Invalid encrypted data format' );
+			if ( str_starts_with( $encrypted, self::ENVELOPE_PREFIX ) ) {
+				return self::decrypt_envelope( $encrypted );
 			}
 
-			if ( strlen( $decoded ) < self::IV_LENGTH + self::TAG_LENGTH ) {
-				throw new \RuntimeException( 'Encrypted data too short' );
+			if ( self::is_legacy_encrypted_value( $encrypted ) ) {
+				return self::decrypt_legacy( $encrypted );
 			}
 
-			$key        = self::get_master_key();
-			$iv         = substr( $decoded, 0, self::IV_LENGTH );
-			$tag        = substr( $decoded, self::IV_LENGTH, self::TAG_LENGTH );
-			$ciphertext = substr( $decoded, self::IV_LENGTH + self::TAG_LENGTH );
-
-			$plaintext = openssl_decrypt(
-				$ciphertext,
-				self::ALGORITHM,
-				$key,
-				OPENSSL_RAW_DATA,
-				$iv,
-				$tag
-			);
-
-			if ( false === $plaintext ) {
-				throw new \RuntimeException( 'Invalid encrypted data' );
-			}
-
-			return $plaintext;
+			throw new \RuntimeException( 'Refusing to decrypt plaintext or an unknown ciphertext format' );
 
 		} catch ( \Throwable $e ) {
 			// Log the error for debugging but don't expose details.
@@ -219,14 +206,12 @@ class Encryption {
 	 * @return bool True if user has permission.
 	 */
 	private static function check_context_permissions( string $context ): bool {
-		// During early WordPress loading or when user context isn't available,
-		// be more permissive to prevent 500 errors during legitimate operations.
-		// Check if WordPress functions are available and if we have user context.
+		// Operational code uses decrypt() directly. Context-aware display access
+		// must fail closed when WordPress cannot establish an authenticated user.
 		$has_user_context = function_exists( 'wp_get_current_user' ) && function_exists( 'current_user_can' ) && function_exists( 'is_user_logged_in' );
 
 		if ( ! $has_user_context ) {
-			// WordPress functions not available yet - allow access for system initialization.
-			return true;
+			return 'public' === $context;
 		}
 
 		// Try to get current user safely.
@@ -234,8 +219,7 @@ class Encryption {
 		$user_loaded  = $current_user->exists();
 
 		if ( ! $user_loaded ) {
-			// User not loaded yet - allow access for initialization.
-			return true;
+			return 'public' === $context;
 		}
 
 		// Normal permission checking.
@@ -277,12 +261,19 @@ class Encryption {
 			return false;
 		}
 
+		// Retain the current key so existing envelopes remain decryptable.
+		$current_key = self::get_master_key();
+		$retired     = self::get_retired_keys();
+
+		$retired[ self::key_id( $current_key ) ] = $current_key;
+
 		// Generate new master key.
 		$new_key = self::generate_master_key();
 
 		// Store the new key.
 		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key rotation, no user request context available
-		$success = \CampaignBridge\Core\Storage::update_option( self::MASTER_KEY_OPTION, $new_key );
+		$retired_saved = \CampaignBridge\Core\Storage::update_option( self::RETIRED_KEYS_OPTION, $retired );
+		$success       = $retired_saved && \CampaignBridge\Core\Storage::update_option( self::MASTER_KEY_OPTION, $new_key );
 
 		if ( $success ) {
 			// Update metadata.
@@ -343,6 +334,138 @@ class Encryption {
 	private static function generate_master_key(): string {
 		$random_bytes = random_bytes( self::KEY_LENGTH );
 		return base64_encode( $random_bytes ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+	}
+
+	/**
+	 * Convert legacy plaintext or unversioned ciphertext to the current envelope.
+	 *
+	 * This method is intentionally explicit; normal decryption never accepts
+	 * plaintext as though it were protected.
+	 *
+	 * @param string $value Stored credential value.
+	 * @return string Current encrypted envelope.
+	 */
+	public static function migrate_legacy_value( string $value ): string {
+		if ( '' === $value || str_starts_with( $value, self::ENVELOPE_PREFIX ) ) {
+			return $value;
+		}
+
+		$plaintext = self::is_legacy_encrypted_value( $value ) ? self::decrypt_legacy( $value ) : $value;
+		return self::encrypt( $plaintext );
+	}
+
+	/**
+	 * Decrypt a versioned envelope.
+	 *
+	 * @param string $encrypted Versioned ciphertext.
+	 * @return string Plaintext.
+	 * @throws \RuntimeException When the envelope or key is invalid.
+	 */
+	private static function decrypt_envelope( string $encrypted ): string {
+		$parts = explode( ':', $encrypted, 4 );
+		if ( 4 !== count( $parts ) || 'cbenc' !== $parts[0] || 'v1' !== $parts[1] ) {
+			throw new \RuntimeException( 'Invalid encrypted data format' );
+		}
+
+		$key_id = $parts[2];
+		$keys   = self::get_decryption_keys();
+		if ( ! isset( $keys[ $key_id ] ) ) {
+			throw new \RuntimeException( 'Encryption key is unavailable' );
+		}
+
+		return self::decrypt_payload( $parts[3], self::key_material( $keys[ $key_id ] ) );
+	}
+
+	/**
+	 * Decrypt ciphertext written before versioned envelopes were introduced.
+	 *
+	 * @param string $encrypted Legacy base64 ciphertext.
+	 * @return string Plaintext.
+	 * @throws \RuntimeException When no retained key can decrypt the value.
+	 */
+	private static function decrypt_legacy( string $encrypted ): string {
+		foreach ( self::get_decryption_keys() as $stored_key ) {
+			try {
+				// Legacy code passed the base64 representation directly to OpenSSL.
+				return self::decrypt_payload( $encrypted, $stored_key );
+			} catch ( \RuntimeException $e ) {
+				continue;
+			}
+		}
+
+		throw new \RuntimeException( 'Invalid encrypted data' );
+	}
+
+	/**
+	 * Decrypt an IV/tag/ciphertext payload.
+	 *
+	 * @param string $payload Base64 payload.
+	 * @param string $key     OpenSSL key material.
+	 * @return string Plaintext.
+	 * @throws \RuntimeException When authentication or payload validation fails.
+	 */
+	private static function decrypt_payload( string $payload, string $key ): string {
+		$decoded = base64_decode( $payload, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		if ( false === $decoded || strlen( $decoded ) < self::IV_LENGTH + self::TAG_LENGTH ) {
+			throw new \RuntimeException( 'Invalid encrypted data format' );
+		}
+
+		$iv         = substr( $decoded, 0, self::IV_LENGTH );
+		$tag        = substr( $decoded, self::IV_LENGTH, self::TAG_LENGTH );
+		$ciphertext = substr( $decoded, self::IV_LENGTH + self::TAG_LENGTH );
+		$plaintext  = openssl_decrypt( $ciphertext, self::ALGORITHM, $key, OPENSSL_RAW_DATA, $iv, $tag );
+
+		if ( false === $plaintext ) {
+			throw new \RuntimeException( 'Invalid encrypted data' );
+		}
+
+		return $plaintext;
+	}
+
+	/**
+	 * Return current and retired keys indexed by stable key ID.
+	 *
+	 * @return array<string, string>
+	 */
+	private static function get_decryption_keys(): array {
+		$current = self::get_master_key();
+		return array( self::key_id( $current ) => $current ) + self::get_retired_keys();
+	}
+
+	/**
+	 * Get retired encryption keys.
+	 *
+	 * @return array<string, string>
+	 */
+	private static function get_retired_keys(): array {
+		$keys = \CampaignBridge\Core\Storage::get_option( self::RETIRED_KEYS_OPTION, array() );
+		return is_array( $keys ) ? array_filter( $keys, 'is_string' ) : array();
+	}
+
+	/**
+	 * Derive binary AES key material from a stored key.
+	 *
+	 * @param string $stored_key Base64 stored key.
+	 * @return string Binary key.
+	 * @throws \RuntimeException When stored key material is invalid.
+	 */
+	private static function key_material( string $stored_key ): string {
+		$decoded = base64_decode( $stored_key, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		if ( false === $decoded || self::KEY_LENGTH !== strlen( $decoded ) ) {
+			throw new \RuntimeException( 'Invalid encryption key material' );
+		}
+
+		return $decoded;
+	}
+
+	/**
+	 * Generate a non-secret identifier for an encryption key.
+	 *
+	 * @param string $stored_key Stored key.
+	 * @return string Key identifier.
+	 */
+	private static function key_id( string $stored_key ): string {
+		return substr( hash( 'sha256', $stored_key ), 0, 16 );
 	}
 
 	/**
@@ -421,6 +544,21 @@ class Encryption {
 	 * @return bool True if value appears to be encrypted.
 	 */
 	public static function is_encrypted_value( string $value ): bool {
+		if ( str_starts_with( $value, self::ENVELOPE_PREFIX ) ) {
+			$parts = explode( ':', $value, 4 );
+			return 4 === count( $parts ) && 16 === strlen( $parts[2] ) && self::is_legacy_encrypted_value( $parts[3] );
+		}
+
+		return self::is_legacy_encrypted_value( $value );
+	}
+
+	/**
+	 * Detect the pre-envelope base64 format.
+	 *
+	 * @param string $value Candidate value.
+	 * @return bool Whether the value has the legacy ciphertext shape.
+	 */
+	private static function is_legacy_encrypted_value( string $value ): bool {
 		// Basic security: only accept reasonable length values.
 		// Allow up to ~10KB for encrypted data (handles large strings with base64 overhead).
 		if ( strlen( $value ) < 20 || strlen( $value ) > 10000 ) {

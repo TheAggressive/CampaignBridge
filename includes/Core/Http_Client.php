@@ -131,9 +131,15 @@ class Http_Client {
 		$start_time = microtime( true );
 		++self::$metrics['requests_total'];
 
+		$http_method    = strtoupper( (string) ( $args['method'] ?? $method ) );
+		$retry_override = $args['campaignbridge_retry'] ?? null;
+		unset( $args['campaignbridge_retry'] );
+		$may_retry = self::may_retry( $http_method, $retry_override );
+
 		$args = wp_parse_args(
 			$args,
 			array(
+				'method'  => $http_method,
 				'timeout' => self::DEFAULT_TIMEOUT,
 				'headers' => array(),
 			)
@@ -159,16 +165,11 @@ class Http_Client {
 			++$attempts;
 
 			try {
-				$function = "wp_remote_{$method}";
-				if ( ! function_exists( $function ) ) {
-					return new \WP_Error( 'invalid_method', 'Unsupported HTTP method: ' . $method );
-				}
-
-				$response = $function( $url, $args );
+				$response = wp_remote_request( $url, $args ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction -- This class is the approved HTTP boundary.
 
 				if ( is_wp_error( $response ) ) {
 					$last_error = $response;
-					if ( $attempts <= self::MAX_RETRIES && self::is_retryable_error( $response ) ) {
+					if ( $may_retry && $attempts <= self::MAX_RETRIES && self::is_retryable_error( $response ) ) {
 						++self::$metrics['requests_retry'];
 						self::exponential_backoff_delay( $attempts );
 						self::log_retry( $method, $url, $attempts, $response );
@@ -178,7 +179,7 @@ class Http_Client {
 				}
 
 				$status_code = wp_remote_retrieve_response_code( $response );
-				if ( $status_code >= 500 && $attempts <= self::MAX_RETRIES ) {
+				if ( $may_retry && $status_code >= 500 && $attempts <= self::MAX_RETRIES ) {
 					// Retry on server errors.
 					++self::$metrics['requests_retry'];
 					self::exponential_backoff_delay( $attempts );
@@ -200,7 +201,7 @@ class Http_Client {
 
 			} catch ( \Throwable $e ) {
 				$last_error = new \WP_Error( 'http_exception', 'HTTP request failed' ); // Don't expose internal error details.
-				if ( $attempts <= self::MAX_RETRIES ) {
+				if ( $may_retry && $attempts <= self::MAX_RETRIES ) {
 					self::exponential_backoff_delay( $attempts );
 					self::log_retry( $method, $url, $attempts, 'Exception occurred' ); // Log without exposing details.
 					continue;
@@ -236,6 +237,24 @@ class Http_Client {
 	private static function is_retryable_error( \WP_Error $error ): bool {
 		$error_codes = array( 'http_request_failed', 'connect_timeout', 'read_timeout' );
 		return in_array( $error->get_error_code(), $error_codes, true );
+	}
+
+	/**
+	 * Determine whether an HTTP operation may be replayed after failure.
+	 *
+	 * Mutating POST/PATCH operations fail closed unless the caller explicitly
+	 * proves and opts into idempotent replay.
+	 *
+	 * @param string $method   HTTP method.
+	 * @param mixed  $override Explicit caller policy.
+	 * @return bool Whether retries are permitted.
+	 */
+	private static function may_retry( string $method, $override ): bool {
+		if ( is_bool( $override ) ) {
+			return $override;
+		}
+
+		return in_array( strtoupper( $method ), array( 'GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE' ), true );
 	}
 
 	/**

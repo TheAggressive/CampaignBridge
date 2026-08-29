@@ -210,7 +210,8 @@ class Form_Conditional_Manager {
 	 */
 	private function get_cache_key( string $field_id ): string {
 		// Include form data hash to ensure cache validity when data changes.
-		return $field_id . '_' . md5( wp_json_encode( $this->form_data ) );
+		$encoded_data = wp_json_encode( $this->form_data );
+		return $field_id . '_' . md5( false === $encoded_data ? '' : $encoded_data );
 	}
 
 	/**

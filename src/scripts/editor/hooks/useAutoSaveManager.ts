@@ -1,4 +1,4 @@
-import { BlockInstance } from '@wordpress/blocks';
+import { Block } from '@wordpress/blocks';
 import { useCallback, useRef, useState } from '@wordpress/element';
 import { savePostContent } from '../services/api';
 import { serializeSafe } from '../utils/blocks';
@@ -34,7 +34,7 @@ import { AUTOSAVE_CONSTANTS, useAutoSave } from './useAutoSave';
 export function useAutoSaveManager(
   postId: number,
   // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
-  onBlocksChange: (blocks: BlockInstance[]) => void,
+  onBlocksChange: (blocks: Block[]) => void,
   // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
   onSuccess: (message: string) => void,
   // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
@@ -52,7 +52,7 @@ export function useAutoSaveManager(
 
   const performSave = useCallback(
     async (
-      blocksToSave: BlockInstance[],
+      blocksToSave: Block[],
       { signal }: { signal?: AbortSignal } = {}
     ) => {
       try {

@@ -118,7 +118,7 @@ class Form_Registry {
 	public static function get_registered_form_ids(): array {
 		$forms_data = \CampaignBridge\Core\Storage::get_option( self::OPTION_KEY, array() );
 
-		return array_unique( array_merge( array_keys( self::$forms ), array_keys( $forms_data ) ) );
+		return array_values( array_unique( array_map( 'strval', array_merge( array_keys( self::$forms ), array_keys( $forms_data ) ) ) ) );
 	}
 
 	/**

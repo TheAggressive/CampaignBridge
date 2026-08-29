@@ -355,7 +355,7 @@ class Screen_Registry {
 		}
 
 		// Fallback to first tab.
-		return array_key_first( $tabs );
+		return (string) array_key_first( $tabs );
 	}
 
 	/**

@@ -15,6 +15,8 @@ namespace CampaignBridge\Tests\Security;
 
 use CampaignBridge\Admin\Controllers\Settings_Controller;
 use CampaignBridge\Admin\Core\Form;
+use CampaignBridge\Admin\Core\Form_Registry;
+use CampaignBridge\Admin\Core\Forms\Form_Config;
 use CampaignBridge\Admin\Core\Screen_Context;
 use CampaignBridge\Core\Encryption;
 use CampaignBridge\Providers\Mailchimp_Provider;
@@ -43,9 +45,23 @@ class Security_Test extends Test_Case {
 		// Set up admin user for security tests
 		$this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+		set_current_screen( 'dashboard' );
+
+		Form_Registry::register(
+			'conditional_test_form',
+			new Form_Config(
+				array(
+					'fields' => array(
+						'enable_api' => array( 'type' => 'checkbox' ),
+						'test_field' => array( 'type' => 'text' ),
+					),
+				)
+			)
+		);
 	}
 
 	public function tearDown(): void {
+		Form_Registry::clear();
 		parent::tearDown();
 		$this->cleanup_test_settings();
 	}
@@ -347,11 +363,13 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		// Set up sensitive data (should be encrypted when stored)
-		update_option( 'campaignbridge_mailchimp_api_key', $this->test_data['api_key'] );
+		$encrypted_key = Encryption::encrypt( $this->test_data['api_key'] );
+		update_option( 'campaignbridge_mailchimp_api_key', $encrypted_key );
 
 		// Test that the API key exists in settings
 		$saved_key = get_option( 'campaignbridge_mailchimp_api_key' );
-		$this->assertEquals( $this->test_data['api_key'], $saved_key );
+		$this->assertNotSame( $this->test_data['api_key'], $saved_key );
+		$this->assertTrue( Encryption::is_encrypted_value( $saved_key ) );
 
 		// Test that admin can decrypt for display
 		$display_key = Encryption::decrypt_for_display( $saved_key );
@@ -436,21 +454,18 @@ class Security_Test extends Test_Case {
 	public function test_conditional_fields_ajax_requires_valid_nonce(): void {
 		// Test without nonce - should fail
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => array( 'test_field' => 'test_value' ),
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array( 'test_field' => 'test_value' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
 
-		// Capture output
-		ob_start();
-		$controller->handle_ajax_evaluate_conditions();
-		$output = ob_get_clean();
+		$response = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
 		// Should return 403 Forbidden
-		$this->assertStringContains( '403', $output );
-		$this->assertStringContains( 'Security check failed', $output );
+		$this->assertFalse( $response['body']['success'] );
+		$this->assertSame( 'Security validation failed.', $response['body']['data'] );
 	}
 
 	/**
@@ -461,22 +476,19 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( 0 ); // Log out
 
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => array( 'test_field' => 'test_value' ),
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array( 'test_field' => 'test_value' ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
 
-		// Capture output
-		ob_start();
-		$controller->handle_ajax_evaluate_conditions();
-		$output = ob_get_clean();
+		$response = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
 		// Should return 401 Unauthorized
-		$this->assertStringContains( '401', $output );
-		$this->assertStringContains( 'Authentication required', $output );
+		$this->assertFalse( $response['body']['success'] );
+		$this->assertSame( 'Authentication required.', $response['body']['data'] );
 	}
 
 	/**
@@ -488,22 +500,19 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $subscriber_id );
 
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => array( 'test_field' => 'test_value' ),
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array( 'test_field' => 'test_value' ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
 
-		// Capture output
-		ob_start();
-		$controller->handle_ajax_evaluate_conditions();
-		$output = ob_get_clean();
+		$response = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
 		// Should return 403 Forbidden
-		$this->assertStringContains( '403', $output );
-		$this->assertStringContains( 'Access denied', $output );
+		$this->assertFalse( $response['body']['success'] );
+		$this->assertSame( 'Insufficient permissions.', $response['body']['data'] );
 	}
 
 	/**
@@ -515,21 +524,18 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => array( 'enable_api' => '1' ),
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array( 'enable_api' => '1' ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
 
-		// Capture output
-		ob_start();
-		$controller->handle_ajax_evaluate_conditions();
-		$output = ob_get_clean();
+		$response = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
 		// Should return success
-		$this->assertStringContains( '"success":true', $output );
+		$this->assertTrue( $response['body']['success'] );
 	}
 
 	/**
@@ -541,27 +547,24 @@ class Security_Test extends Test_Case {
 
 		// Test with malicious input - should be sanitized
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => array(
-				'enable_api' => '1',
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array(
+				'enable_api'      => '1',
 				'malicious_field' => '<script>alert("xss")</script>',
 			),
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
 
-		// Capture output
-		ob_start();
-		$controller->handle_ajax_evaluate_conditions();
-		$output = ob_get_clean();
+		$response = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
 		// Should still work (input is sanitized)
-		$this->assertStringContains( '"success":true', $output );
+		$this->assertTrue( $response['body']['success'] );
 
 		// The malicious script should be sanitized out
-		$this->assertStringNotContainsString( '<script>', $output );
+		$this->assertStringNotContainsString( '<script>', wp_json_encode( $response['body'] ) );
 	}
 
 	/**
@@ -576,19 +579,17 @@ class Security_Test extends Test_Case {
 		// Make multiple requests to trigger rate limiting
 		for ( $i = 0; $i < 25; $i++ ) { // More than the rate limit
 			$_POST = array(
-				'action'   => 'campaignbridge_evaluate_conditions',
-				'form_id'  => 'conditional_test_form',
-				'data'     => array( 'enable_api' => '1' ),
-				'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+				'action'  => 'campaignbridge_evaluate_conditions',
+				'form_id' => 'conditional_test_form',
+				'data'    => array( 'enable_api' => '1' ),
+				'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 			);
 
-			ob_start();
-			$controller->handle_ajax_evaluate_conditions();
-			$output = ob_get_clean();
+			$response = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
 			if ( $i >= 20 ) { // After rate limit is exceeded
-				$this->assertStringContains( 'Too many requests', $output,
-					"Request {$i} should be rate limited" );
+				$this->assertFalse( $response['body']['success'], "Request {$i} should be rate limited" );
+				$this->assertStringContainsString( 'Rate limit exceeded', $response['body']['data'] );
 			}
 		}
 	}
@@ -603,25 +604,13 @@ class Security_Test extends Test_Case {
 		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $admin_id );
 
-		$form_config = array( 'form_id' => 'test_form' );
-		$this->assertTrue( $this->invoke_private_method( $controller, 'user_can_access_form', array( 'test_form', $form_config ) ) );
+		$this->assertTrue( $controller->can_access_form() );
 
 		// Test form access for subscriber - should be denied
 		$subscriber_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $subscriber_id );
 
-		$this->assertFalse( $this->invoke_private_method( $controller, 'user_can_access_form', array( 'test_form', $form_config ) ) );
-
-		// Test form with specific capability requirement
-		$form_config_with_cap = array(
-			'form_id' => 'test_form',
-			'required_capability' => 'edit_posts'
-		);
-
-		$editor_id = $this->create_test_user( array( 'role' => 'editor' ) );
-		wp_set_current_user( $editor_id );
-
-		$this->assertTrue( $this->invoke_private_method( $controller, 'user_can_access_form', array( 'test_form', $form_config_with_cap ) ) );
+		$this->assertFalse( $controller->can_access_form() );
 	}
 
 	/**
@@ -631,28 +620,26 @@ class Security_Test extends Test_Case {
 		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $admin_id );
 
-		// Create oversized data (>100 fields)
+		// Create oversized data (>1000 fields).
 		$oversized_data = array();
-		for ( $i = 0; $i < 150; $i++ ) {
+		for ( $i = 0; $i < 1001; $i++ ) {
 			$oversized_data[ "field_{$i}" ] = 'test_value';
 		}
 
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => $oversized_data,
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => $oversized_data,
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
 
-		// Capture output
-		ob_start();
-		$controller->handle_ajax_evaluate_conditions();
-		$output = ob_get_clean();
+		$response = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
 		// Should return 400 Bad Request
-		$this->assertStringContains( '400', $output );
+		$this->assertFalse( $response['body']['success'] );
+		$this->assertSame( 'Form data is too large.', $response['body']['data'] );
 	}
 
 	/**
@@ -663,19 +650,19 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => array(
-				'enable_api' => '1',
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array(
+				'enable_api'       => '1',
 				'malicious[field]' => 'test', // Malicious field name
-				'script_tag' => '<script>alert("xss")</script>',
+				'script_tag'       => '<script>alert("xss")</script>',
 			),
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
-		$this->expectOutputRegex( '/success.*true/' ); // Should still work (malicious fields are filtered)
-		$controller->handle_ajax_evaluate_conditions();
+		$response   = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
+		$this->assertTrue( $response['body']['success'] );
 	}
 
 	/**
@@ -686,22 +673,19 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'nonexistent_form',
-			'data'     => array( 'test_field' => 'test_value' ),
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_nonexistent_form' ),
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'nonexistent_form',
+			'data'    => array( 'test_field' => 'test_value' ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_nonexistent_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
 
-		// Capture output
-		ob_start();
-		$controller->handle_ajax_evaluate_conditions();
-		$output = ob_get_clean();
+		$response = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
 		// Should return 404 Not Found
-		$this->assertStringContains( '404', $output );
-		$this->assertStringContains( 'Form not found', $output );
+		$this->assertFalse( $response['body']['success'] );
+		$this->assertSame( 'Form configuration not found.', $response['body']['data'] );
 	}
 
 	/**
@@ -712,17 +696,17 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => array(
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array(
 				$this->test_data['malicious_sql'] => 'test_value', // SQL injection in field name
 			),
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
-		$this->expectOutputRegex( '/success.*true/' ); // Should work (malicious field names are filtered)
-		$controller->handle_ajax_evaluate_conditions();
+		$response   = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
+		$this->assertTrue( $response['body']['success'] );
 	}
 
 	/**
@@ -733,21 +717,21 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		$_POST = array(
-			'action'   => 'campaignbridge_evaluate_conditions',
-			'form_id'  => 'conditional_test_form',
-			'data'     => array(
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array(
 				'enable_api' => '1',
 				'test_field' => $this->test_data['malicious_script'],
 			),
-			'nonce'    => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
 		);
 
 		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
-		$this->expectOutputRegex( '/success.*true/' ); // Should work
-		$controller->handle_ajax_evaluate_conditions();
+		$response   = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
 
-		// Verify that the output doesn't contain unsanitized script tags
-		$output = ob_get_contents();
+		// Verify that the output doesn't contain unsanitized script tags.
+		$output = wp_json_encode( $response['body'] );
+		$this->assertTrue( $response['body']['success'] );
 		$this->assertStringNotContainsString( '<script>', $output );
 		$this->assertStringNotContainsString( 'alert(', $output );
 	}
@@ -757,8 +741,7 @@ class Security_Test extends Test_Case {
 	 */
 	private function invoke_private_method( $object, $method_name, $parameters = array() ) {
 		$reflection = new \ReflectionClass( get_class( $object ) );
-		$method = $reflection->getMethod( $method_name );
-		$method->setAccessible( true );
+		$method     = $reflection->getMethod( $method_name );
 
 		return $method->invokeArgs( $object, $parameters );
 	}

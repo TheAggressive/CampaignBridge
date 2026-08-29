@@ -60,7 +60,6 @@
 		<!-- Memory and timeout settings for better stability -->
 		<ini name="memory_limit" value="256M"/>
 		<ini name="max_execution_time" value="300"/>
-		<!-- Disable process isolation for wp-env stability -->
 		<env name="WP_TESTS_FORCE_PROCESS_ISOLATION" value="0"/>
 	</php>
 </phpunit>

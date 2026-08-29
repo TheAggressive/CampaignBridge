@@ -936,7 +936,7 @@ class Form_Builder {
 	 */
 	private function generate_smart_label( string $name ): string {
 		// Convert snake_case or camelCase to Title Case.
-		$label = preg_replace( '/([a-z])([A-Z])/', '$1 $2', $name );
+		$label = preg_replace( '/([a-z])([A-Z])/', '$1 $2', $name ) ?? $name;
 		$label = str_replace( '_', ' ', $label );
 		$label = ucwords( strtolower( $label ) );
 

@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\REST;
 
+use CampaignBridge\Core\Client_Address;
+
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,32 +34,7 @@ class Rate_Limiter {
 	 * @return string Client IP address.
 	 */
 	private static function get_client_ip(): string {
-		$headers = array(
-			'HTTP_CF_CONNECTING_IP',
-			'HTTP_CLIENT_IP',
-			'HTTP_X_FORWARDED_FOR',
-			'HTTP_X_FORWARDED',
-			'HTTP_X_CLUSTER_CLIENT_IP',
-			'HTTP_FORWARDED_FOR',
-			'HTTP_FORWARDED',
-			'REMOTE_ADDR',
-		);
-
-		foreach ( $headers as $header ) {
-			if ( ! empty( $_SERVER[ $header ] ) ) {
-				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
-				// Handle comma-separated IPs (like X-Forwarded-For).
-				if ( strpos( $ip, ',' ) !== false ) {
-					$ip = trim( explode( ',', $ip )[0] );
-				}
-				// Validate IP format.
-				if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-					return $ip;
-				}
-			}
-		}
-
-		return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '127.0.0.1';
+		return Client_Address::get();
 	}
 
 	/**

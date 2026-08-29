@@ -73,9 +73,7 @@ export class ConditionalDataCollector {
     checkboxNames: Set<string>
   ): { fieldId: string; value: string } | null {
     const htmlInput = input as
-      | HTMLInputElement
-      | HTMLSelectElement
-      | HTMLTextAreaElement;
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
     const fullName = (htmlInput as HTMLInputElement).name;
 
     if (!fullName) return null;

@@ -186,6 +186,8 @@ class Form {
 	 */
 	public function ensure_renderer(): void {
 		$this->ensure_initialized();
+		assert( null !== $this->data_manager, 'Data manager must be initialized' );
+		assert( null !== $this->handler, 'Handler must be initialized' );
 
 		$this->renderer = $this->container->create_form_renderer(
 			$this,
@@ -305,6 +307,7 @@ class Form {
 
 		// Ensure renderer is initialized AFTER submission handling to get updated data.
 		$this->ensure_renderer();
+		assert( null !== $this->renderer, 'Renderer must be initialized' );
 
 		// Auto-register form for AJAX access if it has conditional fields.
 		if ( $this->renderer->has_conditional_fields() ) {
@@ -318,6 +321,7 @@ class Form {
 	 * @return void
 	 */
 	private function perform_rendering(): void {
+		assert( null !== $this->renderer, 'Renderer must be initialized' );
 		$this->renderer->render_form_open();
 		$this->renderer->render_fields();
 		$this->renderer->render_submit_button();
@@ -364,6 +368,7 @@ class Form {
 	 */
 	public function get_renderer(): \CampaignBridge\Admin\Core\Forms\Form_Renderer {
 		$this->ensure_renderer();
+		assert( null !== $this->renderer, 'Renderer must be initialized' );
 		return $this->renderer;
 	}
 

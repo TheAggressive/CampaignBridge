@@ -32,7 +32,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * Mailchimp API base URL
 	 */
-	private const API_BASE_URL = 'https://us1.api.mailchimp.com/3.0';
+	private const API_BASE_URL_FORMAT = 'https://%s.api.mailchimp.com/3.0';
 
 	/**
 	 * API endpoints
@@ -312,7 +312,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 */
 	private function create_mailchimp_campaign( array $campaign_data, string $api_key ) {
 		$response = \CampaignBridge\Core\Http_Client::post_json(
-			self::API_BASE_URL . self::ENDPOINT_CAMPAIGNS,
+			self::build_api_url( $api_key, self::ENDPOINT_CAMPAIGNS ),
 			$campaign_data,
 			array(
 				'headers' => array(
@@ -351,7 +351,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 		$send_data = array( 'send' => true );
 
 		$response = \CampaignBridge\Core\Http_Client::post(
-			self::API_BASE_URL . self::ENDPOINT_CAMPAIGNS . '/' . $campaign_id . '/actions/send',
+			self::build_api_url( $api_key, self::ENDPOINT_CAMPAIGNS . '/' . rawurlencode( $campaign_id ) . '/actions/send' ),
 			array(
 				'method'  => 'PATCH',
 				'headers' => array(
@@ -389,7 +389,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 */
 	private function get_mailchimp_templates( string $api_key ) {
 		$response = \CampaignBridge\Core\Http_Client::get(
-			self::API_BASE_URL . self::ENDPOINT_TEMPLATES,
+			self::build_api_url( $api_key, self::ENDPOINT_TEMPLATES ),
 			array(
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
@@ -414,6 +414,22 @@ class Mailchimp_Provider extends Abstract_Provider {
 		}
 
 		return json_decode( $body, true )['templates'] ?? array();
+	}
+
+	/**
+	 * Build a Mailchimp API URL from the data center encoded in the API key.
+	 *
+	 * @param string $api_key  Mailchimp API key.
+	 * @param string $endpoint API endpoint beginning with a slash.
+	 * @return string Fully qualified API URL.
+	 * @throws \InvalidArgumentException When the key has no valid data center.
+	 */
+	private static function build_api_url( string $api_key, string $endpoint ): string {
+		if ( 1 !== preg_match( '/-([a-z]{2}[0-9]+)$/', $api_key, $matches ) ) {
+			throw new \InvalidArgumentException( 'Mailchimp API key does not contain a valid data center.' );
+		}
+
+		return sprintf( self::API_BASE_URL_FORMAT, $matches[1] ) . '/' . ltrim( $endpoint, '/' );
 	}
 
 	/**

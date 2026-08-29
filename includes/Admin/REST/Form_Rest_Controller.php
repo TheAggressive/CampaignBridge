@@ -109,58 +109,57 @@ class Form_Rest_Controller {
 		// Security: Add security headers for AJAX responses.
 		$this->add_security_headers();
 
-		try {
-			// Security: Validate request origin for AJAX calls.
-			if ( ! $this->validate_request_origin() ) {
-				\CampaignBridge\Core\Error_Handler::error(
-					'Invalid request origin',
-					array(
-						'user_id' => get_current_user_id(),
-						'referer' => wp_get_referer(),
-					)
-				);
-				wp_send_json_error( 'Invalid request origin.', 403 );
-			}
+		// Security: Validate request origin for AJAX calls.
+		if ( ! $this->validate_request_origin() ) {
+			\CampaignBridge\Core\Error_Handler::error(
+				'Invalid request origin',
+				array(
+					'user_id' => get_current_user_id(),
+					'referer' => wp_get_referer(),
+				)
+			);
+			wp_send_json_error( 'Invalid request origin.', 403 );
+		}
 
 			// WordPress built-in: Verify user authentication.
-			if ( ! is_user_logged_in() ) {
-				wp_send_json_error( 'Authentication required.', 401 );
-			}
+		if ( ! is_user_logged_in() ) {
+			wp_send_json_error( 'Authentication required.', 401 );
+		}
 
 			// WordPress built-in: Verify nonce for CSRF protection.
 			$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
-			if ( empty( $nonce ) ) {
-				wp_send_json_error( 'Security validation failed.', 403 );
-			}
+		if ( empty( $nonce ) ) {
+			wp_send_json_error( 'Security validation failed.', 403 );
+		}
 
 			// WordPress built-in: Validate form identifier.
 			$form_id = isset( $_POST['form_id'] ) ? sanitize_key( wp_unslash( $_POST['form_id'] ) ) : '';
-			if ( empty( $form_id ) ) {
-				wp_send_json_error( 'Invalid form identifier.', 400 );
-			}
+		if ( empty( $form_id ) ) {
+			wp_send_json_error( 'Invalid form identifier.', 400 );
+		}
 
 			// WordPress built-in: Verify form-specific nonce.
 			$nonce_action = 'campaignbridge_form_' . $form_id;
-			if ( ! wp_verify_nonce( $nonce, $nonce_action ) ) {
-				wp_send_json_error( 'Security validation failed.', 403 );
-			}
+		if ( ! wp_verify_nonce( $nonce, $nonce_action ) ) {
+			wp_send_json_error( 'Security validation failed.', 403 );
+		}
 
 			// WordPress built-in: Verify user permissions.
-			if ( ! current_user_can( 'manage_options' ) ) {
-				wp_send_json_error( 'Insufficient permissions.', 403 );
-			}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( 'Insufficient permissions.', 403 );
+		}
 
 			// Security: Enhanced rate limiting with sliding window (60-second window).
-			if ( ! $this->check_rate_limit( get_current_user_id() ) ) {
-				\CampaignBridge\Core\Error_Handler::error(
-					'Rate limit exceeded',
-					array(
-						'user_id' => get_current_user_id(),
-						'ip'      => $this->get_client_ip(),
-					)
-				);
-				wp_send_json_error( 'Rate limit exceeded. Please wait before making another request.', 429 );
-			}
+		if ( ! $this->check_rate_limit( get_current_user_id() ) ) {
+			\CampaignBridge\Core\Error_Handler::error(
+				'Rate limit exceeded',
+				array(
+					'user_id' => get_current_user_id(),
+					'ip'      => $this->get_client_ip(),
+				)
+			);
+			wp_send_json_error( 'Rate limit exceeded. Please wait before making another request.', 429 );
+		}
 
 			// Get form data with size limits and sanitization.
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Data is sanitized in sanitize_and_validate_form_data()
@@ -168,17 +167,19 @@ class Form_Rest_Controller {
 			$form_data     = $this->sanitize_and_validate_form_data( $raw_form_data );
 
 			// Security: Validate form data size and depth.
-			if ( $this->is_form_data_too_large( $form_data ) ) {
-				wp_send_json_error( 'Form data is too large.', 400 );
-			}
+		if ( $this->is_form_data_too_large( $form_data ) ) {
+			wp_send_json_error( 'Form data is too large.', 400 );
+		}
 
 			// Get the form configuration.
 			$form_config = \CampaignBridge\Admin\Core\Form_Registry::get( $form_id );
-			if ( ! $form_config ) {
-				wp_send_json_error( 'Form configuration not found.', 404 );
-			}
+		if ( ! $form_config ) {
+			wp_send_json_error( 'Form configuration not found.', 404 );
+		}
 
-			// Evaluate conditional logic.
+		try {
+			// Evaluate conditional logic. Keep response termination outside this
+			// block so WordPress AJAX test handlers are not mistaken for failures.
 			$conditional_manager = new \CampaignBridge\Admin\Core\Forms\Form_Conditional_Manager(
 				$form_config->get_fields(),
 				$form_data
@@ -189,19 +190,19 @@ class Form_Rest_Controller {
 				'fields'  => $conditional_manager->evaluate_all_fields( $form_id, get_current_user_id() ),
 			);
 
-			wp_send_json( $result );
-
 		} catch ( \Throwable $e ) {
 			// Log error for debugging but don't expose sensitive information.
 			\CampaignBridge\Core\Error_Handler::error(
 				'Conditional evaluation error: ' . $e->getMessage(),
 				array(
 					'user_id' => get_current_user_id(),
-					'form_id' => $form_id ?? 'unknown',
+					'form_id' => $form_id,
 				)
 			);
 			wp_send_json_error( 'An unexpected error occurred. Please try again.', 500 );
 		}
+
+		wp_send_json( $result );
 	}
 
 	/**
@@ -339,34 +340,7 @@ class Form_Rest_Controller {
 	 * @return string Client IP address.
 	 */
 	private function get_client_ip(): string {
-		$headers = array(
-			'HTTP_CF_CONNECTING_IP', // Cloudflare.
-			'HTTP_CLIENT_IP',
-			'HTTP_X_FORWARDED_FOR',
-			'HTTP_X_FORWARDED',
-			'HTTP_X_CLUSTER_CLIENT_IP',
-			'HTTP_FORWARDED_FOR',
-			'HTTP_FORWARDED',
-			'REMOTE_ADDR',
-		);
-
-		foreach ( $headers as $header ) {
-			if ( ! empty( $_SERVER[ $header ] ) ) {
-				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
-
-				// Handle comma-separated IPs (e.g., X-Forwarded-For).
-				if ( strpos( $ip, ',' ) !== false ) {
-					$ip = trim( explode( ',', $ip )[0] );
-				}
-
-				// Validate IP address.
-				if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-					return $ip;
-				}
-			}
-		}
-
-		return 'unknown';
+		return \CampaignBridge\Core\Client_Address::get();
 	}
 
 	/**
@@ -392,10 +366,14 @@ class Form_Rest_Controller {
 		}
 
 		// Get site URL for comparison.
-		$site_url  = get_site_url();
-		$site_host = sanitize_text_field( wp_unslash( wp_parse_url( $site_url, PHP_URL_HOST ) ) );
-
-		$referer_host = sanitize_text_field( wp_unslash( wp_parse_url( $referer, PHP_URL_HOST ) ) );
+		$site_url         = get_site_url();
+		$site_host_raw    = wp_parse_url( $site_url, PHP_URL_HOST );
+		$referer_host_raw = wp_parse_url( $referer, PHP_URL_HOST );
+		if ( ! is_string( $site_host_raw ) || ! is_string( $referer_host_raw ) ) {
+			return false;
+		}
+		$site_host    = sanitize_text_field( $site_host_raw );
+		$referer_host = sanitize_text_field( $referer_host_raw );
 
 		// Allow same domain and subdomains.
 		if ( $referer_host === $site_host || strpos( $referer_host, '.' . $site_host ) !== false ) {

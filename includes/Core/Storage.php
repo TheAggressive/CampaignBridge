@@ -405,7 +405,7 @@ class Storage {
 		}
 
 		// Process in chunks to prevent memory exhaustion and timeouts.
-		$chunks = array_chunk( $operations, $batch_size );
+		$chunks = array_chunk( $operations, max( 1, $batch_size ) );
 
 		foreach ( $chunks as $chunk ) {
 			// Check execution time limit.
@@ -423,7 +423,7 @@ class Storage {
 
 			$result = self::process_meta_batch( $chunk );
 			if ( ! $result['success'] ) {
-				$errors[] = $result['error'];
+				$errors[] = $result['error'] ?? 'Unknown batch processing failure';
 				break; // Stop on first batch failure to maintain data integrity.
 			}
 
@@ -468,7 +468,7 @@ class Storage {
 	 * Each operation is processed individually using WordPress core functions.
 	 *
 	 * @param array<array{post_id: int, meta_key: string, meta_value: mixed}> $operations Batch operations.
-	 * @return array{success: bool, processed: int, error?: string} Batch result.
+	 * @return array{success: bool, processed: int, error: string|null} Batch result.
 	 */
 	private static function process_meta_batch( array $operations ): array {
 		if ( empty( $operations ) ) {
@@ -584,8 +584,8 @@ class Storage {
 		// Validate prefixes are safe (should only contain alphanumeric and underscores).
 		$safe_prefixes = array_filter(
 			$prefixes,
-			function ( $prefix ) {
-				return preg_match( '/^[a-zA-Z0-9_]+$/', $prefix );
+			function ( $prefix ): bool {
+				return 1 === preg_match( '/^[a-zA-Z0-9_]+$/', $prefix );
 			}
 		);
 

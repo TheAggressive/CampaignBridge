@@ -453,7 +453,7 @@ class Form_Renderer {
 	 * Get field renderer class for field type
 	 *
 	 * @param string $field_type Field type.
-	 * @return string Renderer class name.
+	 * @return class-string<Form_Field_Interface> Renderer class name.
 	 */
 	private function get_field_renderer_class( string $field_type ): string {
 		$type_map = array(

@@ -5,6 +5,7 @@
 # Build output
 /dist/
 /build/
+/release/
 
 # Coverage reports
 /coverage/
@@ -37,6 +38,7 @@ Thumbs.db
 wp-config-local.php
 
 # Test artifacts
+/.cache/
 /tests/tmp/
 /tmp/
 wordpress-tests-lib/

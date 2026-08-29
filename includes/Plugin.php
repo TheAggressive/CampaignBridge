@@ -21,6 +21,7 @@ namespace CampaignBridge;
 
 use CampaignBridge\Blocks\Blocks;
 use CampaignBridge\Core\Service_Container;
+use CampaignBridge\Core\Credential_Migrator;
 use CampaignBridge\Notices;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\REST\Routes as RestRoutes;
@@ -151,6 +152,8 @@ class Plugin {
 		 * @return void
 		 */
 	private function init_core_systems(): void {
+		// Migrate credentials before any provider or admin screen reads them.
+		Credential_Migrator::migrate();
 
 		// Initialize Notices system for admin feedback.
 		Notices::init();

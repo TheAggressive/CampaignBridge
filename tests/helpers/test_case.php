@@ -176,6 +176,40 @@ abstract class Test_Case extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Capture a WordPress AJAX JSON response without terminating PHPUnit.
+	 *
+	 * @param callable(): void $callback AJAX callback.
+	 * @return array{body: array<string, mixed>}
+	 */
+	protected function capture_ajax_response( callable $callback ): array {
+		$die_handler = static function (): callable {
+			return static function (): void {
+				throw new \WPAjaxDieStopException();
+			};
+		};
+		add_filter( 'wp_doing_ajax', '__return_true' );
+		add_filter( 'wp_die_ajax_handler', $die_handler );
+		ob_start();
+
+		try {
+			$callback();
+		} catch ( \WPAjaxDieStopException $exception ) {
+			// Expected: wp_send_json() terminates through wp_die() during AJAX.
+		} finally {
+			$output = (string) ob_get_clean();
+			remove_filter( 'wp_die_ajax_handler', $die_handler );
+			remove_filter( 'wp_doing_ajax', '__return_true' );
+		}
+
+		$body = json_decode( $output, true );
+		$this->assertIsArray( $body, 'AJAX response must be valid JSON: ' . $output );
+
+		return array(
+			'body' => $body,
+		);
+	}
+
+	/**
 	 * Get reflection method for testing private/protected methods.
 	 *
 	 * @param object|string $class_or_object Class name or object instance.
@@ -185,7 +219,6 @@ abstract class Test_Case extends WP_UnitTestCase {
 	protected function get_reflection_method( $class_or_object, string $method_name ): \ReflectionMethod {
 		$reflection = new \ReflectionClass( $class_or_object );
 		$method     = $reflection->getMethod( $method_name );
-		$method->setAccessible( true );
 
 		return $method;
 	}
@@ -200,7 +233,6 @@ abstract class Test_Case extends WP_UnitTestCase {
 	protected function get_reflection_property( $class_or_object, string $property_name ): \ReflectionProperty {
 		$reflection = new \ReflectionClass( $class_or_object );
 		$property   = $reflection->getProperty( $property_name );
-		$property->setAccessible( true );
 
 		return $property;
 	}

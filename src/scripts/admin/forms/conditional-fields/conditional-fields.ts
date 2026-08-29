@@ -112,8 +112,7 @@ export class ConditionalEngine {
    * Extract validation rules from form data attributes
    */
   private getValidationRulesFromForm():
-    | Record<string, import('./validation').ValidationRule>
-    | undefined {
+    Record<string, import('./validation').ValidationRule> | undefined {
     const rules: Record<string, import('./validation').ValidationRule> = {};
 
     // Look for data-validation attributes on form fields

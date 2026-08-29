@@ -351,28 +351,9 @@ class Routes extends Abstract_Rest_Controller {
 
 		$encrypted_value = $request->get_param( 'encrypted_value' );
 		try {
-			// For admin operations, try multiple contexts since we don't know the original context.
-			// Admin users should be able to decrypt fields they have access to.
-			$decrypted  = null;
-			$last_error = null;
-
-			// Try contexts in order of restrictiveness.
-			$contexts_to_try = array( 'public', 'personal', 'sensitive', 'api_key' );
-
-			foreach ( $contexts_to_try as $context ) {
-				try {
-					$decrypted = \CampaignBridge\Core\Encryption::decrypt_for_context( $encrypted_value, $context );
-					break; // Success - use this decrypted value.
-				} catch ( \RuntimeException $e ) {
-					$last_error = $e;
-					continue; // Try next context.
-				}
-			}
-
-			// If no context worked, throw the last error.
-			if ( null === $decrypted ) {
-				throw $last_error ?? new \RuntimeException( 'Unable to decrypt with any available context' );
-			}
+			// This route exposes a stored secret and therefore always uses the
+			// administrator-only sensitive context.
+			$decrypted = \CampaignBridge\Core\Encryption::decrypt_for_context( $encrypted_value, 'sensitive' );
 
 			// Ensure the decrypted value is safe for JSON transmission.
 			// Remove any potential binary data or problematic characters.

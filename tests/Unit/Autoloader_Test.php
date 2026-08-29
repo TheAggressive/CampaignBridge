@@ -259,7 +259,6 @@ class _Autoloader_Test extends WP_UnitTestCase {
 		// Manually add a non-existent file to cache
 		$reflection = new \ReflectionClass( CampaignBridge_Autoloader::class );
 		$property   = $reflection->getProperty( 'class_map' );
-		$property->setAccessible( true );
 
 		$fake_class = 'CampaignBridge\FakeTestClass';
 		$fake_path  = '/non/existent/path/FakeTestClass.php';

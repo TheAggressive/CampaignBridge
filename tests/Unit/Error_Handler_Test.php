@@ -60,7 +60,6 @@ class Error_Handler_Test extends WP_UnitTestCase {
 		// Reset singleton instance between tests
 		$reflection_class  = new \ReflectionClass( Error_Handler::class );
 		$instance_property = $reflection_class->getProperty( 'instance' );
-		$instance_property->setAccessible( true );
 		$instance_property->setValue( null, null );
 
 		$this->error_handler = new Error_Handler();
@@ -330,7 +329,6 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function test_log_file_path(): void {
 		$log_file_property = $this->reflection->getProperty( 'log_file' );
-		$log_file_property->setAccessible( true );
 		$log_file = $log_file_property->getValue( $this->error_handler );
 
 		$this->assertEquals( WP_CONTENT_DIR . '/campaignbridge.log', $log_file );
@@ -356,7 +354,6 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	private function invoke_private_method( string $method_name, ...$args ) {
 		$method = $this->reflection->getMethod( $method_name );
-		$method->setAccessible( true );
 		return $method->invokeArgs( $this->error_handler, $args );
 	}
 
@@ -365,7 +362,6 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	private function set_log_level( int $level ): void {
 		$log_level_property = $this->reflection->getProperty( 'log_level' );
-		$log_level_property->setAccessible( true );
 		$log_level_property->setValue( $this->error_handler, $level );
 	}
 }

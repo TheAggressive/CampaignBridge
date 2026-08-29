@@ -71,7 +71,7 @@ Runs `lint-staged` which processes only staged files based on file type:
 
 #### PHP Files (`*.php`)
 ```javascript
-// Runs in wp-env container:
+// Runs directly against the repository tools:
 'phpcbf --standard=phpcs.xml.dist',  // Auto-fixes PHP coding standards
 'phpstan analyse --memory-limit=2G'  // Static analysis
 ```
@@ -421,14 +421,5 @@ Configures commit message validation rules:
 - Just commit normally: `git commit -m "feat: add feature"`
 - Hooks run automatically
 - Fix issues if hook fails, then commit again
-
-
-
-
-
-
-
-
-
 
 

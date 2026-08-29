@@ -33,7 +33,8 @@ class Response_Formatter {
 	public static function format_posts_response( array $post_ids ): array {
 		$items = array();
 		foreach ( (array) $post_ids as $pid ) {
-			$title_raw     = (string) get_post_field( 'post_title', $pid );
+			$title_value   = get_post_field( 'post_title', $pid );
+			$title_raw     = is_scalar( $title_value ) ? (string) $title_value : '';
 			$title_decoded = html_entity_decode( $title_raw, ENT_QUOTES, 'UTF-8' );
 			$title_escaped = esc_html( $title_decoded ); // Escape HTML to prevent XSS.
 			$items[]       = array(

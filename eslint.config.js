@@ -12,8 +12,10 @@ export default [
     ignores: [
       '*.config.js',
       '*.config.mjs',
+      '.cache/**',
       'node_modules/**',
       'dist/**',
+      'release/**',
       'assets/**',
       'vendor/**',
       'coverage/**',

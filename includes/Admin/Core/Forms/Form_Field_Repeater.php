@@ -36,7 +36,7 @@ class Form_Field_Repeater {
 	/**
 	 * All possible choice options
 	 *
-	 * @var array<string, string>
+	 * @var array<string, string|int>
 	 */
 	private array $populate_all_choices;
 

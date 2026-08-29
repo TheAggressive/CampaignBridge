@@ -22,7 +22,7 @@ A comprehensive WordPress plugin for creating and managing professional email ca
 - **Comprehensive Security**: AES-256-GCM encryption, CSRF protection, input sanitization, and capability validation
 - **Dynamic Form Builder**: Type-safe fluent API with automatic field closing and context-aware methods
 - **Conditional Logic**: Advanced show/hide fields with AJAX evaluation and dependency management
-- **Secure File Uploads**: MIME validation, size limits, and malware scanning with progress tracking
+- **Secure File Uploads**: MIME validation, size limits, and suspicious-content signature checks with progress tracking
 - **Form Factory Pattern**: Pre-built form templates with security integration (contact, registration, settings)
 - **Data Preservation**: Form state maintained across submissions with encrypted sensitive data storage
 - **Accessibility Compliant**: WCAG 2.1 AA compliance with ARIA attributes and full keyboard navigation
@@ -40,8 +40,8 @@ A comprehensive WordPress plugin for creating and managing professional email ca
 - **SQL Injection Prevention**: WordPress prepared statements with automatic parameter binding
 - **XSS Prevention**: Comprehensive output escaping and content filtering
 - **Access Control**: Capability-based permissions with admin-only sensitive data access
-- **Audit Logging**: Complete security event logging with configurable retention
-- **File Security**: MIME validation, size limits, and malware scanning for uploads
+- **Security Logging**: Centralized, redacted diagnostic logging for security-relevant failures
+- **File Security**: MIME validation, size limits, and suspicious-content signature checks for uploads
 
 ### 📊 Advanced Features & Performance
 - **Rate Limiting**: Intelligent API rate limiting with exponential backoff
@@ -61,10 +61,7 @@ A comprehensive WordPress plugin for creating and managing professional email ca
 - **HTTPS**: Required for secure API communications
 
 ### Browser Support
-- Chrome 80+
-- Firefox 75+
-- Safari 13+
-- Edge 80+
+CampaignBridge targets current evergreen Chrome, Firefox, Safari, and Edge releases. Browser compatibility is enforced incrementally through the end-to-end test roadmap in `docs/testing-strategy.md`.
 
 ## 🚀 Installation
 

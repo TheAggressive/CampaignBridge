@@ -190,9 +190,7 @@ export class ConditionalAccessibility implements IConditionalAccessibility {
           nextElement.id ||
             (
               nextElement as
-                | HTMLInputElement
-                | HTMLSelectElement
-                | HTMLTextAreaElement
+                HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
             ).name ||
             'field'
         );

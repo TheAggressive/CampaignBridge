@@ -1,5 +1,5 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
-import { BlockInstance } from '@wordpress/blocks';
+import { Block } from '@wordpress/blocks';
 import {
   Popover,
   ResizableBox,
@@ -121,7 +121,7 @@ export default function EditorChrome({
 
   // Unified update handler using custom hook
   const handleBlocksUpdate = useCallback(
-    (next: BlockInstance[]) => {
+    (next: Block[]) => {
       setBlocks(next);
       if (typeof save.schedule === 'function') {
         save.schedule(next);

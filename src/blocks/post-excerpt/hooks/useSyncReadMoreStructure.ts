@@ -71,7 +71,7 @@ export function useSyncReadMoreStructure(
     // Turning OFF showMore -> clear children
     if (!isOn && wasOn) {
       if (current.length) {
-        replaceInnerBlocks(clientId, [], { updateSelection: false });
+        replaceInnerBlocks(clientId, [], false);
         selectBlock(clientId);
       }
       prevKeyRef.current = structureKey;
@@ -111,7 +111,7 @@ export function useSyncReadMoreStructure(
       }
     }
 
-    replaceInnerBlocks(clientId, desired, { updateSelection: false });
+    replaceInnerBlocks(clientId, desired, false);
     prevKeyRef.current = structureKey;
   }, [
     clientId,

@@ -111,7 +111,7 @@ Each integration test includes:
 ## Dependencies & Requirements
 
 ### WordPress Integration
-- WordPress test environment (`wp-env`)
+- Native WordPress PHPUnit environment (`pnpm test:setup`)
 - Admin user capabilities
 - Plugin activation hooks
 - WordPress REST API

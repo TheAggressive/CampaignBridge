@@ -1,0 +1,13 @@
+# pnpm blocks dependency lifecycle scripts unless each package is reviewed here.
+# These optional bindings are not required by CampaignBridge's build.
+packages: []
+
+overrides:
+  lightningcss: 1.30.2
+
+allowBuilds:
+  '@parcel/watcher': false
+  core-js: false
+  core-js-pure: false
+  fs-ext-extra-prebuilt: false
+  unrs-resolver: false

@@ -359,7 +359,6 @@ class Performance_Test extends Test_Case {
 			// Clear existing blocks (this is test-specific)
 			$reflection = new \ReflectionClass( $registry );
 			$property   = $reflection->getProperty( 'registered_block_types' );
-			$property->setAccessible( true );
 			$property->setValue( $registry, array() );
 		}
 

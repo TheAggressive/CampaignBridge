@@ -1,4 +1,4 @@
-import { BlockInstance, parse } from '@wordpress/blocks';
+import { Block, parse } from '@wordpress/blocks';
 import { useEffect, useState } from '@wordpress/element';
 import { getPostRaw } from '../services/api';
 
@@ -22,18 +22,18 @@ interface PostData {
  *
  * @interface UseEditorDataResult
  * @property {boolean} ready - Whether the editor data has been loaded and parsed
- * @property {BlockInstance[]} blocks - Array of parsed WordPress blocks
+ * @property {Block[]} blocks - Array of parsed WordPress blocks
  * @property {Error | null} error - Error object if loading failed, null otherwise
  * @property {boolean} loading - Whether data is currently being loaded
- * @property {(blocks: BlockInstance[]) => void} setBlocks - Function to manually set blocks
+ * @property {(blocks: Block[]) => void} setBlocks - Function to manually set blocks
  */
 interface UseEditorDataResult {
   ready: boolean;
-  blocks: BlockInstance[];
+  blocks: Block[];
   error: Error | null;
   loading: boolean;
   // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
-  setBlocks: (blocks: BlockInstance[]) => void;
+  setBlocks: (blocks: Block[]) => void;
 }
 
 /**
@@ -51,7 +51,7 @@ export function useEditorData(
   postType: string = 'post'
 ): UseEditorDataResult {
   const [ready, setReady] = useState<boolean>(false);
-  const [blocks, setBlocks] = useState<BlockInstance[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 

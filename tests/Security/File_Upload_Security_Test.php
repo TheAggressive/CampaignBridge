@@ -297,7 +297,6 @@ class File_Upload_Security_Test extends Test_Case {
 		// Test IP detection
 		$reflection = new ReflectionClass( $form_security );
 		$method     = $reflection->getMethod( 'get_client_ip' );
-		$method->setAccessible( true );
 
 		$ip = $method->invoke( $form_security );
 		$this->assertIsString( $ip );

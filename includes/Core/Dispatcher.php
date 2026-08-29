@@ -118,8 +118,8 @@ class Dispatcher {
 		$content_html  = apply_filters( 'the_content', $post->post_content );
 		$link          = get_permalink( $post_id );
 		$title_raw     = get_post_field( 'post_title', $post_id );
-		$title_raw     = $title_raw ? $title_raw : '';
-		$title_decoded = html_entity_decode( (string) $title_raw, ENT_QUOTES, 'UTF-8' );
+		$title_raw     = is_scalar( $title_raw ) ? (string) $title_raw : '';
+		$title_decoded = html_entity_decode( $title_raw, ENT_QUOTES, 'UTF-8' );
 		$title_clean   = preg_replace( self::TITLE_DIMENSION_PATTERN, '', $title_decoded ) ? preg_replace( self::TITLE_DIMENSION_PATTERN, '', $title_decoded ) : '';
 
 		return self::generate_post_html_block( $img, $title_clean, $content_html, $link ? $link : '' );
@@ -181,9 +181,9 @@ class Dispatcher {
 		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
 		foreach ( $sensitive_fields as $field ) {
 			if ( isset( $decrypted_settings[ $field ] ) && ! empty( $decrypted_settings[ $field ] ) ) {
-				// Check if field appears to be encrypted (base64 encoded binary data).
+				// Recognize both the current versioned envelope and the legacy format.
 				$value = $decrypted_settings[ $field ];
-				if ( is_string( $value ) && self::is_encrypted_value( $value ) ) {
+				if ( is_string( $value ) && Encryption::is_encrypted_value( $value ) ) {
 					try {
 						$decrypted_settings[ $field ] = Encryption::decrypt( $value );
 					} catch ( \Throwable $e ) {
@@ -206,27 +206,5 @@ class Dispatcher {
 		}
 
 		return $decrypted_settings;
-	}
-
-	/**
-	 * Check if a value appears to be encrypted data.
-	 *
-	 * @param string $value The value to check.
-	 * @return bool True if value appears to be encrypted.
-	 */
-	private static function is_encrypted_value( string $value ): bool {
-		// Check if it's base64 encoded (encrypted data is base64 encoded).
-		if ( ! preg_match( '/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $value ) ) {
-			return false;
-		}
-
-		// Try to decode and check if it looks like encrypted binary data.
-		$decoded = base64_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
-		if ( false === $decoded ) {
-			return false;
-		}
-
-		// Encrypted data should be at least 28 bytes (IV + tag + minimal ciphertext).
-		return strlen( $decoded ) >= 28;
 	}
 }

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains the PHPUnit test suite for the CampaignBridge WordPress plugin. The testing environment uses WP-Env for WordPress integration and follows WordPress coding standards.
+This directory contains the PHPUnit test suite for the CampaignBridge WordPress plugin. Tests use a native, disposable MySQL database, a pinned WordPress core, and the Composer-pinned WordPress PHPUnit library.
 
 ## Directory Structure
 
@@ -37,11 +37,11 @@ pnpm test:coverage
 pnpm qa
 ```
 
-### Direct PHPUnit
+### Direct PHPUnit arguments
 
 ```bash
-# Inside WP-Env container
-wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit'
+# The wrapper prepares WordPress and MySQL, then passes arguments to PHPUnit.
+pnpm test:any -- --filter My_Feature_Test
 ```
 
 ## Writing Tests
@@ -109,15 +109,18 @@ class My_Integration_Test extends Test_Case {
 ## Test Naming Conventions
 
 ### Files
+
 - Use `snake_case` for file names: `my_feature_test.php`
 - Place in appropriate directory: `Unit/`, `Integration/`, `Legacy/`
 
 ### Classes
+
 - Use `PascalCase_With_Underscores`: `My_Feature_Test`
 - Always extend `Test_Case`
 - Add namespace: `CampaignBridge\Tests\Unit`
 
 ### Methods
+
 - Use `snake_case`: `test_my_feature_works()`
 - Prefix with `test_`
 - Be descriptive: `test_user_registration_sends_email()`
@@ -135,21 +138,25 @@ The test environment is automatically configured by `Bootstrap.php`:
 ## Best Practices
 
 ### 1. Test Organization
+
 - Group related tests in the same class
 - Use descriptive test method names
 - Add PHPDoc comments explaining complex tests
 
 ### 2. Test Data
+
 - Use `Test_Factory` for creating consistent test data
 - Clean up after tests (done automatically by `Test_Case`)
 - Use unique values to avoid conflicts
 
 ### 3. Assertions
+
 - Use specific assertions (`assertEquals` vs `assertTrue`)
 - Test both positive and negative cases
 - Include edge cases and error conditions
 
 ### 4. Performance
+
 - Keep unit tests fast (< 1 second each)
 - Use mocking for external dependencies
 - Group slow tests in Integration suite
@@ -157,19 +164,22 @@ The test environment is automatically configured by `Bootstrap.php`:
 ## Debugging Tests
 
 ### Enable Debug Output
+
 ```php
 // In test methods
 error_log( 'Debug info: ' . print_r( $data, true ) );
 ```
 
 ### Run Single Test
+
 ```bash
-wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit tests/Unit/My_Feature_Test.php'
+pnpm test:any -- tests/Unit/My_Feature_Test.php
 ```
 
 ### Verbose Output
+
 ```bash
-wp-env run tests-cli bash -c 'cd wp-content/plugins/campaignbridge && ./vendor/bin/phpunit --verbose'
+pnpm test:any -- --verbose
 ```
 
 ## Coverage Reports
@@ -192,10 +202,4 @@ pnpm qa  # Run linting + tests
 
 ---
 
-**Note**: Remove `tests/Unit/Example_Test.php` when you add real tests.
-
-
-
-
-
-
+**Note**: MySQL server/client binaries and `curl` are required for the native runner. Test data is isolated under `.cache/tests`; it never uses the WordPress Studio database.

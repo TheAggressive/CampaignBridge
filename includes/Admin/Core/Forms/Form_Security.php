@@ -103,6 +103,9 @@ class Form_Security {
 			$origin     = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ORIGIN'] ) );
 			$admin_url  = admin_url();
 			$parsed_url = wp_parse_url( $admin_url );
+			if ( ! is_array( $parsed_url ) || empty( $parsed_url['host'] ) ) {
+				return false;
+			}
 
 			// Allow same-origin requests.
 			if ( strpos( $origin, $parsed_url['host'] ) === false ) {
@@ -119,7 +122,8 @@ class Form_Security {
 			'post-new.php',
 		);
 
-		$current_page = isset( $_SERVER['REQUEST_URI'] ) ? basename( wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH ) ) : '';
+		$request_path = isset( $_SERVER['REQUEST_URI'] ) ? wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH ) : '';
+		$current_page = is_string( $request_path ) ? basename( $request_path ) : '';
 
 		if ( ! in_array( $current_page, $expected_pages, true ) && strpos( $current_page, 'admin.php' ) !== 0 ) {
 			// Additional check: ensure we're in an admin context.
@@ -715,32 +719,6 @@ class Form_Security {
 	 * @return string Client IP address.
 	 */
 	public static function get_client_ip(): string {
-		$headers = array(
-			'HTTP_CF_CONNECTING_IP',
-			'HTTP_CLIENT_IP',
-			'HTTP_X_FORWARDED_FOR',
-			'HTTP_X_FORWARDED',
-			'HTTP_X_CLUSTER_CLIENT_IP',
-			'HTTP_FORWARDED_FOR',
-			'HTTP_FORWARDED',
-			'REMOTE_ADDR',
-		);
-
-		foreach ( $headers as $header ) {
-			if ( isset( $_SERVER[ $header ] ) ) {
-				$ip = trim( sanitize_text_field( \wp_unslash( $_SERVER[ $header ] ) ) );
-
-				// Handle comma-separated IPs (like X-Forwarded-For).
-				if ( strpos( $ip, ',' ) !== false ) {
-					$ip = trim( explode( ',', $ip )[0] );
-				}
-
-				if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-					return $ip;
-				}
-			}
-		}
-
-		return '127.0.0.1'; // Fallback.
+		return \CampaignBridge\Core\Client_Address::get();
 	}
 }
