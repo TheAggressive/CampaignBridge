@@ -371,14 +371,17 @@ class Encryption_Test extends WP_UnitTestCase {
 		$plaintext = 'sensitive_data';
 		$encrypted = Encryption::encrypt( $plaintext );
 
-		// Tamper with the encrypted data
-		$tampered = substr( $encrypted, 0, -1 ) . 'X'; // Change last character
+		// Flip a bit in the authentication tag. Replacing the final base64
+		// character is not deterministic because it can contain unused bits.
+		$parts   = explode( ':', $encrypted, 4 );
+		$payload = base64_decode( $parts[3], true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		$this->assertIsString( $payload );
+		$payload[12] = chr( ord( $payload[12] ) ^ 1 );
+		$parts[3]    = base64_encode( $payload ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		$tampered    = implode( ':', $parts );
 
-		try {
-			Encryption::decrypt( $tampered );
-			$this->fail( 'Expected RuntimeException for tampered data' );
-		} catch ( \RuntimeException $e ) {
-			$this->assertStringContainsString( 'invalid encrypted data', strtolower( $e->getMessage() ) );
-		}
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'Invalid encrypted data' );
+		Encryption::decrypt( $tampered );
 	}
 }
