@@ -19,11 +19,13 @@ CampaignBridge uses **semantic versioning** with **automated version synchroniza
 The version appears in **3 places** that must stay synchronized:
 
 1. **`package.json`** - Source of truth
+
    ```json
    "version": "0.3.26"
    ```
 
 2. **`campaignbridge.php`** - Plugin header (WordPress requirement)
+
    ```php
    /**
     * Version: 0.3.26
@@ -44,6 +46,7 @@ pnpm version:sync
 ```
 
 **What it does:**
+
 1. Reads `package.json` to get current version
 2. Updates plugin header: `* Version: X.X.X`
 3. Updates PHP constant: `public const VERSION = 'X.X.X'`
@@ -76,6 +79,7 @@ When you push to `master`, **semantic-release** automatically:
 8. **Commits all changes** back to repository
 
 **Commit Message Examples:**
+
 ```bash
 feat: add new email template feature
 # → 0.3.26 → 0.4.0 (MINOR bump)
@@ -101,6 +105,7 @@ pnpm version major  # 0.3.26 → 1.0.0
 ```
 
 **Manual Process:**
+
 1. `pnpm version <type>` updates `package.json`
 2. `preversion` hook runs → `pnpm version:sync`
 3. PHP file is automatically updated
@@ -176,7 +181,6 @@ pnpm version major  # 0.3.26 → 1.0.0
 ┌─────────────────────────────────────────────────────────────┐
 │ 2. Build process continues                                  │
 │    - Build blocks                                           │
-│    - Build interactivity                                    │
 │    - Build assets                                           │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -184,13 +188,16 @@ pnpm version major  # 0.3.26 → 1.0.0
 ## Configuration Files
 
 ### `.releaserc.json`
+
 Semantic release configuration that:
+
 - Analyzes commits to determine version bumps
 - Runs `version:sync` after updating `package.json`
 - Commits updated files back to repository
 - Creates GitHub releases
 
 ### `package.json` scripts
+
 - `version:sync` - Syncs PHP file from package.json
 - `preversion` - Runs before npm/pnpm version commands
 - `build` - Runs version:sync before building
@@ -198,12 +205,14 @@ Semantic release configuration that:
 ## Best Practices
 
 ### ✅ DO:
+
 - Let semantic-release handle version bumps automatically
 - Use conventional commit messages (`feat:`, `fix:`, etc.)
 - Run `pnpm version:sync` manually if you edit `package.json` directly
 - Always commit version changes together
 
 ### ❌ DON'T:
+
 - Manually edit version numbers in `campaignbridge.php`
 - Skip version synchronization
 - Mix manual and automated versioning
@@ -250,6 +259,3 @@ git commit -m "chore: bump version to X.X.X"
 ## Version History
 
 Check `CHANGELOG.md` for complete version history and release notes.
-
-
-

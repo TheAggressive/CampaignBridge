@@ -135,6 +135,10 @@ class Asset_Manager {
 	 * @return void
 	 */
 	private static function enqueue_asset_style_internal( string $handle, string $asset_path, array $asset_data = array() ): void {
+		if ( '' === $handle ) {
+			return;
+		}
+
 		$asset_info = self::prepare_asset_enqueue( $asset_path, $asset_data, '.css' );
 
 		\wp_enqueue_style(
@@ -154,15 +158,19 @@ class Asset_Manager {
 	 * @return void
 	 */
 	private static function enqueue_asset_script_internal( string $handle, string $asset_path, array $asset_data = array() ): void {
+		if ( '' === $handle ) {
+			return;
+		}
+
 		$asset_info = self::prepare_asset_enqueue( $asset_path, $asset_data, '.js' );
 
-				\wp_enqueue_script(
-					$handle,
-					$asset_info['url'],
-					$asset_info['dependencies'],
-					$asset_info['version'],
-					$asset_info['in_footer'] ?? true
-				);
+		\wp_enqueue_script(
+			$handle,
+			$asset_info['url'],
+			$asset_info['dependencies'],
+			$asset_info['version'],
+			$asset_info['in_footer'] ?? true
+		);
 	}
 
 	/**

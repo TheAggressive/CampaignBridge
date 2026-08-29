@@ -8,7 +8,7 @@
  * @note This version is automatically synced from package.json via pnpm version:sync
  *
  * Requires at least: 6.5.0
- * Tested up to: 6.8.2
+ * Tested up to: 7.0
  * Requires PHP: 8.2
  * Author: Aggressive Network, LLC
  * License: GPL v2 or later

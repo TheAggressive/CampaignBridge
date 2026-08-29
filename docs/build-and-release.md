@@ -9,3 +9,7 @@
 Publishing is a manual workflow action. Merge and push events run quality gates but cannot publish a release as a side effect.
 
 CI blocks releases on Composer advisories and advisories in dependencies shipped to production. Dependabot tracks the larger development-only WordPress toolchain separately so upstream build-tool fixes can be reviewed without forcing incompatible transitive overrides.
+
+Direct dependency sources and compatibility locks are governed by
+[`docs/dependency-policy.md`](dependency-policy.md). CI rejects unreviewed Git,
+URL, file, and custom Composer repository dependencies.

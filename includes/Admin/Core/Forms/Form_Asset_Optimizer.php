@@ -117,6 +117,10 @@ class Form_Asset_Optimizer {
 	 * @return void
 	 */
 	public function enqueue_script( string $handle, string $src, array $deps = array(), string $version = '', bool $in_footer = true ): void {
+		if ( '' === $handle ) {
+			return;
+		}
+
 		// Skip if already enqueued to prevent duplicates.
 		if ( in_array( $handle, $this->enqueued_scripts, true ) ) {
 			return;
@@ -155,6 +159,10 @@ class Form_Asset_Optimizer {
 	 * @return void
 	 */
 	public function enqueue_style( string $handle, string $src, array $deps = array(), string $version = '', string $media = 'all' ): void {
+		if ( '' === $handle ) {
+			return;
+		}
+
 		// Skip if already enqueued to prevent duplicates.
 		if ( in_array( $handle, $this->enqueued_styles, true ) ) {
 			return;
@@ -188,7 +196,7 @@ class Form_Asset_Optimizer {
 	 *
 	 * @param array<string> $deps  Original dependencies.
 	 * @param string        $type  Asset type ('script' or 'style').
-	 * @return array<string> Optimized dependencies.
+	 * @return array<non-empty-string> Optimized dependencies.
 	 */
 	private function optimize_dependencies( array $deps, string $type ): array {
 		if ( empty( $deps ) ) {
@@ -204,6 +212,10 @@ class Form_Asset_Optimizer {
 		);
 
 		foreach ( $deps as $dep ) {
+			if ( '' === $dep ) {
+				continue;
+			}
+
 			// Skip core dependencies that are likely already loaded.
 			if ( in_array( $dep, $core_deps[ $type ] ?? array(), true ) ) {
 				// Only skip if the dependency is actually registered/enqueued globally.

@@ -1,3 +1,5 @@
+# Routine dependency maintenance follows the same guarded policy as the other
+# Aggressive WordPress repositories: grouped, cooled down, and non-major.
 version: 2
 
 updates:
@@ -6,12 +8,19 @@ updates:
     schedule:
       interval: weekly
       day: monday
+      time: '06:00'
     open-pull-requests-limit: 3
     cooldown:
       default-days: 7
     commit-message:
       prefix: chore
       include: scope
+    labels:
+      - dependencies
+      - github_actions
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     groups:
       actions:
         patterns: ['*']
@@ -21,36 +30,53 @@ updates:
     schedule:
       interval: weekly
       day: monday
+      time: '06:00'
     open-pull-requests-limit: 3
     cooldown:
       default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
     commit-message:
       prefix: chore
       include: scope
+    labels:
+      - dependencies
+      - php
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]
     groups:
       php-tooling:
         patterns: ['*']
+        update-types: [minor, patch]
 
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
       day: monday
+      time: '06:00'
     open-pull-requests-limit: 3
     cooldown:
       default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
     commit-message:
       prefix: chore
       include: scope
+    labels:
+      - dependencies
+      - javascript
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]
     groups:
       wordpress:
         patterns: ['@wordpress/*']
-      javascript-tooling:
+        update-types: [minor, patch]
+      js-tooling:
         patterns: ['*']
         exclude-patterns: ['@wordpress/*']
+        update-types: [minor, patch]

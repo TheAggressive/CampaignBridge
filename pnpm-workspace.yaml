@@ -3,6 +3,7 @@
 packages: []
 
 overrides:
+  eslint: 9.39.5
   lightningcss: 1.30.2
 
 allowBuilds:
@@ -11,3 +12,11 @@ allowBuilds:
   core-js-pure: false
   fs-ext-extra-prebuilt: false
   unrs-resolver: false
+
+# The current WordPress block-editor package still ships react-autosize-textarea
+# with a stale React 16 peer declaration even though WordPress consumes it in
+# the React 18 editor. Keep the exception scoped to that upstream package.
+peerDependencyRules:
+  allowedVersions:
+    'react-autosize-textarea>react': '18'
+    'react-autosize-textarea>react-dom': '18'

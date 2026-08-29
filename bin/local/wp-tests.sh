@@ -14,7 +14,7 @@ export CB_TESTS_PLUGIN_DIR="$(cd .. && pwd -P)"
 export CB_TESTS_DB_HOST="127.0.0.1:${CB_TESTS_DB_PORT:-13308}"
 export WP_PHPUNIT__TESTS_CONFIG="$(pwd -P)/tests/wp-tests-config.php"
 
-echo "phpunit: WordPress ${CB_TESTS_WP_VERSION:-6.8.2}, PHP $(php -r 'echo PHP_VERSION;')"
+echo "phpunit: WordPress ${CB_TESTS_WP_VERSION:-7.0.4}, PHP $(php -r 'echo PHP_VERSION;')"
 "${PHP_BINARY:-php}" vendor/bin/phpunit "$@"
 status=$?
 

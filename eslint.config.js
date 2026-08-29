@@ -9,6 +9,13 @@ export default [
   js.configs.recommended,
   reactPlugin.configs.flat.recommended,
   {
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+  },
+  {
     ignores: [
       '*.config.js',
       '*.config.mjs',
@@ -22,6 +29,17 @@ export default [
       'tests/**',
       'wordpress-core/**',
     ],
+  },
+  {
+    files: ['bin/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
   },
   {
     files: ['src/**/*.{js,jsx}'],

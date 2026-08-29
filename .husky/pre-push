@@ -1,0 +1,3 @@
+# Keep pushes bounded while catching the repository-level regressions that are
+# expensive to discover in Actions. Database-backed suites remain in full QA.
+pnpm qa:fast
