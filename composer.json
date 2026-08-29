@@ -15,7 +15,7 @@
   "require-dev": {
     "brain/monkey": "^2.6",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-    "php-stubs/wordpress-stubs": "6.8.2",
+    "php-stubs/wordpress-stubs": "6.9.4",
     "phpstan/extension-installer": "^1.4",
     "phpstan/phpstan": "^2",
     "phpstan/phpstan-phpunit": "^2",
@@ -23,7 +23,7 @@
     "squizlabs/php_codesniffer": "^3.13.6",
     "szepeviktor/phpstan-wordpress": "^2",
     "wp-coding-standards/wpcs": "^3.4.1",
-    "wp-phpunit/wp-phpunit": "6.8.2",
+    "wp-phpunit/wp-phpunit": "6.9.7",
     "yoast/phpunit-polyfills": "^4"
   },
   "autoload": {
