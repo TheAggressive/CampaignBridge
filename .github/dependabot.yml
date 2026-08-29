@@ -46,6 +46,10 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]
+      # WordPress core, its PHPUnit library, and public stubs move together
+      # after the target core archive passes checksum verification.
+      - dependency-name: wp-phpunit/wp-phpunit
+      - dependency-name: php-stubs/wordpress-stubs
     groups:
       php-tooling:
         patterns: ['*']
@@ -72,6 +76,12 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]
+      # These packages form the production CSS compatibility stack documented
+      # in docs/dependency-policy.md. Upgrade them together after a clean build.
+      - dependency-name: '@tailwindcss/postcss'
+      - dependency-name: tailwindcss
+      - dependency-name: postcss-lightningcss
+      - dependency-name: postcss-nested
     groups:
       wordpress:
         patterns: ['@wordpress/*']

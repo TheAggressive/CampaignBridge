@@ -27,5 +27,7 @@ Some public packages intentionally stay on older major or minor lines:
   is deferred until its checksum manifest covers every file in its archive.
 
 Dependabot groups non-major updates, applies cooldown periods, and opens review
-pull requests. Major upgrades are deliberate migrations and must pass install,
-peer validation, full QA, production build, and package verification.
+pull requests. Packages listed as compatibility locks are excluded from routine
+version updates so they cannot be separated from the stack they must move with.
+Major and compatibility-stack upgrades are deliberate migrations and must pass
+install, peer validation, full QA, production build, and package verification.
