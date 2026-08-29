@@ -92,7 +92,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function _test_handle_exception(): void {
 		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
-		$initial_size = file_exists( $log_file ) ? filesize( $log_file ) : 0;
+		$initial_size = $this->get_log_file_size( $log_file );
 
 		// Create a test exception
 		$test_exception = new \Exception( 'Test exception message' );
@@ -120,7 +120,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 
 		// Verify exception was logged
 		$this->assertFileExists( $log_file );
-		$this->assertGreaterThan( $initial_size, filesize( $log_file ) );
+		$this->assertGreaterThan( $initial_size, $this->get_log_file_size( $log_file ) );
 	}
 
 	/**
@@ -160,13 +160,13 @@ class Error_Handler_Test extends WP_UnitTestCase {
 
 		// Get initial log file size
 		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
-		$initial_size = file_exists( $log_file ) ? filesize( $log_file ) : 0;
+		$initial_size = $this->get_log_file_size( $log_file );
 
 		Error_Handler::debug( 'Test debug message', array( 'key' => 'value' ) );
 
 		// Verify log file was written to
 		$this->assertFileExists( $log_file );
-		$this->assertGreaterThan( $initial_size, filesize( $log_file ) );
+		$this->assertGreaterThan( $initial_size, $this->get_log_file_size( $log_file ) );
 	}
 
 	/**
@@ -174,12 +174,12 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function test_info_logging(): void {
 		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
-		$initial_size = file_exists( $log_file ) ? filesize( $log_file ) : 0;
+		$initial_size = $this->get_log_file_size( $log_file );
 
 		Error_Handler::info( 'Test info message', array( 'key' => 'value' ) );
 
 		$this->assertFileExists( $log_file );
-		$this->assertGreaterThan( $initial_size, filesize( $log_file ) );
+		$this->assertGreaterThan( $initial_size, $this->get_log_file_size( $log_file ) );
 	}
 
 	/**
@@ -187,12 +187,12 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function test_warning_logging(): void {
 		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
-		$initial_size = file_exists( $log_file ) ? filesize( $log_file ) : 0;
+		$initial_size = $this->get_log_file_size( $log_file );
 
 		Error_Handler::warning( 'Test warning message', array( 'key' => 'value' ) );
 
 		$this->assertFileExists( $log_file );
-		$this->assertGreaterThan( $initial_size, filesize( $log_file ) );
+		$this->assertGreaterThan( $initial_size, $this->get_log_file_size( $log_file ) );
 	}
 
 	/**
@@ -200,12 +200,12 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function test_error_logging(): void {
 		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
-		$initial_size = file_exists( $log_file ) ? filesize( $log_file ) : 0;
+		$initial_size = $this->get_log_file_size( $log_file );
 
 		Error_Handler::error( 'Test error message', array( 'key' => 'value' ) );
 
 		$this->assertFileExists( $log_file );
-		$this->assertGreaterThan( $initial_size, filesize( $log_file ) );
+		$this->assertGreaterThan( $initial_size, $this->get_log_file_size( $log_file ) );
 	}
 
 	/**
@@ -213,20 +213,20 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function test_log_level_filtering(): void {
 		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
-		$initial_size = file_exists( $log_file ) ? filesize( $log_file ) : 0;
+		$initial_size = $this->get_log_file_size( $log_file );
 
 		$this->set_log_level( 1 ); // INFO level
 
 		// Debug messages should be filtered out
 		Error_Handler::debug( 'Debug message should be filtered' );
-		$size_after_debug = filesize( $log_file );
+		$size_after_debug = $this->get_log_file_size( $log_file );
 
 		// Should be same size (debug message filtered)
 		$this->assertEquals( $initial_size, $size_after_debug );
 
 		// Info message should be logged
 		Error_Handler::info( 'Info message should appear' );
-		$final_size = filesize( $log_file );
+		$final_size = $this->get_log_file_size( $log_file );
 
 		// Should be larger now
 		$this->assertGreaterThan( $size_after_debug, $final_size );
@@ -297,7 +297,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function test_handle_wp_php_error(): void {
 		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
-		$initial_size = file_exists( $log_file ) ? filesize( $log_file ) : 0;
+		$initial_size = $this->get_log_file_size( $log_file );
 
 		$error = array(
 			'message' => 'Test PHP error',
@@ -308,7 +308,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 		$this->error_handler->handle_wp_php_error( $error, 'Test error message' );
 
 		$this->assertFileExists( $log_file );
-		$this->assertGreaterThan( $initial_size, filesize( $log_file ) );
+		$this->assertGreaterThan( $initial_size, $this->get_log_file_size( $log_file ) );
 	}
 
 	/**
@@ -316,12 +316,12 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function test_handle_wp_die(): void {
 		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
-		$initial_size = file_exists( $log_file ) ? filesize( $log_file ) : 0;
+		$initial_size = $this->get_log_file_size( $log_file );
 
 		$this->error_handler->handle_wp_die( 'Test die message' );
 
 		$this->assertFileExists( $log_file );
-		$this->assertGreaterThan( $initial_size, filesize( $log_file ) );
+		$this->assertGreaterThan( $initial_size, $this->get_log_file_size( $log_file ) );
 	}
 
 	/**
@@ -363,5 +363,17 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	private function set_log_level( int $level ): void {
 		$log_level_property = $this->reflection->getProperty( 'log_level' );
 		$log_level_property->setValue( $this->error_handler, $level );
+	}
+
+	/**
+	 * Get the current log file size without using PHP's cached file metadata.
+	 *
+	 * @param string $log_file Log file path.
+	 * @return int Log file size in bytes.
+	 */
+	private function get_log_file_size( string $log_file ): int {
+		clearstatcache( true, $log_file );
+
+		return file_exists( $log_file ) ? (int) filesize( $log_file ) : 0;
 	}
 }
