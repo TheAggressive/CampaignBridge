@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/divider",
+  "title": "Email Divider",
+  "category": "campaignbridge-email",
+  "icon": "minus",
+  "description": "A portable horizontal divider with bounded dimensions.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section"],
+  "supports": { "html": false, "reusable": false },
+  "attributes": {
+    "color": { "type": "string", "default": "#dddddd" },
+    "thickness": { "type": "number", "default": 1 },
+    "width": { "type": "number", "default": 100 },
+    "style": { "type": "string", "default": "solid" }
+  },
+  "editorScript": "file:./index.js"
+}

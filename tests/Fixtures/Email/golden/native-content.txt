@@ -1,0 +1,4 @@
+Build & send confidently
+A deterministic message with an auditable link (https://example.com/docs).
+https://example.com/story
+Read the story: https://example.com/story

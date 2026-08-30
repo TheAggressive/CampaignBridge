@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/section",
+  "title": "Email Section",
+  "category": "campaignbridge-email",
+  "icon": "align-wide",
+  "description": "Groups email-native content in one portable full-width row.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/container"],
+  "supports": {
+    "html": false,
+    "innerBlocks": true,
+    "reusable": false
+  },
+  "attributes": {
+    "padding": {
+      "type": "object",
+      "default": { "top": 24, "right": 0, "bottom": 24, "left": 0 }
+    },
+    "backgroundColor": { "type": "string", "default": "#ffffff" }
+  },
+  "editorScript": "file:./index.js"
+}

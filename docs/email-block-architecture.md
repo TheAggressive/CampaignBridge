@@ -171,8 +171,9 @@ prototype renderers. The completed foundation:
    transport output, and core-block conversion in the same bounded rollout.
 4. Ported the container and WordPress post-binding blocks to registered renderers
    that consume immutable snapshots.
-5. Add native text, heading, image, button, layout, and compliance blocks before
-   enabling the corresponding inserter choices.
+5. Added native section, text, heading, image, button, divider, and spacer blocks
+   before enabling their inserter choices; preheader, columns, and compliance
+   controls remain gated.
 6. Add the compiled-preview endpoint and iframe, then gate approval on compiler
    validation and artifact hashing.
 

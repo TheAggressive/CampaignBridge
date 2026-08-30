@@ -26,12 +26,19 @@ class Block_Registration_Test extends WP_UnitTestCase {
 	 * @var array<string>
 	 */
 	private const EXPECTED_BLOCKS = array(
+		'campaignbridge/button',
 		'campaignbridge/container',
+		'campaignbridge/divider',
+		'campaignbridge/heading',
+		'campaignbridge/image',
 		'campaignbridge/post-card',
 		'campaignbridge/post-cta',
 		'campaignbridge/post-excerpt',
 		'campaignbridge/post-image',
 		'campaignbridge/post-title',
+		'campaignbridge/section',
+		'campaignbridge/spacer',
+		'campaignbridge/text',
 	);
 
 	/**
@@ -190,7 +197,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 
 		$this->assertNotNull( $container_block, 'Container block should be registered' );
 		$this->assertEquals( 'Email Container', $container_block->title, 'Container block should have correct title' );
-		$this->assertEquals( 'widgets', $container_block->category, 'Container block should be in widgets category' );
+		$this->assertEquals( 'campaignbridge-email', $container_block->category, 'Container block should use the email category' );
 		$this->assertEquals( 'email', $container_block->icon, 'Container block should have email icon' );
 
 		// Test supports
@@ -201,6 +208,15 @@ class Block_Registration_Test extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'maxWidth', $container_block->attributes, 'Container should have maxWidth attribute' );
 		$this->assertArrayHasKey( 'outerPadding', $container_block->attributes, 'Container should have outerPadding attribute' );
 		$this->assertArrayHasKey( 'padding', $container_block->attributes, 'Container should have padding attribute' );
+	}
+
+	public function test_email_block_category_is_registered_once(): void {
+		$categories = Blocks::register_email_category( array() );
+		$categories = Blocks::register_email_category( $categories );
+
+		$this->assertCount( 1, $categories );
+		$this->assertSame( 'campaignbridge-email', $categories[0]['slug'] );
+		$this->assertSame( 'CampaignBridge Email', $categories[0]['title'] );
 	}
 
 	/**

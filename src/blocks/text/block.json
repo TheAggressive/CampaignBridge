@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/text",
+  "title": "Email Text",
+  "category": "campaignbridge-email",
+  "icon": "text",
+  "description": "Portable rich text with a constrained inline-format contract.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section"],
+  "supports": { "html": false, "reusable": false },
+  "attributes": {
+    "content": { "type": "string", "default": "" },
+    "align": { "type": "string", "default": "left" },
+    "textColor": { "type": "string", "default": "#333333" },
+    "fontSize": { "type": "number", "default": 16 }
+  },
+  "editorScript": "file:./index.js"
+}

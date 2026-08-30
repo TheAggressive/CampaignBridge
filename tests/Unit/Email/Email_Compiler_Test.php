@@ -23,7 +23,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertSame( $this->fixture( 'post-card.html' ), $result->html() );
 		self::assertSame( $this->fixture( 'post-card.txt' ), $result->text() );
 		self::assertMatchesRegularExpression( '/^sha256:[0-9a-f]{64}$/', $result->fingerprint() );
-		self::assertSame( '1', $result->compiler_version() );
+		self::assertSame( '2', $result->compiler_version() );
 		self::assertSame( 'universal@1', $result->profile_version() );
 		self::assertSame(
 			array(

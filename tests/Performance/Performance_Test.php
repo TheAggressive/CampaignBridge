@@ -149,7 +149,8 @@ class Performance_Test extends Test_Case {
 
 		// Assert result contains expected complex elements
 		$this->assertTrue( $result->is_success() );
-		$this->assertSame( 100, substr_count( $result->html(), 'Enterprise compiler post' ) );
+		$this->assertSame( 50, substr_count( $result->html(), 'Enterprise compiler post' ) );
+		$this->assertSame( 50, substr_count( $result->html(), 'Native performance section' ) );
 	}
 
 	/**
@@ -403,13 +404,16 @@ class Performance_Test extends Test_Case {
 	 * Create complex email blocks for testing.
 	 */
 	private function create_complex_email_blocks(): array {
-		$cards = array_fill( 0, 100, $this->create_post_card_block() );
+		$children = array_merge(
+			array_fill( 0, 50, $this->create_post_card_block() ),
+			array_fill( 0, 50, $this->create_native_section_block() )
+		);
 
 		return array(
 			array(
 				'blockName'   => 'campaignbridge/container',
 				'attrs'       => array(),
-				'innerBlocks' => $cards,
+				'innerBlocks' => $children,
 			),
 		);
 	}
@@ -425,6 +429,44 @@ class Performance_Test extends Test_Case {
 			'innerBlocks' => array(
 				array(
 					'blockName'   => 'campaignbridge/post-title',
+					'attrs'       => array(),
+					'innerBlocks' => array(),
+				),
+			),
+		);
+	}
+
+	/** @return array<string, mixed> */
+	private function create_native_section_block(): array {
+		return array(
+			'blockName'   => 'campaignbridge/section',
+			'attrs'       => array(),
+			'innerBlocks' => array(
+				array(
+					'blockName'   => 'campaignbridge/heading',
+					'attrs'       => array( 'content' => 'Native performance section' ),
+					'innerBlocks' => array(),
+				),
+				array(
+					'blockName'   => 'campaignbridge/text',
+					'attrs'       => array( 'content' => 'A <strong>bounded</strong> native content fixture.' ),
+					'innerBlocks' => array(),
+				),
+				array(
+					'blockName'   => 'campaignbridge/button',
+					'attrs'       => array(
+						'label' => 'Continue',
+						'url'   => 'https://example.com/continue',
+					),
+					'innerBlocks' => array(),
+				),
+				array(
+					'blockName'   => 'campaignbridge/spacer',
+					'attrs'       => array(),
+					'innerBlocks' => array(),
+				),
+				array(
+					'blockName'   => 'campaignbridge/divider',
 					'attrs'       => array(),
 					'innerBlocks' => array(),
 				),

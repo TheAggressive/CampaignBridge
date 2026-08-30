@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/image",
+  "title": "Email Image",
+  "category": "campaignbridge-email",
+  "icon": "format-image",
+  "description": "A dimensioned, accessible image with an optional HTTPS link.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section"],
+  "supports": { "html": false, "reusable": false },
+  "attributes": {
+    "url": { "type": "string", "default": "" },
+    "alt": { "type": "string", "default": "" },
+    "decorative": { "type": "boolean", "default": false },
+    "width": { "type": "number", "default": 600 },
+    "height": { "type": "number", "default": 400 },
+    "linkUrl": { "type": "string", "default": "" }
+  },
+  "editorScript": "file:./index.js"
+}

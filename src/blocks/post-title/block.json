@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "name": "campaignbridge/post-title",
   "title": "Post Title",
-  "category": "widgets",
+  "category": "campaignbridge-email",
   "icon": "heading",
   "description": "Displays the post title with customizable typography and styling.",
   "parent": ["campaignbridge/post-card"],

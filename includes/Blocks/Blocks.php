@@ -42,6 +42,28 @@ class Blocks {
 	 */
 	public static function init(): void {
 		\add_action( 'init', array( __CLASS__, 'register' ) );
+		\add_filter( 'block_categories_all', array( __CLASS__, 'register_email_category' ) );
+	}
+
+	/**
+	 * Register the dedicated email block inserter category once.
+	 *
+	 * @param array<int, array<string, mixed>> $categories Existing block categories.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function register_email_category( array $categories ): array {
+		foreach ( $categories as $category ) {
+			if ( 'campaignbridge-email' === ( $category['slug'] ?? null ) ) {
+				return $categories;
+			}
+		}
+
+		$categories[] = array(
+			'slug'  => 'campaignbridge-email',
+			'title' => __( 'CampaignBridge Email', 'campaignbridge' ),
+		);
+
+		return $categories;
 	}
 
 	/**

@@ -26,7 +26,7 @@ they do not introduce another rendering path.
 
 The compiler foundation now replaces the prototype rendering paths:
 
-- one explicit renderer registry owns the six currently supported blocks;
+- one explicit renderer registry owns the thirteen currently supported blocks;
 - compilation fails closed for unknown attributes, blocks, nesting, missing
   snapshots, depth, and block-count violations;
 - HTML, plain text, diagnostics, versions, and a deterministic fingerprint are
@@ -37,7 +37,7 @@ The compiler foundation now replaces the prototype rendering paths:
 - golden artifacts and measured compiler performance are covered by tests.
 
 The remaining production risks are compiled preview/export wiring, snapshot
-resolution and persistence, native content/layout blocks, compliance and
+resolution and persistence, advanced layout/document blocks, compliance and
 compatibility validators, draft/approval semantics, and email-client evidence.
 Existing prototype templates are not a compatibility boundary for the compiler.
 
@@ -140,7 +140,14 @@ This is the exact compiler/editor allowlist after the clean cutover:
 | Block name                    | Role                   | Key constraints                             |
 | ----------------------------- | ---------------------- | ------------------------------------------- |
 | `campaignbridge/container`    | One document root      | Exactly one root; 320–900 px; locked        |
-| `campaignbridge/post-card`    | Immutable post binding | Child of container; snapshot required       |
+| `campaignbridge/section`      | Full-width content row | Child of container; spacing/background      |
+| `campaignbridge/text`         | Rich email text        | Safe inline marks and HTTPS links only      |
+| `campaignbridge/heading`      | Heading                | Levels 1–4; portable typography             |
+| `campaignbridge/image`        | Email image            | HTTPS URL, dimensions, explicit alt choice  |
+| `campaignbridge/button`       | Bulletproof CTA        | HTTPS URL, alignment, Outlook VML fallback  |
+| `campaignbridge/divider`      | Horizontal divider     | Bounded width/thickness and style allowlist |
+| `campaignbridge/spacer`       | Vertical spacing       | Bounded 4–120 px height                     |
+| `campaignbridge/post-card`    | Immutable post binding | Child of container/section; snapshot needed |
 | `campaignbridge/post-image`   | Featured image binding | Child of post card; URL/dimensions/alt      |
 | `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4      |
 | `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words            |
@@ -152,20 +159,12 @@ These are the next production grammar additions. Later parity, commerce,
 transactional, and engagement candidates remain in the planning-only
 [`email-block-catalog.md`](email-block-catalog.md).
 
-| Block name                         | Role                     | Key constraints                                |
-| ---------------------------------- | ------------------------ | ---------------------------------------------- |
-| `campaignbridge/container`         | One document root        | Exactly one root; 320–900 px; locked           |
-| `campaignbridge/preheader`         | Hidden inbox preview     | At most one; plain constrained text            |
-| `campaignbridge/section`           | Full-width content row   | Child of container; spacing/background         |
-| `campaignbridge/columns`           | One or two columns       | Child of section; stacks predictably           |
-| `campaignbridge/column`            | Column content           | Child of columns only                          |
-| `campaignbridge/text`              | Rich email text          | Safe inline marks/links only                   |
-| `campaignbridge/heading`           | Heading                  | Levels 1–4; explicit portable typography       |
-| `campaignbridge/image`             | Email image              | HTTPS URL, dimensions, alt/decorative decision |
-| `campaignbridge/button`            | Bulletproof CTA          | HTTPS URL, label, alignment, VML fallback      |
-| `campaignbridge/divider`           | Horizontal rule          | Width, color, and style allowlist              |
-| `campaignbridge/spacer`            | Vertical spacing         | Bounded pixel height                           |
-| `campaignbridge/compliance-footer` | Required footer controls | Address and unsubscribe tokens                 |
+| Block name                         | Role                     | Key constraints                      |
+| ---------------------------------- | ------------------------ | ------------------------------------ |
+| `campaignbridge/preheader`         | Hidden inbox preview     | At most one; plain constrained text  |
+| `campaignbridge/columns`           | One or two columns       | Child of section; stacks predictably |
+| `campaignbridge/column`            | Column content           | Child of columns only                |
+| `campaignbridge/compliance-footer` | Required footer controls | Address and unsubscribe tokens       |
 
 ### Unsupported blocks
 
@@ -223,7 +222,7 @@ Exit gate:
 - Duplicate renderer registration and unsupported blocks fail deterministically.
 - Identical normalized input produces identical output and fingerprint.
 
-### Phase 2 — First native vertical slice
+### Phase 2 — First native vertical slice — block/compiler complete
 
 Deliverables:
 
@@ -368,7 +367,7 @@ Proposed success response:
   "text": "Weekly update...",
   "diagnostics": [],
   "assets": [],
-  "compiler_version": "1",
+  "compiler_version": "2",
   "profile_version": "universal@1",
   "fingerprint": "sha256:..."
 }
@@ -400,12 +399,11 @@ without inspecting the semantic diff is not an accepted test update.
 
 Keep each pull request independently releasable:
 
-1. Native section/text/heading/image/button/divider/spacer blocks and patterns.
-2. Content snapshot resolver, draft semantics, and approval persistence.
-3. Preview REST controller and compiler response schema.
-4. Sandboxed preview UI and HTML download.
-5. Compatibility/compliance validators and optional public CSS inliner.
-6. Approval and provider workflow cutover.
+1. Content snapshot resolver, draft semantics, and approval persistence.
+2. Preview REST controller and compiler response schema.
+3. Sandboxed preview UI and HTML download.
+4. Preheader, columns, compliance footer, and compatibility/compliance validators.
+5. Approval and provider workflow cutover.
 
 Do not combine provider sending changes with the compiler kernel or block
 migrations. That would make artifact regressions and irreversible delivery risk
@@ -442,4 +440,5 @@ Begin with the direct compiler cutover:
 5. Added golden HTML/plain-text, unsupported-input, deterministic-output, escaping,
    depth/block-budget, and measured performance tests.
 
-The next pull request adds the first complete native authoring vertical slice.
+The first native authoring vertical slice is implemented. The next pull request
+focuses on content snapshot resolution, draft semantics, and approval persistence.

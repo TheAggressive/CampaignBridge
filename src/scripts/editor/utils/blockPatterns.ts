@@ -10,6 +10,24 @@ export const blockPatternCategories = [
 
 export const blockPatterns = [
   {
+    name: 'campaignbridge/email-introduction',
+    title: __('Email introduction', 'campaignbridge'),
+    description: __(
+      'A heading, rich text, call to action, and divider',
+      'campaignbridge'
+    ),
+    category: 'email-basic',
+    content: `
+      <!-- wp:campaignbridge/section -->
+      <!-- wp:campaignbridge/heading {"content":"Your email heading","level":2} /-->
+      <!-- wp:campaignbridge/text {"content":"Introduce your message and give readers a clear reason to continue."} /-->
+      <!-- wp:campaignbridge/button {"label":"Learn more","url":"https://example.com"} /-->
+      <!-- wp:campaignbridge/spacer {"height":24} /-->
+      <!-- wp:campaignbridge/divider /-->
+      <!-- /wp:campaignbridge/section -->
+    `,
+  },
+  {
     name: 'campaignbridge/post-card',
     title: __('Post card', 'campaignbridge'),
     description: __(
