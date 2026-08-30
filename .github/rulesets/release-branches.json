@@ -51,7 +51,7 @@
           {
             "tool": "CodeQL",
             "alerts_threshold": "errors",
-            "security_alerts_threshold": "critical"
+            "security_alerts_threshold": "high_or_higher"
           }
         ]
       }

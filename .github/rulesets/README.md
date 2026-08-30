@@ -13,15 +13,13 @@ The contract is:
   maintainer;
 - strict, up-to-date `CI summary`, CodeQL workflow, Actionlint, Zizmor, and
   `PR Title` checks;
-- native CodeQL enforcement for critical security findings and error-severity
+- native CodeQL enforcement for high-or-higher security findings and error-severity
   quality findings.
 
-The code-scanning threshold is intentionally staged at `critical`. CampaignBridge
-had eight pre-existing high-severity JavaScript alerts when this ruleset was
-introduced. Raising `security_alerts_threshold` to `high_or_higher` before those
-findings are fixed would make every pull request permanently unmergeable. Fix
-the alerts, verify they are closed on `master`, then strengthen the committed and
-live rule together.
+The CodeQL threshold is `high_or_higher`. The committed rule is merged only
+after its branch analysis is clear. After merge, verify the default-branch
+alerts are closed before applying the same rule to the live repository; this
+keeps pull requests mergeable while strengthening enforcement without a gap.
 
 The matching repository settings are squash-only merges, pull-request titles as
 squash subjects, native auto-merge enabled, and automatic head-branch deletion.

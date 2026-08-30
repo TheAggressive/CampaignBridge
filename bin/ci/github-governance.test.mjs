@@ -30,13 +30,13 @@ test('release branch protection is active with no bypass actors', () => {
   assert.ok(ruleset.rules.some(rule => rule.type === 'pull_request'));
 });
 
-test('CodeQL enforcement records the temporary critical threshold', () => {
+test('CodeQL enforcement blocks high-or-higher security findings', () => {
   const scanning = ruleset.rules.find(rule => rule.type === 'code_scanning');
   const [tool] = scanning.parameters.code_scanning_tools;
 
   assert.equal(tool.tool, 'CodeQL');
   assert.equal(tool.alerts_threshold, 'errors');
-  assert.equal(tool.security_alerts_threshold, 'critical');
+  assert.equal(tool.security_alerts_threshold, 'high_or_higher');
 });
 
 test('semantic-release does not push metadata through protected master', () => {
