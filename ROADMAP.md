@@ -129,6 +129,11 @@ compliant, email-safe HTML before any provider is involved.
 
 Deliverables:
 
+- Establish the email-native block grammar and renderer registry described in
+  [`docs/email-block-architecture.md`](docs/email-block-architecture.md); use
+  explicit adapters for a supported core-block subset rather than converting
+  arbitrary frontend markup. Follow the phased
+  [implementation plan](docs/email-block-implementation-plan.md).
 - Correct template draft, publish, revision, duplication, and autosave semantics.
 - Publish a supported core/custom block matrix and fail clearly for unsupported
   blocks instead of silently producing incomplete email.
