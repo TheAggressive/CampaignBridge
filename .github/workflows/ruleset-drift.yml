@@ -1,0 +1,31 @@
+name: Ruleset Drift
+
+on:
+  schedule:
+    - cron: '47 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: Ruleset Drift
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # The default token omits bypass actors. The shared CI App creates a
+      # short-lived, administration-read-only token for a complete comparison.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: audit-token
+        with:
+          client-id: ${{ secrets.AA_CI_CLIENT_ID }}
+          private-key: ${{ secrets.AA_CI_PRIVATE_KEY }}
+          permission-administration: read
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare live rules with committed intent
+        env:
+          GH_TOKEN: ${{ steps.audit-token.outputs.token }}
+        run: node bin/ci/ruleset-drift.mjs

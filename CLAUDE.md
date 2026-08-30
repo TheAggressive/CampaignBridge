@@ -232,6 +232,12 @@ suites, build, package verification, workflow security, and CodeQL. Publishing
 is a deliberate workflow dispatch and must not happen as a side effect of a
 normal push.
 
+`master` is squash-only and pull-request-only. Pull-request titles become squash
+subjects and must pass the `PR Title` check. The PR policy applies type, area,
+and risk labels; only trusted, non-high-risk changes may use native auto-merge.
+Release metadata returns through a signed version-sync pull request rather than
+a protection bypass. See `docs/pull-request-automation.md`.
+
 The release package is allowlisted by `bin/release/package.sh` and independently
 inspected by `bin/release/verify-package.sh`. A successful source build alone is
 not proof that the distributable is valid.
@@ -246,5 +252,6 @@ not proof that the distributable is valid.
 - `docs/dependency-policy.md` — public/private dependency rules and locks
 - `docs/testing-strategy.md` — test responsibilities and environments
 - `docs/build-and-release.md` — package and publishing behavior
+- `docs/pull-request-automation.md` — labels, native auto-merge, and rulesets
 - `docs/threat-model.md` — security boundaries
 - `docs/runbook.md` — operational troubleshooting
