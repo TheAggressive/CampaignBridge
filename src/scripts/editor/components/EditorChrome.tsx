@@ -30,6 +30,15 @@ import Header from './Header';
 import SecondarySidebar from './Sidebars/SecondarySidebar';
 import { SidebarContent, SidebarHeader } from './Sidebars/Sidebar';
 
+const EMAIL_BLOCK_TYPES = [
+  'campaignbridge/container',
+  'campaignbridge/post-card',
+  'campaignbridge/post-image',
+  'campaignbridge/post-title',
+  'campaignbridge/post-excerpt',
+  'campaignbridge/post-cta',
+];
+
 /**
  * Editor Chrome Component (Refactored)
  *
@@ -169,8 +178,9 @@ export default function EditorChrome({
   // Merge editor settings with patterns
   const mergedEditorSettings = {
     ...editorSettings,
-    ...blockPatterns,
-    ...blockPatternCategories,
+    allowedBlockTypes: EMAIL_BLOCK_TYPES,
+    __experimentalBlockPatterns: blockPatterns,
+    __experimentalBlockPatternCategories: blockPatternCategories,
   };
 
   return (
@@ -212,7 +222,7 @@ export default function EditorChrome({
         </ResizableBox>
 
         {/* Block editor with merged settings */}
-        <EntityProvider kind='postType' type='post' id={postId}>
+        <EntityProvider kind='postType' type={postType} id={postId}>
           <BlockEditorProvider
             value={blocks}
             onInput={handleBlocksUpdate}

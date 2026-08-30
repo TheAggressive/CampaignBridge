@@ -7,42 +7,15 @@
   "category": "widgets",
   "icon": "media-document",
   "description": "A container for displaying post content in email campaigns. Add post elements inside this card.",
-  "supports": {
-    "html": false,
-    "innerBlocks": true,
-    "spacing": {
-      "margin": true,
-      "padding": true
-    },
-    "color": {
-      "background": true,
-      "link": true
-    },
-    "border": {
-      "color": true,
-      "radius": true,
-      "style": true,
-      "width": true
-    },
-    "shadow": true,
-    "layout": {
-      "allowSwitching": false,
-      "allowInheriting": false,
-      "allowOrienting": false,
-      "allowEditing": false
-    }
-  },
+  "parent": ["campaignbridge/container"],
+  "supports": { "html": false, "innerBlocks": true, "reusable": false },
   "attributes": {
-    "slotId": { "type": "string", "default": "" },
     "postType": { "type": "string", "default": "post" },
-    "postId": { "type": "number", "default": 0 },
-    "slotLinkEnabled": { "type": "boolean", "default": false },
-    "slotLinkTo": { "type": "string", "default": "post" }
+    "postId": { "type": "number", "default": 0 }
   },
   "providesContext": {
     "campaignbridge:postId": "postId",
     "campaignbridge:postType": "postType"
   },
-  "editorScript": "file:./index.js",
-  "render": "file:./render.php"
+  "editorScript": "file:./index.js"
 }

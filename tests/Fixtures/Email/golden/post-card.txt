@@ -1,0 +1,3 @@
+Enterprise & safe
+This excerpt has safe text.
+Read more: https://example.com/posts/42

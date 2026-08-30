@@ -6,34 +6,13 @@
   "title": "Post Image",
   "category": "widgets",
   "icon": "format-image",
-  "description": "Displays the post's featured image with customizable borders and effects.",
-  "supports": {
-    "html": false,
-    "color": {
-      "background": true,
-      "link": true
-    },
-    "spacing": {
-      "margin": true,
-      "padding": true
-    },
-    "border": {
-      "color": true,
-      "radius": true,
-      "style": true,
-      "width": true
-    },
-    "shadow": true,
-    "dimensions": {
-      "minHeight": true,
-      "aspectRatio": true
-    }
-  },
+  "description": "Displays the snapshotted featured image for the selected post.",
+  "parent": ["campaignbridge/post-card"],
+  "supports": { "html": false, "reusable": false },
   "usesContext": [
     "campaignbridge:postId",
     "campaignbridge:postType",
     "campaignbridge:showImage"
   ],
-  "editorScript": "file:./index.js",
-  "render": "file:./render.php"
+  "editorScript": "file:./index.js"
 }

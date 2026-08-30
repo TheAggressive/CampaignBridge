@@ -36,16 +36,16 @@ import { useBlockSelection } from '../../scripts/editor/hooks/useBlockSelection'
 interface ContainerBlockAttributes {
   maxWidth?: number;
   outerPadding?: {
-    top?: string;
-    right?: string;
-    bottom?: string;
-    left?: string;
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
   };
   padding?: {
-    top?: string;
-    right?: string;
-    bottom?: string;
-    left?: string;
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
   };
   backgroundColor?: string;
   textColor?: string;
@@ -56,12 +56,46 @@ interface EditProps extends BlockEditProps<ContainerBlockAttributes> {
   clientId: string;
 }
 
+type SpacingSide = 'top' | 'right' | 'bottom' | 'left';
+type SpacingInput = Partial<Record<SpacingSide, string | number>>;
+type NormalizedSpacing = Record<SpacingSide, number>;
+
+const DEFAULT_OUTER_PADDING = { top: 20, right: 0, bottom: 20, left: 0 };
+const DEFAULT_INNER_PADDING = { top: 0, right: 24, bottom: 0, left: 24 };
+
+const normalizeSpacing = (
+  values: SpacingInput | undefined
+): NormalizedSpacing =>
+  Object.fromEntries(
+    (['top', 'right', 'bottom', 'left'] as SpacingSide[]).map(side => [
+      side,
+      Math.max(
+        0,
+        Math.min(96, Number.parseInt(String(values?.[side] ?? ''), 10) || 0)
+      ),
+    ])
+  ) as NormalizedSpacing;
+
+const toControlSpacing = (
+  values: SpacingInput | undefined
+): Record<SpacingSide, string> =>
+  Object.fromEntries(
+    (['top', 'right', 'bottom', 'left'] as SpacingSide[]).map(side => [
+      side,
+      `${values?.[side] ?? 0}px`,
+    ])
+  ) as Record<SpacingSide, string>;
+
 export default function Edit({
   attributes,
   setAttributes,
   clientId,
 }: EditProps): JSX.Element {
-  const { maxWidth, outerPadding, padding } = attributes;
+  const {
+    maxWidth = 600,
+    outerPadding = DEFAULT_OUTER_PADDING,
+    padding = DEFAULT_INNER_PADDING,
+  } = attributes;
   const { updateBlockAttributes } = useDispatch('core/block-editor');
   const { hasInnerBlocks } = useBlockSelection(clientId);
 
@@ -74,12 +108,7 @@ export default function Edit({
       },
     },
     {
-      allowedBlocks: [
-        'campaignbridge/post-excerpt',
-        'campaignbridge/post-image',
-        'campaignbridge/post-cta',
-        'campaignbridge/post-card',
-      ],
+      allowedBlocks: ['campaignbridge/post-card'],
       templateLock: false,
       renderAppender: hasInnerBlocks
         ? InnerBlocks.DefaultBlockAppender
@@ -117,15 +146,19 @@ export default function Edit({
 
           <BoxControl
             label={__('Outer padding (around inner table)', 'campaignbridge')}
-            values={outerPadding}
-            onChange={vals => setAttributes({ outerPadding: vals })}
+            values={toControlSpacing(outerPadding)}
+            onChange={values =>
+              setAttributes({ outerPadding: normalizeSpacing(values) })
+            }
             __next40pxDefaultSize
           />
 
           <BoxControl
             label={__('Inner padding (content area)', 'campaignbridge')}
-            values={padding}
-            onChange={vals => setAttributes({ padding: vals })}
+            values={toControlSpacing(padding)}
+            onChange={values =>
+              setAttributes({ padding: normalizeSpacing(values) })
+            }
             __next40pxDefaultSize
           />
         </PanelBody>

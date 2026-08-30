@@ -252,10 +252,9 @@ class Block_Registration_Test extends WP_UnitTestCase {
 		foreach ( self::EXPECTED_BLOCKS as $block_name ) {
 			$block_type = $registry->get_registered( $block_name );
 
-			// Test that blocks have render callbacks (either PHP or dynamic)
-			$this->assertTrue(
-				! empty( $block_type->render_callback ) || ! empty( $block_type->attributes ),
-				"Block '{$block_name}' should have rendering capability"
+			$this->assertNull(
+				$block_type->render_callback,
+				"Block '{$block_name}' must not bypass the canonical email compiler"
 			);
 		}
 	}
@@ -318,14 +317,19 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			Blocks::register();
 		}
 
-		// Test that blocks are available in the inserter
-		$available_blocks = get_dynamic_block_names();
+		$registry = \WP_Block_Type_Registry::get_instance();
 
 		foreach ( self::EXPECTED_BLOCKS as $block_name ) {
-			$this->assertContains(
-				$block_name,
-				$available_blocks,
-				"Block '{$block_name}' should be available in block inserter"
+			$block_type = $registry->get_registered( $block_name );
+
+			$this->assertNotNull(
+				$block_type,
+				"Block '{$block_name}' should be registered for the editor"
+			);
+			$this->assertNotSame(
+				false,
+				$block_type->supports['inserter'] ?? true,
+				"Block '{$block_name}' should be available in the inserter"
 			);
 		}
 	}

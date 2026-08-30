@@ -14,7 +14,8 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Performance;
 
 use CampaignBridge\Admin\Core\Form;
-use CampaignBridge\Services\Email_Generator;
+use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Tests\Helpers\Test_Case;
 use WP_REST_Request;
 
@@ -29,8 +30,8 @@ class Performance_Test extends Test_Case {
 	 * Performance budgets (in milliseconds)
 	 */
 	private const PERFORMANCE_BUDGETS = array(
-		'email_generation_simple'  => 500,  // 500ms for simple email generation
-		'email_generation_complex' => 2000, // 2s for complex templates
+		'email_generation_simple'  => 50,  // 50ms for one bound content card.
+		'email_generation_complex' => 200, // 200ms for a 100-card document.
 		'rest_api_posts_small'     => 100,  // 100ms for small post queries
 		'rest_api_posts_large'     => 500,  // 500ms for large post queries
 		'form_processing_small'    => 200,  // 200ms for small forms
@@ -42,8 +43,8 @@ class Performance_Test extends Test_Case {
 	 * Memory usage budgets (in MB)
 	 */
 	private const MEMORY_BUDGETS = array(
-		'email_generation_simple'  => 16,   // 16MB for simple generation
-		'email_generation_complex' => 32,   // 32MB for complex templates
+		'email_generation_simple'  => 4,    // 4MB for simple generation.
+		'email_generation_complex' => 8,    // 8MB for complex templates.
 		'rest_api_posts_large'     => 8,    // 8MB for post queries
 		'form_processing_large'    => 16,   // 16MB for large forms
 	);
@@ -70,7 +71,7 @@ class Performance_Test extends Test_Case {
 		$start_time   = microtime( true );
 		$start_memory = memory_get_peak_usage( true );
 
-		$result = Email_Generator::generate_email_html( $blocks );
+		$result = Compiler_Factory::create()->compile( $blocks, $this->create_email_context() );
 
 		$end_time   = microtime( true );
 		$end_memory = memory_get_peak_usage( true );
@@ -101,9 +102,10 @@ class Performance_Test extends Test_Case {
 		);
 
 		// Assert result is valid HTML
-		$this->assertStringContainsString( '<html', $result );
-		$this->assertStringContainsString( '</html>', $result );
-		$this->assertGreaterThan( 1000, strlen( $result ) ); // Should be substantial HTML
+		$this->assertTrue( $result->is_success() );
+		$this->assertStringContainsString( '<html', $result->html() );
+		$this->assertStringContainsString( '</html>', $result->html() );
+		$this->assertNotSame( '', $result->fingerprint() );
 	}
 
 	/**
@@ -115,7 +117,7 @@ class Performance_Test extends Test_Case {
 		$start_time   = microtime( true );
 		$start_memory = memory_get_peak_usage( true );
 
-		$result = Email_Generator::generate_email_html( $blocks );
+		$result = Compiler_Factory::create()->compile( $blocks, $this->create_email_context() );
 
 		$end_time   = microtime( true );
 		$end_memory = memory_get_peak_usage( true );
@@ -146,8 +148,8 @@ class Performance_Test extends Test_Case {
 		);
 
 		// Assert result contains expected complex elements
-		$this->assertStringContainsString( 'Welcome to Our Newsletter', $result ); // From heading block
-		$this->assertStringContainsString( 'Post Title', $result ); // From post-card block
+		$this->assertTrue( $result->is_success() );
+		$this->assertSame( 100, substr_count( $result->html(), 'Enterprise compiler post' ) );
 	}
 
 	/**
@@ -390,16 +392,9 @@ class Performance_Test extends Test_Case {
 	private function create_simple_email_blocks(): array {
 		return array(
 			array(
-				'blockName'    => 'core/paragraph',
-				'attrs'        => array(),
-				'innerContent' => array( '<p>Hello World</p>' ),
-				'innerBlocks'  => array(),
-			),
-			array(
-				'blockName'    => 'core/paragraph',
-				'attrs'        => array(),
-				'innerContent' => array( '<p>This is a simple email template.</p>' ),
-				'innerBlocks'  => array(),
+				'blockName'   => 'campaignbridge/container',
+				'attrs'       => array(),
+				'innerBlocks' => array( $this->create_post_card_block() ),
 			),
 		);
 	}
@@ -408,49 +403,51 @@ class Performance_Test extends Test_Case {
 	 * Create complex email blocks for testing.
 	 */
 	private function create_complex_email_blocks(): array {
+		$cards = array_fill( 0, 100, $this->create_post_card_block() );
+
 		return array(
 			array(
-				'blockName'    => 'campaignbridge/container',
-				'attrs'        => array(
-					'backgroundColor' => '#f0f0f0',
-					'padding'         => '20px',
-				),
-				'innerContent' => array(),
-				'innerBlocks'  => array(
-					array(
-						'blockName'    => 'core/heading',
-						'attrs'        => array( 'level' => 1 ),
-						'innerContent' => array( '<h1>Welcome to Our Newsletter</h1>' ),
-						'innerBlocks'  => array(),
-					),
-					array(
-						'blockName'    => 'campaignbridge/post-card',
-						'attrs'        => array(
-							'postId'      => 1,
-							'showImage'   => true,
-							'showExcerpt' => true,
-						),
-						'innerContent' => array(),
-						'innerBlocks'  => array(),
-					),
-					array(
-						'blockName'    => 'core/buttons',
-						'attrs'        => array(),
-						'innerContent' => array(),
-						'innerBlocks'  => array(
-							array(
-								'blockName'    => 'core/button',
-								'attrs'        => array(
-									'url'  => 'https://example.com',
-									'text' => 'Read More',
-								),
-								'innerContent' => array(),
-								'innerBlocks'  => array(),
-							),
-						),
-					),
+				'blockName'   => 'campaignbridge/container',
+				'attrs'       => array(),
+				'innerBlocks' => $cards,
+			),
+		);
+	}
+
+	/** @return array<string, mixed> */
+	private function create_post_card_block(): array {
+		return array(
+			'blockName'   => 'campaignbridge/post-card',
+			'attrs'       => array(
+				'postId'   => 1,
+				'postType' => 'post',
+			),
+			'innerBlocks' => array(
+				array(
+					'blockName'   => 'campaignbridge/post-title',
+					'attrs'       => array(),
+					'innerBlocks' => array(),
 				),
 			),
+		);
+	}
+
+	private function create_email_context(): Render_Context {
+		return new Render_Context(
+			array(
+				'title'    => 'Performance fixture',
+				'language' => 'en',
+			),
+			array(
+				'posts' => array(
+					'1' => array(
+						'id'      => 1,
+						'title'   => 'Enterprise compiler post',
+						'excerpt' => 'A deterministic immutable content snapshot.',
+						'url'     => 'https://example.com/post',
+					),
+				),
+			)
 		);
 	}
 

@@ -106,7 +106,7 @@ export const registerCampaignBridgeBlocks = (
   return results;
 };
 
-// Note: Blocks are registered manually in editor.tsx, similar to registerCoreBlocks()
+// The standalone editor invokes this registry directly during boot.
 
 // Re-export types for external usage
 export type { BlockModule, DiscoveredBlock, RegistrationStats } from './types';

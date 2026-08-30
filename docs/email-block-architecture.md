@@ -81,9 +81,10 @@ The post-v1 candidates, classifications, dependencies, patterns, and promotion
 gates are mapped in [`email-block-catalog.md`](email-block-catalog.md). Inclusion
 there does not add an item to the supported grammar or editor allowlist.
 
-Core blocks may be supported only through explicit adapters with the same
-contract and tests. There is no generic fallback that silently strips or
-approximates unsupported markup.
+Core and third-party frontend blocks are not compiler input. The standalone
+email editor exposes only the CampaignBridge email grammar. Unsupported blocks
+produce blocking diagnostics; there is no adapter or generic fallback that
+silently strips or approximates markup.
 
 ## Output rules
 
@@ -127,7 +128,7 @@ guarantee across every email client.
 
 ## Compiler boundary
 
-Replace `BlockProcessor`'s central block-name switch with a renderer registry.
+The compiler uses an O(1) renderer registry rather than a block-name switch.
 Registration maps one stable block name to its schema, normalizer, validators,
 HTML renderer, plain-text renderer, and supported profiles. Duplicate
 registrations fail at boot.
@@ -137,9 +138,9 @@ errors, referenced assets, compiler/profile versions, and a deterministic hash.
 It does not return an apparently successful partial email when a block is
 unsupported or invalid.
 
-The current simplified `CssProcessor` must be replaced with a maintained public
-CSS inliner selected under `docs/dependency-policy.md`. Inlining is a compiler
-stage, not the mechanism that makes arbitrary browser markup email-safe.
+Renderers emit inline critical CSS directly. If authored style sheets are added
+later, select a maintained public CSS inliner under `docs/dependency-policy.md`.
+Inlining remains a compiler stage, not a mechanism for repairing browser markup.
 
 ## Validation and tests
 
@@ -148,7 +149,7 @@ A block is production-ready only when the following pass:
 - attribute/schema and nesting validation;
 - renderer unit tests for defaults, boundaries, and escaping;
 - golden full-document HTML and plain-text fixtures;
-- legacy serialization migration fixtures;
+- serialization round-trip fixtures for each production schema version;
 - forbidden-element, URL, CSS, accessibility, and compliance validators;
 - deterministic compilation test from identical snapshot input;
 - representative Outlook, Gmail, and Apple Mail fixtures;
@@ -158,20 +159,27 @@ A hosted email-client service such as Litmus or Email on Acid can later validate
 screenshots in real clients. That is an additional release signal, not a reason
 to omit deterministic local compiler tests.
 
-## Migration from the current processor
+## Clean cutover completed
 
-1. Freeze and test current template fixtures before changing rendering.
-2. Introduce block schema, render context, compiler result, and renderer registry
-   interfaces beside the current `BlockProcessor`.
-3. Port the container and simple text/heading/image/button primitives first.
-4. Port WordPress post-binding blocks against immutable content snapshots.
-5. Add the compiled-preview endpoint and iframe.
-6. Gate approval on compiler validation and artifact hashing.
-7. Retire generic conversion paths after every supported legacy block has an
-   adapter or an explicit migration/error path.
+CampaignBridge took a pre-release clean break rather than preserving its
+prototype renderers. The completed foundation:
 
-Do not rewrite saved templates in place without backups, versioned migrations,
-and fixtures proving the old content can still be opened and compiled.
+1. Introduced the block schema, render context, compiler result, renderer
+   registry, and deterministic fingerprint.
+2. Cut compiler consumers directly to the new result contract.
+3. Removed `BlockProcessor`, `CssProcessor`, `EmailStructure`, block `render.php`
+   transport output, and core-block conversion in the same bounded rollout.
+4. Ported the container and WordPress post-binding blocks to registered renderers
+   that consume immutable snapshots.
+5. Add native text, heading, image, button, layout, and compliance blocks before
+   enabling the corresponding inserter choices.
+6. Add the compiled-preview endpoint and iframe, then gate approval on compiler
+   validation and artifact hashing.
+
+Existing prototype templates are unsupported input after cutover. If durable
+production data is declared later, handle it with a finite, observable data
+migration and remove the migration after its support window; do not retain a
+second rendering architecture.
 
 The phased work breakdown, proposed contracts, preview API, migration gates, and
 first pull request are defined in

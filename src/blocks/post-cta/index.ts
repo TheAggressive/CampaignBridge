@@ -10,10 +10,12 @@ export { metadata, name };
 
 export interface PostCTABlockSettings {
   edit: React.ComponentType<any>;
+  save: () => null;
 }
 
 export const settings: PostCTABlockSettings = {
   edit: Edit,
+  save: () => null,
 };
 
 export const init = (): void => {

@@ -7,30 +7,11 @@
   "category": "widgets",
   "icon": "heading",
   "description": "Displays the post title with customizable typography and styling.",
-  "supports": {
-    "html": false,
-    "typography": {
-      "fontSize": true,
-      "lineHeight": true,
-      "textAlign": true,
-      "__experimentalFontFamily": true,
-      "__experimentalFontWeight": true,
-      "__experimentalFontStyle": true,
-      "__experimentalTextDecoration": true,
-      "__experimentalLetterSpacing": true
-    },
-    "color": {
-      "text": true,
-      "background": true,
-      "link": true
-    },
-    "spacing": {
-      "margin": true,
-      "padding": true
-    },
-    "shadow": true
+  "parent": ["campaignbridge/post-card"],
+  "supports": { "html": false, "reusable": false },
+  "attributes": {
+    "level": { "type": "number", "default": 2 }
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
-  "editorScript": "file:./index.js",
-  "render": "file:./render.php"
+  "editorScript": "file:./index.js"
 }

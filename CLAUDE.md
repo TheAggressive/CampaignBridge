@@ -125,8 +125,9 @@ Key rules:
 - Compile each supported block through a dedicated email renderer.
 - Do not call general `render_block()` and attempt to repair arbitrary frontend
   HTML afterward.
-- A deliberately supported subset of core blocks may use explicit adapters.
-  Unsupported blocks fail validation visibly; they never disappear silently.
+- The email editor registers CampaignBridge email blocks only. Core and
+  third-party frontend blocks are unsupported compiler input and fail validation
+  visibly; they never disappear silently.
 - Final output uses conservative email markup: presentation tables, inline CSS,
   HTML width/alignment attributes where needed, and targeted Outlook VML.
 - The editor canvas is an authoring surface. The compiled iframe preview is the
@@ -147,8 +148,11 @@ pnpm create-block-dynamic <name>
 pnpm build:blocks
 ```
 
-All blocks use `apiVersion: 3`. Treat block names and saved attribute shapes as
-stable APIs. Add deprecations/migrations when serialization changes.
+All blocks use `apiVersion: 3`. Once a block enters the production grammar,
+treat its name and saved attribute shape as a stable API. Before that promotion
+gate, prefer a clean schema replacement over carrying compatibility code. Use a
+one-time data migration only when production data has been explicitly declared
+durable; do not keep parallel renderers or permanent legacy adapters.
 
 ## Coding standards
 
