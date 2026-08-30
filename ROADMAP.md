@@ -320,6 +320,9 @@ These are intentionally outside the first production scope:
 - Recurring and event-triggered campaigns.
 - A/B subject/content testing.
 - Reusable campaign recipes, block patterns, and organization design systems.
+- Post-v1 email block waves for builder parity, WordPress content, commerce,
+  transactional events, and engagement integrations as mapped in
+  [`docs/email-block-catalog.md`](docs/email-block-catalog.md).
 - Network-level multisite connection and policy management.
 - Advanced analytics, attribution, and data-warehouse exports.
 

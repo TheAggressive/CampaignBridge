@@ -145,6 +145,10 @@ compile through registered adapters.
 
 ### Native blocks
 
+This table is the committed v1 grammar. Later parity, WordPress, commerce,
+transactional, and engagement candidates are intentionally separated into the
+planning-only [`email-block-catalog.md`](email-block-catalog.md).
+
 | Block name                         | Role                     | Key constraints                                |
 | ---------------------------------- | ------------------------ | ---------------------------------------------- |
 | `campaignbridge/container`         | One document root        | Exactly one root; 320–900 px; locked           |

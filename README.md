@@ -260,6 +260,7 @@ includes/Admin/
 - **[Product Roadmap](ROADMAP.md)** - Current product state, target workflow, milestones, and release gates
 - **[Email Block Architecture](docs/email-block-architecture.md)** - Email-native block grammar, compiler, preview, and compatibility contract
 - **[Email Block Implementation Plan](docs/email-block-implementation-plan.md)** - Phases, contracts, migrations, tests, and first work package
+- **[Email Block Catalog](docs/email-block-catalog.md)** - Post-v1 block, pattern, commerce, automation, and integration map
 - **[Admin System Guide](docs/admin/admin-interface.md)** - Admin interface documentation
 - **[Form System Guide](docs/admin/form-system.md)** - Form building and validation
 
