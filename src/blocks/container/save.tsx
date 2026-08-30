@@ -2,12 +2,8 @@
  * Container Block Save Component
  *
  * Renders the saved content for the CampaignBridge container block. Since the container
- * block uses dynamic rendering (server-side rendering), this save component simply
- * outputs the InnerBlocks content placeholder.
- *
- * The actual rendering is handled by the PHP render callback in render.php,
- * which provides full server-side control over the email HTML structure and
- * ensures proper email client compatibility.
+ * block stores semantic InnerBlocks only. The canonical email compiler renders
+ * the transport HTML used by preview, export, and delivery.
  */
 import { InnerBlocks } from '@wordpress/block-editor';
 

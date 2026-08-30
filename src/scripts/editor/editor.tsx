@@ -1,4 +1,3 @@
-import { registerCoreBlocks } from '@wordpress/block-library';
 import { Button, Icon, Notice, Spinner } from '@wordpress/components';
 import domReady from '@wordpress/dom-ready';
 import { createRoot, useState } from '@wordpress/element';
@@ -222,8 +221,7 @@ function EmptyState({
  * It also registers all necessary WordPress blocks before rendering.
  *
  * The application uses React 18's createRoot API for modern React rendering.
- * Core WordPress blocks and custom CampaignBridge blocks are registered
- * to ensure all block types are available in the editor.
+ * Only compiler-supported CampaignBridge blocks are registered.
  *
  * @function initializeEditor
  * @returns {void}
@@ -237,7 +235,6 @@ domReady(() => {
     const reactRoot = createRoot(root);
 
     // Register all necessary blocks before rendering
-    registerCoreBlocks();
     registerCampaignBridgeBlocks();
 
     // Render the main editor component

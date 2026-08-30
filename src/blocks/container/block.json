@@ -24,13 +24,12 @@
     "maxWidth": { "type": "number", "default": 600 },
     "outerPadding": {
       "type": "object",
-      "default": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+      "default": { "top": 20, "right": 0, "bottom": 20, "left": 0 }
     },
     "padding": {
       "type": "object",
       "default": { "top": 0, "right": 24, "bottom": 0, "left": 24 }
     }
   },
-  "editorScript": "file:./index.js",
-  "render": "file:./render.php"
+  "editorScript": "file:./index.js"
 }

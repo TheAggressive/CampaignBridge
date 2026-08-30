@@ -8,10 +8,9 @@ import { decodeEntities } from '@wordpress/html-entities';
  * @param {number|null} params.postId   - The post ID to get excerpt for
  * @param {string}      params.postType - The post type
  * @param {number}      params.maxWords - Maximum number of words to show
- * @param {boolean}     params.showMore - Whether to prepare for "read more" link
  * @return {string} The excerpt preview text
  */
-export function useExcerptPreview({ postId, postType, maxWords, showMore }) {
+export function useExcerptPreview({ postId, postType, maxWords }) {
   const post = useSelect(
     s =>
       postId
@@ -27,10 +26,6 @@ export function useExcerptPreview({ postId, postType, maxWords, showMore }) {
       .replace(/\s+/g, ' ')
       .trim();
     const words = text.split(/\s+/).filter(Boolean);
-    let out = words.slice(0, maxWords).join(' ');
-    if (showMore && out.endsWith('.')) {
-      out = out.slice(0, -1).trim();
-    }
-    return out;
-  }, [post, maxWords, showMore]);
+    return words.slice(0, maxWords).join(' ');
+  }, [post, maxWords]);
 }

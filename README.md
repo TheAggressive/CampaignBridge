@@ -165,7 +165,8 @@ campaignbridge/
 │   │   ├── MailchimpRoutes.php  # Mailchimp-specific routes
 │   │   └── Editor_Settings_Routes.php # Editor settings
 │   └── Services/                # Business logic services
-│       └── Email_Generator.php   # Email HTML generation
+│       ├── Email/                # Compiler composition and renderers
+│       └── ../Workflow/Email/    # Deterministic compilation workflow
 ├── src/blocks/                  # WordPress block definitions
 │   ├── post/                    # Post content blocks
 │   ├── post-cta/               # Call-to-action blocks

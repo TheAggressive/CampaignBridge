@@ -36,20 +36,20 @@ The v1 grammar and its delivery order remain defined in
 [`email-block-implementation-plan.md`](email-block-implementation-plan.md). The
 following are the foundation for every later wave.
 
-| Proposed block                     | Classification | Purpose                                            | Status                             |
-| ---------------------------------- | -------------- | -------------------------------------------------- | ---------------------------------- |
-| `campaignbridge/container`         | Native block   | Locked email document root and width contract      | Exists; renderer migration planned |
-| `campaignbridge/preheader`         | Native block   | Hidden inbox preview and optional view-online link | v1 planned                         |
-| `campaignbridge/section`           | Native block   | Full-width content row                             | v1 planned                         |
-| `campaignbridge/columns`           | Native block   | Portable one- or two-column layout                 | v1 planned                         |
-| `campaignbridge/column`            | Native block   | Constrained child of columns                       | v1 planned                         |
-| `campaignbridge/text`              | Native block   | Safe rich text, links, and lists                   | v1 planned                         |
-| `campaignbridge/heading`           | Native block   | Portable heading levels and typography             | v1 planned                         |
-| `campaignbridge/image`             | Native block   | Sized, accessible, linked email image              | v1 planned                         |
-| `campaignbridge/button`            | Native block   | Bulletproof call to action                         | v1 planned                         |
-| `campaignbridge/divider`           | Native block   | Portable horizontal rule                           | v1 planned                         |
-| `campaignbridge/spacer`            | Native block   | Bounded vertical spacing                           | v1 planned                         |
-| `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls        | v1 planned                         |
+| Proposed block                     | Classification | Purpose                                            | Status             |
+| ---------------------------------- | -------------- | -------------------------------------------------- | ------------------ |
+| `campaignbridge/container`         | Native block   | Locked email document root and width contract      | Compiler-supported |
+| `campaignbridge/preheader`         | Native block   | Hidden inbox preview and optional view-online link | v1 planned         |
+| `campaignbridge/section`           | Native block   | Full-width content row                             | v1 planned         |
+| `campaignbridge/columns`           | Native block   | Portable one- or two-column layout                 | v1 planned         |
+| `campaignbridge/column`            | Native block   | Constrained child of columns                       | v1 planned         |
+| `campaignbridge/text`              | Native block   | Safe rich text, links, and lists                   | v1 planned         |
+| `campaignbridge/heading`           | Native block   | Portable heading levels and typography             | v1 planned         |
+| `campaignbridge/image`             | Native block   | Sized, accessible, linked email image              | v1 planned         |
+| `campaignbridge/button`            | Native block   | Bulletproof call to action                         | v1 planned         |
+| `campaignbridge/divider`           | Native block   | Portable horizontal rule                           | v1 planned         |
+| `campaignbridge/spacer`            | Native block   | Bounded vertical spacing                           | v1 planned         |
+| `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls        | v1 planned         |
 
 Ordered and unordered lists remain a constrained capability of
 `campaignbridge/text` unless testing proves a separate semantic block is needed.
@@ -83,11 +83,11 @@ before rendering and are frozen in the campaign snapshot.
 
 | Proposed block                | Classification | Purpose                                         | Reuse/dependency                                       |
 | ----------------------------- | -------------- | ----------------------------------------------- | ------------------------------------------------------ |
-| `campaignbridge/post-card`    | Binding block  | One selected post or custom post type           | Exists; migrate to immutable snapshot rendering        |
-| `campaignbridge/post-title`   | Binding block  | Title field within a post composition           | Exists; child-context contract required                |
-| `campaignbridge/post-image`   | Binding block  | Featured image within a post composition        | Exists; reuses image renderer                          |
-| `campaignbridge/post-excerpt` | Binding block  | Bounded excerpt and optional continuation link  | Exists; schema migration required                      |
-| `campaignbridge/post-cta`     | Binding block  | Post-aware call to action                       | Exists; reuses button renderer                         |
+| `campaignbridge/post-card`    | Binding block  | One selected post or custom post type           | Compiler-supported; immutable snapshot required        |
+| `campaignbridge/post-title`   | Binding block  | Title field within a post composition           | Compiler-supported                                     |
+| `campaignbridge/post-image`   | Binding block  | Featured image within a post composition        | Compiler-supported                                     |
+| `campaignbridge/post-excerpt` | Binding block  | Bounded plain-text excerpt                      | Compiler-supported                                     |
+| `campaignbridge/post-cta`     | Binding block  | Post-aware call to action                       | Compiler-supported; bulletproof renderer               |
 | `campaignbridge/post-query`   | Binding block  | Snapshot a bounded, ordered collection of posts | Requires query budget and empty-result policy          |
 | `campaignbridge/post-list`    | Binding block  | Render the immutable result of a post query     | Requires deterministic item template and maximum count |
 

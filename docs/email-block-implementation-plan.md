@@ -20,33 +20,26 @@ they do not introduce another rendering path.
 - Perfect visual emulation of every email client inside a browser.
 - Provider-specific markup inside block renderers.
 - Fetching live WordPress content during final rendering.
-- Rewriting existing template content without a versioned migration and backup.
+- Preserving prototype template markup through permanent compatibility code.
 
-## Current baseline and risks
+## Cutover status and remaining risks
 
-The existing editor and blocks are a useful foundation, but the rendering
-contract is not yet safe to extend:
+The compiler foundation now replaces the prototype rendering paths:
 
-- There are two independent output paths: block `render.php` files and
-  `Services\Email\BlockProcessor`. They disagree on attributes and output.
-- The compiler routes `campaignbridge/post-button`, while the registered block is
-  `campaignbridge/post-cta`.
-- The excerpt block stores `maxWords`, while the compiler reads `wordCount`.
-- The compiler's container path ignores the current max-width and padding schema.
-- Post-card compiler output is mock content; other post renderers query live
-  WordPress data during rendering.
-- Unknown blocks produce an HTML comment instead of a blocking diagnostic.
-- `CssProcessor` is explicitly a placeholder rather than a production inliner.
-- The standalone editor registers every core block and does not apply one global
-  email-block allowlist.
-- Existing patterns depend on core columns/buttons even though the container's
-  child allowlist does not permit them.
-- New templates and every autosave are published immediately.
-- Email generation has performance assertions but no renderer unit suite, golden
-  documents, migration fixtures, or compatibility validator.
+- one explicit renderer registry owns the six currently supported blocks;
+- compilation fails closed for unknown attributes, blocks, nesting, missing
+  snapshots, depth, and block-count violations;
+- HTML, plain text, diagnostics, versions, and a deterministic fingerprint are
+  returned together;
+- the standalone editor registers only compiler-supported CampaignBridge blocks;
+- block `render.php`, `Email_Generator`, `BlockProcessor`, `CssProcessor`, and
+  `EmailStructure` have been removed;
+- golden artifacts and measured compiler performance are covered by tests.
 
-These are migration inputs, not reasons for a rewrite. Existing serialized block
-names remain stable until an explicit migration exists.
+The remaining production risks are compiled preview/export wiring, snapshot
+resolution and persistence, native content/layout blocks, compliance and
+compatibility validators, draft/approval semantics, and email-client evidence.
+Existing prototype templates are not a compatibility boundary for the compiler.
 
 ## Product and technical decisions
 
@@ -60,9 +53,8 @@ names remain stable until an explicit migration exists.
    approval, and provider workflows.
 5. **Use explicit renderers.** One registered renderer owns each supported block
    name. Duplicate registration fails during composition.
-6. **Use explicit legacy adapters.** Supported core blocks remain readable for
-   existing templates but disappear from the new-template inserter after their
-   native replacements ship.
+6. **Expose only native email blocks.** Core and third-party frontend blocks are
+   rejected compiler input and are not registered in the standalone editor.
 7. **Fail closed.** Unsupported blocks, invalid nesting, unresolved required
    content, or compliance failures prevent approval and delivery.
 8. **Snapshot before approval.** Post bindings resolve to immutable content before
@@ -76,13 +68,13 @@ names remain stable until an explicit migration exists.
 
 ```text
 WordPress block comments
-  → WordPress parser adapter
+  → bounded serialized-block parser
   → provider-neutral Block_Node tree
   → grammar and nesting validation
   → content snapshot resolution
   → renderer registry
   → HTML + plain-text document assembly
-  → maintained CSS inliner
+  → optional authored-style inliner
   → compatibility/compliance validators
   → Compile_Result + deterministic fingerprint
         ├── compiled iframe preview
@@ -129,25 +121,36 @@ Place orchestration under `includes/Workflow/Email/`:
 - `Artifact_Fingerprinter`: hashes normalized source, snapshot, metadata,
   compiler version, and profile version.
 
-### Delivery adapters
+### Delivery integrations
 
-- WordPress serialized-block parser adapter.
+- Bounded WordPress serialized-block parser.
 - REST preview controller.
 - HTML-download controller.
-- Public CSS-inliner adapter selected through the dependency policy.
+- Maintained public CSS inliner only if authored style sheets are introduced.
 - Block renderer implementations composed into the registry.
 
-The current `Email_Generator` remains a compatibility facade until every caller
-uses `Email_Compiler`. `BlockProcessor` is retired only after legacy fixtures
-compile through registered adapters.
+There is no compatibility facade or parallel transport renderer.
 
 ## Block grammar v1
 
-### Native blocks
+### Currently supported blocks
 
-This table is the committed v1 grammar. Later parity, WordPress, commerce,
-transactional, and engagement candidates are intentionally separated into the
-planning-only [`email-block-catalog.md`](email-block-catalog.md).
+This is the exact compiler/editor allowlist after the clean cutover:
+
+| Block name                    | Role                   | Key constraints                             |
+| ----------------------------- | ---------------------- | ------------------------------------------- |
+| `campaignbridge/container`    | One document root      | Exactly one root; 320–900 px; locked        |
+| `campaignbridge/post-card`    | Immutable post binding | Child of container; snapshot required       |
+| `campaignbridge/post-image`   | Featured image binding | Child of post card; URL/dimensions/alt      |
+| `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4      |
+| `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words            |
+| `campaignbridge/post-cta`     | Post CTA binding       | Child of post card; HTTPS URL; VML fallback |
+
+### Planned v1 native blocks
+
+These are the next production grammar additions. Later parity, commerce,
+transactional, and engagement candidates remain in the planning-only
+[`email-block-catalog.md`](email-block-catalog.md).
 
 | Block name                         | Role                     | Key constraints                                |
 | ---------------------------------- | ------------------------ | ---------------------------------------------- |
@@ -164,28 +167,12 @@ planning-only [`email-block-catalog.md`](email-block-catalog.md).
 | `campaignbridge/spacer`            | Vertical spacing         | Bounded pixel height                           |
 | `campaignbridge/compliance-footer` | Required footer controls | Address and unsubscribe tokens                 |
 
-The existing post-card, post-image, post-title, post-excerpt, and post-CTA blocks
-remain supported content-binding blocks. Their renderers consume snapshot data.
+### Unsupported blocks
 
-### Legacy adapters
-
-Initially read these core blocks when they already exist in templates:
-
-- `core/paragraph`
-- `core/heading`
-- `core/image`
-- `core/buttons` and `core/button`
-- `core/columns` and `core/column`
-- `core/separator`
-- `core/spacer`
-- `core/group`
-
-Each adapter has an explicit supported-attribute matrix and a diagnostic for
-ignored/unsupported settings. No generic core-block fallback is allowed.
-
-Legacy adapters are migration bridges. New templates use native blocks, and the
-editor offers an explicit “Convert to CampaignBridge blocks” action once
-round-trip fixtures prove it is safe.
+`core/*` and third-party blocks are not part of the grammar. The editor does not
+offer them and the compiler returns a blocking diagnostic containing the exact
+block path if they are received. Prototype templates that contain them must be
+recreated with native blocks.
 
 ### Attribute policy
 
@@ -203,22 +190,21 @@ round-trip fixtures prove it is safe.
 
 ## Phased delivery
 
-### Phase 0 — Baseline and safety net
+### Phase 0 — Clean compiler contract
 
 Deliverables:
 
-- Add representative serialized fixtures for every existing CampaignBridge
-  block and currently supported core block.
-- Add fixtures that expose the current CTA-name, excerpt-attribute, container,
-  unknown-block, and live-content discrepancies.
+- Add representative serialized fixtures for every retained CampaignBridge
+  block and explicit rejection fixtures for core, third-party, and malformed
+  blocks.
 - Add a `tests/Unit/Email/` suite and full-document golden fixture directory.
 - Record the initial compiler/profile versioning rules.
 - Add a supported-block matrix to documentation.
 
 Exit gate:
 
-- Every known legacy shape has a fixture and an expected migration or diagnostic.
-- Tests fail if a supported block silently disappears.
+- Every supported native shape compiles or produces an exact diagnostic.
+- Tests fail if unsupported content disappears or produces a partial artifact.
 
 ### Phase 1 — Compiler kernel
 
@@ -226,9 +212,9 @@ Deliverables:
 
 - Implement the domain values, renderer interface, registry, diagnostics, result,
   and fingerprint.
-- Implement the WordPress parser adapter and normalized block paths.
+- Implement the bounded WordPress parser boundary and normalized block paths.
 - Compose the registry in the plugin composition root without side effects.
-- Wrap the new compiler behind `Email_Generator` for compatibility.
+- Cut isolated generator callers directly to `Email_Compiler`.
 - Make unsupported blocks return blocking diagnostics.
 
 Exit gate:
@@ -257,22 +243,24 @@ Exit gate:
 - Golden HTML includes presentation roles, inline critical styles, image
   dimensions/alt handling, and Outlook button fallback.
 
-### Phase 3 — Legacy parity and migration
+### Phase 3 — Editor and schema cutover
 
 Deliverables:
 
-- Implement explicit legacy core-block adapters.
-- Correct existing CampaignBridge block schema mismatches through renderer
-  aliases and versioned migrations.
-- Add non-destructive conversion previews and template backups/revisions.
-- Show template-level migration state: native, legacy-compatible, migration
-  available, or blocked.
+- Remove core-block registration and core-based patterns from the standalone
+  editor.
+- Replace prototype CampaignBridge schemas directly with the documented native
+  contracts.
+- Recreate starter templates from native blocks and keep normal WordPress
+  revisions for operator undo.
+- Show unsupported-template diagnostics rather than conversion or compatibility
+  states.
 
 Exit gate:
 
-- Every baseline fixture either compiles successfully or produces a documented,
-  actionable blocking diagnostic.
-- Migration is idempotent and undoable through WordPress revisions.
+- Every native fixture compiles and every non-native fixture produces a
+  documented, actionable blocking diagnostic.
+- The editor cannot insert a block the compiler does not support.
 
 ### Phase 4 — Immutable WordPress content bindings
 
@@ -318,9 +306,9 @@ Exit gate:
 
 Deliverables:
 
-- Evaluate a maintained public CSS inliner for license, security, package size,
-  PHP compatibility, deterministic output, and release packaging.
-- Replace the placeholder inliner behind an adapter.
+- If authored style sheets are introduced, evaluate a maintained public CSS
+  inliner for license, security, package size, PHP compatibility, deterministic
+  output, and release packaging.
 - Add validators for forbidden elements/CSS, URL policy, image accessibility,
   preheader, physical address, unsubscribe controls, and sender metadata.
 - Add representative Gmail, Apple Mail, Outlook.com, and desktop Outlook
@@ -330,7 +318,7 @@ Deliverables:
 
 Exit gate:
 
-- No placeholder inliner remains in the production path.
+- Critical output styles remain deterministic and self-contained.
 - Compliance errors block approval; compatibility warnings are visible and
   stable.
 - The release ZIP contains and verifies every required runtime dependency.
@@ -343,8 +331,8 @@ Deliverables:
   `Compile_Result`.
 - Persist approved snapshot, versions, fingerprint, and final artifacts through
   repository ports.
-- Remove direct use of block `render.php` output from transport generation.
-- Retire `BlockProcessor` after telemetry/tests show no unsupported callers.
+- Keep `Email_Compiler` as the only transport rendering path.
+- Verify removed prototype renderer classes have no callers or packaged files.
 - Document compiler/profile upgrade and reapproval rules.
 
 Exit gate:
@@ -397,7 +385,7 @@ not converted into generic 500 responses.
 | Domain           | normalization, bounds, nesting, diagnostics, fingerprint stability |
 | Renderer         | escaping, defaults, HTML, plain text, profile behavior             |
 | Golden documents | full HTML/text bytes for representative templates                  |
-| Migration        | every serialized legacy version, idempotency, revision recovery    |
+| Serialization    | production schema round trips and explicit unsupported diagnostics |
 | Integration      | parser, registry composition, snapshots, REST wiring               |
 | Security         | capabilities, nonce, limits, malicious URLs/markup, redaction      |
 | Accessibility    | alt decisions, heading order warnings, preview controls            |
@@ -408,21 +396,16 @@ not converted into generic 500 responses.
 Golden fixture changes require a reviewable explanation. Regenerating snapshots
 without inspecting the semantic diff is not an accepted test update.
 
-## Pull-request sequence
+## Remaining pull-request sequence
 
 Keep each pull request independently releasable:
 
-1. Baseline fixtures and compiler test harness.
-2. Domain contracts, registry, diagnostics, and fingerprint.
-3. Document/container renderer and compatibility facade.
-4. Native section/text/heading/image/button/divider/spacer blocks.
-5. Editor allowlist, native patterns, and draft semantics.
-6. Legacy core adapters and CampaignBridge mismatch migrations.
-7. Content snapshot schema and post-binding renderers.
-8. Preview REST controller and compiler response schema.
-9. Sandboxed preview UI and HTML download.
-10. Public CSS inliner adapter and compatibility/compliance validators.
-11. Approval/provider cutover and old processor retirement.
+1. Native section/text/heading/image/button/divider/spacer blocks and patterns.
+2. Content snapshot resolver, draft semantics, and approval persistence.
+3. Preview REST controller and compiler response schema.
+4. Sandboxed preview UI and HTML download.
+5. Compatibility/compliance validators and optional public CSS inliner.
+6. Approval and provider workflow cutover.
 
 Do not combine provider sending changes with the compiler kernel or block
 migrations. That would make artifact regressions and irreversible delivery risk
@@ -433,7 +416,7 @@ too difficult to isolate.
 The email-native compiler milestone is complete when:
 
 - new templates expose only the documented native grammar;
-- existing supported templates remain readable through adapters or migrations;
+- prototype templates are rejected unless they use the current native grammar;
 - unsupported content fails with an actionable block-path diagnostic;
 - compiled preview and HTML download are byte-identical;
 - the same approved source/snapshot/profile produces the same fingerprint;
@@ -444,16 +427,19 @@ The email-native compiler milestone is complete when:
 - unit, golden, integration, security, accessibility, performance, and browser
   gates pass.
 
-## First work package
+## First work package — implemented
 
-Begin with pull request 1 only:
+Begin with the direct compiler cutover:
 
-1. Create `tests/Fixtures/Email/legacy/` using real serialized examples of the
-   six current CampaignBridge blocks and supported core blocks.
-2. Add focused tests that demonstrate the known name/attribute/container and
-   unknown-block behavior without changing production output yet.
-3. Define compiler/profile version constants and fixture review rules.
-4. Add a short supported-block matrix generated from the fixture inventory.
+1. Added the pure compiler contracts, O(1) renderer registry, structured
+   diagnostics, profile/version constants, and deterministic fingerprint.
+2. Implemented the document/container and retained post-binding renderers against
+   an immutable snapshot supplied by the caller.
+3. Replaced the isolated generator paths and deleted `Email_Generator`,
+   `BlockProcessor`, `CssProcessor`, and `EmailStructure`.
+4. Removed PHP `render.php` transport output from block metadata so the canonical
+   compiler is the only rendering path.
+5. Added golden HTML/plain-text, unsupported-input, deterministic-output, escaping,
+   depth/block-budget, and measured performance tests.
 
-This establishes the rollback and compatibility boundary needed before changing
-the compiler or editor.
+The next pull request adds the first complete native authoring vertical slice.

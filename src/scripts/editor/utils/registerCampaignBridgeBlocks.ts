@@ -1,9 +1,8 @@
 /**
  * CampaignBridge Block Registration - Core API
  *
- * Provides the main API for registering CampaignBridge blocks, similar to
- * WordPress core's registerCoreBlocks(). This is the primary entry point
- * for block registration in CampaignBridge.
+ * Provides the single API for registering compiler-supported CampaignBridge
+ * email blocks.
  *
  * Usage:
  * ```typescript
@@ -14,7 +13,7 @@
  * ```
  */
 
-// Re-export the core registration function (matches WordPress registerCoreBlocks API)
+// Re-export the registry entry point.
 export { registerCampaignBridgeBlocks } from './block-registry';
 
 // Re-export types for TypeScript users

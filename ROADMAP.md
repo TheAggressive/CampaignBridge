@@ -130,17 +130,17 @@ compliant, email-safe HTML before any provider is involved.
 Deliverables:
 
 - Establish the email-native block grammar and renderer registry described in
-  [`docs/email-block-architecture.md`](docs/email-block-architecture.md); use
-  explicit adapters for a supported core-block subset rather than converting
-  arbitrary frontend markup. Follow the phased
+  [`docs/email-block-architecture.md`](docs/email-block-architecture.md); accept
+  only explicitly supported CampaignBridge blocks and reject core or third-party
+  frontend markup. Follow the phased
   [implementation plan](docs/email-block-implementation-plan.md).
 - Correct template draft, publish, revision, duplication, and autosave semantics.
-- Publish a supported core/custom block matrix and fail clearly for unsupported
-  blocks instead of silently producing incomplete email.
+- Keep the compiler/editor supported-block matrix current and fail clearly for
+  all unsupported blocks instead of silently producing incomplete email.
 - Define dynamic content bindings for one or more selected WordPress posts and
   create an immutable content snapshot for review.
-- Replace the simplified CSS inliner with a maintained public implementation and
-  deterministic sanitization pipeline.
+- Keep critical styles renderer-owned; if authored style sheets are introduced,
+  select a maintained public inliner and deterministic sanitization pipeline.
 - Enforce required sender, physical-address, unsubscribe, view-online, alt-text,
   and preheader rules before approval.
 - Add desktop/mobile preview, generated-HTML inspection, and secure HTML download.

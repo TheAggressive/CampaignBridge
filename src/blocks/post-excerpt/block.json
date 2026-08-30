@@ -6,36 +6,13 @@
   "title": "Post Excerpt",
   "category": "widgets",
   "icon": "editor-justify",
-  "description": "Shows the post summary with customizable text length and an optional read-more link/button.",
-  "supports": {
-    "html": false,
-    "inserter": true,
-    "multiple": true,
-    "reusable": true
-  },
+  "description": "Shows a bounded plain-text summary for the selected post.",
+  "parent": ["campaignbridge/post-card"],
+  "supports": { "html": false, "reusable": false },
   "attributes": {
-    "maxWords": { "type": "number", "default": 50 },
-    "showMore": { "type": "boolean", "default": true },
-    "moreStyle": { "type": "string", "default": "link" },
-    "linkTo": { "type": "string", "default": "post" },
-    "morePrefix": { "type": "string", "default": "" },
-    "addSpaceBeforeLink": { "type": "boolean", "default": true },
-    "enableSeparator": { "type": "boolean", "default": false },
-    "separatorType": { "type": "string", "default": "custom" },
-    "customSeparator": { "type": "string", "default": "" },
-    "addSpaceBeforeSeparator": { "type": "boolean", "default": false },
-    "buttonRadius": { "type": "number", "default": 4 },
-    "buttonPaddingX": { "type": "number", "default": 16 },
-    "buttonPaddingY": { "type": "number", "default": 10 },
-    "buttonLayout": { "type": "string", "default": "new-line" },
-    "buttonAlignment": { "type": "string", "default": "left" },
-    "morePlacement": { "type": "string", "default": "inline" },
-    "moreLabel": { "type": "string", "default": "Read more" }
+    "maxWords": { "type": "number", "default": 50 }
   },
-  "allowedBlocks": ["core/paragraph", "core/buttons", "core/button"],
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js",
-  "render": "file:./render.php",
-  "style": "file:./style-index.css",
   "editorStyle": "file:./index.css"
 }
