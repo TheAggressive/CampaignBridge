@@ -46,7 +46,7 @@ final class Container_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function allowed_children(): array {
-		return array( 'campaignbridge/post-card' );
+		return array( 'campaignbridge/section', 'campaignbridge/post-card' );
 	}
 
 	/**

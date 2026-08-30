@@ -32,21 +32,16 @@ import { useDispatch } from '@wordpress/data';
 import { useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { useBlockSelection } from '../../scripts/editor/hooks/useBlockSelection';
+import {
+  normalizeSpacing,
+  toControlSpacing,
+  type NormalizedSpacing,
+} from '../shared/spacing';
 
 interface ContainerBlockAttributes {
   maxWidth?: number;
-  outerPadding?: {
-    top?: number;
-    right?: number;
-    bottom?: number;
-    left?: number;
-  };
-  padding?: {
-    top?: number;
-    right?: number;
-    bottom?: number;
-    left?: number;
-  };
+  outerPadding?: NormalizedSpacing;
+  padding?: NormalizedSpacing;
   backgroundColor?: string;
   textColor?: string;
   [key: string]: any;
@@ -56,35 +51,8 @@ interface EditProps extends BlockEditProps<ContainerBlockAttributes> {
   clientId: string;
 }
 
-type SpacingSide = 'top' | 'right' | 'bottom' | 'left';
-type SpacingInput = Partial<Record<SpacingSide, string | number>>;
-type NormalizedSpacing = Record<SpacingSide, number>;
-
 const DEFAULT_OUTER_PADDING = { top: 20, right: 0, bottom: 20, left: 0 };
 const DEFAULT_INNER_PADDING = { top: 0, right: 24, bottom: 0, left: 24 };
-
-const normalizeSpacing = (
-  values: SpacingInput | undefined
-): NormalizedSpacing =>
-  Object.fromEntries(
-    (['top', 'right', 'bottom', 'left'] as SpacingSide[]).map(side => [
-      side,
-      Math.max(
-        0,
-        Math.min(96, Number.parseInt(String(values?.[side] ?? ''), 10) || 0)
-      ),
-    ])
-  ) as NormalizedSpacing;
-
-const toControlSpacing = (
-  values: SpacingInput | undefined
-): Record<SpacingSide, string> =>
-  Object.fromEntries(
-    (['top', 'right', 'bottom', 'left'] as SpacingSide[]).map(side => [
-      side,
-      `${values?.[side] ?? 0}px`,
-    ])
-  ) as Record<SpacingSide, string>;
 
 export default function Edit({
   attributes,
@@ -108,7 +76,7 @@ export default function Edit({
       },
     },
     {
-      allowedBlocks: ['campaignbridge/post-card'],
+      allowedBlocks: ['campaignbridge/section', 'campaignbridge/post-card'],
       templateLock: false,
       renderAppender: hasInnerBlocks
         ? InnerBlocks.DefaultBlockAppender

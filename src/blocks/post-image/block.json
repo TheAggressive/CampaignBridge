@@ -4,15 +4,11 @@
   "version": "1.0.0",
   "name": "campaignbridge/post-image",
   "title": "Post Image",
-  "category": "widgets",
+  "category": "campaignbridge-email",
   "icon": "format-image",
   "description": "Displays the snapshotted featured image for the selected post.",
   "parent": ["campaignbridge/post-card"],
   "supports": { "html": false, "reusable": false },
-  "usesContext": [
-    "campaignbridge:postId",
-    "campaignbridge:postType",
-    "campaignbridge:showImage"
-  ],
+  "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js"
 }

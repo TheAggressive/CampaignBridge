@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/spacer",
+  "title": "Email Spacer",
+  "category": "campaignbridge-email",
+  "icon": "image-flip-vertical",
+  "description": "A bounded vertical spacer rendered with email-safe markup.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section"],
+  "supports": { "html": false, "reusable": false },
+  "attributes": {
+    "height": { "type": "number", "default": 24 }
+  },
+  "editorScript": "file:./index.js"
+}

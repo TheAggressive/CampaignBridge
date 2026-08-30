@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "name": "campaignbridge/post-card",
   "title": "Post Card",
-  "category": "widgets",
+  "category": "campaignbridge-email",
   "icon": "media-document",
   "description": "A container for displaying post content in email campaigns. Add post elements inside this card.",
-  "parent": ["campaignbridge/container"],
+  "parent": ["campaignbridge/container", "campaignbridge/section"],
   "supports": { "html": false, "innerBlocks": true, "reusable": false },
   "attributes": {
     "postType": { "type": "string", "default": "post" },

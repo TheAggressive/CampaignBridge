@@ -40,18 +40,18 @@ following are the foundation for every later wave.
 | ---------------------------------- | -------------- | -------------------------------------------------- | ------------------ |
 | `campaignbridge/container`         | Native block   | Locked email document root and width contract      | Compiler-supported |
 | `campaignbridge/preheader`         | Native block   | Hidden inbox preview and optional view-online link | v1 planned         |
-| `campaignbridge/section`           | Native block   | Full-width content row                             | v1 planned         |
+| `campaignbridge/section`           | Native block   | Full-width content row                             | Compiler-supported |
 | `campaignbridge/columns`           | Native block   | Portable one- or two-column layout                 | v1 planned         |
 | `campaignbridge/column`            | Native block   | Constrained child of columns                       | v1 planned         |
-| `campaignbridge/text`              | Native block   | Safe rich text, links, and lists                   | v1 planned         |
-| `campaignbridge/heading`           | Native block   | Portable heading levels and typography             | v1 planned         |
-| `campaignbridge/image`             | Native block   | Sized, accessible, linked email image              | v1 planned         |
-| `campaignbridge/button`            | Native block   | Bulletproof call to action                         | v1 planned         |
-| `campaignbridge/divider`           | Native block   | Portable horizontal rule                           | v1 planned         |
-| `campaignbridge/spacer`            | Native block   | Bounded vertical spacing                           | v1 planned         |
+| `campaignbridge/text`              | Native block   | Safe rich text and HTTPS links                     | Compiler-supported |
+| `campaignbridge/heading`           | Native block   | Portable heading levels and typography             | Compiler-supported |
+| `campaignbridge/image`             | Native block   | Sized, accessible, linked email image              | Compiler-supported |
+| `campaignbridge/button`            | Native block   | Bulletproof call to action                         | Compiler-supported |
+| `campaignbridge/divider`           | Native block   | Portable horizontal rule                           | Compiler-supported |
+| `campaignbridge/spacer`            | Native block   | Bounded vertical spacing                           | Compiler-supported |
 | `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls        | v1 planned         |
 
-Ordered and unordered lists remain a constrained capability of
+Ordered and unordered lists remain planned as a constrained capability of
 `campaignbridge/text` unless testing proves a separate semantic block is needed.
 
 ## Wave A — general builder parity

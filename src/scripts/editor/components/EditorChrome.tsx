@@ -32,6 +32,13 @@ import { SidebarContent, SidebarHeader } from './Sidebars/Sidebar';
 
 const EMAIL_BLOCK_TYPES = [
   'campaignbridge/container',
+  'campaignbridge/section',
+  'campaignbridge/text',
+  'campaignbridge/heading',
+  'campaignbridge/image',
+  'campaignbridge/button',
+  'campaignbridge/divider',
+  'campaignbridge/spacer',
   'campaignbridge/post-card',
   'campaignbridge/post-image',
   'campaignbridge/post-title',

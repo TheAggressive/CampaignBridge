@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/heading",
+  "title": "Email Heading",
+  "category": "campaignbridge-email",
+  "icon": "heading",
+  "description": "Portable email heading with explicit hierarchy and alignment.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section"],
+  "supports": { "html": false, "reusable": false },
+  "attributes": {
+    "content": { "type": "string", "default": "" },
+    "level": { "type": "number", "default": 2 },
+    "align": { "type": "string", "default": "left" },
+    "textColor": { "type": "string", "default": "#111111" }
+  },
+  "editorScript": "file:./index.js"
+}

@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "name": "campaignbridge/post-excerpt",
   "title": "Post Excerpt",
-  "category": "widgets",
+  "category": "campaignbridge-email",
   "icon": "editor-justify",
   "description": "Shows a bounded plain-text summary for the selected post.",
   "parent": ["campaignbridge/post-card"],

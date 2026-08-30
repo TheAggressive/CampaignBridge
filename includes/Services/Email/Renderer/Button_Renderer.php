@@ -1,6 +1,6 @@
 <?php
 /**
- * Bulletproof post call-to-action renderer.
+ * Native email button renderer.
  *
  * @package CampaignBridge
  */
@@ -18,16 +18,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Renders an accessible CTA with a desktop Outlook VML fallback. */
-final class Post_Cta_Renderer extends Abstract_Renderer {
+/** Renders a validated bulletproof call to action. */
+final class Button_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function block_name(): string {
-		return 'campaignbridge/post-cta';
+		return 'campaignbridge/button';
 	}
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'backgroundColor', 'textColor' );
+		return array( 'label', 'url', 'align', 'backgroundColor', 'textColor' );
 	}
 
 	/**
@@ -37,11 +37,13 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
 		$attributes = $block->attributes();
-		$label      = is_string( $attributes['label'] ?? null ) ? trim( $attributes['label'] ) : 'Read more';
+		$label      = is_string( $attributes['label'] ?? null ) ? trim( $attributes['label'] ) : '';
 
 		return $block->with_attributes(
 			array(
-				'label'           => '' === $label ? 'Read more' : $label,
+				'label'           => $label,
+				'url'             => is_string( $attributes['url'] ?? null ) ? trim( $attributes['url'] ) : '',
+				'align'           => Renderer_Support::alignment( $attributes['align'] ?? null ),
 				'backgroundColor' => Renderer_Support::color( $attributes['backgroundColor'] ?? null, '#111111' ),
 				'textColor'       => Renderer_Support::color( $attributes['textColor'] ?? null, '#ffffff' ),
 			)
@@ -54,20 +56,18 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Block_Node     $block   Normalized block.
 	 * @param Render_Context $context Immutable scoped context.
 	 */
-	public function validate( Block_Node $block, Render_Context $context ): array {
-		$post = $context->binding( 'post' );
-		$url  = is_array( $post ) ? Renderer_Support::https_url( $post['url'] ?? null ) : null;
-
-		if ( null === $url ) {
-			return array(
-				Compile_Diagnostic::error( 'post.cta.url_missing', $block->path(), 'The post CTA requires a snapshot HTTPS URL.' ),
-			);
+	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$attributes = $block->attributes();
+		if ( '' === $attributes['label'] ) {
+			return array( Compile_Diagnostic::error( 'button.label.empty', $block->path(), 'Email buttons require a label.' ) );
 		}
 
-		if ( 80 < strlen( $block->attributes()['label'] ) ) {
-			return array(
-				Compile_Diagnostic::error( 'post.cta.label_too_long', $block->path(), 'The post CTA label cannot exceed 80 bytes.' ),
-			);
+		if ( 80 < strlen( $attributes['label'] ) ) {
+			return array( Compile_Diagnostic::error( 'button.label.too_long', $block->path(), 'Email button labels cannot exceed 80 bytes.' ) );
+		}
+
+		if ( null === Renderer_Support::https_url( $attributes['url'] ) ) {
+			return array( Compile_Diagnostic::error( 'button.url.invalid', $block->path(), 'Email buttons require an absolute HTTPS URL.' ) );
 		}
 
 		return array();
@@ -81,16 +81,14 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$post       = $context->binding( 'post' );
 		$attributes = $block->attributes();
 
 		return Button_Markup::html(
-			(string) ( $post['url'] ?? '' ),
+			$attributes['url'],
 			$attributes['label'],
 			$attributes['backgroundColor'],
 			$attributes['textColor'],
-			null,
-			160
+			$attributes['align']
 		);
 	}
 
@@ -102,8 +100,6 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_text( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$post = $context->binding( 'post' );
-
-		return $block->attributes()['label'] . ': ' . (string) ( $post['url'] ?? '' ) . "\n";
+		return $block->attributes()['label'] . ': ' . $block->attributes()['url'] . "\n";
 	}
 }

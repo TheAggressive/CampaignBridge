@@ -2,18 +2,20 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
   "version": "1.0.0",
-  "name": "campaignbridge/post-cta",
-  "title": "Post CTA",
+  "name": "campaignbridge/button",
+  "title": "Email Button",
   "category": "campaignbridge-email",
   "icon": "button",
-  "description": "Creates a bulletproof call-to-action button for the selected post.",
-  "parent": ["campaignbridge/post-card"],
+  "description": "A bulletproof call-to-action with an Outlook VML fallback.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section"],
   "supports": { "html": false, "reusable": false },
   "attributes": {
-    "label": { "type": "string", "default": "Read more" },
+    "label": { "type": "string", "default": "Learn more" },
+    "url": { "type": "string", "default": "" },
+    "align": { "type": "string", "default": "left" },
     "backgroundColor": { "type": "string", "default": "#111111" },
     "textColor": { "type": "string", "default": "#ffffff" }
   },
-  "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js"
 }
