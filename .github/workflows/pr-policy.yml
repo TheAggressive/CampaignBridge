@@ -1,0 +1,102 @@
+name: PR Policy
+
+# Read-only title validation runs from pull-request code. The write-capable
+# policy job always checks out protected master and reads every fact it judges
+# back from GitHub's API; it never executes code from a pull request.
+on: # zizmor: ignore[dangerous-triggers] pull_request_target executes protected base code only
+  pull_request:
+    branches: [master]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  pull_request_target:
+    branches: [master]
+    types:
+      [
+        opened,
+        edited,
+        labeled,
+        unlabeled,
+        synchronize,
+        reopened,
+        ready_for_review,
+      ]
+  workflow_run:
+    workflows: ['CI/CD Pipeline', 'CodeQL', 'Workflow Security']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-policy-${{ github.event.pull_request.number || github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  title:
+    name: PR Title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.18.1'
+      - name: Validate the pull request title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node bin/ci/check-pr-title.mjs
+
+  policy:
+    name: Classify and route
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'pull_request')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.18.1'
+      - name: Resolve the pull request from GitHub
+        id: pull-request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "pull_request_target" ]]; then
+            number="${EVENT_PR_NUMBER}"
+          else
+            number="$(gh api "repos/${GH_REPO}/actions/runs/${WORKFLOW_RUN_ID}/pull_requests" \
+              --jq '.[0].number // empty')"
+          fi
+
+          if [[ -z "${number}" ]]; then
+            echo "No open pull request is associated with this event."
+            exit 0
+          fi
+
+          echo "number=${number}" >> "${GITHUB_OUTPUT}"
+      - name: Classify, label, update, or register native auto-merge
+        if: steps.pull-request.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          CB_AUTOMERGE_ACTORS: ${{ vars.CB_AUTOMERGE_ACTORS || github.repository_owner }}
+          PR_NUMBER: ${{ steps.pull-request.outputs.number }}
+        run: node bin/ci/pr-policy.mjs "${PR_NUMBER}"

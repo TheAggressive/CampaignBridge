@@ -1,0 +1,21 @@
+# Solo-maintainer routing. Require code-owner approval only after a second
+# active maintainer can review the owner without creating a self-review lock.
+*                           @TheAggressive
+
+# These paths define what runs, what ships, and what protects master.
+/.github/workflows/         @TheAggressive
+/.github/rulesets/          @TheAggressive
+/.github/CODEOWNERS         @TheAggressive
+/.github/dependabot.yml     @TheAggressive
+/bin/ci/                    @TheAggressive
+/bin/release/               @TheAggressive
+/.releaserc.json            @TheAggressive
+
+# Runtime, dependency, and analysis contracts.
+/campaignbridge.php         @TheAggressive
+/composer.json              @TheAggressive
+/composer.lock              @TheAggressive
+/package.json               @TheAggressive
+/pnpm-lock.yaml             @TheAggressive
+/phpcs.xml.dist             @TheAggressive
+/phpstan.neon               @TheAggressive
