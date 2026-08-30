@@ -77,6 +77,10 @@ Add social links and more layout variants only after the compiler and fixtures
 prove the base contract. Forms, scripts, video embeds, arbitrary HTML, navigation,
 and unrestricted nested core blocks are out of scope initially.
 
+The post-v1 candidates, classifications, dependencies, patterns, and promotion
+gates are mapped in [`email-block-catalog.md`](email-block-catalog.md). Inclusion
+there does not add an item to the supported grammar or editor allowlist.
+
 Core blocks may be supported only through explicit adapters with the same
 contract and tests. There is no generic fallback that silently strips or
 approximates unsupported markup.
