@@ -27,6 +27,23 @@
 
   &__canvas-tools {
     @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
+    flex: 0 0 auto;
+  }
+
+  &__content,
+  &__canvas {
+    height: 100%;
+    min-height: 0;
+  }
+
+  &__canvas {
+    display: flex;
+    flex-direction: column;
+
+    > :last-child {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
   }
 }
 

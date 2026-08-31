@@ -5,18 +5,7 @@
  * Eliminates manual registration by dynamically discovering block modules.
  */
 
-// Declare WordPress global for TypeScript.
-
-declare global {
-  // eslint-disable-next-line no-unused-vars -- Global type declaration.
-  const wp: {
-    blocks?: {
-      // eslint-disable-next-line no-unused-vars -- Parameter type declaration.
-      getBlockType?: (name: string) => any;
-    };
-  };
-}
-
+import { getBlockType } from '@wordpress/blocks';
 import { blockDiscovery } from './discovery';
 import type { RegistrationStats } from './types';
 
@@ -80,21 +69,20 @@ export const registerCampaignBridgeBlocks = (
 
   blocks.forEach(blockModule => {
     try {
+      if (getBlockType(blockModule.name)) {
+        results.skipped++;
+        return;
+      }
+
       // Call init function (just like WordPress core)
       if (blockModule.init && typeof blockModule.init === 'function') {
         blockModule.init();
 
         // Verify the block was registered
-        if (typeof wp !== 'undefined' && wp.blocks && wp.blocks.getBlockType) {
-          const blockType = wp.blocks.getBlockType(blockModule.name);
-          if (blockType) {
-            results.registered++;
-          } else {
-            results.failed++;
-          }
-        } else {
-          // Fallback if wp.blocks is not available yet
+        if (getBlockType(blockModule.name)) {
           results.registered++;
+        } else {
+          results.failed++;
         }
       } else {
         results.failed++;

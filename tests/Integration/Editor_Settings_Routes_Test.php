@@ -1,0 +1,69 @@
+<?php
+/**
+ * Editor settings route integration tests.
+ *
+ * @package CampaignBridge\Tests\Integration
+ */
+
+declare(strict_types=1);
+
+namespace CampaignBridge\Tests\Integration;
+
+use CampaignBridge\Post_Types\Post_Type_Email_Template;
+use CampaignBridge\REST\Editor_Settings_Routes;
+use CampaignBridge\Tests\Helpers\Test_Case;
+use WP_Block_Editor_Context;
+use WP_REST_Request;
+
+/**
+ * Verify editor settings use the actual template security and block context.
+ */
+class Editor_Settings_Routes_Test extends Test_Case {
+	/**
+	 * The route should build core settings for the requested template.
+	 */
+	public function test_settings_use_requested_template_context(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$template_id = $this->create_test_post(
+			array(
+				'post_type'   => Post_Type_Email_Template::POST_TYPE,
+				'post_status' => 'draft',
+			)
+		);
+
+		$context_post_id = 0;
+		$capture_context = static function ( array $settings, WP_Block_Editor_Context $context ) use ( &$context_post_id ): array {
+			$context_post_id = $context->post ? (int) $context->post->ID : 0;
+			return $settings;
+		};
+		add_filter( 'block_editor_settings_all', $capture_context, 10, 2 );
+
+		$request = new WP_REST_Request( 'GET', '/campaignbridge/v1/editor-settings' );
+		$request->set_param( 'post_type', Post_Type_Email_Template::POST_TYPE );
+		$request->set_param( 'post_id', $template_id );
+		$response = ( new Editor_Settings_Routes() )->handle_request( $request );
+
+		remove_filter( 'block_editor_settings_all', $capture_context, 10 );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( $template_id, $context_post_id );
+	}
+
+	/**
+	 * A post from another post type must not be accepted as a template context.
+	 */
+	public function test_settings_reject_mismatched_post_type(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$post_id = $this->create_test_post();
+
+		$request = new WP_REST_Request( 'GET', '/campaignbridge/v1/editor-settings' );
+		$request->set_param( 'post_type', Post_Type_Email_Template::POST_TYPE );
+		$request->set_param( 'post_id', $post_id );
+		$response = ( new Editor_Settings_Routes() )->handle_request( $request );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'template_not_found', $response->get_error_code() );
+	}
+}

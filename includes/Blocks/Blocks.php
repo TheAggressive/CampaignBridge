@@ -41,7 +41,12 @@ class Blocks {
 	 * @return void
 	 */
 	public static function init(): void {
-		\add_action( 'init', array( __CLASS__, 'register' ) );
+		if ( did_action( 'init' ) ) {
+			self::register();
+		} else {
+			\add_action( 'init', array( __CLASS__, 'register' ) );
+		}
+
 		\add_filter( 'block_categories_all', array( __CLASS__, 'register_email_category' ) );
 	}
 

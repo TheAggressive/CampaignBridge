@@ -1,5 +1,6 @@
 import { BlockEditorKeyboardShortcuts } from '@wordpress/block-editor';
 import BlockCanvas from './BlockCanvas';
+import EditorKeyboardShortcuts from './EditorKeyboardShortcuts';
 
 /**
  * Main content component for the CampaignBridge template editor.
@@ -15,11 +16,12 @@ import BlockCanvas from './BlockCanvas';
  * <Content />
  * ```
  */
-export default function Content() {
+export default function Content({ onSave, styles }) {
   return (
     <div className='cb-editor__content'>
       <BlockEditorKeyboardShortcuts />
-      <BlockCanvas />
+      <EditorKeyboardShortcuts onSave={onSave} />
+      <BlockCanvas styles={styles} />
     </div>
   );
 }

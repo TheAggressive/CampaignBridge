@@ -6,8 +6,8 @@ import { SIDEBAR_CONSTANTS } from '../../hooks/useSidebarState';
 import { ToggleButton } from './ToggleButton';
 
 // Fullscreen mode preference constants (consistent with EditorChrome)
-const FULLSCREEN_SCOPE = SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE;
-const FULLSCREEN_KEY = 'isFullscreen';
+const FULLSCREEN_SCOPE = SIDEBAR_CONSTANTS.PREFERENCES.SCOPE;
+const FULLSCREEN_KEY = SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE;
 
 /**
  * Fullscreen Toggle Button Component

@@ -234,10 +234,25 @@ domReady(() => {
     // Create React 18 root and render the main application
     const reactRoot = createRoot(root);
 
-    // Register all necessary blocks before rendering
-    registerCampaignBridgeBlocks();
+    try {
+      const registration = registerCampaignBridgeBlocks();
 
-    // Render the main editor component
-    reactRoot.render(<CampaignBridgeBlockEditor />);
+      if (registration.failed > 0 || registration.discovered === 0) {
+        throw new Error('The email block catalog could not be initialized.');
+      }
+
+      reactRoot.render(<CampaignBridgeBlockEditor />);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : __('The email editor could not be initialized.', 'campaignbridge');
+
+      reactRoot.render(
+        <Notice status='error' isDismissible={false}>
+          {message}
+        </Notice>
+      );
+    }
   }
 });

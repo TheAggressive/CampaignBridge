@@ -22,10 +22,8 @@ export const SIDEBAR_CONSTANTS = {
     SECONDARY_OPEN: 'secondarySidebarOpen',
   } as const,
   PREFERENCES: {
-    PRIMARY_SIDEBAR_OPEN: 'campaignbridge/template-editor/primarySidebarOpen',
-    SECONDARY_SIDEBAR_OPEN:
-      'campaignbridge/template-editor/secondarySidebarOpen',
-    FULLSCREEN_MODE: 'core/edit-post/fullscreenMode',
+    SCOPE: 'campaignbridge/template-editor',
+    FULLSCREEN_MODE: 'fullscreenMode',
   } as const,
   SCOPES: {
     PRIMARY: 'campaignbridge/template-editor/primary',
@@ -43,13 +41,13 @@ const SIDEBAR_CONFIG_MAP: Record<SidebarType, SidebarConfig> = {
     scope: SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
     identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
     preferenceKey: SIDEBAR_CONSTANTS.PREFERENCE_KEYS.PRIMARY_OPEN,
-    preferencePath: SIDEBAR_CONSTANTS.PREFERENCES.PRIMARY_SIDEBAR_OPEN,
+    preferencePath: SIDEBAR_CONSTANTS.PREFERENCES.SCOPE,
   },
   secondary: {
     scope: SIDEBAR_CONSTANTS.SCOPES.SECONDARY,
     identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
     preferenceKey: SIDEBAR_CONSTANTS.PREFERENCE_KEYS.SECONDARY_OPEN,
-    preferencePath: SIDEBAR_CONSTANTS.PREFERENCES.SECONDARY_SIDEBAR_OPEN,
+    preferencePath: SIDEBAR_CONSTANTS.PREFERENCES.SCOPE,
   },
 } as const;
 

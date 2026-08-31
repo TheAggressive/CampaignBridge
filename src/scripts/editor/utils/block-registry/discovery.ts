@@ -35,7 +35,7 @@ export const createBlockDiscovery = (): BlockDiscovery => {
   /**
    * Creates a discovered block object from a file path
    */
-  const createDiscoveredBlock = (blockPath: string): DiscoveredBlock | null => {
+  const createDiscoveredBlock = (blockPath: string): DiscoveredBlock => {
     const blockName = extractBlockName(blockPath);
     const fullBlockName = createFullBlockName(blockName);
 
@@ -43,7 +43,7 @@ export const createBlockDiscovery = (): BlockDiscovery => {
       const blockModule: BlockModule = blockContext(blockPath);
 
       if (!blockModule || typeof blockModule.init !== 'function') {
-        return null;
+        throw new Error(`Block module ${fullBlockName} has no init function.`);
       }
 
       // Set the block name on the module for easier access
@@ -53,9 +53,9 @@ export const createBlockDiscovery = (): BlockDiscovery => {
         name: fullBlockName,
         module: blockModule,
       };
-    } catch {
-      // Silently handle individual block loading failures.
-      return null;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`Unable to load ${fullBlockName}: ${reason}`);
     }
   };
 
@@ -66,8 +66,7 @@ export const createBlockDiscovery = (): BlockDiscovery => {
     blockContext
       .keys()
       .filter((path: string) => BLOCK_CONFIG.PATTERN.test(path))
-      .map(createDiscoveredBlock)
-      .filter((block): block is DiscoveredBlock => block !== null);
+      .map(createDiscoveredBlock);
 
   return {
     discoverAllBlocks,

@@ -25,9 +25,3 @@ $screen->enqueue_style(
 ?>
 
 <div id="cb-block-editor-root" class="editor-screen"></div>
-
-<style>
-	h1 {
-	color: red;
-	}
-</style>

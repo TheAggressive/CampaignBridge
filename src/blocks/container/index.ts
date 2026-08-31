@@ -16,7 +16,7 @@
  */
 
 import type { BlockConfiguration } from '@wordpress/blocks';
-import { registerBlockType } from '@wordpress/blocks';
+import { getBlockType, registerBlockType } from '@wordpress/blocks';
 import type { ComponentType } from 'react';
 
 import metadata from './block.json';
@@ -55,6 +55,10 @@ export const settings: ContainerBlockSettings = {
  * This function is called immediately to register the block on load.
  */
 export const init = (): void => {
+  if (getBlockType(name)) {
+    return;
+  }
+
   registerBlockType(
     { name, ...metadata } as unknown as BlockConfiguration,
     settings

@@ -126,6 +126,34 @@ The UI should distinguish:
 This avoids promising literal WYSIWYG behavior that no browser-based editor can
 guarantee across every email client.
 
+### Core-aligned editor composition
+
+CampaignBridge does not maintain a parallel block data store. The standalone
+screen binds `cb_templates` to WordPress's public `core-data` entity lifecycle:
+
+```text
+EntityProvider(cb_templates, post ID)
+  → useEntityRecord + useEntityBlockEditor
+  → BlockEditorProvider
+  → BlockCanvas
+  → CampaignBridge email blocks only
+```
+
+Core owns entity resolution, transient `onInput` changes, persistent `onChange`
+edits, undo/redo levels, dirty state, and REST persistence. CampaignBridge owns
+only the email grammar allowlist, editor chrome, a two-second save debounce, and
+the server-side compiler boundary. Block and template-meta changes therefore
+share one edit history and one save lifecycle.
+
+The editor uses public WordPress packages and stores rather than copying block
+list, writing-flow, selection, history, or serialization internals. The isolated
+list-view adapter remains experimental because WordPress does not yet expose a
+stable standalone equivalent; it must not leak into persistence or compilation.
+
+New templates are created as drafts with one canonical container. Saving never
+changes post status. Publishing and approval are explicit workflow transitions,
+not side effects of typing or autosave.
+
 ## Compiler boundary
 
 The compiler uses an O(1) renderer registry rather than a block-name switch.

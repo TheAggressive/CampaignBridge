@@ -1,3 +1,5 @@
+import { Button } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
 import { FullscreenToggle } from './Button/FullscreenToggle';
 import { PrimarySidebarToggle } from './Button/PrimarySidebarToggle';
 import { SecondarySidebarToggle } from './Button/SecondarySidebarToggle';
@@ -71,7 +73,17 @@ export default function Header({
   isSecondaryOpen,
   togglePrimary,
   toggleSecondary,
+  hasEdits = false,
+  onSave = () => {},
+  saveStatus = 'saved',
 }) {
+  const isSaving = saveStatus === 'saving';
+  const saveLabel = isSaving
+    ? __('Saving…', 'campaignbridge')
+    : hasEdits
+      ? __('Save', 'campaignbridge')
+      : __('Saved', 'campaignbridge');
+
   return (
     <div className={CLASSES.HEADER}>
       <div className={CLASSES.HEADER_LEFT}>
@@ -85,6 +97,15 @@ export default function Header({
       </div>
 
       <div className={CLASSES.HEADER_ACTIONS}>
+        <Button
+          variant='primary'
+          onClick={() => void onSave()}
+          disabled={!hasEdits || isSaving}
+          isBusy={isSaving}
+          aria-label={saveLabel}
+        >
+          {saveLabel}
+        </Button>
         <SecondarySidebarToggle
           isOpen={isSecondaryOpen}
           onToggle={toggleSecondary}

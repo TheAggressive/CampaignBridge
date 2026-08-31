@@ -1,5 +1,5 @@
 import type { BlockConfiguration } from '@wordpress/blocks';
-import { registerBlockType } from '@wordpress/blocks';
+import { getBlockType, registerBlockType } from '@wordpress/blocks';
 import type { ComponentType } from 'react';
 
 import './editor.css';
@@ -20,6 +20,10 @@ export const settings: PostExcerptBlockSettings = {
 };
 
 export const init = (): void => {
+  if (getBlockType(name)) {
+    return;
+  }
+
   registerBlockType(
     { name, ...metadata } as unknown as BlockConfiguration,
     settings

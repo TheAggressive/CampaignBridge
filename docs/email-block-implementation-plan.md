@@ -32,6 +32,10 @@ The compiler foundation now replaces the prototype rendering paths:
 - HTML, plain text, diagnostics, versions, and a deterministic fingerprint are
   returned together;
 - the standalone editor registers only compiler-supported CampaignBridge blocks;
+- the standalone editor uses core-data entity editing, core undo/redo, and the
+  core block canvas instead of parallel parsing, history, and persistence code;
+- new templates remain drafts through autosave and start with one canonical
+  container;
 - block `render.php`, `Email_Generator`, `BlockProcessor`, `CssProcessor`, and
   `EmailStructure` have been removed;
 - golden artifacts and measured compiler performance are covered by tests.
