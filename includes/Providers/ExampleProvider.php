@@ -176,7 +176,6 @@ class ExampleProvider extends Abstract_Provider {
 					'headers' => array(
 						'Authorization' => 'Bearer ' . $api_key,
 					),
-					'timeout' => 30,
 				)
 			);
 

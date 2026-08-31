@@ -260,9 +260,6 @@ class CampaignBridge_Plugin {
 			$admin_role->add_cap( 'campaignbridge_manage' );
 		}
 
-		// Flush rewrite rules on activation.
-		\flush_rewrite_rules();
-
 		// Log activation (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( 'CampaignBridge plugin activated successfully.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Sniffs.DirectLogging.DirectLoggingFunction -- Plugin lifecycle logging before Error_Handler is available.
@@ -278,9 +275,6 @@ class CampaignBridge_Plugin {
 	 * @return void
 	 */
 	public static function deactivate(): void {
-		// Flush rewrite rules on deactivation.
-		\flush_rewrite_rules();
-
 		// Log deactivation (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( __( 'CampaignBridge plugin deactivated.', 'campaignbridge' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Sniffs.DirectLogging.DirectLoggingFunction -- Plugin lifecycle logging before Error_Handler is available.

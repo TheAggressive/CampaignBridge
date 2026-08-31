@@ -318,7 +318,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
-				'timeout' => 30,
 			)
 		);
 
@@ -359,7 +358,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 					'Content-Type'  => 'application/json',
 				),
 				'body'    => wp_json_encode( $send_data ),
-				'timeout' => 30,
 			)
 		);
 
@@ -394,7 +392,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),
-				'timeout' => 30,
 			)
 		);
 

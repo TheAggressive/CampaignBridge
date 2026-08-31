@@ -23,8 +23,9 @@ final class Client_Address {
 	 * @return string Valid IP address.
 	 */
 	public static function get(): string {
-		$remote_address = isset( $_SERVER['REMOTE_ADDR'] )
-			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
+		$raw_remote_address = wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders,WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___SERVER__REMOTE_ADDR__ -- The server address is required for security throttling and is validated as an IP immediately below.
+		$remote_address     = is_string( $raw_remote_address ) && false !== filter_var( $raw_remote_address, FILTER_VALIDATE_IP )
+			? $raw_remote_address
 			: '127.0.0.1';
 
 		/**

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Storage Operations for CampaignBridge Plugin
  *
@@ -271,7 +270,9 @@ class Storage {
 	 */
 	public static function wp_cache_set( string $key, $value, string $group, int $expiration = 0 ): bool {
 		$prefixed_group = Storage_Prefixes::get_cache_group( $group );
-		return wp_cache_set( $key, $value, $prefixed_group, $expiration );
+		$expiration     = 0 === $expiration ? 0 : max( 300, $expiration );
+
+		return wp_cache_set( $key, $value, $prefixed_group, $expiration ); // phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined -- Runtime normalization guarantees either persistent storage or a minimum five-minute TTL.
 	}
 
 	/**
@@ -335,7 +336,7 @@ class Storage {
 	 * @param mixed  $default Default value if key not found.
 	 * @return mixed Cached value or default.
 	 */
-	public static function get_cache( string $key, string $group, $default = false ) {
+	public static function get_cache( string $key, string $group, $default = false ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Public named parameter retained for backward compatibility.
 		$value = self::wp_cache_get( $key, $group );
 		return false === $value ? $default : $value;
 	}
@@ -354,7 +355,7 @@ class Storage {
 	/**
 	 * Update multiple meta keys for a single post.
 	 *
-	 * @param int                $post_id   The post ID.
+	 * @param int                 $post_id   The post ID.
 	 * @param array<string,mixed> $meta_data Array of meta key => value pairs.
 	 * @return bool True on success, false on failure.
 	 */
@@ -368,12 +369,12 @@ class Storage {
 		return true;
 	}
 
-  /**
+	/**
 	 * Batch update post meta using WordPress API methods.
 	 *
 	 * @param array<array<string,mixed>> $post_meta_updates Array of post_id => meta_data pairs.
-	 * @param int                           $batch_size        Maximum items per batch (default: 50).
-	 * @param int                           $max_execution_time Maximum execution time in seconds (default: 25).
+	 * @param int                        $batch_size        Maximum items per batch (default: 50).
+	 * @param int                        $max_execution_time Maximum execution time in seconds (default: 25).
 	 * @return array{success: bool, processed: int, batches: int, errors: array<int, string>} Result with success status and statistics.
 	 */
 	public static function batch_update_post_meta( array $post_meta_updates, int $batch_size = 50, int $max_execution_time = 25 ): array {

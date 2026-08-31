@@ -33,6 +33,11 @@ class Post_Type_Email_Template {
 	public const POST_TYPE = 'cb_templates';
 
 	/**
+	 * Maximum templates loaded by each database query.
+	 */
+	private const TEMPLATE_QUERY_BATCH_SIZE = 100;
+
+	/**
 	 * Meta field keys are defined in META_FIELD_CONFIG for consistency.
 	 * All field definitions, validation rules, and categories are centralized here.
 	 * Use self::get_meta_field_keys() to get all available field keys,
@@ -346,15 +351,7 @@ class Post_Type_Email_Template {
 		 * @return array<int, \WP_Post> Array of template posts.
 		 */
 	public static function get_templates(): array {
-		return get_posts(
-			array(
-				'post_type'      => self::POST_TYPE,
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'orderby'        => 'title',
-				'order'          => 'ASC',
-			)
-		);
+		return self::query_templates();
 	}
 
 		/**
@@ -364,21 +361,60 @@ class Post_Type_Email_Template {
 		 * @return array<int, \WP_Post> Array of template posts.
 		 */
 	public static function get_templates_by_category( string $category ): array {
-		return get_posts(
+		return self::query_templates(
 			array(
-				'post_type'      => self::POST_TYPE,
-				'post_status'    => 'publish',
-				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Category is stored as registered post meta until a dedicated taxonomy migration is introduced.
 					array(
 						'key'   => 'campaignbridge_template_category',
 						'value' => $category,
 					),
 				),
-				'posts_per_page' => -1,
-				'orderby'        => 'title',
-				'order'          => 'ASC',
 			)
 		);
+	}
+
+	/**
+	 * Load all matching templates through bounded database queries.
+	 *
+	 * The public template methods retain their existing return contract while
+	 * avoiding the unbounded query prohibited by WordPress VIP.
+	 *
+	 * @param array<string, mixed> $query_args Additional query arguments.
+	 * @return array<int, \WP_Post> Matching templates.
+	 */
+	private static function query_templates( array $query_args = array() ): array {
+		$templates = array();
+		$page      = 1;
+
+		do {
+			$batch = get_posts(
+				wp_parse_args(
+					$query_args,
+					array(
+						'post_type'              => self::POST_TYPE,
+						'post_status'            => 'publish',
+						'posts_per_page'         => self::TEMPLATE_QUERY_BATCH_SIZE,
+						'paged'                  => $page,
+						'orderby'                => 'title',
+						'order'                  => 'ASC',
+						'no_found_rows'          => true,
+						'ignore_sticky_posts'    => true,
+						'update_post_meta_cache' => false,
+						'update_post_term_cache' => false,
+					)
+				)
+			);
+
+			$batch_size = count( $batch );
+			foreach ( $batch as $template ) {
+				if ( $template instanceof \WP_Post ) {
+					$templates[] = $template;
+				}
+			}
+			++$page;
+		} while ( self::TEMPLATE_QUERY_BATCH_SIZE === $batch_size );
+
+		return $templates;
 	}
 
 	/**

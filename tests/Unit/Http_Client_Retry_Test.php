@@ -18,6 +18,17 @@ use WP_UnitTestCase;
  */
 class Http_Client_Retry_Test extends WP_UnitTestCase {
 	/**
+	 * Remote requests use the WordPress VIP maximum timeout.
+	 */
+	public function test_default_timeout_meets_vip_budget(): void {
+		$reflection = new \ReflectionClass( Http_Client::class );
+		$constant   = $reflection->getReflectionConstant( 'DEFAULT_TIMEOUT' );
+
+		$this->assertNotFalse( $constant );
+		$this->assertSame( 3, $constant->getValue() );
+	}
+
+	/**
 	 * Safe methods retry, while mutations fail closed.
 	 */
 	public function test_retry_policy_is_method_aware(): void {
