@@ -170,14 +170,17 @@ class Admin_Screens_Test extends Test_Case {
 		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
 
-		add_menu_page( 'CampaignBridge', 'CampaignBridge', 'manage_options', 'campaignbridge' );
-		$this->trigger_screen_discovery();
-		do_action( 'admin_enqueue_scripts', 'campaignbridge_page_campaignbridge-editor' );
+		$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
+			\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
+			'campaignbridge'
+		);
+		$enqueue  = $this->get_reflection_method( $registry, 'enqueue_screen_assets' );
+		$config   = require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/editor_config.php';
+		$enqueue->invoke( $registry, 'editor', 'single', $config );
 
 		$styles = wp_styles();
 		$script = wp_scripts();
 		$handle = 'cb-campaignbridge-block-editor-styles';
-		$config = require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/editor_config.php';
 
 		$this->assertArrayHasKey( $handle, $styles->registered );
 		$this->assertSame( 'dist/styles/editor/editor.asset.php', $config['assets']['asset_styles']['campaignbridge-block-editor-styles']['src'] );
