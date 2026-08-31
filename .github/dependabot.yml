@@ -1,4 +1,4 @@
-# Routine dependency maintenance is grouped, cooled down, and kept monthly.
+# Routine dependency maintenance is grouped and checked weekly.
 # Version-update rules exclude majors without suppressing security fixes that
 # may need to cross a major version.
 version: 2
@@ -7,10 +7,12 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
     open-pull-requests-limit: 2
     cooldown:
-      default-days: 14
+      default-days: 7
     commit-message:
       prefix: chore
       include: scope
@@ -34,13 +36,15 @@ updates:
   - package-ecosystem: composer
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
     open-pull-requests-limit: 2
     cooldown:
-      default-days: 14
+      default-days: 7
       semver-major-days: 30
-      semver-minor-days: 14
-      semver-patch-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 3
     commit-message:
       prefix: chore
       include: scope
@@ -69,13 +73,15 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
     open-pull-requests-limit: 2
     cooldown:
-      default-days: 14
+      default-days: 7
       semver-major-days: 30
-      semver-minor-days: 14
-      semver-patch-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 3
     commit-message:
       prefix: chore
       include: scope
