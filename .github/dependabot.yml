@@ -1,5 +1,6 @@
-# Routine dependency maintenance follows the same guarded policy as the other
-# Aggressive WordPress repositories: grouped, cooled down, and non-major.
+# Routine dependency maintenance is grouped and checked weekly.
+# Version-update rules exclude majors without suppressing security fixes that
+# may need to cross a major version.
 version: 2
 
 updates:
@@ -9,7 +10,7 @@ updates:
       interval: weekly
       day: monday
       time: '06:00'
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
     cooldown:
       default-days: 7
     commit-message:
@@ -18,11 +19,18 @@ updates:
     labels:
       - dependencies
       - github_actions
-    ignore:
+    allow:
       - dependency-name: '*'
-        update-types: [version-update:semver-major]
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     groups:
-      actions:
+      routine-actions:
+        applies-to: version-updates
+        patterns: ['*']
+        update-types: [minor, patch]
+      security-actions:
+        applies-to: security-updates
         patterns: ['*']
 
   - package-ecosystem: composer
@@ -31,7 +39,7 @@ updates:
       interval: weekly
       day: monday
       time: '06:00'
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
     cooldown:
       default-days: 7
       semver-major-days: 30
@@ -43,17 +51,24 @@ updates:
     labels:
       - dependencies
       - php
-    ignore:
+    allow:
       - dependency-name: '*'
-        update-types: [version-update:semver-major]
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+    ignore:
       # WordPress core, its PHPUnit library, and public stubs move together
       # after the target core archive passes checksum verification.
       - dependency-name: wp-phpunit/wp-phpunit
       - dependency-name: php-stubs/wordpress-stubs
     groups:
       php-tooling:
+        applies-to: version-updates
         patterns: ['*']
         update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ['*']
 
   - package-ecosystem: npm
     directory: /
@@ -61,7 +76,7 @@ updates:
       interval: weekly
       day: monday
       time: '06:00'
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
     cooldown:
       default-days: 7
       semver-major-days: 30
@@ -73,9 +88,12 @@ updates:
     labels:
       - dependencies
       - javascript
-    ignore:
+    allow:
       - dependency-name: '*'
-        update-types: [version-update:semver-major]
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+    ignore:
       # These packages form the production CSS compatibility stack documented
       # in docs/dependency-policy.md. Upgrade them together after a clean build.
       - dependency-name: '@tailwindcss/postcss'
@@ -84,9 +102,14 @@ updates:
       - dependency-name: postcss-nested
     groups:
       wordpress:
+        applies-to: version-updates
         patterns: ['@wordpress/*']
         update-types: [minor, patch]
       js-tooling:
+        applies-to: version-updates
         patterns: ['*']
         exclude-patterns: ['@wordpress/*']
         update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ['*']
