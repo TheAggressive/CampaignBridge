@@ -91,7 +91,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 * Test exception handling
 	 */
 	public function _test_handle_exception(): void {
-		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
+		$log_file     = get_temp_dir() . 'campaignbridge.log';
 		$initial_size = $this->get_log_file_size( $log_file );
 
 		// Create a test exception
@@ -159,7 +159,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 		$this->set_log_level( 0 );
 
 		// Get initial log file size
-		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
+		$log_file     = get_temp_dir() . 'campaignbridge.log';
 		$initial_size = $this->get_log_file_size( $log_file );
 
 		Error_Handler::debug( 'Test debug message', array( 'key' => 'value' ) );
@@ -173,7 +173,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 * Test info logging method
 	 */
 	public function test_info_logging(): void {
-		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
+		$log_file     = get_temp_dir() . 'campaignbridge.log';
 		$initial_size = $this->get_log_file_size( $log_file );
 
 		Error_Handler::info( 'Test info message', array( 'key' => 'value' ) );
@@ -186,7 +186,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 * Test warning logging method
 	 */
 	public function test_warning_logging(): void {
-		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
+		$log_file     = get_temp_dir() . 'campaignbridge.log';
 		$initial_size = $this->get_log_file_size( $log_file );
 
 		Error_Handler::warning( 'Test warning message', array( 'key' => 'value' ) );
@@ -199,7 +199,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 * Test error logging method
 	 */
 	public function test_error_logging(): void {
-		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
+		$log_file     = get_temp_dir() . 'campaignbridge.log';
 		$initial_size = $this->get_log_file_size( $log_file );
 
 		Error_Handler::error( 'Test error message', array( 'key' => 'value' ) );
@@ -212,7 +212,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 * Test log level filtering - debug messages filtered out at INFO level
 	 */
 	public function test_log_level_filtering(): void {
-		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
+		$log_file     = get_temp_dir() . 'campaignbridge.log';
 		$initial_size = $this->get_log_file_size( $log_file );
 
 		$this->set_log_level( 1 ); // INFO level
@@ -296,7 +296,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 * Test WordPress PHP error handling
 	 */
 	public function test_handle_wp_php_error(): void {
-		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
+		$log_file     = get_temp_dir() . 'campaignbridge.log';
 		$initial_size = $this->get_log_file_size( $log_file );
 
 		$error = array(
@@ -315,7 +315,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 * Test WordPress die handling
 	 */
 	public function test_handle_wp_die(): void {
-		$log_file     = WP_CONTENT_DIR . '/campaignbridge.log';
+		$log_file     = get_temp_dir() . 'campaignbridge.log';
 		$initial_size = $this->get_log_file_size( $log_file );
 
 		$this->error_handler->handle_wp_die( 'Test die message' );
@@ -331,7 +331,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 		$log_file_property = $this->reflection->getProperty( 'log_file' );
 		$log_file = $log_file_property->getValue( $this->error_handler );
 
-		$this->assertEquals( WP_CONTENT_DIR . '/campaignbridge.log', $log_file );
+		$this->assertEquals( get_temp_dir() . 'campaignbridge.log', $log_file );
 	}
 
 	/**

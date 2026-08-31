@@ -251,7 +251,6 @@ class Routes extends Abstract_Rest_Controller {
 			'update_post_meta_cache' => false,
 			'update_post_term_cache' => false,
 			'ignore_sticky_posts'    => true,
-			'suppress_filters'       => true,
 		);
 	}
 

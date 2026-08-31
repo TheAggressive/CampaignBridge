@@ -92,7 +92,6 @@ class Performance_Optimizer {
 			'update_post_term_cache' => false, // Don't load term cache if not needed.
 			'fields'                 => 'ids', // Only get post IDs if that's all you need.
 			'ignore_sticky_posts'    => true,
-			'suppress_filters'       => true,
 		);
 
 		$args = wp_parse_args( $args, $defaults );

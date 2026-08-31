@@ -56,7 +56,7 @@ final class Text_Renderer extends Abstract_Renderer {
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$content = $block->attributes()['content'];
-		if ( '' === trim( strip_tags( $content ) ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Validation checks whether any visible text remains.
+		if ( '' === trim( wp_strip_all_tags( $content ) ) ) {
 			return array( Compile_Diagnostic::error( 'text.content.empty', $block->path(), 'Email text requires visible content.' ) );
 		}
 

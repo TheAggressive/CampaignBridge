@@ -185,7 +185,7 @@ final class Renderer_Support {
 		$html = preg_replace_callback(
 			'/<a href="([^"]+)"[^>]*>(.*?)<\/a>/su',
 			static function ( array $matches ): string {
-				$label = html_entity_decode( strip_tags( $matches[2] ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Pure renderer removes the validated inline markup.
+				$label = html_entity_decode( wp_strip_all_tags( $matches[2] ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 				$url   = html_entity_decode( $matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
 				return $label . ' (' . $url . ')';
@@ -197,7 +197,7 @@ final class Renderer_Support {
 		}
 
 		$html = preg_replace( '/<br>/i', "\n", $html );
-		$text = html_entity_decode( strip_tags( (string) $html ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Pure renderer removes the validated inline markup.
+		$text = html_entity_decode( wp_strip_all_tags( (string) $html ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		$text = preg_replace( '/[ \t]+/u', ' ', $text );
 		$text = preg_replace( '/\s*\n\s*/u', "\n", (string) $text );
 

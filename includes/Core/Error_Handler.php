@@ -9,8 +9,6 @@
  * @since 0.1.0
  */
 
-// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_error_log,WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- This class intentionally uses direct logging functions as approved wrappers
-
 declare(strict_types=1);
 
 namespace CampaignBridge\Core;
@@ -59,7 +57,7 @@ class Error_Handler {
 	 */
 	public function __construct() {
 		$this->log_level = $this->get_log_level();
-		$this->log_file  = WP_CONTENT_DIR . '/campaignbridge.log';
+		$this->log_file  = get_temp_dir() . 'campaignbridge.log';
 	}
 
 	/**
@@ -189,14 +187,13 @@ class Error_Handler {
 			'context'     => $sanitized_context,
 			'user_id'     => get_current_user_id(),
 			'request_uri' => sanitize_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ),
-			'user_agent'  => sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ),
 		);
 
 		$log_line = wp_json_encode( $log_entry ) . PHP_EOL;
 
 		// Use error_log for production or file_put_contents for development.
 		if ( WP_DEBUG ) {
-			file_put_contents( $this->log_file, $log_line, FILE_APPEND | LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Logging only.
+			file_put_contents( $this->log_file, $log_line, FILE_APPEND | LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents,WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_file_put_contents,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- Debug-only logging writes to the platform-approved temporary directory.
 		} else {
 			error_log( $log_line ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- Production logging within Error_Handler.
 		}

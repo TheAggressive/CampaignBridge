@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <ruleset name="CampaignBridge">
-  <description>CampaignBridge WordPress Coding Standards - Modern PHP with WordPress conventions.</description>
+  <description>CampaignBridge enterprise coding standards: WordPress VIP, WordPress, and project architecture rules.</description>
 
-  <!-- Storage abstraction layer - intentionally uses direct storage functions and security is handled at application layer -->
-  <exclude-pattern>includes/Core/Storage.php</exclude-pattern>
+  <!-- WordPress VIP is the default platform standard. -->
+  <rule ref="WordPress-VIP-Go"/>
 
-  <!-- Base WordPress rules -->
+  <!-- Retain the complete WordPress coding, documentation, and security standards. -->
   <rule ref="WordPress"/>
   <rule ref="WordPress-Extra"/>
   <rule ref="WordPress-Docs"/>
@@ -95,5 +95,4 @@
     <severity>warning</severity>
   </rule>
 </ruleset>
-
 

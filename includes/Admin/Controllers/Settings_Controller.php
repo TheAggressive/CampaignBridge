@@ -322,7 +322,7 @@ class Settings_Controller {
 			wp_die( 'Invalid file upload' );
 		}
 
-		$content = file_get_contents( $uploaded_file_tmp_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents,CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction -- Reading uploaded file, not HTTP request
+		$content = file_get_contents( $uploaded_file_tmp_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents,CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction,WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown -- Reading a locally validated PHP upload temporary file, never a remote URL.
 		if ( false === $content ) {
 			wp_die( 'Failed to read uploaded file' );
 		}

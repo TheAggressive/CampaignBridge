@@ -26,7 +26,7 @@ class Http_Client {
 	/**
 	 * Default request timeout in seconds.
 	 */
-	private const DEFAULT_TIMEOUT = 30;
+	private const DEFAULT_TIMEOUT = 3;
 
 	/**
 	 * Maximum number of retries for failed requests.
