@@ -204,8 +204,18 @@ class Screen_Registry {
 	 * @return void
 	 */
 	private function render_screen( string $screen_name, string $type, $controller, array $config ): void {
-		echo '<div class="wrap campaignbridge-screen">';
-		echo '<h1>' . esc_html( $config['page_title'] ) . '</h1>';
+		$screen_class = sanitize_html_class( $screen_name );
+		$title_class  = 'editor' === $screen_name ? 'screen-reader-text' : '';
+
+		printf(
+			'<div class="wrap campaignbridge-screen campaignbridge-screen--%s">',
+			esc_attr( $screen_class )
+		);
+		printf(
+			'<h1 class="%s">%s</h1>',
+			esc_attr( $title_class ),
+			esc_html( $config['page_title'] )
+		);
 
 		// Start output buffering to capture screen content and process forms.
 		ob_start();
@@ -226,12 +236,8 @@ class Screen_Registry {
 		// Now that forms have been processed, display notices seamlessly right after the h1.
 		settings_errors( 'campaignbridge_form' );
 
-		// Output the screen content. Since we control all HTML generation server-side and
-		// properly escape all dynamic values, we can safely output without additional sanitization.
-		// This avoids maintenance burden of maintaining HTML whitelists.
-		echo $screen_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-
-		// Render any notices that were added during screen processing (forms, etc.).
+		// Screen processing is complete, so render its notices in WordPress's standard
+		// position before the application or form content.
 		\CampaignBridge\Notices::render();
 
 		// Fire custom hook for individual screens to display notices after content processing.
@@ -239,6 +245,11 @@ class Screen_Registry {
 		if ( $this->is_valid_screen_name( $screen_name ) ) {
 			do_action( 'campaignbridge_form_notices', $screen_name );
 		}
+
+		// Output the screen content. Since we control all HTML generation server-side and
+		// properly escape all dynamic values, we can safely output without additional sanitization.
+		// This avoids maintenance burden of maintaining HTML whitelists.
+		echo $screen_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo '</div>';
 	}

@@ -9,7 +9,6 @@ import TemplateToolbar from './TemplateToolbar';
 const CLASSES = {
   HEADER: 'cb-editor__header',
   HEADER_LEFT: 'cb-editor__header-left',
-  HEADER_TITLE: 'cb-editor__title',
   HEADER_ACTIONS: 'cb-editor__header-actions',
 };
 
@@ -85,7 +84,11 @@ export default function Header({
       : __('Saved', 'campaignbridge');
 
   return (
-    <div className={CLASSES.HEADER}>
+    <div
+      className={CLASSES.HEADER}
+      role='toolbar'
+      aria-label={__('Email editor toolbar', 'campaignbridge')}
+    >
       <div className={CLASSES.HEADER_LEFT}>
         <TemplateToolbar
           list={list}
@@ -94,10 +97,15 @@ export default function Header({
           onSelect={onSelect}
           onNew={onNew}
         />
+        <SecondarySidebarToggle
+          isOpen={isSecondaryOpen}
+          onToggle={toggleSecondary}
+        />
       </div>
 
       <div className={CLASSES.HEADER_ACTIONS}>
         <Button
+          className='cb-editor__save-button'
           variant='primary'
           onClick={() => void onSave()}
           disabled={!hasEdits || isSaving}
@@ -106,10 +114,6 @@ export default function Header({
         >
           {saveLabel}
         </Button>
-        <SecondarySidebarToggle
-          isOpen={isSecondaryOpen}
-          onToggle={toggleSecondary}
-        />
         <PrimarySidebarToggle isOpen={isPrimaryOpen} onToggle={togglePrimary} />
         <FullscreenToggle />
       </div>

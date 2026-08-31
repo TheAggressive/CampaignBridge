@@ -13,7 +13,7 @@ const TOOLBAR_LABELS = {
 const TOOLBAR_CLASSES = {
   CONTAINER: 'cb-editor__toolbar',
   SELECT: 'cb-editor__templates-select',
-  // Export for potential reuse by other toolbar components
+  NEW_BUTTON: 'cb-editor__new-template',
 };
 
 export { TOOLBAR_CLASSES };
@@ -94,7 +94,11 @@ export default function TemplateToolbar({
             : options),
         ]}
       />
-      <Button variant='primary' onClick={onNew}>
+      <Button
+        className={TOOLBAR_CLASSES.NEW_BUTTON}
+        variant='secondary'
+        onClick={onNew}
+      >
         {TOOLBAR_LABELS.NEW_TEMPLATE}
       </Button>
     </div>

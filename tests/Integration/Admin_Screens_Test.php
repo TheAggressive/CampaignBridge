@@ -164,6 +164,47 @@ class Admin_Screens_Test extends Test_Case {
 	}
 
 	/**
+	 * Test that the editor screen owns a bounded application wrapper and keeps
+	 * screen notices before the React root.
+	 */
+	public function test_editor_screen_renders_notices_before_application(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
+			\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
+			'campaignbridge'
+		);
+		$render   = $this->get_reflection_method( $registry, 'render_screen' );
+		$notice   = static function ( string $screen_name ): void {
+			if ( 'editor' === $screen_name ) {
+				echo '<div id="campaignbridge-editor-test-notice"></div>';
+			}
+		};
+
+		add_action( 'campaignbridge_form_notices', $notice );
+		ob_start();
+		$render->invoke(
+			$registry,
+			'editor',
+			'single',
+			null,
+			array( 'page_title' => 'Editor' )
+		);
+		$output = (string) ob_get_clean();
+		remove_action( 'campaignbridge_form_notices', $notice );
+
+		$notice_position = strpos( $output, 'campaignbridge-editor-test-notice' );
+		$root_position   = strpos( $output, 'cb-block-editor-root' );
+
+		$this->assertStringContainsString( 'campaignbridge-screen--editor', $output );
+		$this->assertStringContainsString( '<h1 class="screen-reader-text">Editor</h1>', $output );
+		$this->assertIsInt( $notice_position );
+		$this->assertIsInt( $root_position );
+		$this->assertLessThan( $root_position, $notice_position );
+	}
+
+	/**
 	 * Test that repeater test screen works with repeater fields.
 	 */
 	public function test_repeater_test_screen_works_with_repeaters(): void {
