@@ -65,7 +65,7 @@ class Screen_Registry {
 
 		foreach ( scandir( $this->screens_path ) as $item ) {
 			// Skip special files.
-			if ( '.' === $item || '..' === $item || strpos( $item, '_' ) === 0 || strpos( $item, '.' ) === 0 ) {
+			if ( '.' === $item || '..' === $item || strpos( $item, '_' ) === 0 || strpos( $item, '.' ) === 0 || str_ends_with( $item, '_config.php' ) ) {
 				continue;
 			}
 
@@ -91,11 +91,14 @@ class Screen_Registry {
 		$screen_name = pathinfo( $filename, PATHINFO_FILENAME );
 		$slug        = $this->generate_slug( $screen_name );
 
-		// Load optional config (future: could support dashboard_config.php).
-		$config = array();
+		// Load optional screen configuration before registering enqueue hooks.
+		$config_file = $this->screens_path . $screen_name . '_config.php';
+		$config      = file_exists( $config_file ) ? require $config_file : array();
 
 		// Auto-discover controller.
-		$config['controller'] = $this->discover_controller( $screen_name );
+		if ( ! isset( $config['controller'] ) ) {
+			$config['controller'] = $this->discover_controller( $screen_name );
+		}
 
 		// Merge with defaults.
 		$config = array_merge(
@@ -726,8 +729,15 @@ class Screen_Registry {
 
 		// Built assets.
 		if ( isset( $config['assets']['asset_styles'] ) ) {
-			foreach ( $config['assets']['asset_styles'] as $handle => $asset_file ) {
-				$screen->asset_enqueue_style( $handle, $asset_file );
+			foreach ( $config['assets']['asset_styles'] as $handle => $asset_data ) {
+				if ( is_string( $asset_data ) ) {
+					$screen->asset_enqueue_style( $handle, $asset_data );
+				} elseif ( is_array( $asset_data ) ) {
+					$asset_file = $asset_data['src'] ?? $asset_data['path'] ?? '';
+					if ( $asset_file ) {
+						$screen->asset_enqueue_style( $handle, $asset_file, $asset_data['deps'] ?? array() );
+					}
+				}
 			}
 		}
 
