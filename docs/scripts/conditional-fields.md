@@ -246,17 +246,17 @@ describe('Conditional Fields', () => {
 
 ## 🔒 Security
 
-### Input Sanitization
+### Input trust boundary
 
-All form inputs are automatically sanitized:
+Client-side validation exists for immediate operator feedback and request-size
+efficiency only. Browser data remains untrusted. The authenticated WordPress
+endpoint validates keys, types, size and nesting limits, then sanitizes values
+before evaluating conditional rules. Output is escaped at its rendering
+boundary.
 
-```javascript
-import { DataSanitizer } from 'campaignbridge/conditional-fields';
-
-// Manual sanitization (rarely needed)
-const cleanHtml = DataSanitizer.sanitizeHtml('<script>alert("xss")</script>');
-const cleanSql = DataSanitizer.sanitizeSqlLike('user_input%');
-```
+Do not add client-side HTML or SQL “sanitizers.” HTML must be handled by a
+maintained parser and explicit allowlist at a server boundary, and database
+queries must use prepared statements rather than keyword filtering.
 
 ### Error Handling
 

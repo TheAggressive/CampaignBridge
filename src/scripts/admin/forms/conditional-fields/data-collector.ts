@@ -2,7 +2,7 @@
  * Collects form data for conditional evaluation, matching current behavior.
  */
 
-import { DataSanitizer, FormValidator } from './validation';
+import { FormValidator } from './validation';
 
 export class ConditionalDataCollector {
   private validator: FormValidator;
@@ -98,7 +98,7 @@ export class ConditionalDataCollector {
 
     return {
       fieldId,
-      value: this.validateAndSanitizeValue(fieldId, value),
+      value: this.validateAndNormalizeValue(fieldId, value),
     };
   }
 
@@ -159,24 +159,23 @@ export class ConditionalDataCollector {
   }
 
   /**
-   * Validate and sanitize a field value
+   * Validate and normalize a field value for conditional evaluation.
    */
-  private validateAndSanitizeValue(fieldId: string, value: any): string {
-    const validationResult = this.validator.validateField(fieldId, value, {});
+  private validateAndNormalizeValue(fieldId: string, value: unknown): string {
+    const validationResult = this.validator.validateField(fieldId, value);
 
-    if (validationResult.isValid) {
-      // Use sanitized value if available, otherwise sanitize manually
-      return validationResult.sanitizedValue !== undefined
-        ? String(validationResult.sanitizedValue)
-        : DataSanitizer.sanitizeHtml(String(value));
-    } else {
-      // Log validation error but still include the data (fail gracefully)
+    if (!validationResult.isValid) {
+      // Validation here supports immediate operator feedback only. The server
+      // independently validates and sanitizes every request value.
       console.warn(
         `Field validation failed for ${fieldId}:`,
         validationResult.errorMessage
       );
-      return DataSanitizer.sanitizeHtml(String(value));
     }
+
+    return validationResult.normalizedValue !== undefined
+      ? String(validationResult.normalizedValue)
+      : String(value);
   }
 
   /**
