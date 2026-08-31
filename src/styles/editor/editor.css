@@ -15,8 +15,20 @@
 
 /* Give this application-style screen a bounded viewport below the admin bar. */
 body.campaignbridge_page_campaignbridge-editor {
+  background: #fff;
+
+  #wpcontent {
+    padding-left: 0;
+  }
+
   #wpbody-content {
     padding-bottom: 0;
+  }
+
+  /* Match core application screens: classic notices remain available on
+     ordinary wp-admin pages but cannot cover the fixed editor skeleton. */
+  #wpbody-content > div:not(.campaignbridge-screen--editor):not(#screen-meta) {
+    display: none;
   }
 
   #wpfooter {
@@ -33,14 +45,6 @@ body.campaignbridge_page_campaignbridge-editor {
 
   > h1.screen-reader-text {
     margin: 0;
-  }
-
-  > .notice,
-  > .settings-error {
-    flex: 0 0 auto;
-    margin: 8px 12px 0;
-    position: relative;
-    z-index: 30;
   }
 
   > #cb-block-editor-root {

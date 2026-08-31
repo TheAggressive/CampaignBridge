@@ -164,10 +164,9 @@ class Admin_Screens_Test extends Test_Case {
 	}
 
 	/**
-	 * Test that the editor screen owns a bounded application wrapper and keeps
-	 * screen notices before the React root.
+	 * Test that the editor screen owns its application notice boundary.
 	 */
-	public function test_editor_screen_renders_notices_before_application(): void {
+	public function test_editor_screen_owns_notice_boundary(): void {
 		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
 
@@ -194,14 +193,10 @@ class Admin_Screens_Test extends Test_Case {
 		$output = (string) ob_get_clean();
 		remove_action( 'campaignbridge_form_notices', $notice );
 
-		$notice_position = strpos( $output, 'campaignbridge-editor-test-notice' );
-		$root_position   = strpos( $output, 'cb-block-editor-root' );
-
 		$this->assertStringContainsString( 'campaignbridge-screen--editor', $output );
 		$this->assertStringContainsString( '<h1 class="screen-reader-text">Editor</h1>', $output );
-		$this->assertIsInt( $notice_position );
-		$this->assertIsInt( $root_position );
-		$this->assertLessThan( $root_position, $notice_position );
+		$this->assertStringContainsString( 'cb-block-editor-root', $output );
+		$this->assertStringNotContainsString( 'campaignbridge-editor-test-notice', $output );
 	}
 
 	/**

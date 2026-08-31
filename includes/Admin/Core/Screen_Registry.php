@@ -233,17 +233,19 @@ class Screen_Registry {
 		// Get the buffered screen content.
 		$screen_content = ob_get_clean();
 
-		// Now that forms have been processed, display notices seamlessly right after the h1.
-		settings_errors( 'campaignbridge_form' );
+		// Application screens own their notice lifecycle. Rendering classic admin
+		// notices over a fixed InterfaceSkeleton obscures its editor toolbar.
+		if ( 'editor' !== $screen_name ) {
+			settings_errors( 'campaignbridge_form' );
 
-		// Screen processing is complete, so render its notices in WordPress's standard
-		// position before the application or form content.
-		\CampaignBridge\Notices::render();
+			// Screen processing is complete, so render its notices in WordPress's
+			// standard position before the form content.
+			\CampaignBridge\Notices::render();
 
-		// Fire custom hook for individual screens to display notices after content processing.
-		// Security: Only allow hooks for valid screen names to prevent abuse.
-		if ( $this->is_valid_screen_name( $screen_name ) ) {
-			do_action( 'campaignbridge_form_notices', $screen_name );
+			// Fire custom hooks only for registered screens.
+			if ( $this->is_valid_screen_name( $screen_name ) ) {
+				do_action( 'campaignbridge_form_notices', $screen_name );
+			}
 		}
 
 		// Output the screen content. Since we control all HTML generation server-side and
