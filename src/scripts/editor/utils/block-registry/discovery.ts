@@ -46,8 +46,14 @@ export const createBlockDiscovery = (): BlockDiscovery => {
         throw new Error(`Block module ${fullBlockName} has no init function.`);
       }
 
-      // Set the block name on the module for easier access
-      blockModule.name = fullBlockName;
+      // Webpack exposes ES module exports as a read-only namespace object.
+      // Validate the canonical name exported from block.json instead of
+      // attempting to mutate that namespace during discovery.
+      if (blockModule.name !== fullBlockName) {
+        throw new Error(
+          `Block module name "${blockModule.name}" does not match "${fullBlockName}".`
+        );
+      }
 
       return {
         name: fullBlockName,

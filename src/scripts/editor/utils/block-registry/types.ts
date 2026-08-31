@@ -6,8 +6,8 @@
  * A block module that can be registered with WordPress
  */
 export interface BlockModule {
-  init: () => void;
-  name: string;
+  readonly init: () => void;
+  readonly name: string;
 }
 
 /**
