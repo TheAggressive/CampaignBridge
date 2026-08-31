@@ -7,7 +7,7 @@ import { ConditionalEngine } from './conditional-fields';
 export { conditionalCache } from './cache';
 export { ConditionalEngine } from './conditional-fields';
 export { performanceMonitor } from './performance-monitor';
-export { DataSanitizer, FormValidator } from './validation';
+export { FormValidator } from './validation';
 
 // Mock implementations for testing
 export { MockConditionalCache, MockPerformanceMonitor } from './types';

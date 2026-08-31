@@ -643,6 +643,27 @@ class Security_Test extends Test_Case {
 	}
 
 	/**
+	 * Test that one oversized scalar is rejected before recursive sanitization.
+	 */
+	public function test_conditional_fields_reject_oversized_scalar_value(): void {
+		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		$_POST = array(
+			'action'  => 'campaignbridge_evaluate_conditions',
+			'form_id' => 'conditional_test_form',
+			'data'    => array( 'test_field' => str_repeat( 'a', 10001 ) ),
+			'nonce'   => wp_create_nonce( 'campaignbridge_form_conditional_test_form' ),
+		);
+
+		$controller = new \CampaignBridge\Admin\REST\Form_Rest_Controller();
+		$response   = $this->capture_ajax_response( array( $controller, 'handle_ajax_evaluate_conditions' ) );
+
+		$this->assertFalse( $response['body']['success'] );
+		$this->assertSame( 'Form data is too large.', $response['body']['data'] );
+	}
+
+	/**
 	 * Test that conditional fields validate field names (no malicious field names).
 	 */
 	public function test_conditional_fields_validate_field_names(): void {

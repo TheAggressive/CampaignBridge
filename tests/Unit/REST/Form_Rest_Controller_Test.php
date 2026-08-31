@@ -189,7 +189,9 @@ class Form_Rest_Controller_Test extends \WP_UnitTestCase {
 			'normal_field' => 'normal value',
 			'script_field' => '<script>alert("xss")</script>',
 			'nested'       => array(
-				'inner' => 'inner value',
+				'inner'          => 'inner value',
+				'invalid[field]' => 'discarded',
+				'list'           => array( '<b>first</b>', 'second' ),
 			),
 		);
 
@@ -197,7 +199,70 @@ class Form_Rest_Controller_Test extends \WP_UnitTestCase {
 
 		$this->assertEquals( 'normal value', $result['normal_field'] );
 		$this->assertEquals( '', $result['script_field'] ); // Should be sanitized
-		$this->assertEquals( array( 'inner' => 'inner value' ), $result['nested'] );
+		$this->assertEquals(
+			array(
+				'inner' => 'inner value',
+				'list'  => array( 'first', 'second' ),
+			),
+			$result['nested']
+		);
+	}
+
+	/**
+	 * Test aggregate entry, scalar byte, and nesting budgets.
+	 */
+	public function test_form_data_budget_is_bounded(): void {
+		$controller = new Form_Rest_Controller();
+
+		$this->assertFalse(
+			$this->invoke_private_method(
+				$controller,
+				'is_form_data_too_large',
+				array( array( 'field' => str_repeat( 'a', 10000 ) ) )
+			)
+		);
+		$this->assertTrue(
+			$this->invoke_private_method(
+				$controller,
+				'is_form_data_too_large',
+				array( array( 'field' => str_repeat( 'a', 10001 ) ) )
+			)
+		);
+		$this->assertTrue(
+			$this->invoke_private_method(
+				$controller,
+				'is_form_data_too_large',
+				array( array( 'items' => array_fill( 0, 1001, 'value' ) ) )
+			)
+		);
+
+		$too_deep = 'value';
+		for ( $depth = 0; $depth < 7; ++$depth ) {
+			$too_deep = array( 'nested' => $too_deep );
+		}
+
+		$this->assertTrue(
+			$this->invoke_private_method(
+				$controller,
+				'is_form_data_too_large',
+				array( $too_deep )
+			)
+		);
+	}
+
+	/**
+	 * Test REST evaluation rejects a non-object data shape.
+	 */
+	public function test_evaluate_conditions_rejects_non_array_data(): void {
+		$request = new WP_REST_Request( 'POST', '/campaignbridge/v1/forms/test/evaluate' );
+		$request->set_param( 'form_id', 'test' );
+		$request->set_param( 'data', 'not-an-object' );
+
+		$result = $this->controller->evaluate_conditions( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_form_data', $result->get_error_code() );
+		$this->assertSame( 400, $result->get_error_data()['status'] );
 	}
 
 	/**

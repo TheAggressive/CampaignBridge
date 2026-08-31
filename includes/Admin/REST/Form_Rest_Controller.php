@@ -27,6 +27,18 @@ class Form_Rest_Controller {
 	 */
 	private const RATE_LIMIT_REQUESTS = 20;
 
+	/** Maximum number of nested form entries accepted per evaluation. */
+	private const MAX_FORM_ENTRIES = 1000;
+
+	/** Maximum nesting below the top-level form data array. */
+	private const MAX_FORM_DEPTH = 5;
+
+	/** Maximum UTF-8 byte length accepted for one scalar value. */
+	private const MAX_FIELD_BYTES = 10000;
+
+	/** Maximum aggregate bytes accepted across keys and scalar values. */
+	private const MAX_FORM_BYTES = 262144;
+
 	/**
 	 * Sanitize form data.
 	 *
@@ -49,18 +61,30 @@ class Form_Rest_Controller {
 	/**
 	 * Evaluate conditional logic for form fields.
 	 *
-	 * @param \WP_REST_Request<array{form_id: string|null, data: array<mixed>|null}> $request REST request object.
+	 * @param \WP_REST_Request<array{form_id: string|null, data: mixed}> $request REST request object.
 	 * @return \WP_REST_Response|\WP_Error Response object or error.
 	 */
 	public function evaluate_conditions( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		try {
 			// Get form data from request.
 			$form_id   = $request->get_param( 'form_id' );
-			$form_data = $request->get_param( 'data' ) ? $request->get_param( 'data' ) : array();
+			$form_data = $request->get_param( 'data' );
 
 			// Validate form identifier.
 			if ( empty( $form_id ) ) {
 				return new \WP_Error( 'invalid_form_id', 'Invalid form identifier.', array( 'status' => 400 ) );
+			}
+
+			if ( null === $form_data ) {
+				$form_data = array();
+			}
+
+			if ( ! is_array( $form_data ) ) {
+				return new \WP_Error( 'invalid_form_data', 'Form data must be an object.', array( 'status' => 400 ) );
+			}
+
+			if ( $this->is_form_data_too_large( $form_data ) ) {
+				return new \WP_Error( 'form_data_too_large', 'Form data is too large.', array( 'status' => 400 ) );
 			}
 
 			// Get the form configuration.
@@ -121,35 +145,35 @@ class Form_Rest_Controller {
 			wp_send_json_error( 'Invalid request origin.', 403 );
 		}
 
-			// WordPress built-in: Verify user authentication.
+		// WordPress built-in: Verify user authentication.
 		if ( ! is_user_logged_in() ) {
 			wp_send_json_error( 'Authentication required.', 401 );
 		}
 
-			// WordPress built-in: Verify nonce for CSRF protection.
-			$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+		// WordPress built-in: Verify nonce for CSRF protection.
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 		if ( empty( $nonce ) ) {
 			wp_send_json_error( 'Security validation failed.', 403 );
 		}
 
-			// WordPress built-in: Validate form identifier.
-			$form_id = isset( $_POST['form_id'] ) ? sanitize_key( wp_unslash( $_POST['form_id'] ) ) : '';
+		// WordPress built-in: Validate form identifier.
+		$form_id = isset( $_POST['form_id'] ) ? sanitize_key( wp_unslash( $_POST['form_id'] ) ) : '';
 		if ( empty( $form_id ) ) {
 			wp_send_json_error( 'Invalid form identifier.', 400 );
 		}
 
-			// WordPress built-in: Verify form-specific nonce.
-			$nonce_action = 'campaignbridge_form_' . $form_id;
+		// WordPress built-in: Verify form-specific nonce.
+		$nonce_action = 'campaignbridge_form_' . $form_id;
 		if ( ! wp_verify_nonce( $nonce, $nonce_action ) ) {
 			wp_send_json_error( 'Security validation failed.', 403 );
 		}
 
-			// WordPress built-in: Verify user permissions.
+		// WordPress built-in: Verify user permissions.
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( 'Insufficient permissions.', 403 );
 		}
 
-			// Security: Enhanced rate limiting with sliding window (60-second window).
+		// Security: Enhanced rate limiting with sliding window (60-second window).
 		if ( ! $this->check_rate_limit( get_current_user_id() ) ) {
 			\CampaignBridge\Core\Error_Handler::error(
 				'Rate limit exceeded',
@@ -161,18 +185,19 @@ class Form_Rest_Controller {
 			wp_send_json_error( 'Rate limit exceeded. Please wait before making another request.', 429 );
 		}
 
-			// Get form data with size limits and sanitization.
-			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Data is sanitized in sanitize_and_validate_form_data()
-			$raw_form_data = isset( $_POST['data'] ) && is_array( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : array();
-			$form_data     = $this->sanitize_and_validate_form_data( $raw_form_data );
+		// Read the bounded raw shape before sanitizing individual values.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- The raw shape is bounded immediately and values are then sanitized.
+		$raw_form_data = isset( $_POST['data'] ) && is_array( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : array();
 
-			// Security: Validate form data size and depth.
-		if ( $this->is_form_data_too_large( $form_data ) ) {
+		// Security: Reject oversized input before recursive sanitization work.
+		if ( $this->is_form_data_too_large( $raw_form_data ) ) {
 			wp_send_json_error( 'Form data is too large.', 400 );
 		}
 
-			// Get the form configuration.
-			$form_config = \CampaignBridge\Admin\Core\Form_Registry::get( $form_id );
+		$form_data = $this->sanitize_and_validate_form_data( $raw_form_data );
+
+		// Get the form configuration.
+		$form_config = \CampaignBridge\Admin\Core\Form_Registry::get( $form_id );
 		if ( ! $form_config ) {
 			wp_send_json_error( 'Form configuration not found.', 404 );
 		}
@@ -208,51 +233,105 @@ class Form_Rest_Controller {
 	/**
 	 * Validate form data size and depth to prevent DoS attacks.
 	 *
-	 * @param array<string, mixed> $data         Form data to validate.
-	 * @param int                  $max_size     Maximum array size.
-	 * @param int                  $max_depth    Maximum nesting depth.
-	 * @param int                  $current_depth Current recursion depth.
+	 * @param array<string, mixed> $data Form data to validate.
 	 * @return bool True if data is too large, false otherwise.
 	 */
-	private function is_form_data_too_large( array $data, int $max_size = 1000, int $max_depth = 5, int $current_depth = 0 ): bool {
-		// Prevent infinite recursion.
-		if ( $current_depth > $max_depth ) {
-			return true;
+	private function is_form_data_too_large( array $data ): bool {
+		$remaining_entries = self::MAX_FORM_ENTRIES;
+		$remaining_bytes   = self::MAX_FORM_BYTES;
+
+		return ! $this->consume_form_data_budget( $data, 0, $remaining_entries, $remaining_bytes );
+	}
+
+	/**
+	 * Consume a single aggregate budget while walking nested form data.
+	 *
+	 * @param array<mixed> $data              Raw form data.
+	 * @param int          $depth             Current array depth.
+	 * @param int          $remaining_entries Remaining entry budget.
+	 * @param int          $remaining_bytes   Remaining byte budget.
+	 * @return bool True when the data stays within every bound.
+	 */
+	private function consume_form_data_budget( array $data, int $depth, int &$remaining_entries, int &$remaining_bytes ): bool {
+		if ( $depth > self::MAX_FORM_DEPTH ) {
+			return false;
 		}
 
-		// Check array size.
-		if ( count( $data ) > $max_size ) {
-			return true;
-		}
+		foreach ( $data as $key => $value ) {
+			--$remaining_entries;
+			$remaining_bytes -= strlen( (string) $key );
 
-		// Recursively check nested arrays.
-		foreach ( $data as $value ) {
+			if ( $remaining_entries < 0 || $remaining_bytes < 0 ) {
+				return false;
+			}
+
 			if ( is_array( $value ) ) {
-				if ( $this->is_form_data_too_large( $value, $max_size, $max_depth, $current_depth + 1 ) ) {
-					return true;
+				if ( ! $this->consume_form_data_budget( $value, $depth + 1, $remaining_entries, $remaining_bytes ) ) {
+					return false;
 				}
+				continue;
+			}
+
+			if ( null !== $value && ! is_scalar( $value ) ) {
+				return false;
+			}
+
+			$value_bytes = strlen( (string) $value );
+			if ( $value_bytes > self::MAX_FIELD_BYTES ) {
+				return false;
+			}
+
+			$remaining_bytes -= $value_bytes;
+			if ( $remaining_bytes < 0 ) {
+				return false;
 			}
 		}
 
-		return false;
+		return true;
 	}
 
 	/**
 	 * Sanitize and validate form data to prevent XSS and injection attacks.
 	 *
-	 * @param array<string, mixed> $data Raw form data from POST.
+	 * @param array<mixed> $data Raw top-level form data from POST.
 	 * @return array<string, mixed> Sanitized and validated form data.
 	 */
 	private function sanitize_and_validate_form_data( array $data ): array {
 		$sanitized = array();
 
 		foreach ( $data as $field_key => $field_value ) {
-			// Validate field key (alphanumeric, underscore, dash only).
-			if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $field_key ) ) {
+			if ( ! is_string( $field_key ) || ! preg_match( '/^[a-zA-Z0-9_-]+$/', $field_key ) ) {
 				continue; // Skip invalid field keys.
 			}
 
-			$sanitized[ $field_key ] = $this->sanitize_field_value( $field_value );
+			$sanitized[ $field_key ] = is_array( $field_value )
+				? $this->sanitize_nested_form_data( $field_value )
+				: $this->sanitize_field_value( $field_value );
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Sanitize nested objects and lists while preserving safe keys.
+	 *
+	 * @param array<mixed> $data Raw nested form data.
+	 * @return array<int|string, mixed> Sanitized nested form data.
+	 */
+	private function sanitize_nested_form_data( array $data ): array {
+		$sanitized = array();
+
+		foreach ( $data as $field_key => $field_value ) {
+			$is_valid_key = is_int( $field_key )
+				|| preg_match( '/^[a-zA-Z0-9_-]+$/', $field_key );
+
+			if ( ! $is_valid_key ) {
+				continue;
+			}
+
+			$sanitized[ $field_key ] = is_array( $field_value )
+				? $this->sanitize_nested_form_data( $field_value )
+				: $this->sanitize_field_value( $field_value );
 		}
 
 		return $sanitized;
@@ -268,9 +347,6 @@ class Form_Rest_Controller {
 		switch ( gettype( $value ) ) {
 			case 'string':
 				return sanitize_text_field( $value );
-
-			case 'array':
-				return array_map( array( $this, 'sanitize_field_value' ), $value );
 
 			case 'integer':
 				return absint( $value );

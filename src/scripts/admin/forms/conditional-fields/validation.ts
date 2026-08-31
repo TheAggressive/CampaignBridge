@@ -8,14 +8,14 @@ export interface ValidationRule {
   maxLength?: number;
   pattern?: RegExp;
   // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
-  customValidator?: (value: any) => boolean;
+  customValidator?: (value: unknown) => boolean;
   errorMessage?: string;
 }
 
 export interface ValidationResult {
   isValid: boolean;
   errorMessage?: string;
-  sanitizedValue?: any;
+  normalizedValue?: unknown;
 }
 
 export interface FieldValidationRules {
@@ -42,16 +42,19 @@ export class FormValidator {
   /**
    * Validate form data against rules
    */
-  public validateFormData(formData: Record<string, any>): ValidationResult {
-    for (const [fieldName, value] of Object.entries(formData)) {
-      const rule = this.rules[fieldName];
-      if (rule) {
-        const result = this.validateField(fieldName, value, rule);
-        if (!result.isValid) {
-          return result;
-        }
+  public validateFormData(formData: Record<string, unknown>): ValidationResult {
+    const fieldNames = new Set([
+      ...Object.keys(formData),
+      ...Object.keys(this.rules).filter(fieldName => fieldName !== '*'),
+    ]);
+
+    for (const fieldName of fieldNames) {
+      const result = this.validateField(fieldName, formData[fieldName]);
+      if (!result.isValid) {
+        return result;
       }
     }
+
     return { isValid: true };
   }
 
@@ -60,135 +63,125 @@ export class FormValidator {
    */
   public validateField(
     fieldName: string,
-    value: any,
-    rule: ValidationRule
+    value: unknown,
+    rule: ValidationRule = {}
   ): ValidationResult {
+    const effectiveRule = {
+      ...(this.rules['*'] ?? {}),
+      ...(this.rules[fieldName] ?? {}),
+      ...rule,
+    };
+
     // Check required fields
     if (
-      rule.required &&
+      effectiveRule.required &&
       (value === null || value === undefined || value === '')
     ) {
       return {
         isValid: false,
-        errorMessage: rule.errorMessage || `${fieldName} is required`,
+        errorMessage: effectiveRule.errorMessage || `${fieldName} is required`,
       };
     }
 
     // Skip further validation if value is empty and not required
     if (value === null || value === undefined || value === '') {
-      return { isValid: true, sanitizedValue: value };
+      return { isValid: true, normalizedValue: value };
     }
 
-    // Sanitize the value first
-    let sanitizedValue = this.sanitizeValue(value, rule);
+    // Client-side normalization improves UX only. The authenticated server
+    // endpoint remains responsible for security validation and sanitization.
+    const normalizedValue = this.normalizeValue(value);
 
     // Apply validations
     if (
-      rule.minLength &&
-      typeof sanitizedValue === 'string' &&
-      sanitizedValue.length < rule.minLength
+      effectiveRule.minLength !== undefined &&
+      typeof normalizedValue === 'string' &&
+      normalizedValue.length < effectiveRule.minLength
     ) {
       return {
         isValid: false,
+        normalizedValue,
         errorMessage:
-          rule.errorMessage ||
-          `${fieldName} must be at least ${rule.minLength} characters`,
+          effectiveRule.errorMessage ||
+          `${fieldName} must be at least ${effectiveRule.minLength} characters`,
       };
     }
 
     if (
-      rule.maxLength &&
-      typeof sanitizedValue === 'string' &&
-      sanitizedValue.length > rule.maxLength
+      effectiveRule.maxLength !== undefined &&
+      typeof normalizedValue === 'string' &&
+      normalizedValue.length > effectiveRule.maxLength
     ) {
       return {
         isValid: false,
+        normalizedValue,
         errorMessage:
-          rule.errorMessage ||
-          `${fieldName} must be no more than ${rule.maxLength} characters`,
+          effectiveRule.errorMessage ||
+          `${fieldName} must be no more than ${effectiveRule.maxLength} characters`,
       };
     }
 
     if (
-      rule.pattern &&
-      typeof sanitizedValue === 'string' &&
-      !rule.pattern.test(sanitizedValue)
+      effectiveRule.pattern &&
+      typeof normalizedValue === 'string' &&
+      !this.matchesPattern(effectiveRule.pattern, normalizedValue)
     ) {
       return {
         isValid: false,
-        errorMessage: rule.errorMessage || `${fieldName} format is invalid`,
+        normalizedValue,
+        errorMessage:
+          effectiveRule.errorMessage || `${fieldName} format is invalid`,
       };
     }
 
-    if (rule.customValidator && !rule.customValidator(sanitizedValue)) {
+    if (
+      effectiveRule.customValidator &&
+      !effectiveRule.customValidator(normalizedValue)
+    ) {
       return {
         isValid: false,
-        errorMessage: rule.errorMessage || `${fieldName} validation failed`,
+        normalizedValue,
+        errorMessage:
+          effectiveRule.errorMessage || `${fieldName} validation failed`,
       };
     }
 
     return {
       isValid: true,
-      sanitizedValue,
+      normalizedValue,
     };
   }
 
   /**
-   * Sanitize a value based on its type and rules
+   * Normalize a scalar form value without attempting security sanitization.
+   *
+   * Browser input is untrusted even after this method runs. Security controls
+   * belong to the authenticated server boundary, where WordPress can validate
+   * the request against the registered field schema.
    */
-  private sanitizeValue(
-    value: any,
-    // eslint-disable-next-line no-unused-vars -- Reserved for future rule-based sanitization.
-    rule: ValidationRule
-  ): any {
+  private normalizeValue(value: unknown): unknown {
     if (value === null || value === undefined) {
       return value;
     }
 
-    // Convert to string for sanitization
-    let stringValue = String(value);
-
-    // Basic HTML sanitization - remove script tags and other dangerous content
-    stringValue = stringValue.replace(
-      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-      ''
-    );
-    stringValue = stringValue.replace(
-      /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
-      ''
-    );
-    stringValue = stringValue.replace(
-      /<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi,
-      ''
-    );
-    stringValue = stringValue.replace(
-      /<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi,
-      ''
-    );
-
-    // Remove null bytes and other control characters
-    // eslint-disable-next-line no-control-regex -- Control characters are intentionally removed for security sanitization.
-    stringValue = stringValue.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-
-    // Trim whitespace
-    stringValue = stringValue.trim();
-
-    // Try to convert back to appropriate type
-    if (
-      typeof value === 'number' ||
-      (typeof value === 'string' && /^\d+$/.test(value))
-    ) {
-      const numValue = parseInt(stringValue, 10);
-      if (!isNaN(numValue)) {
-        return numValue;
-      }
+    if (typeof value !== 'string') {
+      return value;
     }
 
-    if (typeof value === 'boolean' || value === 'true' || value === 'false') {
-      return value === 'true' || value === true;
-    }
+    // eslint-disable-next-line no-control-regex -- Non-printing controls are not meaningful form values.
+    return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
+  }
 
-    return stringValue;
+  /**
+   * Test a pattern without leaking state from global or sticky expressions.
+   */
+  private matchesPattern(pattern: RegExp, value: string): boolean {
+    const statelessPattern = new RegExp(
+      pattern.source,
+      pattern.flags.replace(/[gy]/g, '')
+    );
+
+    return statelessPattern.test(value);
   }
 
   /**
@@ -236,98 +229,5 @@ export class FormValidator {
         errorMessage: 'Please enter a positive number',
       },
     };
-  }
-}
-
-/**
- * Sanitization utilities
- */
-export class DataSanitizer {
-  /**
-   * Sanitize HTML content (basic protection against XSS)
-   */
-  public static sanitizeHtml(input: string): string {
-    if (typeof input !== 'string') {
-      return '';
-    }
-
-    // Remove dangerous tags
-    let sanitized = input
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-      .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
-      .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '')
-      .replace(/<input\b[^<]*(?:(?!<\/input>)<[^<]*)*<\/input>/gi, '')
-      .replace(/<button\b[^<]*(?:(?!<\/button>)<[^<]*)*<\/button>/gi, '');
-
-    // Remove event handlers
-    sanitized = sanitized.replace(/on\w+="[^"]*"/gi, '');
-    sanitized = sanitized.replace(/on\w+='[^']*'/gi, '');
-
-    return sanitized;
-  }
-
-  /**
-   * Sanitize SQL-like inputs (basic protection)
-   */
-  public static sanitizeSqlInput(input: string): string {
-    if (typeof input !== 'string') {
-      return '';
-    }
-
-    // Remove or escape dangerous SQL keywords (basic protection)
-    return input
-      .replace(/;/g, '')
-      .replace(/--/g, '')
-      .replace(/\/\*/g, '')
-      .replace(/\*\//g, '')
-      .replace(/union/i, '')
-      .replace(/select/i, '')
-      .replace(/drop/i, '')
-      .replace(/delete/i, '')
-      .replace(/update/i, '')
-      .replace(/insert/i, '');
-  }
-
-  /**
-   * Sanitize filename
-   */
-  public static sanitizeFilename(filename: string): string {
-    if (typeof filename !== 'string') {
-      return '';
-    }
-
-    return filename
-      .replace(/[<>:"/\\|?*]/g, '') // Remove invalid characters
-      .replace(/\s+/g, '_') // Replace spaces with underscores
-      .substring(0, 255); // Limit length
-  }
-
-  /**
-   * Deep sanitize object properties
-   */
-  public static sanitizeObject(obj: any, maxDepth: number = 5): any {
-    if (maxDepth <= 0) return obj;
-
-    if (typeof obj === 'string') {
-      return this.sanitizeHtml(obj);
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.sanitizeObject(item, maxDepth - 1));
-    }
-
-    if (obj !== null && typeof obj === 'object') {
-      const sanitized: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (typeof key === 'string') {
-          sanitized[key] = this.sanitizeObject(value, maxDepth - 1);
-        }
-      }
-      return sanitized;
-    }
-
-    return obj;
   }
 }
