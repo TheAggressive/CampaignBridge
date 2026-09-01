@@ -155,7 +155,7 @@ This is the exact compiler/editor allowlist after the clean cutover:
 | `campaignbridge/post-image`   | Featured image binding | Child of post card; URL/dimensions/alt      |
 | `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4      |
 | `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words            |
-| `campaignbridge/post-cta`     | Post CTA binding       | Article/parent target; HTTPS; VML fallback  |
+| `campaignbridge/post-cta`     | Post CTA binding       | Article/post-parent target; HTTPS; VML      |
 
 ### Planned v1 native blocks
 

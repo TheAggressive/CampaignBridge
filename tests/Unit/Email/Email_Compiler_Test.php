@@ -53,12 +53,12 @@ final class Email_Compiler_Test extends TestCase {
 				array(
 					'posts' => array(
 						'42' => array(
-							'parentUrl' => 'https://example.com/parent-page',
-							'url'       => 'https://example.com/posts/42',
-							'excerpt'   => '<strong>This</strong> excerpt has safe text.',
-							'title'     => 'Enterprise & safe',
-							'id'        => 42,
-							'image'     => array(
+							'postParentUrl' => 'https://example.com/parent-page',
+							'url'           => 'https://example.com/posts/42',
+							'excerpt'       => '<strong>This</strong> excerpt has safe text.',
+							'title'         => 'Enterprise & safe',
+							'id'            => 42,
+							'image'         => array(
 								'height' => 400,
 								'alt'    => 'A "safe" image',
 								'url'    => 'https://example.com/image.jpg',
@@ -107,9 +107,9 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertSame( 'post.snapshot.missing', $result->diagnostics()[0]->code() );
 	}
 
-	public function test_post_cta_can_target_immutable_parent_page(): void {
+	public function test_post_cta_can_target_immutable_post_parent(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'parent';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postParent';
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
@@ -117,13 +117,13 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertStringContainsString( 'Read more: https://example.com/parent-page', $result->text() );
 	}
 
-	public function test_post_cta_rejects_parent_target_without_snapshot_url(): void {
+	public function test_post_cta_rejects_post_parent_target_without_snapshot_url(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'parent';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postParent';
 		$result = Compiler_Factory::create()->compile( $document, $this->context( false ) );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.cta.parent_url_missing', $result->diagnostics()[0]->code() );
+		self::assertSame( 'post.cta.post_parent_url_missing', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_rejects_documents_over_block_budget(): void {
@@ -279,7 +279,7 @@ final class Email_Compiler_Test extends TestCase {
 		);
 
 		if ( $include_parent_url ) {
-			$post['parentUrl'] = 'https://example.com/parent-page';
+			$post['postParentUrl'] = 'https://example.com/parent-page';
 		}
 
 		return new Render_Context(

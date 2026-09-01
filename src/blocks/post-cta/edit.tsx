@@ -13,7 +13,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
   const postType = context['campaignbridge:postType'] || 'post';
   const label = attributes.label || __('Read more', 'campaignbridge');
   const destination =
-    attributes.destination === 'parent' ? 'parent' : 'article';
+    attributes.destination === 'postParent' ? 'postParent' : 'article';
   const backgroundColor = attributes.backgroundColor || '#111111';
   const textColor = attributes.textColor || '#ffffff';
   const post = useSelect(
@@ -23,21 +23,22 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
         : null,
     [postType, postId]
   );
-  const parentId = Number(post?.parent) || 0;
-  const parent = useSelect(
+  const postParentId = Number(post?.parent) || 0;
+  const postParent = useSelect(
     select =>
-      parentId
+      postParentId
         ? (select('core') as any).getEntityRecord(
             'postType',
             postType,
-            parentId
+            postParentId
           )
         : null,
-    [parentId, postType]
+    [postParentId, postType]
   );
   const articleUrl = post?.link || '';
-  const parentUrl = parent?.link || '';
-  const destinationUrl = destination === 'parent' ? parentUrl : articleUrl;
+  const postParentUrl = postParent?.link || '';
+  const destinationUrl =
+    destination === 'postParent' ? postParentUrl : articleUrl;
 
   return (
     <div {...useBlockProps()}>
@@ -56,16 +57,16 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
             options={[
               { label: __('Article', 'campaignbridge'), value: 'article' },
               {
-                label: __('Parent page', 'campaignbridge'),
-                value: 'parent',
-                disabled: !parentUrl,
+                label: __('Post parent', 'campaignbridge'),
+                value: 'postParent',
+                disabled: !postParentUrl,
               },
             ]}
             onChange={value => setAttributes({ destination: value })}
             help={
-              !parentUrl
+              !postParentUrl
                 ? __(
-                    'The selected article has no parent page.',
+                    'The selected article does not have a post parent.',
                     'campaignbridge'
                   )
                 : undefined

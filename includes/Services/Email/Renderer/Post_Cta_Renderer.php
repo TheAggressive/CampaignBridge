@@ -42,7 +42,7 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 		return $block->with_attributes(
 			array(
 				'label'           => '' === $label ? 'Read more' : $label,
-				'destination'     => 'parent' === ( $attributes['destination'] ?? null ) ? 'parent' : 'article',
+				'destination'     => 'postParent' === ( $attributes['destination'] ?? null ) ? 'postParent' : 'article',
 				'backgroundColor' => Renderer_Support::color( $attributes['backgroundColor'] ?? null, '#111111' ),
 				'textColor'       => Renderer_Support::color( $attributes['textColor'] ?? null, '#ffffff' ),
 			)
@@ -59,13 +59,13 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 		$url = $this->destination_url( $block, $context );
 
 		if ( null === $url ) {
-			$is_parent = 'parent' === $block->attributes()['destination'];
+			$is_post_parent = 'postParent' === $block->attributes()['destination'];
 			return array(
 				Compile_Diagnostic::error(
-					$is_parent ? 'post.cta.parent_url_missing' : 'post.cta.url_missing',
+					$is_post_parent ? 'post.cta.post_parent_url_missing' : 'post.cta.url_missing',
 					$block->path(),
-					$is_parent
-						? 'The post CTA requires a snapshot HTTPS parent-page URL.'
+					$is_post_parent
+						? 'The post CTA requires the post parent HTTPS URL in its snapshot.'
 						: 'The post CTA requires a snapshot HTTPS article URL.'
 				),
 			);
@@ -123,7 +123,7 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 			return null;
 		}
 
-		$field = 'parent' === $block->attributes()['destination'] ? 'parentUrl' : 'url';
+		$field = 'postParent' === $block->attributes()['destination'] ? 'postParentUrl' : 'url';
 
 		return Renderer_Support::https_url( $post[ $field ] ?? null );
 	}

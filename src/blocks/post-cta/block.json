@@ -13,7 +13,7 @@
     "label": { "type": "string", "default": "Read more" },
     "destination": {
       "type": "string",
-      "enum": ["article", "parent"],
+      "enum": ["article", "postParent"],
       "default": "article"
     },
     "backgroundColor": { "type": "string", "default": "#111111" },
