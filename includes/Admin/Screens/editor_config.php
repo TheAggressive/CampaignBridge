@@ -11,7 +11,8 @@
 declare(strict_types=1);
 
 return array(
-	'assets' => array(
+	'application_screen' => true,
+	'assets'             => array(
 		'asset_styles'  => array(
 			'campaignbridge-block-editor-styles' => array(
 				'src'  => 'dist/styles/editor/editor.asset.php',

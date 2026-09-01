@@ -189,6 +189,45 @@ class Admin_Screens_Test extends Test_Case {
 	}
 
 	/**
+	 * Test that application screens suppress every classic admin notice channel.
+	 */
+	public function test_editor_request_suppresses_classic_admin_notice_hooks(): void {
+		global $wp_filter;
+
+		$notice_hooks = array( 'admin_notices', 'all_admin_notices', 'network_admin_notices', 'user_admin_notices' );
+		$originals    = array();
+		$callback     = static function (): void {};
+
+		foreach ( $notice_hooks as $notice_hook ) {
+			$originals[ $notice_hook ] = isset( $wp_filter[ $notice_hook ] ) ? clone $wp_filter[ $notice_hook ] : null;
+			add_action( $notice_hook, $callback );
+		}
+
+		try {
+			$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
+				\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
+				'campaignbridge'
+			);
+			$prepare  = $this->get_reflection_method( $registry, 'prepare_screen_request' );
+			$config   = require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/editor_config.php';
+
+			$prepare->invoke( $registry, null, $config['application_screen'] );
+
+			foreach ( $notice_hooks as $notice_hook ) {
+				$this->assertFalse( has_action( $notice_hook ) );
+			}
+		} finally {
+			foreach ( $originals as $notice_hook => $original ) {
+				if ( null === $original ) {
+					unset( $wp_filter[ $notice_hook ] );
+				} else {
+					$wp_filter[ $notice_hook ] = $original;
+				}
+			}
+		}
+	}
+
+	/**
 	 * Test that the editor screen owns its application notice boundary.
 	 */
 	public function test_editor_screen_owns_notice_boundary(): void {

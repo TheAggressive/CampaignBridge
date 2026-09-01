@@ -179,10 +179,8 @@ class Screen_Registry {
 		// Hook: on page load (for form handling).
 		\add_action(
 			"load-{$hook}",
-			function () use ( $controller ) {
-				if ( $controller && method_exists( $controller, 'handle_request' ) ) {
-					$controller->handle_request();
-				}
+			function () use ( $controller, $config ) {
+				$this->prepare_screen_request( $controller, ! empty( $config['application_screen'] ) );
 			}
 		);
 
@@ -195,6 +193,29 @@ class Screen_Registry {
 				}
 			}
 		);
+	}
+
+	/**
+	 * Prepare a registered screen request before WordPress renders the admin header.
+	 *
+	 * @param mixed $controller         The screen controller instance.
+	 * @param bool  $application_screen Whether the screen owns its complete notice UI.
+	 * @return void
+	 */
+	private function prepare_screen_request( $controller, bool $application_screen ): void {
+		if ( is_object( $controller ) && method_exists( $controller, 'handle_request' ) ) {
+			$controller->handle_request();
+		}
+
+		if ( ! $application_screen ) {
+			return;
+		}
+
+		// Application screens use the editor notice store. Classic callbacks render
+		// outside the InterfaceSkeleton and can obscure its fixed toolbar.
+		foreach ( array( 'admin_notices', 'all_admin_notices', 'network_admin_notices', 'user_admin_notices' ) as $notice_hook ) {
+			remove_all_actions( $notice_hook );
+		}
 	}
 
 	/**
