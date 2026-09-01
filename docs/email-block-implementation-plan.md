@@ -141,21 +141,21 @@ There is no compatibility facade or parallel transport renderer.
 
 This is the exact compiler/editor allowlist after the clean cutover:
 
-| Block name                    | Role                   | Key constraints                             |
-| ----------------------------- | ---------------------- | ------------------------------------------- |
-| `campaignbridge/container`    | One document root      | Exactly one root; 320–900 px; locked        |
-| `campaignbridge/section`      | Full-width content row | Child of container; spacing/background      |
-| `campaignbridge/text`         | Rich email text        | Safe inline marks and HTTPS links only      |
-| `campaignbridge/heading`      | Heading                | Levels 1–4; portable typography             |
-| `campaignbridge/image`        | Email image            | HTTPS URL, dimensions, explicit alt choice  |
-| `campaignbridge/button`       | Bulletproof CTA        | HTTPS URL, alignment, Outlook VML fallback  |
-| `campaignbridge/divider`      | Horizontal divider     | Bounded width/thickness and style allowlist |
-| `campaignbridge/spacer`       | Vertical spacing       | Bounded 4–120 px height                     |
-| `campaignbridge/post-card`    | Immutable post binding | Child of container/section; snapshot needed |
-| `campaignbridge/post-image`   | Featured image binding | Child of post card; URL/dimensions/alt      |
-| `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4      |
-| `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words            |
-| `campaignbridge/post-cta`     | Post CTA binding       | Article/post-parent target; HTTPS; VML      |
+| Block name                    | Role                   | Key constraints                              |
+| ----------------------------- | ---------------------- | -------------------------------------------- |
+| `campaignbridge/container`    | One document root      | Exactly one root; 320–900 px; locked         |
+| `campaignbridge/section`      | Full-width content row | Child of container; spacing/background       |
+| `campaignbridge/text`         | Rich email text        | Safe inline marks and HTTPS links only       |
+| `campaignbridge/heading`      | Heading                | Levels 1–4; portable typography              |
+| `campaignbridge/image`        | Email image            | HTTPS URL, dimensions, explicit alt choice   |
+| `campaignbridge/button`       | Bulletproof CTA        | HTTPS URL, alignment, Outlook VML fallback   |
+| `campaignbridge/divider`      | Horizontal divider     | Bounded width/thickness and style allowlist  |
+| `campaignbridge/spacer`       | Vertical spacing       | Bounded 4–120 px height                      |
+| `campaignbridge/post-card`    | Immutable post binding | Child of container/section; snapshot needed  |
+| `campaignbridge/post-image`   | Featured image binding | Child of post card; URL/dimensions/alt       |
+| `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4       |
+| `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words             |
+| `campaignbridge/post-cta`     | Post CTA binding       | Article, parent, archive, custom; HTTPS; VML |
 
 ### Planned v1 native blocks
 

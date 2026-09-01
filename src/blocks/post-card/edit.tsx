@@ -8,6 +8,8 @@ import { PanelBody, SelectControl, Spinner } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
+import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
+
 const ALLOWED_BLOCKS = [
   'campaignbridge/post-image',
   'campaignbridge/post-title',
@@ -30,17 +32,15 @@ interface PostCardAttributes {
 
 export default function Edit({ attributes, setAttributes }) {
   const { postType = 'post', postId = 0 } = attributes as PostCardAttributes;
-  const [postTypes, setPostTypes] = useState<ApiItem[]>([]);
+  const [postTypes, setPostTypes] = useState<PostTypeItem[]>([]);
   const [posts, setPosts] = useState<ApiItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
-    apiFetch<{ items?: ApiItem[] }>({
-      path: '/campaignbridge/v1/post-types',
-    })
-      .then(response => {
-        if (active) setPostTypes(response.items ?? []);
+    fetchPostTypes()
+      .then(items => {
+        if (active) setPostTypes(items);
       })
       .catch(() => {
         if (active) setPostTypes([]);

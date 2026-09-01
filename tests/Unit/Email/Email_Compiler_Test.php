@@ -53,12 +53,13 @@ final class Email_Compiler_Test extends TestCase {
 				array(
 					'posts' => array(
 						'42' => array(
-							'postParentUrl' => 'https://example.com/parent-page',
-							'url'           => 'https://example.com/posts/42',
-							'excerpt'       => '<strong>This</strong> excerpt has safe text.',
-							'title'         => 'Enterprise & safe',
-							'id'            => 42,
-							'image'         => array(
+							'postParentUrl'      => 'https://example.com/parent-page',
+							'postTypeArchiveUrl' => 'https://example.com/news',
+							'url'                => 'https://example.com/posts/42',
+							'excerpt'            => '<strong>This</strong> excerpt has safe text.',
+							'title'              => 'Enterprise & safe',
+							'id'                 => 42,
+							'image'              => array(
 								'height' => 400,
 								'alt'    => 'A "safe" image',
 								'url'    => 'https://example.com/image.jpg',
@@ -124,6 +125,46 @@ final class Email_Compiler_Test extends TestCase {
 
 		self::assertFalse( $result->is_success() );
 		self::assertSame( 'post.cta.post_parent_url_missing', $result->diagnostics()[0]->code() );
+	}
+
+	public function test_post_cta_can_target_immutable_post_type_archive(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postTypeArchive';
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'href="https://example.com/news"', $result->html() );
+		self::assertStringContainsString( 'Read more: https://example.com/news', $result->text() );
+	}
+
+	public function test_post_cta_rejects_archive_target_without_snapshot_url(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postTypeArchive';
+		$result = Compiler_Factory::create()->compile( $document, $this->context( true, false ) );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'post.cta.post_type_archive_url_missing', $result->diagnostics()[0]->code() );
+	}
+
+	public function test_post_cta_can_target_custom_https_url(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'custom';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['customUrl']   = 'https://example.com/landing?source=email&campaign=weekly';
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'href="https://example.com/landing?source=email&amp;campaign=weekly"', $result->html() );
+		self::assertStringContainsString( 'Read more: https://example.com/landing?source=email&campaign=weekly', $result->text() );
+	}
+
+	public function test_post_cta_rejects_unsafe_custom_url(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'custom';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['customUrl']   = 'javascript:alert(1)';
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'post.cta.custom_url_invalid', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_rejects_documents_over_block_budget(): void {
@@ -264,7 +305,7 @@ final class Email_Compiler_Test extends TestCase {
 		);
 	}
 
-	private function context( bool $include_parent_url = true ): Render_Context {
+	private function context( bool $include_parent_url = true, bool $include_archive_url = true ): Render_Context {
 		$post = array(
 			'id'      => 42,
 			'title'   => 'Enterprise & safe',
@@ -280,6 +321,10 @@ final class Email_Compiler_Test extends TestCase {
 
 		if ( $include_parent_url ) {
 			$post['postParentUrl'] = 'https://example.com/parent-page';
+		}
+
+		if ( $include_archive_url ) {
+			$post['postTypeArchiveUrl'] = 'https://example.com/news';
 		}
 
 		return new Render_Context(

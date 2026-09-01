@@ -27,7 +27,7 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'destination', 'backgroundColor', 'textColor' );
+		return array( 'label', 'destination', 'customUrl', 'backgroundColor', 'textColor' );
 	}
 
 	/**
@@ -36,13 +36,18 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
-		$label      = is_string( $attributes['label'] ?? null ) ? trim( $attributes['label'] ) : 'Read more';
+		$attributes  = $block->attributes();
+		$label       = is_string( $attributes['label'] ?? null ) ? trim( $attributes['label'] ) : 'Read more';
+		$destination = is_string( $attributes['destination'] ?? null )
+			&& in_array( $attributes['destination'], array( 'article', 'postParent', 'postTypeArchive', 'custom' ), true )
+			? $attributes['destination']
+			: 'article';
 
 		return $block->with_attributes(
 			array(
 				'label'           => '' === $label ? 'Read more' : $label,
-				'destination'     => 'postParent' === ( $attributes['destination'] ?? null ) ? 'postParent' : 'article',
+				'destination'     => $destination,
+				'customUrl'       => is_string( $attributes['customUrl'] ?? null ) ? trim( $attributes['customUrl'] ) : '',
 				'backgroundColor' => Renderer_Support::color( $attributes['backgroundColor'] ?? null, '#111111' ),
 				'textColor'       => Renderer_Support::color( $attributes['textColor'] ?? null, '#ffffff' ),
 			)
@@ -59,14 +64,18 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 		$url = $this->destination_url( $block, $context );
 
 		if ( null === $url ) {
-			$is_post_parent = 'postParent' === $block->attributes()['destination'];
+			$destination = $block->attributes()['destination'];
+			$diagnostics = array(
+				'article'         => array( 'post.cta.url_missing', 'The post CTA requires a snapshot HTTPS article URL.' ),
+				'postParent'      => array( 'post.cta.post_parent_url_missing', 'The post CTA requires the post parent HTTPS URL in its snapshot.' ),
+				'postTypeArchive' => array( 'post.cta.post_type_archive_url_missing', 'The post CTA requires the post type archive HTTPS URL in its snapshot.' ),
+				'custom'          => array( 'post.cta.custom_url_invalid', 'The post CTA custom destination must be an absolute HTTPS URL.' ),
+			);
 			return array(
 				Compile_Diagnostic::error(
-					$is_post_parent ? 'post.cta.post_parent_url_missing' : 'post.cta.url_missing',
+					$diagnostics[ $destination ][0],
 					$block->path(),
-					$is_post_parent
-						? 'The post CTA requires the post parent HTTPS URL in its snapshot.'
-						: 'The post CTA requires a snapshot HTTPS article URL.'
+					$diagnostics[ $destination ][1]
 				),
 			);
 		}
@@ -118,12 +127,21 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	private function destination_url( Block_Node $block, Render_Context $context ): ?string {
+		$destination = $block->attributes()['destination'];
+		if ( 'custom' === $destination ) {
+			return Renderer_Support::https_url( $block->attributes()['customUrl'] );
+		}
+
 		$post = $context->binding( 'post' );
 		if ( ! is_array( $post ) ) {
 			return null;
 		}
 
-		$field = 'postParent' === $block->attributes()['destination'] ? 'postParentUrl' : 'url';
+		$field = match ( $destination ) {
+			'postParent'      => 'postParentUrl',
+			'postTypeArchive' => 'postTypeArchiveUrl',
+			default           => 'url',
+		};
 
 		return Renderer_Support::https_url( $post[ $field ] ?? null );
 	}

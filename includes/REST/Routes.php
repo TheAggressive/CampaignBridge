@@ -309,9 +309,11 @@ class Routes extends Abstract_Rest_Controller {
 		// Format response.
 		$items = array();
 		foreach ( $objs as $obj ) {
-			$items[] = array(
-				'id'    => (string) $obj->name,
-				'label' => esc_html( (string) $obj->labels->singular_name ),
+			$archive_url = get_post_type_archive_link( $obj->name );
+			$items[]     = array(
+				'id'          => (string) $obj->name,
+				'label'       => esc_html( (string) $obj->labels->singular_name ),
+				'archive_url' => is_string( $archive_url ) ? esc_url_raw( $archive_url ) : null,
 			);
 		}
 
