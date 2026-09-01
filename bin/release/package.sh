@@ -50,7 +50,8 @@ for path in "${required[@]}"; do
 	fi
 done
 
-if find "${staging}" -type f \( -name '.env*' -o -name '*.pem' -o -name '*.key' -o -name 'id_rsa*' \) | grep -q .; then
+credential_file=$(find "${staging}" -type f \( -name '.env*' -o -name '*.pem' -o -name '*.key' -o -name 'id_rsa*' \) -print -quit)
+if [[ -n "${credential_file}" ]]; then
 	echo "Possible credential file reached the package." >&2
 	exit 1
 fi
