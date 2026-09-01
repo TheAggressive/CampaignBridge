@@ -36,20 +36,15 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes  = $block->attributes();
-		$label       = is_string( $attributes['label'] ?? null ) ? trim( $attributes['label'] ) : 'Read more';
-		$destination = is_string( $attributes['destination'] ?? null )
-			&& in_array( $attributes['destination'], array( 'article', 'postParent', 'postTypeArchive', 'custom' ), true )
-			? $attributes['destination']
-			: 'article';
+		$attributes = $block->attributes();
 
 		return $block->with_attributes(
 			array(
-				'label'           => '' === $label ? 'Read more' : $label,
-				'destination'     => $destination,
-				'customUrl'       => is_string( $attributes['customUrl'] ?? null ) ? trim( $attributes['customUrl'] ) : '',
-				'backgroundColor' => Renderer_Support::color( $attributes['backgroundColor'] ?? null, '#111111' ),
-				'textColor'       => Renderer_Support::color( $attributes['textColor'] ?? null, '#ffffff' ),
+				'label'           => trim( Renderer_Support::string_attribute( $attributes, 'label', 'Read more' ) ),
+				'destination'     => Renderer_Support::choice_attribute( $attributes, 'destination', 'article', array( 'article', 'postParent', 'postTypeArchive', 'custom' ) ),
+				'customUrl'       => trim( Renderer_Support::string_attribute( $attributes, 'customUrl', '' ) ),
+				'backgroundColor' => Renderer_Support::color_attribute( $attributes, 'backgroundColor', '#111111' ),
+				'textColor'       => Renderer_Support::color_attribute( $attributes, 'textColor', '#ffffff' ),
 			)
 		);
 	}
@@ -61,6 +56,12 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array {
+		if ( '' === $block->attributes()['label'] ) {
+			return array(
+				Compile_Diagnostic::error( 'post.cta.label_empty', $block->path(), 'The post CTA requires a label.' ),
+			);
+		}
+
 		$url = $this->destination_url( $block, $context );
 
 		if ( null === $url ) {

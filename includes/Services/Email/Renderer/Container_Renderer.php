@@ -56,16 +56,16 @@ final class Container_Renderer extends Abstract_Renderer {
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
 		$attributes = $block->attributes();
-		$style      = is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array();
-		$colors     = is_array( $style['color'] ?? null ) ? $style['color'] : array();
+		$style      = Renderer_Support::object_attribute( $attributes, 'style', array() );
+		$colors     = Renderer_Support::object_attribute( $style, 'color', array(), 'style.color' );
 
 		return $block->with_attributes(
 			array(
-				'maxWidth'        => Renderer_Support::integer( $attributes['maxWidth'] ?? null, 600, 320, 900 ),
-				'outerPadding'    => Renderer_Support::spacing( $attributes['outerPadding'] ?? null, self::DEFAULT_OUTER_PADDING ),
-				'padding'         => Renderer_Support::spacing( $attributes['padding'] ?? null, self::DEFAULT_INNER_PADDING ),
-				'backgroundColor' => Renderer_Support::color( $colors['background'] ?? null, '#ffffff' ),
-				'textColor'       => Renderer_Support::color( $colors['text'] ?? null, '#111111' ),
+				'maxWidth'        => Renderer_Support::integer_attribute( $attributes, 'maxWidth', 600, 320, 900 ),
+				'outerPadding'    => Renderer_Support::spacing_attribute( $attributes, 'outerPadding', self::DEFAULT_OUTER_PADDING ),
+				'padding'         => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_INNER_PADDING ),
+				'backgroundColor' => Renderer_Support::color_attribute( $colors, 'background', '#ffffff', 'style.color.background' ),
+				'textColor'       => Renderer_Support::color_attribute( $colors, 'text', '#111111', 'style.color.text' ),
 			)
 		);
 	}

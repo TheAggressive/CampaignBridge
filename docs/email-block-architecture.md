@@ -62,6 +62,12 @@ global request input, mutate persistence, call providers, or fetch live post
 content. Dynamic WordPress content is resolved before rendering and frozen in
 the campaign snapshot.
 
+Normalization supplies documented defaults for omitted attributes and performs
+lossless canonicalization such as trimming URL fields. It must not clamp,
+substitute, or otherwise repair explicitly malformed persisted input. Invalid
+types, ranges, colors, alignments, and enum values produce blocking compiler
+diagnostics so an approved artifact remains auditable against its source.
+
 ## Initial library
 
 The first production set should stay deliberately small:
@@ -85,6 +91,12 @@ Core and third-party frontend blocks are not compiler input. The standalone
 email editor exposes only the CampaignBridge email grammar. Unsupported blocks
 produce blocking diagnostics; there is no adapter or generic fallback that
 silently strips or approximates markup.
+
+The inline rich-text parser is intentionally a small, fail-closed grammar for
+balanced emphasis, underline, strikethrough, line breaks, and HTTPS links. Do
+not evolve it into a general HTML parser as new content features arrive. Add
+semantic blocks for structures such as lists, and move to a purpose-built,
+allowlisted parser before accepting spans, arbitrary attributes, or styles.
 
 ## Output rules
 

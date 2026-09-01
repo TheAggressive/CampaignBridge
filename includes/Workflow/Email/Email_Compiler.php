@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Compile_Result;
 use CampaignBridge\Domain\Email\Document_Renderer_Interface;
+use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Renderer_Registry;
 
@@ -22,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Compiles a bounded native block tree into one deterministic artifact. */
 final class Email_Compiler {
-	public const COMPILER_VERSION = '2';
+	public const COMPILER_VERSION = '3';
 	public const PROFILE_VERSION  = 'universal@1';
 
 	private const MAX_BLOCKS = 500;
@@ -260,7 +261,22 @@ final class Email_Compiler {
 			);
 		}
 
-		$block       = $renderer->normalize( $block );
+		try {
+			$block = $renderer->normalize( $block );
+		} catch ( Invalid_Block_Attribute $exception ) {
+			$diagnostics[] = Compile_Diagnostic::error(
+				'block.attribute.invalid',
+				$block->path() . '.attrs.' . $exception->attribute(),
+				$exception->getMessage()
+			);
+
+			return array(
+				'html'   => '',
+				'text'   => '',
+				'assets' => array(),
+			);
+		}
+
 		$diagnostics = array_merge( $diagnostics, $renderer->validate( $block, $context ) );
 		if ( $this->has_errors( $diagnostics ) ) {
 			return array(

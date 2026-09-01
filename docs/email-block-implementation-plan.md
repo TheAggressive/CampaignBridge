@@ -371,7 +371,7 @@ Proposed success response:
   "text": "Weekly update...",
   "diagnostics": [],
   "assets": [],
-  "compiler_version": "2",
+  "compiler_version": "3",
   "profile_version": "universal@1",
   "fingerprint": "sha256:..."
 }

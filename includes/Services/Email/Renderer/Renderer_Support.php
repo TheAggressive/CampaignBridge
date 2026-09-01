@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Services\Email\Renderer;
 
+use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -25,62 +27,208 @@ final class Renderer_Support {
 	}
 
 	/**
-	 * Normalize a six-digit portable color.
+	 * Read a string attribute, defaulting only when it is omitted.
 	 *
-	 * @param mixed  $value    Candidate color.
-	 * @param string $fallback Valid fallback color.
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param string               $name       Attribute name.
+	 * @param string               $fallback   Documented default.
+	 * @throws Invalid_Block_Attribute When an explicit value is not a string.
 	 */
-	public static function color( mixed $value, string $fallback ): string {
-		if ( is_string( $value ) && preg_match( '/^#[0-9a-f]{6}$/i', $value ) ) {
-			return strtolower( $value );
-		}
-
-		return $fallback;
-	}
-
-	/**
-	 * Normalize an integer into inclusive bounds.
-	 *
-	 * @param mixed $value    Candidate number.
-	 * @param int   $fallback Default number.
-	 * @param int   $minimum  Inclusive minimum.
-	 * @param int   $maximum  Inclusive maximum.
-	 */
-	public static function integer( mixed $value, int $fallback, int $minimum, int $maximum ): int {
-		if ( ! is_int( $value ) && ! is_numeric( $value ) ) {
+	public static function string_attribute( array $attributes, string $name, string $fallback ): string {
+		if ( ! array_key_exists( $name, $attributes ) ) {
 			return $fallback;
 		}
 
-		return max( $minimum, min( $maximum, (int) $value ) );
+		if ( ! is_string( $attributes[ $name ] ) ) {
+			throw new Invalid_Block_Attribute( $name, 'must be a string.' );
+		}
+
+		return $attributes[ $name ];
 	}
 
 	/**
-	 * Normalize portable horizontal alignment.
+	 * Read a boolean attribute, defaulting only when it is omitted.
 	 *
-	 * @param mixed  $value    Candidate alignment.
-	 * @param string $fallback Default alignment.
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param string               $name       Attribute name.
+	 * @param bool                 $fallback   Documented default.
+	 * @throws Invalid_Block_Attribute When an explicit value is not a boolean.
 	 */
-	public static function alignment( mixed $value, string $fallback = 'left' ): string {
-		return is_string( $value ) && in_array( $value, array( 'left', 'center', 'right' ), true )
-			? $value
-			: $fallback;
+	public static function boolean_attribute( array $attributes, string $name, bool $fallback ): bool {
+		if ( ! array_key_exists( $name, $attributes ) ) {
+			return $fallback;
+		}
+
+		if ( ! is_bool( $attributes[ $name ] ) ) {
+			throw new Invalid_Block_Attribute( $name, 'must be a boolean.' );
+		}
+
+		return $attributes[ $name ];
 	}
 
 	/**
-	 * Normalize four-sided pixel spacing.
+	 * Read an object attribute, defaulting only when it is omitted.
 	 *
-	 * @param mixed                                               $value    Candidate spacing.
-	 * @param array{top: int, right: int, bottom: int, left: int} $fallback Default spacing.
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param string               $name       Attribute name.
+	 * @param array<string, mixed> $fallback   Documented default.
+	 * @param string|null          $path       Optional nested diagnostic path.
+	 * @return array<string, mixed>
+	 * @throws Invalid_Block_Attribute When an explicit value is not a named object.
+	 */
+	public static function object_attribute( array $attributes, string $name, array $fallback, ?string $path = null ): array {
+		if ( ! array_key_exists( $name, $attributes ) ) {
+			return $fallback;
+		}
+
+		$value = $attributes[ $name ];
+		if ( ! is_array( $value ) ) {
+			throw new Invalid_Block_Attribute( $path ?? $name, 'must be an object.' );
+		}
+
+		foreach ( array_keys( $value ) as $key ) {
+			if ( ! is_string( $key ) ) {
+				throw new Invalid_Block_Attribute( $path ?? $name, 'must use named object properties.' );
+			}
+		}
+
+		/**
+		 * Validated named attributes.
+		 *
+		 * @var array<string, mixed> $value
+		 */
+		return $value;
+	}
+
+	/**
+	 * Read an allowlisted string attribute.
+	 *
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param string               $name       Attribute name.
+	 * @param string               $fallback   Documented default.
+	 * @param array<int, string>   $choices    Accepted values.
+	 * @param string|null          $path       Optional nested diagnostic path.
+	 * @throws Invalid_Block_Attribute When an explicit value is not allowlisted.
+	 */
+	public static function choice_attribute( array $attributes, string $name, string $fallback, array $choices, ?string $path = null ): string {
+		if ( ! array_key_exists( $name, $attributes ) ) {
+			return $fallback;
+		}
+
+		$value = $attributes[ $name ];
+		if ( ! is_string( $value ) || ! in_array( $value, $choices, true ) ) {
+			throw new Invalid_Block_Attribute(
+				$path ?? $name,
+				sprintf( 'must be one of: %s.', implode( ', ', $choices ) )
+			);
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Read a six-digit portable color attribute.
+	 *
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param string               $name       Attribute name.
+	 * @param string               $fallback   Valid documented default.
+	 * @param string|null          $path       Optional nested diagnostic path.
+	 * @throws Invalid_Block_Attribute When an explicit value is not a portable color.
+	 */
+	public static function color_attribute( array $attributes, string $name, string $fallback, ?string $path = null ): string {
+		if ( ! array_key_exists( $name, $attributes ) ) {
+			return $fallback;
+		}
+
+		$value = $attributes[ $name ];
+		if ( ! is_string( $value ) || ! preg_match( '/^#[0-9a-f]{6}$/i', $value ) ) {
+			throw new Invalid_Block_Attribute( $path ?? $name, 'must be a six-digit hexadecimal color.' );
+		}
+
+		return strtolower( $value );
+	}
+
+	/**
+	 * Return a portable six-digit color or null.
+	 *
+	 * This is used for non-block document metadata. Persisted block attributes
+	 * must use color_attribute() so malformed explicit values are diagnosed.
+	 *
+	 * @param mixed $value Candidate color.
+	 */
+	public static function portable_color( mixed $value ): ?string {
+		if ( ! is_string( $value ) || ! preg_match( '/^#[0-9a-f]{6}$/i', $value ) ) {
+			return null;
+		}
+
+		return strtolower( $value );
+	}
+
+	/**
+	 * Read an integer attribute within inclusive bounds.
+	 *
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param string               $name       Attribute name.
+	 * @param int                  $fallback   Documented default.
+	 * @param int                  $minimum    Inclusive minimum.
+	 * @param int                  $maximum    Inclusive maximum.
+	 * @param string|null          $path       Optional nested diagnostic path.
+	 * @throws Invalid_Block_Attribute When an explicit value is not a bounded integer.
+	 */
+	public static function integer_attribute( array $attributes, string $name, int $fallback, int $minimum, int $maximum, ?string $path = null ): int {
+		if ( ! array_key_exists( $name, $attributes ) ) {
+			return $fallback;
+		}
+
+		$value = $attributes[ $name ];
+		if ( ! is_int( $value ) || $minimum > $value || $maximum < $value ) {
+			throw new Invalid_Block_Attribute(
+				$path ?? $name,
+				sprintf( 'must be an integer from %d through %d.', $minimum, $maximum )
+			);
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Read portable horizontal alignment.
+	 *
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param string               $name       Attribute name.
+	 * @param string               $fallback   Documented default.
+	 * @throws Invalid_Block_Attribute When an explicit value is not a portable alignment.
+	 */
+	public static function alignment_attribute( array $attributes, string $name, string $fallback = 'left' ): string {
+		return self::choice_attribute( $attributes, $name, $fallback, array( 'left', 'center', 'right' ) );
+	}
+
+	/**
+	 * Read complete four-sided pixel spacing.
+	 *
+	 * @param array<string, mixed>                                $attributes Source attributes.
+	 * @param string                                              $name       Attribute name.
+	 * @param array{top: int, right: int, bottom: int, left: int} $fallback Documented default.
 	 * @return array{top: int, right: int, bottom: int, left: int}
+	 * @throws Invalid_Block_Attribute When explicit spacing is incomplete or out of range.
 	 */
-	public static function spacing( mixed $value, array $fallback ): array {
-		$value = is_array( $value ) ? $value : array();
+	public static function spacing_attribute( array $attributes, string $name, array $fallback ): array {
+		if ( ! array_key_exists( $name, $attributes ) ) {
+			return $fallback;
+		}
+
+		$value = self::object_attribute( $attributes, $name, array() );
+		$keys  = array_keys( $value );
+		sort( $keys, SORT_STRING );
+		if ( array( 'bottom', 'left', 'right', 'top' ) !== $keys ) {
+			throw new Invalid_Block_Attribute( $name, 'must define exactly top, right, bottom, and left.' );
+		}
 
 		return array(
-			'top'    => self::integer( $value['top'] ?? null, $fallback['top'], 0, 96 ),
-			'right'  => self::integer( $value['right'] ?? null, $fallback['right'], 0, 96 ),
-			'bottom' => self::integer( $value['bottom'] ?? null, $fallback['bottom'], 0, 96 ),
-			'left'   => self::integer( $value['left'] ?? null, $fallback['left'], 0, 96 ),
+			'top'    => self::integer_attribute( $value, 'top', $fallback['top'], 0, 96, $name . '.top' ),
+			'right'  => self::integer_attribute( $value, 'right', $fallback['right'], 0, 96, $name . '.right' ),
+			'bottom' => self::integer_attribute( $value, 'bottom', $fallback['bottom'], 0, 96, $name . '.bottom' ),
+			'left'   => self::integer_attribute( $value, 'left', $fallback['left'], 0, 96, $name . '.left' ),
 		);
 	}
 
