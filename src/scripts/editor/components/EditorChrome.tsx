@@ -22,6 +22,7 @@ import { SIDEBAR_CONSTANTS, useSidebarState } from '../hooks/useSidebarState';
 import { useTemplateEditor } from '../hooks/useTemplateEditor';
 import { blockPatternCategories, blockPatterns } from '../utils/blockPatterns';
 import Content from './Content';
+import EditorEffects from './EditorEffects';
 import { ErrorState, LoadingState } from './EditorStates';
 import Footer from './Footer';
 import Header from './Header';
@@ -128,11 +129,20 @@ function EditorChromeContent({
     []
   );
 
-  const { isPrimaryOpen, isSecondaryOpen, togglePrimary, toggleSecondary } =
-    useSidebarState(
-      SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
-      SIDEBAR_CONSTANTS.SCOPES.SECONDARY
-    );
+  const {
+    isPrimaryOpen,
+    isSecondaryOpen,
+    openPrimary,
+    togglePrimary,
+    toggleSecondary,
+  } = useSidebarState(
+    SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+    SIDEBAR_CONSTANTS.SCOPES.SECONDARY
+  );
+  const handleBlockSelected = useCallback(() => {
+    setSidebarActiveTab(SIDEBAR_CONSTANTS.TABS.INSPECTOR);
+    openPrimary();
+  }, [openPrimary, setSidebarActiveTab]);
 
   if (isResolving) {
     return (
@@ -215,6 +225,10 @@ function EditorChromeContent({
           onChange={onChange}
           settings={mergedEditorSettings}
         >
+          <EditorEffects
+            saveStatus={saveStatus}
+            onBlockSelected={handleBlockSelected}
+          />
           <InterfaceSkeleton
             className={skeletonClassName}
             header={

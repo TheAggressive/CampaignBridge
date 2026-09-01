@@ -1,15 +1,11 @@
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useEffect, useState } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import { store as noticesStore } from '@wordpress/notices';
 import { SIDEBAR_CONSTANTS } from './useSidebarState';
 
 type WordPressInterface = {
   // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
   getActiveComplementaryArea?: (scope: string) => string | undefined;
-};
-
-type WordPressBlockEditor = {
-  getSelectedBlock?: () => { id?: string } | null;
 };
 
 // Layout-specific constants (exported for reuse if needed)
@@ -72,29 +68,6 @@ export function useEditorLayout() {
     },
     [SIDEBAR_CONSTANTS.SCOPES.SECONDARY]
   );
-
-  // Detect block selection for auto-switching
-  const selectedBlock = useSelect(select => {
-    try {
-      const { getSelectedBlock } = select(
-        'core/block-editor'
-      ) as WordPressBlockEditor;
-      return getSelectedBlock?.();
-    } catch (error) {
-      console.warn(
-        'useEditorLayout: Error accessing block editor state:',
-        error
-      );
-      return null;
-    }
-  }, []);
-
-  // Auto-switch to block inspector when a block is selected
-  useEffect(() => {
-    if (selectedBlock && sidebarActiveTab !== 'block-inspector') {
-      setSidebarActiveTab('block-inspector');
-    }
-  }, [selectedBlock, sidebarActiveTab]);
 
   // Note: Sidebar state restoration is now handled by useSidebarState hook
 

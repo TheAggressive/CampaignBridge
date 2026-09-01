@@ -57,6 +57,7 @@ const SIDEBAR_CONFIG_MAP: Record<SidebarType, SidebarConfig> = {
 interface SidebarState {
   isPrimaryOpen: boolean;
   isSecondaryOpen: boolean;
+  openPrimary: () => void;
   togglePrimary: () => void;
   toggleSecondary: () => void;
 }
@@ -196,6 +197,18 @@ export function useSidebarState(
     []
   );
 
+  const openPrimary = useCallback(() => {
+    enableComplementaryArea(
+      SIDEBAR_CONFIG_MAP.primary.scope,
+      SIDEBAR_CONFIG_MAP.primary.identifier
+    );
+    setPreference(
+      SIDEBAR_CONFIG_MAP.primary.preferencePath,
+      SIDEBAR_CONFIG_MAP.primary.preferenceKey,
+      true
+    );
+  }, [enableComplementaryArea, setPreference]);
+
   // Create toggle functions using configuration
   const togglePrimary = useCallback(() => {
     const currentState =
@@ -280,6 +293,7 @@ export function useSidebarState(
     // State - directly from WordPress interface store
     isPrimaryOpen,
     isSecondaryOpen,
+    openPrimary,
 
     // Actions
     togglePrimary,
