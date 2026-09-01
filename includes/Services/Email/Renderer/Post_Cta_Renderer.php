@@ -27,7 +27,7 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'backgroundColor', 'textColor' );
+		return array( 'label', 'destination', 'backgroundColor', 'textColor' );
 	}
 
 	/**
@@ -42,6 +42,7 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 		return $block->with_attributes(
 			array(
 				'label'           => '' === $label ? 'Read more' : $label,
+				'destination'     => 'parent' === ( $attributes['destination'] ?? null ) ? 'parent' : 'article',
 				'backgroundColor' => Renderer_Support::color( $attributes['backgroundColor'] ?? null, '#111111' ),
 				'textColor'       => Renderer_Support::color( $attributes['textColor'] ?? null, '#ffffff' ),
 			)
@@ -55,12 +56,18 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array {
-		$post = $context->binding( 'post' );
-		$url  = is_array( $post ) ? Renderer_Support::https_url( $post['url'] ?? null ) : null;
+		$url = $this->destination_url( $block, $context );
 
 		if ( null === $url ) {
+			$is_parent = 'parent' === $block->attributes()['destination'];
 			return array(
-				Compile_Diagnostic::error( 'post.cta.url_missing', $block->path(), 'The post CTA requires a snapshot HTTPS URL.' ),
+				Compile_Diagnostic::error(
+					$is_parent ? 'post.cta.parent_url_missing' : 'post.cta.url_missing',
+					$block->path(),
+					$is_parent
+						? 'The post CTA requires a snapshot HTTPS parent-page URL.'
+						: 'The post CTA requires a snapshot HTTPS article URL.'
+				),
 			);
 		}
 
@@ -81,11 +88,10 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$post       = $context->binding( 'post' );
 		$attributes = $block->attributes();
 
 		return Button_Markup::html(
-			(string) ( $post['url'] ?? '' ),
+			(string) $this->destination_url( $block, $context ),
 			$attributes['label'],
 			$attributes['backgroundColor'],
 			$attributes['textColor'],
@@ -102,8 +108,23 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_text( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$post = $context->binding( 'post' );
+		return $block->attributes()['label'] . ': ' . (string) $this->destination_url( $block, $context ) . "\n";
+	}
 
-		return $block->attributes()['label'] . ': ' . (string) ( $post['url'] ?? '' ) . "\n";
+	/**
+	 * Resolve the selected immutable CTA destination.
+	 *
+	 * @param Block_Node     $block   Normalized CTA block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	private function destination_url( Block_Node $block, Render_Context $context ): ?string {
+		$post = $context->binding( 'post' );
+		if ( ! is_array( $post ) ) {
+			return null;
+		}
+
+		$field = 'parent' === $block->attributes()['destination'] ? 'parentUrl' : 'url';
+
+		return Renderer_Support::https_url( $post[ $field ] ?? null );
 	}
 }

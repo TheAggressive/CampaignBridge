@@ -1,5 +1,10 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import { ColorPalette, PanelBody, TextControl } from '@wordpress/components';
+import {
+  ColorPalette,
+  PanelBody,
+  SelectControl,
+  TextControl,
+} from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 
@@ -7,6 +12,8 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
   const label = attributes.label || __('Read more', 'campaignbridge');
+  const destination =
+    attributes.destination === 'parent' ? 'parent' : 'article';
   const backgroundColor = attributes.backgroundColor || '#111111';
   const textColor = attributes.textColor || '#ffffff';
   const post = useSelect(
@@ -16,6 +23,21 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
         : null,
     [postType, postId]
   );
+  const parentId = Number(post?.parent) || 0;
+  const parent = useSelect(
+    select =>
+      parentId
+        ? (select('core') as any).getEntityRecord(
+            'postType',
+            postType,
+            parentId
+          )
+        : null,
+    [parentId, postType]
+  );
+  const articleUrl = post?.link || '';
+  const parentUrl = parent?.link || '';
+  const destinationUrl = destination === 'parent' ? parentUrl : articleUrl;
 
   return (
     <div {...useBlockProps()}>
@@ -25,6 +47,29 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
             label={__('Label', 'campaignbridge')}
             value={label}
             onChange={value => setAttributes({ label: value })}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+          <SelectControl
+            label={__('CTA destination', 'campaignbridge')}
+            value={destination}
+            options={[
+              { label: __('Article', 'campaignbridge'), value: 'article' },
+              {
+                label: __('Parent page', 'campaignbridge'),
+                value: 'parent',
+                disabled: !parentUrl,
+              },
+            ]}
+            onChange={value => setAttributes({ destination: value })}
+            help={
+              !parentUrl
+                ? __(
+                    'The selected article has no parent page.',
+                    'campaignbridge'
+                  )
+                : undefined
+            }
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
@@ -43,7 +88,8 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
         </PanelBody>
       </InspectorControls>
       <a
-        href={post?.link || '#'}
+        href={destinationUrl || '#'}
+        aria-disabled={!destinationUrl}
         style={{
           display: 'inline-block',
           padding: '12px 24px',

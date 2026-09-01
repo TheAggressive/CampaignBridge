@@ -11,6 +11,11 @@
   "supports": { "html": false, "reusable": false },
   "attributes": {
     "label": { "type": "string", "default": "Read more" },
+    "destination": {
+      "type": "string",
+      "enum": ["article", "parent"],
+      "default": "article"
+    },
     "backgroundColor": { "type": "string", "default": "#111111" },
     "textColor": { "type": "string", "default": "#ffffff" }
   },

@@ -53,11 +53,12 @@ final class Email_Compiler_Test extends TestCase {
 				array(
 					'posts' => array(
 						'42' => array(
-							'url'     => 'https://example.com/posts/42',
-							'excerpt' => '<strong>This</strong> excerpt has safe text.',
-							'title'   => 'Enterprise & safe',
-							'id'      => 42,
-							'image'   => array(
+							'parentUrl' => 'https://example.com/parent-page',
+							'url'       => 'https://example.com/posts/42',
+							'excerpt'   => '<strong>This</strong> excerpt has safe text.',
+							'title'     => 'Enterprise & safe',
+							'id'        => 42,
+							'image'     => array(
 								'height' => 400,
 								'alt'    => 'A "safe" image',
 								'url'    => 'https://example.com/image.jpg',
@@ -104,6 +105,25 @@ final class Email_Compiler_Test extends TestCase {
 
 		self::assertFalse( $result->is_success() );
 		self::assertSame( 'post.snapshot.missing', $result->diagnostics()[0]->code() );
+	}
+
+	public function test_post_cta_can_target_immutable_parent_page(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'parent';
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'href="https://example.com/parent-page"', $result->html() );
+		self::assertStringContainsString( 'Read more: https://example.com/parent-page', $result->text() );
+	}
+
+	public function test_post_cta_rejects_parent_target_without_snapshot_url(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'parent';
+		$result = Compiler_Factory::create()->compile( $document, $this->context( false ) );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'post.cta.parent_url_missing', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_rejects_documents_over_block_budget(): void {
@@ -244,7 +264,24 @@ final class Email_Compiler_Test extends TestCase {
 		);
 	}
 
-	private function context(): Render_Context {
+	private function context( bool $include_parent_url = true ): Render_Context {
+		$post = array(
+			'id'      => 42,
+			'title'   => 'Enterprise & safe',
+			'excerpt' => '<strong>This</strong> excerpt has safe text.',
+			'url'     => 'https://example.com/posts/42',
+			'image'   => array(
+				'url'    => 'https://example.com/image.jpg',
+				'alt'    => 'A "safe" image',
+				'width'  => 600,
+				'height' => 400,
+			),
+		);
+
+		if ( $include_parent_url ) {
+			$post['parentUrl'] = 'https://example.com/parent-page';
+		}
+
 		return new Render_Context(
 			array(
 				'title'            => 'Compiler fixture',
@@ -253,18 +290,7 @@ final class Email_Compiler_Test extends TestCase {
 			),
 			array(
 				'posts' => array(
-					'42' => array(
-						'id'      => 42,
-						'title'   => 'Enterprise & safe',
-						'excerpt' => '<strong>This</strong> excerpt has safe text.',
-						'url'     => 'https://example.com/posts/42',
-						'image'   => array(
-							'url'    => 'https://example.com/image.jpg',
-							'alt'    => 'A "safe" image',
-							'width'  => 600,
-							'height' => 400,
-						),
-					),
+					'42' => $post,
 				),
 			)
 		);
