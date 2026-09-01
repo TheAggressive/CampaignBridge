@@ -71,19 +71,16 @@ jobs:
       - name: Resolve the pull request from GitHub
         id: pull-request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
-          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
         run: |
           set -euo pipefail
 
           if [[ "${EVENT_NAME}" == "pull_request_target" ]]; then
             number="${EVENT_PR_NUMBER}"
           else
-            number="$(gh api "repos/${GH_REPO}/actions/runs/${WORKFLOW_RUN_ID}/pull_requests" \
-              --jq '.[0].number // empty')"
+            number="${WORKFLOW_PR_NUMBER}"
           fi
 
           if [[ -z "${number}" ]]; then

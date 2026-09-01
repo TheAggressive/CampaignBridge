@@ -55,3 +55,14 @@ test('privileged PR policy jobs execute only protected base code', () => {
   assert.doesNotMatch(policyWorkflow, /ref: \$\{\{ github\.head_ref \}\}/u);
   assert.doesNotMatch(policyWorkflow, /pull\/\$\{\{/u);
 });
+
+test('workflow-run policy resolves the pull request without an Actions API lookup', () => {
+  assert.match(
+    policyWorkflow,
+    /github\.event\.workflow_run\.pull_requests\[0\]\.number/u
+  );
+  assert.doesNotMatch(
+    policyWorkflow,
+    /actions\/runs\/\$\{WORKFLOW_RUN_ID\}\/pull_requests/u
+  );
+});
