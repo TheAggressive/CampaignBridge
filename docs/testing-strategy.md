@@ -15,11 +15,11 @@ The current PHPUnit configuration still boots WordPress for every PHP suite. Spl
 
 ## Local and CI environment
 
-The browser-facing development site is managed with WordPress Studio. The repository does not own a Docker or WordPress runtime.
+The browser-facing development site is managed with WordPress Studio. The repository does not own a Docker or `wp-env` runtime. Install the pinned Chromium browser once with `pnpm test:e2e:install`, then run `pnpm test:e2e`; the local wrapper obtains a short-lived Studio auto-login URL without printing it and stores browser authentication only under the ignored `.cache/` directory.
 
 PHPUnit runs natively with `pnpm test`. The runner starts a disposable MySQL instance under `.cache/tests/mysql`, downloads the pinned WordPress core under `.cache/tests/wordpress`, verifies core checksums through the pinned WP-CLI binary, and uses the Composer-pinned WordPress PHPUnit library. Use `pnpm test:setup` to prepare the environment without running tests and `pnpm db:local stop` to stop the database.
 
-CI uses the same WordPress version, test configuration, and PHPUnit library with a MySQL 8.4 service. Suite jobs are isolated from one another and do not depend on a long-lived development environment.
+CI uses the same WordPress version, test configuration, and PHPUnit library with a MySQL 8.4 service. Suite jobs are isolated from one another and do not depend on a long-lived development environment. Browser E2E tests install a disposable WordPress site natively, serve it with PHP, and retain Playwright traces, screenshots, video, and the server log on failure.
 
 ## Failure policy
 

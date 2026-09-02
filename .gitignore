@@ -39,6 +39,8 @@ wp-config-local.php
 
 # Test artifacts
 /.cache/
+/playwright-report/
+/test-results/
 /tests/tmp/
 /tmp/
 wordpress-tests-lib/

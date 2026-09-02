@@ -9,6 +9,7 @@ import TemplateToolbar from './TemplateToolbar';
 const CLASSES = {
   HEADER: 'cb-editor__header',
   HEADER_LEFT: 'cb-editor__header-left',
+  HEADER_CENTER: 'cb-editor__header-center',
   HEADER_ACTIONS: 'cb-editor__header-actions',
 };
 
@@ -90,16 +91,19 @@ export default function Header({
       aria-label={__('Email editor toolbar', 'campaignbridge')}
     >
       <div className={CLASSES.HEADER_LEFT}>
+        <SecondarySidebarToggle
+          isOpen={isSecondaryOpen}
+          onToggle={toggleSecondary}
+        />
+      </div>
+
+      <div className={CLASSES.HEADER_CENTER}>
         <TemplateToolbar
           list={list}
           currentId={currentId}
           loading={loading}
           onSelect={onSelect}
           onNew={onNew}
-        />
-        <SecondarySidebarToggle
-          isOpen={isSecondaryOpen}
-          onToggle={toggleSecondary}
         />
       </div>
 

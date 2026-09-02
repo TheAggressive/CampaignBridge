@@ -44,6 +44,8 @@ pnpm test:integration
 pnpm test:security
 pnpm test:accessibility
 pnpm test:performance
+pnpm test:e2e:install       # one-time local Chromium installation
+pnpm test:e2e               # authenticated browser tests against Studio
 
 pnpm lint:php
 pnpm lint:js
