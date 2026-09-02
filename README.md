@@ -256,8 +256,8 @@ includes/Admin/
 
 ## 📖 Documentation
 
-- **[Developer Guide](DEV_README.md)** - Comprehensive technical documentation for developers
-- **[API Documentation](API_DOCUMENTATION.md)** - Complete REST API reference
+- **[Developer Guide](docs/development.md)** - Contributor setup and development workflow
+- **[API Documentation](docs/api.md)** - REST namespace and security contract
 - **[Product Roadmap](ROADMAP.md)** - Current product state, target workflow, milestones, and release gates
 - **[Email Block Architecture](docs/email-block-architecture.md)** - Email-native block grammar, compiler, preview, and compatibility contract
 - **[Email Block Implementation Plan](docs/email-block-implementation-plan.md)** - Phases, contracts, migrations, tests, and first work package

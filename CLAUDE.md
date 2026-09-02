@@ -246,6 +246,8 @@ not proof that the distributable is valid.
 
 - `README.md` — shipped product overview
 - `ROADMAP.md` — target product and gated milestones
+- `docs/development.md` — local setup and contributor workflow
+- `docs/api.md` — REST namespace and security contract
 - `docs/architecture.md` — dependency boundaries
 - `docs/email-block-architecture.md` — email-native block contract
 - `docs/email-block-implementation-plan.md` — phased compiler and block rollout

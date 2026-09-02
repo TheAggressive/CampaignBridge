@@ -500,9 +500,9 @@ GPL-2.0-or-later - See LICENSE file for details.
 
 ## 🆘 Support
 
-- **Documentation**: [Full API Docs](./api-docs.md)
-- **Issues**: [GitHub Issues](https://github.com/your-org/campaignbridge/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/campaignbridge/discussions)
+- **Documentation**: [CampaignBridge REST API overview](../api.md)
+- **Issues**: [GitHub Issues](https://github.com/TheAggressive/CampaignBridge/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/TheAggressive/CampaignBridge/discussions)
 
 ---
 
