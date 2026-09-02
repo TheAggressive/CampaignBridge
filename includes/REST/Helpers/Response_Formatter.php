@@ -88,7 +88,6 @@ class Response_Formatter {
 	private static function get_sensitive_editor_keys(): array {
 		return array(
 			'__experimentalDashboardLink',       // Admin URL.
-			'__unstableResolvedAssets',          // Contains URLs, versions, scripts with sensitive data.
 			'__experimentalDiscussionSettings',  // Contains avatar URLs and discussion settings.
 			'canUpdateBlockBindings',            // Not needed for editor functionality.
 		);

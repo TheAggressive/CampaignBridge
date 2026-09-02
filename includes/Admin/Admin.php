@@ -15,6 +15,11 @@ use CampaignBridge\Admin\Core\Screen_Registry;
  * @package CampaignBridge\Admin
  */
 class Admin {
+	/**
+	 * WordPress hook suffix for the standalone email editor.
+	 */
+	private const EDITOR_SCREEN_HOOK = 'campaignbridge_page_campaignbridge-editor';
+
 
 	/**
 	 * Screen registry instance.
@@ -101,6 +106,13 @@ class Admin {
 
 		// Global admin assets using Asset_Manager.
 		Asset_Manager::enqueue_asset( 'campaignbridge-admin-global-styles', 'dist/styles/styles.asset.php' );
+
+		// The editor is a standalone application and does not render the shared
+		// admin forms. Keep its dependency graph limited to editor-owned assets.
+		if ( self::EDITOR_SCREEN_HOOK === $hook ) {
+			Editor_Data_Preload::preload_for_request();
+			return;
+		}
 
 		// Global form styles - load on all admin pages since many screens use forms.
 		Asset_Manager::enqueue_asset( 'campaignbridge-admin-form-styles', 'dist/styles/admin/forms/forms.asset.php' );

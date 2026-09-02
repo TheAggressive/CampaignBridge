@@ -13,6 +13,5 @@
     "maxWords": { "type": "number", "default": 50 }
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
-  "editorScript": "file:./index.js",
-  "editorStyle": "file:./index.css"
+  "editorScript": "file:./index.js"
 }

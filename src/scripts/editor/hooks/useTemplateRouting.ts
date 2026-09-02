@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
-import { getParam, setParamAndReload } from '../utils/url';
+import { getParam } from '../utils/url';
 
 // Template routing-specific constants (exported for reuse if needed)
 export const ROUTING_CONSTANTS = {
@@ -87,7 +87,13 @@ export function useTemplateRouting(): TemplateRoutingState {
         return;
       }
 
-      setParamAndReload(ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID, id);
+      const url = new URL(window.location.href);
+      url.searchParams.set(
+        ROUTING_CONSTANTS.URL_PARAMS.TEMPLATE_ID,
+        String(id)
+      );
+      window.history.replaceState(window.history.state, '', url);
+      setUrlKey(previous => previous + 1);
     } catch {
       // Silently handle errors.
     }

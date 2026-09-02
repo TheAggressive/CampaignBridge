@@ -51,6 +51,63 @@ class Editor_Settings_Routes_Test extends Test_Case {
 	}
 
 	/**
+	 * Core iframe assets must remain available to BlockCanvas.
+	 */
+	public function test_settings_include_resolved_iframe_assets(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$template_id = $this->create_test_post(
+			array(
+				'post_type'   => Post_Type_Email_Template::POST_TYPE,
+				'post_status' => 'draft',
+			)
+		);
+
+		$request = new WP_REST_Request( 'GET', '/campaignbridge/v1/editor-settings' );
+		$request->set_param( 'post_type', Post_Type_Email_Template::POST_TYPE );
+		$request->set_param( 'post_id', $template_id );
+		$response = ( new Editor_Settings_Routes() )->handle_request( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertIsArray( $data );
+		$this->assertArrayHasKey( '__unstableResolvedAssets', $data );
+		$this->assertIsArray( $data['__unstableResolvedAssets'] );
+		$this->assertArrayHasKey( 'styles', $data['__unstableResolvedAssets'] );
+		$this->assertArrayHasKey( 'scripts', $data['__unstableResolvedAssets'] );
+		$this->assertIsString( $data['__unstableResolvedAssets']['styles'] );
+		$this->assertIsString( $data['__unstableResolvedAssets']['scripts'] );
+		$this->assertStringContainsString( 'wp-edit-blocks', $data['__unstableResolvedAssets']['styles'] );
+	}
+
+	/**
+	 * Resolved assets cannot be requested for a template the user cannot edit.
+	 */
+	public function test_settings_reject_user_without_template_access(): void {
+		$administrator_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $administrator_id );
+		$template_id = $this->create_test_post(
+			array(
+				'post_type'   => Post_Type_Email_Template::POST_TYPE,
+				'post_status' => 'draft',
+				'post_author' => $administrator_id,
+			)
+		);
+
+		$subscriber_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $subscriber_id );
+
+		$request = new WP_REST_Request( 'GET', '/campaignbridge/v1/editor-settings' );
+		$request->set_param( 'post_type', Post_Type_Email_Template::POST_TYPE );
+		$request->set_param( 'post_id', $template_id );
+		$response = ( new Editor_Settings_Routes() )->handle_request( $request );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'rest_forbidden', $response->get_error_code() );
+		$this->assertSame( 403, $response->get_error_data()['status'] );
+	}
+
+	/**
 	 * A post from another post type must not be accepted as a template context.
 	 */
 	public function test_settings_reject_mismatched_post_type(): void {

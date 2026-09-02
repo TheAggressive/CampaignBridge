@@ -123,14 +123,20 @@ export function useTemplateEditor({
   }, [hasEdits]);
 
   const saveNow = useCallback(async () => {
-    if (!hasEdits || isSaving) {
-      return;
+    if (!hasEdits) {
+      return true;
+    }
+
+    if (isSaving) {
+      return false;
     }
 
     try {
       await save();
+      return true;
     } catch {
       // The core-data error selector drives notices and retry state.
+      return false;
     }
   }, [hasEdits, isSaving, save]);
 

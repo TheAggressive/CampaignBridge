@@ -1,10 +1,5 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
-import {
-  Popover,
-  ResizableBox,
-  SlotFillProvider,
-  SnackbarList,
-} from '@wordpress/components';
+import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
 import { EntityProvider } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useCallback } from '@wordpress/element';
@@ -115,7 +110,6 @@ function EditorChromeContent({
     sidebarActiveTab,
     setSidebarActiveTab,
     primarySidebarProps,
-    secondarySidebarProps,
     snackbarNotices,
     removeNotice,
   } = useEditorLayout();
@@ -143,6 +137,20 @@ function EditorChromeContent({
     setSidebarActiveTab(SIDEBAR_CONSTANTS.TABS.INSPECTOR);
     openPrimary();
   }, [openPrimary, setSidebarActiveTab]);
+  const handleTemplateSelect = useCallback(
+    (id: number | null) => {
+      if (!id || id === postId) {
+        return;
+      }
+
+      void saveNow().then(saved => {
+        if (saved) {
+          onSelect(id);
+        }
+      });
+    },
+    [onSelect, postId, saveNow]
+  );
 
   if (isResolving) {
     return (
@@ -206,55 +214,49 @@ function EditorChromeContent({
           </div>
         </ComplementaryArea>
 
-        <ResizableBox
-          size={{ width: 165 }}
-          minWidth={165}
-          maxWidth={300}
-          enable={false}
-        >
-          <ComplementaryArea {...secondarySidebarProps}>
-            <div className={LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
-              <SecondarySidebar />
-            </div>
-          </ComplementaryArea>
-        </ResizableBox>
-
-        <BlockEditorProvider
-          value={blocks}
-          onInput={onInput}
-          onChange={onChange}
-          settings={mergedEditorSettings}
-        >
-          <EditorEffects
-            saveStatus={saveStatus}
-            onBlockSelected={handleBlockSelected}
-          />
-          <InterfaceSkeleton
-            className={skeletonClassName}
-            header={
-              <Header
-                list={list}
-                currentId={currentId}
-                loading={loading}
-                onSelect={onSelect}
-                onNew={onNew}
-                isPrimaryOpen={isPrimaryOpen}
-                isSecondaryOpen={isSecondaryOpen}
-                togglePrimary={togglePrimary}
-                toggleSecondary={toggleSecondary}
-                hasEdits={hasEdits}
-                onSave={saveNow}
-                saveStatus={saveStatus}
-              />
-            }
-            content={<Content onSave={saveNow} styles={editorStyles} />}
-            sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
-            secondarySidebar={
-              <ComplementaryArea.Slot {...secondarySidebarProps} />
-            }
-            footer={<Footer />}
-          />
-        </BlockEditorProvider>
+        <div className='cb-editor__viewport'>
+          <BlockEditorProvider
+            value={blocks}
+            onInput={onInput}
+            onChange={onChange}
+            settings={mergedEditorSettings}
+          >
+            <EditorEffects
+              saveStatus={saveStatus}
+              onBlockSelected={handleBlockSelected}
+            />
+            <InterfaceSkeleton
+              className={skeletonClassName}
+              header={
+                <Header
+                  list={list}
+                  currentId={currentId}
+                  loading={loading || saveStatus === 'saving'}
+                  onSelect={handleTemplateSelect}
+                  onNew={onNew}
+                  isPrimaryOpen={isPrimaryOpen}
+                  isSecondaryOpen={isSecondaryOpen}
+                  togglePrimary={togglePrimary}
+                  toggleSecondary={toggleSecondary}
+                  hasEdits={hasEdits}
+                  onSave={saveNow}
+                  saveStatus={saveStatus}
+                />
+              }
+              content={<Content onSave={saveNow} styles={editorStyles} />}
+              sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
+              secondarySidebar={
+                isSecondaryOpen ? (
+                  <SecondarySidebar onClose={toggleSecondary} />
+                ) : null
+              }
+              labels={{
+                secondarySidebar: __('List view', 'campaignbridge'),
+              }}
+              footer={<Footer />}
+            />
+          </BlockEditorProvider>
+        </div>
 
         <Popover.Slot />
         <div className={LAYOUT_CONSTANTS.CSS_CLASSES.EDITOR_SNACKBAR}>

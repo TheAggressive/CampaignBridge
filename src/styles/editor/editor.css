@@ -61,6 +61,15 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
 .cb-editor-shell {
   height: 100%;
   min-height: 0;
+  overflow: visible;
+  position: relative;
+}
+
+/* Bound the editor application without clipping popovers rendered in the
+   sibling Popover.Slot. */
+.cb-editor__viewport {
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   position: relative;
 }
@@ -104,6 +113,29 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
     &-inner {
       overflow-x: hidden !important;
     }
+  }
+
+  .cb-editor__sidebar--secondary {
+    display: flex;
+    flex-direction: column;
+    width: 165px;
+
+    .cb-editor__sidebar-content {
+      flex: 1 1 auto;
+      height: auto;
+      min-height: 0;
+    }
+  }
+
+  &__list-view-empty {
+    color: #666;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 781px) {
+  .cb-editor .cb-editor__sidebar--secondary {
+    width: 100vw;
   }
 }
 

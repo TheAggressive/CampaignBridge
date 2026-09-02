@@ -117,12 +117,9 @@ export default function CampaignBridgeBlockEditor(): JSX.Element {
         onConfirm={confirmCreate}
         busy={creating}
       />
-      {loading ? (
-        <div className='cb-block-editor-loading'>
-          <Spinner />
-        </div>
-      ) : currentId ? (
+      {currentId ? (
         <EditorChrome
+          key={`${POST_TYPE}:${currentId}`}
           list={list}
           currentId={currentId}
           loading={loading}
@@ -131,6 +128,10 @@ export default function CampaignBridgeBlockEditor(): JSX.Element {
           postId={currentId}
           postType={POST_TYPE}
         />
+      ) : loading ? (
+        <div className='cb-block-editor-loading'>
+          <Spinner />
+        </div>
       ) : (
         <EmptyState
           list={list}

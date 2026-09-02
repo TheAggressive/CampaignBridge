@@ -2,7 +2,6 @@ import type { BlockConfiguration } from '@wordpress/blocks';
 import { getBlockType, registerBlockType } from '@wordpress/blocks';
 import type { ComponentType } from 'react';
 
-import './editor.css';
 import metadata from './block.json';
 import Edit from './edit';
 
