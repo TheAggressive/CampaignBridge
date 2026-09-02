@@ -150,7 +150,7 @@ test('uses the core secondary-sidebar transition for list view', async ({
     const finalWidth = (await sidebar.boundingBox())?.width ?? 0;
 
     expect(startingWidth).toBeLessThan(finalWidth);
-    expect(finalWidth).toBeGreaterThan(100);
+    expect(finalWidth).toBeGreaterThanOrEqual(260);
 
     await page.getByRole('button', { name: 'Close list view' }).click();
     await page.waitForTimeout(50);
