@@ -118,7 +118,6 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
   .cb-editor__sidebar--secondary {
     display: flex;
     flex-direction: column;
-    width: 165px;
 
     .cb-editor__sidebar-content {
       flex: 1 1 auto;
@@ -130,12 +129,6 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
   &__list-view-empty {
     color: #666;
     padding: 16px;
-  }
-}
-
-@media (max-width: 781px) {
-  .cb-editor .cb-editor__sidebar--secondary {
-    width: 100vw;
   }
 }
 
