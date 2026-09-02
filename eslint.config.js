@@ -26,9 +26,26 @@ export default [
       'assets/**',
       'vendor/**',
       'coverage/**',
-      'tests/**',
+      'tests/{Accessibility,Fixtures,Integration,Performance,Security,Unit,helpers,js}/**',
+      'tests/*.{php,md}',
       'wordpress-core/**',
     ],
+  },
+  {
+    files: ['playwright.config.ts', 'tests/e2e/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      parser: tsParser,
+      parserOptions: {
+        project: './tsconfig.e2e.json',
+        tsconfigRootDir: import.meta.dirname || process.cwd(),
+      },
+      globals: {
+        process: 'readonly',
+        URL: 'readonly',
+      },
+    },
   },
   {
     files: ['bin/**/*.mjs'],
@@ -38,6 +55,7 @@ export default [
       globals: {
         console: 'readonly',
         process: 'readonly',
+        URL: 'readonly',
       },
     },
   },
