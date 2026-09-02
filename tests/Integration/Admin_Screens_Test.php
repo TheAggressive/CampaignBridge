@@ -220,6 +220,32 @@ class Admin_Screens_Test extends Test_Case {
 	}
 
 	/**
+	 * Test that the editor primes core api-fetch data for the current template.
+	 */
+	public function test_editor_preloads_template_data(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$template_id = $this->create_test_post(
+			array(
+				'post_type'   => 'cb_templates',
+				'post_status' => 'draft',
+			)
+		);
+
+		$_GET['post_id'] = (string) $template_id;
+		Admin::get_instance()->enqueue_global_assets( 'campaignbridge_page_campaignbridge-editor' );
+		$inline_scripts = wp_scripts()->get_data( 'wp-api-fetch', 'after' );
+		unset( $_GET['post_id'] );
+
+		$this->assertIsArray( $inline_scripts );
+		$preload_script = implode( "\n", $inline_scripts );
+		$this->assertStringContainsString( 'createPreloadingMiddleware', $preload_script );
+		$this->assertStringContainsString( '/wp/v2/cb_templates/' . $template_id . '?context=edit', $preload_script );
+		$this->assertStringContainsString( '/campaignbridge/v1/editor-settings?post_type=cb_templates', $preload_script );
+		$this->assertStringContainsString( 'post_id=' . $template_id, $preload_script );
+	}
+
+	/**
 	 * Test that application screens suppress every classic admin notice channel.
 	 */
 	public function test_editor_request_suppresses_classic_admin_notice_hooks(): void {

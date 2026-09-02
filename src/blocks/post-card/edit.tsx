@@ -1,34 +1,39 @@
-import apiFetch from '@wordpress/api-fetch';
 import {
   InspectorControls,
   useBlockProps,
   useInnerBlocksProps,
 } from '@wordpress/block-editor';
 import { PanelBody, SelectControl, Spinner } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
+import { fetchPosts, type PostItem } from '../shared/posts';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
 import { POST_CARD_ALLOWED_BLOCKS } from './config';
-
-interface ApiItem {
-  id: number | string;
-  label?: string;
-  title?: string | { rendered?: string };
-}
 
 interface PostCardAttributes {
   postType: string;
   postId: number;
 }
 
-export default function Edit({ attributes, setAttributes }) {
+export default function Edit({ attributes, setAttributes, clientId }) {
   const { postType = 'post', postId = 0 } = attributes as PostCardAttributes;
   const [postTypes, setPostTypes] = useState<PostTypeItem[]>([]);
-  const [posts, setPosts] = useState<ApiItem[]>([]);
+  const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const isSelected = useSelect(
+    select =>
+      (select('core/block-editor') as any).getSelectedBlockClientId() ===
+      clientId,
+    [clientId]
+  );
 
   useEffect(() => {
+    if (!isSelected) {
+      return;
+    }
+
     let active = true;
     fetchPostTypes()
       .then(items => {
@@ -41,16 +46,18 @@ export default function Edit({ attributes, setAttributes }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isSelected]);
 
   useEffect(() => {
+    if (!isSelected) {
+      return;
+    }
+
     let active = true;
     setLoading(true);
-    apiFetch<{ items?: ApiItem[] }>({
-      path: `/campaignbridge/v1/posts?post_type=${encodeURIComponent(postType)}`,
-    })
-      .then(response => {
-        if (active) setPosts(response.items ?? []);
+    fetchPosts(postType)
+      .then(items => {
+        if (active) setPosts(items);
       })
       .catch(() => {
         if (active) setPosts([]);
@@ -62,7 +69,7 @@ export default function Edit({ attributes, setAttributes }) {
     return () => {
       active = false;
     };
-  }, [postType]);
+  }, [isSelected, postType]);
 
   const postTypeOptions = postTypes.map(item => ({
     label: item.label ?? String(item.id),

@@ -110,6 +110,7 @@ class Admin {
 		// The editor is a standalone application and does not render the shared
 		// admin forms. Keep its dependency graph limited to editor-owned assets.
 		if ( self::EDITOR_SCREEN_HOOK === $hook ) {
+			Editor_Data_Preload::preload_for_request();
 			return;
 		}
 

@@ -77,23 +77,13 @@ test('loads core iframe assets without unrelated CampaignBridge form assets', as
 
   const templateId = await createTemplate(page);
   try {
+    const restRequests: string[] = [];
+    page.on('request', request => {
+      if (request.url().includes('/wp-json/')) {
+        restRequests.push(request.url());
+      }
+    });
     await openTemplate(page, templateId);
-
-    const resolvedAssets = await page.evaluate(async id => {
-      const apiFetch = (
-        globalThis as typeof globalThis & { wp: { apiFetch: ApiFetch } }
-      ).wp.apiFetch;
-      const settings = await apiFetch<{
-        __unstableResolvedAssets?: { styles?: string; scripts?: string };
-      }>({
-        path: `/campaignbridge/v1/editor-settings?post_type=cb_templates&post_id=${id}`,
-      });
-
-      return settings.__unstableResolvedAssets;
-    }, templateId);
-
-    expect(resolvedAssets?.styles?.length).toBeGreaterThan(0);
-    expect(resolvedAssets?.scripts?.length).toBeGreaterThan(0);
     await expect(
       page
         .frameLocator('iframe[name="editor-canvas"]')
@@ -110,8 +100,95 @@ test('loads core iframe assets without unrelated CampaignBridge form assets', as
         message.includes('template prop in useInnerBlocksProps')
       )
     ).toBe(false);
+    expect(
+      restRequests.some(url => url.includes('/wp/v2/cb_templates?per_page=100'))
+    ).toBe(false);
+    expect(
+      restRequests.some(url => url.includes('/wp/v2/types?context=view'))
+    ).toBe(false);
+    expect(
+      restRequests.some(url =>
+        url.includes(`/wp/v2/cb_templates/${templateId}?context=edit`)
+      )
+    ).toBe(false);
+    expect(
+      restRequests.some(url =>
+        url.includes('/campaignbridge/v1/editor-settings')
+      )
+    ).toBe(false);
   } finally {
     await deleteTemplate(page, templateId);
+  }
+});
+
+test('uses the core secondary-sidebar transition for list view', async ({
+  page,
+}) => {
+  const templateId = await createTemplate(page);
+
+  try {
+    await openTemplate(page, templateId);
+    const toggle = page.locator('.cb-editor__toggle--secondary');
+    if ((await toggle.getAttribute('aria-pressed')) === 'true') {
+      await toggle.click();
+    }
+    await expect(
+      page.locator('.interface-interface-skeleton__secondary-sidebar')
+    ).toHaveCount(0);
+
+    await toggle.click();
+    const sidebar = page.locator(
+      '.interface-interface-skeleton__secondary-sidebar'
+    );
+    await sidebar.waitFor({ state: 'attached' });
+
+    const startingWidth = (await sidebar.boundingBox())?.width ?? 0;
+    await page.waitForTimeout(350);
+    const finalWidth = (await sidebar.boundingBox())?.width ?? 0;
+
+    expect(startingWidth).toBeLessThan(finalWidth);
+    expect(finalWidth).toBeGreaterThan(100);
+  } finally {
+    await deleteTemplate(page, templateId);
+  }
+});
+
+test('switches existing templates without reloading wp-admin', async ({
+  page,
+}) => {
+  const firstTemplateId = await createTemplate(page);
+  const secondTemplateId = await createTemplate(page);
+
+  try {
+    await openTemplate(page, firstTemplateId);
+    const documentTimeOrigin = await page.evaluate(
+      () => globalThis.performance.timeOrigin
+    );
+    const previousIframe = await page
+      .locator('iframe[name="editor-canvas"]')
+      .elementHandle();
+
+    await page
+      .locator('.cb-editor__templates-select select')
+      .selectOption(String(secondTemplateId));
+    await expect(page).toHaveURL(
+      new RegExp(`post_id=${secondTemplateId}(?:&|$)`, 'u')
+    );
+    await expect
+      .poll(() => previousIframe?.evaluate(element => element.isConnected))
+      .toBe(false);
+    await expect(
+      page
+        .frameLocator('iframe[name="editor-canvas"]')
+        .locator('body.editor-styles-wrapper')
+    ).toBeVisible();
+
+    expect(await page.evaluate(() => globalThis.performance.timeOrigin)).toBe(
+      documentTimeOrigin
+    );
+  } finally {
+    await deleteTemplate(page, firstTemplateId);
+    await deleteTemplate(page, secondTemplateId);
   }
 });
 

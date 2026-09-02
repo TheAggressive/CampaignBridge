@@ -143,6 +143,20 @@ function EditorChromeContent({
     setSidebarActiveTab(SIDEBAR_CONSTANTS.TABS.INSPECTOR);
     openPrimary();
   }, [openPrimary, setSidebarActiveTab]);
+  const handleTemplateSelect = useCallback(
+    (id: number | null) => {
+      if (!id || id === postId) {
+        return;
+      }
+
+      void saveNow().then(saved => {
+        if (saved) {
+          onSelect(id);
+        }
+      });
+    },
+    [onSelect, postId, saveNow]
+  );
 
   if (isResolving) {
     return (
@@ -236,8 +250,8 @@ function EditorChromeContent({
                 <Header
                   list={list}
                   currentId={currentId}
-                  loading={loading}
-                  onSelect={onSelect}
+                  loading={loading || saveStatus === 'saving'}
+                  onSelect={handleTemplateSelect}
                   onNew={onNew}
                   isPrimaryOpen={isPrimaryOpen}
                   isSecondaryOpen={isSecondaryOpen}
@@ -251,7 +265,9 @@ function EditorChromeContent({
               content={<Content onSave={saveNow} styles={editorStyles} />}
               sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
               secondarySidebar={
-                <ComplementaryArea.Slot {...secondarySidebarProps} />
+                isSecondaryOpen ? (
+                  <ComplementaryArea.Slot {...secondarySidebarProps} />
+                ) : null
               }
               footer={<Footer />}
             />
