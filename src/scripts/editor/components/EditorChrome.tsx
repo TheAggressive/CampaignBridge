@@ -1,10 +1,5 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
-import {
-  Popover,
-  ResizableBox,
-  SlotFillProvider,
-  SnackbarList,
-} from '@wordpress/components';
+import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
 import { EntityProvider } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useCallback } from '@wordpress/element';
@@ -115,7 +110,6 @@ function EditorChromeContent({
     sidebarActiveTab,
     setSidebarActiveTab,
     primarySidebarProps,
-    secondarySidebarProps,
     snackbarNotices,
     removeNotice,
   } = useEditorLayout();
@@ -220,19 +214,6 @@ function EditorChromeContent({
           </div>
         </ComplementaryArea>
 
-        <ResizableBox
-          size={{ width: 165 }}
-          minWidth={165}
-          maxWidth={300}
-          enable={false}
-        >
-          <ComplementaryArea {...secondarySidebarProps}>
-            <div className={LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_CONTENT}>
-              <SecondarySidebar />
-            </div>
-          </ComplementaryArea>
-        </ResizableBox>
-
         <div className='cb-editor__viewport'>
           <BlockEditorProvider
             value={blocks}
@@ -266,9 +247,12 @@ function EditorChromeContent({
               sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
               secondarySidebar={
                 isSecondaryOpen ? (
-                  <ComplementaryArea.Slot {...secondarySidebarProps} />
+                  <SecondarySidebar onClose={toggleSecondary} />
                 ) : null
               }
+              labels={{
+                secondarySidebar: __('List view', 'campaignbridge'),
+              }}
               footer={<Footer />}
             />
           </BlockEditorProvider>

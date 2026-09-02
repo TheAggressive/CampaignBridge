@@ -105,16 +105,6 @@ export function useEditorLayout() {
     isPinnable: false,
   };
 
-  const secondarySidebarProps = {
-    scope: SIDEBAR_CONSTANTS.SCOPES.SECONDARY,
-    identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY,
-    closeLabel: 'Close list view',
-    isSecondary: true,
-    className: `${LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_SECONDARY} cb-editor__sidebar--${activeSecondary === SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY ? 'open' : 'closed'}`,
-    isPinnable: false,
-    header: 'List View',
-  };
-
   return {
     // Layout state
     skeletonClassName,
@@ -127,7 +117,6 @@ export function useEditorLayout() {
 
     // Sidebar props
     primarySidebarProps,
-    secondarySidebarProps,
 
     // Notifications
     snackbarNotices,

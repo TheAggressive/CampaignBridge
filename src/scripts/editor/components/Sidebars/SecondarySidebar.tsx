@@ -1,7 +1,14 @@
 // @ts-ignore
 // eslint-disable-next-line @wordpress/no-unsafe-wp-apis
 import { __experimentalListView as ListView } from '@wordpress/block-editor';
+import { Button } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
+import { __ } from '@wordpress/i18n';
+import { closeSmall } from '@wordpress/icons';
+
+interface SecondarySidebarProps {
+  onClose: () => void;
+}
 
 /**
  * Secondary Sidebar Component
@@ -19,10 +26,12 @@ import { useSelect } from '@wordpress/data';
  *
  * @example
  * ```jsx
- * <SecondarySidebar />
+ * <SecondarySidebar onClose={closeListView} />
  * ```
  */
-export default function SecondarySidebar(): JSX.Element {
+export default function SecondarySidebar({
+  onClose,
+}: SecondarySidebarProps): JSX.Element {
   // Get the selected block and root blocks count for display
   const { selectedBlockClientId, blockCount } = useSelect((select: any) => {
     const blockEditorSelect = select('core/block-editor');
@@ -33,23 +42,42 @@ export default function SecondarySidebar(): JSX.Element {
   }, []);
 
   return (
-    <div
-      className='cb-editor__sidebar-content-inner'
-      style={{ height: '100%', overflowX: 'hidden' }}
-    >
-      {blockCount > 0 ? (
-        <ListView
-          rootClientId=''
-          selectedBlockClientId={selectedBlockClientId}
-          showNestedBlocks
-          showBlockMovers={false}
-          showAppender={false}
+    <div className='interface-complementary-area cb-editor__sidebar cb-editor__sidebar--secondary'>
+      <div
+        className='components-panel__header interface-complementary-area-header'
+        tabIndex={-1}
+      >
+        <h2 className='interface-complementary-area-header__title'>
+          {__('List view', 'campaignbridge')}
+        </h2>
+        <Button
+          icon={closeSmall}
+          label={__('Close list view', 'campaignbridge')}
+          onClick={onClose}
+          showTooltip
+          size='compact'
         />
-      ) : (
-        <div style={{ padding: '16px', color: '#666' }}>
-          No blocks found. Add some content to see the block structure.
+      </div>
+      <div className='cb-editor__sidebar-content'>
+        <div className='cb-editor__sidebar-content-inner'>
+          {blockCount > 0 ? (
+            <ListView
+              rootClientId=''
+              selectedBlockClientId={selectedBlockClientId}
+              showNestedBlocks
+              showBlockMovers={false}
+              showAppender={false}
+            />
+          ) : (
+            <div className='cb-editor__list-view-empty'>
+              {__(
+                'No blocks found. Add some content to see the block structure.',
+                'campaignbridge'
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -141,6 +141,9 @@ test('uses the core secondary-sidebar transition for list view', async ({
       '.interface-interface-skeleton__secondary-sidebar'
     );
     await sidebar.waitFor({ state: 'attached' });
+    await expect(
+      sidebar.locator('.interface-complementary-area__fill')
+    ).toHaveCount(0);
 
     const startingWidth = (await sidebar.boundingBox())?.width ?? 0;
     await page.waitForTimeout(350);
@@ -148,6 +151,14 @@ test('uses the core secondary-sidebar transition for list view', async ({
 
     expect(startingWidth).toBeLessThan(finalWidth);
     expect(finalWidth).toBeGreaterThan(100);
+
+    await page.getByRole('button', { name: 'Close list view' }).click();
+    await page.waitForTimeout(50);
+    const closingWidth = (await sidebar.boundingBox())?.width ?? 0;
+
+    expect(closingWidth).toBeGreaterThan(0);
+    expect(closingWidth).toBeLessThan(finalWidth);
+    await expect(sidebar).toHaveCount(0);
   } finally {
     await deleteTemplate(page, templateId);
   }
@@ -228,7 +239,10 @@ test('keeps the bottom inserter popover visible and inside the editor', async ({
     expect(shellBox).not.toBeNull();
 
     const popoverBottom = popoverBox!.y + popoverBox!.height;
-    expect(popoverBottom).toBeLessThanOrEqual(appenderBox!.y);
+    const appenderBottom = appenderBox!.y + appenderBox!.height;
+    const isOutsideAppender =
+      popoverBottom <= appenderBox!.y || popoverBox!.y >= appenderBottom;
+    expect(isOutsideAppender).toBe(true);
     expect(popoverBox!.y).toBeGreaterThanOrEqual(shellBox!.y);
     expect(popoverBottom).toBeLessThanOrEqual(shellBox!.y + shellBox!.height);
 
