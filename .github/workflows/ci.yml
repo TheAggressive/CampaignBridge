@@ -276,11 +276,14 @@ jobs:
             if curl --fail --silent http://127.0.0.1:8889/wp-login.php > /dev/null; then
               exit 0
             fi
+
+            if [[ "${attempt}" -eq 30 ]]; then
+              echo 'WordPress E2E server did not become ready.' >&2
+              exit 1
+            fi
+
             sleep 1
           done
-
-          echo 'WordPress E2E server did not become ready.' >&2
-          exit 1
 
       - name: Run browser tests
         env:
