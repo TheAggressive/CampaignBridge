@@ -1,0 +1,180 @@
+import { expect, test, type Locator, type Page } from '@playwright/test';
+
+const EDITOR_PATH = '/wp-admin/admin.php?page=campaignbridge-editor';
+
+type ApiFetch = <T>(
+  // eslint-disable-next-line no-unused-vars -- Documents the callable WordPress API contract.
+  options: {
+    path: string;
+    method?: string;
+    data?: Record<string, unknown>;
+  }
+) => Promise<T>;
+
+async function createTemplate(page: Page): Promise<number> {
+  await page.goto(EDITOR_PATH);
+  await expect(page.locator('.cb-editor__header')).toBeVisible();
+
+  return page.evaluate(async title => {
+    const apiFetch = (
+      globalThis as typeof globalThis & { wp: { apiFetch: ApiFetch } }
+    ).wp.apiFetch;
+    const result = await apiFetch<{ id: number }>({
+      path: '/wp/v2/cb_templates',
+      method: 'POST',
+      data: {
+        title,
+        status: 'draft',
+      },
+    });
+
+    return result.id;
+  }, `CampaignBridge E2E ${Date.now()}`);
+}
+
+async function deleteTemplate(page: Page, templateId: number): Promise<void> {
+  await page.evaluate(async id => {
+    const apiFetch = (
+      globalThis as typeof globalThis & { wp: { apiFetch: ApiFetch } }
+    ).wp.apiFetch;
+    await apiFetch({
+      path: `/wp/v2/cb_templates/${id}?force=true`,
+      method: 'DELETE',
+    });
+  }, templateId);
+}
+
+async function openTemplate(page: Page, templateId: number): Promise<void> {
+  await page.goto(`${EDITOR_PATH}&post_id=${templateId}`);
+  await expect(page.locator('iframe[name="editor-canvas"]')).toBeVisible();
+  await expect(
+    page
+      .frameLocator('iframe[name="editor-canvas"]')
+      .locator('body.editor-styles-wrapper')
+  ).toBeVisible();
+}
+
+async function lastVisible(locator: Locator): Promise<Locator> {
+  for (let index = (await locator.count()) - 1; index >= 0; index -= 1) {
+    const candidate = locator.nth(index);
+    if (await candidate.isVisible()) {
+      return candidate;
+    }
+  }
+
+  throw new Error('No visible block appender was found.');
+}
+
+test('loads core iframe assets without unrelated CampaignBridge form assets', async ({
+  page,
+}) => {
+  const warnings: string[] = [];
+  page.on('console', message => {
+    if (message.type() === 'warning') {
+      warnings.push(message.text());
+    }
+  });
+
+  const templateId = await createTemplate(page);
+  try {
+    await openTemplate(page, templateId);
+
+    const resolvedAssets = await page.evaluate(async id => {
+      const apiFetch = (
+        globalThis as typeof globalThis & { wp: { apiFetch: ApiFetch } }
+      ).wp.apiFetch;
+      const settings = await apiFetch<{
+        __unstableResolvedAssets?: { styles?: string; scripts?: string };
+      }>({
+        path: `/campaignbridge/v1/editor-settings?post_type=cb_templates&post_id=${id}`,
+      });
+
+      return settings.__unstableResolvedAssets;
+    }, templateId);
+
+    expect(resolvedAssets?.styles?.length).toBeGreaterThan(0);
+    expect(resolvedAssets?.scripts?.length).toBeGreaterThan(0);
+    await expect(
+      page
+        .frameLocator('iframe[name="editor-canvas"]')
+        .locator('#wp-edit-blocks-css')
+    ).toHaveCount(1);
+    await expect(
+      page.locator('#campaignbridge-admin-form-styles-css')
+    ).toHaveCount(0);
+    await expect(
+      page.locator('#campaignbridge-encrypted-fields-js')
+    ).toHaveCount(0);
+    expect(
+      warnings.some(message =>
+        message.includes('template prop in useInnerBlocksProps')
+      )
+    ).toBe(false);
+  } finally {
+    await deleteTemplate(page, templateId);
+  }
+});
+
+test('keeps the bottom inserter popover visible and inside the editor', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 700 });
+  const templateId = await createTemplate(page);
+
+  try {
+    await openTemplate(page, templateId);
+    const frame = page.frameLocator('iframe[name="editor-canvas"]');
+    const appender = await lastVisible(
+      frame.locator(
+        '.block-editor-button-block-appender, .block-list-appender button, .block-editor-default-block-appender button'
+      )
+    );
+
+    await appender.evaluate(element => {
+      element.style.marginTop = '1000px';
+      const ownerWindow = element.ownerDocument.defaultView;
+      ownerWindow?.scrollTo(
+        0,
+        element.ownerDocument.documentElement.scrollHeight
+      );
+    });
+    await appender.click();
+
+    const popover = page.locator('.block-editor-inserter__popover').first();
+    await expect(popover).toBeVisible();
+
+    const appenderBox = await appender.boundingBox();
+    const popoverBox = await popover.boundingBox();
+    const shellBox = await page.locator('.cb-editor-shell').boundingBox();
+    expect(appenderBox).not.toBeNull();
+    expect(popoverBox).not.toBeNull();
+    expect(shellBox).not.toBeNull();
+
+    const popoverBottom = popoverBox!.y + popoverBox!.height;
+    expect(popoverBottom).toBeLessThanOrEqual(appenderBox!.y);
+    expect(popoverBox!.y).toBeGreaterThanOrEqual(shellBox!.y);
+    expect(popoverBottom).toBeLessThanOrEqual(shellBox!.y + shellBox!.height);
+
+    const hasClippingAncestor = await popover.evaluate(element => {
+      let ancestor = element.parentElement;
+      while (ancestor) {
+        const styles =
+          element.ownerDocument.defaultView?.getComputedStyle(ancestor);
+        if (!styles) {
+          return false;
+        }
+        if (
+          ['hidden', 'clip'].includes(styles.overflow) ||
+          ['hidden', 'clip'].includes(styles.overflowY)
+        ) {
+          return true;
+        }
+        ancestor = ancestor.parentElement;
+      }
+      return false;
+    });
+    expect(hasClippingAncestor).toBe(false);
+  } finally {
+    await deleteTemplate(page, templateId);
+  }
+});

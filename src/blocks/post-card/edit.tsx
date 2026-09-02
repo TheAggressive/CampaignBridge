@@ -9,15 +9,7 @@ import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
-
-const ALLOWED_BLOCKS = [
-  'campaignbridge/post-image',
-  'campaignbridge/post-title',
-  'campaignbridge/post-excerpt',
-  'campaignbridge/post-cta',
-];
-
-const TEMPLATE = ALLOWED_BLOCKS.map(name => [name]);
+import { POST_CARD_ALLOWED_BLOCKS } from './config';
 
 interface ApiItem {
   id: number | string;
@@ -86,8 +78,7 @@ export default function Edit({ attributes, setAttributes }) {
   const innerBlocksProps = useInnerBlocksProps(
     useBlockProps({ className: 'cb-post-card' }),
     {
-      allowedBlocks: ALLOWED_BLOCKS,
-      template: TEMPLATE as any,
+      allowedBlocks: POST_CARD_ALLOWED_BLOCKS,
       templateLock: false,
     }
   );

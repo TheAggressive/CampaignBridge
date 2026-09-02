@@ -61,6 +61,15 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
 .cb-editor-shell {
   height: 100%;
   min-height: 0;
+  overflow: visible;
+  position: relative;
+}
+
+/* Bound the editor application without clipping popovers rendered in the
+   sibling Popover.Slot. */
+.cb-editor__viewport {
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   position: relative;
 }

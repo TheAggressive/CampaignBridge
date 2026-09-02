@@ -110,7 +110,10 @@ class Editor_Settings_Routes extends Abstract_Rest_Controller {
 		$block_editor_context = new \WP_Block_Editor_Context( array( 'post' => $post ) );
 		$settings             = get_block_editor_settings( array(), $block_editor_context );
 
-		// Filter out sensitive information.
+		// Filter out sensitive information. Core's __unstableResolvedAssets value
+		// must remain intact: BlockCanvas uses it to populate the iframe with the
+		// registered editor styles and scripts. This route is capability protected
+		// and additionally verifies edit access to the requested template above.
 		$settings = Response_Formatter::filter_editor_settings( $settings );
 
 		return $this->ensure_response( $settings );

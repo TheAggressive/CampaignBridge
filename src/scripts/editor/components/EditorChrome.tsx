@@ -219,42 +219,44 @@ function EditorChromeContent({
           </ComplementaryArea>
         </ResizableBox>
 
-        <BlockEditorProvider
-          value={blocks}
-          onInput={onInput}
-          onChange={onChange}
-          settings={mergedEditorSettings}
-        >
-          <EditorEffects
-            saveStatus={saveStatus}
-            onBlockSelected={handleBlockSelected}
-          />
-          <InterfaceSkeleton
-            className={skeletonClassName}
-            header={
-              <Header
-                list={list}
-                currentId={currentId}
-                loading={loading}
-                onSelect={onSelect}
-                onNew={onNew}
-                isPrimaryOpen={isPrimaryOpen}
-                isSecondaryOpen={isSecondaryOpen}
-                togglePrimary={togglePrimary}
-                toggleSecondary={toggleSecondary}
-                hasEdits={hasEdits}
-                onSave={saveNow}
-                saveStatus={saveStatus}
-              />
-            }
-            content={<Content onSave={saveNow} styles={editorStyles} />}
-            sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
-            secondarySidebar={
-              <ComplementaryArea.Slot {...secondarySidebarProps} />
-            }
-            footer={<Footer />}
-          />
-        </BlockEditorProvider>
+        <div className='cb-editor__viewport'>
+          <BlockEditorProvider
+            value={blocks}
+            onInput={onInput}
+            onChange={onChange}
+            settings={mergedEditorSettings}
+          >
+            <EditorEffects
+              saveStatus={saveStatus}
+              onBlockSelected={handleBlockSelected}
+            />
+            <InterfaceSkeleton
+              className={skeletonClassName}
+              header={
+                <Header
+                  list={list}
+                  currentId={currentId}
+                  loading={loading}
+                  onSelect={onSelect}
+                  onNew={onNew}
+                  isPrimaryOpen={isPrimaryOpen}
+                  isSecondaryOpen={isSecondaryOpen}
+                  togglePrimary={togglePrimary}
+                  toggleSecondary={toggleSecondary}
+                  hasEdits={hasEdits}
+                  onSave={saveNow}
+                  saveStatus={saveStatus}
+                />
+              }
+              content={<Content onSave={saveNow} styles={editorStyles} />}
+              sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
+              secondarySidebar={
+                <ComplementaryArea.Slot {...secondarySidebarProps} />
+              }
+              footer={<Footer />}
+            />
+          </BlockEditorProvider>
+        </div>
 
         <Popover.Slot />
         <div className={LAYOUT_CONSTANTS.CSS_CLASSES.EDITOR_SNACKBAR}>

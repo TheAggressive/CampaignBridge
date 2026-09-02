@@ -12,6 +12,7 @@ declare( strict_types = 1 );
 
 namespace CampaignBridge\Tests\Integration;
 
+use CampaignBridge\Admin\Admin;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
 /**
@@ -186,6 +187,36 @@ class Admin_Screens_Test extends Test_Case {
 		$this->assertSame( 'dist/styles/editor/editor.asset.php', $config['assets']['asset_styles']['campaignbridge-block-editor-styles']['src'] );
 		$this->assertContains( 'wp-edit-post', $styles->registered[ $handle ]->deps );
 		$this->assertArrayHasKey( 'cb-campaignbridge-block-editor-script', $script->registered );
+	}
+
+	/**
+	 * Test that the standalone editor does not load unrelated form assets.
+	 */
+	public function test_editor_skips_shared_form_assets(): void {
+		$style_handles  = array(
+			'campaignbridge-admin-global-styles',
+			'campaignbridge-admin-form-styles',
+		);
+		$script_handles = array(
+			'campaignbridge-encrypted-fields',
+			'campaignbridge-form-validation',
+			'campaignbridge-form-loading',
+		);
+
+		foreach ( $style_handles as $handle ) {
+			wp_dequeue_style( $handle );
+		}
+		foreach ( $script_handles as $handle ) {
+			wp_dequeue_script( $handle );
+		}
+
+		Admin::get_instance()->enqueue_global_assets( 'campaignbridge_page_campaignbridge-editor' );
+
+		$this->assertTrue( wp_style_is( 'campaignbridge-admin-global-styles', 'enqueued' ) );
+		$this->assertFalse( wp_style_is( 'campaignbridge-admin-form-styles', 'enqueued' ) );
+		foreach ( $script_handles as $handle ) {
+			$this->assertFalse( wp_script_is( $handle, 'enqueued' ) );
+		}
 	}
 
 	/**
