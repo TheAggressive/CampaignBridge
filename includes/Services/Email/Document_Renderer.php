@@ -28,7 +28,7 @@ final class Document_Renderer implements Document_Renderer_Interface {
 	public function render( string $body, Render_Context $context ): string {
 		$language   = Renderer_Support::html( (string) $context->metadata( 'language', 'en' ) );
 		$title      = Renderer_Support::html( (string) $context->metadata( 'title', 'CampaignBridge email' ) );
-		$background = Renderer_Support::color( $context->metadata( 'background_color' ), '#f4f4f4' );
+		$background = Renderer_Support::portable_color( $context->metadata( 'background_color' ) ) ?? '#f4f4f4';
 
 		return '<!doctype html>' . "\n"
 			. '<html lang="' . $language . '">' . "\n"

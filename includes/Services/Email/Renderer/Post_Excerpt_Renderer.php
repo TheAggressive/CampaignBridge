@@ -40,7 +40,7 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'maxWords' => Renderer_Support::integer( $attributes['maxWords'] ?? null, 50, 10, 150 ),
+				'maxWords' => Renderer_Support::integer_attribute( $attributes, 'maxWords', 50, 10, 150 ),
 			)
 		);
 	}

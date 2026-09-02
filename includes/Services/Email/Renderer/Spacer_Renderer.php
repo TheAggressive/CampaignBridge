@@ -35,8 +35,10 @@ final class Spacer_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
+		$attributes = $block->attributes();
+
 		return $block->with_attributes(
-			array( 'height' => Renderer_Support::integer( $block->attributes()['height'] ?? null, 24, 4, 120 ) )
+			array( 'height' => Renderer_Support::integer_attribute( $attributes, 'height', 24, 4, 120 ) )
 		);
 	}
 

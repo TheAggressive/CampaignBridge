@@ -1,14 +1,72 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import { ColorPalette, PanelBody, TextControl } from '@wordpress/components';
+import {
+  ColorPalette,
+  PanelBody,
+  SelectControl,
+  TextControl,
+} from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
+import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+
+import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
+
+type Destination = 'article' | 'postParent' | 'postTypeArchive' | 'custom';
+
+const DESTINATIONS: readonly Destination[] = [
+  'article',
+  'postParent',
+  'postTypeArchive',
+  'custom',
+];
+
+function normalizeDestination(value: unknown): Destination {
+  return typeof value === 'string' &&
+    DESTINATIONS.includes(value as Destination)
+    ? (value as Destination)
+    : 'article';
+}
+
+function isSafePreviewUrl(value: string): boolean {
+  try {
+    return ['http:', 'https:'].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 export default function Edit({ attributes, setAttributes, context = {} }) {
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
   const label = attributes.label || __('Read more', 'campaignbridge');
+  const destination = normalizeDestination(attributes.destination);
+  const customUrl =
+    typeof attributes.customUrl === 'string' ? attributes.customUrl : '';
   const backgroundColor = attributes.backgroundColor || '#111111';
   const textColor = attributes.textColor || '#ffffff';
+  const [postTypes, setPostTypes] = useState<PostTypeItem[]>([]);
+  useEffect(() => {
+    let active = true;
+    fetchPostTypes()
+      .then(items => {
+        if (active) setPostTypes(items);
+      })
+      .catch(() => {
+        if (active) setPostTypes([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
   const post = useSelect(
     select =>
       postId
@@ -16,6 +74,42 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
         : null,
     [postType, postId]
   );
+  const postParentId = Number(post?.parent) || 0;
+  const postParent = useSelect(
+    select =>
+      postParentId
+        ? (select('core') as any).getEntityRecord(
+            'postType',
+            postType,
+            postParentId
+          )
+        : null,
+    [postParentId, postType]
+  );
+  const articleUrl = post?.link || '';
+  const postParentUrl = postParent?.link || '';
+  const postTypeArchiveUrl =
+    postTypes.find(item => item.id === postType)?.archive_url || '';
+  const destinationUrls: Record<Destination, string> = {
+    article: articleUrl,
+    postParent: postParentUrl,
+    postTypeArchive: postTypeArchiveUrl,
+    custom: customUrl,
+  };
+  const destinationUrl = destinationUrls[destination];
+  const previewUrl = isSafePreviewUrl(destinationUrl) ? destinationUrl : '';
+  const destinationHelp =
+    destination === 'postParent' && !postParentUrl
+      ? __(
+          'The selected article does not have a post parent.',
+          'campaignbridge'
+        )
+      : destination === 'postTypeArchive' && !postTypeArchiveUrl
+        ? __(
+            'The selected post type does not have an archive page.',
+            'campaignbridge'
+          )
+        : undefined;
 
   return (
     <div {...useBlockProps()}>
@@ -28,6 +122,46 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
+          <SelectControl
+            label={__('CTA destination', 'campaignbridge')}
+            value={destination}
+            options={[
+              { label: __('Article', 'campaignbridge'), value: 'article' },
+              {
+                label: __('Post parent', 'campaignbridge'),
+                value: 'postParent',
+                disabled: !postParentUrl,
+              },
+              {
+                label: __('Post type archive', 'campaignbridge'),
+                value: 'postTypeArchive',
+                disabled: !postTypeArchiveUrl,
+              },
+              { label: __('Custom URL', 'campaignbridge'), value: 'custom' },
+            ]}
+            onChange={value => setAttributes({ destination: value })}
+            help={destinationHelp}
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
+          />
+          {destination === 'custom' && (
+            <TextControl
+              label={__('Custom HTTPS URL', 'campaignbridge')}
+              type='url'
+              value={customUrl}
+              onChange={value => setAttributes({ customUrl: value })}
+              help={
+                customUrl && !isHttpsUrl(customUrl)
+                  ? __(
+                      'Enter an absolute URL beginning with https://.',
+                      'campaignbridge'
+                    )
+                  : undefined
+              }
+              __next40pxDefaultSize
+              __nextHasNoMarginBottom
+            />
+          )}
           <p>{__('Background color', 'campaignbridge')}</p>
           <ColorPalette
             value={backgroundColor}
@@ -43,7 +177,8 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
         </PanelBody>
       </InspectorControls>
       <a
-        href={post?.link || '#'}
+        href={previewUrl || '#'}
+        aria-disabled={!previewUrl}
         style={{
           display: 'inline-block',
           padding: '12px 24px',

@@ -50,6 +50,11 @@ class Editor_Settings_Routes extends Abstract_Rest_Controller {
 						'required' => false,
 						'default'  => Rest_Constants::DEFAULT_POST_TYPE,
 					),
+					'post_id'   => array(
+						'type'     => 'integer',
+						'required' => true,
+						'minimum'  => 1,
+					),
 				),
 			)
 		);
@@ -85,8 +90,24 @@ class Editor_Settings_Routes extends Abstract_Rest_Controller {
 			return $this->create_error( 'post_type_not_found', 'Post type object not found' );
 		}
 
-		// Get block editor settings from WordPress core.
-		$block_editor_context = new \WP_Block_Editor_Context( array( 'post' => null ) );
+		$post_id = absint( $req->get_param( 'post_id' ) );
+		$post    = get_post( $post_id );
+
+		if ( ! $post || $post_type !== $post->post_type ) {
+			return $this->create_error( 'template_not_found', 'Email template not found' );
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return $this->create_error( 'rest_forbidden', 'You cannot edit this email template', 403 );
+		}
+
+		// REST requests do not guarantee that the asset registries exist. Core's
+		// iframe settings collector requires both before it resolves assets.
+		wp_styles();
+		wp_scripts();
+
+		// Match core by deriving settings from the post being edited.
+		$block_editor_context = new \WP_Block_Editor_Context( array( 'post' => $post ) );
 		$settings             = get_block_editor_settings( array(), $block_editor_context );
 
 		// Filter out sensitive information.

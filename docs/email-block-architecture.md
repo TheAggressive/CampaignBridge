@@ -62,6 +62,12 @@ global request input, mutate persistence, call providers, or fetch live post
 content. Dynamic WordPress content is resolved before rendering and frozen in
 the campaign snapshot.
 
+Normalization supplies documented defaults for omitted attributes and performs
+lossless canonicalization such as trimming URL fields. It must not clamp,
+substitute, or otherwise repair explicitly malformed persisted input. Invalid
+types, ranges, colors, alignments, and enum values produce blocking compiler
+diagnostics so an approved artifact remains auditable against its source.
+
 ## Initial library
 
 The first production set should stay deliberately small:
@@ -85,6 +91,12 @@ Core and third-party frontend blocks are not compiler input. The standalone
 email editor exposes only the CampaignBridge email grammar. Unsupported blocks
 produce blocking diagnostics; there is no adapter or generic fallback that
 silently strips or approximates markup.
+
+The inline rich-text parser is intentionally a small, fail-closed grammar for
+balanced emphasis, underline, strikethrough, line breaks, and HTTPS links. Do
+not evolve it into a general HTML parser as new content features arrive. Add
+semantic blocks for structures such as lists, and move to a purpose-built,
+allowlisted parser before accepting spans, arbitrary attributes, or styles.
 
 ## Output rules
 
@@ -125,6 +137,34 @@ The UI should distinguish:
 
 This avoids promising literal WYSIWYG behavior that no browser-based editor can
 guarantee across every email client.
+
+### Core-aligned editor composition
+
+CampaignBridge does not maintain a parallel block data store. The standalone
+screen binds `cb_templates` to WordPress's public `core-data` entity lifecycle:
+
+```text
+EntityProvider(cb_templates, post ID)
+  → useEntityRecord + useEntityBlockEditor
+  → BlockEditorProvider
+  → BlockCanvas
+  → CampaignBridge email blocks only
+```
+
+Core owns entity resolution, transient `onInput` changes, persistent `onChange`
+edits, undo/redo levels, dirty state, and REST persistence. CampaignBridge owns
+only the email grammar allowlist, editor chrome, a two-second save debounce, and
+the server-side compiler boundary. Block and template-meta changes therefore
+share one edit history and one save lifecycle.
+
+The editor uses public WordPress packages and stores rather than copying block
+list, writing-flow, selection, history, or serialization internals. The isolated
+list-view adapter remains experimental because WordPress does not yet expose a
+stable standalone equivalent; it must not leak into persistence or compilation.
+
+New templates are created as drafts with one canonical container. Saving never
+changes post status. Publishing and approval are explicit workflow transitions,
+not side effects of typing or autosave.
 
 ## Compiler boundary
 

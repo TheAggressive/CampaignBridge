@@ -1,3 +1,5 @@
+import { Button } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
 import { FullscreenToggle } from './Button/FullscreenToggle';
 import { PrimarySidebarToggle } from './Button/PrimarySidebarToggle';
 import { SecondarySidebarToggle } from './Button/SecondarySidebarToggle';
@@ -7,7 +9,6 @@ import TemplateToolbar from './TemplateToolbar';
 const CLASSES = {
   HEADER: 'cb-editor__header',
   HEADER_LEFT: 'cb-editor__header-left',
-  HEADER_TITLE: 'cb-editor__title',
   HEADER_ACTIONS: 'cb-editor__header-actions',
 };
 
@@ -71,9 +72,23 @@ export default function Header({
   isSecondaryOpen,
   togglePrimary,
   toggleSecondary,
+  hasEdits = false,
+  onSave = () => {},
+  saveStatus = 'saved',
 }) {
+  const isSaving = saveStatus === 'saving';
+  const saveLabel = isSaving
+    ? __('Saving…', 'campaignbridge')
+    : hasEdits
+      ? __('Save', 'campaignbridge')
+      : __('Saved', 'campaignbridge');
+
   return (
-    <div className={CLASSES.HEADER}>
+    <div
+      className={CLASSES.HEADER}
+      role='toolbar'
+      aria-label={__('Email editor toolbar', 'campaignbridge')}
+    >
       <div className={CLASSES.HEADER_LEFT}>
         <TemplateToolbar
           list={list}
@@ -82,13 +97,23 @@ export default function Header({
           onSelect={onSelect}
           onNew={onNew}
         />
-      </div>
-
-      <div className={CLASSES.HEADER_ACTIONS}>
         <SecondarySidebarToggle
           isOpen={isSecondaryOpen}
           onToggle={toggleSecondary}
         />
+      </div>
+
+      <div className={CLASSES.HEADER_ACTIONS}>
+        <Button
+          className='cb-editor__save-button'
+          variant='primary'
+          onClick={() => void onSave()}
+          disabled={!hasEdits || isSaving}
+          isBusy={isSaving}
+          aria-label={saveLabel}
+        >
+          {saveLabel}
+        </Button>
         <PrimarySidebarToggle isOpen={isPrimaryOpen} onToggle={togglePrimary} />
         <FullscreenToggle />
       </div>

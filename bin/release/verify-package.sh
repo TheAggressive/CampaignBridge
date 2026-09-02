@@ -24,14 +24,14 @@ if [[ "${top_level}" != "${slug}" ]]; then
 fi
 
 for forbidden in node_modules vendor tests bin src docs .git .github .husky composer.json package.json pnpm-lock.yaml; do
-	if printf '%s\n' "${listing}" | grep -qE "^${slug}/${forbidden}(/|$)"; then
+	if grep -qE "^${slug}/${forbidden}(/|$)" <<< "${listing}"; then
 		echo "Forbidden package path: ${forbidden}" >&2
 		exit 1
 	fi
 done
 
 for required in campaignbridge.php uninstall.php includes/Autoloader.php includes/Plugin.php dist/styles/styles.css; do
-	if ! printf '%s\n' "${listing}" | grep -qxF "${slug}/${required}"; then
+	if ! grep -qxF "${slug}/${required}" <<< "${listing}"; then
 		echo "Required package file is missing: ${required}" >&2
 		exit 1
 	fi

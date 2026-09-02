@@ -9,11 +9,58 @@
 :root {
   --cb-sidebar-width: 8rem;
   --cb-secondary-sidebar-width: 24rem;
+  --cb-admin-bar-height: 32px;
+  --cb-editor-header-height: 60px;
 }
 
-/* Editor Shell wrapper (outside InterfaceSkeleton) */
+/* Give this application-style screen a bounded viewport below the admin bar. */
+body.campaignbridge_page_campaignbridge-editor {
+  background: #fff;
+
+  #wpcontent {
+    padding-left: 0;
+  }
+
+  #wpbody-content {
+    padding-bottom: 0;
+  }
+
+  /* Match core application screens: classic notices remain available on
+     ordinary wp-admin pages but cannot cover the fixed editor skeleton. */
+  #wpbody-content > div:not(.campaignbridge-screen--editor):not(#screen-meta) {
+    display: none;
+  }
+
+  #wpfooter {
+    display: none;
+  }
+}
+
+.campaignbridge-screen--editor {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--cb-admin-bar-height));
+  margin: 0;
+  min-height: 0;
+
+  > h1.screen-reader-text {
+    margin: 0;
+  }
+
+  > #cb-block-editor-root {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+body.is-fullscreen-mode .campaignbridge-screen--editor {
+  height: 100dvh;
+}
+
+/* Editor shell wrapper (outside InterfaceSkeleton). */
 .cb-editor-shell {
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   position: relative;
 }
@@ -27,6 +74,23 @@
 
   &__canvas-tools {
     @apply flex items-center justify-items-start border-b border-gray-200 bg-gray-50 p-2;
+    flex: 0 0 auto;
+  }
+
+  &__content,
+  &__canvas {
+    height: 100%;
+    min-height: 0;
+  }
+
+  &__canvas {
+    display: flex;
+    flex-direction: column;
+
+    > :last-child {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
   }
 }
 
@@ -46,16 +110,52 @@
 /* Custom header styling */
 .cb-editor {
   &__header {
-    /* Only override if you need custom header styling */
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: saturate(160%) blur(8px);
+    align-items: center;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
     display: flex;
-    flex-direction: column-reverse;
+    flex: 0 0 auto;
+    gap: 12px;
+    justify-content: space-between;
+    min-height: var(--cb-editor-header-height);
+    padding: 8px 12px;
+    position: relative;
+    z-index: 20;
   }
 
-  &__title {
-    font-weight: 600;
-    color: #111827;
+  &__header-left,
+  &__header-actions,
+  &__toolbar {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+  }
+
+  &__header-left {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__header-actions {
+    flex: 0 0 auto;
+  }
+
+  &__toolbar {
+    min-width: 0;
+  }
+
+  &__save-button.components-button,
+  &__new-template.components-button,
+  &__toggle.components-button,
+  .cb-fullscreen-toggle.components-button {
+    height: 40px;
+  }
+
+  &__toggle.components-button,
+  .cb-fullscreen-toggle.components-button {
+    justify-content: center;
+    min-width: 40px;
+    padding: 0 8px;
   }
 
   &__divider {
@@ -69,8 +169,20 @@
 /* Template selector styling */
 .cb-editor {
   &__templates-select {
+    margin: 0;
+    min-width: 220px;
+    width: clamp(220px, 28vw, 360px);
+
     .components-base-control__label {
       display: none;
+    }
+
+    .components-base-control,
+    .components-base-control__field,
+    .components-select-control,
+    select {
+      margin-bottom: 0;
+      width: 100%;
     }
 
     .components-base-control__field {
@@ -84,7 +196,8 @@
   &__empty {
     display: grid;
     place-items: center;
-    height: calc(100vh - 48px);
+    height: 100%;
+    min-height: 0;
     padding: 24px;
     background: transparent;
   }
@@ -131,6 +244,37 @@
   &__empty-primary.components-button {
     height: 36px;
     padding: 0 12px;
+  }
+}
+
+@media (max-width: 782px) {
+  :root {
+    --cb-admin-bar-height: 46px;
+  }
+
+  .cb-editor {
+    &__header {
+      align-items: stretch;
+      flex-wrap: wrap;
+    }
+
+    &__header-left {
+      flex: 1 1 100%;
+    }
+
+    &__toolbar {
+      flex: 1 1 auto;
+    }
+
+    &__templates-select {
+      min-width: 0;
+      width: 100%;
+    }
+
+    &__header-actions {
+      justify-content: flex-end;
+      margin-left: auto;
+    }
   }
 }
 

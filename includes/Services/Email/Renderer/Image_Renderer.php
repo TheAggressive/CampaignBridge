@@ -40,12 +40,12 @@ final class Image_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'url'        => is_string( $attributes['url'] ?? null ) ? trim( $attributes['url'] ) : '',
-				'alt'        => is_string( $attributes['alt'] ?? null ) ? trim( $attributes['alt'] ) : '',
-				'decorative' => true === ( $attributes['decorative'] ?? false ),
-				'width'      => Renderer_Support::integer( $attributes['width'] ?? null, 600, 1, 1200 ),
-				'height'     => Renderer_Support::integer( $attributes['height'] ?? null, 400, 1, 1200 ),
-				'linkUrl'    => is_string( $attributes['linkUrl'] ?? null ) ? trim( $attributes['linkUrl'] ) : '',
+				'url'        => trim( Renderer_Support::string_attribute( $attributes, 'url', '' ) ),
+				'alt'        => trim( Renderer_Support::string_attribute( $attributes, 'alt', '' ) ),
+				'decorative' => Renderer_Support::boolean_attribute( $attributes, 'decorative', false ),
+				'width'      => Renderer_Support::integer_attribute( $attributes, 'width', 600, 1, 1200 ),
+				'height'     => Renderer_Support::integer_attribute( $attributes, 'height', 400, 1, 1200 ),
+				'linkUrl'    => trim( Renderer_Support::string_attribute( $attributes, 'linkUrl', '' ) ),
 			)
 		);
 	}

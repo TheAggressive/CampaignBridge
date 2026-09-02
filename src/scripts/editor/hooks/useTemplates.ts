@@ -60,7 +60,7 @@ const TEMPLATE_ERROR_MESSAGES = TEMPLATES_CONSTANTS.ERROR_MESSAGES;
  * - **Memory Management**: Proper cleanup to prevent memory leaks
  *
  * @param {Object} [options]
- * @param {boolean} [options.includeDrafts=true] Reserved; API currently fetches published only
+ * @param {boolean} [options.includeDrafts=true] Include editable draft templates
  * @param {Function} [options.onError] Optional error callback(message)
  * @param {boolean} [options.disableCache=false] Disable caching for fresh data
  * @returns {TemplatesState}
@@ -98,14 +98,17 @@ export function useTemplates(
     disableCache?: boolean;
   } = {}
 ) {
-  // eslint-disable-next-line no-unused-vars -- Reserved for future use; API currently fetches published only.
   const { includeDrafts = true, onError, disableCache = false } = options;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Simple time-based caching
-  const cacheRef = useRef({ data: null, timestamp: 0 });
+  const cacheRef = useRef({
+    data: null,
+    timestamp: 0,
+    includeDrafts: null as boolean | null,
+  });
 
   // Helper function to check if cache is stale
   const isCacheStale = useCallback(() => {
@@ -113,9 +116,10 @@ export function useTemplates(
     return (
       disableCache ||
       !cacheRef.current.data ||
+      cacheRef.current.includeDrafts !== includeDrafts ||
       now - cacheRef.current.timestamp > TEMPLATES_CONSTANTS.CACHE_DURATION_MS
     );
-  }, [disableCache]);
+  }, [disableCache, includeDrafts]);
 
   // Enhanced fetch function with retry logic
   const fetchListWithRetry = useCallback(
@@ -131,7 +135,7 @@ export function useTemplates(
           return;
         }
 
-        const posts = await listTemplates();
+        const posts = await listTemplates(includeDrafts);
         if (signal?.aborted) return;
 
         // Validate response
@@ -141,7 +145,7 @@ export function useTemplates(
 
         // Update cache
         const now = Date.now();
-        cacheRef.current = { data: posts, timestamp: now };
+        cacheRef.current = { data: posts, timestamp: now, includeDrafts };
 
         setItems(posts);
         setError('');
@@ -193,7 +197,7 @@ export function useTemplates(
         }
       }
     },
-    [onError, disableCache, isCacheStale]
+    [onError, disableCache, includeDrafts, isCacheStale]
   );
 
   useEffect(() => {

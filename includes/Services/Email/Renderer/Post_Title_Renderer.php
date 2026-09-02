@@ -36,9 +36,11 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
+		$attributes = $block->attributes();
+
 		return $block->with_attributes(
 			array(
-				'level' => Renderer_Support::integer( $block->attributes()['level'] ?? null, 2, 1, 4 ),
+				'level' => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
 			)
 		);
 	}

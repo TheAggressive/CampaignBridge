@@ -40,10 +40,10 @@ final class Text_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'content'   => is_string( $attributes['content'] ?? null ) ? $attributes['content'] : '',
-				'align'     => Renderer_Support::alignment( $attributes['align'] ?? null ),
-				'textColor' => Renderer_Support::color( $attributes['textColor'] ?? null, '#333333' ),
-				'fontSize'  => Renderer_Support::integer( $attributes['fontSize'] ?? null, 16, 12, 24 ),
+				'content'   => Renderer_Support::string_attribute( $attributes, 'content', '' ),
+				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'textColor' => Renderer_Support::color_attribute( $attributes, 'textColor', '#333333' ),
+				'fontSize'  => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 12, 24 ),
 			)
 		);
 	}

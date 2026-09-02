@@ -6,9 +6,12 @@ import {
   TextareaControl,
   ToggleControl,
 } from '@wordpress/components';
+import { useEntityProp } from '@wordpress/core-data';
+import { useCallback, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { useAutoSaveMetaManager } from '../../hooks/useAutoSaveMetaManager';
-import { useNotices } from '../../hooks/useNotices';
+
+type TemplateMetaValue = boolean | string;
+type TemplateMeta = Record<string, TemplateMetaValue | undefined>;
 
 /**
  * Template Settings Panel Component
@@ -25,37 +28,26 @@ import { useNotices } from '../../hooks/useNotices';
  * ```
  */
 export default function TemplateSettings({ postType, postId }) {
-  const { success, error } = useNotices();
-  const {
-    values: rawValues,
-    update,
-    saveStatus,
-  } = useAutoSaveMetaManager({
+  const [rawValues = {}, setValues] = useEntityProp(
+    'postType',
     postType,
-    postId,
-    keys: [
-      'campaignbridge_template_category',
-      'campaignbridge_subject',
-      'campaignbridge_preheader',
-      'campaignbridge_audience_tags',
-    ],
-    onSuccess: success,
-    onError: error,
-  });
-
-  const values: Record<string, string | undefined> = rawValues || {};
-  const isLoading = saveStatus === 'saving';
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <Panel>
-        <PanelBody title={__('Template Settings', 'campaignbridge')}>
-          <p>{__('Loading template settings...', 'campaignbridge')}</p>
-        </PanelBody>
-      </Panel>
-    );
-  }
+    'meta',
+    postId
+  ) as [
+    TemplateMeta,
+    // eslint-disable-next-line no-unused-vars -- Parameter name documents the setter contract.
+    (values: TemplateMeta) => void,
+    unknown,
+  ];
+  const values = useMemo(() => rawValues ?? {}, [rawValues]);
+  const update = useCallback(
+    (key: string, value: TemplateMetaValue) => {
+      setValues({ ...values, [key]: value });
+    },
+    [setValues, values]
+  );
+  const getString = (key: string): string =>
+    typeof values[key] === 'string' ? values[key] : '';
 
   // Template categories for dropdown
   const categoryOptions = [
@@ -76,7 +68,7 @@ export default function TemplateSettings({ postType, postId }) {
         >
           <SelectControl
             label={__('Category', 'campaignbridge')}
-            value={values.campaignbridge_template_category || 'general'}
+            value={getString('campaignbridge_template_category') || 'general'}
             options={categoryOptions}
             onChange={value =>
               update('campaignbridge_template_category', value)
@@ -87,7 +79,7 @@ export default function TemplateSettings({ postType, postId }) {
 
           <TextControl
             label={__('Subject Line', 'campaignbridge')}
-            value={values.campaignbridge_subject || ''}
+            value={getString('campaignbridge_subject')}
             onChange={value => update('campaignbridge_subject', value)}
             placeholder={__('Enter email subject...', 'campaignbridge')}
             __nextHasNoMarginBottom
@@ -96,7 +88,7 @@ export default function TemplateSettings({ postType, postId }) {
 
           <TextControl
             label={__('Preheader Text', 'campaignbridge')}
-            value={values.campaignbridge_preheader || ''}
+            value={getString('campaignbridge_preheader')}
             onChange={value => update('campaignbridge_preheader', value)}
             placeholder={__('Hidden preview text...', 'campaignbridge')}
             help={__('Shown in email client previews', 'campaignbridge')}
@@ -106,7 +98,7 @@ export default function TemplateSettings({ postType, postId }) {
 
           <TextControl
             label={__('Audience Tags', 'campaignbridge')}
-            value={values.campaignbridge_audience_tags || ''}
+            value={getString('campaignbridge_audience_tags')}
             onChange={value => update('campaignbridge_audience_tags', value)}
             placeholder={__('tag1, tag2, tag3', 'campaignbridge')}
             help={__('Comma-separated list of audience tags', 'campaignbridge')}
@@ -124,7 +116,7 @@ export default function TemplateSettings({ postType, postId }) {
         >
           <TextControl
             label={__('Sender Name', 'campaignbridge')}
-            value={values.campaignbridge_sender_name || ''}
+            value={getString('campaignbridge_sender_name')}
             onChange={value => update('campaignbridge_sender_name', value)}
             placeholder={__('Your Name', 'campaignbridge')}
             __nextHasNoMarginBottom
@@ -133,7 +125,7 @@ export default function TemplateSettings({ postType, postId }) {
 
           <TextControl
             label={__('Sender Email', 'campaignbridge')}
-            value={values.campaignbridge_sender_email || ''}
+            value={getString('campaignbridge_sender_email')}
             onChange={value => update('campaignbridge_sender_email', value)}
             type='email'
             placeholder={__('sender@domain.com', 'campaignbridge')}
@@ -143,17 +135,17 @@ export default function TemplateSettings({ postType, postId }) {
 
           <ToggleControl
             label={__('Enable View Online Link', 'campaignbridge')}
-            checked={values.campaignbridge_view_online_enabled === '1'}
+            checked={values.campaignbridge_view_online_enabled === true}
             onChange={checked =>
-              update('campaignbridge_view_online_enabled', checked ? '1' : '0')
+              update('campaignbridge_view_online_enabled', checked)
             }
             __nextHasNoMarginBottom
           />
 
-          {values.campaignbridge_view_online_enabled === '1' && (
+          {values.campaignbridge_view_online_enabled === true && (
             <TextControl
               label={__('View Online URL', 'campaignbridge')}
-              value={values.campaignbridge_view_online_url || ''}
+              value={getString('campaignbridge_view_online_url')}
               onChange={value =>
                 update('campaignbridge_view_online_url', value)
               }
@@ -166,7 +158,7 @@ export default function TemplateSettings({ postType, postId }) {
 
           <TextControl
             label={__('Unsubscribe URL', 'campaignbridge')}
-            value={values.campaignbridge_unsubscribe_url || ''}
+            value={getString('campaignbridge_unsubscribe_url')}
             onChange={value => update('campaignbridge_unsubscribe_url', value)}
             type='url'
             placeholder={__('https://unsubscribe...', 'campaignbridge')}
@@ -188,7 +180,7 @@ export default function TemplateSettings({ postType, postId }) {
         >
           <TextareaControl
             label={__('Address / Compliance', 'campaignbridge')}
-            value={values.campaignbridge_address_html || ''}
+            value={getString('campaignbridge_address_html')}
             onChange={value => update('campaignbridge_address_html', value)}
             placeholder={__(
               'Physical address and compliance info...',
@@ -201,18 +193,15 @@ export default function TemplateSettings({ postType, postId }) {
 
           <ToggleControl
             label={__('Enable UTM Tracking', 'campaignbridge')}
-            checked={values.campaignbridge_utm_enabled === '1'}
-            onChange={checked =>
-              update('campaignbridge_utm_enabled', checked ? '1' : '0')
-            }
+            checked={values.campaignbridge_utm_enabled === true}
+            onChange={checked => update('campaignbridge_utm_enabled', checked)}
             __nextHasNoMarginBottom
           />
 
-          {(values.campaignbridge_utm_enabled === '1' ||
-            values.campaignbridge_utm_enabled === '1') && (
+          {values.campaignbridge_utm_enabled === true && (
             <TextControl
               label={__('UTM Template', 'campaignbridge')}
-              value={values.campaignbridge_utm_template || ''}
+              value={getString('campaignbridge_utm_template')}
               onChange={value => update('campaignbridge_utm_template', value)}
               placeholder={'utm_source=newsletter&utm_campaign={post_slug}'}
               help={__('Template for UTM query parameters', 'campaignbridge')}
@@ -223,21 +212,17 @@ export default function TemplateSettings({ postType, postId }) {
 
           <ToggleControl
             label={__('Enable Default Footer', 'campaignbridge')}
-            checked={
-              values.campaignbridge_footer_enabled === '1' ||
-              values.campaignbridge_footer_enabled === '1'
-            }
+            checked={values.campaignbridge_footer_enabled === true}
             onChange={checked =>
-              update('campaignbridge_footer_enabled', checked ? '1' : '0')
+              update('campaignbridge_footer_enabled', checked)
             }
             __nextHasNoMarginBottom
           />
 
-          {(values.campaignbridge_footer_enabled === '1' ||
-            values.campaignbridge_footer_enabled === '1') && (
+          {values.campaignbridge_footer_enabled === true && (
             <TextControl
               label={__('Footer Pattern', 'campaignbridge')}
-              value={values.campaignbridge_footer_pattern || ''}
+              value={getString('campaignbridge_footer_pattern')}
               onChange={value => update('campaignbridge_footer_pattern', value)}
               placeholder={__('Footer template slug', 'campaignbridge')}
               __nextHasNoMarginBottom

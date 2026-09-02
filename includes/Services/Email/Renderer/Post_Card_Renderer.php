@@ -50,8 +50,8 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'postId'   => Renderer_Support::integer( $attributes['postId'] ?? null, 0, 0, PHP_INT_MAX ),
-				'postType' => is_string( $attributes['postType'] ?? null ) ? $attributes['postType'] : 'post',
+				'postId'   => Renderer_Support::integer_attribute( $attributes, 'postId', 0, 0, PHP_INT_MAX ),
+				'postType' => Renderer_Support::string_attribute( $attributes, 'postType', 'post' ),
 			)
 		);
 	}
@@ -63,6 +63,16 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array {
+		if ( ! preg_match( '/^[a-z0-9_-]{1,20}$/', $block->attributes()['postType'] ) ) {
+			return array(
+				Compile_Diagnostic::error(
+					'post.type.invalid',
+					$block->path(),
+					'The selected post type must use a valid WordPress post-type slug.'
+				),
+			);
+		}
+
 		$post_id = (string) $block->attributes()['postId'];
 		$post    = $context->snapshot( 'posts', $post_id );
 

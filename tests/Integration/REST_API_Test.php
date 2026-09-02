@@ -160,6 +160,15 @@ class REST_API_Test extends Test_Case {
 
 		// Should contain our configured type.
 		$this->assertContains( 'post', $post_type_ids, 'Should include post type' );
+		$post_type_item = current(
+			array_filter(
+				$items,
+				static fn ( array $item ): bool => 'post' === $item['id']
+			)
+		);
+		$this->assertIsArray( $post_type_item );
+		$this->assertArrayHasKey( 'archive_url', $post_type_item );
+		$this->assertSame( esc_url_raw( (string) get_post_type_archive_link( 'post' ) ), $post_type_item['archive_url'] );
 
 		// Should not include page (excluded by logic).
 		$this->assertNotContains( 'page', $post_type_ids, 'Should exclude page type' );

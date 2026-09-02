@@ -37,15 +37,14 @@ final class Button_Renderer extends Abstract_Renderer {
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
 		$attributes = $block->attributes();
-		$label      = is_string( $attributes['label'] ?? null ) ? trim( $attributes['label'] ) : '';
 
 		return $block->with_attributes(
 			array(
-				'label'           => $label,
-				'url'             => is_string( $attributes['url'] ?? null ) ? trim( $attributes['url'] ) : '',
-				'align'           => Renderer_Support::alignment( $attributes['align'] ?? null ),
-				'backgroundColor' => Renderer_Support::color( $attributes['backgroundColor'] ?? null, '#111111' ),
-				'textColor'       => Renderer_Support::color( $attributes['textColor'] ?? null, '#ffffff' ),
+				'label'           => trim( Renderer_Support::string_attribute( $attributes, 'label', 'Learn more' ) ),
+				'url'             => trim( Renderer_Support::string_attribute( $attributes, 'url', '' ) ),
+				'align'           => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'backgroundColor' => Renderer_Support::color_attribute( $attributes, 'backgroundColor', '#111111' ),
+				'textColor'       => Renderer_Support::color_attribute( $attributes, 'textColor', '#ffffff' ),
 			)
 		);
 	}

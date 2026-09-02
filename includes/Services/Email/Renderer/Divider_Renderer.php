@@ -36,16 +36,13 @@ final class Divider_Renderer extends Abstract_Renderer {
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
 		$attributes = $block->attributes();
-		$style      = is_string( $attributes['style'] ?? null ) && in_array( $attributes['style'], array( 'solid', 'dashed', 'dotted' ), true )
-			? $attributes['style']
-			: 'solid';
 
 		return $block->with_attributes(
 			array(
-				'color'     => Renderer_Support::color( $attributes['color'] ?? null, '#dddddd' ),
-				'thickness' => Renderer_Support::integer( $attributes['thickness'] ?? null, 1, 1, 8 ),
-				'width'     => Renderer_Support::integer( $attributes['width'] ?? null, 100, 10, 100 ),
-				'style'     => $style,
+				'color'     => Renderer_Support::color_attribute( $attributes, 'color', '#dddddd' ),
+				'thickness' => Renderer_Support::integer_attribute( $attributes, 'thickness', 1, 1, 8 ),
+				'width'     => Renderer_Support::integer_attribute( $attributes, 'width', 100, 10, 100 ),
+				'style'     => Renderer_Support::choice_attribute( $attributes, 'style', 'solid', array( 'solid', 'dashed', 'dotted' ) ),
 			)
 		);
 	}

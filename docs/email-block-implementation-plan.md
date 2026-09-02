@@ -32,6 +32,10 @@ The compiler foundation now replaces the prototype rendering paths:
 - HTML, plain text, diagnostics, versions, and a deterministic fingerprint are
   returned together;
 - the standalone editor registers only compiler-supported CampaignBridge blocks;
+- the standalone editor uses core-data entity editing, core undo/redo, and the
+  core block canvas instead of parallel parsing, history, and persistence code;
+- new templates remain drafts through autosave and start with one canonical
+  container;
 - block `render.php`, `Email_Generator`, `BlockProcessor`, `CssProcessor`, and
   `EmailStructure` have been removed;
 - golden artifacts and measured compiler performance are covered by tests.
@@ -137,21 +141,21 @@ There is no compatibility facade or parallel transport renderer.
 
 This is the exact compiler/editor allowlist after the clean cutover:
 
-| Block name                    | Role                   | Key constraints                             |
-| ----------------------------- | ---------------------- | ------------------------------------------- |
-| `campaignbridge/container`    | One document root      | Exactly one root; 320–900 px; locked        |
-| `campaignbridge/section`      | Full-width content row | Child of container; spacing/background      |
-| `campaignbridge/text`         | Rich email text        | Safe inline marks and HTTPS links only      |
-| `campaignbridge/heading`      | Heading                | Levels 1–4; portable typography             |
-| `campaignbridge/image`        | Email image            | HTTPS URL, dimensions, explicit alt choice  |
-| `campaignbridge/button`       | Bulletproof CTA        | HTTPS URL, alignment, Outlook VML fallback  |
-| `campaignbridge/divider`      | Horizontal divider     | Bounded width/thickness and style allowlist |
-| `campaignbridge/spacer`       | Vertical spacing       | Bounded 4–120 px height                     |
-| `campaignbridge/post-card`    | Immutable post binding | Child of container/section; snapshot needed |
-| `campaignbridge/post-image`   | Featured image binding | Child of post card; URL/dimensions/alt      |
-| `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4      |
-| `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words            |
-| `campaignbridge/post-cta`     | Post CTA binding       | Child of post card; HTTPS URL; VML fallback |
+| Block name                    | Role                   | Key constraints                              |
+| ----------------------------- | ---------------------- | -------------------------------------------- |
+| `campaignbridge/container`    | One document root      | Exactly one root; 320–900 px; locked         |
+| `campaignbridge/section`      | Full-width content row | Child of container; spacing/background       |
+| `campaignbridge/text`         | Rich email text        | Safe inline marks and HTTPS links only       |
+| `campaignbridge/heading`      | Heading                | Levels 1–4; portable typography              |
+| `campaignbridge/image`        | Email image            | HTTPS URL, dimensions, explicit alt choice   |
+| `campaignbridge/button`       | Bulletproof CTA        | HTTPS URL, alignment, Outlook VML fallback   |
+| `campaignbridge/divider`      | Horizontal divider     | Bounded width/thickness and style allowlist  |
+| `campaignbridge/spacer`       | Vertical spacing       | Bounded 4–120 px height                      |
+| `campaignbridge/post-card`    | Immutable post binding | Child of container/section; snapshot needed  |
+| `campaignbridge/post-image`   | Featured image binding | Child of post card; URL/dimensions/alt       |
+| `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4       |
+| `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words             |
+| `campaignbridge/post-cta`     | Post CTA binding       | Article, parent, archive, custom; HTTPS; VML |
 
 ### Planned v1 native blocks
 
@@ -367,7 +371,7 @@ Proposed success response:
   "text": "Weekly update...",
   "diagnostics": [],
   "assets": [],
-  "compiler_version": "2",
+  "compiler_version": "3",
   "profile_version": "universal@1",
   "fingerprint": "sha256:..."
 }

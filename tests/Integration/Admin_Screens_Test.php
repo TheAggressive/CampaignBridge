@@ -164,6 +164,106 @@ class Admin_Screens_Test extends Test_Case {
 	}
 
 	/**
+	 * Test that editor assets are available during the admin enqueue phase.
+	 */
+	public function test_editor_assets_are_enqueued_before_render(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
+			\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
+			'campaignbridge'
+		);
+		$enqueue  = $this->get_reflection_method( $registry, 'enqueue_screen_assets' );
+		$config   = require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/editor_config.php';
+		$enqueue->invoke( $registry, 'editor', 'single', $config );
+
+		$styles = wp_styles();
+		$script = wp_scripts();
+		$handle = 'cb-campaignbridge-block-editor-styles';
+
+		$this->assertArrayHasKey( $handle, $styles->registered );
+		$this->assertSame( 'dist/styles/editor/editor.asset.php', $config['assets']['asset_styles']['campaignbridge-block-editor-styles']['src'] );
+		$this->assertContains( 'wp-edit-post', $styles->registered[ $handle ]->deps );
+		$this->assertArrayHasKey( 'cb-campaignbridge-block-editor-script', $script->registered );
+	}
+
+	/**
+	 * Test that application screens suppress every classic admin notice channel.
+	 */
+	public function test_editor_request_suppresses_classic_admin_notice_hooks(): void {
+		global $wp_filter;
+
+		$notice_hooks = array( 'admin_notices', 'all_admin_notices', 'network_admin_notices', 'user_admin_notices' );
+		$originals    = array();
+		$callback     = static function (): void {};
+
+		foreach ( $notice_hooks as $notice_hook ) {
+			$originals[ $notice_hook ] = isset( $wp_filter[ $notice_hook ] ) ? clone $wp_filter[ $notice_hook ] : null;
+			add_action( $notice_hook, $callback );
+		}
+
+		try {
+			$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
+				\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
+				'campaignbridge'
+			);
+			$prepare  = $this->get_reflection_method( $registry, 'prepare_screen_request' );
+			$config   = require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/editor_config.php';
+
+			$prepare->invoke( $registry, null, $config['application_screen'] );
+
+			foreach ( $notice_hooks as $notice_hook ) {
+				$this->assertFalse( has_action( $notice_hook ) );
+			}
+		} finally {
+			foreach ( $originals as $notice_hook => $original ) {
+				if ( null === $original ) {
+					unset( $wp_filter[ $notice_hook ] );
+				} else {
+					$wp_filter[ $notice_hook ] = $original;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Test that the editor screen owns its application notice boundary.
+	 */
+	public function test_editor_screen_owns_notice_boundary(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
+			\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
+			'campaignbridge'
+		);
+		$render   = $this->get_reflection_method( $registry, 'render_screen' );
+		$notice   = static function ( string $screen_name ): void {
+			if ( 'editor' === $screen_name ) {
+				echo '<div id="campaignbridge-editor-test-notice"></div>';
+			}
+		};
+
+		add_action( 'campaignbridge_form_notices', $notice );
+		ob_start();
+		$render->invoke(
+			$registry,
+			'editor',
+			'single',
+			null,
+			array( 'page_title' => 'Editor' )
+		);
+		$output = (string) ob_get_clean();
+		remove_action( 'campaignbridge_form_notices', $notice );
+
+		$this->assertStringContainsString( 'campaignbridge-screen--editor', $output );
+		$this->assertStringContainsString( '<h1 class="screen-reader-text">Editor</h1>', $output );
+		$this->assertStringContainsString( 'cb-block-editor-root', $output );
+		$this->assertStringNotContainsString( 'campaignbridge-editor-test-notice', $output );
+	}
+
+	/**
 	 * Test that repeater test screen works with repeater fields.
 	 */
 	public function test_repeater_test_screen_works_with_repeaters(): void {

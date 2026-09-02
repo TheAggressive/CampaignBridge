@@ -44,6 +44,7 @@ interface ContainerBlockAttributes {
   padding?: NormalizedSpacing;
   backgroundColor?: string;
   textColor?: string;
+  lock?: { remove?: boolean; move?: boolean };
   [key: string]: any;
 }
 
@@ -86,10 +87,14 @@ export default function Edit({
 
   // Hard lock: cannot remove or move the root container
   useEffect(() => {
+    if (attributes.lock?.remove === true && attributes.lock.move === false) {
+      return;
+    }
+
     updateBlockAttributes(clientId, {
       lock: { remove: true, move: false },
     });
-  }, [clientId, updateBlockAttributes]);
+  }, [attributes.lock, clientId, updateBlockAttributes]);
 
   // Note: Background/Text colors come from core color support UI
   const blockProps = useBlockProps({

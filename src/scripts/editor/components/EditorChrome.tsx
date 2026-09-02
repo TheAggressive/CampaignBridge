@@ -1,5 +1,4 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
-import { Block } from '@wordpress/blocks';
 import {
   Popover,
   ResizableBox,
@@ -8,7 +7,7 @@ import {
 } from '@wordpress/components';
 import { EntityProvider } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { useCallback, useEffect } from '@wordpress/element';
+import { useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import {
   ComplementaryArea,
@@ -16,14 +15,14 @@ import {
   InterfaceSkeleton,
 } from '@wordpress/interface';
 import { ShortcutProvider } from '@wordpress/keyboard-shortcuts';
-import { useAutoSaveManager } from '../hooks/useAutoSaveManager';
-import { useEditorData } from '../hooks/useEditorData';
 import { LAYOUT_CONSTANTS, useEditorLayout } from '../hooks/useEditorLayout';
 import { useEditorSettings } from '../hooks/useEditorSettings';
 import { useNotices } from '../hooks/useNotices';
 import { SIDEBAR_CONSTANTS, useSidebarState } from '../hooks/useSidebarState';
+import { useTemplateEditor } from '../hooks/useTemplateEditor';
 import { blockPatternCategories, blockPatterns } from '../utils/blockPatterns';
 import Content from './Content';
+import EditorEffects from './EditorEffects';
 import { ErrorState, LoadingState } from './EditorStates';
 import Footer from './Footer';
 import Header from './Header';
@@ -46,59 +45,71 @@ const EMAIL_BLOCK_TYPES = [
   'campaignbridge/post-cta',
 ];
 
+interface EditorChromeProps {
+  list: Array<Record<string, unknown>>;
+  currentId: number;
+  loading: boolean;
+  // eslint-disable-next-line no-unused-vars -- Parameter name documents the callback contract.
+  onSelect: (id: number | null) => void;
+  onNew: () => void;
+  postId: number;
+  postType?: string;
+}
+
 /**
- * Editor Chrome Component (Refactored)
- *
- * Lightweight coordinator component that orchestrates the WordPress block editor experience
- * using custom hooks for state management. This component focuses solely on coordination
- * and rendering, with all complex logic extracted to specialized hooks.
- *
- * Features:
- * - Custom hooks for data loading, auto-save, and layout management
- * - Clean separation of concerns with dedicated state components
- * - Centralized constants for maintainability
- * - Simplified JSX with reusable components
- *
- * @example
- * ```jsx
- * <EditorChrome
- *   list={templates}
- *   currentId={1}
- *   loading={false}
- *   onSelect={onSelect}
- *   onNew={onNew}
- *   postId={1}
- *   postType="post"
- * />
- * ```
+ * Provide the current template entity before any child binds to entity props.
  */
 export default function EditorChrome({
+  postId,
+  postType = 'post',
+  ...props
+}: EditorChromeProps): JSX.Element {
+  return (
+    <EntityProvider kind='postType' type={postType} id={postId}>
+      <EditorChromeContent postId={postId} postType={postType} {...props} />
+    </EntityProvider>
+  );
+}
+
+/**
+ * Compose WordPress's public standalone block-editor primitives around the
+ * CampaignBridge email block grammar.
+ */
+function EditorChromeContent({
   list,
   currentId,
   loading,
   onSelect,
   onNew,
   postId,
-  onBlocksChange = () => {},
   postType = 'post',
-}) {
-  // Use custom hooks to manage complex state
-  const { ready, blocks, setBlocks } = useEditorData(postId, postType);
-
+}: EditorChromeProps): JSX.Element {
   const { success, error: errorNotice } = useNotices();
+  const handleSaveSuccess = useCallback(
+    () => success(__('Template saved.', 'campaignbridge')),
+    [success]
+  );
+  const {
+    blocks,
+    hasEdits,
+    isResolving,
+    loadError,
+    onChange,
+    onInput,
+    record,
+    saveNow,
+    saveStatus,
+  } = useTemplateEditor({
+    postId,
+    postType,
+    onSave: handleSaveSuccess,
+    onError: errorNotice,
+  });
   const {
     settings: editorSettings,
     error: editorSettingsError,
     loading: editorSettingsLoading,
-  } = useEditorSettings(postType);
-
-  const { save } = useAutoSaveManager(
-    postId,
-    onBlocksChange,
-    success,
-    errorNotice
-  );
-
+  } = useEditorSettings(postType, postId);
   const {
     skeletonClassName,
     sidebarActiveTab,
@@ -112,57 +123,38 @@ export default function EditorChrome({
   const isFullscreen = useSelect(
     select =>
       (select('core/preferences') as any).get(
-        SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE,
-        'isFullscreen'
+        SIDEBAR_CONSTANTS.PREFERENCES.SCOPE,
+        SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE
       ) as boolean,
     []
   );
 
-  // Get sidebar states using the dedicated hook for consistent state management
-  // This replaces manual useSelect calls and ensures proper state restoration from preferences
-  const { isPrimaryOpen, isSecondaryOpen, togglePrimary, toggleSecondary } =
-    useSidebarState(
-      SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
-      SIDEBAR_CONSTANTS.SCOPES.SECONDARY
-    );
-
-  // Apply CSS classes for sidebar state - much simpler than JS manipulation
-  const sidebarClasses = [
-    'cb-editor',
-    !isPrimaryOpen && '',
-    !isSecondaryOpen && '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  // Unified update handler using custom hook
-  const handleBlocksUpdate = useCallback(
-    (next: Block[]) => {
-      setBlocks(next);
-      if (typeof save.schedule === 'function') {
-        save.schedule(next);
-      } else {
-        save(next);
-      }
-    },
-    [save, setBlocks]
+  const {
+    isPrimaryOpen,
+    isSecondaryOpen,
+    openPrimary,
+    togglePrimary,
+    toggleSecondary,
+  } = useSidebarState(
+    SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+    SIDEBAR_CONSTANTS.SCOPES.SECONDARY
   );
+  const handleBlockSelected = useCallback(() => {
+    setSidebarActiveTab(SIDEBAR_CONSTANTS.TABS.INSPECTOR);
+    openPrimary();
+  }, [openPrimary, setSidebarActiveTab]);
 
-  // Flush pending save on navigation/unload
-  useEffect(() => {
-    const beforeUnload = () => {
-      if (typeof save.flush === 'function') {
-        save.flush();
-      }
-    };
-    window.addEventListener('beforeunload', beforeUnload);
-    return () => window.removeEventListener('beforeunload', beforeUnload);
-  }, [save]);
-
-  // Early returns for loading and error states
-  if (!ready) {
+  if (isResolving) {
     return (
       <LoadingState message={__('Initializing editor…', 'campaignbridge')} />
+    );
+  }
+
+  if (loadError || !record) {
+    return (
+      <ErrorState
+        message={__('Unable to load this email template.', 'campaignbridge')}
+      />
     );
   }
 
@@ -182,20 +174,20 @@ export default function EditorChrome({
     );
   }
 
-  // Merge editor settings with patterns
   const mergedEditorSettings = {
     ...editorSettings,
     allowedBlockTypes: EMAIL_BLOCK_TYPES,
     __experimentalBlockPatterns: blockPatterns,
     __experimentalBlockPatternCategories: blockPatternCategories,
   };
+  const editorStyles = Array.isArray(editorSettings.styles)
+    ? (editorSettings.styles as Array<Record<string, unknown>>)
+    : [];
 
   return (
     <ShortcutProvider>
       <SlotFillProvider>
         <FullscreenMode isActive={isFullscreen} />
-
-        {/* Primary sidebar with tabs */}
         <ComplementaryArea
           {...primarySidebarProps}
           header={
@@ -214,7 +206,6 @@ export default function EditorChrome({
           </div>
         </ComplementaryArea>
 
-        {/* Secondary sidebar (list view) */}
         <ResizableBox
           size={{ width: 165 }}
           minWidth={165}
@@ -228,38 +219,42 @@ export default function EditorChrome({
           </ComplementaryArea>
         </ResizableBox>
 
-        {/* Block editor with merged settings */}
-        <EntityProvider kind='postType' type={postType} id={postId}>
-          <BlockEditorProvider
-            value={blocks}
-            onInput={handleBlocksUpdate}
-            onChange={handleBlocksUpdate}
-            settings={mergedEditorSettings}
-          >
-            <InterfaceSkeleton
-              className={`${skeletonClassName} ${sidebarClasses}`}
-              header={
-                <Header
-                  list={list}
-                  currentId={currentId}
-                  loading={loading}
-                  onSelect={onSelect}
-                  onNew={onNew}
-                  isPrimaryOpen={isPrimaryOpen}
-                  isSecondaryOpen={isSecondaryOpen}
-                  togglePrimary={togglePrimary}
-                  toggleSecondary={toggleSecondary}
-                />
-              }
-              content={<Content />}
-              sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
-              secondarySidebar={
-                <ComplementaryArea.Slot {...secondarySidebarProps} />
-              }
-              footer={<Footer />}
-            />
-          </BlockEditorProvider>
-        </EntityProvider>
+        <BlockEditorProvider
+          value={blocks}
+          onInput={onInput}
+          onChange={onChange}
+          settings={mergedEditorSettings}
+        >
+          <EditorEffects
+            saveStatus={saveStatus}
+            onBlockSelected={handleBlockSelected}
+          />
+          <InterfaceSkeleton
+            className={skeletonClassName}
+            header={
+              <Header
+                list={list}
+                currentId={currentId}
+                loading={loading}
+                onSelect={onSelect}
+                onNew={onNew}
+                isPrimaryOpen={isPrimaryOpen}
+                isSecondaryOpen={isSecondaryOpen}
+                togglePrimary={togglePrimary}
+                toggleSecondary={toggleSecondary}
+                hasEdits={hasEdits}
+                onSave={saveNow}
+                saveStatus={saveStatus}
+              />
+            }
+            content={<Content onSave={saveNow} styles={editorStyles} />}
+            sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
+            secondarySidebar={
+              <ComplementaryArea.Slot {...secondarySidebarProps} />
+            }
+            footer={<Footer />}
+          />
+        </BlockEditorProvider>
 
         <Popover.Slot />
         <div className={LAYOUT_CONSTANTS.CSS_CLASSES.EDITOR_SNACKBAR}>

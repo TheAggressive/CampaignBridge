@@ -101,6 +101,56 @@ final class Native_Email_Blocks_Test extends TestCase {
 		self::assertSame( 'button.url.invalid', $result->diagnostics()[0]->code() );
 	}
 
+	public function test_rejects_out_of_range_width_instead_of_clamping_it(): void {
+		$document = $this->document();
+
+		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['width'] = 5000;
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertSame( 'blocks[0].innerBlocks[0].innerBlocks[2].attrs.width', $result->diagnostics()[0]->path() );
+		self::assertSame( '', $result->html() );
+		self::assertSame( array(), $result->assets() );
+	}
+
+	public function test_rejects_invalid_alignment_instead_of_substituting_a_default(): void {
+		$document = $this->document();
+
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['align'] = 'diagonal';
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertSame( 'blocks[0].innerBlocks[0].innerBlocks[1].attrs.align', $result->diagnostics()[0]->path() );
+	}
+
+	public function test_rejects_invalid_color_instead_of_substituting_a_default(): void {
+		$document = $this->document();
+
+		$document[0]['innerBlocks'][0]['innerBlocks'][5]['attrs']['color'] = 'red';
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertSame( 'blocks[0].innerBlocks[0].innerBlocks[5].attrs.color', $result->diagnostics()[0]->path() );
+	}
+
+	public function test_rejects_partial_spacing_instead_of_filling_missing_sides(): void {
+		$document = $this->document();
+
+		$document[0]['innerBlocks'][0]['attrs']['padding'] = array( 'top' => 24 );
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertSame( 'blocks[0].innerBlocks[0].attrs.padding', $result->diagnostics()[0]->path() );
+	}
+
 	public function test_rejects_native_leaf_outside_section(): void {
 		$document = array(
 			array(

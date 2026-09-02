@@ -65,7 +65,7 @@ class Screen_Registry {
 
 		foreach ( scandir( $this->screens_path ) as $item ) {
 			// Skip special files.
-			if ( '.' === $item || '..' === $item || strpos( $item, '_' ) === 0 || strpos( $item, '.' ) === 0 ) {
+			if ( '.' === $item || '..' === $item || strpos( $item, '_' ) === 0 || strpos( $item, '.' ) === 0 || str_ends_with( $item, '_config.php' ) ) {
 				continue;
 			}
 
@@ -91,11 +91,14 @@ class Screen_Registry {
 		$screen_name = pathinfo( $filename, PATHINFO_FILENAME );
 		$slug        = $this->generate_slug( $screen_name );
 
-		// Load optional config (future: could support dashboard_config.php).
-		$config = array();
+		// Load optional screen configuration before registering enqueue hooks.
+		$config_file = $this->screens_path . $screen_name . '_config.php';
+		$config      = file_exists( $config_file ) ? require $config_file : array();
 
 		// Auto-discover controller.
-		$config['controller'] = $this->discover_controller( $screen_name );
+		if ( ! isset( $config['controller'] ) ) {
+			$config['controller'] = $this->discover_controller( $screen_name );
+		}
 
 		// Merge with defaults.
 		$config = array_merge(
@@ -176,10 +179,8 @@ class Screen_Registry {
 		// Hook: on page load (for form handling).
 		\add_action(
 			"load-{$hook}",
-			function () use ( $controller ) {
-				if ( $controller && method_exists( $controller, 'handle_request' ) ) {
-					$controller->handle_request();
-				}
+			function () use ( $controller, $config ) {
+				$this->prepare_screen_request( $controller, ! empty( $config['application_screen'] ) );
 			}
 		);
 
@@ -195,6 +196,29 @@ class Screen_Registry {
 	}
 
 	/**
+	 * Prepare a registered screen request before WordPress renders the admin header.
+	 *
+	 * @param mixed $controller         The screen controller instance.
+	 * @param bool  $application_screen Whether the screen owns its complete notice UI.
+	 * @return void
+	 */
+	private function prepare_screen_request( $controller, bool $application_screen ): void {
+		if ( is_object( $controller ) && method_exists( $controller, 'handle_request' ) ) {
+			$controller->handle_request();
+		}
+
+		if ( ! $application_screen ) {
+			return;
+		}
+
+		// Application screens use the editor notice store. Classic callbacks render
+		// outside the InterfaceSkeleton and can obscure its fixed toolbar.
+		foreach ( array( 'admin_notices', 'all_admin_notices', 'network_admin_notices', 'user_admin_notices' ) as $notice_hook ) {
+			remove_all_actions( $notice_hook );
+		}
+	}
+
+	/**
 	 * Render screen (simple or tabbed).
 	 *
 	 * @param string               $screen_name The name of the screen.
@@ -204,8 +228,18 @@ class Screen_Registry {
 	 * @return void
 	 */
 	private function render_screen( string $screen_name, string $type, $controller, array $config ): void {
-		echo '<div class="wrap campaignbridge-screen">';
-		echo '<h1>' . esc_html( $config['page_title'] ) . '</h1>';
+		$screen_class = sanitize_html_class( $screen_name );
+		$title_class  = 'editor' === $screen_name ? 'screen-reader-text' : '';
+
+		printf(
+			'<div class="wrap campaignbridge-screen campaignbridge-screen--%s">',
+			esc_attr( $screen_class )
+		);
+		printf(
+			'<h1 class="%s">%s</h1>',
+			esc_attr( $title_class ),
+			esc_html( $config['page_title'] )
+		);
 
 		// Start output buffering to capture screen content and process forms.
 		ob_start();
@@ -223,22 +257,25 @@ class Screen_Registry {
 		// Get the buffered screen content.
 		$screen_content = ob_get_clean();
 
-		// Now that forms have been processed, display notices seamlessly right after the h1.
-		settings_errors( 'campaignbridge_form' );
+		// Application screens own their notice lifecycle. Rendering classic admin
+		// notices over a fixed InterfaceSkeleton obscures its editor toolbar.
+		if ( 'editor' !== $screen_name ) {
+			settings_errors( 'campaignbridge_form' );
+
+			// Screen processing is complete, so render its notices in WordPress's
+			// standard position before the form content.
+			\CampaignBridge\Notices::render();
+
+			// Fire custom hooks only for registered screens.
+			if ( $this->is_valid_screen_name( $screen_name ) ) {
+				do_action( 'campaignbridge_form_notices', $screen_name );
+			}
+		}
 
 		// Output the screen content. Since we control all HTML generation server-side and
 		// properly escape all dynamic values, we can safely output without additional sanitization.
 		// This avoids maintenance burden of maintaining HTML whitelists.
 		echo $screen_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-
-		// Render any notices that were added during screen processing (forms, etc.).
-		\CampaignBridge\Notices::render();
-
-		// Fire custom hook for individual screens to display notices after content processing.
-		// Security: Only allow hooks for valid screen names to prevent abuse.
-		if ( $this->is_valid_screen_name( $screen_name ) ) {
-			do_action( 'campaignbridge_form_notices', $screen_name );
-		}
 
 		echo '</div>';
 	}
@@ -713,8 +750,15 @@ class Screen_Registry {
 
 		// Built assets.
 		if ( isset( $config['assets']['asset_styles'] ) ) {
-			foreach ( $config['assets']['asset_styles'] as $handle => $asset_file ) {
-				$screen->asset_enqueue_style( $handle, $asset_file );
+			foreach ( $config['assets']['asset_styles'] as $handle => $asset_data ) {
+				if ( is_string( $asset_data ) ) {
+					$screen->asset_enqueue_style( $handle, $asset_data );
+				} elseif ( is_array( $asset_data ) ) {
+					$asset_file = $asset_data['src'] ?? $asset_data['path'] ?? '';
+					if ( $asset_file ) {
+						$screen->asset_enqueue_style( $handle, $asset_file, $asset_data['deps'] ?? array() );
+					}
+				}
 			}
 		}
 

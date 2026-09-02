@@ -32,9 +32,10 @@ interface Renderer_Interface {
 	public function allowed_children(): ?array;
 
 	/**
-	 * Normalize documented values and defaults.
+	 * Supply omitted defaults and perform lossless canonicalization.
 	 *
 	 * @param Block_Node $block Source block.
+	 * @throws Invalid_Block_Attribute When an explicit persisted value is malformed.
 	 */
 	public function normalize( Block_Node $block ): Block_Node;
 

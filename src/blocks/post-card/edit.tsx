@@ -1,12 +1,14 @@
 import apiFetch from '@wordpress/api-fetch';
 import {
-  InnerBlocks,
   InspectorControls,
   useBlockProps,
+  useInnerBlocksProps,
 } from '@wordpress/block-editor';
 import { PanelBody, SelectControl, Spinner } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+
+import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
 
 const ALLOWED_BLOCKS = [
   'campaignbridge/post-image',
@@ -30,17 +32,15 @@ interface PostCardAttributes {
 
 export default function Edit({ attributes, setAttributes }) {
   const { postType = 'post', postId = 0 } = attributes as PostCardAttributes;
-  const [postTypes, setPostTypes] = useState<ApiItem[]>([]);
+  const [postTypes, setPostTypes] = useState<PostTypeItem[]>([]);
   const [posts, setPosts] = useState<ApiItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
-    apiFetch<{ items?: ApiItem[] }>({
-      path: '/campaignbridge/v1/post-types',
-    })
-      .then(response => {
-        if (active) setPostTypes(response.items ?? []);
+    fetchPostTypes()
+      .then(items => {
+        if (active) setPostTypes(items);
       })
       .catch(() => {
         if (active) setPostTypes([]);
@@ -83,9 +83,17 @@ export default function Edit({ attributes, setAttributes }) {
         : item.title?.rendered || item.label || String(item.id),
     value: String(item.id),
   }));
+  const innerBlocksProps = useInnerBlocksProps(
+    useBlockProps({ className: 'cb-post-card' }),
+    {
+      allowedBlocks: ALLOWED_BLOCKS,
+      template: TEMPLATE as any,
+      templateLock: false,
+    }
+  );
 
   return (
-    <div {...useBlockProps({ className: 'cb-post-card' })}>
+    <>
       <InspectorControls>
         <PanelBody title={__('Post', 'campaignbridge')} initialOpen>
           <SelectControl
@@ -111,11 +119,7 @@ export default function Edit({ attributes, setAttributes }) {
           {loading && <Spinner />}
         </PanelBody>
       </InspectorControls>
-      <InnerBlocks
-        allowedBlocks={ALLOWED_BLOCKS}
-        template={TEMPLATE as any}
-        templateLock={false}
-      />
-    </div>
+      <div {...innerBlocksProps} />
+    </>
   );
 }

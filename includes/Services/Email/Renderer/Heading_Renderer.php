@@ -40,10 +40,10 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'content'   => is_string( $attributes['content'] ?? null ) ? $attributes['content'] : '',
-				'level'     => Renderer_Support::integer( $attributes['level'] ?? null, 2, 1, 4 ),
-				'align'     => Renderer_Support::alignment( $attributes['align'] ?? null ),
-				'textColor' => Renderer_Support::color( $attributes['textColor'] ?? null, '#111111' ),
+				'content'   => Renderer_Support::string_attribute( $attributes, 'content', '' ),
+				'level'     => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
+				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'textColor' => Renderer_Support::color_attribute( $attributes, 'textColor', '#111111' ),
 			)
 		);
 	}

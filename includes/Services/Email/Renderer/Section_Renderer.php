@@ -59,8 +59,8 @@ final class Section_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'padding'         => Renderer_Support::spacing( $attributes['padding'] ?? null, self::DEFAULT_PADDING ),
-				'backgroundColor' => Renderer_Support::color( $attributes['backgroundColor'] ?? null, '#ffffff' ),
+				'padding'         => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ),
+				'backgroundColor' => Renderer_Support::color_attribute( $attributes, 'backgroundColor', '#ffffff' ),
 			)
 		);
 	}
