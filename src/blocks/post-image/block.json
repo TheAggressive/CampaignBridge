@@ -8,7 +8,27 @@
   "icon": "format-image",
   "description": "Displays the snapshotted featured image for the selected post.",
   "parent": ["campaignbridge/post-card"],
-  "supports": { "html": false, "reusable": false },
+  "supports": {
+    "html": false,
+    "reusable": false
+  },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
-  "editorScript": "file:./index.js"
+  "editorScript": "file:./index.js",
+  "attributes": {
+    "width": {
+      "type": "number"
+    },
+    "align": {
+      "type": "string",
+      "default": "left"
+    },
+    "linkToPost": {
+      "type": "boolean",
+      "default": false
+    },
+    "decorative": {
+      "type": "boolean",
+      "default": false
+    }
+  }
 }

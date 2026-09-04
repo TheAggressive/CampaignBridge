@@ -27,7 +27,7 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'maxWords' );
+		return array( 'maxWords', 'align', 'textColor', 'fontSize' );
 	}
 
 	/**
@@ -40,7 +40,10 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'maxWords' => Renderer_Support::integer_attribute( $attributes, 'maxWords', 50, 10, 150 ),
+				'maxWords'  => Renderer_Support::integer_attribute( $attributes, 'maxWords', 50, 10, 150 ),
+				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'textColor' => Renderer_Support::color_attribute( $attributes, 'textColor', '#333333' ),
+				'fontSize'  => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 12, 24 ),
 			)
 		);
 	}
@@ -70,9 +73,15 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		return '<p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#333333">'
-			. Renderer_Support::html( $this->excerpt( $block, $context ) )
-			. '</p>';
+		$attributes = $block->attributes();
+
+		return sprintf(
+			'<p align="%1$s" style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:%2$dpx;line-height:1.6;text-align:%1$s;color:%3$s">%4$s</p>',
+			$attributes['align'],
+			$attributes['fontSize'],
+			$attributes['textColor'],
+			Renderer_Support::html( $this->excerpt( $block, $context ) )
+		);
 	}
 
 	/**

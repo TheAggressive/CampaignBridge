@@ -48,6 +48,10 @@ final class Column_Renderer extends Abstract_Renderer {
 			'campaignbridge/divider',
 			'campaignbridge/spacer',
 			'campaignbridge/post-card',
+			'campaignbridge/post-image',
+			'campaignbridge/post-title',
+			'campaignbridge/post-excerpt',
+			'campaignbridge/post-cta',
 		);
 	}
 

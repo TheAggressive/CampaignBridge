@@ -8,10 +8,32 @@
   "icon": "media-document",
   "description": "A container for displaying post content in email campaigns. Add post elements inside this card.",
   "parent": ["campaignbridge/container", "campaignbridge/section"],
-  "supports": { "html": false, "innerBlocks": true, "reusable": false },
+  "supports": {
+    "html": false,
+    "innerBlocks": true,
+    "reusable": false
+  },
   "attributes": {
-    "postType": { "type": "string", "default": "post" },
-    "postId": { "type": "number", "default": 0 }
+    "postType": {
+      "type": "string",
+      "default": "post"
+    },
+    "postId": {
+      "type": "number",
+      "default": 0
+    },
+    "padding": {
+      "type": "object",
+      "default": {
+        "top": 20,
+        "right": 0,
+        "bottom": 20,
+        "left": 0
+      }
+    },
+    "backgroundColor": {
+      "type": "string"
+    }
   },
   "providesContext": {
     "campaignbridge:postId": "postId",

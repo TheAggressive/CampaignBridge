@@ -20,6 +20,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Resolves a post snapshot and scopes it to semantic child blocks. */
 final class Post_Card_Renderer extends Abstract_Renderer {
+	private const DEFAULT_PADDING = array(
+		'top'    => 20,
+		'right'  => 0,
+		'bottom' => 20,
+		'left'   => 0,
+	);
+
 	/** {@inheritDoc} */
 	public function block_name(): string {
 		return 'campaignbridge/post-card';
@@ -27,12 +34,13 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'postId', 'postType' );
+		return array( 'postId', 'postType', 'padding', 'backgroundColor' );
 	}
 
 	/** {@inheritDoc} */
 	public function allowed_children(): array {
 		return array(
+			'campaignbridge/columns',
 			'campaignbridge/post-image',
 			'campaignbridge/post-title',
 			'campaignbridge/post-excerpt',
@@ -50,8 +58,13 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'postId'   => Renderer_Support::integer_attribute( $attributes, 'postId', 0, 0, PHP_INT_MAX ),
-				'postType' => Renderer_Support::string_attribute( $attributes, 'postType', 'post' ),
+				'postId'          => Renderer_Support::integer_attribute( $attributes, 'postId', 0, 0, PHP_INT_MAX ),
+				'postType'        => Renderer_Support::string_attribute( $attributes, 'postType', 'post' ),
+				'padding'         => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ),
+				// Omitted stays null so a card never paints over its section.
+				'backgroundColor' => array_key_exists( 'backgroundColor', $attributes )
+					? Renderer_Support::color_attribute( $attributes, 'backgroundColor', '#ffffff' )
+					: null,
 			)
 		);
 	}
@@ -131,7 +144,21 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse"><tr><td style="padding:20px 0">' . $children . '</td></tr></table>';
+		$attributes = $block->attributes();
+		$padding    = $attributes['padding'];
+		$background = null === $attributes['backgroundColor']
+			? ''
+			: sprintf( ';background-color:%s', $attributes['backgroundColor'] );
+
+		return sprintf(
+			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse%1$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',
+			$background,
+			$padding['top'],
+			$padding['right'],
+			$padding['bottom'],
+			$padding['left'],
+			$children
+		);
 	}
 
 	/**

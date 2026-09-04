@@ -3,19 +3,33 @@ import {
   useBlockProps,
   useInnerBlocksProps,
 } from '@wordpress/block-editor';
-import { PanelBody, SelectControl, Spinner } from '@wordpress/components';
+import {
+  BoxControl,
+  Button,
+  ColorPalette,
+  PanelBody,
+  SelectControl,
+  Spinner,
+} from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 import { fetchPosts, type PostItem } from '../shared/posts';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
+import {
+  normalizeSpacing,
+  toControlSpacing,
+  type NormalizedSpacing,
+} from '../shared/spacing';
 import { POST_CARD_ALLOWED_BLOCKS } from './config';
 import type { EmailBlockEditProps } from '../types';
 
 interface PostCardAttributes {
   postType: string;
   postId: number;
+  padding?: NormalizedSpacing;
+  backgroundColor?: string;
 }
 
 interface BlockEditorSelectors {
@@ -92,8 +106,18 @@ export default function Edit({
         : item.title?.rendered || item.label || String(item.id),
     value: String(item.id),
   }));
+  const {
+    padding = { top: 20, right: 0, bottom: 20, left: 0 },
+    backgroundColor,
+  } = attributes;
   const innerBlocksProps = useInnerBlocksProps(
-    useBlockProps({ className: 'cb-post-card' }),
+    useBlockProps({
+      className: 'cb-post-card',
+      style: {
+        padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
+        backgroundColor,
+      },
+    }),
     {
       allowedBlocks: POST_CARD_ALLOWED_BLOCKS,
       templateLock: false,
@@ -125,6 +149,32 @@ export default function Edit({
             __nextHasNoMarginBottom
           />
           {loading && <Spinner />}
+        </PanelBody>
+        <PanelBody
+          title={__('Card style', 'campaignbridge')}
+          initialOpen={false}
+        >
+          <BoxControl
+            label={__('Padding', 'campaignbridge')}
+            values={toControlSpacing(padding)}
+            onChange={values =>
+              setAttributes({ padding: normalizeSpacing(values) })
+            }
+            __next40pxDefaultSize
+          />
+          <p>{__('Background color', 'campaignbridge')}</p>
+          <ColorPalette
+            value={backgroundColor}
+            onChange={value => setAttributes({ backgroundColor: value })}
+          />
+          {backgroundColor !== undefined && (
+            <Button
+              variant='tertiary'
+              onClick={() => setAttributes({ backgroundColor: undefined })}
+            >
+              {__('Clear background', 'campaignbridge')}
+            </Button>
+          )}
         </PanelBody>
       </InspectorControls>
       <div {...innerBlocksProps} />

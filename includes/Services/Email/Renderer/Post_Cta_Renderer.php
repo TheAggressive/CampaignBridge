@@ -27,7 +27,7 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'destination', 'customUrl', 'backgroundColor', 'textColor' );
+		return array( 'label', 'destination', 'customUrl', 'backgroundColor', 'textColor', 'align', 'style', 'linkColor' );
 	}
 
 	/**
@@ -45,6 +45,11 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 				'customUrl'       => trim( Renderer_Support::string_attribute( $attributes, 'customUrl', '' ) ),
 				'backgroundColor' => Renderer_Support::color_attribute( $attributes, 'backgroundColor', '#111111' ),
 				'textColor'       => Renderer_Support::color_attribute( $attributes, 'textColor', '#ffffff' ),
+				'align'           => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'style'           => Renderer_Support::choice_attribute( $attributes, 'style', 'button', array( 'button', 'link' ) ),
+				// Link style needs its own colour: textColor defaults to white
+				// for legibility on the button fill and would vanish inline.
+				'linkColor'       => Renderer_Support::color_attribute( $attributes, 'linkColor', '#111111' ),
 			)
 		);
 	}
@@ -99,13 +104,26 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$attributes = $block->attributes();
+		$url        = (string) $this->destination_url( $block, $context );
+
+		if ( 'link' === $attributes['style'] ) {
+			// A text link sits in the surrounding copy and uses neither the
+			// button fill nor its on-fill text colour.
+			return sprintf(
+				'<p align="%1$s" style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;text-align:%1$s"><a href="%2$s" style="color:%3$s;text-decoration:underline">%4$s</a></p>',
+				$attributes['align'],
+				Renderer_Support::html( $url ),
+				$attributes['linkColor'],
+				Renderer_Support::html( $attributes['label'] )
+			);
+		}
 
 		return Button_Markup::html(
-			(string) $this->destination_url( $block, $context ),
+			$url,
 			$attributes['label'],
 			$attributes['backgroundColor'],
 			$attributes['textColor'],
-			null,
+			'left' === $attributes['align'] ? null : $attributes['align'],
 			160
 		);
 	}
