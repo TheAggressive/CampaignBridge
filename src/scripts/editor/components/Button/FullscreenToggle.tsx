@@ -41,7 +41,6 @@ export function FullscreenToggle(): JSX.Element {
     select =>
       (
         select('core/preferences') as {
-          // eslint-disable-next-line no-unused-vars -- Parameter names in type definition are for documentation.
           get: (scope: string, key: string) => unknown;
         }
       ).get(FULLSCREEN_SCOPE, FULLSCREEN_KEY) as boolean,

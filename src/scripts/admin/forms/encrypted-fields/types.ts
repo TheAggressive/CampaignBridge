@@ -64,8 +64,7 @@ export type ValidationResult = {
 // Event handler types
 export type EventHandlerMap = Record<
   string,
-  // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
-  (element: HTMLElement) => void | Promise<void>
+  (element: HTMLButtonElement) => void | Promise<void>
 >;
 
 // State management types
@@ -109,6 +108,5 @@ export const CLASSES = {
 
 // Global type declarations
 declare global {
-  // eslint-disable-next-line no-unused-vars -- Global type declaration for TypeScript, used at runtime.
   const campaignbridgeAdmin: CampaignBridgeAdmin;
 }

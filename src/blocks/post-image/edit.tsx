@@ -1,13 +1,39 @@
 import { useBlockProps } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
+import type { EmailBlockEditProps } from '../types';
 
-export default function Edit({ context = {} }) {
+interface PostRecord {
+  featured_media?: number;
+}
+
+interface MediaRecord {
+  source_url?: string;
+  media_details?: {
+    sizes?: { full?: { source_url?: string } };
+  };
+}
+
+interface CoreSelectors {
+  getEntityRecord: (
+    kind: string,
+    name: string,
+    id: number
+  ) => PostRecord | MediaRecord | null;
+}
+
+export default function Edit({
+  context = {},
+}: EmailBlockEditProps<Record<string, never>>): JSX.Element {
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
   const post = useSelect(
     select =>
       postId
-        ? (select('core') as any).getEntityRecord('postType', postType, postId)
+        ? ((select('core') as unknown as CoreSelectors).getEntityRecord(
+            'postType',
+            postType,
+            postId
+          ) as PostRecord | null)
         : null,
     [postType, postId]
   );
@@ -15,11 +41,11 @@ export default function Edit({ context = {} }) {
   const media = useSelect(
     select =>
       mediaId
-        ? (select('core') as any).getEntityRecord(
+        ? ((select('core') as unknown as CoreSelectors).getEntityRecord(
             'postType',
             'attachment',
             mediaId
-          )
+          ) as MediaRecord | null)
         : null,
     [mediaId]
   );

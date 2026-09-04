@@ -11,7 +11,11 @@ export class ConditionalAccessibility implements IConditionalAccessibility {
   private skipLinks: HTMLElement[] = [];
   private errorAnnouncer: HTMLElement | null = null;
   private keyboardNavigationEnabled: boolean = true;
-  private lastFocusedElement: HTMLElement | null = null;
+  private keyboardListenersBound: boolean = false;
+  private readonly keydownHandler = (event: KeyboardEvent): void =>
+    this.handleKeydown(event);
+  private readonly focusHandler = (event: FocusEvent): void =>
+    this.handleFocusIn(event);
 
   constructor(formId: string) {
     this.formId = formId;
@@ -110,10 +114,20 @@ export class ConditionalAccessibility implements IConditionalAccessibility {
    * Set up keyboard navigation
    */
   private setupKeyboardNavigation(): void {
-    if (!this.keyboardNavigationEnabled) return;
+    if (!this.keyboardNavigationEnabled || this.keyboardListenersBound) return;
 
-    document.addEventListener('keydown', this.handleKeydown.bind(this));
-    document.addEventListener('focusin', this.handleFocusIn.bind(this));
+    document.addEventListener('keydown', this.keydownHandler);
+    document.addEventListener('focusin', this.focusHandler);
+    this.keyboardListenersBound = true;
+  }
+
+  /** Remove keyboard listeners using the references used during registration. */
+  private removeKeyboardNavigation(): void {
+    if (!this.keyboardListenersBound) return;
+
+    document.removeEventListener('keydown', this.keydownHandler);
+    document.removeEventListener('focusin', this.focusHandler);
+    this.keyboardListenersBound = false;
   }
 
   /**
@@ -154,8 +168,6 @@ export class ConditionalAccessibility implements IConditionalAccessibility {
    */
   private handleFocusIn(event: FocusEvent): void {
     const target = event.target as HTMLElement;
-    this.lastFocusedElement = target;
-
     // Announce field focus for screen readers
     if (this.isFormElement(target)) {
       const fieldLabel = this.getFieldLabel(
@@ -420,9 +432,7 @@ export class ConditionalAccessibility implements IConditionalAccessibility {
     if (enabled) {
       this.setupKeyboardNavigation();
     } else {
-      // Remove event listeners (would need to store references to remove them)
-      document.removeEventListener('keydown', this.handleKeydown.bind(this));
-      document.removeEventListener('focusin', this.handleFocusIn.bind(this));
+      this.removeKeyboardNavigation();
     }
   }
 
@@ -596,41 +606,6 @@ export class ConditionalAccessibility implements IConditionalAccessibility {
   }
 
   /**
-   * Add required indicator for screen readers
-   */
-  private addRequiredIndicator(field: HTMLElement, fieldLabel: string): void {
-    // Check if indicator already exists
-    const existingIndicator = field.parentNode?.querySelector(
-      '.campaignbridge-field__required'
-    );
-    if (existingIndicator) {
-      return;
-    }
-
-    // Create screen reader indicator
-    const indicator = document.createElement('span');
-    indicator.className = 'campaignbridge-field__required screen-reader-text';
-    indicator.textContent = `${fieldLabel} is required`;
-
-    // Insert after the field
-    if (field.parentNode) {
-      field.parentNode.insertBefore(indicator, field.nextSibling);
-    }
-  }
-
-  /**
-   * Remove required indicator
-   */
-  private removeRequiredIndicator(field: HTMLElement): void {
-    const indicator = field.parentNode?.querySelector(
-      '.campaignbridge-field__required'
-    );
-    if (indicator) {
-      indicator.remove();
-    }
-  }
-
-  /**
    * Cleanup accessibility elements and live regions
    */
   public destroy(): void {
@@ -695,13 +670,9 @@ export class ConditionalAccessibility implements IConditionalAccessibility {
     }
 
     // Remove keyboard navigation event listeners
-    if (this.keyboardNavigationEnabled) {
-      document.removeEventListener('keydown', this.handleKeydown.bind(this));
-      document.removeEventListener('focusin', this.handleFocusIn.bind(this));
-    }
+    this.removeKeyboardNavigation();
 
     // Reset state
     this.keyboardNavigationEnabled = false;
-    this.lastFocusedElement = null;
   }
 }

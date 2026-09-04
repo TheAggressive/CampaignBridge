@@ -4,20 +4,41 @@ import { useSelect } from '@wordpress/data';
 import { createElement } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __ } from '@wordpress/i18n';
+import type { EmailBlockEditProps } from '../types';
+
+interface PostTitleAttributes {
+  level?: number;
+}
+
+interface CoreSelectors {
+  getEntityRecord: (
+    kind: string,
+    name: string,
+    id: number
+  ) => { title?: { rendered?: string } } | null;
+}
 
 const LEVELS = [1, 2, 3, 4].map(level => ({
   label: `H${level}`,
   value: String(level),
 }));
 
-export default function Edit({ attributes, setAttributes, context = {} }) {
+export default function Edit({
+  attributes,
+  setAttributes,
+  context = {},
+}: EmailBlockEditProps<PostTitleAttributes>): JSX.Element {
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
   const level = Number(attributes.level) || 2;
   const post = useSelect(
     select =>
       postId
-        ? (select('core') as any).getEntityRecord('postType', postType, postId)
+        ? (select('core') as unknown as CoreSelectors).getEntityRecord(
+            'postType',
+            postType,
+            postId
+          )
         : null,
     [postType, postId]
   );

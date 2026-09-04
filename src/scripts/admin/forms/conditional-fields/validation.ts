@@ -7,7 +7,7 @@ export interface ValidationRule {
   minLength?: number;
   maxLength?: number;
   pattern?: RegExp;
-  // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
   customValidator?: (value: unknown) => boolean;
   errorMessage?: string;
 }

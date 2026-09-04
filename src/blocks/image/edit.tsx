@@ -12,6 +12,16 @@ import {
   ToggleControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import type { EmailBlockEditProps } from '../types';
+
+interface ImageAttributes {
+  url?: string;
+  alt?: string;
+  decorative?: boolean;
+  width?: number;
+  height?: number;
+  linkUrl?: string;
+}
 
 interface SelectedMedia {
   id: number;
@@ -21,7 +31,10 @@ interface SelectedMedia {
   width?: number;
 }
 
-export default function Edit({ attributes, setAttributes }) {
+export default function Edit({
+  attributes,
+  setAttributes,
+}: EmailBlockEditProps<ImageAttributes>): JSX.Element {
   const {
     url = '',
     alt = '',

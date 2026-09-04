@@ -8,9 +8,8 @@ export class ConditionalDataCollector {
   private validator: FormValidator;
 
   constructor(
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property.
     private form: HTMLFormElement,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property.
+
     private formId: string
   ) {
     this.validator = new FormValidator();

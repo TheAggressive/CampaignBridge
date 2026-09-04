@@ -89,7 +89,7 @@ class Screen_Registry {
 	 */
 	private function register_simple_screen( string $filename ): void {
 		$screen_name = pathinfo( $filename, PATHINFO_FILENAME );
-		$slug        = $this->generate_slug( $screen_name );
+		$slug        = Screen_Naming::slug( $screen_name );
 
 		// Load optional screen configuration before registering enqueue hooks.
 		$config_file = $this->screens_path . $screen_name . '_config.php';
@@ -103,8 +103,8 @@ class Screen_Registry {
 		// Merge with defaults.
 		$config = array_merge(
 			array(
-				'menu_title' => $this->generate_title( $screen_name ),
-				'page_title' => $this->generate_title( $screen_name ),
+				'menu_title' => Screen_Naming::title( $screen_name ),
+				'page_title' => Screen_Naming::title( $screen_name ),
 				'capability' => 'manage_options',
 			),
 			$config
@@ -120,7 +120,7 @@ class Screen_Registry {
 	 * @return void
 	 */
 	private function register_tabbed_screen( string $folder_name ): void {
-		$slug        = $this->generate_slug( $folder_name );
+		$slug        = Screen_Naming::slug( $folder_name );
 		$folder_path = $this->screens_path . $folder_name;
 
 		// Check for optional _config.php.
@@ -135,8 +135,8 @@ class Screen_Registry {
 		// Merge with defaults.
 		$config = array_merge(
 			array(
-				'menu_title' => $this->generate_title( $folder_name ),
-				'page_title' => $this->generate_title( $folder_name ),
+				'menu_title' => Screen_Naming::title( $folder_name ),
+				'page_title' => Screen_Naming::title( $folder_name ),
 				'capability' => 'manage_options',
 			),
 			$config
@@ -537,8 +537,8 @@ class Screen_Registry {
 		// Start with auto-generated defaults.
 		$tab_info = array(
 			'name'       => $tab_name,
-			'title'      => $this->generate_title( $tab_name ),
-			'slug'       => $this->generate_slug( $tab_name ),
+			'title'      => Screen_Naming::title( $tab_name ),
+			'slug'       => Screen_Naming::slug( $tab_name ),
 			'file'       => $file_path,
 			'capability' => $config['capability'] ?? 'manage_options',
 			'order'      => 10,
@@ -785,25 +785,5 @@ class Screen_Registry {
 				$screen->asset_enqueue( $handle, $asset_file );
 			}
 		}
-	}
-
-	/**
-	 * Generate a URL-friendly slug from a name.
-	 *
-	 * @param string $name The name to convert to a slug.
-	 * @return string The generated slug.
-	 */
-	private function generate_slug( string $name ): string {
-		return strtolower( str_replace( array( '_', ' ' ), '-', $name ) );
-	}
-
-	/**
-	 * Generate a human-readable title from a name.
-	 *
-	 * @param string $name The name to convert to a title.
-	 * @return string The generated title.
-	 */
-	private function generate_title( string $name ): string {
-		return ucwords( str_replace( array( '_', '-' ), ' ', $name ) );
 	}
 }

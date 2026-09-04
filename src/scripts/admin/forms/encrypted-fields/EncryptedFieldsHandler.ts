@@ -138,7 +138,6 @@ export class EncryptedFieldsHandler {
         this.handleSuccessfulDecryption(
           elements,
           fieldId,
-          encryptedValue,
           response.data.decrypted
         );
       } else {
@@ -148,10 +147,10 @@ export class EncryptedFieldsHandler {
         );
       }
     } catch (error) {
-      this.logError('Decryption failed', { error: error.message, fieldId });
-      this.apiClient.showError(
-        (error as Error).message || 'Network error occurred'
-      );
+      const message =
+        error instanceof Error ? error.message : 'Network error occurred';
+      this.logError('Decryption failed', { error: message, fieldId });
+      this.apiClient.showError(message);
     } finally {
       this.uiManager.setButtonLoading(button, false);
     }
@@ -163,7 +162,6 @@ export class EncryptedFieldsHandler {
   private handleSuccessfulDecryption(
     elements: FieldElements,
     fieldId: string,
-    encryptedValue: string,
     decryptedValue: string
   ): void {
     // Store the decrypted value for canceling edit operations
@@ -340,10 +338,10 @@ export class EncryptedFieldsHandler {
         );
       }
     } catch (error) {
-      this.logError('Save failed', { error: error.message, fieldId });
-      this.apiClient.showError(
-        (error as Error).message || 'Network error occurred'
-      );
+      const message =
+        error instanceof Error ? error.message : 'Network error occurred';
+      this.logError('Save failed', { error: message, fieldId });
+      this.apiClient.showError(message);
     } finally {
       this.uiManager.setButtonLoading(button, false);
     }
@@ -361,10 +359,12 @@ export class EncryptedFieldsHandler {
     const elements = this.fieldElements.getFieldElements(field);
     const fieldId = field.dataset.fieldId;
 
-    // Clear any pending reveal timeout
-    if (fieldId) {
-      this.stateManager.clearTimeout(fieldId);
+    if (!fieldId) {
+      return;
     }
+
+    // Clear any pending reveal timeout
+    this.stateManager.clearTimeout(fieldId);
 
     // Return to secure masked state
     this.uiManager.cancelEditMode(
@@ -373,9 +373,7 @@ export class EncryptedFieldsHandler {
     );
 
     // Clear revealed value for security
-    if (fieldId) {
-      this.stateManager.clearRevealedValue(fieldId);
-    }
+    this.stateManager.clearRevealedValue(fieldId);
 
     // Announce state change
     this.accessibility.announceToScreenReader(

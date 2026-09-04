@@ -266,22 +266,6 @@ export class LRUCache<T> {
     const total = this.stats.hits + this.stats.misses;
     this.stats.hitRate = total > 0 ? this.stats.hits / total : 0;
   }
-
-  /**
-   * Compress large objects (future enhancement)
-   */
-  private compress(value: T): string {
-    // Placeholder for compression - could use LZ-string or similar
-    return JSON.stringify(value);
-  }
-
-  /**
-   * Decompress objects (future enhancement)
-   */
-  private decompress(compressed: string): T {
-    // Placeholder for decompression
-    return JSON.parse(compressed);
-  }
 }
 
 /**
@@ -289,8 +273,6 @@ export class LRUCache<T> {
  */
 export class ConditionalCache {
   private cache: LRUCache<any>;
-  private readonly enableCompression: boolean;
-  private readonly compressionThreshold: number;
 
   constructor() {
     const config = configManager.getConfig();
@@ -298,8 +280,6 @@ export class ConditionalCache {
       config.cacheSize * 1024, // Convert KB to bytes
       config.cacheSize // Max items = cache size setting
     );
-    this.enableCompression = false; // Can be enabled in config later
-    this.compressionThreshold = 1024; // Compress objects > 1KB
   }
 
   /**

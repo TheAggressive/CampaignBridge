@@ -1,10 +1,13 @@
-// @ts-ignore
-// eslint-disable-next-line @wordpress/no-unsafe-wp-apis
-import { __experimentalListView as ListView } from '@wordpress/block-editor';
 import { Button } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import { closeSmall } from '@wordpress/icons';
+import ListView from '../../wordpress/ListView';
+
+interface BlockEditorSelectors {
+  getSelectedBlockClientId: () => string | null;
+  getBlocks: () => unknown[];
+}
 
 interface SecondarySidebarProps {
   onClose: () => void;
@@ -33,8 +36,10 @@ export default function SecondarySidebar({
   onClose,
 }: SecondarySidebarProps): JSX.Element {
   // Get the selected block and root blocks count for display
-  const { selectedBlockClientId, blockCount } = useSelect((select: any) => {
-    const blockEditorSelect = select('core/block-editor');
+  const { selectedBlockClientId, blockCount } = useSelect(select => {
+    const blockEditorSelect = select(
+      'core/block-editor'
+    ) as unknown as BlockEditorSelectors;
     return {
       selectedBlockClientId: blockEditorSelect.getSelectedBlockClientId(),
       blockCount: blockEditorSelect.getBlocks().length,

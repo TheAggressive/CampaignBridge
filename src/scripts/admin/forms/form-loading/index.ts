@@ -411,7 +411,6 @@ export function initFormLoading(config: FormLoadingConfig): void {
 
 // Auto-initialize if config is available on window
 declare global {
-  // eslint-disable-next-line no-unused-vars -- Global type declaration for TypeScript, used at runtime.
   interface Window {
     campaignbridgeFormLoading?: FormLoadingConfig;
   }

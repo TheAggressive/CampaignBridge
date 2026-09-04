@@ -12,7 +12,6 @@ import { setParamAndReload } from '../utils/url';
  */
 export function useNewTemplate(
   options: {
-    // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
     onError?: (message: string) => void;
   } = {}
 ) {
@@ -42,11 +41,13 @@ export function useNewTemplate(
         ((created as { id?: number | string })?.id || created) as
           string | number
       );
-    } catch (e) {
+    } catch (error) {
       setBusy(false);
       setOpen(false);
       if (typeof onError === 'function') {
-        onError(e?.message || 'Failed to create template.');
+        onError(
+          error instanceof Error ? error.message : 'Failed to create template.'
+        );
       }
     }
   }, [title, onError]);

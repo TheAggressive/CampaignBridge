@@ -11,6 +11,7 @@ namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\REST\Editor_Settings_Routes;
+use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Tests\Helpers\Test_Case;
 use WP_Block_Editor_Context;
 use WP_REST_Request;
@@ -78,6 +79,33 @@ class Editor_Settings_Routes_Test extends Test_Case {
 		$this->assertIsString( $data['__unstableResolvedAssets']['styles'] );
 		$this->assertIsString( $data['__unstableResolvedAssets']['scripts'] );
 		$this->assertStringContainsString( 'wp-edit-blocks', $data['__unstableResolvedAssets']['styles'] );
+	}
+
+	/**
+	 * The compiler registry is the authority for blocks offered by the editor.
+	 */
+	public function test_settings_include_compiler_supported_block_types(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$template_id = $this->create_test_post(
+			array(
+				'post_type'   => Post_Type_Email_Template::POST_TYPE,
+				'post_status' => 'draft',
+			)
+		);
+
+		$request = new WP_REST_Request( 'GET', '/campaignbridge/v1/editor-settings' );
+		$request->set_param( 'post_type', Post_Type_Email_Template::POST_TYPE );
+		$request->set_param( 'post_id', $template_id );
+		$response = ( new Editor_Settings_Routes() )->handle_request( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertIsArray( $data );
+		$this->assertSame(
+			Compiler_Factory::registry()->block_names(),
+			$data['allowedBlockTypes']
+		);
 	}
 
 	/**

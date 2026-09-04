@@ -10,11 +10,38 @@ import { decodeEntities } from '@wordpress/html-entities';
  * @param {number}      params.maxWords - Maximum number of words to show
  * @return {string} The excerpt preview text
  */
-export function useExcerptPreview({ postId, postType, maxWords }) {
+interface ExcerptPreviewOptions {
+  postId: number;
+  postType: string;
+  maxWords: number;
+}
+
+interface PostPreviewRecord {
+  excerpt?: { rendered?: string };
+  content?: { rendered?: string };
+}
+
+interface CoreSelectors {
+  getEntityRecord: (
+    kind: string,
+    name: string,
+    id: number
+  ) => PostPreviewRecord | null;
+}
+
+export function useExcerptPreview({
+  postId,
+  postType,
+  maxWords,
+}: ExcerptPreviewOptions): string {
   const post = useSelect(
     s =>
       postId
-        ? (s('core') as any).getEntityRecord('postType', postType, postId)
+        ? (s('core') as unknown as CoreSelectors).getEntityRecord(
+            'postType',
+            postType,
+            postId
+          )
         : null,
     [postId, postType]
   );

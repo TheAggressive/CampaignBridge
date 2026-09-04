@@ -1,8 +1,16 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { PanelBody, RangeControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import type { EmailBlockEditProps } from '../types';
 
-export default function Edit({ attributes, setAttributes }) {
+interface SpacerAttributes {
+  height?: number;
+}
+
+export default function Edit({
+  attributes,
+  setAttributes,
+}: EmailBlockEditProps<SpacerAttributes>): JSX.Element {
   const height = Number(attributes.height) || 24;
 
   return (

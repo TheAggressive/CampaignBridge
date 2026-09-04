@@ -11,25 +11,29 @@ type ApiFetch = <T>(
   }
 ) => Promise<T>;
 
-async function createTemplate(page: Page): Promise<number> {
+async function createTemplate(page: Page, content?: string): Promise<number> {
   await page.goto(EDITOR_PATH);
   await expect(page.locator('.cb-editor__header')).toBeVisible();
 
-  return page.evaluate(async title => {
-    const apiFetch = (
-      globalThis as typeof globalThis & { wp: { apiFetch: ApiFetch } }
-    ).wp.apiFetch;
-    const result = await apiFetch<{ id: number }>({
-      path: '/wp/v2/cb_templates',
-      method: 'POST',
-      data: {
-        title,
-        status: 'draft',
-      },
-    });
+  return page.evaluate(
+    async template => {
+      const apiFetch = (
+        globalThis as typeof globalThis & { wp: { apiFetch: ApiFetch } }
+      ).wp.apiFetch;
+      const result = await apiFetch<{ id: number }>({
+        path: '/wp/v2/cb_templates',
+        method: 'POST',
+        data: {
+          title: template.title,
+          status: 'draft',
+          ...(template.content ? { content: template.content } : {}),
+        },
+      });
 
-    return result.id;
-  }, `CampaignBridge E2E ${Date.now()}`);
+      return result.id;
+    },
+    { title: `CampaignBridge E2E ${Date.now()}`, content }
+  );
 }
 
 async function deleteTemplate(page: Page, templateId: number): Promise<void> {
@@ -159,6 +163,68 @@ test('uses the core secondary-sidebar transition for list view', async ({
     expect(closingWidth).toBeGreaterThan(0);
     expect(closingWidth).toBeLessThan(finalWidth);
     await expect(sidebar).toHaveCount(0);
+  } finally {
+    await deleteTemplate(page, templateId);
+  }
+});
+
+test('keeps the iframe as the sole canvas scroller for tall selected content', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 700 });
+  const spacers = Array.from(
+    { length: 24 },
+    () => '<!-- wp:campaignbridge/spacer {"height":48} /-->'
+  ).join('\n');
+  const content = [
+    '<!-- wp:campaignbridge/container {"lock":{"remove":true,"move":false}} -->',
+    '<!-- wp:campaignbridge/section -->',
+    spacers,
+    '<!-- /wp:campaignbridge/section -->',
+    '<!-- /wp:campaignbridge/container -->',
+  ].join('\n');
+  const templateId = await createTemplate(page, content);
+
+  try {
+    await openTemplate(page, templateId);
+    const frame = page.frameLocator('iframe[name="editor-canvas"]');
+    await frame.locator('[data-type="campaignbridge/spacer"]').last().waitFor();
+    await frame.locator('[data-type="campaignbridge/spacer"]').first().click();
+    await frame.locator('body').evaluate(() => {
+      globalThis.scrollTo(0, globalThis.document.documentElement.scrollHeight);
+    });
+
+    const scrolling = await page.evaluate(() => {
+      const canvas =
+        globalThis.document.querySelector<HTMLElement>('.cb-editor__canvas');
+      const content = globalThis.document.querySelector<HTMLElement>(
+        '.interface-interface-skeleton__content'
+      );
+
+      return {
+        canvasOverflowY: canvas
+          ? globalThis.getComputedStyle(canvas).overflowY
+          : '',
+        contentClientHeight: content?.clientHeight ?? 0,
+        contentScrollHeight: content?.scrollHeight ?? 0,
+        contentScrollTop: content?.scrollTop ?? 0,
+      };
+    });
+    const iframeScrolling = await frame.locator('body').evaluate(() => ({
+      clientHeight: globalThis.document.documentElement.clientHeight,
+      scrollHeight: globalThis.document.documentElement.scrollHeight,
+      scrollTop: globalThis.scrollY,
+    }));
+
+    expect(iframeScrolling.scrollHeight).toBeGreaterThan(
+      iframeScrolling.clientHeight
+    );
+    expect(scrolling.contentScrollHeight).toBeLessThanOrEqual(
+      scrolling.contentClientHeight
+    );
+    expect(iframeScrolling.scrollTop).toBeGreaterThan(0);
+    expect(scrolling.contentScrollTop).toBe(0);
+    expect(scrolling.canvasOverflowY).toBe('hidden');
   } finally {
     await deleteTemplate(page, templateId);
   }

@@ -71,20 +71,6 @@ export class FormValidator {
   }
 
   /**
-   * Clear DOM cache for a field (useful when DOM changes)
-   */
-  private clearDomCache(fieldId?: string): void {
-    if (fieldId) {
-      this.domCache.delete(fieldId);
-      // Also clear related caches
-      this.validationCache.delete(fieldId);
-    } else {
-      this.domCache.clear();
-      this.validationCache.clear();
-    }
-  }
-
-  /**
    * Get cached validation result if still valid
    */
   private getCachedValidation(
@@ -866,7 +852,7 @@ export class FormValidator {
     this.setupFieldTypeAccessibility(field);
 
     // Add keyboard navigation support
-    this.setupKeyboardNavigation(field, fieldContainer);
+    this.setupKeyboardNavigation(field);
   }
 
   /**
@@ -936,13 +922,10 @@ export class FormValidator {
   /**
    * Setup keyboard navigation support
    */
-  private setupKeyboardNavigation(
-    field: HTMLInputElement,
-    // eslint-disable-next-line no-unused-vars -- Reserved for future container-based navigation enhancements.
-    container: Element
-  ): void {
+  private setupKeyboardNavigation(field: HTMLInputElement): void {
     // Add keyboard event listeners for better navigation
-    const keyboardHandler = (event: KeyboardEvent) => {
+    const keyboardHandler: EventListener = rawEvent => {
+      const event = rawEvent as KeyboardEvent;
       // Enhanced Enter key handling for form submission
       if (event.key === 'Enter' && !event.shiftKey) {
         // Find the next logical field or submit button

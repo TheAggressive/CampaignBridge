@@ -64,7 +64,7 @@ export class ConditionalEngine {
     this.config.validationRules = this.getValidationRulesFromForm();
 
     // Initialize focused responsibility managers
-    this.stateManager = new ConditionalStateManager(this.config);
+    this.stateManager = new ConditionalStateManager();
     this.apiService = new ConditionalApiService(this.config);
     this.uiManager = new ConditionalUIManager(this.form, this.config);
     this.accessibility = new ConditionalAccessibility(formId);
@@ -72,7 +72,7 @@ export class ConditionalEngine {
     // Initialize debounced evaluator
     this.debouncedEvaluate = this.debounce(() => {
       this.evaluateConditions();
-    }, this.config.debounceDelay);
+    }, this.config.debounceDelay ?? 100);
 
     this.init();
   }
@@ -370,11 +370,10 @@ export class ConditionalEngine {
   /**
    * Utility method to debounce function calls
    */
-  // eslint-disable-next-line no-unused-vars -- Parameter name in generic type constraint is for documentation.
+
   private debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
-    // eslint-disable-next-line no-unused-vars -- Parameter name in return type is for documentation.
   ): (...args: Parameters<T>) => void {
     let timeout: number;
     return (...args: Parameters<T>) => {

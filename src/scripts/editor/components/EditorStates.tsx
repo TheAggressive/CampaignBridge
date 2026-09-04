@@ -14,7 +14,11 @@ export const EDITOR_STATES_CONSTANTS = {
  * @param {string} message - Loading message to display
  * @returns {JSX.Element} Loading state UI
  */
-export function LoadingState({ message }) {
+interface EditorStateProps {
+  message: string;
+}
+
+export function LoadingState({ message }: EditorStateProps): JSX.Element {
   return (
     <div className={EDITOR_STATES_CONSTANTS.CSS_CLASSES.EDITOR_LOADING}>
       <p>{message}</p>
@@ -30,7 +34,7 @@ export function LoadingState({ message }) {
  * @param {string} message - Error message to display
  * @returns {JSX.Element} Error state UI
  */
-export function ErrorState({ message }) {
+export function ErrorState({ message }: EditorStateProps): JSX.Element {
   return (
     <div className={EDITOR_STATES_CONSTANTS.CSS_CLASSES.EDITOR_ERROR}>
       <p>{message}</p>

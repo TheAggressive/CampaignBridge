@@ -25,15 +25,14 @@ export const BLOCK_CONFIG = {
  */
 declare const require: {
   context: (
-    // eslint-disable-next-line no-unused-vars -- Parameter name required for TypeScript function signature.
     directory: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name required for TypeScript function signature.
+
     useSubdirectories: boolean,
-    // eslint-disable-next-line no-unused-vars -- Parameter name required for TypeScript function signature.
+
     regExp: RegExp
   ) => {
     keys: () => string[];
-    // eslint-disable-next-line no-unused-vars -- Parameter name required for TypeScript function signature.
+
     (id: string): any;
   };
 };

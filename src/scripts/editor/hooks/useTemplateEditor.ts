@@ -6,6 +6,7 @@ import {
 } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useCallback, useEffect, useRef } from '@wordpress/element';
+import type { SaveStatus } from '../types';
 
 const AUTOSAVE_DELAY_MS = 2000;
 
@@ -18,9 +19,8 @@ interface TemplateRecord {
 
 type ChangeOptions = Record<string, unknown>;
 type ChangeHandler = (
-  // eslint-disable-next-line no-unused-vars -- Parameter names document the core callback contract.
   blocks: Block[],
-  // eslint-disable-next-line no-unused-vars -- Parameter names document the core callback contract.
+
   options?: ChangeOptions
 ) => void;
 
@@ -28,7 +28,7 @@ interface UseTemplateEditorOptions {
   postId: number;
   postType: string;
   onSave?: () => void;
-  // eslint-disable-next-line no-unused-vars -- Parameter name documents the callback contract.
+
   onError?: (message: string) => void;
 }
 
@@ -140,7 +140,7 @@ export function useTemplateEditor({
     }
   }, [hasEdits, isSaving, save]);
 
-  const saveStatus = saveError
+  const saveStatus: SaveStatus = saveError
     ? 'error'
     : isSaving
       ? 'saving'

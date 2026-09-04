@@ -7,68 +7,13 @@
 
 namespace CampaignBridge\Tests\Unit\Forms;
 
-use CampaignBridge\Admin\Core\Forms\Form_Handler;
-use CampaignBridge\Admin\Core\Forms\Form_Config;
-use CampaignBridge\Admin\Core\Forms\Form_Security;
-use CampaignBridge\Admin\Core\Forms\Form_Validator;
-use CampaignBridge\Admin\Core\Forms\Form_Notice_Handler;
 use CampaignBridge\Admin\Core\Forms\Form_Conditional_Manager;
+use CampaignBridge\Admin\Core\Forms\Form_Conditional_Submission_Guard;
 
 /**
  * Form Handler Test Class
  */
 class Form_Handler_Test extends \WP_UnitTestCase {
-	/**
-	 * Form config instance
-	 *
-	 * @var Form_Config
-	 */
-	private Form_Config $config;
-
-	/**
-	 * Form security instance
-	 *
-	 * @var Form_Security
-	 */
-	private Form_Security $security;
-
-	/**
-	 * Form validator instance
-	 *
-	 * @var Form_Validator
-	 */
-	private Form_Validator $validator;
-
-	/**
-	 * Notice handler instance
-	 *
-	 * @var Form_Notice_Handler
-	 */
-	private Form_Notice_Handler $notice_handler;
-
-	/**
-	 * Test admin user ID for cleanup
-	 *
-	 * @var int
-	 */
-	private int $test_admin_user_id;
-
-	/**
-	 * Set up test environment
-	 */
-	public function setUp(): void {
-		parent::setUp();
-
-		// Set up admin user for testing (Form_Security requires admin privileges)
-		$this->test_admin_user_id = $this->factory->user->create(['role' => 'administrator']);
-		wp_set_current_user($this->test_admin_user_id);
-
-		$this->config         = new Form_Config();
-		$this->security       = new Form_Security( 'test_form' );
-		$this->validator      = new Form_Validator();
-		$this->notice_handler = new Form_Notice_Handler();
-	}
-
 	/**
 	 * Test conditional data filtering
 	 */
@@ -81,22 +26,13 @@ class Form_Handler_Test extends \WP_UnitTestCase {
 				}
 			);
 
-		$handler = new Form_Handler(
-			null, // form
-			$this->config,
-			array( // fields
-				'visible_field' => array( 'type' => 'text' ),
-				'hidden_field'  => array(
-					'type'        => 'text',
-					'conditional' => array( 'type' => 'show_when' ),
-				),
+		$fields = array(
+			'visible_field' => array( 'type' => 'text' ),
+			'hidden_field'  => array(
+				'type'        => 'text',
+				'conditional' => array( 'type' => 'show_when' ),
 			),
-			$this->security,
-			$this->validator,
-			$this->notice_handler
 		);
-
-		$handler->set_conditional_manager( $conditional_manager );
 
 		$form_data = array(
 			'visible_field' => 'visible value',
@@ -104,7 +40,7 @@ class Form_Handler_Test extends \WP_UnitTestCase {
 			'regular_field' => 'regular value',
 		);
 
-		$filtered_data = $this->invoke_private_method( $handler, 'filter_conditional_field_data', array( $form_data ) );
+		$filtered_data = Form_Conditional_Submission_Guard::filter( $conditional_manager, $fields, $form_data );
 
 		// Hidden field data should be filtered out
 		$this->assertArrayHasKey( 'visible_field', $filtered_data );
@@ -114,25 +50,4 @@ class Form_Handler_Test extends \WP_UnitTestCase {
 		$this->assertEquals( 'regular value', $filtered_data['regular_field'] );
 	}
 
-	/**
-	 * Clean up after each test
-	 */
-	public function tearDown(): void {
-		parent::tearDown();
-
-		// Clean up test admin user
-		if (isset($this->test_admin_user_id)) {
-			wp_delete_user($this->test_admin_user_id);
-		}
-	}
-
-	/**
-	 * Helper method to invoke private methods
-	 */
-	private function invoke_private_method( $object, $method_name, $args = array() ) {
-		$reflection = new \ReflectionClass( $object );
-		$method     = $reflection->getMethod( $method_name );
-
-		return $method->invokeArgs( $object, $args );
-	}
 }

@@ -200,7 +200,7 @@ export class ConditionalUIManager {
    */
   private showField(
     field: HTMLElement,
-    conditionalWrapper?: HTMLElement
+    conditionalWrapper?: HTMLElement | null
   ): void {
     const targetElement =
       conditionalWrapper ||
@@ -246,7 +246,7 @@ export class ConditionalUIManager {
    */
   private hideField(
     field: HTMLElement,
-    conditionalWrapper?: HTMLElement
+    conditionalWrapper?: HTMLElement | null
   ): void {
     const targetElement =
       conditionalWrapper ||

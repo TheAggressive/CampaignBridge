@@ -20,7 +20,7 @@ export function useNotices() {
   } = useDispatch(noticesStore);
 
   const success = useCallback(
-    (message, options = {}) => {
+    (message: string, options: Record<string, unknown> = {}) => {
       createSuccessNotice(message, {
         type: 'snackbar',
         isDismissible: true,
@@ -31,7 +31,7 @@ export function useNotices() {
   );
 
   const error = useCallback(
-    (message, options = {}) => {
+    (message: string, options: Record<string, unknown> = {}) => {
       createErrorNotice(message, {
         type: 'snackbar',
         isDismissible: true,
@@ -42,7 +42,7 @@ export function useNotices() {
   );
 
   const info = useCallback(
-    (message, options = {}) => {
+    (message: string, options: Record<string, unknown> = {}) => {
       createInfoNotice(message, {
         type: 'snackbar',
         isDismissible: true,
@@ -53,7 +53,7 @@ export function useNotices() {
   );
 
   const warning = useCallback(
-    (message, options = {}) => {
+    (message: string, options: Record<string, unknown> = {}) => {
       createWarningNotice(message, {
         type: 'snackbar',
         isDismissible: true,

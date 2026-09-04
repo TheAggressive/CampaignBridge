@@ -2,8 +2,17 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { PanelBody, RangeControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useExcerptPreview } from './hooks/useExcerptPreview';
+import type { EmailBlockEditProps } from '../types';
 
-export default function Edit({ attributes, setAttributes, context = {} }) {
+interface PostExcerptAttributes {
+  maxWords?: number;
+}
+
+export default function Edit({
+  attributes,
+  setAttributes,
+  context = {},
+}: EmailBlockEditProps<PostExcerptAttributes>): JSX.Element {
   const maxWords = Number(attributes.maxWords) || 50;
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';

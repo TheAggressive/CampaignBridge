@@ -9,7 +9,7 @@ import {
 } from '@wordpress/keyboard-shortcuts';
 
 interface EditorKeyboardShortcutsProps {
-  onSave: () => void | Promise<void>;
+  onSave: () => void | Promise<unknown>;
 }
 
 function usesNativeTextHistory(event: KeyboardEvent): boolean {

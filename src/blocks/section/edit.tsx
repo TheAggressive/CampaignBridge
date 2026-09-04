@@ -10,6 +10,7 @@ import {
   toControlSpacing,
   type NormalizedSpacing,
 } from '../shared/spacing';
+import type { EmailBlockEditProps } from '../types';
 
 const ALLOWED_BLOCKS = [
   'campaignbridge/text',
@@ -26,11 +27,14 @@ interface SectionAttributes {
   backgroundColor?: string;
 }
 
-export default function Edit({ attributes, setAttributes }) {
+export default function Edit({
+  attributes,
+  setAttributes,
+}: EmailBlockEditProps<SectionAttributes>): JSX.Element {
   const {
     padding = { top: 24, right: 0, bottom: 24, left: 0 },
     backgroundColor = '#ffffff',
-  } = attributes as SectionAttributes;
+  } = attributes;
   const blockProps = useBlockProps({
     style: {
       padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,

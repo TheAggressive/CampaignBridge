@@ -153,6 +153,9 @@ export default [
       'react-hooks': reactHooksPlugin,
     },
     rules: {
+      // The base rule reports TypeScript signature parameters as unused.
+      // TypeScript performs the authoritative unused-symbol checks below.
+      'no-unused-vars': 'off',
       // Disable ESLint rules that conflict with Prettier
       indent: 'off',
       'no-tabs': 'off',

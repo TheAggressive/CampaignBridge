@@ -40,12 +40,11 @@
 import { useSelect } from '@wordpress/data';
 
 type WordPressBlockEditor = {
-  // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
   getBlock?: (clientId: string) => { innerBlocks?: unknown[] } | undefined;
   getBlocks?: () => unknown[];
-  // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
   isBlockSelected?: (clientId: string) => boolean;
-  // eslint-disable-next-line no-unused-vars -- Parameter names in type definition are for documentation.
+
   hasSelectedInnerBlock?: (clientId: string, deep?: boolean) => boolean;
   getSelectedBlockClientId?: () => string | null;
 };

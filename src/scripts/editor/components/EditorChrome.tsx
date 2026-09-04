@@ -1,4 +1,5 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
+import { getBlockType } from '@wordpress/blocks';
 import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
 import { EntityProvider } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
@@ -23,28 +24,13 @@ import Footer from './Footer';
 import Header from './Header';
 import SecondarySidebar from './Sidebars/SecondarySidebar';
 import { SidebarContent, SidebarHeader } from './Sidebars/Sidebar';
-
-const EMAIL_BLOCK_TYPES = [
-  'campaignbridge/container',
-  'campaignbridge/section',
-  'campaignbridge/text',
-  'campaignbridge/heading',
-  'campaignbridge/image',
-  'campaignbridge/button',
-  'campaignbridge/divider',
-  'campaignbridge/spacer',
-  'campaignbridge/post-card',
-  'campaignbridge/post-image',
-  'campaignbridge/post-title',
-  'campaignbridge/post-excerpt',
-  'campaignbridge/post-cta',
-];
+import type { TemplateSummary } from '../types';
 
 interface EditorChromeProps {
-  list: Array<Record<string, unknown>>;
+  list: TemplateSummary[];
   currentId: number;
   loading: boolean;
-  // eslint-disable-next-line no-unused-vars -- Parameter name documents the callback contract.
+
   onSelect: (id: number | null) => void;
   onNew: () => void;
   postId: number;
@@ -105,18 +91,13 @@ function EditorChromeContent({
     error: editorSettingsError,
     loading: editorSettingsLoading,
   } = useEditorSettings(postType, postId);
-  const {
-    skeletonClassName,
-    sidebarActiveTab,
-    setSidebarActiveTab,
-    primarySidebarProps,
-    snackbarNotices,
-    removeNotice,
-  } = useEditorLayout();
-
   const isFullscreen = useSelect(
     select =>
-      (select('core/preferences') as any).get(
+      (
+        select('core/preferences') as unknown as {
+          get: (scope: string, key: string) => unknown;
+        }
+      ).get(
         SIDEBAR_CONSTANTS.PREFERENCES.SCOPE,
         SIDEBAR_CONSTANTS.PREFERENCES.FULLSCREEN_MODE
       ) as boolean,
@@ -129,10 +110,15 @@ function EditorChromeContent({
     openPrimary,
     togglePrimary,
     toggleSecondary,
-  } = useSidebarState(
-    SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
-    SIDEBAR_CONSTANTS.SCOPES.SECONDARY
-  );
+  } = useSidebarState();
+  const {
+    skeletonClassName,
+    sidebarActiveTab,
+    setSidebarActiveTab,
+    primarySidebarProps,
+    snackbarNotices,
+    removeNotice,
+  } = useEditorLayout({ isPrimaryOpen, isSecondaryOpen });
   const handleBlockSelected = useCallback(() => {
     setSidebarActiveTab(SIDEBAR_CONSTANTS.TABS.INSPECTOR);
     openPrimary();
@@ -182,14 +168,30 @@ function EditorChromeContent({
     );
   }
 
+  const allowedBlockTypes = editorSettings.allowedBlockTypes || [];
+  const missingBlockTypes = allowedBlockTypes.filter(
+    blockName => !getBlockType(blockName)
+  );
+
+  if (allowedBlockTypes.length === 0 || missingBlockTypes.length > 0) {
+    return (
+      <ErrorState
+        message={__(
+          'The compiler-supported email block catalog could not be loaded.',
+          'campaignbridge'
+        )}
+      />
+    );
+  }
+
   const mergedEditorSettings = {
     ...editorSettings,
-    allowedBlockTypes: EMAIL_BLOCK_TYPES,
+    allowedBlockTypes,
     __experimentalBlockPatterns: blockPatterns,
     __experimentalBlockPatternCategories: blockPatternCategories,
   };
   const editorStyles = Array.isArray(editorSettings.styles)
-    ? (editorSettings.styles as Array<Record<string, unknown>>)
+    ? editorSettings.styles
     : [];
 
   return (

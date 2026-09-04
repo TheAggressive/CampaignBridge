@@ -11,21 +11,31 @@ import { __ } from '@wordpress/i18n';
 import { fetchPosts, type PostItem } from '../shared/posts';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
 import { POST_CARD_ALLOWED_BLOCKS } from './config';
+import type { EmailBlockEditProps } from '../types';
 
 interface PostCardAttributes {
   postType: string;
   postId: number;
 }
 
-export default function Edit({ attributes, setAttributes, clientId }) {
-  const { postType = 'post', postId = 0 } = attributes as PostCardAttributes;
+interface BlockEditorSelectors {
+  getSelectedBlockClientId: () => string | null;
+}
+
+export default function Edit({
+  attributes,
+  setAttributes,
+  clientId,
+}: EmailBlockEditProps<PostCardAttributes>): JSX.Element {
+  const { postType = 'post', postId = 0 } = attributes;
   const [postTypes, setPostTypes] = useState<PostTypeItem[]>([]);
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
   const isSelected = useSelect(
     select =>
-      (select('core/block-editor') as any).getSelectedBlockClientId() ===
-      clientId,
+      (
+        select('core/block-editor') as unknown as BlockEditorSelectors
+      ).getSelectedBlockClientId() === clientId,
     [clientId]
   );
 

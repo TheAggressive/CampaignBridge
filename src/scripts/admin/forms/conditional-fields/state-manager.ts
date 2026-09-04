@@ -4,21 +4,10 @@
 
 import { conditionalCache } from './cache';
 import { ConditionalDataCollector } from './data-collector';
-import type {
-  ConditionalApiResponse,
-  ConditionalEngineConfig,
-  FormData,
-} from './types';
+import type { ConditionalApiResponse, FormData } from './types';
 
 export class ConditionalStateManager {
   private lastFormData: FormData | null = null;
-
-  constructor(
-    // eslint-disable-next-line no-unused-vars -- Reserved for future use; cache is now managed by ConditionalCache singleton.
-    config: ConditionalEngineConfig
-  ) {
-    // Cache is now managed by ConditionalCache singleton.
-  }
 
   /**
    * Get cached evaluation result for form data
