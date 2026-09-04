@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/preheader",
+  "title": "Email Preheader",
+  "category": "campaignbridge-email",
+  "icon": "visibility",
+  "description": "Sets the hidden preview text inboxes show beside the subject line.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/container"],
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "multiple": false
+  },
+  "attributes": {
+    "content": { "type": "string", "default": "" }
+  },
+  "editorScript": "file:./index.js"
+}

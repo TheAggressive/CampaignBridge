@@ -26,7 +26,7 @@ they do not introduce another rendering path.
 
 The compiler foundation now replaces the prototype rendering paths:
 
-- one explicit renderer registry owns the thirteen currently supported blocks;
+- one explicit renderer registry owns the seventeen currently supported blocks;
 - compilation fails closed for unknown attributes, blocks, nesting, missing
   snapshots, depth, and block-count violations;
 - HTML, plain text, diagnostics, versions, and a deterministic fingerprint are
@@ -156,19 +156,25 @@ This is the exact compiler/editor allowlist after the clean cutover:
 | `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4       |
 | `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words             |
 | `campaignbridge/post-cta`     | Post CTA binding       | Article, parent, archive, custom; HTTPS; VML |
+| `campaignbridge/preheader`    | Hidden inbox preview   | First child of container; at most one; 1-150 characters |
+| `campaignbridge/columns`      | One or two columns     | Child of section; 1-2 columns; gap 0-48 px   |
+| `campaignbridge/column`       | Column content         | Child of columns; width 20-80% totalling 100 |
+| `campaignbridge/compliance-footer` | Sender and unsubscribe controls | Last child of container; at most one; address required |
 
 ### Planned v1 native blocks
 
-These are the next production grammar additions. Later parity, commerce,
-transactional, and engagement candidates remain in the planning-only
-[`email-block-catalog.md`](email-block-catalog.md).
+The v1 grammar is complete. Later parity, commerce, transactional, and
+engagement candidates remain in the planning-only
+[`email-block-catalog.md`](email-block-catalog.md) and are not scheduled here.
 
-| Block name                         | Role                     | Key constraints                      |
-| ---------------------------------- | ------------------------ | ------------------------------------ |
-| `campaignbridge/preheader`         | Hidden inbox preview     | At most one; plain constrained text  |
-| `campaignbridge/columns`           | One or two columns       | Child of section; stacks predictably |
-| `campaignbridge/column`            | Column content           | Child of columns only                |
-| `campaignbridge/compliance-footer` | Required footer controls | Address and unsubscribe tokens       |
+Two-column rows stack through the document media query rather than a ghost-table
+hybrid. Clients that ignore `@media` — desktop Outlook in particular — keep the
+columns side by side at their declared widths, which is the intended desktop
+result. That degradation is deliberate and is covered by the golden fixture.
+
+The unsubscribe destination is never a block attribute. The compliance footer
+reads it from immutable render context metadata, so provider merge syntax stays
+outside the block grammar and outside the renderer.
 
 ### Unsupported blocks
 
@@ -406,7 +412,9 @@ Keep each pull request independently releasable:
 1. Content snapshot resolver, draft semantics, and approval persistence.
 2. Preview REST controller and compiler response schema.
 3. Sandboxed preview UI and HTML download.
-4. Preheader, columns, compliance footer, and compatibility/compliance validators.
+4. Compatibility validators and the remaining compliance checks. The preheader,
+   columns, and compliance-footer blocks are implemented; the footer already
+   fails closed on a missing address or unsubscribe URL.
 5. Approval and provider workflow cutover.
 
 Do not combine provider sending changes with the compiler kernel or block

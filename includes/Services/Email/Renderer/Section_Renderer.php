@@ -39,6 +39,7 @@ final class Section_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function allowed_children(): array {
 		return array(
+			'campaignbridge/columns',
 			'campaignbridge/text',
 			'campaignbridge/heading',
 			'campaignbridge/image',
