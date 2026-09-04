@@ -86,6 +86,56 @@ class _Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 	}
 
 	/**
+	 * A real call between two unrelated strings must still be reported.
+	 *
+	 * This is a regression guard: the literal check once matched from the
+	 * quote closing one string to the quote opening the next, hiding any
+	 * violation that sat between them.
+	 */
+	public function test_a_call_between_two_strings_is_not_mistaken_for_a_literal(): void {
+		$hidden = "'alt' => get_post_meta( \$id, '_wp_attachment_image_alt', true ),";
+
+		self::assertFalse(
+			$this->call_is_inside_string_literal( $hidden, 'get_post_meta' ),
+			'A genuine call surrounded by unrelated strings must be reported.'
+		);
+	}
+
+	/**
+	 * A name that only appears inside quotes is still not a call.
+	 */
+	public function test_a_quoted_function_name_is_still_treated_as_a_literal(): void {
+		self::assertTrue(
+			$this->call_is_inside_string_literal( "\$message = 'call get_option( ) yourself';", 'get_option' )
+		);
+		self::assertTrue(
+			$this->call_is_inside_string_literal( "'get_post_meta' => 'documented',", 'get_post_meta' )
+		);
+	}
+
+	/**
+	 * An ordinary direct call is reported.
+	 */
+	public function test_a_plain_call_is_reported(): void {
+		self::assertFalse(
+			$this->call_is_inside_string_literal( "\$value = get_option( 'thing' );", 'get_option' )
+		);
+	}
+
+	/**
+	 * Reach the private literal check without widening its visibility.
+	 *
+	 * @param string $line     Source line under test.
+	 * @param string $function Forbidden function name.
+	 */
+	private function call_is_inside_string_literal( string $line, string $function ): bool {
+		// Private methods are reflection-invokable without setAccessible on
+		// PHP 8.1 and later, where that call is a deprecated no-op.
+		return (bool) ( new \ReflectionMethod( $this, 'isInsideStringLiteral' ) )
+			->invoke( $this, $line, $function );
+	}
+
+	/**
 	 * Test that Storage wrapper methods exist for all WordPress storage functions.
 	 */
 	public function test_storage_wrapper_methods_exist(): void {
@@ -407,16 +457,19 @@ class _Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 	 * @return bool True if the function appears to be inside quotes.
 	 */
 	private function isInsideStringLiteral( string $line, string $function ): bool {
-		// Simple check: if the function appears between quotes
-		if ( preg_match( '/[\'"][^\'"]*' . preg_quote( $function, '/' ) . '[^\'"]*[\'"]/', $line ) ) {
-			return true;
-		}
+		// Blank the contents of every quoted span, then look for the call
+		// again. If it no longer appears, the only occurrence was inside a
+		// string literal.
+		//
+		// The previous heuristic asked whether the name appeared anywhere
+		// between a pair of quotes, which is true of any line where a real
+		// call happens to sit between two unrelated strings. A featured-image
+		// read written as
+		//     'alt' => get_post_meta( $id, '_wp_attachment_image_alt', true )
+		// matched from the quote after `alt` to the quote before `_wp` and was
+		// skipped, so a genuine violation went unreported.
+		$stripped = preg_replace( '/\'[^\']*\'|"[^"]*"/', "''", $line );
 
-		// Check for function in array keys/values that might be strings
-		if ( preg_match( '/[\'"]' . preg_quote( $function, '/' ) . '[\'"]\s*=>/', $line ) ) {
-			return true;
-		}
-
-		return false;
+		return 1 !== preg_match( '/\b' . preg_quote( $function, '/' ) . '\s*\(/', (string) $stripped );
 	}
 }
