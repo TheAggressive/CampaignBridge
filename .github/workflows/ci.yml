@@ -63,7 +63,7 @@ jobs:
         run: |
           composer validate --strict --no-check-publish
           composer audit --locked --no-interaction
-          pnpm audit --prod --audit-level moderate
+          node bin/ci/npm-audit.mjs
           pnpm lint:files
 
       - name: Check PHP
