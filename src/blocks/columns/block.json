@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/columns",
+  "title": "Email Columns",
+  "category": "campaignbridge-email",
+  "icon": "columns",
+  "description": "Places one or two columns side by side, stacking on narrow screens.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section"],
+  "supports": {
+    "html": false,
+    "innerBlocks": true,
+    "reusable": false
+  },
+  "attributes": {
+    "gap": { "type": "number", "default": 24 },
+    "verticalAlign": { "type": "string", "default": "top" }
+  },
+  "editorScript": "file:./index.js"
+}

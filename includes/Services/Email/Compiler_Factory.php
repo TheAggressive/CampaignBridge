@@ -11,6 +11,9 @@ namespace CampaignBridge\Services\Email;
 
 use CampaignBridge\Domain\Email\Renderer_Registry;
 use CampaignBridge\Services\Email\Renderer\Button_Renderer;
+use CampaignBridge\Services\Email\Renderer\Column_Renderer;
+use CampaignBridge\Services\Email\Renderer\Columns_Renderer;
+use CampaignBridge\Services\Email\Renderer\Compliance_Footer_Renderer;
 use CampaignBridge\Services\Email\Renderer\Container_Renderer;
 use CampaignBridge\Services\Email\Renderer\Divider_Renderer;
 use CampaignBridge\Services\Email\Renderer\Heading_Renderer;
@@ -20,6 +23,7 @@ use CampaignBridge\Services\Email\Renderer\Post_Cta_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Excerpt_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Image_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Title_Renderer;
+use CampaignBridge\Services\Email\Renderer\Preheader_Renderer;
 use CampaignBridge\Services\Email\Renderer\Section_Renderer;
 use CampaignBridge\Services\Email\Renderer\Spacer_Renderer;
 use CampaignBridge\Services\Email\Renderer\Text_Renderer;
@@ -46,7 +50,10 @@ final class Compiler_Factory {
 		return new Renderer_Registry(
 			array(
 				new Container_Renderer(),
+				new Preheader_Renderer(),
 				new Section_Renderer(),
+				new Columns_Renderer(),
+				new Column_Renderer(),
 				new Text_Renderer(),
 				new Heading_Renderer(),
 				new Image_Renderer(),
@@ -58,6 +65,7 @@ final class Compiler_Factory {
 				new Post_Excerpt_Renderer(),
 				new Post_Image_Renderer(),
 				new Post_Cta_Renderer(),
+				new Compliance_Footer_Renderer(),
 			)
 		);
 	}

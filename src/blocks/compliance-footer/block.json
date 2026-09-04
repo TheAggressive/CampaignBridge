@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/compliance-footer",
+  "title": "Email Compliance Footer",
+  "category": "campaignbridge-email",
+  "icon": "shield",
+  "description": "Shows the sender identity, postal address, and unsubscribe link required to send.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/container"],
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "multiple": false
+  },
+  "attributes": {
+    "businessName": { "type": "string", "default": "" },
+    "address": { "type": "string", "default": "" },
+    "unsubscribeLabel": { "type": "string", "default": "Unsubscribe" },
+    "padding": {
+      "type": "object",
+      "default": { "top": 24, "right": 0, "bottom": 24, "left": 0 }
+    },
+    "textColor": { "type": "string", "default": "#666666" }
+  },
+  "editorScript": "file:./index.js"
+}

@@ -27,6 +27,9 @@ class Block_Bootstrap_Test extends Test_Case {
 
 		$expected_blocks = array(
 			'campaignbridge/button',
+			'campaignbridge/column',
+			'campaignbridge/columns',
+			'campaignbridge/compliance-footer',
 			'campaignbridge/container',
 			'campaignbridge/divider',
 			'campaignbridge/heading',
@@ -36,16 +39,18 @@ class Block_Bootstrap_Test extends Test_Case {
 			'campaignbridge/post-excerpt',
 			'campaignbridge/post-image',
 			'campaignbridge/post-title',
+			'campaignbridge/preheader',
 			'campaignbridge/section',
 			'campaignbridge/spacer',
 			'campaignbridge/text',
 		);
 		$registry        = WP_Block_Type_Registry::get_instance();
 
-		foreach ( $expected_blocks as $block_name ) {
-			if ( $registry->is_registered( $block_name ) ) {
-				$registry->unregister( $block_name );
-			}
+		// Clear every plugin block, not just the asserted inventory: init()
+		// re-registers the whole build directory, and re-registering a block
+		// that is still present raises a doing-it-wrong notice.
+		foreach ( Blocks::get_registered_blocks() as $block_name ) {
+			$registry->unregister( $block_name );
 		}
 
 		Blocks::init();

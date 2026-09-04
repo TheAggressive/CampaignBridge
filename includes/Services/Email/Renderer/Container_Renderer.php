@@ -46,7 +46,12 @@ final class Container_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function allowed_children(): array {
-		return array( 'campaignbridge/section', 'campaignbridge/post-card' );
+		return array(
+			'campaignbridge/preheader',
+			'campaignbridge/section',
+			'campaignbridge/post-card',
+			'campaignbridge/compliance-footer',
+		);
 	}
 
 	/**
@@ -77,12 +82,67 @@ final class Container_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		if ( array() === $block->children() ) {
+		$children = $block->children();
+
+		if ( array() === $children ) {
 			return array(
 				Compile_Diagnostic::warning(
 					'container.empty',
 					$block->path(),
 					'The email container has no content.'
+				),
+			);
+		}
+
+		return array_merge(
+			$this->validate_singleton( $block, $children, 'campaignbridge/preheader', 0, 'preheader', 'first' ),
+			$this->validate_singleton( $block, $children, 'campaignbridge/compliance-footer', count( $children ) - 1, 'compliance_footer', 'last' )
+		);
+	}
+
+	/**
+	 * Require at most one document-level block, pinned to one position.
+	 *
+	 * Both blocks describe the document rather than a content row, so a second
+	 * copy or a mid-document placement is a source error rather than something
+	 * to silently reorder.
+	 *
+	 * @param Block_Node             $block    Normalized container.
+	 * @param array<int, Block_Node> $children Container children.
+	 * @param string                 $name     Block name that is limited.
+	 * @param int                    $expected Index the block must occupy.
+	 * @param string                 $code     Diagnostic code prefix.
+	 * @param string                 $position Human-readable expected position.
+	 * @return array<int, Compile_Diagnostic>
+	 */
+	private function validate_singleton( Block_Node $block, array $children, string $name, int $expected, string $code, string $position ): array {
+		$found = array();
+		foreach ( $children as $index => $child ) {
+			if ( $name === $child->name() ) {
+				$found[] = $index;
+			}
+		}
+
+		if ( array() === $found ) {
+			return array();
+		}
+
+		if ( 1 < count( $found ) ) {
+			return array(
+				Compile_Diagnostic::error(
+					$code . '.duplicated',
+					$block->path(),
+					sprintf( 'An email can contain only one %s block.', $name )
+				),
+			);
+		}
+
+		if ( $found[0] !== $expected ) {
+			return array(
+				Compile_Diagnostic::error(
+					$code . '.misplaced',
+					$children[ $found[0] ]->path(),
+					sprintf( 'The %1$s block must be the %2$s block in the email.', $name, $position )
 				),
 			);
 		}

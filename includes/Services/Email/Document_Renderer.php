@@ -38,7 +38,7 @@ final class Document_Renderer implements Document_Renderer_Interface {
 			. '<meta name="x-apple-disable-message-reformatting">' . "\n"
 			. '<title>' . $title . '</title>' . "\n"
 			. '<!--[if mso]><noscript><xml><o:OfficeDocumentSettings xmlns:o="urn:schemas-microsoft-com:office:office"><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->' . "\n"
-			. '<style>@media only screen and (max-width:620px){.cb-email-container{width:100%!important}.cb-email-cell{padding-left:16px!important;padding-right:16px!important}}</style>' . "\n"
+			. '<style>@media only screen and (max-width:620px){.cb-email-container{width:100%!important}.cb-email-cell{padding-left:16px!important;padding-right:16px!important}.cb-col{display:block!important;width:100%!important}}</style>' . "\n"
 			. '</head>' . "\n"
 			. '<body style="margin:0;padding:0;background-color:' . $background . ';-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">' . "\n"
 			. $body . "\n"

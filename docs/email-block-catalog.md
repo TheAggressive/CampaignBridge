@@ -39,20 +39,24 @@ following are the foundation for every later wave.
 | Proposed block                     | Classification | Purpose                                            | Status             |
 | ---------------------------------- | -------------- | -------------------------------------------------- | ------------------ |
 | `campaignbridge/container`         | Native block   | Locked email document root and width contract      | Compiler-supported |
-| `campaignbridge/preheader`         | Native block   | Hidden inbox preview and optional view-online link | v1 planned         |
+| `campaignbridge/preheader`         | Native block   | Hidden inbox preview text                          | Compiler-supported         |
 | `campaignbridge/section`           | Native block   | Full-width content row                             | Compiler-supported |
-| `campaignbridge/columns`           | Native block   | Portable one- or two-column layout                 | v1 planned         |
-| `campaignbridge/column`            | Native block   | Constrained child of columns                       | v1 planned         |
+| `campaignbridge/columns`           | Native block   | Portable one- or two-column layout                 | Compiler-supported         |
+| `campaignbridge/column`            | Native block   | Constrained child of columns                       | Compiler-supported         |
 | `campaignbridge/text`              | Native block   | Safe rich text and HTTPS links                     | Compiler-supported |
 | `campaignbridge/heading`           | Native block   | Portable heading levels and typography             | Compiler-supported |
 | `campaignbridge/image`             | Native block   | Sized, accessible, linked email image              | Compiler-supported |
 | `campaignbridge/button`            | Native block   | Bulletproof call to action                         | Compiler-supported |
 | `campaignbridge/divider`           | Native block   | Portable horizontal rule                           | Compiler-supported |
 | `campaignbridge/spacer`            | Native block   | Bounded vertical spacing                           | Compiler-supported |
-| `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls        | v1 planned         |
+| `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls        | Compiler-supported         |
 
 Ordered and unordered lists remain planned as a constrained capability of
 `campaignbridge/text` unless testing proves a separate semantic block is needed.
+
+The view-online link once grouped with the preheader is not implemented. It is a
+separate document-level concern with its own hosted-URL dependency, and the
+template already stores `campaignbridge_view_online_url` for it.
 
 ## Wave A — general builder parity
 
