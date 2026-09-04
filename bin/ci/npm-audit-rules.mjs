@@ -29,6 +29,7 @@ export const OUTCOMES = Object.freeze({
   CLEAN: 'clean',
   VULNERABLE: 'vulnerable',
   UNAVAILABLE: 'unavailable',
+  EMPTY: 'empty',
 });
 
 const TRANSPORT_HINTS = Object.freeze([
@@ -43,6 +44,27 @@ const TRANSPORT_HINTS = Object.freeze([
   'request to https',
   'socket hang up',
 ]);
+
+/**
+ * Count the dependencies `--prod` actually audits.
+ *
+ * A WordPress plugin ships PHP and compiled assets, so every npm package here
+ * may be a devDependency. `pnpm audit --prod` then has an empty input set and
+ * cannot report a finding however it is invoked, which makes the network call
+ * pure cost: it proves nothing when it succeeds and blocks a merge when the
+ * advisory service is unreachable.
+ *
+ * @param {object} manifest Parsed package.json.
+ * @return {{ production: number, development: number }} Dependency counts.
+ */
+export function dependencyCounts(manifest) {
+  const count = section => Object.keys(manifest?.[section] ?? {}).length;
+
+  return {
+    production: count('dependencies') + count('optionalDependencies'),
+    development: count('devDependencies'),
+  };
+}
 
 /**
  * Severities at or above the configured threshold.
@@ -185,10 +207,29 @@ export function classifyAttempt({ exitCode, stdout, stderr, level }) {
  * red gate nobody can fix trains developers to bypass every check. A skipped
  * audit is never presented as a passing one.
  *
- * @param {{ outcome: string, findings?: object, reason?: string, isCI: boolean, level: string, attempts: number }} input Final state.
+ * @param {{ outcome: string, findings?: object, reason?: string, isCI: boolean, level: string, attempts: number, counts?: object }} input Final state.
  * @return {{ exitCode: number, severity: string, lines: string[] }} Decision.
  */
-export function decide({ outcome, findings, reason, isCI, level, attempts }) {
+export function decide({
+  outcome,
+  findings,
+  reason,
+  isCI,
+  level,
+  attempts,
+  counts,
+}) {
+  if (outcome === OUTCOMES.EMPTY) {
+    return {
+      exitCode: 0,
+      severity: 'warn',
+      lines: [
+        'npm audit skipped: this package declares no production dependencies.',
+        `--prod audits nothing here, so no request was made. ${counts?.development ?? 0} devDependencies are NOT covered by this gate.`,
+      ],
+    };
+  }
+
   if (outcome === OUTCOMES.CLEAN) {
     return {
       exitCode: 0,
