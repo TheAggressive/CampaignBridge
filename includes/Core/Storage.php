@@ -145,6 +145,29 @@ class Storage {
 	}
 
 	/**
+	 * Read a WordPress-owned post meta key without plugin prefixing.
+	 *
+	 * Core keys such as `_wp_attachment_image_alt` belong to WordPress, not to
+	 * this plugin, so prefixing them would look up a key that never exists.
+	 * Access still goes through the storage boundary rather than scattering
+	 * raw meta calls, and the underscore prefix WordPress reserves for its own
+	 * protected meta is required so this cannot become a way to bypass
+	 * prefixing for plugin data.
+	 *
+	 * @param int    $post_id The post ID.
+	 * @param string $key     WordPress-owned meta key, beginning with an underscore.
+	 * @param bool   $single  Whether to return a single value.
+	 * @return mixed The meta value, or an empty string when the key is not WordPress-owned.
+	 */
+	public static function get_core_post_meta( int $post_id, string $key, bool $single = false ): mixed {
+		if ( ! str_starts_with( $key, '_' ) ) {
+			return $single ? '' : array();
+		}
+
+		return get_post_meta( $post_id, $key, $single );
+	}
+
+	/**
 	 * Update post meta with automatic prefixing.
 	 *
 	 * @param int    $post_id    The post ID.
