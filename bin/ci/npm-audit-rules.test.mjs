@@ -5,6 +5,7 @@ import {
   classifyAttempt,
   countFindings,
   decide,
+  dependencyCounts,
   OUTCOMES,
   parseReport,
   severitiesAtOrAbove,
@@ -220,4 +221,51 @@ test('a clean audit is the only outcome that reports success', () => {
 
   assert.equal(decision.exitCode, 0);
   assert.equal(decision.severity, 'ok');
+});
+
+test('production dependencies count both runtime sections', () => {
+  assert.deepEqual(
+    dependencyCounts({
+      dependencies: { a: '1' },
+      optionalDependencies: { b: '1' },
+      devDependencies: { c: '1', d: '1' },
+    }),
+    { production: 2, development: 2 }
+  );
+  assert.deepEqual(dependencyCounts({}), { production: 0, development: 0 });
+  assert.deepEqual(dependencyCounts(undefined), {
+    production: 0,
+    development: 0,
+  });
+});
+
+test('an empty production set skips the request without claiming safety', () => {
+  const decision = decide({
+    outcome: OUTCOMES.EMPTY,
+    counts: { production: 0, development: 61 },
+    attempts: 0,
+    isCI: true,
+    level: LEVEL,
+  });
+
+  assert.equal(decision.exitCode, 0);
+  assert.equal(decision.severity, 'warn');
+  const text = decision.lines.join('\n');
+  // The operator must be told what was not checked.
+  assert.match(text, /61 devDependencies are NOT covered/);
+  assert.doesNotMatch(text, /no .*advisories/);
+});
+
+test('an empty production set behaves identically in CI and locally', () => {
+  const base = {
+    outcome: OUTCOMES.EMPTY,
+    counts: { production: 0, development: 3 },
+    attempts: 0,
+    level: LEVEL,
+  };
+
+  assert.deepEqual(
+    decide({ ...base, isCI: true }),
+    decide({ ...base, isCI: false })
+  );
 });

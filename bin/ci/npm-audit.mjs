@@ -7,13 +7,21 @@
  */
 
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
-import { classifyAttempt, decide, OUTCOMES } from './npm-audit-rules.mjs';
+import {
+  classifyAttempt,
+  decide,
+  dependencyCounts,
+  OUTCOMES,
+} from './npm-audit-rules.mjs';
 
 const AUDIT_LEVEL = process.env.CB_AUDIT_LEVEL || 'moderate';
-const MAX_ATTEMPTS = Number(process.env.CB_AUDIT_ATTEMPTS || 3);
-const BACKOFF_MS = Number(process.env.CB_AUDIT_BACKOFF_MS || 5000);
+const MAX_ATTEMPTS = Number(process.env.CB_AUDIT_ATTEMPTS || 4);
+// Shared CI egress addresses get throttled for minutes, not seconds, so the
+// window has to outlast that rather than retry three times inside 150s.
+const BACKOFF_MS = Number(process.env.CB_AUDIT_BACKOFF_MS || 15000);
 const ATTEMPT_TIMEOUT_MS = Number(process.env.CB_AUDIT_TIMEOUT_MS || 45000);
 
 // GitHub Actions and most hosted runners set CI=true.
@@ -54,10 +62,23 @@ function runAudit() {
   return { exitCode: result.status ?? 1, stdout, stderr };
 }
 
+const counts = dependencyCounts(
+  JSON.parse(readFileSync('package.json', 'utf8'))
+);
+
 let classification = { outcome: OUTCOMES.UNAVAILABLE, reason: 'not attempted' };
 let attempts = 0;
 
-for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+// Nothing to audit means nothing to ask about; skip the request entirely
+// rather than letting an unreachable service fail a build over an empty set.
+if (0 === counts.production) {
+  classification = { outcome: OUTCOMES.EMPTY };
+}
+
+const attemptBudget =
+  OUTCOMES.EMPTY === classification.outcome ? 0 : MAX_ATTEMPTS;
+
+for (let attempt = 1; attempt <= attemptBudget; attempt += 1) {
   attempts = attempt;
   classification = classifyAttempt({ ...runAudit(), level: AUDIT_LEVEL });
 
@@ -66,9 +87,9 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     break;
   }
 
-  if (attempt < MAX_ATTEMPTS) {
+  if (attempt < attemptBudget) {
     process.stderr.write(
-      `npm audit attempt ${attempt}/${MAX_ATTEMPTS} failed: ${classification.reason}\n`
+      `npm audit attempt ${attempt}/${attemptBudget} failed: ${classification.reason}\n`
     );
     sleepSync(BACKOFF_MS * attempt);
   }
@@ -77,6 +98,7 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
 const decision = decide({
   ...classification,
   attempts,
+  counts,
   isCI,
   level: AUDIT_LEVEL,
 });
