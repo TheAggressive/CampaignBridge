@@ -1,6 +1,15 @@
 import { Button, Modal, TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
+interface NewTemplateModalProps {
+  open: boolean;
+  title: string;
+  onChangeTitle: (title: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void | Promise<unknown>;
+  busy?: boolean;
+}
+
 /**
  * New Template Modal
  *
@@ -14,7 +23,7 @@ export default function NewTemplateModal({
   onCancel,
   onConfirm,
   busy = false,
-}) {
+}: NewTemplateModalProps): JSX.Element | null {
   if (!open) return null;
 
   return (
@@ -24,7 +33,7 @@ export default function NewTemplateModal({
       shouldCloseOnClickOutside={!busy}
       isDismissible={!busy}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className='cb-editor__new-template-modal'>
         <TextControl
           label={__('Template name', 'campaignbridge')}
           placeholder={__('e.g., Weekly Newsletter', 'campaignbridge')}
@@ -34,7 +43,7 @@ export default function NewTemplateModal({
           __nextHasNoMarginBottom
           autoFocus
         />
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div className='cb-editor__new-template-actions'>
           <Button variant='tertiary' onClick={onCancel} disabled={busy}>
             {__('Cancel', 'campaignbridge')}
           </Button>

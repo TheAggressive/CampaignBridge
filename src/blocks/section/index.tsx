@@ -18,10 +18,7 @@ export const init = (): void => {
     return;
   }
 
-  registerBlockType(
-    { name, ...metadata } as unknown as BlockConfiguration,
-    settings
-  );
+  registerBlockType(metadata as unknown as BlockConfiguration, settings);
 };
 
 init();

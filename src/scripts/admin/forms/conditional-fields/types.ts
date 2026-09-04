@@ -54,44 +54,34 @@ export interface AccessibilityAnnouncement {
 
 export interface IConditionalAccessibility {
   handleFieldHidden(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     field: HTMLElement,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     fieldId: string
   ): void;
   getFieldLabel(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     field: HTMLElement,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     fieldId: string
   ): string;
-  announceFieldChanges(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    changes: string[]
-  ): void;
+  announceFieldChanges(changes: string[]): void;
   updateFieldAccessibility(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     field: HTMLElement,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     state: FieldState,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     fieldId: string
   ): void;
-  announceValidationErrors(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    errors: string[]
-  ): void;
+  announceValidationErrors(errors: string[]): void;
   clearValidationErrors(): void;
   enhanceFieldAria(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     field: HTMLElement,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     state: FieldState,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     fieldId: string
   ): void;
   setupFormLandmarks(): void;
-  // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
   setKeyboardNavigation(enabled: boolean): void;
   getAccessibilityStatus(): {
     keyboardNavigation: boolean;
@@ -112,39 +102,30 @@ export interface IConditionalEngine {
 }
 
 export interface IConditionalStateManager {
-  getCachedResult(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    formData: FormData
-  ): ConditionalApiResponse | null;
+  getCachedResult(formData: FormData): ConditionalApiResponse | null;
   cacheResult(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     formData: FormData,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     result: ConditionalApiResponse
   ): void;
   collectFormData(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     form: HTMLFormElement,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     formId: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     validationRules?: Record<string, import('./validation').ValidationRule>
   ): FormData;
   getCacheStats(): ReturnType<
     typeof import('./cache').conditionalCache.getStats
   >;
   clearCache(): void;
-  updateLastFormData(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    formData: FormData
-  ): void;
+  updateLastFormData(formData: FormData): void;
 }
 
 export interface IConditionalApiService {
   evaluateConditions(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     apiEndpoint: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     requestPayload: ConditionalApiRequest
   ): Promise<EvaluationResult>;
   isEvaluationInProgress(): boolean;
@@ -154,51 +135,38 @@ export interface IConditionalApiService {
 export interface IConditionalUIManager {
   initialize(): void;
   updateFields(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     fieldStates: FieldStateMap,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     accessibilityManager: IConditionalAccessibility
   ): void;
   showLoading(): void;
   hideLoading(): void;
-  showError(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    message: string
-  ): void;
+  showError(message: string): void;
   hideError(): void;
-  setRetryCallback(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    callback: () => void
-  ): void;
+  setRetryCallback(callback: () => void): void;
   showValidationErrors(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     errors: string[],
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     accessibilityManager: IConditionalAccessibility
   ): void;
-  clearValidationErrors(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    accessibilityManager: IConditionalAccessibility
-  ): void;
+  clearValidationErrors(accessibilityManager: IConditionalAccessibility): void;
   destroy(): void;
 }
 
 export interface IConditionalDataCollector {
   getFormData(): Record<string, string>;
   setValidationRules(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     rules: Record<string, import('./validation').ValidationRule>
   ): void;
-  // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
   parseFieldName(fullName: string): string | null;
 }
 
 export interface IConditionalCache {
-  // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
   get(formData: FormData): ConditionalApiResponse | null;
-  // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
   set(formData: FormData, result: ConditionalApiResponse): void;
-  // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
   delete(formData: FormData): boolean;
   clear(): void;
   getStats(): {
@@ -213,23 +181,18 @@ export interface IConditionalCache {
 
 export interface IConditionalValidator {
   addRule(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     fieldName: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     rule: import('./validation').ValidationRule
   ): void;
   validateField(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     fieldName: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     value: any,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     context?: Record<string, any>
   ): import('./validation').ValidationResult;
-  validateForm(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    data: Record<string, any>
-  ): {
+  validateForm(data: Record<string, any>): {
     isValid: boolean;
     errors: string[];
     sanitizedData: Record<string, any>;
@@ -239,46 +202,36 @@ export interface IConditionalValidator {
 
 export interface IConditionalApiClient {
   evaluate(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     apiEndpoint: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     payload: ConditionalApiRequest
   ): Promise<ConditionalApiResponse>;
 }
 
 export interface IPerformanceMonitor {
-  startTimer(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    operation: string
-  ): string;
-  endTimer(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    timerId: string
-  ): { duration: number; operation: string };
+  startTimer(operation: string): string;
+  endTimer(timerId: string): { duration: number; operation: string };
   recordMetric(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     name: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     value: number,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     unit: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     context?: Record<string, any>
   ): void;
   recordApiCall(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     endpoint: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     duration: number,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     success: boolean
   ): void;
   recordDomOperation(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     operation: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     operationsCount: number,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
+
     duration: number
   ): void;
   recordMemoryUsage(): void;
@@ -295,17 +248,13 @@ export interface IPerformanceMonitor {
   generateReport(): import('./performance-monitor').PerformanceReport;
   exportMetrics(): import('./performance-monitor').PerformanceMetric[];
   shouldLogMetric(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
     metric: import('./performance-monitor').PerformanceMetric
   ): boolean;
 }
 
 export interface IConfigManager {
   getConfig(): ConditionalEngineConfig;
-  updateConfig(
-    // eslint-disable-next-line no-unused-vars -- Parameter name in interface method signature is for documentation.
-    newConfig: Partial<ConditionalEngineConfig>
-  ): void;
+  updateConfig(newConfig: Partial<ConditionalEngineConfig>): void;
 }
 
 // Mock implementations for testing (exported for test utilities)

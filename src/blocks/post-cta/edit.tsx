@@ -10,8 +10,30 @@ import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
+import type { EmailBlockEditProps } from '../types';
 
 type Destination = 'article' | 'postParent' | 'postTypeArchive' | 'custom';
+
+interface PostCtaAttributes {
+  label?: string;
+  destination?: Destination;
+  customUrl?: string;
+  backgroundColor?: string;
+  textColor?: string;
+}
+
+interface PostRecord {
+  link?: string;
+  parent?: number;
+}
+
+interface CoreSelectors {
+  getEntityRecord: (
+    kind: string,
+    name: string,
+    id: number
+  ) => PostRecord | null;
+}
 
 const DESTINATIONS: readonly Destination[] = [
   'article',
@@ -43,7 +65,11 @@ function isHttpsUrl(value: string): boolean {
   }
 }
 
-export default function Edit({ attributes, setAttributes, context = {} }) {
+export default function Edit({
+  attributes,
+  setAttributes,
+  context = {},
+}: EmailBlockEditProps<PostCtaAttributes>): JSX.Element {
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
   const label = attributes.label || __('Read more', 'campaignbridge');
@@ -70,7 +96,11 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
   const post = useSelect(
     select =>
       postId
-        ? (select('core') as any).getEntityRecord('postType', postType, postId)
+        ? (select('core') as unknown as CoreSelectors).getEntityRecord(
+            'postType',
+            postType,
+            postId
+          )
         : null,
     [postType, postId]
   );
@@ -78,7 +108,7 @@ export default function Edit({ attributes, setAttributes, context = {} }) {
   const postParent = useSelect(
     select =>
       postParentId
-        ? (select('core') as any).getEntityRecord(
+        ? (select('core') as unknown as CoreSelectors).getEntityRecord(
             'postType',
             postType,
             postParentId

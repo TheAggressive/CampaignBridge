@@ -5,9 +5,9 @@
 export class ConditionalFieldError extends Error {
   constructor(
     message: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property.
+
     public readonly code: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property.
+
     public readonly details?: Record<string, any>
   ) {
     super(message);

@@ -214,7 +214,7 @@ export class ConditionalApiService {
         return new RateLimitError();
 
       default:
-        return this.createErrorForStatusRange(status, textStatus, errorThrown);
+        return this.createErrorForStatusRange(status, textStatus);
     }
   }
 
@@ -223,9 +223,7 @@ export class ConditionalApiService {
    */
   private createErrorForStatusRange(
     status: number,
-    textStatus: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter part of jQuery error callback signature, reserved for future use.
-    errorThrown: string
+    textStatus: string
   ): ConditionalFieldError {
     if (status >= 500) {
       return new NetworkError(

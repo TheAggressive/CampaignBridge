@@ -1,8 +1,9 @@
 import apiFetch from '@wordpress/api-fetch';
 import { useCallback, useEffect, useState } from '@wordpress/element';
+import type { EmailEditorSettings } from '../types';
 
 const EDITOR_SETTINGS_PATH = '/campaignbridge/v1/editor-settings';
-const settingsCache = new Map<string, Promise<Record<string, unknown>>>();
+const settingsCache = new Map<string, Promise<EmailEditorSettings>>();
 
 function getSettings(postType: string, postId: number) {
   const key = `${postType}:${postId}`;
@@ -12,7 +13,7 @@ function getSettings(postType: string, postId: number) {
     return cached;
   }
 
-  const request = apiFetch<Record<string, unknown>>({
+  const request = apiFetch<EmailEditorSettings>({
     path: `${EDITOR_SETTINGS_PATH}?post_type=${encodeURIComponent(postType)}&post_id=${postId}`,
   }).catch(error => {
     settingsCache.delete(key);
@@ -27,7 +28,7 @@ function getSettings(postType: string, postId: number) {
  * Fetch the core block-editor settings for the current template context.
  */
 export function useEditorSettings(postType: string, postId: number) {
-  const [settings, setSettings] = useState<Record<string, unknown>>({});
+  const [settings, setSettings] = useState<EmailEditorSettings>({});
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState(true);
   const cacheKey = `${postType}:${postId}`;

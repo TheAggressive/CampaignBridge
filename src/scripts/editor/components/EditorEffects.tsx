@@ -1,10 +1,8 @@
 import { store as blockEditorStore } from '@wordpress/block-editor';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { useSelect } from '@wordpress/data';
 import { useEffect, useRef } from '@wordpress/element';
 
-interface BlockEditorDispatch {
-  __unstableMarkLastChangeAsPersistent: () => void;
-}
+import { usePersistentChangeBoundary } from '../wordpress/usePersistentChangeBoundary';
 
 interface EditorEffectsProps {
   saveStatus: string;
@@ -23,9 +21,7 @@ export default function EditorEffects({
     select => select(blockEditorStore).getSelectedBlockClientId(),
     []
   );
-  const { __unstableMarkLastChangeAsPersistent } = useDispatch(
-    blockEditorStore
-  ) as unknown as BlockEditorDispatch;
+  const markLastChangeAsPersistent = usePersistentChangeBoundary();
   const wasSavingRef = useRef(false);
 
   useEffect(() => {
@@ -41,11 +37,11 @@ export default function EditorEffects({
       // Match core/editor's successful regular-save lifecycle. Without this
       // boundary, another edit to the same attribute remains transient and
       // never marks the entity dirty again.
-      __unstableMarkLastChangeAsPersistent();
+      markLastChangeAsPersistent();
     }
 
     wasSavingRef.current = isSaving;
-  }, [__unstableMarkLastChangeAsPersistent, saveStatus]);
+  }, [markLastChangeAsPersistent, saveStatus]);
 
   return null;
 }

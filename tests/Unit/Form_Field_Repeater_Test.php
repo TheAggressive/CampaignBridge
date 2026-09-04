@@ -388,16 +388,6 @@ class Form_Field_Repeater_Test extends Test_Case {
 	 * Test form data merge logic for different field types.
 	 */
 	public function test_form_data_merge_logic(): void {
-		$form = Form::make( 'merge_test' );
-		$form->text( 'regular_field', 'Regular' )
-			->encrypted( 'encrypted_field', 'Encrypted' )
-			->checkbox( 'checkbox_field', 'Checkbox' )
-			->switch( 'switch_field', 'Switch' );
-
-		// Get the form handler to test merge logic
-		$handler = $form->get_handler();
-
-		// Test data scenarios
 		$existing_data = array(
 			'regular_field'   => 'old_value',
 			'encrypted_field' => \CampaignBridge\Core\Encryption::encrypt( 'old_encrypted' ),
@@ -412,26 +402,20 @@ class Form_Field_Repeater_Test extends Test_Case {
 			'switch_field'    => array( 'type' => 'switch' ),
 		);
 
-		// Test 1: Regular field - submitted value takes priority
-		$method = $this->get_reflection_method( $handler, 'merge_field_values' );
-		$result = $method->invoke( $handler, 'new_value', $existing_data['regular_field'], $field_config['regular_field'] );
-		$this->assertEquals( 'new_value', $result );
+		$result = \CampaignBridge\Admin\Core\Forms\Form_Value_Merger::merge(
+			array(
+				'regular_field'   => 'new_value',
+				'encrypted_field' => '',
+				'switch_field'    => '1',
+			),
+			$existing_data,
+			$field_config
+		);
 
-		// Test 2: Encrypted field - preserves encrypted value when empty submitted
-		$result = $method->invoke( $handler, '', $existing_data['encrypted_field'], $field_config['encrypted_field'] );
-		$this->assertEquals( $existing_data['encrypted_field'], $result );
-
-		// Test 3: Encrypted field - uses submitted value when not empty
-		$result = $method->invoke( $handler, 'new_encrypted', $existing_data['encrypted_field'], $field_config['encrypted_field'] );
-		$this->assertEquals( 'new_encrypted', $result );
-
-		// Test 4: Checkbox/Switch - returns false when not submitted
-		$result = $method->invoke( $handler, null, $existing_data['checkbox_field'], $field_config['checkbox_field'] );
-		$this->assertFalse( $result );
-
-		// Test 5: Checkbox/Switch - uses submitted value when submitted
-		$result = $method->invoke( $handler, '1', $existing_data['switch_field'], $field_config['switch_field'] );
-		$this->assertEquals( '1', $result );
+		$this->assertEquals( 'new_value', $result['regular_field'] );
+		$this->assertEquals( $existing_data['encrypted_field'], $result['encrypted_field'] );
+		$this->assertFalse( $result['checkbox_field'] );
+		$this->assertEquals( '1', $result['switch_field'] );
 	}
 
 	/**

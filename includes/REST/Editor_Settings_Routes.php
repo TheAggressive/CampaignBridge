@@ -16,6 +16,7 @@ namespace CampaignBridge\REST;
 use WP_REST_Request;
 use CampaignBridge\REST\Helpers\Response_Formatter;
 use CampaignBridge\REST\Helpers\Input_Validator;
+use CampaignBridge\Services\Email\Compiler_Factory;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -114,7 +115,8 @@ class Editor_Settings_Routes extends Abstract_Rest_Controller {
 		// must remain intact: BlockCanvas uses it to populate the iframe with the
 		// registered editor styles and scripts. This route is capability protected
 		// and additionally verifies edit access to the requested template above.
-		$settings = Response_Formatter::filter_editor_settings( $settings );
+		$settings                      = Response_Formatter::filter_editor_settings( $settings );
+		$settings['allowedBlockTypes'] = Compiler_Factory::registry()->block_names();
 
 		return $this->ensure_response( $settings );
 	}

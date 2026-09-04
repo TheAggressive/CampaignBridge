@@ -23,11 +23,10 @@ import type { ValidationManager } from './ValidationManager';
  */
 export class ApiClient {
   constructor(
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.stateManager.
     private stateManager: StateManager,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.validationManager.
+
     private validationManager: ValidationManager,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.accessibility.
+
     private accessibility: AccessibilityManager
   ) {}
 

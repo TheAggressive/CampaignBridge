@@ -1,6 +1,12 @@
 import { BlockEditorKeyboardShortcuts } from '@wordpress/block-editor';
 import BlockCanvas from './BlockCanvas';
 import EditorKeyboardShortcuts from './EditorKeyboardShortcuts';
+import type { EditorStyle } from '../types';
+
+interface ContentProps {
+  onSave: () => void | Promise<unknown>;
+  styles?: EditorStyle[];
+}
 
 /**
  * Main content component for the CampaignBridge template editor.
@@ -16,7 +22,7 @@ import EditorKeyboardShortcuts from './EditorKeyboardShortcuts';
  * <Content />
  * ```
  */
-export default function Content({ onSave, styles }) {
+export default function Content({ onSave, styles }: ContentProps): JSX.Element {
   return (
     <div className='cb-editor__content'>
       <BlockEditorKeyboardShortcuts />

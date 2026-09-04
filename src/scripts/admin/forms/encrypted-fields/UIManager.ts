@@ -14,10 +14,7 @@ import { CLASSES } from './types';
  * Manages UI states and transitions for encrypted fields
  */
 export class UIManager {
-  constructor(
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.accessibility.
-    private accessibility: AccessibilityManager
-  ) {}
+  constructor(private accessibility: AccessibilityManager) {}
 
   /**
    * Helper method to hide an element using CSS classes
@@ -32,6 +29,17 @@ export class UIManager {
       CLASSES.EDIT_VISIBLE,
       CLASSES.EDIT_CONTROLS_VISIBLE
     );
+  }
+
+  /**
+   * Drop any custom validity before the edit input leaves the layout.
+   *
+   * A hidden input carrying a validation message blocks submission of the
+   * whole settings form, and the browser cannot focus it to report why.
+   */
+  private clearEditValidity(editInput: HTMLInputElement): void {
+    editInput.removeAttribute('aria-invalid');
+    editInput.setCustomValidity('');
   }
 
   /**
@@ -73,7 +81,10 @@ export class UIManager {
    * Switch field back to display mode
    */
   switchToDisplayMode(elements: FieldElements): void {
-    if (elements.editInput) this.hideElement(elements.editInput);
+    if (elements.editInput) {
+      this.clearEditValidity(elements.editInput);
+      this.hideElement(elements.editInput);
+    }
     if (elements.editControls) this.hideElement(elements.editControls);
     if (elements.displayInput) {
       // Ensure display input is visible (remove any hidden classes)
@@ -91,6 +102,7 @@ export class UIManager {
     // Clear edit input
     if (elements.editInput) {
       elements.editInput.value = '';
+      this.clearEditValidity(elements.editInput);
       this.hideElement(elements.editInput);
     }
     if (elements.editControls) this.hideElement(elements.editControls);

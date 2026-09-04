@@ -6,8 +6,20 @@ import {
   TextControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import type { EmailBlockEditProps } from '../types';
 
-export default function Edit({ attributes, setAttributes }) {
+interface ButtonAttributes {
+  label?: string;
+  url?: string;
+  align?: 'left' | 'center' | 'right';
+  backgroundColor?: string;
+  textColor?: string;
+}
+
+export default function Edit({
+  attributes,
+  setAttributes,
+}: EmailBlockEditProps<ButtonAttributes>): JSX.Element {
   const {
     label = __('Learn more', 'campaignbridge'),
     url = '',

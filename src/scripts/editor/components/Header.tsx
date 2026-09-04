@@ -4,6 +4,7 @@ import { FullscreenToggle } from './Button/FullscreenToggle';
 import { PrimarySidebarToggle } from './Button/PrimarySidebarToggle';
 import { SecondarySidebarToggle } from './Button/SecondarySidebarToggle';
 import TemplateToolbar from './TemplateToolbar';
+import type { SaveStatus, TemplateSummary } from '../types';
 
 /* CSS classes */
 const CLASSES = {
@@ -63,6 +64,21 @@ const CLASSES = {
  * />
  * ```
  */
+interface HeaderProps {
+  list: TemplateSummary[];
+  currentId: number | null;
+  loading: boolean;
+  onSelect: (id: number | null) => void;
+  onNew: () => void;
+  isPrimaryOpen: boolean;
+  isSecondaryOpen: boolean;
+  togglePrimary: () => void;
+  toggleSecondary: () => void;
+  hasEdits?: boolean;
+  onSave?: () => void | Promise<unknown>;
+  saveStatus?: SaveStatus;
+}
+
 export default function Header({
   list,
   currentId,
@@ -76,7 +92,7 @@ export default function Header({
   hasEdits = false,
   onSave = () => {},
   saveStatus = 'saved',
-}) {
+}: HeaderProps): JSX.Element {
   const isSaving = saveStatus === 'saving';
   const saveLabel = isSaving
     ? __('Saving…', 'campaignbridge')

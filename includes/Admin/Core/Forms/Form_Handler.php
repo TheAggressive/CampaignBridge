@@ -130,10 +130,10 @@ class Form_Handler {
 
 			// Validate conditional integrity before processing.
 			if ( $this->conditional_manager ) {
-				$integrity_issues = $this->validate_conditional_integrity( $processed_form_data );
+				$integrity_issues = Form_Conditional_Submission_Guard::validate( $this->conditional_manager, $this->fields, $processed_form_data );
 				if ( ! empty( $integrity_issues ) ) {
 					// Log security concern but continue processing (data will be filtered).
-					$this->log_conditional_security_issue( $integrity_issues, $processed_form_data );
+					Form_Conditional_Submission_Guard::log( $integrity_issues, $processed_form_data );
 				}
 			}
 
@@ -142,7 +142,7 @@ class Form_Handler {
 				$this->conditional_manager->with_form_data( $processed_form_data );
 			}
 
-			$filtered_form_data = $this->filter_conditional_field_data( $processed_form_data );
+			$filtered_form_data = Form_Conditional_Submission_Guard::filter( $this->conditional_manager, $this->fields, $processed_form_data );
 
 			// Validate using raw form data (before encryption for encrypted fields).
 			if ( ! $this->validate_raw_form_data( $raw_form_data ) ) {
@@ -341,99 +341,12 @@ class Form_Handler {
 
 			$existing_data = $this->form->data();
 
-			// Merge submitted data with existing data using field-specific logic.
-			$merged_data = array();
-
-			// Track which repeater base fields have been processed to avoid double processing.
-			$processed_repeater_bases = array();
-
-			foreach ( $this->fields as $field_id => $field_config ) {
-				// Skip individual repeater fields if the base repeater field was submitted.
-				if ( $this->is_repeater_field( $field_id ) ) {
-					list( $base_name, $key ) = explode( '___', $field_id, 2 );
-					if ( isset( $submitted_data[ $base_name ] ) && ! in_array( $base_name, $processed_repeater_bases, true ) ) {
-						// Use the submitted base repeater field value directly.
-						$merged_data[ $base_name ]  = $submitted_data[ $base_name ];
-						$processed_repeater_bases[] = $base_name;
-						continue;
-					} elseif ( in_array( $base_name, $processed_repeater_bases, true ) ) {
-						// Skip individual fields for already processed repeater bases.
-						continue;
-					}
-				}
-
-				$submitted_value = $submitted_data[ $field_id ] ?? null;
-				$existing_value  = $existing_data[ $field_id ] ?? null;
-
-				// Use field-specific merge logic based on field type.
-				$merged_data[ $field_id ] = $this->merge_field_values( $submitted_value, $existing_value, $field_config );
-			}
-
-			return $merged_data;
+			return Form_Value_Merger::merge( $submitted_data, $existing_data, $this->fields );
 		}
 
 		// If no existing data available, just return submitted data.
 		return $submitted_data;
 	}
-
-	/**
-	 * Merge field values using type-specific logic
-	 *
-	 * @param mixed                $submitted_value Submitted value (null if not submitted).
-	 * @param mixed                $existing_value Existing value.
-	 * @param array<string, mixed> $field_config   Field configuration.
-	 * @return mixed Merged value.
-	 */
-	private function merge_field_values( $submitted_value, $existing_value, array $field_config ) {
-		$field_type = $field_config['type'] ?? 'text';
-
-		// Use static merge methods based on field type.
-		switch ( $field_type ) {
-			case 'encrypted':
-				return $this->merge_encrypted_field_value( $submitted_value, $existing_value );
-			case 'checkbox':
-			case 'switch':
-				return $this->merge_checkbox_field_value( $submitted_value, $existing_value );
-			default:
-				// Default behavior: submitted value takes priority, fallback to existing.
-				return $submitted_value ?? $existing_value;
-		}
-	}
-
-	/**
-	 * Merge encrypted field values
-	 *
-	 * @param mixed $submitted_value Submitted value.
-	 * @param mixed $existing_value  Existing value.
-	 * @return mixed Merged value.
-	 */
-	private function merge_encrypted_field_value( $submitted_value, $existing_value ) {
-		// Preserve existing encrypted values if submitted value is empty.
-		if ( empty( $submitted_value ) && ! empty( $existing_value ) && \CampaignBridge\Core\Encryption::is_encrypted_value( $existing_value ) ) {
-			return $existing_value;
-		}
-
-		// Otherwise use default behavior.
-		return $submitted_value ?? $existing_value;
-	}
-
-	/**
-	 * Merge checkbox/switch field values
-	 *
-	 * @param mixed $submitted_value Submitted value.
-	 * @param mixed $existing_value  Existing value.
-	 * @return mixed Merged value.
-	 */
-	private function merge_checkbox_field_value( $submitted_value, $existing_value ) {
-		// If checkbox/switch was not submitted, it was unchecked.
-		if ( null === $submitted_value ) {
-			return false;
-		}
-
-		// Otherwise use default behavior.
-		return $submitted_value;
-	}
-
 
 	/**
 	 * Get raw form data from superglobals
@@ -869,153 +782,6 @@ class Form_Handler {
 	 */
 	public function set_conditional_manager( Form_Conditional_Manager $conditional_manager ): void {
 		$this->conditional_manager = $conditional_manager;
-	}
-
-	/**
-	 * Filter out data from hidden conditional fields for security and data integrity
-	 *
-	 * @param array<string, mixed> $form_data Submitted form data.
-	 * @return array<string, mixed> Filtered form data with hidden conditional fields removed.
-	 */
-	private function filter_conditional_field_data( array $form_data ): array {
-		// If we don't have a conditional manager, return data as-is.
-		if ( ! $this->conditional_manager ) {
-			return $form_data;
-		}
-
-		$filtered_data = array();
-
-		foreach ( $form_data as $field_id => $value ) {
-			// Skip data from hidden conditional fields.
-			if ( isset( $this->fields[ $field_id ] ) && isset( $this->fields[ $field_id ]['conditional'] ) ) {
-				if ( ! $this->conditional_manager->should_show_field( $field_id ) ) {
-					// Field is conditionally hidden, don't include its data.
-					continue;
-				}
-			}
-
-			$filtered_data[ $field_id ] = $value;
-		}
-
-		return $filtered_data;
-	}
-
-
-	/**
-	 * Validate conditional field integrity for security.
-	 *
-	 * Checks if submitted data is consistent with conditional logic by ensuring
-	 * that data submitted for conditional fields would actually make those fields visible.
-	 * This detects attempts to submit data for fields that shouldn't be accessible.
-	 *
-	 * @param array<string, mixed> $submitted_data The submitted form data.
-	 * @return array<string, string> Array of field IDs with integrity issues.
-	 */
-	private function validate_conditional_integrity( array $submitted_data ): array {
-		$issues = array();
-
-		if ( ! $this->conditional_manager ) {
-			return $issues;
-		}
-
-		// Clone manager to test integrity without affecting the main evaluation.
-		$integrity_manager = clone $this->conditional_manager;
-
-		foreach ( $submitted_data as $field_id => $value ) {
-			// Only check fields that have conditional logic and non-empty submitted values.
-			if ( ! isset( $this->fields[ $field_id ]['conditional'] ) || $this->is_empty_value( $value ) ) {
-				continue;
-			}
-
-			// Test if this field would be visible with the submitted data.
-			$integrity_manager->with_form_data( $submitted_data );
-
-			if ( ! $integrity_manager->should_show_field( $field_id ) ) {
-				$issues[ $field_id ] = sprintf(
-					'Data submitted for field that should be hidden based on conditional logic: %s',
-					$field_id
-				);
-			}
-		}
-
-		return $issues;
-	}
-
-	/**
-	 * Log conditional field security issues for monitoring.
-	 *
-	 * @param array<string, string> $issues Array of field IDs with security issues.
-	 * @param array<string, mixed>  $form_data The submitted form data (for context).
-	 * @return void
-	 */
-	private function log_conditional_security_issue( array $issues, array $form_data ): void {
-		\CampaignBridge\Core\Error_Handler::warning(
-			'Potential form manipulation detected in conditional fields',
-			array(
-				'issues'      => $issues,
-				'field_count' => count( $form_data ),
-				'form_data'   => $this->sanitize_for_logging( $form_data ),
-				'user_id'     => get_current_user_id(),
-				'user_ip'     => $this->get_client_ip(),
-				'timestamp'   => current_time( 'mysql' ),
-			)
-		);
-	}
-
-	/**
-	 * Get the client IP address for logging purposes.
-	 *
-	 * @return string The client IP address.
-	 */
-	private function get_client_ip(): string {
-		return \CampaignBridge\Core\Client_Address::get();
-	}
-
-	/**
-	 * Sanitize form data for logging purposes.
-	 *
-	 * @param array<string, mixed> $form_data The form data to sanitize.
-	 * @return array<string, mixed> Sanitized form data safe for logging.
-	 */
-	private function sanitize_for_logging( array $form_data ): array {
-		$sanitized = array();
-
-		foreach ( $form_data as $key => $value ) {
-			$key = sanitize_key( $key );
-
-			if ( is_string( $value ) ) {
-				// Truncate long values and mask potential sensitive data.
-				$value = substr( $value, 0, 100 );
-				if ( strlen( $value ) === 100 ) {
-					$value .= '...';
-				}
-
-				// Mask potential passwords/API keys.
-				if ( strpos( strtolower( $key ), 'password' ) !== false ||
-					strpos( strtolower( $key ), 'api_key' ) !== false ||
-					strpos( strtolower( $key ), 'secret' ) !== false ) {
-					$value = '[REDACTED]';
-				}
-			} elseif ( is_array( $value ) ) {
-				$value = '[ARRAY]';
-			} elseif ( ! is_scalar( $value ) ) {
-				$value = '[' . gettype( $value ) . ']';
-			}
-
-			$sanitized[ $key ] = $value;
-		}
-
-		return $sanitized;
-	}
-
-	/**
-	 * Check if a value is considered empty for validation purposes.
-	 *
-	 * @param mixed $value The value to check.
-	 * @return bool True if the value is considered empty.
-	 */
-	private function is_empty_value( mixed $value ): bool {
-		return empty( $value ) && ! is_numeric( $value );
 	}
 
 	/**

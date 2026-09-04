@@ -10,8 +10,19 @@ import {
   SelectControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import type { EmailBlockEditProps } from '../types';
 
-export default function Edit({ attributes, setAttributes }) {
+interface TextAttributes {
+  content?: string;
+  align?: 'left' | 'center' | 'right';
+  textColor?: string;
+  fontSize?: number;
+}
+
+export default function Edit({
+  attributes,
+  setAttributes,
+}: EmailBlockEditProps<TextAttributes>): JSX.Element {
   const {
     content = '',
     align = 'left',
@@ -31,7 +42,9 @@ export default function Edit({ attributes, setAttributes }) {
               { label: __('Center', 'campaignbridge'), value: 'center' },
               { label: __('Right', 'campaignbridge'), value: 'right' },
             ]}
-            onChange={value => setAttributes({ align: value })}
+            onChange={value =>
+              setAttributes({ align: value as TextAttributes['align'] })
+            }
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />

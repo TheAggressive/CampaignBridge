@@ -32,9 +32,8 @@ export interface ValidationRule {
 
   /** Custom validator function */
   validator?: (
-    // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
     value: string,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
     field: HTMLInputElement
   ) =>
     | Promise<{ isValid: boolean; error?: string }>

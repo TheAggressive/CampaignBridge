@@ -6,8 +6,19 @@ import {
 import { ColorPalette, PanelBody, SelectControl } from '@wordpress/components';
 import { createElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import type { EmailBlockEditProps } from '../types';
 
-export default function Edit({ attributes, setAttributes }) {
+interface HeadingAttributes {
+  content?: string;
+  level?: number;
+  align?: 'left' | 'center' | 'right';
+  textColor?: string;
+}
+
+export default function Edit({
+  attributes,
+  setAttributes,
+}: EmailBlockEditProps<HeadingAttributes>): JSX.Element {
   const {
     content = '',
     level = 2,
@@ -48,7 +59,9 @@ export default function Edit({ attributes, setAttributes }) {
               { label: __('Center', 'campaignbridge'), value: 'center' },
               { label: __('Right', 'campaignbridge'), value: 'right' },
             ]}
-            onChange={value => setAttributes({ align: value })}
+            onChange={value =>
+              setAttributes({ align: value as HeadingAttributes['align'] })
+            }
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />

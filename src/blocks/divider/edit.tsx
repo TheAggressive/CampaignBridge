@@ -6,8 +6,19 @@ import {
   SelectControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import type { EmailBlockEditProps } from '../types';
 
-export default function Edit({ attributes, setAttributes }) {
+interface DividerAttributes {
+  color?: string;
+  thickness?: number;
+  width?: number;
+  style?: 'solid' | 'dashed' | 'dotted';
+}
+
+export default function Edit({
+  attributes,
+  setAttributes,
+}: EmailBlockEditProps<DividerAttributes>): JSX.Element {
   const {
     color = '#dddddd',
     thickness = 1,
@@ -45,7 +56,9 @@ export default function Edit({ attributes, setAttributes }) {
               { label: __('Dashed', 'campaignbridge'), value: 'dashed' },
               { label: __('Dotted', 'campaignbridge'), value: 'dotted' },
             ]}
-            onChange={value => setAttributes({ style: value })}
+            onChange={value =>
+              setAttributes({ style: value as DividerAttributes['style'] })
+            }
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />

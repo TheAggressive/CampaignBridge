@@ -13,7 +13,7 @@ export const ROUTING_CONSTANTS = {
  */
 interface TemplateRoutingState {
   currentId: number | null;
-  // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
   selectTemplate: (id: number) => void;
   isValidId: boolean;
 }

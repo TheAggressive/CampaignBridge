@@ -1,231 +1,80 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from '@wordpress/element';
-import { listTemplates } from '../services/api';
+import { store as coreDataStore, useEntityRecords } from '@wordpress/core-data';
+import { useSelect } from '@wordpress/data';
+import { useEffect, useMemo } from '@wordpress/element';
+import type { TemplateRestRecord, TemplateSummary } from '../types';
 
-// Template-specific constants (exported for reuse if needed)
-export const TEMPLATES_CONSTANTS = {
-  CACHE_DURATION_MS: 5 * 60 * 1000, // 5 minutes
-  RETRY: {
-    MAX_RETRIES: 3,
-    DELAY_MS: 1000,
-  },
-  ERROR_MESSAGES: {
-    LOAD_FAILED: 'Failed to load templates.',
-    INVALID_RESPONSE: 'Invalid response format: expected array',
-    API_NOT_AVAILABLE: 'Templates API not available.',
-  },
-};
-
-// Template-specific error messages
-const TEMPLATE_ERROR_MESSAGES = TEMPLATES_CONSTANTS.ERROR_MESSAGES;
+const TEMPLATE_POST_TYPE = 'cb_templates';
 
 /**
- * @typedef {Object} TemplateItem
- * @property {number} id - Template ID
- * @property {string} title - Template title
- * @property {string} status - Template status (published, draft, etc.)
- * @property {string} [content] - Template content
- * @property {string} [excerpt] - Template excerpt
+ * Keep this query aligned with Editor_Data_Preload so core-data can consume
+ * the server-preloaded response without issuing another request.
  */
+export const TEMPLATE_LIST_QUERY = Object.freeze({
+  per_page: 100,
+  status: 'draft,publish',
+  context: 'edit',
+  _fields: 'id,title,status,date',
+});
 
-/**
- * @typedef {Object} TemplatesState
- * @property {TemplateItem[]} items - Array of template objects
- * @property {boolean} loading - Whether templates are currently loading
- * @property {string} error - Error message if loading failed
- * @property {Function} refresh - Function to manually refresh templates
- * @property {number} lastUpdated - Timestamp of last successful fetch
- * @property {boolean} isStale - Whether cached data is stale
- */
+interface UseTemplatesOptions {
+  onError?: (message: string) => void;
+}
 
-/**
- * Enhanced useTemplates
- *
- * Advanced template management with caching, retry logic, enhanced error handling,
- * and comprehensive validation.
- *
- * Features:
- * - **Time-based Caching**: Prevents redundant API calls with configurable cache duration
- * - **Retry Logic**: Automatically retries failed requests with exponential backoff
- * - **Enhanced Error Handling**: Specific error messages for different failure types
- * - **Response Validation**: Validates API responses before caching
- * - **Constants Integration**: Uses centralized constants for all configuration
- * - **Type Safety**: JSDoc typedefs for better IDE support and documentation
- * - **Performance Optimized**: Efficient memoization and callback stability
- * - **Memory Management**: Proper cleanup to prevent memory leaks
- *
- * @param {Object} [options]
- * @param {boolean} [options.includeDrafts=true] Include editable draft templates
- * @param {Function} [options.onError] Optional error callback(message)
- * @param {boolean} [options.disableCache=false] Disable caching for fresh data
- * @returns {TemplatesState}
- *
- * @example
- * ```jsx
- * const {
- *   items,
- *   loading,
- *   error,
- *   refresh,
- *   lastUpdated,
- *   isStale
- * } = useTemplates({
- *   onError: (message) => console.error(message)
- * });
- *
- * if (loading) return <Spinner />;
- * if (error) return <ErrorMessage error={error} />;
- *
- * return (
- *   <div>
- *     <button onClick={refresh}>Refresh</button>
- *     <TemplateList items={items} />
- *     {isStale && <span>⚠️ Data may be outdated</span>}
- *   </div>
- * );
- * ```
- */
-export function useTemplates(
-  options: {
-    includeDrafts?: boolean;
-    // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
-    onError?: (message: string) => void;
-    disableCache?: boolean;
-  } = {}
-) {
-  const { includeDrafts = true, onError, disableCache = false } = options;
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+function templateTitle(record: TemplateRestRecord): string {
+  if (typeof record.title === 'string') {
+    return record.title || `#${record.id}`;
+  }
 
-  // Simple time-based caching
-  const cacheRef = useRef({
-    data: null,
-    timestamp: 0,
-    includeDrafts: null as boolean | null,
-  });
+  return record.title.raw || record.title.rendered || `#${record.id}`;
+}
 
-  // Helper function to check if cache is stale
-  const isCacheStale = useCallback(() => {
-    const now = Date.now();
-    return (
-      disableCache ||
-      !cacheRef.current.data ||
-      cacheRef.current.includeDrafts !== includeDrafts ||
-      now - cacheRef.current.timestamp > TEMPLATES_CONSTANTS.CACHE_DURATION_MS
+function errorMessage(error: unknown): string {
+  return error instanceof Error && error.message
+    ? error.message
+    : 'Failed to load templates.';
+}
+
+/** Read template summaries through WordPress core-data's resolver and cache. */
+export function useTemplates({ onError }: UseTemplatesOptions = {}) {
+  const { records, isResolving, hasResolved } =
+    useEntityRecords<TemplateRestRecord>(
+      'postType',
+      TEMPLATE_POST_TYPE,
+      TEMPLATE_LIST_QUERY
     );
-  }, [disableCache, includeDrafts]);
 
-  // Enhanced fetch function with retry logic
-  const fetchListWithRetry = useCallback(
-    async (signal, retryCount = 0) => {
-      try {
-        setLoading(true);
-        setError('');
-
-        // Check cache first if not disabled
-        if (!disableCache && !isCacheStale()) {
-          setItems(cacheRef.current.data);
-          setLoading(false);
-          return;
-        }
-
-        const posts = await listTemplates(includeDrafts);
-        if (signal?.aborted) return;
-
-        // Validate response
-        if (!Array.isArray(posts)) {
-          throw new Error(TEMPLATE_ERROR_MESSAGES.INVALID_RESPONSE);
-        }
-
-        // Update cache
-        const now = Date.now();
-        cacheRef.current = { data: posts, timestamp: now, includeDrafts };
-
-        setItems(posts);
-        setError('');
-      } catch (e) {
-        if (signal?.aborted) return;
-
-        // Determine error message based on error type
-        let msg = TEMPLATE_ERROR_MESSAGES.LOAD_FAILED;
-        if (e?.message) msg = e.message;
-        if (e?.code === 'rest_no_route') {
-          msg = TEMPLATE_ERROR_MESSAGES.API_NOT_AVAILABLE;
-        }
-
-        // Retry logic for retryable errors
-        const isRetryable =
-          e?.code !== 'rest_forbidden' && e?.code !== 'rest_invalid_param';
-
-        if (isRetryable && retryCount < TEMPLATES_CONSTANTS.RETRY.MAX_RETRIES) {
-          const delayMs =
-            TEMPLATES_CONSTANTS.RETRY.DELAY_MS * Math.pow(2, retryCount);
-          if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-            console.warn(
-              `useTemplates: Retrying templates fetch (attempt ${retryCount + 1}/${TEMPLATES_CONSTANTS.RETRY.MAX_RETRIES}):`,
-              e
-            );
-          }
-
-          setTimeout(() => {
-            if (!signal?.aborted) {
-              fetchListWithRetry(signal, retryCount + 1);
-            }
-          }, delayMs);
-          return;
-        }
-
-        setError(msg);
-        setItems([]); // Provide empty array as fallback
-        if (typeof onError === 'function') onError(msg);
-
-        if ((globalThis as any).process?.env?.NODE_ENV === 'development') {
-          console.error(
-            'useTemplates: Failed to load templates after all retries:',
-            e
-          );
-        }
-      } finally {
-        if (!signal?.aborted) {
-          setLoading(false);
-        }
-      }
-    },
-    [onError, disableCache, includeDrafts, isCacheStale]
+  const resolutionError = useSelect(
+    select =>
+      select(coreDataStore).getResolutionError('getEntityRecords', [
+        'postType',
+        TEMPLATE_POST_TYPE,
+        TEMPLATE_LIST_QUERY,
+      ]),
+    []
   );
 
+  const error = resolutionError ? errorMessage(resolutionError) : '';
+
   useEffect(() => {
-    const controller =
-      typeof AbortController !== 'undefined' ? new AbortController() : null;
-    fetchListWithRetry(controller?.signal);
-    return () => controller?.abort?.();
-  }, [fetchListWithRetry]);
+    if (error) {
+      onError?.(error);
+    }
+  }, [error, onError]);
 
-  // Manual refresh function
-  const refresh = useCallback(() => {
-    const controller =
-      typeof AbortController !== 'undefined' ? new AbortController() : null;
-    fetchListWithRetry(controller?.signal);
-    return () => controller?.abort?.();
-  }, [fetchListWithRetry]);
-
-  // Computed properties
-  const lastUpdated = useMemo(() => cacheRef.current.timestamp, []);
-  const isStale = useMemo(() => isCacheStale(), [isCacheStale]);
-
-  const stateMemo = useMemo(
-    () => ({ items, loading, error, lastUpdated, isStale }),
-    [items, loading, error, lastUpdated, isStale]
+  const items = useMemo<TemplateSummary[]>(
+    () =>
+      (records || []).map(record => ({
+        id: record.id,
+        title: templateTitle(record),
+        status: record.status,
+        date: record.date,
+      })),
+    [records]
   );
 
   return {
-    ...stateMemo,
-    refresh,
+    items,
+    loading: isResolving || !hasResolved,
+    error,
   };
 }

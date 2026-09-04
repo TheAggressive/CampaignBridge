@@ -20,25 +20,23 @@ export class EventHandler {
   private eventHandlers: EventHandlerMap;
 
   constructor(
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.fieldElements.
     private fieldElements: FieldElementsManager,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.stateManager.
+
     private stateManager: StateManager,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.accessibility.
+
     private accessibility: AccessibilityManager,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.uiManager.
+
     private uiManager: UIManager,
-    // eslint-disable-next-line no-unused-vars -- Parameter property automatically creates class property used via this.handlers.
+
     private handlers: {
-      // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
       handleReveal: (button: HTMLButtonElement) => Promise<void>;
-      // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
       handleHide: (button: HTMLButtonElement) => void;
-      // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
       handleEdit: (button: HTMLButtonElement) => void;
-      // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
       handleSave: (button: HTMLButtonElement) => Promise<void>;
-      // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
       handleCancel: (button: HTMLButtonElement) => void;
       handleFormSubmit: () => void;
     }
@@ -78,8 +76,8 @@ export class EventHandler {
 
     // Find the matching action and execute it
     for (const [className, handler] of Object.entries(this.eventHandlers)) {
-      const element = target.closest(`.${className}`) as HTMLElement;
-      if (element) {
+      const element = target.closest(`.${className}`);
+      if (element instanceof HTMLButtonElement) {
         event.preventDefault();
         handler(element);
         return;
@@ -105,7 +103,10 @@ export class EventHandler {
           elements.editInput.classList.contains(CLASSES.EDIT_VISIBLE)
         ) {
           event.preventDefault();
-          this.handlers.handleCancel(elements.cancelBtn || elements.saveBtn);
+          const cancelButton = elements.cancelBtn || elements.saveBtn;
+          if (cancelButton) {
+            this.handlers.handleCancel(cancelButton);
+          }
           return;
         }
 

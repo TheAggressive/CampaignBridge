@@ -15,7 +15,7 @@ import { Panel } from '@wordpress/components';
  * <Inspector />
  * ```
  */
-export default function Inspector() {
+export default function Inspector(): JSX.Element {
   return (
     <Panel>
       <BlockInspector />

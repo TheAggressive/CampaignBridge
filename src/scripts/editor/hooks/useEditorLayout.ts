@@ -1,14 +1,9 @@
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useState } from '@wordpress/element';
 import { store as noticesStore } from '@wordpress/notices';
+import type { SidebarTab } from '../types';
 import { SIDEBAR_CONSTANTS } from './useSidebarState';
 
-type WordPressInterface = {
-  // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
-  getActiveComplementaryArea?: (scope: string) => string | undefined;
-};
-
-// Layout-specific constants (exported for reuse if needed)
 export const LAYOUT_CONSTANTS = {
   MODIFIERS: {
     HAS_PRIMARY: 'cb-editor--has-primary',
@@ -20,58 +15,23 @@ export const LAYOUT_CONSTANTS = {
     EDITOR: 'cb-editor',
     EDITOR_SNACKBAR: 'cb-editor__snackbar',
     SIDEBAR_PRIMARY: 'cb-editor__sidebar cb-editor__sidebar--primary',
-    SIDEBAR_SECONDARY: 'cb-editor__sidebar cb-editor__sidebar--secondary',
     SIDEBAR_CONTENT: 'cb-editor__sidebar-content',
   },
-};
+} as const;
 
-/**
- * Custom hook for managing editor layout state and sidebar coordination
- *
- * @returns {Object} Layout state and sidebar management functions
- */
-export function useEditorLayout() {
-  // Sidebar tab state
-  const [sidebarActiveTab, setSidebarActiveTab] = useState('template-settings');
+interface UseEditorLayoutOptions {
+  isPrimaryOpen: boolean;
+  isSecondaryOpen: boolean;
+}
 
-  // Track active complementary areas with better reactivity
-  const activePrimary = useSelect(
-    select => {
-      try {
-        return (
-          select('core/interface') as WordPressInterface
-        ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.PRIMARY);
-      } catch (error) {
-        console.warn(
-          'useEditorLayout: Error getting primary sidebar state:',
-          error
-        );
-        return undefined;
-      }
-    },
-    [SIDEBAR_CONSTANTS.SCOPES.PRIMARY]
+/** Derive editor layout props from the sidebar store's single subscription. */
+export function useEditorLayout({
+  isPrimaryOpen,
+  isSecondaryOpen,
+}: UseEditorLayoutOptions) {
+  const [sidebarActiveTab, setSidebarActiveTab] = useState<SidebarTab>(
+    SIDEBAR_CONSTANTS.TABS.TEMPLATE
   );
-
-  const activeSecondary = useSelect(
-    select => {
-      try {
-        return (
-          select('core/interface') as WordPressInterface
-        ).getActiveComplementaryArea?.(SIDEBAR_CONSTANTS.SCOPES.SECONDARY);
-      } catch (error) {
-        console.warn(
-          'useEditorLayout: Error getting secondary sidebar state:',
-          error
-        );
-        return undefined;
-      }
-    },
-    [SIDEBAR_CONSTANTS.SCOPES.SECONDARY]
-  );
-
-  // Note: Sidebar state restoration is now handled by useSidebarState hook
-
-  // Snackbar notifications
   const snackbarNotices = useSelect(
     select =>
       select(noticesStore)
@@ -79,46 +39,28 @@ export function useEditorLayout() {
         .filter(notice => notice.type === 'snackbar'),
     []
   );
-
   const { removeNotice } = useDispatch(noticesStore);
 
-  // Layout class management
-  const hasPrimary = !!activePrimary;
-  const hasSecondary =
-    activeSecondary === SIDEBAR_CONSTANTS.IDENTIFIERS.SECONDARY;
-
   const skeletonClassName = `${LAYOUT_CONSTANTS.CSS_CLASSES.EDITOR} ${
-    hasPrimary
+    isPrimaryOpen
       ? LAYOUT_CONSTANTS.MODIFIERS.HAS_PRIMARY
       : LAYOUT_CONSTANTS.MODIFIERS.NO_PRIMARY
   } ${
-    hasSecondary
+    isSecondaryOpen
       ? LAYOUT_CONSTANTS.MODIFIERS.HAS_SECONDARY
       : LAYOUT_CONSTANTS.MODIFIERS.NO_SECONDARY
   }`;
 
-  // Sidebar configuration with dynamic state-based classes
-  const primarySidebarProps = {
-    scope: SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
-    identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
-    className: `${LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_PRIMARY} cb-editor__sidebar--${activePrimary === SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY ? 'open' : 'closed'}`,
-    isPinnable: false,
-  };
-
   return {
-    // Layout state
     skeletonClassName,
-    hasPrimary,
-    hasSecondary,
-
-    // Sidebar state
     sidebarActiveTab,
     setSidebarActiveTab,
-
-    // Sidebar props
-    primarySidebarProps,
-
-    // Notifications
+    primarySidebarProps: {
+      scope: SIDEBAR_CONSTANTS.SCOPES.PRIMARY,
+      identifier: SIDEBAR_CONSTANTS.IDENTIFIERS.PRIMARY,
+      className: `${LAYOUT_CONSTANTS.CSS_CLASSES.SIDEBAR_PRIMARY} cb-editor__sidebar--${isPrimaryOpen ? 'open' : 'closed'}`,
+      isPinnable: false,
+    },
     snackbarNotices,
     removeNotice,
   };

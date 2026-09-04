@@ -1,6 +1,7 @@
 import { Button, SelectControl } from '@wordpress/components';
 import { useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import type { TemplateSummary } from '../types';
 
 // Component-specific constants
 const TOOLBAR_LABELS = {
@@ -55,18 +56,26 @@ export { TOOLBAR_CLASSES };
  * />
  * ```
  */
+interface TemplateToolbarProps {
+  list: TemplateSummary[];
+  currentId: number | null;
+  loading: boolean;
+  onSelect: (id: number | null) => void;
+  onNew: () => void;
+}
+
 export default function TemplateToolbar({
   list,
   currentId,
   loading,
   onSelect,
   onNew,
-}) {
+}: TemplateToolbarProps): JSX.Element {
   // Transform the template list into select options (memoized)
   const options = useMemo(() => {
-    return (list || []).map(p => ({
-      label: p?.title?.rendered || `#${p?.id}`,
-      value: String(p?.id),
+    return list.map(template => ({
+      label: template.title,
+      value: String(template.id),
     }));
   }, [list]);
   return (

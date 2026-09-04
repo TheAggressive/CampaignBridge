@@ -102,14 +102,10 @@ export class ValidationManager {
    */
   setValidationError(
     inputElement: HTMLInputElement,
-    // eslint-disable-next-line no-unused-vars -- Parameter name in method signature is for documentation.
     errorMessage: string
   ): void {
     inputElement.setAttribute('aria-invalid', 'true');
-    inputElement.setAttribute(
-      'aria-describedby',
-      `error-${inputElement.id || 'field'}`
-    );
+    inputElement.setCustomValidity(errorMessage);
   }
 
   /**
@@ -117,7 +113,7 @@ export class ValidationManager {
    */
   clearValidation(inputElement: HTMLInputElement): void {
     inputElement.removeAttribute('aria-invalid');
-    inputElement.removeAttribute('aria-describedby');
+    inputElement.setCustomValidity('');
   }
 
   /**

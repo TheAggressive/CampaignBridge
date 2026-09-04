@@ -12,6 +12,7 @@ import { useNewTemplate } from './hooks/useNewTemplate';
 import { useTemplateRouting } from './hooks/useTemplateRouting';
 import { useTemplates } from './hooks/useTemplates';
 import { registerCampaignBridgeBlocks } from './utils/registerCampaignBridgeBlocks';
+import type { TemplateSummary } from './types';
 
 /**
  * Post type identifier for CampaignBridge email templates.
@@ -29,30 +30,24 @@ export const POST_TYPE = 'cb_templates';
 /**
  * Represents a template item with basic metadata.
  *
- * @interface TemplateItem
+ * @interface TemplateSummary
  * @property {number} id - Unique identifier for the template
  * @property {string} title - Display title of the template
  * @property {any} [key] - Additional properties that may be present
  */
-interface TemplateItem {
-  id: number;
-  title: string;
-  [key: string]: any;
-}
-
 /**
  * Props for the EmptyState component.
  *
  * @interface EmptyStateProps
- * @property {TemplateItem[]} list - Array of available templates
+ * @property {TemplateSummary[]} list - Array of available templates
  * @property {boolean} loading - Whether templates are currently loading
  * @property {(id: number | null) => void} onSelect - Callback when a template is selected
  * @property {() => void} onNew - Callback when creating a new template
  */
 interface EmptyStateProps {
-  list: TemplateItem[];
+  list: TemplateSummary[];
   loading: boolean;
-  // eslint-disable-next-line no-unused-vars -- Parameter name in type definition is for documentation.
+
   onSelect: (id: number | null) => void;
   onNew: () => void;
 }
@@ -151,7 +146,7 @@ export default function CampaignBridgeBlockEditor(): JSX.Element {
  * or create a new one. Provides a clean starting point for template creation.
  *
  * @param {EmptyStateProps} props - Component props
- * @param {TemplateItem[]} props.list - Array of available templates
+ * @param {TemplateSummary[]} props.list - Array of available templates
  * @param {boolean} props.loading - Whether templates are currently loading
  * @param {(id: number | null) => void} props.onSelect - Callback when a template is selected
  * @param {() => void} props.onNew - Callback when creating a new template

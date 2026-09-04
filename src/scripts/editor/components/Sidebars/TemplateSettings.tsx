@@ -13,6 +13,11 @@ import { __ } from '@wordpress/i18n';
 type TemplateMetaValue = boolean | string;
 type TemplateMeta = Record<string, TemplateMetaValue | undefined>;
 
+interface TemplateSettingsProps {
+  postType: string;
+  postId: number;
+}
+
 /**
  * Template Settings Panel Component
  *
@@ -27,18 +32,16 @@ type TemplateMeta = Record<string, TemplateMetaValue | undefined>;
  * <TemplateSettings />
  * ```
  */
-export default function TemplateSettings({ postType, postId }) {
+export default function TemplateSettings({
+  postType,
+  postId,
+}: TemplateSettingsProps): JSX.Element {
   const [rawValues = {}, setValues] = useEntityProp(
     'postType',
     postType,
     'meta',
     postId
-  ) as [
-    TemplateMeta,
-    // eslint-disable-next-line no-unused-vars -- Parameter name documents the setter contract.
-    (values: TemplateMeta) => void,
-    unknown,
-  ];
+  ) as [TemplateMeta, (values: TemplateMeta) => void, unknown];
   const values = useMemo(() => rawValues ?? {}, [rawValues]);
   const update = useCallback(
     (key: string, value: TemplateMetaValue) => {
