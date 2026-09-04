@@ -85,7 +85,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 	public function test_marks_decorative_images_explicitly(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['decorative'] = true;
-		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['alt'] = '';
+		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['alt']        = '';
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
@@ -165,7 +165,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 				),
 			),
 		);
-		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+		$result   = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
 		self::assertSame( 'block.child.unsupported', $result->diagnostics()[0]->code() );
@@ -195,7 +195,12 @@ final class Native_Email_Blocks_Test extends TestCase {
 					array(
 						'blockName'   => 'campaignbridge/section',
 						'attrs'       => array(
-							'padding'         => array( 'top' => 24, 'right' => 12, 'bottom' => 24, 'left' => 12 ),
+							'padding'         => array(
+								'top'    => 24,
+								'right'  => 12,
+								'bottom' => 24,
+								'left'   => 12,
+							),
 							'backgroundColor' => '#ffffff',
 						),
 						'innerBlocks' => array(

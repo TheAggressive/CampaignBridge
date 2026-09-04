@@ -43,8 +43,8 @@ class Form_Rest_Controller_Test extends \WP_UnitTestCase {
 		parent::setUp();
 
 		// Set up admin user for testing (Form_Rest_Controller requires admin privileges)
-		$this->test_admin_user_id = $this->factory->user->create(['role' => 'administrator']);
-		wp_set_current_user($this->test_admin_user_id);
+		$this->test_admin_user_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $this->test_admin_user_id );
 
 		// Create mock container
 		$this->container_mock = $this->createMock( Form_Container::class );
@@ -293,8 +293,8 @@ class Form_Rest_Controller_Test extends \WP_UnitTestCase {
 		Form_Registry::clear();
 
 		// Clean up test admin user
-		if (isset($this->test_admin_user_id)) {
-			wp_delete_user($this->test_admin_user_id);
+		if ( isset( $this->test_admin_user_id ) ) {
+			wp_delete_user( $this->test_admin_user_id );
 		}
 	}
 

@@ -126,7 +126,7 @@ class Form_Test extends Test_Case {
 
 		// Get the config array from Form_Config using reflection
 		$config_property = new \ReflectionProperty( Form_Config::class, 'config' );
-		$config_array = $config_property->getValue( $this->config );
+		$config_array    = $config_property->getValue( $this->config );
 
 		// Create a Form instance using Form::make() which creates with default container,
 		// then manually set our test container
@@ -169,7 +169,7 @@ class Form_Test extends Test_Case {
 
 		// Get the config array from Form_Config using reflection
 		$config_property = new \ReflectionProperty( Form_Config::class, 'config' );
-		$config_array = $config_property->getValue( $this->config );
+		$config_array    = $config_property->getValue( $this->config );
 
 		// Create a Form instance using Form::make() which creates with default container,
 		// then manually set our test container
@@ -241,7 +241,7 @@ class Form_Test extends Test_Case {
 		foreach ( $save_methods as $save_method ) {
 			// Create a fresh container and config for this test to avoid interference
 			$test_container = new Form_Container();
-			$test_config = new Form_Config();
+			$test_config    = new Form_Config();
 
 			// Create a mock notice handler
 			$notice_handler_mock = $this->createMock( Form_Notice_Handler::class );
@@ -260,7 +260,7 @@ class Form_Test extends Test_Case {
 
 			// Get the config array from Form_Config using reflection
 			$config_property = new \ReflectionProperty( Form_Config::class, 'config' );
-			$config_array = $config_property->getValue( $test_config );
+			$config_array    = $config_property->getValue( $test_config );
 
 			// Create a Form instance using Form::make() with the test container
 			$form = new Form( 'test_form_' . $save_method, $config_array, $test_container );

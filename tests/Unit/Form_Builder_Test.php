@@ -47,8 +47,8 @@ class Form_Builder_Test extends Test_Case {
 		parent::setUp();
 
 		// Set up admin user for testing (some form operations may require admin privileges)
-		$this->test_admin_user_id = $this->factory->user->create(['role' => 'administrator']);
-		wp_set_current_user($this->test_admin_user_id);
+		$this->test_admin_user_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $this->test_admin_user_id );
 
 		$form          = Form::make( 'test_form' );
 		$this->config  = $this->get_reflection_property( $form, 'config' )->getValue( $form );
@@ -139,8 +139,8 @@ class Form_Builder_Test extends Test_Case {
 		parent::tearDown();
 
 		// Clean up test admin user
-		if (isset($this->test_admin_user_id)) {
-			wp_delete_user($this->test_admin_user_id);
+		if ( isset( $this->test_admin_user_id ) ) {
+			wp_delete_user( $this->test_admin_user_id );
 		}
 	}
 }
