@@ -18,10 +18,12 @@ final class Render_Context {
 	/**
 	 * Create a render context.
 	 *
-	 * @param array<string, mixed>                               $metadata  Email metadata and design tokens.
-	 * @param array<string, array<string, array<string, mixed>>> $snapshots Immutable content snapshots.
-	 * @param array<string, array<string, mixed>>                $bindings  Active parent bindings.
-	 * @param string                                             $profile   Versioned target profile.
+	 * @param array<string, mixed>                                   $metadata  Email metadata and design tokens.
+	 * @param array<string, array<int|string, array<string, mixed>>> $snapshots Immutable content snapshots.
+	 *        Record keys are post ids, which PHP stores as int when numeric; the
+	 *        string lookup in snapshot() resolves through the same coercion.
+	 * @param array<string, array<string, mixed>>                    $bindings  Active parent bindings.
+	 * @param string                                                 $profile   Versioned target profile.
 	 */
 	public function __construct(
 		private readonly array $metadata = array(),

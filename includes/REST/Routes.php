@@ -53,6 +53,13 @@ class Routes extends Abstract_Rest_Controller {
 	private static Editor_Settings_Routes $editor_settings_routes;
 
 	/**
+	 * Compiled preview routes instance.
+	 *
+	 * @var Preview_Routes
+	 */
+	private static Preview_Routes $preview_routes;
+
+	/**
 	 * Initialize shared state.
 	 *
 	 * @param string               $option_name Options key used by the plugin.
@@ -63,6 +70,7 @@ class Routes extends Abstract_Rest_Controller {
 		// $_providers parameter accepted for future extensibility but not currently used.
 
 		self::$editor_settings_routes = new Editor_Settings_Routes();
+		self::$preview_routes         = new Preview_Routes();
 		self::$form_controller        = new Form_Rest_Controller();
 
 		// Register AJAX handlers.
@@ -93,6 +101,9 @@ class Routes extends Abstract_Rest_Controller {
 
 		// Register editor settings routes.
 		self::$editor_settings_routes->register();
+
+		// Register compiled preview routes.
+		self::$preview_routes->register();
 	}
 
 	/**
