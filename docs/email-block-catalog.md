@@ -96,7 +96,9 @@ before rendering and are frozen in the campaign snapshot.
 | `campaignbridge/post-list`    | Binding block  | Render the immutable result of a post query     | Requires deterministic item template and maximum count |
 
 Featured article, latest posts, category digest, event listing, and author digest
-should initially be patterns over the post blocks. Custom post types use the same
+should initially be patterns over the post blocks. The media-beside-copy card is
+already shipped that way: `Post card, media left` and `Post card, media right`
+compose `columns` inside `post-card` rather than adding a layout attribute. Custom post types use the same
 binding contract rather than receiving a renderer per post type.
 
 ## Wave C — personalization and conditional content

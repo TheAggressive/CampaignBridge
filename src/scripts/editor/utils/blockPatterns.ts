@@ -44,4 +44,50 @@ export const blockPatterns = [
       <!-- /wp:campaignbridge/post-card -->
     `,
   },
+  {
+    name: 'campaignbridge/post-card-media-left',
+    title: __('Post card, media left', 'campaignbridge'),
+    description: __(
+      'A post card with the image beside the text, stacking on narrow screens',
+      'campaignbridge'
+    ),
+    category: 'email-basic',
+    content: `
+      <!-- wp:campaignbridge/post-card {"postType":"post","postId":0} -->
+      <!-- wp:campaignbridge/columns {"gap":24,"verticalAlign":"middle"} -->
+      <!-- wp:campaignbridge/column {"width":35} -->
+      <!-- wp:campaignbridge/post-image {"linkToPost":true} /-->
+      <!-- /wp:campaignbridge/column -->
+      <!-- wp:campaignbridge/column {"width":65} -->
+      <!-- wp:campaignbridge/post-title {"linkToPost":true} /-->
+      <!-- wp:campaignbridge/post-excerpt /-->
+      <!-- wp:campaignbridge/post-cta {"style":"link"} /-->
+      <!-- /wp:campaignbridge/column -->
+      <!-- /wp:campaignbridge/columns -->
+      <!-- /wp:campaignbridge/post-card -->
+    `,
+  },
+  {
+    name: 'campaignbridge/post-card-media-right',
+    title: __('Post card, media right', 'campaignbridge'),
+    description: __(
+      'A post card with the image beside the text, stacking on narrow screens',
+      'campaignbridge'
+    ),
+    category: 'email-basic',
+    content: `
+      <!-- wp:campaignbridge/post-card {"postType":"post","postId":0} -->
+      <!-- wp:campaignbridge/columns {"gap":24,"verticalAlign":"middle"} -->
+      <!-- wp:campaignbridge/column {"width":65} -->
+      <!-- wp:campaignbridge/post-title {"linkToPost":true} /-->
+      <!-- wp:campaignbridge/post-excerpt /-->
+      <!-- wp:campaignbridge/post-cta {"style":"link"} /-->
+      <!-- /wp:campaignbridge/column -->
+      <!-- wp:campaignbridge/column {"width":35} -->
+      <!-- wp:campaignbridge/post-image {"linkToPost":true} /-->
+      <!-- /wp:campaignbridge/column -->
+      <!-- /wp:campaignbridge/columns -->
+      <!-- /wp:campaignbridge/post-card -->
+    `,
+  },
 ];

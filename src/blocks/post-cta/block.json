@@ -8,17 +8,44 @@
   "icon": "button",
   "description": "Creates a bulletproof call-to-action button for the selected post.",
   "parent": ["campaignbridge/post-card"],
-  "supports": { "html": false, "reusable": false },
+  "supports": {
+    "html": false,
+    "reusable": false
+  },
   "attributes": {
-    "label": { "type": "string", "default": "Read more" },
+    "label": {
+      "type": "string",
+      "default": "Read more"
+    },
     "destination": {
       "type": "string",
       "enum": ["article", "postParent", "postTypeArchive", "custom"],
       "default": "article"
     },
-    "customUrl": { "type": "string", "default": "" },
-    "backgroundColor": { "type": "string", "default": "#111111" },
-    "textColor": { "type": "string", "default": "#ffffff" }
+    "customUrl": {
+      "type": "string",
+      "default": ""
+    },
+    "backgroundColor": {
+      "type": "string",
+      "default": "#111111"
+    },
+    "textColor": {
+      "type": "string",
+      "default": "#ffffff"
+    },
+    "align": {
+      "type": "string",
+      "default": "left"
+    },
+    "style": {
+      "type": "string",
+      "default": "button"
+    },
+    "linkColor": {
+      "type": "string",
+      "default": "#111111"
+    }
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js"

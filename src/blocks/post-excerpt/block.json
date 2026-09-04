@@ -8,9 +8,27 @@
   "icon": "editor-justify",
   "description": "Shows a bounded plain-text summary for the selected post.",
   "parent": ["campaignbridge/post-card"],
-  "supports": { "html": false, "reusable": false },
+  "supports": {
+    "html": false,
+    "reusable": false
+  },
   "attributes": {
-    "maxWords": { "type": "number", "default": 50 }
+    "maxWords": {
+      "type": "number",
+      "default": 50
+    },
+    "align": {
+      "type": "string",
+      "default": "left"
+    },
+    "textColor": {
+      "type": "string",
+      "default": "#333333"
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 16
+    }
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js"

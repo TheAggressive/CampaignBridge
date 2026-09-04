@@ -27,7 +27,7 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'level' );
+		return array( 'level', 'align', 'textColor', 'linkToPost' );
 	}
 
 	/**
@@ -40,7 +40,10 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'level' => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
+				'level'      => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
+				'align'      => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'textColor'  => Renderer_Support::color_attribute( $attributes, 'textColor', '#111111' ),
+				'linkToPost' => Renderer_Support::boolean_attribute( $attributes, 'linkToPost', false ),
 			)
 		);
 	}
@@ -70,11 +73,27 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$post  = $context->binding( 'post' );
-		$title = Renderer_Support::html( (string) ( $post['title'] ?? '' ) );
-		$level = $block->attributes()['level'];
+		$post       = $context->binding( 'post' );
+		$title      = Renderer_Support::html( (string) ( $post['title'] ?? '' ) );
+		$attributes = $block->attributes();
+		$url        = $attributes['linkToPost'] ? Renderer_Support::https_url( $post['url'] ?? null ) : null;
 
-		return sprintf( '<h%1$d style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:24px;line-height:1.25;color:#111111">%2$s</h%1$d>', $level, $title );
+		if ( null !== $url ) {
+			$title = sprintf(
+				'<a href="%1$s" style="color:%2$s;text-decoration:none">%3$s</a>',
+				Renderer_Support::html( $url ),
+				$attributes['textColor'],
+				$title
+			);
+		}
+
+		return sprintf(
+			'<h%1$d align="%2$s" style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:24px;line-height:1.25;text-align:%2$s;color:%3$s">%4$s</h%1$d>',
+			$attributes['level'],
+			$attributes['align'],
+			$attributes['textColor'],
+			$title
+		);
 	}
 
 	/**

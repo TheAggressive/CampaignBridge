@@ -8,9 +8,27 @@
   "icon": "heading",
   "description": "Displays the post title with customizable typography and styling.",
   "parent": ["campaignbridge/post-card"],
-  "supports": { "html": false, "reusable": false },
+  "supports": {
+    "html": false,
+    "reusable": false
+  },
   "attributes": {
-    "level": { "type": "number", "default": 2 }
+    "level": {
+      "type": "number",
+      "default": 2
+    },
+    "align": {
+      "type": "string",
+      "default": "left"
+    },
+    "textColor": {
+      "type": "string",
+      "default": "#111111"
+    },
+    "linkToPost": {
+      "type": "boolean",
+      "default": false
+    }
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js"

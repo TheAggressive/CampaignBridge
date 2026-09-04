@@ -1,14 +1,14 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import {
-  ColorPalette,
-  PanelBody,
-  SelectControl,
-  TextControl,
-} from '@wordpress/components';
+import { PanelBody, SelectControl, TextControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
+import {
+  AlignmentSelect,
+  EmailColor,
+  type EmailAlignment,
+} from '../shared/controls';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
 import type { EmailBlockEditProps } from '../types';
 
@@ -20,6 +20,9 @@ interface PostCtaAttributes {
   customUrl?: string;
   backgroundColor?: string;
   textColor?: string;
+  align?: EmailAlignment;
+  style?: 'button' | 'link';
+  linkColor?: string;
 }
 
 interface PostRecord {
@@ -78,6 +81,9 @@ export default function Edit({
     typeof attributes.customUrl === 'string' ? attributes.customUrl : '';
   const backgroundColor = attributes.backgroundColor || '#111111';
   const textColor = attributes.textColor || '#ffffff';
+  const ctaStyle = attributes.style === 'link' ? 'link' : 'button';
+  const align = attributes.align ?? 'left';
+  const linkColor = attributes.linkColor || '#111111';
   const [postTypes, setPostTypes] = useState<PostTypeItem[]>([]);
   useEffect(() => {
     let active = true;
@@ -142,7 +148,7 @@ export default function Edit({
         : undefined;
 
   return (
-    <div {...useBlockProps()}>
+    <div {...useBlockProps({ style: { textAlign: align } })}>
       <InspectorControls>
         <PanelBody title={__('Call to action', 'campaignbridge')} initialOpen>
           <TextControl
@@ -192,18 +198,46 @@ export default function Edit({
               __nextHasNoMarginBottom
             />
           )}
-          <p>{__('Background color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={backgroundColor}
+          <SelectControl
+            label={__('Style', 'campaignbridge')}
+            value={ctaStyle}
+            options={[
+              { label: __('Button', 'campaignbridge'), value: 'button' },
+              { label: __('Text link', 'campaignbridge'), value: 'link' },
+            ]}
             onChange={value =>
-              setAttributes({ backgroundColor: value || '#111111' })
+              setAttributes({ style: value as 'button' | 'link' })
             }
+            __next40pxDefaultSize
+            __nextHasNoMarginBottom
           />
-          <p>{__('Text color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={textColor}
-            onChange={value => setAttributes({ textColor: value || '#ffffff' })}
+          <AlignmentSelect
+            value={align}
+            onChange={value => setAttributes({ align: value })}
           />
+          {ctaStyle === 'link' ? (
+            <EmailColor
+              label={__('Link color', 'campaignbridge')}
+              value={linkColor}
+              fallback='#111111'
+              onChange={value => setAttributes({ linkColor: value })}
+            />
+          ) : (
+            <>
+              <EmailColor
+                label={__('Background color', 'campaignbridge')}
+                value={backgroundColor}
+                fallback='#111111'
+                onChange={value => setAttributes({ backgroundColor: value })}
+              />
+              <EmailColor
+                label={__('Text color', 'campaignbridge')}
+                value={textColor}
+                fallback='#ffffff'
+                onChange={value => setAttributes({ textColor: value })}
+              />
+            </>
+          )}
         </PanelBody>
       </InspectorControls>
       <a
@@ -211,12 +245,13 @@ export default function Edit({
         aria-disabled={!previewUrl}
         style={{
           display: 'inline-block',
-          padding: '12px 24px',
-          borderRadius: 4,
-          backgroundColor,
-          color: textColor,
-          textDecoration: 'none',
-          fontWeight: 700,
+          padding: ctaStyle === 'link' ? 0 : '12px 24px',
+          borderRadius: ctaStyle === 'link' ? 0 : 4,
+          backgroundColor:
+            ctaStyle === 'link' ? 'transparent' : backgroundColor,
+          color: ctaStyle === 'link' ? linkColor : textColor,
+          textDecoration: ctaStyle === 'link' ? 'underline' : 'none',
+          fontWeight: ctaStyle === 'link' ? 400 : 700,
         }}
       >
         {label}

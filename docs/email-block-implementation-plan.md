@@ -151,11 +151,11 @@ This is the exact compiler/editor allowlist after the clean cutover:
 | `campaignbridge/button`       | Bulletproof CTA        | HTTPS URL, alignment, Outlook VML fallback   |
 | `campaignbridge/divider`      | Horizontal divider     | Bounded width/thickness and style allowlist  |
 | `campaignbridge/spacer`       | Vertical spacing       | Bounded 4–120 px height                      |
-| `campaignbridge/post-card`    | Immutable post binding | Child of container/section; snapshot needed  |
-| `campaignbridge/post-image`   | Featured image binding | Child of post card; URL/dimensions/alt       |
-| `campaignbridge/post-title`   | Post title binding     | Child of post card; heading levels 1–4       |
-| `campaignbridge/post-excerpt` | Post excerpt binding   | Child of post card; 10–150 words             |
-| `campaignbridge/post-cta`     | Post CTA binding       | Article, parent, archive, custom; HTTPS; VML |
+| `campaignbridge/post-card`    | Immutable post binding | Child of container/section; snapshot needed; padding, background |
+| `campaignbridge/post-image`   | Featured image binding | Child of post card or column; width, align, link-to-post, decorative |
+| `campaignbridge/post-title`   | Post title binding | Child of post card or column; levels 1–4, align, colour, link-to-post |
+| `campaignbridge/post-excerpt` | Post excerpt binding | Child of post card or column; 10–150 words, align, colour, 12–24px |
+| `campaignbridge/post-cta`     | Post CTA binding       | Article, parent, archive, custom; HTTPS; button or text link |
 | `campaignbridge/preheader`    | Hidden inbox preview   | First child of container; at most one; 1-150 characters |
 | `campaignbridge/columns`      | One or two columns     | Child of section; 1-2 columns; gap 0-48 px   |
 | `campaignbridge/column`       | Column content         | Child of columns; width 20-80% totalling 100 |
@@ -171,6 +171,18 @@ Two-column rows stack through the document media query rather than a ghost-table
 hybrid. Clients that ignore `@media` — desktop Outlook in particular — keep the
 columns side by side at their declared widths, which is the intended desktop
 result. That degradation is deliberate and is covered by the golden fixture.
+
+Horizontal post cards are a composition, not a block attribute. A card places a
+`columns` block inside itself and puts the image in one column and the copy in
+the other, so any arrangement is expressible and the compiler needs no per-child
+layout logic. The `Post card, media left` and `Post card, media right` patterns
+ship that composition as a single insert. The post binding reaches the post
+blocks through the columns wrapper because context flows down unchanged.
+
+Every post binding block mirrors the control surface of its static twin:
+post-title matches heading, post-excerpt matches text, post-cta matches button.
+Their defaults reproduce the previous output exactly, so templates authored
+before the controls existed compile to the same bytes.
 
 The unsubscribe destination is never a block attribute. The compliance footer
 reads it from immutable render context metadata, so provider merge syntax stays
