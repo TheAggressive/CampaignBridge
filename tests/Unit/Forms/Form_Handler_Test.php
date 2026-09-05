@@ -49,5 +49,4 @@ class Form_Handler_Test extends \WP_UnitTestCase {
 		$this->assertEquals( 'visible value', $filtered_data['visible_field'] );
 		$this->assertEquals( 'regular value', $filtered_data['regular_field'] );
 	}
-
 }

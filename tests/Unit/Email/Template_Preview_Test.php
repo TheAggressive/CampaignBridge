@@ -27,8 +27,20 @@ final class Template_Preview_Test extends TestCase {
 		$references = Snapshot_References::collect( $blocks );
 
 		self::assertCount( 2, $references );
-		self::assertContains( array( 'id' => 7, 'type' => 'post' ), $references );
-		self::assertContains( array( 'id' => 9, 'type' => 'page' ), $references );
+		self::assertContains(
+			array(
+				'id'   => 7,
+				'type' => 'post',
+			),
+			$references 
+		);
+		self::assertContains(
+			array(
+				'id'   => 9,
+				'type' => 'page',
+			),
+			$references 
+		);
 	}
 
 	public function test_ignores_a_card_with_no_post_selected_yet(): void {
@@ -47,7 +59,12 @@ final class Template_Preview_Test extends TestCase {
 		);
 
 		self::assertSame(
-			array( array( 'id' => 4, 'type' => 'post' ) ),
+			array(
+				array(
+					'id'   => 4,
+					'type' => 'post',
+				),
+			),
 			Snapshot_References::collect( $blocks )
 		);
 	}

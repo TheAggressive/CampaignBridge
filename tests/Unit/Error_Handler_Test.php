@@ -329,7 +329,7 @@ class Error_Handler_Test extends WP_UnitTestCase {
 	 */
 	public function test_log_file_path(): void {
 		$log_file_property = $this->reflection->getProperty( 'log_file' );
-		$log_file = $log_file_property->getValue( $this->error_handler );
+		$log_file          = $log_file_property->getValue( $this->error_handler );
 
 		$this->assertEquals( get_temp_dir() . 'campaignbridge.log', $log_file );
 	}

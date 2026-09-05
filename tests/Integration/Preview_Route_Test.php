@@ -95,7 +95,13 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 		$request = new WP_REST_Request( 'POST', self::ROUTE );
 		$request->set_param( 'template_id', $this->template_id );
 		$request->set_param( 'content', '<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section --><!-- wp:campaignbridge/spacer /--><!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->' );
-		$request->set_param( 'metadata', array( 'background_color' => '#ff0000', 'evil' => '<script>' ) );
+		$request->set_param(
+			'metadata',
+			array(
+				'background_color' => '#ff0000',
+				'evil'             => '<script>',
+			) 
+		);
 
 		$data = rest_get_server()->dispatch( $request )->get_data();
 

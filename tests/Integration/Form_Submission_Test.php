@@ -113,7 +113,6 @@ class Form_Submission_Test extends Test_Case {
 		$form2->render(); // Process form
 		$this->assertTrue( $form2->submitted(), 'Form should be detected as submitted' );
 		$this->assertFalse( $form2->valid(), 'Form should be invalid with missing required field' );
-
 	}
 
 	/**

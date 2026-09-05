@@ -465,7 +465,7 @@ class _Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 		// between a pair of quotes, which is true of any line where a real
 		// call happens to sit between two unrelated strings. A featured-image
 		// read written as
-		//     'alt' => get_post_meta( $id, '_wp_attachment_image_alt', true )
+		// 'alt' => get_post_meta( $id, '_wp_attachment_image_alt', true )
 		// matched from the quote after `alt` to the quote before `_wp` and was
 		// skipped, so a genuine violation went unreported.
 		$stripped = preg_replace( '/\'[^\']*\'|"[^"]*"/', "''", $line );

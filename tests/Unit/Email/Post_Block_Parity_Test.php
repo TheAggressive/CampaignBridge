@@ -86,8 +86,8 @@ final class Post_Block_Parity_Test extends TestCase {
 	}
 
 	public function test_link_style_uses_its_own_colour_rather_than_the_button_fill(): void {
-		$document = $this->document();
-		$cta      = &$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs'];
+		$document               = $this->document();
+		$cta                    = &$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs'];
 		$cta['style']           = 'link';
 		$cta['linkColor']       = '#0000ee';
 		$cta['backgroundColor'] = '#ff0000';
@@ -163,8 +163,8 @@ final class Post_Block_Parity_Test extends TestCase {
 										'attrs'       => array(),
 										'innerBlocks' => array(
 											array(
-												'blockName'   => 'campaignbridge/post-title',
-												'attrs'       => array(),
+												'blockName' => 'campaignbridge/post-title',
+												'attrs' => array(),
 												'innerBlocks' => array(),
 											),
 										),

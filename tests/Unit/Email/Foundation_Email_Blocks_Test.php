@@ -64,8 +64,8 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 	}
 
 	public function test_rejects_a_preheader_that_is_not_first(): void {
-		$document                    = $this->document();
-		$preheader                   = $document[0]['innerBlocks'][0];
+		$document                      = $this->document();
+		$preheader                     = $document[0]['innerBlocks'][0];
 		$document[0]['innerBlocks'][0] = $document[0]['innerBlocks'][1];
 		$document[0]['innerBlocks'][1] = $preheader;
 
@@ -117,8 +117,8 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 	}
 
 	public function test_rejects_column_widths_that_do_not_total_one_hundred(): void {
-		$document = $this->document();
-		$columns  = &$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'];
+		$document                     = $this->document();
+		$columns                      = &$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'];
 		$columns[0]['attrs']['width'] = 60;
 		$columns[1]['attrs']['width'] = 60;
 
@@ -129,8 +129,8 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 	}
 
 	public function test_honours_explicit_column_widths_that_total_one_hundred(): void {
-		$document = $this->document();
-		$columns  = &$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'];
+		$document                     = $this->document();
+		$columns                      = &$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'];
 		$columns[0]['attrs']['width'] = 65;
 		$columns[1]['attrs']['width'] = 35;
 
@@ -142,8 +142,8 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 	}
 
 	public function test_rejects_a_column_width_outside_the_documented_range(): void {
-		$document = $this->document();
-		$columns  = &$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'];
+		$document                     = $this->document();
+		$columns                      = &$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'];
 		$columns[0]['attrs']['width'] = 90;
 		$columns[1]['attrs']['width'] = 10;
 
@@ -225,8 +225,8 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 									$this->column(
 										array(
 											array(
-												'blockName'   => 'campaignbridge/heading',
-												'attrs'       => array(
+												'blockName' => 'campaignbridge/heading',
+												'attrs' => array(
 													'content' => 'Left',
 													'level'   => 2,
 												),
@@ -237,8 +237,8 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 									$this->column(
 										array(
 											array(
-												'blockName'   => 'campaignbridge/text',
-												'attrs'       => array( 'content' => 'Right side copy.' ),
+												'blockName' => 'campaignbridge/text',
+												'attrs' => array( 'content' => 'Right side copy.' ),
 												'innerBlocks' => array(),
 											),
 										),
