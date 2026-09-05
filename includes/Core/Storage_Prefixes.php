@@ -105,6 +105,7 @@ class Storage_Prefixes {
 	 */
 	public const ARRAY_OPTIONS = array(
 		'campaignbridge_settings', // Main settings array.
+		'campaignbridge_brand_kit', // Email brand colours imported from the theme or edited by the operator.
 		'campaignbridge_performance_config', // Performance monitoring configuration.
 		'campaignbridge_performance_metrics', // Current performance metrics.
 	);

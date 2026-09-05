@@ -102,6 +102,8 @@ class Routes extends Abstract_Rest_Controller {
 		// Register editor settings routes.
 		self::$editor_settings_routes->register();
 
+		( new Brand_Kit_Routes() )->register();
+
 		// Register compiled preview routes.
 		self::$preview_routes->register();
 	}

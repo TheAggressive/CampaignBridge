@@ -1,0 +1,46 @@
+@import '@wordpress/dataviews/build-style/style.css';
+
+.campaignbridge-brand-kit {
+  background: #fff;
+  border: 1px solid #ddd;
+  margin-top: 20px;
+  padding: 20px;
+
+  &__intro,
+  &__source {
+    max-width: 40rem;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 24px;
+  }
+
+  &__action {
+    margin: 0;
+  }
+
+  &__dataviews {
+    min-height: 28rem;
+  }
+
+  &__source {
+    margin: 0 0 12px;
+  }
+
+  &__swatch {
+    background: var(--campaignbridge-swatch, #fff);
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 40%);
+    display: inline-block;
+    height: 32px;
+    width: 48px;
+  }
+
+  &__notice {
+    margin: 0 0 16px;
+  }
+}
