@@ -100,6 +100,7 @@
     "@wordpress/core-data": "^7.54.0",
     "@wordpress/data": "^10.54.0",
     "@wordpress/data-controls": "^4.54.0",
+    "@wordpress/dataviews": "^18.1.0",
     "@wordpress/dependency-extraction-webpack-plugin": "^6.54.0",
     "@wordpress/dom-ready": "^4.54.0",
     "@wordpress/editor": "^14.54.0",

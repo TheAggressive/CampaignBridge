@@ -12,6 +12,10 @@
 
 namespace CampaignBridge\Admin\Controllers;
 
+use CampaignBridge\Domain\Email\Theme_Brand_Mapper;
+use CampaignBridge\Repository\Brand_Kit_Repository;
+use CampaignBridge\Repository\Theme_Style_Reader;
+
 /**
  * Settings Controller class.
  *
@@ -70,6 +74,18 @@ class Settings_Controller {
 		$import_settings = isset( $_POST['import_settings'] ) ? sanitize_text_field( wp_unslash( $_POST['import_settings'] ) ) : '';
 		if ( ! empty( $import_settings ) ) {
 			$this->handle_import_settings();
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in individual handler methods
+		$import_brand = isset( $_POST['import_brand_kit'] ) ? sanitize_text_field( wp_unslash( $_POST['import_brand_kit'] ) ) : '';
+		if ( ! empty( $import_brand ) ) {
+			$this->handle_import_brand_kit();
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in individual handler methods
+		$restore_brand = isset( $_POST['restore_brand_kit'] ) ? sanitize_text_field( wp_unslash( $_POST['restore_brand_kit'] ) ) : '';
+		if ( ! empty( $restore_brand ) ) {
+			$this->handle_restore_brand_kit();
 		}
 	}
 
@@ -173,7 +189,7 @@ class Settings_Controller {
 		// Double security: sanitize input before nonce verification.
 		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
 		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_reset_all' ) ) {
-			wp_die( 'Security check failed' );
+			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
 		}
 
 		// Rate limiting for destructive actions.
@@ -194,6 +210,7 @@ class Settings_Controller {
 			'campaignbridge_log_level',
 			'campaignbridge_cache_duration',
 			'campaignbridge_rate_limit',
+			'campaignbridge_brand_kit',
 		);
 
 		foreach ( $options_to_reset as $option ) {
@@ -224,7 +241,7 @@ class Settings_Controller {
 		// Double security: sanitize input before nonce verification.
 		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
 		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_export_settings' ) ) {
-			wp_die( 'Security check failed' );
+			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
 		}
 
 		// Check user capabilities.
@@ -256,7 +273,7 @@ class Settings_Controller {
 		// Double security: sanitize input before nonce verification.
 		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
 		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_import_settings' ) ) {
-			wp_die( 'Security check failed' );
+			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
 		}
 
 		// Check user capabilities.
@@ -358,6 +375,73 @@ class Settings_Controller {
 					'import' => 'success',
 				),
 				\admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Copy portable theme colours into the stored brand kit.
+	 *
+	 * @return void
+	 */
+	private function handle_import_brand_kit(): void {
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_import_brand' ) ) {
+			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to update the brand kit.', 'campaignbridge' ) );
+		}
+
+		$kit    = Theme_Brand_Mapper::from_theme( ( new Theme_Style_Reader() )->extract() );
+		$saved  = ( new Brand_Kit_Repository() )->save( $kit );
+		$result = $saved ? array( 'imported' => 'theme' ) : array( 'brand_error' => 'import' );
+
+		wp_safe_redirect(
+			add_query_arg(
+				array_merge(
+					array(
+						'page' => 'campaignbridge-settings',
+						'tab'  => 'brand',
+					),
+					$result
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Remove the stored kit so CampaignBridge defaults return.
+	 *
+	 * @return void
+	 */
+	private function handle_restore_brand_kit(): void {
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_restore_brand' ) ) {
+			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to update the brand kit.', 'campaignbridge' ) );
+		}
+
+		$cleared = ( new Brand_Kit_Repository() )->clear();
+		$result  = $cleared ? array( 'restored' => '1' ) : array( 'brand_error' => 'restore' );
+
+		wp_safe_redirect(
+			add_query_arg(
+				array_merge(
+					array(
+						'page' => 'campaignbridge-settings',
+						'tab'  => 'brand',
+					),
+					$result
+				),
+				admin_url( 'admin.php' )
 			)
 		);
 		exit;

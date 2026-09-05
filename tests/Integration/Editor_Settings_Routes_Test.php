@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Integration;
 
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
+use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\REST\Editor_Settings_Routes;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Tests\Helpers\Test_Case;
@@ -106,6 +108,50 @@ class Editor_Settings_Routes_Test extends Test_Case {
 			Compiler_Factory::registry()->block_names(),
 			$data['allowedBlockTypes']
 		);
+	}
+
+	/**
+	 * Editor colour presets come from the brand kit, not the live theme.
+	 */
+	public function test_settings_include_the_brand_kit_palette(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$template_id = $this->create_test_post(
+			array(
+				'post_type'   => Post_Type_Email_Template::POST_TYPE,
+				'post_status' => 'draft',
+			)
+		);
+
+		( new Brand_Kit_Repository() )->save(
+			Brand_Kit::from_colors( array( Brand_Kit::SLOT_BRAND => '#ff5500' ) )
+		);
+
+		$request = new WP_REST_Request( 'GET', '/campaignbridge/v1/editor-settings' );
+		$request->set_param( 'post_type', Post_Type_Email_Template::POST_TYPE );
+		$request->set_param( 'post_id', $template_id );
+		$response = ( new Editor_Settings_Routes() )->handle_request( $request );
+		$data     = $response->get_data();
+
+		( new Brand_Kit_Repository() )->clear();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertIsArray( $data );
+		$this->assertFalse( $data['__experimentalFeatures']['color']['defaultPalette'] );
+		$this->assertFalse( $data['__experimentalFeatures']['color']['gradients'] );
+
+		$palette = $data['__experimentalFeatures']['color']['palette']['theme'];
+		$slugs   = array_map( static fn( array $preset ): string => $preset['slug'], $palette );
+		$this->assertSame( Brand_Kit::SLOTS, $slugs );
+
+		$brand = null;
+		foreach ( $palette as $preset ) {
+			if ( Brand_Kit::SLOT_BRAND === $preset['slug'] ) {
+				$brand = $preset['color'];
+			}
+		}
+
+		$this->assertSame( '#ff5500', $brand );
 	}
 
 	/**

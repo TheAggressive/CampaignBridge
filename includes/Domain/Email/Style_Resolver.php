@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * WordPress records a style choice in one of three shapes, and a block can use
  * all three at once:
  *
- * - a preset slug in a top-level attribute, `backgroundColor: "accent"`;
+ * - a preset slug in a top-level attribute, `backgroundColor: "brand"`;
  * - a literal in the style tree, `style.color.background: "#1a6dcc"`;
  * - a preset reference in the style tree, `var:preset|spacing|40`.
  *
@@ -42,9 +42,11 @@ final class Style_Resolver {
 	 * @param array<string, mixed> $attributes Block attributes.
 	 * @param string               $slot       Colour slot: background, text, or link.
 	 * @param string|null          $fallback   Value when the author chose nothing.
+	 * @param Brand_Kit|null       $kit        Active brand kit. Defaults when omitted.
 	 * @throws Invalid_Block_Attribute When an explicit value is not portable.
 	 */
-	public static function color( array $attributes, string $slot, ?string $fallback = null ): ?string {
+	public static function color( array $attributes, string $slot, ?string $fallback = null, ?Brand_Kit $kit = null ): ?string {
+		$kit              = $kit ?? Brand_Kit::defaults();
 		$preset_attribute = array(
 			'background' => 'backgroundColor',
 			'text'       => 'textColor',
@@ -58,7 +60,7 @@ final class Style_Resolver {
 				throw new Invalid_Block_Attribute( $preset_attribute, 'must be a colour preset slug.' );
 			}
 
-			$resolved = Design_Presets::color( $slug );
+			$resolved = $kit->color( $slug );
 			if ( null === $resolved ) {
 				throw new Invalid_Block_Attribute( $preset_attribute, sprintf( 'is not a known colour preset: %s.', $slug ) );
 			}
@@ -72,7 +74,7 @@ final class Style_Resolver {
 			return $fallback;
 		}
 
-		$resolved = self::resolve_preset_reference( $value, 'color' );
+		$resolved = self::resolve_preset_reference( $value, 'color', $kit );
 		$path     = 'style.color.' . $slot;
 
 		if ( null === $resolved ) {
@@ -204,11 +206,12 @@ final class Style_Resolver {
 	/**
 	 * Expand a `var:preset|kind|slug` reference, or pass a literal through.
 	 *
-	 * @param mixed  $value Raw style value.
-	 * @param string $kind  Preset kind to expand.
+	 * @param mixed          $value Raw style value.
+	 * @param string         $kind  Preset kind to expand.
+	 * @param Brand_Kit|null $kit   Active brand kit for colour references.
 	 * @return string|null Null when the reference names an unknown preset.
 	 */
-	private static function resolve_preset_reference( mixed $value, string $kind ): ?string {
+	private static function resolve_preset_reference( mixed $value, string $kind, ?Brand_Kit $kit = null ): ?string {
 		if ( ! is_string( $value ) ) {
 			return null;
 		}
@@ -221,7 +224,7 @@ final class Style_Resolver {
 		$slug = substr( $value, strlen( $prefix ) );
 
 		return 'color' === $kind
-			? Design_Presets::color( $slug )
+			? ( $kit ?? Brand_Kit::defaults() )->color( $slug )
 			: Design_Presets::spacing( $slug );
 	}
 

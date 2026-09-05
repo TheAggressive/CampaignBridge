@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Design_Presets;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
 use CampaignBridge\Domain\Email\Style_Resolver;
@@ -18,7 +19,7 @@ final class Style_Resolver_Test extends TestCase {
 	public function test_resolves_a_preset_slug_written_to_the_top_level_attribute(): void {
 		self::assertSame(
 			'#1a6dcc',
-			Style_Resolver::color( array( 'backgroundColor' => 'accent' ), 'background' )
+			Style_Resolver::color( array( 'backgroundColor' => 'brand' ), 'background' )
 		);
 	}
 
@@ -36,7 +37,7 @@ final class Style_Resolver_Test extends TestCase {
 		self::assertSame(
 			'#f4f4f4',
 			Style_Resolver::color(
-				array( 'style' => array( 'color' => array( 'background' => 'var:preset|color|surface' ) ) ),
+				array( 'style' => array( 'color' => array( 'background' => 'var:preset|color|card' ) ) ),
 				'background'
 			)
 		);
@@ -49,7 +50,7 @@ final class Style_Resolver_Test extends TestCase {
 			'#111111',
 			Style_Resolver::color(
 				array(
-					'backgroundColor' => 'foreground',
+					'backgroundColor' => 'text',
 					'style'           => array( 'color' => array( 'background' => '#ff0000' ) ),
 				),
 				'background'
@@ -60,6 +61,24 @@ final class Style_Resolver_Test extends TestCase {
 	public function test_returns_the_fallback_when_nothing_was_chosen(): void {
 		self::assertSame( '#ffffff', Style_Resolver::color( array(), 'background', '#ffffff' ) );
 		self::assertNull( Style_Resolver::color( array(), 'background' ) );
+	}
+
+	public function test_resolves_a_colour_from_the_active_brand_kit(): void {
+		$kit = Brand_Kit::from_colors( array( Brand_Kit::SLOT_BRAND => '#ff5500' ) );
+
+		self::assertSame(
+			'#ff5500',
+			Style_Resolver::color( array( 'backgroundColor' => 'brand' ), 'background', null, $kit )
+		);
+		self::assertSame(
+			'#ff5500',
+			Style_Resolver::color(
+				array( 'style' => array( 'color' => array( 'background' => 'var:preset|color|brand' ) ) ),
+				'background',
+				null,
+				$kit
+			)
+		);
 	}
 
 	public function test_rejects_an_unknown_colour_preset(): void {

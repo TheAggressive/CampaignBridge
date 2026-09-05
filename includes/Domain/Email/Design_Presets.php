@@ -30,13 +30,13 @@ final class Design_Presets {
 	 */
 	private const COLORS = array(
 		array(
-			'slug'  => 'foreground',
-			'name'  => 'Foreground',
+			'slug'  => 'text',
+			'name'  => 'Text',
 			'color' => '#111111',
 		),
 		array(
-			'slug'  => 'muted',
-			'name'  => 'Muted',
+			'slug'  => 'secondary',
+			'name'  => 'Secondary text',
 			'color' => '#666666',
 		),
 		array(
@@ -45,8 +45,8 @@ final class Design_Presets {
 			'color' => '#ffffff',
 		),
 		array(
-			'slug'  => 'surface',
-			'name'  => 'Surface',
+			'slug'  => 'card',
+			'name'  => 'Card',
 			'color' => '#f4f4f4',
 		),
 		array(
@@ -55,13 +55,13 @@ final class Design_Presets {
 			'color' => '#e0e0e0',
 		),
 		array(
-			'slug'  => 'accent',
-			'name'  => 'Accent',
+			'slug'  => 'brand',
+			'name'  => 'Brand',
 			'color' => '#1a6dcc',
 		),
 		array(
-			'slug'  => 'accent-contrast',
-			'name'  => 'Accent contrast',
+			'slug'  => 'on-brand',
+			'name'  => 'On brand',
 			'color' => '#ffffff',
 		),
 	);

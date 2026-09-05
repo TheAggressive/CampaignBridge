@@ -12,5 +12,18 @@ return array(
 	'capability'  => 'manage_options',
 	'position'    => 10,
 	'description' => __( 'Configure your email campaign settings and integrations.', 'campaignbridge' ),
-
+	'tabs'        => array(
+		'general'   => array(
+			'label' => __( 'General', 'campaignbridge' ),
+			'order' => 10,
+		),
+		'brand'     => array(
+			'label' => __( 'Brand', 'campaignbridge' ),
+			'order' => 20,
+		),
+		'providers' => array(
+			'label' => __( 'Providers', 'campaignbridge' ),
+			'order' => 30,
+		),
+	),
 );

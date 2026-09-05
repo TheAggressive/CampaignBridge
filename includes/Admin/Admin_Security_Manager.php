@@ -8,6 +8,8 @@
  * @package CampaignBridge\Admin
  */
 
+declare(strict_types=1);
+
 namespace CampaignBridge\Admin;
 
 /**
@@ -37,34 +39,63 @@ class Admin_Security_Manager {
 	 * @return void
 	 */
 	public function init(): void {
-		\add_action( 'admin_head', array( $this, 'add_security_headers' ) );
+		// current_screen fires inside set_current_screen(), after the screen
+		// object exists but before wp-admin/admin-header.php is required. Both
+		// admin_head and admin_enqueue_scripts run after _wp_admin_html_begin()
+		// has already started output, at which point header() is too late.
+		\add_action( 'current_screen', array( $this, 'add_security_headers' ) );
 	}
 
 	/**
-	 * Add security headers for admin pages with encrypted fields.
+	 * Send the security headers for admin pages handling sensitive data.
 	 *
+	 * @param \WP_Screen|null $screen Screen being loaded.
 	 * @return void
 	 */
-	public function add_security_headers(): void {
-		// Only add headers on pages that might contain encrypted fields.
-		$current_screen = get_current_screen();
-		if ( ! $current_screen || ! in_array( $current_screen->id, self::SECURE_PAGES, true ) ) {
+	public function add_security_headers( $screen = null ): void {
+		$screen_id = $screen instanceof \WP_Screen ? $screen->id : '';
+
+		if ( '' === $screen_id && function_exists( 'get_current_screen' ) ) {
+			$current   = get_current_screen();
+			$screen_id = $current instanceof \WP_Screen ? $current->id : '';
+		}
+
+		$headers = self::headers_for( $screen_id );
+
+		if ( array() === $headers || \headers_sent() ) {
 			return;
 		}
 
-		// Add Content Security Policy to prevent XSS.
-		header( "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; form-action 'self';" );
+		foreach ( $headers as $header ) {
+			header( $header );
+		}
+	}
 
-		// Prevent clickjacking.
-		header( 'X-Frame-Options: SAMEORIGIN' );
+	/**
+	 * Build the headers a screen should receive.
+	 *
+	 * Kept separate from sending so the policy itself is assertable: a test can
+	 * prove which headers a screen gets without needing a live HTTP response.
+	 *
+	 * @param string $screen_id Screen identifier.
+	 * @return array<int, string> Header lines, empty when the screen is not covered.
+	 */
+	public static function headers_for( string $screen_id ): array {
+		if ( ! in_array( $screen_id, self::SECURE_PAGES, true ) ) {
+			return array();
+		}
 
-		// Enable XSS protection.
-		header( 'X-XSS-Protection: 1; mode=block' );
-
-		// Prevent MIME type sniffing.
-		header( 'X-Content-Type-Options: nosniff' );
-
-		// Referrer policy for encrypted field pages.
-		header( 'Referrer-Policy: strict-origin-when-cross-origin' );
+		return array(
+			// Content Security Policy to limit script and form origins.
+			"Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; form-action 'self';",
+			// Prevent clickjacking.
+			'X-Frame-Options: SAMEORIGIN',
+			// Legacy XSS filter for older clients.
+			'X-XSS-Protection: 1; mode=block',
+			// Prevent MIME type sniffing.
+			'X-Content-Type-Options: nosniff',
+			// Limit referrer leakage from pages showing encrypted fields.
+			'Referrer-Policy: strict-origin-when-cross-origin',
+		);
 	}
 }
