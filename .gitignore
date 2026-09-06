@@ -29,6 +29,7 @@ phpunit.xml
 *.swp
 *.swo
 .cursor/
+.clinerules
 
 # OS files
 .DS_Store
