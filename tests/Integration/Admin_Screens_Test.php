@@ -483,11 +483,11 @@ class Admin_Screens_Test extends Test_Case {
 	}
 
 	/**
-	 * Render repeater test screen.
+	 * Render the repeater test screen fixture.
 	 */
 	private function render_repeater_test_screen(): void {
 		global $screen;
-		require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/repeater-test.php';
+		require \CampaignBridge_Plugin::path() . 'tests/Fixtures/Screens/repeater-test.php';
 	}
 
 	/**
