@@ -269,6 +269,46 @@ final class Native_Email_Blocks_Test extends TestCase {
 		);
 	}
 
+	public function test_button_style_variants_render_expected_inline_css(): void {
+		$variants = array(
+			'primary' => array(
+				'background-color:#0057b8',
+				';color:#ffffff',
+			),
+			'outline' => array(
+				'background-color:transparent',
+				'border:2px solid #0057b8',
+				';color:#0057b8',
+			),
+			'ghost'   => array(
+				'background-color:transparent',
+				'text-decoration:underline',
+				';color:#0057b8',
+			),
+		);
+
+		foreach ( $variants as $variant => $fragments ) {
+			$document = $this->document();
+			$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['className'] = 'is-style-' . $variant;
+
+			$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+			self::assertTrue( $result->is_success(), 'Expected style ' . $variant . ' to compile.' );
+
+			foreach ( $fragments as $fragment ) {
+				self::assertStringContainsString( $fragment, $result->html(), 'style ' . $variant );
+			}
+		}
+
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['className'] = 'is-style-neon';
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attributes.unsupported', $result->diagnostics()[0]->code() );
+	}
+
 	private function context(): Render_Context {
 		return new Render_Context(
 			array(

@@ -9,7 +9,13 @@
   "description": "Portable rich text with a constrained inline-format contract.",
   "textdomain": "campaignbridge",
   "parent": ["campaignbridge/section"],
-  "supports": { "html": false, "reusable": false },
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "color": { "text": true, "background": true },
+    "spacing": { "padding": true, "margin": true },
+    "typography": { "fontSize": true, "lineHeight": true }
+  },
   "attributes": {
     "content": { "type": "string", "default": "" },
     "align": { "type": "string", "default": "left" },
