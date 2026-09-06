@@ -453,5 +453,3 @@ For issues and feature requests:
 ---
 
 **CampaignBridge** - Professional Email Campaign Management for WordPress
-
-# Test commit to verify Husky v9 works without warnings

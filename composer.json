@@ -40,8 +40,8 @@
   "scripts": {
     "test": "phpunit",
     "test:coverage": "phpunit --coverage-html coverage",
-    "phpcs": "phpcs --standard=phpcs.xml.dist",
-    "phpcbf": "phpcbf --standard=phpcs.xml.dist",
+    "phpcs": "phpcs --standard=phpcs.xml.dist includes/ src/ campaignbridge.php uninstall.php",
+    "phpcbf": "phpcbf --standard=phpcs.xml.dist includes/ src/ campaignbridge.php uninstall.php",
     "phpstan": "phpstan analyse",
     "lint": [
       "@phpcs",
