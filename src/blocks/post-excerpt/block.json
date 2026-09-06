@@ -7,7 +7,7 @@
   "category": "campaignbridge-email",
   "icon": "editor-justify",
   "description": "Shows a bounded plain-text summary for the selected post.",
-  "parent": ["campaignbridge/post-card"],
+  "parent": ["campaignbridge/column", "campaignbridge/post-card"],
   "supports": {
     "html": false,
     "reusable": false

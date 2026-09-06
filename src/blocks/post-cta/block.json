@@ -7,7 +7,7 @@
   "category": "campaignbridge-email",
   "icon": "button",
   "description": "Creates a bulletproof call-to-action button for the selected post.",
-  "parent": ["campaignbridge/post-card"],
+  "parent": ["campaignbridge/column", "campaignbridge/post-card"],
   "supports": {
     "html": false,
     "reusable": false

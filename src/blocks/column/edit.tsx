@@ -11,16 +11,7 @@ import {
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import type { EmailBlockEditProps } from '../types';
-
-const ALLOWED_BLOCKS = [
-  'campaignbridge/text',
-  'campaignbridge/heading',
-  'campaignbridge/image',
-  'campaignbridge/button',
-  'campaignbridge/divider',
-  'campaignbridge/spacer',
-  'campaignbridge/post-card',
-];
+import { COLUMN_ALLOWED_BLOCKS } from './config';
 
 interface ColumnAttributes {
   width?: number;
@@ -41,7 +32,7 @@ export default function Edit({
     },
   });
   const innerBlocksProps = useInnerBlocksProps(blockProps, {
-    allowedBlocks: ALLOWED_BLOCKS,
+    allowedBlocks: COLUMN_ALLOWED_BLOCKS,
     templateLock: false,
   });
 

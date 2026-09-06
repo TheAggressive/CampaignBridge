@@ -8,7 +8,7 @@
   "icon": "columns",
   "description": "Places one or two columns side by side, stacking on narrow screens.",
   "textdomain": "campaignbridge",
-  "parent": ["campaignbridge/section"],
+  "parent": ["campaignbridge/post-card", "campaignbridge/section"],
   "supports": {
     "html": false,
     "innerBlocks": true,
