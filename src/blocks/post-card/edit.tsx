@@ -1,8 +1,11 @@
 import {
+  BlockControls,
   InspectorControls,
+  store as blockEditorStore,
   useBlockProps,
   useInnerBlocksProps,
 } from '@wordpress/block-editor';
+import { createBlocksFromInnerBlocksTemplate } from '@wordpress/blocks';
 import {
   BoxControl,
   Button,
@@ -10,10 +13,13 @@ import {
   PanelBody,
   SelectControl,
   Spinner,
+  ToolbarGroup,
 } from '@wordpress/components';
-import { useSelect } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import { layout as LayoutIcon } from '@wordpress/icons';
+import type { ComponentType } from 'react';
 
 import { fetchPosts, type PostItem } from '../shared/posts';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
@@ -23,6 +29,7 @@ import {
   type NormalizedSpacing,
 } from '../shared/spacing';
 import { POST_CARD_ALLOWED_BLOCKS } from './config';
+import { detectActiveLayout, POST_CARD_VARIATIONS } from './variations';
 import type { EmailBlockEditProps } from '../types';
 
 interface PostCardAttributes {
@@ -30,10 +37,6 @@ interface PostCardAttributes {
   postId: number;
   padding?: NormalizedSpacing;
   backgroundColor?: string;
-}
-
-interface BlockEditorSelectors {
-  getSelectedBlockClientId: () => string | null;
 }
 
 export default function Edit({
@@ -46,10 +49,14 @@ export default function Edit({
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
   const isSelected = useSelect(
+    select => select(blockEditorStore).getSelectedBlockClientId() === clientId,
+    [clientId]
+  );
+  const { replaceInnerBlocks } = useDispatch(blockEditorStore);
+  const innerBlocks = useSelect(
     select =>
-      (
-        select('core/block-editor') as unknown as BlockEditorSelectors
-      ).getSelectedBlockClientId() === clientId,
+      select(blockEditorStore).getBlocksByClientId(clientId)[0]?.innerBlocks ??
+      [],
     [clientId]
   );
 
@@ -124,8 +131,40 @@ export default function Edit({
     }
   );
 
+  const activeLayout = detectActiveLayout(innerBlocks);
+
+  const applyLayout = (
+    variation: (typeof POST_CARD_VARIATIONS)[number]
+  ): void => {
+    const variationBlocks = createBlocksFromInnerBlocksTemplate(
+      variation.innerBlocks as Array<
+        [string, Record<string, unknown>, unknown[]]
+      >
+    );
+    if (variationBlocks.length > 0) {
+      // Keep the Post Card selected so the Layout control stays available for
+      // trying another layout.
+      replaceInnerBlocks(clientId, variationBlocks);
+    }
+  };
+
+  const layoutControls = POST_CARD_VARIATIONS.map(variation => ({
+    icon: variation.icon as ComponentType,
+    title: variation.title,
+    isActive: activeLayout === variation.name,
+    onClick: () => applyLayout(variation),
+  }));
+
   return (
     <>
+      <BlockControls>
+        <ToolbarGroup
+          isCollapsed
+          title={__('Layout', 'campaignbridge')}
+          icon={LayoutIcon}
+          controls={layoutControls}
+        />
+      </BlockControls>
       <InspectorControls>
         <PanelBody title={__('Post', 'campaignbridge')} initialOpen>
           <SelectControl

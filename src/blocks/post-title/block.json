@@ -7,7 +7,7 @@
   "category": "campaignbridge-email",
   "icon": "heading",
   "description": "Displays the post title with customizable typography and styling.",
-  "parent": ["campaignbridge/post-card"],
+  "parent": ["campaignbridge/column", "campaignbridge/post-card"],
   "supports": {
     "html": false,
     "reusable": false

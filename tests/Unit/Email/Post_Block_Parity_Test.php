@@ -144,6 +144,26 @@ final class Post_Block_Parity_Test extends TestCase {
 		self::assertStringContainsString( 'https://example.com/hero.jpg', $result->html() );
 	}
 
+	public function test_compiles_a_post_card_laid_out_with_columns_media_right(): void {
+		$document = $this->media_left_document();
+		$columns  = &$document[0]['innerBlocks'][0]['innerBlocks'][0]['innerBlocks'];
+		$columns  = array_reverse( $columns );
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		// Reordering the columns keeps the post binding intact and swaps the visual order.
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'width="35%"', $result->html() );
+		self::assertStringContainsString( 'width="65%"', $result->html() );
+		self::assertStringContainsString( 'Snapshot title', $result->html() );
+
+		$text   = strpos( $result->html(), 'Snapshot title' );
+		$image  = strpos( $result->html(), 'https://example.com/hero.jpg' );
+		self::assertNotFalse( $text );
+		self::assertNotFalse( $image );
+		self::assertLessThan( $image, $text );
+	}
+
 	public function test_a_post_block_outside_a_card_fails_with_a_binding_diagnostic(): void {
 		$document = array(
 			array(

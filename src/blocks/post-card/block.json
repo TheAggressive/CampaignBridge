@@ -7,7 +7,11 @@
   "category": "campaignbridge-email",
   "icon": "media-document",
   "description": "A container for displaying post content in email campaigns. Add post elements inside this card.",
-  "parent": ["campaignbridge/container", "campaignbridge/section"],
+  "parent": [
+    "campaignbridge/column",
+    "campaignbridge/container",
+    "campaignbridge/section"
+  ],
   "supports": {
     "html": false,
     "innerBlocks": true,

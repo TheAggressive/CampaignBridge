@@ -23,12 +23,17 @@
 
 import { InnerBlocks } from '@wordpress/block-editor';
 import type { BlockConfiguration } from '@wordpress/blocks';
-import { getBlockType, registerBlockType } from '@wordpress/blocks';
+import {
+  getBlockType,
+  registerBlockType,
+  registerBlockVariation,
+} from '@wordpress/blocks';
 import React from 'react';
 
 import metadata from './block.json';
 import { POST_CARD_TEMPLATE } from './config';
 import Edit from './edit';
+import { POST_CARD_VARIATIONS } from './variations';
 
 /**
  * Block metadata imported from block.json
@@ -67,7 +72,9 @@ export const settings: PostCardBlockSettings = {
 /**
  * Initialize and register the post card block
  *
- * Registers the block with WordPress using the metadata and settings.
+ * Registers the block with WordPress using the metadata and settings, then
+ * registers the three layout variations (stacked, media left, media right)
+ * so the block inserter offers each layout as a one-click option.
  * This function is called immediately to register the block on load.
  */
 export const init = (): void => {
@@ -76,6 +83,10 @@ export const init = (): void => {
   }
 
   registerBlockType(metadata as unknown as BlockConfiguration, settings);
+
+  // Inserter-scoped variations, so they are never auto-applied to an existing
+  // card. The editor's explicit Layout control applies one on demand.
+  registerBlockVariation(name, POST_CARD_VARIATIONS);
 };
 
 // Initialize the block immediately
