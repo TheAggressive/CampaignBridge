@@ -78,7 +78,7 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 		$title      = Renderer_Support::html( (string) ( $post['title'] ?? '' ) );
 		$attributes = $block->attributes();
 		$text_color = Renderer_Support::resolve_color( $attributes['textColor'], Renderer_Support::brand_kit( $context ) );
-		$url        = $attributes['linkToPost'] ? Renderer_Support::safe_url( $post['url'] ?? null ) : null;
+		$url        = $attributes['linkToPost'] ? Renderer_Support::https_url( $post['url'] ?? null ) : null;
 
 		if ( null !== $url ) {
 			$title = sprintf(

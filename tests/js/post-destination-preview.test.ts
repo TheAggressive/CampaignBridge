@@ -1,5 +1,5 @@
 import {
-  isSafePreviewUrl,
+  isHttpsUrl,
   normalizeDestination,
   resolveDestinationPreview,
 } from '../../src/blocks/shared/post-destination';
@@ -96,7 +96,9 @@ describe('resolveDestinationPreview', () => {
       });
 
       expect(result.previewUrl).toBe('');
-      expect(result.destinationHelp).toBe('Enter a custom URL to preview it.');
+      expect(result.destinationHelp).toBe(
+        'Enter a custom HTTPS URL to preview it.'
+      );
     });
 
     it('uses the no-HTTPS-URL message for non-custom destinations', () => {
@@ -110,7 +112,7 @@ describe('resolveDestinationPreview', () => {
 
       expect(result.previewUrl).toBe('');
       expect(result.destinationHelp).toBe(
-        'This post snapshot has no URL yet; the link renders from the post data at send time.'
+        'This post snapshot has no HTTPS URL yet; the link renders from the post data at send time.'
       );
     });
 
@@ -122,12 +124,14 @@ describe('resolveDestinationPreview', () => {
         postParentUrl: '',
         postTypeArchiveUrl: '',
         helpMessages: {
-          customUrlRequired: 'Enter a custom URL to preview it.',
+          customUrlRequired: 'Enter a custom HTTPS URL to preview it.',
         },
       });
 
       expect(result.previewUrl).toBe('');
-      expect(result.destinationHelp).toBe('Enter a custom URL to preview it.');
+      expect(result.destinationHelp).toBe(
+        'Enter a custom HTTPS URL to preview it.'
+      );
     });
   });
 
@@ -139,12 +143,12 @@ describe('resolveDestinationPreview', () => {
       expect(normalizeDestination('postParent')).toBe('postParent');
     });
 
-    it('isSafePreviewUrl only accepts http/https URLs', () => {
-      expect(isSafePreviewUrl('https://example.com')).toBe(true);
-      expect(isSafePreviewUrl('http://example.com')).toBe(true);
-      expect(isSafePreviewUrl('javascript:void(0)')).toBe(false);
-      expect(isSafePreviewUrl('not-a-url')).toBe(false);
-      expect(isSafePreviewUrl('')).toBe(false);
+    it('isHttpsUrl only accepts HTTPS URLs', () => {
+      expect(isHttpsUrl('https://example.com')).toBe(true);
+      expect(isHttpsUrl('http://example.com')).toBe(false);
+      expect(isHttpsUrl('javascript:void(0)')).toBe(false);
+      expect(isHttpsUrl('not-a-url')).toBe(false);
+      expect(isHttpsUrl('')).toBe(false);
     });
   });
 });

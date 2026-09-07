@@ -71,7 +71,7 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 		}
 
 		if (
-			null === Renderer_Support::safe_url( $image['url'] ?? null )
+			null === Renderer_Support::https_url( $image['url'] ?? null )
 			|| ! is_string( $image['alt'] ?? null )
 			|| ! is_int( $image['width'] ?? null )
 			|| ! is_int( $image['height'] ?? null )
@@ -117,7 +117,7 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 			$decorative ? ' role="presentation"' : ''
 		);
 
-		$url = $attributes['linkToPost'] ? Renderer_Support::safe_url( $post['url'] ?? null ) : null;
+		$url = $attributes['linkToPost'] ? Renderer_Support::https_url( $post['url'] ?? null ) : null;
 		if ( null !== $url ) {
 			$markup = '<a href="' . Renderer_Support::html( $url ) . '" style="text-decoration:none">' . $markup . '</a>';
 		}

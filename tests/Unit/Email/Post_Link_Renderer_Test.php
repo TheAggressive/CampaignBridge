@@ -75,27 +75,12 @@ final class Post_Link_Renderer_Test extends TestCase {
 	public function test_rejects_an_invalid_custom_url(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['destination'] = 'custom';
-		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['customUrl']   = 'not-a-url';
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['customUrl']   = 'http://insecure.example.com';
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
 		self::assertSame( 'post.link.custom_url_invalid', $result->diagnostics()[0]->code() );
-	}
-
-	public function test_accepts_an_http_custom_url(): void {
-		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['destination'] = 'custom';
-		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['customUrl']   = 'http://local.example.com/page';
-		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['label']       = 'Go now';
-
-		$result = Compiler_Factory::create()->compile( $document, $this->context() );
-
-		self::assertTrue( $result->is_success() );
-		self::assertStringContainsString(
-			'<a href="http://local.example.com/page" style="color:#111111;text-decoration:underline">Go now</a>',
-			$result->html()
-		);
 	}
 
 	public function test_renders_to_plain_text(): void {

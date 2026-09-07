@@ -33,14 +33,13 @@ export function normalizeDestination(value: unknown): Destination {
     : 'article';
 }
 
-export function isSafePreviewUrl(value: string): boolean {
+export function isHttpsUrl(value: string): boolean {
   try {
-    return ['http:', 'https:'].includes(new URL(value).protocol);
+    return new URL(value).protocol === 'https:';
   } catch {
     return false;
   }
 }
-
 export interface DestinationPreview {
   previewUrl: string;
   destinationHelp: string;
@@ -63,7 +62,7 @@ export function resolveDestinationPreview(args: {
   postTypeArchiveUrl: string;
   helpMessages?: {
     customUrlRequired?: string;
-    noUrlYet?: string;
+    noHttpsUrlYet?: string;
   };
 }): DestinationPreview {
   const {
@@ -78,14 +77,14 @@ export function resolveDestinationPreview(args: {
   let previewUrl = '';
   if (destination === 'custom') {
     previewUrl = customUrl;
-  } else if (destination === 'postParent' && isSafePreviewUrl(postParentUrl)) {
+  } else if (destination === 'postParent' && isHttpsUrl(postParentUrl)) {
     previewUrl = postParentUrl;
   } else if (
     destination === 'postTypeArchive' &&
-    isSafePreviewUrl(postTypeArchiveUrl)
+    isHttpsUrl(postTypeArchiveUrl)
   ) {
     previewUrl = postTypeArchiveUrl;
-  } else if (isSafePreviewUrl(articleUrl)) {
+  } else if (isHttpsUrl(articleUrl)) {
     previewUrl = articleUrl;
   }
 
@@ -95,9 +94,10 @@ export function resolveDestinationPreview(args: {
 
   const destinationHelp =
     destination === 'custom'
-      ? (helpMessages?.customUrlRequired ?? 'Enter a custom URL to preview it.')
-      : (helpMessages?.noUrlYet ??
-        'This post snapshot has no URL yet; the link renders from the post data at send time.');
+      ? (helpMessages?.customUrlRequired ??
+        'Enter a custom HTTPS URL to preview it.')
+      : (helpMessages?.noHttpsUrlYet ??
+        'This post snapshot has no HTTPS URL yet; the link renders from the post data at send time.');
 
   return { previewUrl, destinationHelp };
 }

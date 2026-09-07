@@ -178,6 +178,6 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	private function unsubscribe_url( Render_Context $context ): ?string {
-		return Renderer_Support::safe_url( $context->metadata( 'unsubscribe_url' ) );
+		return Renderer_Support::https_url( $context->metadata( 'unsubscribe_url' ) );
 	}
 }

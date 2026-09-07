@@ -9,7 +9,7 @@ import { __ } from '@wordpress/i18n';
 
 import { toPortableHex } from '../../scripts/admin/brand-kit/color';
 import {
-  isSafePreviewUrl,
+  isHttpsUrl,
   normalizeDestination,
   resolveDestinationPreview,
   usePostDestination,
@@ -43,11 +43,11 @@ export default function Edit({
     postTypeArchiveUrl: postTypeArchiveUrl ?? '',
     helpMessages: {
       customUrlRequired: __(
-        'Enter a custom URL to preview it.',
+        'Enter a custom HTTPS URL to preview it.',
         'campaignbridge'
       ),
-      noUrlYet: __(
-        'This post snapshot has no URL yet; the link renders from the post data at send time.',
+      noHttpsUrlYet: __(
+        'This post snapshot has no HTTPS URL yet; the link renders from the post data at send time.',
         'campaignbridge'
       ),
     },
@@ -88,14 +88,14 @@ export default function Edit({
           />
           {destination === 'custom' && (
             <TextControl
-              label={__('Custom URL', 'campaignbridge')}
+              label={__('Custom HTTPS URL', 'campaignbridge')}
               type='url'
               value={customUrl}
               onChange={value => setAttributes({ customUrl: value })}
               help={
-                customUrl && !isSafePreviewUrl(customUrl)
+                customUrl && !isHttpsUrl(customUrl)
                   ? __(
-                      'Enter an absolute URL (http:// or https://).',
+                      'Enter an absolute URL beginning with https://.',
                       'campaignbridge'
                     )
                   : undefined
