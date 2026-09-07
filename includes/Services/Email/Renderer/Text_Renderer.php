@@ -44,7 +44,7 @@ final class Text_Renderer extends Abstract_Renderer {
 			array(
 				'content'   => Renderer_Support::string_attribute( $attributes, 'content', '' ),
 				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
-				'textColor' => Renderer_Support::color_attribute( $attributes, 'textColor', '#333333' ),
+				'textColor' => Renderer_Support::string_attribute( $attributes, 'textColor', '#333333' ),
 				'fontSize'  => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 12, 24 ),
 				'style'     => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 			)
@@ -146,7 +146,7 @@ final class Text_Renderer extends Abstract_Renderer {
 			$color = Style_Resolver::color( $wrapper, 'text', null, $kit );
 		}
 		if ( null === $color ) {
-			$color = (string) $attributes['textColor'];
+			$color = Renderer_Support::resolve_color( (string) $attributes['textColor'], $kit );
 		}
 		$style .= sprintf( ';color:%s', $color );
 

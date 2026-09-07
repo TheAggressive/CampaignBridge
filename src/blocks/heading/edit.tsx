@@ -3,7 +3,7 @@ import {
   RichText,
   useBlockProps,
 } from '@wordpress/block-editor';
-import { ColorPalette, PanelBody, SelectControl } from '@wordpress/components';
+import { PanelBody, SelectControl } from '@wordpress/components';
 import { createElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import type { EmailBlockEditProps } from '../types';
@@ -50,25 +50,6 @@ export default function Edit({
             onChange={value => setAttributes({ level: Number(value) })}
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-          />
-          <SelectControl
-            label={__('Alignment', 'campaignbridge')}
-            value={align}
-            options={[
-              { label: __('Left', 'campaignbridge'), value: 'left' },
-              { label: __('Center', 'campaignbridge'), value: 'center' },
-              { label: __('Right', 'campaignbridge'), value: 'right' },
-            ]}
-            onChange={value =>
-              setAttributes({ align: value as HeadingAttributes['align'] })
-            }
-            __next40pxDefaultSize
-            __nextHasNoMarginBottom
-          />
-          <p>{__('Text color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={textColor}
-            onChange={value => setAttributes({ textColor: value || '#111111' })}
           />
         </PanelBody>
       </InspectorControls>

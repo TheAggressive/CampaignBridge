@@ -15,7 +15,9 @@
   "supports": {
     "html": false,
     "innerBlocks": true,
-    "reusable": false
+    "reusable": false,
+    "color": { "background": true },
+    "spacing": { "padding": true }
   },
   "attributes": {
     "postType": {

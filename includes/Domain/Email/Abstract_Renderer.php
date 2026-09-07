@@ -21,6 +21,11 @@ abstract class Abstract_Renderer implements Renderer_Interface {
 	}
 
 	/** {@inheritDoc} */
+	public function block_style_names(): array {
+		return array();
+	}
+
+	/** {@inheritDoc} */
 	public function allowed_children(): ?array {
 		return array();
 	}

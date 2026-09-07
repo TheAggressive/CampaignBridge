@@ -12,7 +12,9 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "multiple": false
+    "multiple": false,
+    "align": true,
+    "color": { "text": true }
   },
   "attributes": {
     "businessName": { "type": "string", "default": "" },

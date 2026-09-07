@@ -25,6 +25,17 @@ interface Renderer_Interface {
 	public function attribute_names(): array;
 
 	/**
+	 * Get accepted block style slugs.
+	 *
+	 * A non-empty list opts the renderer in to the compiler folding the
+	 * selected `is-style-{slug}` class from `className` into the `style`
+	 * attribute before whitelist validation.
+	 *
+	 * @return array<int, string>
+	 */
+	public function block_style_names(): array;
+
+	/**
 	 * Get accepted child block names.
 	 *
 	 * @return array<int, string>|null Null permits any registered child.

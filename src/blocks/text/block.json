@@ -12,6 +12,7 @@
   "supports": {
     "html": false,
     "reusable": false,
+    "align": true,
     "color": { "text": true, "background": true },
     "spacing": { "padding": true, "margin": true },
     "typography": { "fontSize": true, "lineHeight": true }

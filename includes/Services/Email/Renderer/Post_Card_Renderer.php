@@ -63,7 +63,7 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 				'padding'         => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ),
 				// Omitted stays null so a card never paints over its section.
 				'backgroundColor' => array_key_exists( 'backgroundColor', $attributes )
-					? Renderer_Support::color_attribute( $attributes, 'backgroundColor', '#ffffff' )
+					? Renderer_Support::string_attribute( $attributes, 'backgroundColor', '#ffffff' )
 					: null,
 			)
 		);
@@ -143,12 +143,12 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 	 * @param string         $children Compiled child HTML.
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
-	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$attributes = $block->attributes();
 		$padding    = $attributes['padding'];
 		$background = null === $attributes['backgroundColor']
 			? ''
-			: sprintf( ';background-color:%s', $attributes['backgroundColor'] );
+			: sprintf( ';background-color:%s', Renderer_Support::resolve_color( $attributes['backgroundColor'], Renderer_Support::brand_kit( $context ) ) );
 
 		return sprintf(
 			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse%1$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',

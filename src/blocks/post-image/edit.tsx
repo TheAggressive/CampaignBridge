@@ -2,12 +2,11 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { PanelBody, RangeControl, ToggleControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
-import { AlignmentSelect, type EmailAlignment } from '../shared/controls';
 import type { EmailBlockEditProps } from '../types';
 
 interface PostImageAttributes {
   width?: number;
-  align?: EmailAlignment;
+  align?: 'left' | 'center' | 'right';
   linkToPost?: boolean;
   decorative?: boolean;
 }
@@ -93,10 +92,6 @@ export default function Edit({
             onChange={value => setAttributes({ width: value })}
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-          />
-          <AlignmentSelect
-            value={align}
-            onChange={value => setAttributes({ align: value })}
           />
           <ToggleControl
             label={__('Link to the post', 'campaignbridge')}

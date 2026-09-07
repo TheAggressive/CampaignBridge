@@ -42,7 +42,7 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 			array(
 				'level'      => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
 				'align'      => Renderer_Support::alignment_attribute( $attributes, 'align' ),
-				'textColor'  => Renderer_Support::color_attribute( $attributes, 'textColor', '#111111' ),
+				'textColor'  => Renderer_Support::string_attribute( $attributes, 'textColor', '#111111' ),
 				'linkToPost' => Renderer_Support::boolean_attribute( $attributes, 'linkToPost', false ),
 			)
 		);
@@ -72,17 +72,18 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 	 * @param string         $children Compiled child HTML.
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
-	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$post       = $context->binding( 'post' );
 		$title      = Renderer_Support::html( (string) ( $post['title'] ?? '' ) );
 		$attributes = $block->attributes();
+		$text_color = Renderer_Support::resolve_color( $attributes['textColor'], Renderer_Support::brand_kit( $context ) );
 		$url        = $attributes['linkToPost'] ? Renderer_Support::https_url( $post['url'] ?? null ) : null;
 
 		if ( null !== $url ) {
 			$title = sprintf(
 				'<a href="%1$s" style="color:%2$s;text-decoration:none">%3$s</a>',
 				Renderer_Support::html( $url ),
-				$attributes['textColor'],
+				$text_color,
 				$title
 			);
 		}
@@ -91,7 +92,7 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 			'<h%1$d align="%2$s" style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:24px;line-height:1.25;text-align:%2$s;color:%3$s">%4$s</h%1$d>',
 			$attributes['level'],
 			$attributes['align'],
-			$attributes['textColor'],
+			$text_color,
 			$title
 		);
 	}

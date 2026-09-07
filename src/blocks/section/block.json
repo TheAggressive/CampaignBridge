@@ -12,7 +12,10 @@
   "supports": {
     "html": false,
     "innerBlocks": true,
-    "reusable": false
+    "reusable": false,
+    "align": true,
+    "color": { "background": true },
+    "spacing": { "padding": true }
   },
   "attributes": {
     "padding": {

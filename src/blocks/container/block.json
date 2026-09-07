@@ -18,6 +18,9 @@
       "background": true,
       "text": true,
       "gradients": false
+    },
+    "spacing": {
+      "padding": true
     }
   },
   "attributes": {

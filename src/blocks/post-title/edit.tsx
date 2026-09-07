@@ -4,16 +4,11 @@ import { useSelect } from '@wordpress/data';
 import { createElement } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __ } from '@wordpress/i18n';
-import {
-  AlignmentSelect,
-  EmailColor,
-  type EmailAlignment,
-} from '../shared/controls';
 import type { EmailBlockEditProps } from '../types';
 
 interface PostTitleAttributes {
   level?: number;
-  align?: EmailAlignment;
+  align?: 'left' | 'center' | 'right';
   textColor?: string;
   linkToPost?: boolean;
 }
@@ -70,16 +65,6 @@ export default function Edit({
             onChange={value => setAttributes({ level: Number(value) })}
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-          />
-          <AlignmentSelect
-            value={align}
-            onChange={value => setAttributes({ align: value })}
-          />
-          <EmailColor
-            label={__('Text color', 'campaignbridge')}
-            value={textColor}
-            fallback='#111111'
-            onChange={value => setAttributes({ textColor: value })}
           />
           <ToggleControl
             label={__('Link to the post', 'campaignbridge')}

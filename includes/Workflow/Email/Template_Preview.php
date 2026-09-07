@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Workflow\Email;
 
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Compile_Result;
 use CampaignBridge\Domain\Email\Post_Snapshot_Source;
 use CampaignBridge\Domain\Email\Render_Context;
@@ -29,9 +30,13 @@ final class Template_Preview {
 	/**
 	 * Build a preview compiler.
 	 *
-	 * @param Post_Snapshot_Source $snapshots Immutable post source.
+	 * @param Post_Snapshot_Source $snapshots   Immutable post source.
+	 * @param Brand_Kit|null       $brand_kit   Active brand kit. Null uses defaults.
 	 */
-	public function __construct( private readonly Post_Snapshot_Source $snapshots ) {}
+	public function __construct(
+		private readonly Post_Snapshot_Source $snapshots,
+		private readonly ?Brand_Kit $brand_kit = null
+	) {}
 
 	/**
 	 * Compile serialized block content.
@@ -42,12 +47,14 @@ final class Template_Preview {
 	public function compile( string $content, array $metadata = array() ): Compile_Result {
 		$blocks = $this->parse( $content );
 
+		$kit = $this->brand_kit ?? Brand_Kit::defaults();
+
 		$context = new Render_Context(
 			$metadata,
 			array( 'posts' => $this->snapshots->posts( Snapshot_References::collect( $blocks ) ) ),
 			array(),
 			Email_Compiler::PROFILE_VERSION
-		);
+		)->with_metadata( 'brandKit', $kit );
 
 		return Compiler_Factory::create()->compile( $blocks, $context );
 	}

@@ -59,7 +59,7 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 				'address'          => trim( preg_replace( '/\s+/u', ' ', Renderer_Support::string_attribute( $attributes, 'address', '' ) ) ?? '' ),
 				'unsubscribeLabel' => trim( Renderer_Support::string_attribute( $attributes, 'unsubscribeLabel', 'Unsubscribe' ) ),
 				'padding'          => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ),
-				'textColor'        => Renderer_Support::color_attribute( $attributes, 'textColor', '#666666' ),
+				'textColor'        => Renderer_Support::string_attribute( $attributes, 'textColor', '#666666' ),
 			)
 		);
 	}
@@ -118,9 +118,10 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 	 * @param string         $children Compiled child HTML.
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
-	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$attributes = $block->attributes();
 		$padding    = $attributes['padding'];
+		$text_color = Renderer_Support::resolve_color( $attributes['textColor'], Renderer_Support::brand_kit( $context ) );
 		$lines      = array();
 
 		if ( '' !== $attributes['businessName'] ) {
@@ -131,7 +132,7 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 		$lines[] = sprintf(
 			'<a href="%1$s" style="color:%2$s;text-decoration:underline">%3$s</a>',
 			Renderer_Support::html( (string) $this->unsubscribe_url( $context ) ),
-			$attributes['textColor'],
+			$text_color,
 			Renderer_Support::html( (string) $attributes['unsubscribeLabel'] )
 		);
 
@@ -141,7 +142,7 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 			$padding['right'],
 			$padding['bottom'],
 			$padding['left'],
-			$attributes['textColor'],
+			$text_color,
 			implode( '<br>', $lines )
 		);
 	}

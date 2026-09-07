@@ -15,6 +15,7 @@ use CampaignBridge\Domain\Email\Compile_Result;
 use CampaignBridge\Domain\Email\Document_Renderer_Interface;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Renderer_Interface;
 use CampaignBridge\Domain\Email\Renderer_Registry;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -220,6 +221,8 @@ final class Email_Compiler {
 			);
 		}
 
+		$block = $this->apply_block_style( $block, $renderer );
+
 		$unsupported_attributes = array_diff( array_keys( $block->attributes() ), $renderer->attribute_names() );
 		if ( array() !== $unsupported_attributes ) {
 			sort( $unsupported_attributes, SORT_STRING );
@@ -311,6 +314,52 @@ final class Email_Compiler {
 			'text'   => $renderer->render_text( $block, $text, $context ),
 			'assets' => $assets,
 		);
+	}
+
+	/**
+	 * Fold a selected native block style into a semantic style attribute.
+	 *
+	 * Block styles persist as `is-style-{slug}` classes inside `className`.
+	 * Renderers that opt in via `block_style_names()` receive the first
+	 * selected slug as their `style` attribute while `className` is dropped,
+	 * so whitelist validation only ever sees semantic names. Blocks without
+	 * an opted-in slug are returned unchanged and fail the whitelist check
+	 * exactly as before.
+	 *
+	 * @param Block_Node         $block    Source block.
+	 * @param Renderer_Interface $renderer Resolved renderer.
+	 * @return Block_Node Restyled block, or the source block when unchanged.
+	 */
+	private function apply_block_style( Block_Node $block, Renderer_Interface $renderer ): Block_Node {
+		$attributes = $block->attributes();
+		$class_name = $attributes['className'] ?? '';
+
+		if ( ! is_string( $class_name ) ) {
+			return $block;
+		}
+
+		$style  = null;
+		$tokens = preg_split( '/\s+/', trim( $class_name ) );
+		if ( false === $tokens ) {
+			return $block;
+		}
+
+		foreach ( $tokens as $token ) {
+			if ( preg_match( '/^is-style-(.+)$/', (string) $token, $matches ) ) {
+				$style = (string) $matches[1];
+
+				break;
+			}
+		}
+
+		if ( null === $style || ! in_array( $style, $renderer->block_style_names(), true ) ) {
+			return $block;
+		}
+
+		unset( $attributes['className'] );
+		$attributes['style'] = $style;
+
+		return $block->with_attributes( $attributes );
 	}
 
 	/**

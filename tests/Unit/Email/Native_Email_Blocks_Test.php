@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use PHPUnit\Framework\TestCase;
@@ -128,15 +129,17 @@ final class Native_Email_Blocks_Test extends TestCase {
 	}
 
 	public function test_rejects_invalid_color_instead_of_substituting_a_default(): void {
+		$kit      = Brand_Kit::defaults();
 		$document = $this->document();
 
 		$document[0]['innerBlocks'][0]['innerBlocks'][5]['attrs']['color'] = 'red';
 
-		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
 
-		self::assertFalse( $result->is_success() );
-		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
-		self::assertSame( 'blocks[0].innerBlocks[0].innerBlocks[5].attrs.color', $result->diagnostics()[0]->path() );
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected an invalid divider color to degrade, not reject the block.' );
+		self::assertStringContainsString( 'border-top:2px solid #1a6dcc', $result->html() );
 	}
 
 	public function test_rejects_partial_spacing_instead_of_filling_missing_sides(): void {
@@ -307,6 +310,157 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 		self::assertFalse( $result->is_success() );
 		self::assertSame( 'block.attributes.unsupported', $result->diagnostics()[0]->code() );
+	}
+
+	public function test_button_resolves_brand_kit_preset_slugs(): void {
+		$kit = Brand_Kit::from_colors(
+			array(
+				'brand'    => '#ff0000',
+				'on-brand' => '#00ff00',
+			)
+		);
+
+		$document                           = $this->document();
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
+		$button['attrs']['backgroundColor'] = 'brand';
+		$button['attrs']['textColor']       = 'on-brand';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected button with brand kit slugs to compile.' );
+		self::assertStringContainsString( 'background-color:#ff0000', $result->html() );
+		self::assertStringContainsString( ';color:#00ff00', $result->html() );
+	}
+
+	public function test_button_falls_back_to_normalized_color_when_slug_unknown(): void {
+		$kit = Brand_Kit::defaults();
+
+		$document                           = $this->document();
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
+		$button['attrs']['backgroundColor'] = 'unknown-slug';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected button with unknown slug to compile.' );
+		self::assertStringContainsString( 'background-color:#1a6dcc', $result->html() );
+	}
+
+	public function test_button_accepts_hex_colors_directly(): void {
+		$kit = Brand_Kit::defaults();
+
+		$document                           = $this->document();
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
+		$button['attrs']['backgroundColor'] = '#123456';
+		$button['attrs']['textColor']       = '#abcdef';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected button with hex colors to compile.' );
+		self::assertStringContainsString( 'background-color:#123456', $result->html() );
+		self::assertStringContainsString( ';color:#abcdef', $result->html() );
+	}
+
+	public function test_button_accepts_preset_reference_format(): void {
+		$kit = Brand_Kit::from_colors(
+			array(
+				'brand'    => '#ff0000',
+				'on-brand' => '#00ff00',
+			)
+		);
+
+		$document                           = $this->document();
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
+		$button['attrs']['backgroundColor'] = 'var:preset|color|brand';
+		$button['attrs']['textColor']       = 'var:preset|color|on-brand';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected button with preset reference format to compile.' );
+		self::assertStringContainsString( 'background-color:#ff0000', $result->html() );
+		self::assertStringContainsString( ';color:#00ff00', $result->html() );
+	}
+
+	public function test_section_resolves_brand_kit_background_slug(): void {
+		$kit = Brand_Kit::from_colors( array( 'brand' => '#ff0000' ) );
+
+		$document                            = $this->document();
+		$section                             = &$document[0]['innerBlocks'][0];
+		$section['attrs']['backgroundColor'] = 'brand';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected a section with a brand slug to compile.' );
+		self::assertStringContainsString( 'background-color:#ff0000', $result->html() );
+	}
+
+	public function test_button_resolves_brand_kit_background_slug_in_generalized_flow(): void {
+		$kit = Brand_Kit::from_colors( array( 'brand' => '#123456' ) );
+
+		$document                           = $this->document();
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
+		$button['attrs']['backgroundColor'] = 'brand';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected a button with a brand slug to compile.' );
+		self::assertStringContainsString( 'background-color:#123456', $result->html() );
+	}
+
+	public function test_divider_resolves_brand_kit_preset_reference(): void {
+		$kit = Brand_Kit::from_colors( array( 'brand' => '#ff0000' ) );
+
+		$document                  = $this->document();
+		$divider                   = &$document[0]['innerBlocks'][0]['innerBlocks'][5];
+		$divider['attrs']['color'] = 'var:preset|color|brand';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected a divider with a preset reference to compile.' );
+		self::assertStringContainsString( 'border-top:2px solid #ff0000', $result->html() );
+	}
+
+	public function test_heading_resolves_brand_kit_text_color_slug(): void {
+		$kit = Brand_Kit::from_colors( array( 'brand' => '#ff0000' ) );
+
+		$document                      = $this->document();
+		$heading                       = &$document[0]['innerBlocks'][0]['innerBlocks'][0];
+		$heading['attrs']['textColor'] = 'brand';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected a heading with a brand slug to compile.' );
+		self::assertStringContainsString( 'color:#ff0000', $result->html() );
+	}
+
+	public function test_text_resolves_brand_kit_text_color_slug(): void {
+		$kit = Brand_Kit::from_colors( array( 'brand' => '#ff0000' ) );
+
+		$document                   = $this->document();
+		$text                       = &$document[0]['innerBlocks'][0]['innerBlocks'][1];
+		$text['attrs']['textColor'] = 'brand';
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected a text block with a brand slug to compile.' );
+		self::assertStringContainsString( 'color:#ff0000', $result->html() );
 	}
 
 	private function context(): Render_Context {

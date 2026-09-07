@@ -39,7 +39,7 @@ final class Divider_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'color'     => Renderer_Support::color_attribute( $attributes, 'color', '#dddddd' ),
+				'color'     => Renderer_Support::string_attribute( $attributes, 'color', '#dddddd' ),
 				'thickness' => Renderer_Support::integer_attribute( $attributes, 'thickness', 1, 1, 8 ),
 				'width'     => Renderer_Support::integer_attribute( $attributes, 'width', 100, 10, 100 ),
 				'style'     => Renderer_Support::choice_attribute( $attributes, 'style', 'solid', array( 'solid', 'dashed', 'dotted' ) ),
@@ -54,15 +54,16 @@ final class Divider_Renderer extends Abstract_Renderer {
 	 * @param string         $children Compiled child HTML.
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
-	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$attributes = $block->attributes();
+		$color      = Renderer_Support::resolve_color( $attributes['color'], Renderer_Support::brand_kit( $context ) );
 
 		return sprintf(
 			'<table role="presentation" width="%1$d%%" align="center" cellpadding="0" cellspacing="0" border="0" style="width:%1$d%%;border-collapse:collapse"><tr><td style="border-top:%2$dpx %3$s %4$s;font-size:0;line-height:0">&nbsp;</td></tr></table>',
 			$attributes['width'],
 			$attributes['thickness'],
 			$attributes['style'],
-			$attributes['color']
+			$color
 		);
 	}
 
