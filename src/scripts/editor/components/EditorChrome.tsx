@@ -3,7 +3,7 @@ import { getBlockType } from '@wordpress/blocks';
 import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
 import { EntityProvider } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { useCallback } from '@wordpress/element';
+import { useEffect, useCallback, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import {
   ComplementaryArea,
@@ -16,9 +16,11 @@ import { useEditorSettings } from '../hooks/useEditorSettings';
 import { useNotices } from '../hooks/useNotices';
 import { SIDEBAR_CONSTANTS, useSidebarState } from '../hooks/useSidebarState';
 import { useTemplateEditor } from '../hooks/useTemplateEditor';
+import { useEmailPreview } from '../hooks/useEmailPreview';
 import { blockPatternCategories, blockPatterns } from '../utils/blockPatterns';
 import Content from './Content';
 import EditorEffects from './EditorEffects';
+import EmailPreviewModal from './EmailPreviewModal';
 import { ErrorState, LoadingState } from './EditorStates';
 import Footer from './Footer';
 import Header from './Header';
@@ -86,6 +88,7 @@ function EditorChromeContent({
     onSave: handleSaveSuccess,
     onError: errorNotice,
   });
+
   const {
     settings: editorSettings,
     error: editorSettingsError,
@@ -119,6 +122,15 @@ function EditorChromeContent({
     snackbarNotices,
     removeNotice,
   } = useEditorLayout({ isPrimaryOpen, isSecondaryOpen });
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const handleOpenPreview = useCallback(() => {
+    setPreviewOpen(true);
+  }, []);
+  const handleClosePreview = useCallback(() => {
+    setPreviewOpen(false);
+  }, []);
+
   const handleBlockSelected = useCallback(() => {
     setSidebarActiveTab(SIDEBAR_CONSTANTS.TABS.INSPECTOR);
     openPrimary();
@@ -227,6 +239,11 @@ function EditorChromeContent({
               saveStatus={saveStatus}
               onBlockSelected={handleBlockSelected}
             />
+            <PreviewController
+              postId={postId}
+              isOpen={previewOpen}
+              onRequestClose={handleClosePreview}
+            />
             <InterfaceSkeleton
               className={skeletonClassName}
               header={
@@ -243,6 +260,7 @@ function EditorChromeContent({
                   hasEdits={hasEdits}
                   onSave={saveNow}
                   saveStatus={saveStatus}
+                  onOpenPreview={handleOpenPreview}
                 />
               }
               content={<Content onSave={saveNow} styles={editorStyles} />}
@@ -269,5 +287,47 @@ function EditorChromeContent({
         </div>
       </SlotFillProvider>
     </ShortcutProvider>
+  );
+}
+
+/**
+ * Renders the email preview modal inside the BlockEditorProvider's scoped
+ * registry so that useEmailPreview reads blocks from the correct store.
+ *
+ * Without this, the hook would read from the parent registry's block editor
+ * store, which is a different instance than the one BlockEditorProvider
+ * manages via withRegistryProvider.
+ */
+function PreviewController({
+  postId,
+  isOpen,
+  onRequestClose,
+}: {
+  postId: number;
+  isOpen: boolean;
+  onRequestClose: () => void;
+}): JSX.Element | null {
+  const { preview, requestPreview, resetPreview } = useEmailPreview(postId);
+
+  useEffect(() => {
+    if (isOpen) {
+      void requestPreview();
+    } else {
+      resetPreview();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <EmailPreviewModal
+      isOpen={isOpen}
+      onRequestClose={onRequestClose}
+      preview={preview}
+      onRefresh={() => void requestPreview()}
+    />
   );
 }

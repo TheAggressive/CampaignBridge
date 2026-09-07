@@ -27,7 +27,7 @@ final class Post_Link_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'destination', 'customUrl', 'linkColor', 'align' );
+		return array( 'label', 'destination', 'customUrl', 'linkColor', 'align', 'style', 'backgroundColor', 'textColor' );
 	}
 
 	/**
@@ -38,13 +38,23 @@ final class Post_Link_Renderer extends Abstract_Renderer {
 	public function normalize( Block_Node $block ): Block_Node {
 		$attributes = $block->attributes();
 
+		// Style is optional and may be injected by WordPress supports as a
+		// non-string value (e.g. a CSS object). Only coerce when it's a string.
+		$style = '';
+		if ( isset( $attributes['style'] ) && is_string( $attributes['style'] ) ) {
+			$style = $attributes['style'];
+		}
+
 		return $block->with_attributes(
 			array(
-				'label'       => trim( Renderer_Support::string_attribute( $attributes, 'label', 'Read more' ) ),
-				'destination' => Renderer_Support::choice_attribute( $attributes, 'destination', 'article', array( 'article', 'postParent', 'postTypeArchive', 'custom' ) ),
-				'customUrl'   => trim( Renderer_Support::string_attribute( $attributes, 'customUrl', '' ) ),
-				'linkColor'   => Renderer_Support::string_attribute( $attributes, 'linkColor', '#111111' ),
-				'align'       => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'label'           => trim( Renderer_Support::string_attribute( $attributes, 'label', 'Read more' ) ),
+				'destination'     => Renderer_Support::choice_attribute( $attributes, 'destination', 'article', array( 'article', 'postParent', 'postTypeArchive', 'custom' ) ),
+				'customUrl'       => trim( Renderer_Support::string_attribute( $attributes, 'customUrl', '' ) ),
+				'linkColor'       => Renderer_Support::string_attribute( $attributes, 'linkColor', '#111111' ),
+				'align'           => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'style'           => $style,
+				'backgroundColor' => (string) Renderer_Support::string_attribute( $attributes, 'backgroundColor', '' ),
+				'textColor'       => (string) Renderer_Support::string_attribute( $attributes, 'textColor', '' ),
 			)
 		);
 	}

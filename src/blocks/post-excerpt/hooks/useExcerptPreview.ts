@@ -1,6 +1,6 @@
 import { useSelect } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
-import { decodeEntities } from '@wordpress/html-entities';
+import { truncateExcerpt } from '../truncate';
 
 /**
  * Returns a memoized plain-text excerpt preview for the editor.
@@ -18,7 +18,6 @@ interface ExcerptPreviewOptions {
 
 interface PostPreviewRecord {
   excerpt?: { rendered?: string };
-  content?: { rendered?: string };
 }
 
 interface CoreSelectors {
@@ -47,12 +46,14 @@ export function useExcerptPreview({
   );
 
   return useMemo(() => {
-    const raw = post?.excerpt?.rendered || post?.content?.rendered || '';
-    const text = decodeEntities(raw)
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const words = text.split(/\s+/).filter(Boolean);
-    return words.slice(0, maxWords).join(' ');
+    // Read the manual post excerpt only — the exact source the email renderer
+    // reads (post_excerpt). Capping with `truncateExcerpt` keeps the editor
+    // preview identical to the compiled email.
+    const raw = post?.excerpt?.rendered ?? '';
+    if (!raw) {
+      return '';
+    }
+
+    return truncateExcerpt(raw, maxWords);
   }, [post, maxWords]);
 }

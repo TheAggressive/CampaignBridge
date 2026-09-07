@@ -146,7 +146,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertSame( 'post.button.post_type_archive_url_missing', $result->diagnostics()[0]->code() );
 	}
 
-	public function test_post_button_can_target_custom_https_url(): void {
+	public function test_post_button_can_target_custom_url(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'custom';
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['customUrl']   = 'https://example.com/landing?source=email&campaign=weekly';

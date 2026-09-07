@@ -65,9 +65,9 @@ final class Native_Email_Blocks_Test extends TestCase {
 		self::assertSame( array(), $result->assets() );
 	}
 
-	public function test_rejects_non_https_rich_text_link(): void {
+	public function test_rejects_non_http_rich_text_link(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['content'] = '<a href="http://example.com">Unsafe</a>';
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['content'] = '<a href="javascript:void(0)">Unsafe</a>';
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
@@ -93,7 +93,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 		self::assertStringContainsString( 'alt="" role="presentation"', $result->html() );
 	}
 
-	public function test_requires_https_button_url(): void {
+	public function test_rejects_an_unsafe_button_url(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['url'] = 'javascript:alert(1)';
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );

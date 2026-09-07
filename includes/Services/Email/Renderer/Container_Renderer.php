@@ -41,7 +41,7 @@ final class Container_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'maxWidth', 'outerPadding', 'padding', 'style' );
+		return array( 'maxWidth', 'outerPadding', 'padding', 'style', 'lock' );
 	}
 
 	/** {@inheritDoc} */

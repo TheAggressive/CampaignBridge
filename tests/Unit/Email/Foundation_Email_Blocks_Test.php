@@ -164,7 +164,7 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 		self::assertSame( '', $result->html() );
 	}
 
-	public function test_requires_an_https_unsubscribe_url_from_template_metadata(): void {
+	public function test_requires_an_unsubscribe_url_from_template_metadata(): void {
 		$result = Compiler_Factory::create()->compile(
 			$this->document(),
 			new Render_Context( array( 'title' => 'Foundation fixture' ), array(), array(), 'universal@1' )
@@ -174,13 +174,13 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 		self::assertSame( 'compliance.unsubscribe.missing', $result->diagnostics()[0]->code() );
 	}
 
-	public function test_rejects_a_non_https_unsubscribe_url(): void {
+	public function test_rejects_a_non_http_unsubscribe_url(): void {
 		$result = Compiler_Factory::create()->compile(
 			$this->document(),
 			new Render_Context(
 				array(
 					'title'           => 'Foundation fixture',
-					'unsubscribe_url' => 'http://example.com/unsubscribe',
+					'unsubscribe_url' => 'javascript:void(0)',
 				),
 				array(),
 				array(),

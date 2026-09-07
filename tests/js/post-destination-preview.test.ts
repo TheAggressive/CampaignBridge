@@ -97,7 +97,7 @@ describe('resolveDestinationPreview', () => {
 
       expect(result.previewUrl).toBe('');
       expect(result.destinationHelp).toBe(
-        'Enter a custom HTTPS URL to preview it.'
+        'Enter a custom URL to preview it.'
       );
     });
 
@@ -112,7 +112,7 @@ describe('resolveDestinationPreview', () => {
 
       expect(result.previewUrl).toBe('');
       expect(result.destinationHelp).toBe(
-        'This post snapshot has no HTTPS URL yet; the link renders from the post data at send time.'
+        'This post snapshot has no URL yet; the link renders from the post data at send time.'
       );
     });
 
@@ -124,13 +124,13 @@ describe('resolveDestinationPreview', () => {
         postParentUrl: '',
         postTypeArchiveUrl: '',
         helpMessages: {
-          customUrlRequired: 'Enter a custom HTTPS URL to preview it.',
+          customUrlRequired: 'Enter a custom URL to preview it.',
         },
       });
 
       expect(result.previewUrl).toBe('');
       expect(result.destinationHelp).toBe(
-        'Enter a custom HTTPS URL to preview it.'
+        'Enter a custom URL to preview it.'
       );
     });
   });

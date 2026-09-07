@@ -103,16 +103,11 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	private function excerpt( Block_Node $block, Render_Context $context ): string {
-		$post    = $context->binding( 'post' );
-		$content = trim( html_entity_decode( wp_strip_all_tags( (string) ( $post['excerpt'] ?? '' ) ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
-		$words   = preg_split( '/\s+/u', $content, -1, PREG_SPLIT_NO_EMPTY );
-		$words   = is_array( $words ) ? $words : array();
-		$limit   = $block->attributes()['maxWords'];
+		$post  = $context->binding( 'post' );
+		$raw   = (string) ( $post['excerpt'] ?? '' );
+		$limit = (int) $block->attributes()['maxWords'];
+		$limit = $limit > 0 ? $limit : 50;
 
-		if ( count( $words ) <= $limit ) {
-			return implode( ' ', $words );
-		}
-
-		return implode( ' ', array_slice( $words, 0, $limit ) ) . '…';
+		return Renderer_Support::truncate_words( $raw, $limit );
 	}
 }

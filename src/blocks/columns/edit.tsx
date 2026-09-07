@@ -5,9 +5,8 @@ import {
 } from '@wordpress/block-editor';
 import { PanelBody, RangeControl, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { EMAIL_BLOCK_NESTING } from '../shared/nesting';
 import type { EmailBlockEditProps } from '../types';
-
-const ALLOWED_BLOCKS = ['campaignbridge/column'];
 
 /** Two even columns is the layout authors reach for first. */
 const TEMPLATE: [string, Record<string, unknown>][] = [
@@ -38,7 +37,7 @@ export default function Edit({
     },
   });
   const innerBlocksProps = useInnerBlocksProps(blockProps, {
-    allowedBlocks: ALLOWED_BLOCKS,
+    allowedBlocks: [...EMAIL_BLOCK_NESTING.columns],
     template: TEMPLATE,
     templateLock: false,
     orientation: 'horizontal',

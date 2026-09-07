@@ -74,8 +74,8 @@ final class Button_Renderer extends Abstract_Renderer {
 			return array( Compile_Diagnostic::error( 'button.label.too_long', $block->path(), 'Email button labels cannot exceed 80 bytes.' ) );
 		}
 
-		if ( null === Renderer_Support::https_url( $attributes['url'] ) ) {
-			return array( Compile_Diagnostic::error( 'button.url.invalid', $block->path(), 'Email buttons require an absolute HTTPS URL.' ) );
+		if ( null === Renderer_Support::safe_url( $attributes['url'] ) ) {
+			return array( Compile_Diagnostic::error( 'button.url.invalid', $block->path(), 'Email buttons require an absolute URL.' ) );
 		}
 
 		return array();

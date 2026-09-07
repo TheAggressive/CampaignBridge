@@ -60,16 +60,16 @@ final class Image_Renderer extends Abstract_Renderer {
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$attributes = $block->attributes();
-		if ( null === Renderer_Support::https_url( $attributes['url'] ) ) {
-			return array( Compile_Diagnostic::error( 'image.url.invalid', $block->path(), 'Email images require an absolute HTTPS URL.' ) );
+		if ( null === Renderer_Support::safe_url( $attributes['url'] ) ) {
+			return array( Compile_Diagnostic::error( 'image.url.invalid', $block->path(), 'Email images require an absolute URL.' ) );
 		}
 
 		if ( ! $attributes['decorative'] && '' === $attributes['alt'] ) {
 			return array( Compile_Diagnostic::error( 'image.alt.missing', $block->path(), 'Non-decorative email images require alternative text.' ) );
 		}
 
-		if ( '' !== $attributes['linkUrl'] && null === Renderer_Support::https_url( $attributes['linkUrl'] ) ) {
-			return array( Compile_Diagnostic::error( 'image.link.invalid', $block->path(), 'Linked email images require an absolute HTTPS URL.' ) );
+		if ( '' !== $attributes['linkUrl'] && null === Renderer_Support::safe_url( $attributes['linkUrl'] ) ) {
+			return array( Compile_Diagnostic::error( 'image.link.invalid', $block->path(), 'Linked email images require an absolute URL.' ) );
 		}
 
 		return array();

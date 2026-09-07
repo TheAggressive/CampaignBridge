@@ -24,8 +24,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * edited midway through rendering.
  */
 final class Post_Snapshot_Repository implements Post_Snapshot_Source {
-	private const EXCERPT_WORDS = 150;
-
 	/**
 	 * {@inheritDoc}
 	 *
@@ -97,17 +95,18 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 	/**
 	 * Resolve the excerpt without invoking frontend rendering filters.
 	 *
+	 * Prefers the manual excerpt, then WordPress' default excerpt. Both are the
+	 * exact source the editor preview reads (`excerpt.rendered`), so the block's
+	 * word cap is applied to the same text in the email as in the editor.
+	 *
 	 * @param \WP_Post $post Source post.
 	 */
 	private function excerpt( \WP_Post $post ): string {
 		$excerpt = trim( (string) $post->post_excerpt );
 
+		// Fall back to the same source the editor preview reads (excerpt.rendered).
 		if ( '' === $excerpt ) {
-			$excerpt = wp_trim_words(
-				wp_strip_all_tags( strip_shortcodes( (string) $post->post_content ) ),
-				self::EXCERPT_WORDS,
-				''
-			);
+			$excerpt = trim( (string) get_the_excerpt( $post ) );
 		}
 
 		return trim( $excerpt );

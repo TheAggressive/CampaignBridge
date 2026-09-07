@@ -1,12 +1,7 @@
+import { EMAIL_BLOCK_NESTING } from '../shared/nesting';
+
 /** Child blocks supported by the post-card email grammar. */
-export const POST_CARD_ALLOWED_BLOCKS = [
-  'campaignbridge/columns',
-  'campaignbridge/post-image',
-  'campaignbridge/post-title',
-  'campaignbridge/post-excerpt',
-  'campaignbridge/post-button',
-  'campaignbridge/post-link',
-];
+export const POST_CARD_ALLOWED_BLOCKS = [...EMAIL_BLOCK_NESTING['post-card']];
 
 /**
  * Initial post-card structure, declared on the block type for Gutenberg.

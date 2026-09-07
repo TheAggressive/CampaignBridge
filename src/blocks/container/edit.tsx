@@ -31,6 +31,7 @@ import { useDispatch } from '@wordpress/data';
 import { useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { useBlockSelection } from '../../scripts/editor/hooks/useBlockSelection';
+import { EMAIL_BLOCK_NESTING } from '../shared/nesting';
 import type { NormalizedSpacing } from '../shared/spacing';
 
 interface ContainerBlockAttributes {
@@ -67,7 +68,7 @@ export default function Edit({
       },
     },
     {
-      allowedBlocks: ['campaignbridge/section', 'campaignbridge/post-card'],
+      allowedBlocks: [...EMAIL_BLOCK_NESTING.container],
       templateLock: false,
       renderAppender: hasInnerBlocks
         ? InnerBlocks.DefaultBlockAppender

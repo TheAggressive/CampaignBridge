@@ -3,6 +3,7 @@ import { __ } from '@wordpress/i18n';
 import { FullscreenToggle } from './Button/FullscreenToggle';
 import { PrimarySidebarToggle } from './Button/PrimarySidebarToggle';
 import { SecondarySidebarToggle } from './Button/SecondarySidebarToggle';
+import PreviewButton from './PreviewButton';
 import TemplateToolbar from './TemplateToolbar';
 import type { SaveStatus, TemplateSummary } from '../types';
 
@@ -77,6 +78,7 @@ interface HeaderProps {
   hasEdits?: boolean;
   onSave?: () => void | Promise<unknown>;
   saveStatus?: SaveStatus;
+  onOpenPreview?: () => void;
 }
 
 export default function Header({
@@ -92,6 +94,7 @@ export default function Header({
   hasEdits = false,
   onSave = () => {},
   saveStatus = 'saved',
+  onOpenPreview = () => {},
 }: HeaderProps): JSX.Element {
   const isSaving = saveStatus === 'saving';
   const saveLabel = isSaving
@@ -124,6 +127,7 @@ export default function Header({
       </div>
 
       <div className={CLASSES.HEADER_ACTIONS}>
+        <PreviewButton onClick={onOpenPreview} />
         <Button
           className='cb-editor__save-button'
           variant='primary'

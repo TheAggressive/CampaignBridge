@@ -18,7 +18,7 @@ final class Button_Markup {
 	/**
 	 * Render button HTML.
 	 *
-	 * @param string      $url        Valid HTTPS URL.
+	 * @param string      $url        Valid absolute URL.
 	 * @param string      $label      Validated button label.
 	 * @param string      $background Portable background color.
 	 * @param string      $text       Portable text color.

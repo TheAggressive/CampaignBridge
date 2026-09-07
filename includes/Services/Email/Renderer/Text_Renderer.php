@@ -68,7 +68,7 @@ final class Text_Renderer extends Abstract_Renderer {
 				Compile_Diagnostic::error(
 					'text.content.invalid',
 					$block->path(),
-					'Email text permits only balanced strong, emphasis, underline, strikethrough, line-break, and HTTPS link markup.'
+					'Email text permits only balanced strong, emphasis, underline, strikethrough, line-break, and link markup.'
 				),
 			);
 		}

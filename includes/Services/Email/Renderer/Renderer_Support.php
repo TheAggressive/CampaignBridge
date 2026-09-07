@@ -241,6 +241,28 @@ final class Renderer_Support {
 	}
 
 	/**
+	 * Collapse rich text into plain words and cap it at a word budget.
+	 *
+	 * Mirrors the editor preview so a block renders the same summary in the
+	 * email as it shows in the editor, and appends an ellipsis when clipped.
+	 *
+	 * @param string $raw       Rich text or plain text source.
+	 * @param int    $max_words Maximum number of words to keep.
+	 */
+	public static function truncate_words( string $raw, int $max_words ): string {
+		$text  = trim( html_entity_decode( wp_strip_all_tags( $raw ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+		$text  = rtrim( $text, '…' );
+		$words = preg_split( '/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY );
+		$words = is_array( $words ) ? $words : array();
+
+		if ( count( $words ) <= $max_words ) {
+			return implode( ' ', $words );
+		}
+
+		return implode( ' ', array_slice( $words, 0, $max_words ) ) . '…';
+	}
+
+	/**
 	 * Read portable horizontal alignment.
 	 *
 	 * @param array<string, mixed> $attributes Source attributes.
@@ -293,7 +315,7 @@ final class Renderer_Support {
 	public static function post_destination_url( array $attributes, Render_Context $context ): ?string {
 		$destination = $attributes['destination'];
 		if ( 'custom' === $destination ) {
-			return self::https_url( $attributes['customUrl'] );
+			return self::safe_url( $attributes['customUrl'] );
 		}
 
 		$post = $context->binding( 'post' );
@@ -307,7 +329,7 @@ final class Renderer_Support {
 			default           => 'url',
 		};
 
-		return self::https_url( $post[ $field ] ?? null );
+		return self::safe_url( $post[ $field ] ?? null );
 	}
 
 	/**
@@ -319,28 +341,28 @@ final class Renderer_Support {
 	 */
 	public static function missing_destination_diagnostics( string $code_prefix, string $destination ): array {
 		$diagnostics = array(
-			'article'         => array( $code_prefix . '.url_missing', 'A snapshot HTTPS article URL is required.' ),
-			'postParent'      => array( $code_prefix . '.post_parent_url_missing', 'The post parent HTTPS URL is required in the snapshot.' ),
-			'postTypeArchive' => array( $code_prefix . '.post_type_archive_url_missing', 'The post type archive HTTPS URL is required in the snapshot.' ),
-			'custom'          => array( $code_prefix . '.custom_url_invalid', 'The custom destination must be an absolute HTTPS URL.' ),
+			'article'         => array( $code_prefix . '.url_missing', 'A snapshot article URL is required.' ),
+			'postParent'      => array( $code_prefix . '.post_parent_url_missing', 'The post parent URL is required in the snapshot.' ),
+			'postTypeArchive' => array( $code_prefix . '.post_type_archive_url_missing', 'The post type archive URL is required in the snapshot.' ),
+			'custom'          => array( $code_prefix . '.custom_url_invalid', 'The custom destination must be an absolute URL.' ),
 		);
 
 		return $diagnostics[ $destination ] ?? $diagnostics['article'];
 	}
 
 	/**
-	 * Return an absolute HTTPS URL or null.
+	 * Return an absolute URL or null.
 	 *
 	 * @param mixed $value Candidate URL.
 	 */
-	public static function https_url( mixed $value ): ?string {
+	public static function safe_url( mixed $value ): ?string {
 		if ( ! is_string( $value ) || false === filter_var( $value, FILTER_VALIDATE_URL ) ) {
 			return null;
 		}
 
 		$scheme = parse_url( $value, PHP_URL_SCHEME ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Renderer normalization is intentionally WordPress-independent.
 
-		return 'https' === strtolower( is_string( $scheme ) ? $scheme : '' ) ? $value : null;
+		return in_array( strtolower( is_string( $scheme ) ? $scheme : '' ), array( 'http', 'https' ), true ) ? $value : null;
 	}
 
 	/**
@@ -398,7 +420,7 @@ final class Renderer_Support {
 				&& ! in_array( 'a', $stack, true )
 			) {
 				$url = html_entity_decode( $matches[2], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-				if ( null === self::https_url( $url ) ) {
+				if ( null === self::safe_url( $url ) ) {
 					return null;
 				}
 

@@ -41,14 +41,6 @@ export function isSafePreviewUrl(value: string): boolean {
   }
 }
 
-export function isHttpsUrl(value: string): boolean {
-  try {
-    return new URL(value).protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
 export interface DestinationPreview {
   previewUrl: string;
   destinationHelp: string;
@@ -71,7 +63,7 @@ export function resolveDestinationPreview(args: {
   postTypeArchiveUrl: string;
   helpMessages?: {
     customUrlRequired?: string;
-    noHttpsUrlYet?: string;
+    noUrlYet?: string;
   };
 }): DestinationPreview {
   const {
@@ -104,9 +96,9 @@ export function resolveDestinationPreview(args: {
   const destinationHelp =
     destination === 'custom'
       ? (helpMessages?.customUrlRequired ??
-        'Enter a custom HTTPS URL to preview it.')
-      : (helpMessages?.noHttpsUrlYet ??
-        'This post snapshot has no HTTPS URL yet; the link renders from the post data at send time.');
+        'Enter a custom URL to preview it.')
+      : (helpMessages?.noUrlYet ??
+        'This post snapshot has no URL yet; the link renders from the post data at send time.');
 
   return { previewUrl, destinationHelp };
 }
