@@ -2,17 +2,17 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
   "version": "1.0.0",
-  "name": "campaignbridge/post-cta",
-  "title": "Post CTA",
+  "name": "campaignbridge/post-button",
+  "title": "Post Button",
   "category": "campaignbridge-email",
   "icon": "button",
-  "description": "Creates a bulletproof call-to-action button for the selected post.",
+  "description": "Creates a bulletproof button linking to the selected post.",
   "parent": ["campaignbridge/column", "campaignbridge/post-card"],
   "supports": {
     "html": false,
     "reusable": false,
-    "align": true,
-    "color": { "background": true, "text": true, "link": true }
+    "color": { "background": true, "text": true, "link": true },
+    "align": true
   },
   "attributes": {
     "label": {

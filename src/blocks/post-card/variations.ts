@@ -36,7 +36,7 @@ export const POST_CARD_VARIATIONS: BlockVariation[] = [
       ['campaignbridge/post-image'],
       ['campaignbridge/post-title'],
       ['campaignbridge/post-excerpt'],
-      ['campaignbridge/post-cta'],
+      ['campaignbridge/post-button'],
     ],
   },
   {
@@ -69,7 +69,7 @@ export const POST_CARD_VARIATIONS: BlockVariation[] = [
             [
               ['campaignbridge/post-title', { linkToPost: true }],
               ['campaignbridge/post-excerpt'],
-              ['campaignbridge/post-cta', { style: 'link' }],
+              ['campaignbridge/post-button', { style: 'link' }],
             ],
           ],
         ],
@@ -101,7 +101,7 @@ export const POST_CARD_VARIATIONS: BlockVariation[] = [
             [
               ['campaignbridge/post-title', { linkToPost: true }],
               ['campaignbridge/post-excerpt'],
-              ['campaignbridge/post-cta', { style: 'link' }],
+              ['campaignbridge/post-button', { style: 'link' }],
             ],
           ],
           [

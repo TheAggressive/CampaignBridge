@@ -30,6 +30,10 @@
     "linkToPost": {
       "type": "boolean",
       "default": false
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 24
     }
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],

@@ -155,7 +155,7 @@ This is the exact compiler/editor allowlist after the clean cutover:
 | `campaignbridge/post-image`   | Featured image binding | Child of post card or column; width, align, link-to-post, decorative |
 | `campaignbridge/post-title`   | Post title binding | Child of post card or column; levels 1–4, align, colour, link-to-post |
 | `campaignbridge/post-excerpt` | Post excerpt binding | Child of post card or column; 10–150 words, align, colour, 12–24px |
-| `campaignbridge/post-cta`     | Post CTA binding       | Article, parent, archive, custom; HTTPS; button or text link |
+| `campaignbridge/post-button`  | Post button binding | Article, parent, archive, custom; HTTPS; button or text link |
 | `campaignbridge/preheader`    | Hidden inbox preview   | First child of container; at most one; 1-150 characters |
 | `campaignbridge/columns`      | One or two columns     | Child of section; 1-2 columns; gap 0-48 px   |
 | `campaignbridge/column`       | Column content         | Child of columns; width 20-80% totalling 100 |
@@ -180,7 +180,7 @@ ship that composition as a single insert. The post binding reaches the post
 blocks through the columns wrapper because context flows down unchanged.
 
 Every post binding block mirrors the control surface of its static twin:
-post-title matches heading, post-excerpt matches text, post-cta matches button.
+post-title matches heading, post-excerpt matches text, post-button matches button.
 Their defaults reproduce the previous output exactly, so templates authored
 before the controls existed compile to the same bytes.
 

@@ -4,7 +4,8 @@ export const POST_CARD_ALLOWED_BLOCKS = [
   'campaignbridge/post-image',
   'campaignbridge/post-title',
   'campaignbridge/post-excerpt',
-  'campaignbridge/post-cta',
+  'campaignbridge/post-button',
+  'campaignbridge/post-link',
 ];
 
 /**
@@ -17,5 +18,5 @@ export const POST_CARD_TEMPLATE: Array<[string]> = [
   ['campaignbridge/post-image'],
   ['campaignbridge/post-title'],
   ['campaignbridge/post-excerpt'],
-  ['campaignbridge/post-cta'],
+  ['campaignbridge/post-button'],
 ];

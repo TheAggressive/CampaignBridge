@@ -11,7 +11,7 @@ let postTypesRequest: Promise<PostTypeItem[]> | null = null;
 /**
  * Load the configured post types once per editor session.
  *
- * Post cards and their CTA children share this request so a template with
+ * Post cards and their button children share this request so a template with
  * several cards does not issue duplicate REST requests.
  */
 export function fetchPostTypes(): Promise<PostTypeItem[]> {

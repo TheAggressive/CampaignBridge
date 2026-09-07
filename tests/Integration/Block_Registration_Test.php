@@ -223,7 +223,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			'campaignbridge/post-title',
 			'campaignbridge/post-excerpt',
 			'campaignbridge/post-image',
-			'campaignbridge/post-cta',
+			'campaignbridge/post-button',
 		);
 
 		foreach ( $post_blocks as $block_name ) {

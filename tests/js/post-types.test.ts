@@ -10,7 +10,7 @@ import { fetchPostTypes } from '../../src/blocks/shared/post-types';
 const mockApiFetch = apiFetch as jest.MockedFunction<typeof apiFetch>;
 
 describe('fetchPostTypes', () => {
-  it('shares one request across post cards and CTA blocks', async () => {
+  it('shares one request across post cards and button blocks', async () => {
     mockApiFetch.mockResolvedValueOnce({
       items: [
         {

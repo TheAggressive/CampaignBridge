@@ -49,7 +49,7 @@ describe('post-card layout variations', () => {
         ['campaignbridge/post-image'],
         ['campaignbridge/post-title'],
         ['campaignbridge/post-excerpt'],
-        ['campaignbridge/post-cta'],
+        ['campaignbridge/post-button'],
       ]);
     });
 
@@ -74,7 +74,7 @@ describe('post-card layout variations', () => {
       expect(names(second[2] ?? [])).toEqual([
         'campaignbridge/post-title',
         'campaignbridge/post-excerpt',
-        'campaignbridge/post-cta',
+        'campaignbridge/post-button',
       ]);
     });
 
@@ -88,7 +88,7 @@ describe('post-card layout variations', () => {
       expect(names(first[2] ?? [])).toEqual([
         'campaignbridge/post-title',
         'campaignbridge/post-excerpt',
-        'campaignbridge/post-cta',
+        'campaignbridge/post-button',
       ]);
 
       expect(second[0]).toBe('campaignbridge/column');
@@ -121,7 +121,7 @@ describe('post-card layout variations', () => {
           block('campaignbridge/post-image'),
           block('campaignbridge/post-title'),
           block('campaignbridge/post-excerpt'),
-          block('campaignbridge/post-cta'),
+          block('campaignbridge/post-button'),
         ])
       ).toBe('stacked');
     });
@@ -155,7 +155,7 @@ describe('post-card layout variations', () => {
           block('campaignbridge/columns', {}, [
             block('campaignbridge/column', { width: 35 }),
           ]),
-          block('campaignbridge/post-cta'),
+          block('campaignbridge/post-button'),
         ])
       ).toBe('stacked');
     });

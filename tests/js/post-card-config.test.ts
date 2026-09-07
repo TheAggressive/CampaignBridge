@@ -9,7 +9,7 @@ describe('post-card block configuration', () => {
       ['campaignbridge/post-image'],
       ['campaignbridge/post-title'],
       ['campaignbridge/post-excerpt'],
-      ['campaignbridge/post-cta'],
+      ['campaignbridge/post-button'],
     ]);
   });
 

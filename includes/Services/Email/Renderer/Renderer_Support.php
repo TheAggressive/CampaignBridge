@@ -282,6 +282,53 @@ final class Renderer_Support {
 	}
 
 	/**
+	 * Resolve the post destination URL from the immutable context binding.
+	 *
+	 * Shared by the post button and post link renderers: both accept the same
+	 * destination enum and read the same post snapshot fields.
+	 *
+	 * @param array<string, mixed> $attributes Normalized block attributes.
+	 * @param Render_Context       $context    Immutable scoped context.
+	 */
+	public static function post_destination_url( array $attributes, Render_Context $context ): ?string {
+		$destination = $attributes['destination'];
+		if ( 'custom' === $destination ) {
+			return self::https_url( $attributes['customUrl'] );
+		}
+
+		$post = $context->binding( 'post' );
+		if ( ! is_array( $post ) ) {
+			return null;
+		}
+
+		$field = match ( $destination ) {
+			'postParent'      => 'postParentUrl',
+			'postTypeArchive' => 'postTypeArchiveUrl',
+			default           => 'url',
+		};
+
+		return self::https_url( $post[ $field ] ?? null );
+	}
+
+	/**
+	 * Build the destination-specific missing-URL diagnostics.
+	 *
+	 * @param string $code_prefix Diagnostic prefix, e.g. 'post.button' or 'post.link'.
+	 * @param string $destination Destination slug from the normalized block.
+	 * @return array{0: string, 1: string} Code and message pair.
+	 */
+	public static function missing_destination_diagnostics( string $code_prefix, string $destination ): array {
+		$diagnostics = array(
+			'article'         => array( $code_prefix . '.url_missing', 'A snapshot HTTPS article URL is required.' ),
+			'postParent'      => array( $code_prefix . '.post_parent_url_missing', 'The post parent HTTPS URL is required in the snapshot.' ),
+			'postTypeArchive' => array( $code_prefix . '.post_type_archive_url_missing', 'The post type archive HTTPS URL is required in the snapshot.' ),
+			'custom'          => array( $code_prefix . '.custom_url_invalid', 'The custom destination must be an absolute HTTPS URL.' ),
+		);
+
+		return $diagnostics[ $destination ] ?? $diagnostics['article'];
+	}
+
+	/**
 	 * Return an absolute HTTPS URL or null.
 	 *
 	 * @param mixed $value Candidate URL.

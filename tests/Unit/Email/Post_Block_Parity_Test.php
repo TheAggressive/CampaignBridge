@@ -71,6 +71,16 @@ final class Post_Block_Parity_Test extends TestCase {
 		self::assertSame( '', $result->assets()[0]['alt'] );
 	}
 
+	public function test_renders_a_custom_font_size_for_the_post_title(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['fontSize'] = 32;
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'font-size:32px', $result->html() );
+	}
+
 	public function test_renders_the_call_to_action_as_a_text_link_without_button_markup(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['style'] = 'link';
@@ -224,7 +234,7 @@ final class Post_Block_Parity_Test extends TestCase {
 							$this->block( 'post-image' ),
 							$this->block( 'post-title' ),
 							$this->block( 'post-excerpt' ),
-							$this->block( 'post-cta' ),
+							$this->block( 'post-button' ),
 						),
 					),
 				),
@@ -265,7 +275,7 @@ final class Post_Block_Parity_Test extends TestCase {
 										'innerBlocks' => array(
 											$this->block( 'post-title' ),
 											$this->block( 'post-excerpt' ),
-											$this->block( 'post-cta', array( 'style' => 'link' ) ),
+											$this->block( 'post-button', array( 'style' => 'link' ) ),
 										),
 									),
 								),

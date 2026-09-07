@@ -35,7 +35,7 @@ class Block_Bootstrap_Test extends Test_Case {
 			'campaignbridge/heading',
 			'campaignbridge/image',
 			'campaignbridge/post-card',
-			'campaignbridge/post-cta',
+			'campaignbridge/post-button',
 			'campaignbridge/post-excerpt',
 			'campaignbridge/post-image',
 			'campaignbridge/post-title',

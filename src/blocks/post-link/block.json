@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/post-link",
+  "title": "Post Link",
+  "category": "campaignbridge-email",
+  "icon": "editor-insertmore",
+  "description": "An inline text link to the selected post. Use it when a button is too heavy for the surrounding copy.",
+  "parent": ["campaignbridge/column", "campaignbridge/post-card"],
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "color": { "link": true },
+    "align": true
+  },
+  "attributes": {
+    "label": {
+      "type": "string",
+      "default": "Read more"
+    },
+    "destination": {
+      "type": "string",
+      "enum": ["article", "postParent", "postTypeArchive", "custom"],
+      "default": "article"
+    },
+    "customUrl": {
+      "type": "string",
+      "default": ""
+    },
+    "linkColor": {
+      "type": "string",
+      "default": "#111111"
+    },
+    "align": {
+      "type": "string",
+      "default": "left"
+    }
+  },
+  "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
+  "editorScript": "file:./index.js"
+}
