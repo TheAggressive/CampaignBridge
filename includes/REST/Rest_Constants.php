@@ -65,4 +65,20 @@ class Rest_Constants {
 	 * Query defaults for posts endpoint.
 	 */
 	public const POSTS_PER_PAGE = 100;
+
+	/**
+	 * Default word cap for the excerpt preview.
+	 *
+	 * Keep in sync with the JS default in `src/blocks/shared/posts.ts`.
+	 */
+	public const DEFAULT_EXCERPT_MAX_WORDS = 50;
+
+	/**
+	 * Upper bound for the excerpt preview word cap.
+	 *
+	 * Prevents a client from requesting an unbounded excerpt for every
+	 * post in a response, which would bloat the JSON payload without
+	 * providing a usable editor preview.
+	 */
+	public const EXCERPT_PREVIEW_MAX_WORDS = 500;
 }

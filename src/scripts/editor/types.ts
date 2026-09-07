@@ -24,6 +24,17 @@ export interface EditorStyle {
   ignoredSelectors?: Array<string | RegExp>;
 }
 
+export interface EmailPreviewResponse {
+  html: string;
+  text?: string;
+  diagnostics: Array<{
+    severity: string;
+    code: string;
+    path: string;
+    message: string;
+  }>;
+}
+
 export interface EmailEditorSettings extends Record<string, unknown> {
   allowedBlockTypes?: string[];
   styles?: EditorStyle[];

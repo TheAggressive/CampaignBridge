@@ -2,6 +2,7 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { PanelBody, RangeControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useExcerptPreview } from './hooks/useExcerptPreview';
+import { DEFAULT_EXCERPT_MAX_WORDS } from '../shared/posts';
 import type { EmailBlockEditProps } from '../types';
 
 interface PostExcerptAttributes {
@@ -16,7 +17,7 @@ export default function Edit({
   setAttributes,
   context = {},
 }: EmailBlockEditProps<PostExcerptAttributes>): JSX.Element {
-  const maxWords = Number(attributes.maxWords) || 50;
+  const maxWords = Number(attributes.maxWords) || DEFAULT_EXCERPT_MAX_WORDS;
   const { align = 'left', textColor = '#333333', fontSize = 16 } = attributes;
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
@@ -43,7 +44,11 @@ export default function Edit({
             value={maxWords}
             min={10}
             max={150}
-            onChange={value => setAttributes({ maxWords: Number(value) || 50 })}
+            onChange={value =>
+              setAttributes({
+                maxWords: Number(value) || DEFAULT_EXCERPT_MAX_WORDS,
+              })
+            }
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />

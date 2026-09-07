@@ -104,7 +104,7 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 			$diagnostics[] = Compile_Diagnostic::error(
 				'compliance.unsubscribe.missing',
 				$block->path(),
-				'This template has no HTTPS unsubscribe URL. Set one on the email template before approval.'
+				'This template has no unsubscribe URL. Set one on the email template before approval.'
 			);
 		}
 

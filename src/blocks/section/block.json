@@ -15,7 +15,7 @@
     "reusable": false,
     "align": true,
     "color": { "background": true },
-    "spacing": { "padding": true }
+    "spacing": { "padding": true, "margin": true }
   },
   "attributes": {
     "padding": {

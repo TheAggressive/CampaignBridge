@@ -241,6 +241,28 @@ final class Renderer_Support {
 	}
 
 	/**
+	 * Collapse rich text into plain words and cap it at a word budget.
+	 *
+	 * Mirrors the editor preview so a block renders the same summary in the
+	 * email as it shows in the editor, and appends an ellipsis when clipped.
+	 *
+	 * @param string $raw       Rich text or plain text source.
+	 * @param int    $max_words Maximum number of words to keep.
+	 */
+	public static function truncate_words( string $raw, int $max_words ): string {
+		$text  = trim( html_entity_decode( wp_strip_all_tags( $raw ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+		$text  = rtrim( $text, '…' );
+		$words = preg_split( '/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY );
+		$words = is_array( $words ) ? $words : array();
+
+		if ( count( $words ) <= $max_words ) {
+			return implode( ' ', $words );
+		}
+
+		return implode( ' ', array_slice( $words, 0, $max_words ) ) . '…';
+	}
+
+	/**
 	 * Read portable horizontal alignment.
 	 *
 	 * @param array<string, mixed> $attributes Source attributes.

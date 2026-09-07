@@ -1,9 +1,9 @@
-import { useSelect } from '@wordpress/data';
-import { useMemo } from '@wordpress/element';
-import { decodeEntities } from '@wordpress/html-entities';
+import { useEffect, useState } from '@wordpress/element';
+import { fetchPosts, type PostItem } from '../../shared/posts';
 
 /**
  * Returns a memoized plain-text excerpt preview for the editor.
+ * The preview is resolved server-side so it always matches the compiled email.
  * @param {Object}      params          - Hook parameters
  * @param {number|null} params.postId   - The post ID to get excerpt for
  * @param {string}      params.postType - The post type
@@ -16,43 +16,36 @@ interface ExcerptPreviewOptions {
   maxWords: number;
 }
 
-interface PostPreviewRecord {
-  excerpt?: { rendered?: string };
-  content?: { rendered?: string };
-}
-
-interface CoreSelectors {
-  getEntityRecord: (
-    kind: string,
-    name: string,
-    id: number
-  ) => PostPreviewRecord | null;
-}
-
 export function useExcerptPreview({
   postId,
   postType,
   maxWords,
 }: ExcerptPreviewOptions): string {
-  const post = useSelect(
-    s =>
-      postId
-        ? (s('core') as unknown as CoreSelectors).getEntityRecord(
-            'postType',
-            postType,
-            postId
-          )
-        : null,
-    [postId, postType]
-  );
+  const [post, setPost] = useState<PostItem | null>(null);
 
-  return useMemo(() => {
-    const raw = post?.excerpt?.rendered || post?.content?.rendered || '';
-    const text = decodeEntities(raw)
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const words = text.split(/\s+/).filter(Boolean);
-    return words.slice(0, maxWords).join(' ');
-  }, [post, maxWords]);
+  useEffect(() => {
+    if (!postId) {
+      setPost(null);
+      return;
+    }
+
+    let active = true;
+    fetchPosts(postType, maxWords)
+      .then(items => {
+        if (active) {
+          setPost(items.find(item => Number(item.id) === postId) ?? null);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setPost(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [postId, postType, maxWords]);
+
+  return post?.excerptPreview ?? '';
 }

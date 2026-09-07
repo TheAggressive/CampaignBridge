@@ -33,14 +33,6 @@ export function normalizeDestination(value: unknown): Destination {
     : 'article';
 }
 
-export function isSafePreviewUrl(value: string): boolean {
-  try {
-    return ['http:', 'https:'].includes(new URL(value).protocol);
-  } catch {
-    return false;
-  }
-}
-
 export function isHttpsUrl(value: string): boolean {
   try {
     return new URL(value).protocol === 'https:';
@@ -48,7 +40,6 @@ export function isHttpsUrl(value: string): boolean {
     return false;
   }
 }
-
 export interface DestinationPreview {
   previewUrl: string;
   destinationHelp: string;
@@ -86,14 +77,14 @@ export function resolveDestinationPreview(args: {
   let previewUrl = '';
   if (destination === 'custom') {
     previewUrl = customUrl;
-  } else if (destination === 'postParent' && isSafePreviewUrl(postParentUrl)) {
+  } else if (destination === 'postParent' && isHttpsUrl(postParentUrl)) {
     previewUrl = postParentUrl;
   } else if (
     destination === 'postTypeArchive' &&
-    isSafePreviewUrl(postTypeArchiveUrl)
+    isHttpsUrl(postTypeArchiveUrl)
   ) {
     previewUrl = postTypeArchiveUrl;
-  } else if (isSafePreviewUrl(articleUrl)) {
+  } else if (isHttpsUrl(articleUrl)) {
     previewUrl = articleUrl;
   }
 

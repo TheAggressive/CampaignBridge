@@ -1,6 +1,7 @@
 import columnsMeta from '../../src/blocks/columns/block.json';
 import postCardMeta from '../../src/blocks/post-card/block.json';
 import postButtonMeta from '../../src/blocks/post-button/block.json';
+import postLinkMeta from '../../src/blocks/post-link/block.json';
 import postExcerptMeta from '../../src/blocks/post-excerpt/block.json';
 import postImageMeta from '../../src/blocks/post-image/block.json';
 import postTitleMeta from '../../src/blocks/post-title/block.json';
@@ -27,6 +28,7 @@ describe('column block configuration', () => {
       'campaignbridge/post-title',
       'campaignbridge/post-excerpt',
       'campaignbridge/post-button',
+      'campaignbridge/post-link',
     ]) {
       expect(COLUMN_ALLOWED_BLOCKS).toContain(name);
     }
@@ -48,6 +50,7 @@ describe('post-card layout grammar', () => {
     expect(postTitleMeta.parent).toContain('campaignbridge/column');
     expect(postExcerptMeta.parent).toContain('campaignbridge/column');
     expect(postButtonMeta.parent).toContain('campaignbridge/column');
+    expect(postLinkMeta.parent).toContain('campaignbridge/column');
   });
 
   it('lets a post-card be placed inside a column', () => {

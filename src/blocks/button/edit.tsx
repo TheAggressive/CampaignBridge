@@ -65,7 +65,7 @@ export default function Edit({
             __nextHasNoMarginBottom
           />
           <TextControl
-            label={__('HTTPS URL', 'campaignbridge')}
+            label={__('URL', 'campaignbridge')}
             type='url'
             value={url}
             onChange={value => setAttributes({ url: value })}

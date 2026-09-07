@@ -75,7 +75,7 @@ final class Button_Renderer extends Abstract_Renderer {
 		}
 
 		if ( null === Renderer_Support::https_url( $attributes['url'] ) ) {
-			return array( Compile_Diagnostic::error( 'button.url.invalid', $block->path(), 'Email buttons require an absolute HTTPS URL.' ) );
+			return array( Compile_Diagnostic::error( 'button.url.invalid', $block->path(), 'Email buttons require an absolute URL.' ) );
 		}
 
 		return array();

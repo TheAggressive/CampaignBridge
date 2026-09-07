@@ -82,7 +82,7 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 				Compile_Diagnostic::error(
 					'post.image.invalid',
 					$block->path(),
-					'Post images require an HTTPS URL, alt decision, and positive integer dimensions.'
+					'Post images require an absolute URL, alt decision, and positive integer dimensions.'
 				),
 			);
 		}

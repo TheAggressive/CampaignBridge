@@ -117,7 +117,7 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 				Compile_Diagnostic::error(
 					'post.url.invalid',
 					$block->path(),
-					'The post snapshot URL must be an absolute HTTPS URL.'
+					'The post snapshot URL must be an absolute URL.'
 				),
 			);
 		}

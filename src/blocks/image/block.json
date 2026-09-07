@@ -6,7 +6,7 @@
   "title": "Email Image",
   "category": "campaignbridge-email",
   "icon": "format-image",
-  "description": "A dimensioned, accessible image with an optional HTTPS link.",
+  "description": "A dimensioned, accessible image with an optional link.",
   "textdomain": "campaignbridge",
   "parent": ["campaignbridge/section"],
   "supports": {

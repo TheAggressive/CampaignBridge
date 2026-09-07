@@ -24,6 +24,7 @@ export default [
       'dist/**',
       'release/**',
       'assets/**',
+      'build/**',
       'vendor/**',
       'coverage/**',
       'tests/{Accessibility,Fixtures,Integration,Performance,Security,Unit,helpers,js}/**',

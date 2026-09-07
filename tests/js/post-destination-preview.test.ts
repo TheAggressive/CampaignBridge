@@ -1,5 +1,5 @@
 import {
-  isSafePreviewUrl,
+  isHttpsUrl,
   normalizeDestination,
   resolveDestinationPreview,
 } from '../../src/blocks/shared/post-destination';
@@ -143,12 +143,12 @@ describe('resolveDestinationPreview', () => {
       expect(normalizeDestination('postParent')).toBe('postParent');
     });
 
-    it('isSafePreviewUrl only accepts http/https URLs', () => {
-      expect(isSafePreviewUrl('https://example.com')).toBe(true);
-      expect(isSafePreviewUrl('http://example.com')).toBe(true);
-      expect(isSafePreviewUrl('javascript:void(0)')).toBe(false);
-      expect(isSafePreviewUrl('not-a-url')).toBe(false);
-      expect(isSafePreviewUrl('')).toBe(false);
+    it('isHttpsUrl only accepts HTTPS URLs', () => {
+      expect(isHttpsUrl('https://example.com')).toBe(true);
+      expect(isHttpsUrl('http://example.com')).toBe(false);
+      expect(isHttpsUrl('javascript:void(0)')).toBe(false);
+      expect(isHttpsUrl('not-a-url')).toBe(false);
+      expect(isHttpsUrl('')).toBe(false);
     });
   });
 });
