@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace CampaignBridge\REST;
 
 use CampaignBridge\Core\Storage;
+use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Post_Snapshot_Repository;
 use CampaignBridge\Workflow\Email\Template_Preview;
 use WP_REST_Request;
@@ -106,7 +107,7 @@ class Preview_Routes extends Abstract_Rest_Controller {
 			return self::create_error( 'content_too_large', 'The submitted template content is too large to compile' );
 		}
 
-		$result = ( new Template_Preview( new Post_Snapshot_Repository() ) )->compile(
+		$result = ( new Template_Preview( new Post_Snapshot_Repository(), ( new Brand_Kit_Repository() )->get() ) )->compile(
 			$content,
 			$this->metadata( $req, $template_id )
 		);

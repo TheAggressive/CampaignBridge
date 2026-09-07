@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Services\Email\Renderer;
 
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
+use CampaignBridge\Domain\Email\Render_Context;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -162,6 +164,53 @@ final class Renderer_Support {
 		}
 
 		return strtolower( $value );
+	}
+
+	/**
+	 * Resolve a single raw colour value against the active brand kit.
+	 *
+	 * @param string    $value Raw colour (hex, preset reference, or slot slug).
+	 * @param Brand_Kit $kit   Active brand kit.
+	 * @return string Portable six-digit hex colour.
+	 */
+	public static function resolve_color( string $value, Brand_Kit $kit ): string {
+		$normalized = trim( $value );
+
+		// 1. Portable hex passes straight through.
+		if ( 1 === preg_match( '/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $normalized ) ) {
+			return Brand_Kit::normalize_hex( $normalized ) ?? $normalized;
+		}
+
+		// 2. Design-system preset reference (var:preset|color|<slug>).
+		if ( str_starts_with( $normalized, 'var:preset|color|' ) ) {
+			$slug = substr( $normalized, strlen( 'var:preset|color|' ) );
+			$hex  = $kit->color( $slug );
+
+			if ( null !== $hex ) {
+				return $hex;
+			}
+		}
+
+		// 3. Bare brand kit slot slug.
+		if ( '' !== $normalized && null !== $kit->color( $normalized ) ) {
+			return $kit->color( $normalized );
+		}
+
+		// 4. Unknown value: degrade to the brand slot.
+		return $kit->color( Brand_Kit::SLOT_BRAND ) ?? '#1a6dcc';
+	}
+
+	/**
+	 * Read the active brand kit from the context, defaulting to the kit
+	 * defaults when none is supplied.
+	 *
+	 * @param Render_Context $context Immutable scoped context.
+	 * @return Brand_Kit Resolved brand kit.
+	 */
+	public static function brand_kit( Render_Context $context ): Brand_Kit {
+		$kit = $context->metadata( 'brandKit' );
+
+		return $kit instanceof Brand_Kit ? $kit : Brand_Kit::defaults();
 	}
 
 	/**

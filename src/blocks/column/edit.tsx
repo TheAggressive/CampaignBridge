@@ -3,12 +3,7 @@ import {
   useBlockProps,
   useInnerBlocksProps,
 } from '@wordpress/block-editor';
-import {
-  Button,
-  ColorPalette,
-  PanelBody,
-  RangeControl,
-} from '@wordpress/components';
+import { PanelBody, RangeControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import type { EmailBlockEditProps } from '../types';
 import { COLUMN_ALLOWED_BLOCKS } from './config';
@@ -55,19 +50,6 @@ export default function Edit({
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
-          <p>{__('Background color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={backgroundColor}
-            onChange={value => setAttributes({ backgroundColor: value })}
-          />
-          {backgroundColor !== undefined && (
-            <Button
-              variant='tertiary'
-              onClick={() => setAttributes({ backgroundColor: undefined })}
-            >
-              {__('Clear background', 'campaignbridge')}
-            </Button>
-          )}
         </PanelBody>
       </InspectorControls>
       <div {...innerBlocksProps} />

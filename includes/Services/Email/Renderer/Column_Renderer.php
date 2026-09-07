@@ -73,7 +73,7 @@ final class Column_Renderer extends Abstract_Renderer {
 					: null,
 				// Omitted stays null so a column never paints over its section.
 				'backgroundColor' => array_key_exists( 'backgroundColor', $attributes )
-					? Renderer_Support::color_attribute( $attributes, 'backgroundColor', '#ffffff' )
+					? Renderer_Support::string_attribute( $attributes, 'backgroundColor', '#ffffff' )
 					: null,
 			)
 		);
@@ -95,7 +95,7 @@ final class Column_Renderer extends Abstract_Renderer {
 
 		$background = null === $attributes['backgroundColor']
 			? ''
-			: sprintf( ';background-color:%s', $attributes['backgroundColor'] );
+			: sprintf( ';background-color:%s', Renderer_Support::resolve_color( $attributes['backgroundColor'], Renderer_Support::brand_kit( $context ) ) );
 
 		return sprintf(
 			'<td class="cb-col" valign="%1$s" width="%2$d%%" style="width:%2$d%%;vertical-align:%1$s%3$s">%4$s</td>',

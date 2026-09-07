@@ -11,15 +11,29 @@ namespace CampaignBridge\Services\Email\Renderer;
 
 use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Renders a bounded semantic heading. */
+/** Renders a bounded heading with explicit hierarchy and alignment. */
 final class Heading_Renderer extends Abstract_Renderer {
+	/**
+	 * Portable sizes by heading level.
+	 *
+	 * @var array<int, int>
+	 */
+	private const SIZE_BY_LEVEL = array(
+		1 => 32,
+		2 => 28,
+		3 => 24,
+		4 => 20,
+	);
+
 	/** {@inheritDoc} */
 	public function block_name(): string {
 		return 'campaignbridge/heading';
@@ -27,7 +41,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'content', 'level', 'align', 'textColor' );
+		return array( 'content', 'level', 'align', 'textColor', 'style' );
 	}
 
 	/**
@@ -43,7 +57,8 @@ final class Heading_Renderer extends Abstract_Renderer {
 				'content'   => Renderer_Support::string_attribute( $attributes, 'content', '' ),
 				'level'     => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
 				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
-				'textColor' => Renderer_Support::color_attribute( $attributes, 'textColor', '#111111' ),
+				'textColor' => Renderer_Support::string_attribute( $attributes, 'textColor', '#111111' ),
+				'style'     => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 			)
 		);
 	}
@@ -55,13 +70,14 @@ final class Heading_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$content = $block->attributes()['content'];
-		if ( '' === trim( html_entity_decode( $content, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) ) {
-			return array( Compile_Diagnostic::error( 'heading.content.empty', $block->path(), 'Email headings require visible content.' ) );
-		}
-
-		if ( preg_match( '/<[^>]*>/', $content ) ) {
-			return array( Compile_Diagnostic::error( 'heading.content.invalid', $block->path(), 'Email headings do not permit nested markup.' ) );
+		if ( '' === trim( wp_strip_all_tags( $block->attributes()['content'] ) ) ) {
+			return array(
+				Compile_Diagnostic::error(
+					'heading.content.empty',
+					$block->path(),
+					'Email headings require visible text.'
+				),
+			);
 		}
 
 		return array();
@@ -76,22 +92,15 @@ final class Heading_Renderer extends Abstract_Renderer {
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$attributes = $block->attributes();
-		$level      = $attributes['level'];
-		$sizes      = array(
-			1 => 32,
-			2 => 28,
-			3 => 24,
-			4 => 20,
-		);
-		$content    = Renderer_Support::html( html_entity_decode( $attributes['content'], ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+		$style      = $this->build_style( $attributes, $context );
+		$heading    = 'h' . $attributes['level'];
 
 		return sprintf(
-			'<h%1$d align="%2$s" style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:%3$dpx;line-height:1.25;text-align:%2$s;color:%4$s">%5$s</h%1$d>',
-			$level,
+			'<%1$s align="%2$s" style="%3$s">%4$s</%1$s>',
+			$heading,
 			$attributes['align'],
-			$sizes[ $level ],
-			$attributes['textColor'],
-			$content
+			$style,
+			Renderer_Support::html( html_entity_decode( $attributes['content'], ENT_QUOTES | ENT_HTML5, 'UTF-8' ) )
 		);
 	}
 
@@ -104,5 +113,55 @@ final class Heading_Renderer extends Abstract_Renderer {
 	 */
 	public function render_text( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		return trim( html_entity_decode( $block->attributes()['content'], ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) . "\n";
+	}
+
+	/**
+	 * Build the portable inline style string for the heading block.
+	 *
+	 * Resolves the design-system style tree (color, typography) through the
+	 * Style_Resolver, falling back to the legacy per-block attributes when no
+	 * style choice was made.
+	 *
+	 * @param array<string, mixed> $attributes Normalized attributes.
+	 * @param Render_Context       $context    Immutable scoped context.
+	 * @return string Portable CSS declarations, semicolon-separated.
+	 */
+	private function build_style( array $attributes, Render_Context $context ): string {
+		$style_tree = is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array();
+		$wrapper    = array( 'style' => $style_tree );
+		$kit        = $context->metadata( 'brandKit' );
+		$kit        = $kit instanceof Brand_Kit ? $kit : Brand_Kit::defaults();
+
+		$font_size = null;
+		if ( isset( $style_tree['typography']['fontSize'] ) ) {
+			$font_size = Style_Resolver::font_size( $wrapper, null, 16, 48 );
+		}
+		if ( null === $font_size ) {
+			$font_size = self::SIZE_BY_LEVEL[ $attributes['level'] ] ?? 24;
+		}
+
+		$line_height = null;
+		if ( isset( $style_tree['typography']['lineHeight'] ) ) {
+			$line_height = Style_Resolver::line_height( $wrapper, null );
+		}
+		if ( null === $line_height ) {
+			$line_height = 1.25;
+		}
+
+		$color = null;
+		if ( isset( $style_tree['color']['text'] ) ) {
+			$color = Style_Resolver::color( $wrapper, 'text', null, $kit );
+		}
+		if ( null === $color ) {
+			$color = Renderer_Support::resolve_color( (string) $attributes['textColor'], $kit );
+		}
+
+		return sprintf(
+			'margin:0 0 16px;font-family:Arial,sans-serif;font-size:%dpx;line-height:%s;text-align:%s;color:%s',
+			$font_size,
+			$line_height,
+			$attributes['align'],
+			$color
+		);
 	}
 }

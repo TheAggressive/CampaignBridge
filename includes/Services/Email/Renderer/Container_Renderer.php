@@ -69,8 +69,8 @@ final class Container_Renderer extends Abstract_Renderer {
 				'maxWidth'        => Renderer_Support::integer_attribute( $attributes, 'maxWidth', 600, 320, 900 ),
 				'outerPadding'    => Renderer_Support::spacing_attribute( $attributes, 'outerPadding', self::DEFAULT_OUTER_PADDING ),
 				'padding'         => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_INNER_PADDING ),
-				'backgroundColor' => Renderer_Support::color_attribute( $colors, 'background', '#ffffff', 'style.color.background' ),
-				'textColor'       => Renderer_Support::color_attribute( $colors, 'text', '#111111', 'style.color.text' ),
+				'backgroundColor' => Renderer_Support::string_attribute( $colors, 'background', '#ffffff' ),
+				'textColor'       => Renderer_Support::string_attribute( $colors, 'text', '#111111' ),
 			)
 		);
 	}
@@ -157,13 +157,14 @@ final class Container_Renderer extends Abstract_Renderer {
 	 * @param string         $children Compiled child HTML.
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
-	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$attributes = $block->attributes();
 		$outer      = $attributes['outerPadding'];
 		$inner      = $attributes['padding'];
 		$width      = $attributes['maxWidth'];
-		$background = $attributes['backgroundColor'];
-		$text       = $attributes['textColor'];
+		$kit        = Renderer_Support::brand_kit( $context );
+		$background = Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit );
+		$text       = Renderer_Support::resolve_color( $attributes['textColor'], $kit );
 
 		return sprintf(
 			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse;background-color:%1$s;color:%2$s"><tr><td align="center" style="padding:%3$dpx %4$dpx %5$dpx %6$dpx"><table role="presentation" class="cb-email-container" width="%7$d" cellpadding="0" cellspacing="0" border="0" style="width:%7$dpx;max-width:100%%;border-collapse:collapse;background-color:%1$s;color:%2$s"><tr><td class="cb-email-cell" style="padding:%8$dpx %9$dpx %10$dpx %11$dpx">%12$s</td></tr></table></td></tr></table>',

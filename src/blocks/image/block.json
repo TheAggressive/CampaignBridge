@@ -9,7 +9,11 @@
   "description": "A dimensioned, accessible image with an optional HTTPS link.",
   "textdomain": "campaignbridge",
   "parent": ["campaignbridge/section"],
-  "supports": { "html": false, "reusable": false },
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "spacing": { "margin": true }
+  },
   "attributes": {
     "url": { "type": "string", "default": "" },
     "alt": { "type": "string", "default": "" },

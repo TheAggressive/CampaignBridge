@@ -1,10 +1,5 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import {
-  ColorPalette,
-  PanelBody,
-  RangeControl,
-  SelectControl,
-} from '@wordpress/components';
+import { PanelBody, RangeControl, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import type { EmailBlockEditProps } from '../types';
 
@@ -61,11 +56,6 @@ export default function Edit({
             }
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-          />
-          <p>{__('Color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={color}
-            onChange={value => setAttributes({ color: value || '#dddddd' })}
           />
         </PanelBody>
       </InspectorControls>

@@ -9,13 +9,21 @@
   "description": "A bulletproof call-to-action with an Outlook VML fallback.",
   "textdomain": "campaignbridge",
   "parent": ["campaignbridge/section"],
-  "supports": { "html": false, "reusable": false },
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "align": true,
+    "color": { "background": true, "text": true }
+  },
   "attributes": {
     "label": { "type": "string", "default": "Learn more" },
     "url": { "type": "string", "default": "" },
-    "align": { "type": "string", "default": "left" },
-    "backgroundColor": { "type": "string", "default": "#111111" },
-    "textColor": { "type": "string", "default": "#ffffff" }
+    "align": { "type": "string", "default": "left" }
   },
+  "styles": [
+    { "name": "primary", "label": "Primary" },
+    { "name": "outline", "label": "Outline" },
+    { "name": "ghost", "label": "Ghost" }
+  ],
   "editorScript": "file:./index.js"
 }

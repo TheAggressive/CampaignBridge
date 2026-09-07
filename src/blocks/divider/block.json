@@ -9,7 +9,11 @@
   "description": "A portable horizontal divider with bounded dimensions.",
   "textdomain": "campaignbridge",
   "parent": ["campaignbridge/section"],
-  "supports": { "html": false, "reusable": false },
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "align": true
+  },
   "attributes": {
     "color": { "type": "string", "default": "#dddddd" },
     "thickness": { "type": "number", "default": 1 },

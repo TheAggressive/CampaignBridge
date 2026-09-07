@@ -4,11 +4,6 @@ import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
-import {
-  AlignmentSelect,
-  EmailColor,
-  type EmailAlignment,
-} from '../shared/controls';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
 import type { EmailBlockEditProps } from '../types';
 
@@ -20,7 +15,7 @@ interface PostCtaAttributes {
   customUrl?: string;
   backgroundColor?: string;
   textColor?: string;
-  align?: EmailAlignment;
+  align?: 'left' | 'center' | 'right';
   style?: 'button' | 'link';
   linkColor?: string;
 }
@@ -211,33 +206,6 @@ export default function Edit({
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
-          <AlignmentSelect
-            value={align}
-            onChange={value => setAttributes({ align: value })}
-          />
-          {ctaStyle === 'link' ? (
-            <EmailColor
-              label={__('Link color', 'campaignbridge')}
-              value={linkColor}
-              fallback='#111111'
-              onChange={value => setAttributes({ linkColor: value })}
-            />
-          ) : (
-            <>
-              <EmailColor
-                label={__('Background color', 'campaignbridge')}
-                value={backgroundColor}
-                fallback='#111111'
-                onChange={value => setAttributes({ backgroundColor: value })}
-              />
-              <EmailColor
-                label={__('Text color', 'campaignbridge')}
-                value={textColor}
-                fallback='#ffffff'
-                onChange={value => setAttributes({ textColor: value })}
-              />
-            </>
-          )}
         </PanelBody>
       </InspectorControls>
       <a

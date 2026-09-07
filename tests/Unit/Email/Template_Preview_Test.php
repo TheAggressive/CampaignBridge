@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Post_Snapshot_Source;
 use CampaignBridge\Workflow\Email\Snapshot_References;
 use CampaignBridge\Workflow\Email\Template_Preview;
@@ -143,6 +144,42 @@ final class Template_Preview_Test extends TestCase {
 			$this->preview()->compile( $content )->fingerprint(),
 			$this->preview()->compile( $content )->fingerprint()
 		);
+	}
+
+	public function test_a_brand_kit_passed_into_the_preview_is_honoured(): void {
+		$kit = Brand_Kit::from_colors(
+			array(
+				'brand' => '#ff0000',
+			)
+		);
+		$preview = new Template_Preview(
+			new class() implements Post_Snapshot_Source {
+				/**
+				 * {@inheritDoc}
+				 *
+				 * @param array<int, array{id: int, type: string}> $references Requested posts.
+				 * @return array<int|string, array<string, mixed>>
+				 */
+				public function posts( array $references ): array {
+					return array();
+				}
+			},
+			$kit
+		);
+
+		// The heading's style tree references the "brand" preset slug via the
+		// standard `var:preset|color|<slug>` form. With the custom kit,
+		// "brand" resolves to #ff0000 instead of the default #1a6dcc.
+		$result = $preview->compile(
+			'<!-- wp:campaignbridge/container -->'
+			. '<!-- wp:campaignbridge/section -->'
+			. '<!-- wp:campaignbridge/heading {"content":"Hello","level":2,"style":{"color":{"text":"var:preset|color|brand"}}} /-->'
+			. '<!-- /wp:campaignbridge/section -->'
+			. '<!-- /wp:campaignbridge/container -->'
+		);
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'color:#ff0000', $result->html() );
 	}
 
 	/** Build a preview bound to a fixed in-memory snapshot source. */

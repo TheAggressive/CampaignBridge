@@ -10,7 +10,9 @@
   "parent": ["campaignbridge/column", "campaignbridge/post-card"],
   "supports": {
     "html": false,
-    "reusable": false
+    "reusable": false,
+    "align": true,
+    "color": { "background": true, "text": true, "link": true }
   },
   "attributes": {
     "label": {

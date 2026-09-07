@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -27,7 +28,7 @@ final class Image_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'url', 'alt', 'decorative', 'width', 'height', 'linkUrl' );
+		return array( 'url', 'alt', 'decorative', 'width', 'height', 'linkUrl', 'style' );
 	}
 
 	/**
@@ -46,6 +47,7 @@ final class Image_Renderer extends Abstract_Renderer {
 				'width'      => Renderer_Support::integer_attribute( $attributes, 'width', 600, 1, 1200 ),
 				'height'     => Renderer_Support::integer_attribute( $attributes, 'height', 400, 1, 1200 ),
 				'linkUrl'    => trim( Renderer_Support::string_attribute( $attributes, 'linkUrl', '' ) ),
+				'style'      => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 			)
 		);
 	}
@@ -80,15 +82,42 @@ final class Image_Renderer extends Abstract_Renderer {
 	 * @param string         $children Compiled child HTML.
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
-	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$attributes = $block->attributes();
-		$image      = sprintf(
-			'<img src="%1$s" width="%2$d" height="%3$d" alt="%4$s"%5$s border="0" style="display:block;width:100%%;max-width:%2$dpx;height:auto;border:0">',
+		$style_tree = is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array();
+
+		// Base image style.
+		$image_style = 'display:block;width:100%;max-width:' . (int) $attributes['width'] . 'px;height:auto;border:0';
+
+		// Margin: design-system shape first.
+		if ( isset( $style_tree['spacing']['margin'] ) ) {
+			$margin       = Style_Resolver::spacing(
+				array( 'style' => $style_tree ),
+				'margin',
+				array(
+					'top'    => 0,
+					'right'  => 0,
+					'bottom' => 0,
+					'left'   => 0,
+				)
+			);
+			$image_style .= sprintf(
+				';margin:%dpx %dpx %dpx %dpx',
+				$margin['top'],
+				$margin['right'],
+				$margin['bottom'],
+				$margin['left']
+			);
+		}
+
+		$image = sprintf(
+			'<img src="%1$s" width="%2$d" height="%3$d" alt="%4$s"%5$s border="0" style="%6$s">',
 			Renderer_Support::html( $attributes['url'] ),
 			$attributes['width'],
 			$attributes['height'],
 			Renderer_Support::html( $attributes['decorative'] ? '' : $attributes['alt'] ),
-			$attributes['decorative'] ? ' role="presentation"' : ''
+			$attributes['decorative'] ? ' role="presentation"' : '',
+			$image_style
 		);
 
 		return '' === $attributes['linkUrl']

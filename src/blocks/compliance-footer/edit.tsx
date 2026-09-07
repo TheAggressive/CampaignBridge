@@ -1,18 +1,12 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import {
-  BoxControl,
-  ColorPalette,
   Notice,
   PanelBody,
   TextControl,
   TextareaControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import {
-  normalizeSpacing,
-  toControlSpacing,
-  type NormalizedSpacing,
-} from '../shared/spacing';
+import type { NormalizedSpacing } from '../shared/spacing';
 import type { EmailBlockEditProps } from '../types';
 
 interface ComplianceFooterAttributes {
@@ -75,19 +69,6 @@ export default function Edit({
             onChange={value => setAttributes({ unsubscribeLabel: value })}
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-          />
-          <BoxControl
-            label={__('Padding', 'campaignbridge')}
-            values={toControlSpacing(padding)}
-            onChange={values =>
-              setAttributes({ padding: normalizeSpacing(values) })
-            }
-            __next40pxDefaultSize
-          />
-          <p>{__('Text color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={textColor}
-            onChange={value => setAttributes({ textColor: value || '#666666' })}
           />
         </PanelBody>
       </InspectorControls>

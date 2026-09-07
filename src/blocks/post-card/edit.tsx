@@ -7,9 +7,6 @@ import {
 } from '@wordpress/block-editor';
 import { createBlocksFromInnerBlocksTemplate } from '@wordpress/blocks';
 import {
-  BoxControl,
-  Button,
-  ColorPalette,
   PanelBody,
   SelectControl,
   Spinner,
@@ -23,13 +20,9 @@ import type { ComponentType } from 'react';
 
 import { fetchPosts, type PostItem } from '../shared/posts';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
-import {
-  normalizeSpacing,
-  toControlSpacing,
-  type NormalizedSpacing,
-} from '../shared/spacing';
 import { POST_CARD_ALLOWED_BLOCKS } from './config';
 import { detectActiveLayout, POST_CARD_VARIATIONS } from './variations';
+import type { NormalizedSpacing } from '../shared/spacing';
 import type { EmailBlockEditProps } from '../types';
 
 interface PostCardAttributes {
@@ -188,32 +181,6 @@ export default function Edit({
             __nextHasNoMarginBottom
           />
           {loading && <Spinner />}
-        </PanelBody>
-        <PanelBody
-          title={__('Card style', 'campaignbridge')}
-          initialOpen={false}
-        >
-          <BoxControl
-            label={__('Padding', 'campaignbridge')}
-            values={toControlSpacing(padding)}
-            onChange={values =>
-              setAttributes({ padding: normalizeSpacing(values) })
-            }
-            __next40pxDefaultSize
-          />
-          <p>{__('Background color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={backgroundColor}
-            onChange={value => setAttributes({ backgroundColor: value })}
-          />
-          {backgroundColor !== undefined && (
-            <Button
-              variant='tertiary'
-              onClick={() => setAttributes({ backgroundColor: undefined })}
-            >
-              {__('Clear background', 'campaignbridge')}
-            </Button>
-          )}
         </PanelBody>
       </InspectorControls>
       <div {...innerBlocksProps} />

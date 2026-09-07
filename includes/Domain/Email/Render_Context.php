@@ -72,6 +72,19 @@ final class Render_Context {
 	}
 
 	/**
+	 * Return a context copy with a metadata value set.
+	 *
+	 * @param string $key   Metadata key.
+	 * @param mixed  $value Value to store.
+	 */
+	public function with_metadata( string $key, mixed $value ): self {
+		$metadata         = $this->metadata;
+		$metadata[ $key ] = $value;
+
+		return new self( $metadata, $this->snapshots, $this->bindings, $this->profile );
+	}
+
+	/**
 	 * Return a context copy with an active binding.
 	 *
 	 * @param string               $name  Binding name.

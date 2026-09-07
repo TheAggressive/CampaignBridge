@@ -1,11 +1,7 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import {
-  ColorPalette,
-  PanelBody,
-  SelectControl,
-  TextControl,
-} from '@wordpress/components';
+import { PanelBody, SelectControl, TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import type { CSSProperties } from 'react';
 import type { EmailBlockEditProps } from '../types';
 
 interface ButtonAttributes {
@@ -14,6 +10,7 @@ interface ButtonAttributes {
   align?: 'left' | 'center' | 'right';
   backgroundColor?: string;
   textColor?: string;
+  className?: string;
 }
 
 export default function Edit({
@@ -27,6 +24,34 @@ export default function Edit({
     backgroundColor = '#111111',
     textColor = '#ffffff',
   } = attributes;
+
+  const variant =
+    attributes.className?.match(/is-style-([a-z0-9-]+)/)?.[1] ?? 'primary';
+
+  const buttonStyle: CSSProperties =
+    variant === 'outline'
+      ? {
+          backgroundColor: 'transparent',
+          color: backgroundColor,
+          padding: '10px 20px',
+          border: `2px solid ${backgroundColor}`,
+          textDecoration: 'none',
+        }
+      : variant === 'ghost'
+        ? {
+            backgroundColor: 'transparent',
+            color: backgroundColor,
+            padding: '12px 24px',
+            border: 'none',
+            textDecoration: 'underline',
+          }
+        : {
+            backgroundColor,
+            color: textColor,
+            padding: '12px 24px',
+            border: 'none',
+            textDecoration: 'none',
+          };
 
   return (
     <div {...useBlockProps({ style: { textAlign: align } })}>
@@ -59,30 +84,15 @@ export default function Edit({
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
-          <p>{__('Background color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={backgroundColor}
-            onChange={value =>
-              setAttributes({ backgroundColor: value || '#111111' })
-            }
-          />
-          <p>{__('Text color', 'campaignbridge')}</p>
-          <ColorPalette
-            value={textColor}
-            onChange={value => setAttributes({ textColor: value || '#ffffff' })}
-          />
         </PanelBody>
       </InspectorControls>
       <a
         href={url || '#'}
         style={{
           display: 'inline-block',
-          padding: '12px 24px',
           borderRadius: 4,
-          backgroundColor,
-          color: textColor,
-          textDecoration: 'none',
           fontWeight: 700,
+          ...buttonStyle,
         }}
       >
         {label}

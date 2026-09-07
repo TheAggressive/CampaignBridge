@@ -7,15 +7,14 @@
  *
  * Key Features:
  * - Responsive max-width control (320px - 900px)
- * - Configurable outer padding (gutter around inner table)
- * - Configurable inner padding (content area padding)
+ * - Content-area padding via native WordPress spacing support
  * - Automatic block locking to prevent accidental removal/movement
  * - Inner blocks support with restricted allowed blocks
  * - Dynamic appender based on inner block presence
  * - WordPress color panel integration for background/text colors
  *
  * Block Structure:
- * - Outer wrapper with outer padding and color support
+ * - Outer wrapper with color support
  * - Inner container with max-width and auto margins (centered)
  * - InnerBlocks area with configurable appender behavior
  */
@@ -27,16 +26,12 @@ import {
   useInnerBlocksProps,
 } from '@wordpress/block-editor';
 import type { BlockEditProps } from '@wordpress/blocks';
-import { BoxControl, PanelBody, RangeControl } from '@wordpress/components';
+import { PanelBody, RangeControl } from '@wordpress/components';
 import { useDispatch } from '@wordpress/data';
 import { useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { useBlockSelection } from '../../scripts/editor/hooks/useBlockSelection';
-import {
-  normalizeSpacing,
-  toControlSpacing,
-  type NormalizedSpacing,
-} from '../shared/spacing';
+import type { NormalizedSpacing } from '../shared/spacing';
 
 interface ContainerBlockAttributes {
   maxWidth?: number;
@@ -52,7 +47,6 @@ interface EditProps extends BlockEditProps<ContainerBlockAttributes> {
   clientId: string;
 }
 
-const DEFAULT_OUTER_PADDING = { top: 20, right: 0, bottom: 20, left: 0 };
 const DEFAULT_INNER_PADDING = { top: 0, right: 24, bottom: 0, left: 24 };
 
 export default function Edit({
@@ -60,11 +54,7 @@ export default function Edit({
   setAttributes,
   clientId,
 }: EditProps): JSX.Element {
-  const {
-    maxWidth = 600,
-    outerPadding = DEFAULT_OUTER_PADDING,
-    padding = DEFAULT_INNER_PADDING,
-  } = attributes;
+  const { maxWidth = 600, padding = DEFAULT_INNER_PADDING } = attributes;
   const { updateBlockAttributes } = useDispatch('core/block-editor');
   const { hasInnerBlocks } = useBlockSelection(clientId);
 
@@ -115,24 +105,6 @@ export default function Edit({
             onChange={v => setAttributes({ maxWidth: v })}
             __next40pxDefaultSize
             __nextHasNoMarginBottom
-          />
-
-          <BoxControl
-            label={__('Outer padding (around inner table)', 'campaignbridge')}
-            values={toControlSpacing(outerPadding)}
-            onChange={values =>
-              setAttributes({ outerPadding: normalizeSpacing(values) })
-            }
-            __next40pxDefaultSize
-          />
-
-          <BoxControl
-            label={__('Inner padding (content area)', 'campaignbridge')}
-            values={toControlSpacing(padding)}
-            onChange={values =>
-              setAttributes({ padding: normalizeSpacing(values) })
-            }
-            __next40pxDefaultSize
           />
         </PanelBody>
       </InspectorControls>

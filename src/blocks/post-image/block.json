@@ -10,7 +10,8 @@
   "parent": ["campaignbridge/column", "campaignbridge/post-card"],
   "supports": {
     "html": false,
-    "reusable": false
+    "reusable": false,
+    "align": true
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js",

@@ -12,7 +12,8 @@
   "supports": {
     "html": false,
     "innerBlocks": true,
-    "reusable": false
+    "reusable": false,
+    "color": { "background": true }
   },
   "attributes": {
     "width": { "type": "number" },
