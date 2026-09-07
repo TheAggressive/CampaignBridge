@@ -108,7 +108,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertSame( 'post.snapshot.missing', $result->diagnostics()[0]->code() );
 	}
 
-	public function test_post_cta_can_target_immutable_post_parent(): void {
+	public function test_post_button_can_target_immutable_post_parent(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postParent';
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
@@ -118,7 +118,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertStringContainsString( 'Read more: https://example.com/parent-page', $result->text() );
 	}
 
-	public function test_post_cta_rejects_post_parent_target_without_snapshot_url(): void {
+	public function test_post_button_rejects_post_parent_target_without_snapshot_url(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postParent';
 		$result = Compiler_Factory::create()->compile( $document, $this->context( false ) );
@@ -127,7 +127,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertSame( 'post.button.post_parent_url_missing', $result->diagnostics()[0]->code() );
 	}
 
-	public function test_post_cta_can_target_immutable_post_type_archive(): void {
+	public function test_post_button_can_target_immutable_post_type_archive(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postTypeArchive';
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
@@ -137,7 +137,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertStringContainsString( 'Read more: https://example.com/news', $result->text() );
 	}
 
-	public function test_post_cta_rejects_archive_target_without_snapshot_url(): void {
+	public function test_post_button_rejects_archive_target_without_snapshot_url(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postTypeArchive';
 		$result = Compiler_Factory::create()->compile( $document, $this->context( true, false ) );
@@ -146,7 +146,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertSame( 'post.button.post_type_archive_url_missing', $result->diagnostics()[0]->code() );
 	}
 
-	public function test_post_cta_can_target_custom_https_url(): void {
+	public function test_post_button_can_target_custom_https_url(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'custom';
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['customUrl']   = 'https://example.com/landing?source=email&campaign=weekly';
@@ -157,7 +157,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertStringContainsString( 'Read more: https://example.com/landing?source=email&campaign=weekly', $result->text() );
 	}
 
-	public function test_post_cta_rejects_unsafe_custom_url(): void {
+	public function test_post_button_rejects_unsafe_custom_url(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'custom';
 		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['customUrl']   = 'javascript:alert(1)';
