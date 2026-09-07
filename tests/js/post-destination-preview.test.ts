@@ -96,9 +96,7 @@ describe('resolveDestinationPreview', () => {
       });
 
       expect(result.previewUrl).toBe('');
-      expect(result.destinationHelp).toBe(
-        'Enter a custom URL to preview it.'
-      );
+      expect(result.destinationHelp).toBe('Enter a custom URL to preview it.');
     });
 
     it('uses the no-HTTPS-URL message for non-custom destinations', () => {
@@ -129,9 +127,7 @@ describe('resolveDestinationPreview', () => {
       });
 
       expect(result.previewUrl).toBe('');
-      expect(result.destinationHelp).toBe(
-        'Enter a custom URL to preview it.'
-      );
+      expect(result.destinationHelp).toBe('Enter a custom URL to preview it.');
     });
   });
 

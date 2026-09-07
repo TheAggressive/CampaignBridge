@@ -113,6 +113,32 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 	}
 
 	/**
+	 * Resolve the bounded excerpt preview for the editor.
+	 *
+	 * Applies the same source fallback (manual excerpt → `get_the_excerpt()`)
+	 * and the same word cap as the email renderer, so the editor preview
+	 * always matches the compiled email exactly.
+	 *
+	 * Exposed for the REST layer; not part of the {@see Post_Snapshot_Source} contract.
+	 *
+	 * @param int $post_id   Post identifier.
+	 * @param int $max_words Maximum number of words to keep.
+	 * @return string Plain-text excerpt, truncated to $max_words with an ellipsis when cut.
+	 */
+	public function resolve_excerpt_preview( int $post_id, int $max_words ): string {
+		$post = get_post( $post_id );
+
+		if ( ! $post instanceof \WP_Post ) {
+			return '';
+		}
+
+		$raw   = $this->excerpt( $post );
+		$limit = $max_words > 0 ? $max_words : \CampaignBridge\REST\Rest_Constants::DEFAULT_EXCERPT_MAX_WORDS;
+
+		return \CampaignBridge\Services\Email\Renderer\Renderer_Support::truncate_words( $raw, $limit );
+	}
+
+	/**
 	 * Resolve the featured image with the dimensions email markup requires.
 	 *
 	 * @param int $post_id Post identifier.

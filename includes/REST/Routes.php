@@ -128,6 +128,13 @@ class Routes extends Abstract_Rest_Controller {
 						'sanitize_callback' => array( __CLASS__, 'sanitize_post_type' ),
 						'validate_callback' => array( __CLASS__, 'validate_post_type' ),
 					),
+					'maxWords'  => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => Rest_Constants::DEFAULT_EXCERPT_MAX_WORDS,
+						'sanitize_callback' => array( __CLASS__, 'sanitize_max_words' ),
+						'validate_callback' => array( __CLASS__, 'validate_max_words' ),
+					),
 				),
 			)
 		);
@@ -231,6 +238,9 @@ class Routes extends Abstract_Rest_Controller {
 			return $allowed_check;
 		}
 
+		// maxWords is sanitized and validated by the REST schema (see register_posts_route).
+		$max_words = (int) $req->get_param( 'maxWords' );
+
 		// Get and format posts.
 		$post_ids = get_posts( self::get_posts_query_args( $post_type ) );
 		// Since we use 'fields' => 'ids' in query args, all values should be integers.
@@ -241,7 +251,7 @@ class Routes extends Abstract_Rest_Controller {
 		 * @var array<int> $post_ids
 		 */
 		$int_post_ids = array_map( 'intval', $post_ids );
-		$items        = Response_Formatter::format_posts_response( $int_post_ids );
+		$items        = Response_Formatter::format_posts_response( $int_post_ids, $max_words );
 
 		return self::ensure_response( array( 'items' => $items ) );
 	}
@@ -482,6 +492,34 @@ class Routes extends Abstract_Rest_Controller {
 			$error_message = WP_DEBUG ? $e->getMessage() : 'Unable to process the data for encryption';
 			return new WP_Error( 'encryption_failed', $error_message, array( 'status' => 400 ) );
 		}
+	}
+
+	/**
+	 * Sanitize the maxWords parameter.
+	 *
+	 * Clamps the value to [1, EXCERPT_PREVIEW_MAX_WORDS] so the preview is
+	 * always bounded. The REST framework guarantees an integer here because
+	 * the schema declares 'type' => 'integer'.
+	 *
+	 * @param int $value Raw integer value from the request.
+	 * @return int Clamped word cap.
+	 */
+	public static function sanitize_max_words( int $value ): int {
+		return min( max( 1, $value ), Rest_Constants::EXCERPT_PREVIEW_MAX_WORDS );
+	}
+
+	/**
+	 * Validate the maxWords parameter.
+	 *
+	 * Accepts any positive integer; the upper bound is enforced by the
+	 * sanitize callback. This exists so the schema can reject non-integer
+	 * values with a clear 400 response.
+	 *
+	 * @param int $value Raw integer value from the request.
+	 * @return bool True if the value is a positive integer.
+	 */
+	public static function validate_max_words( int $value ): bool {
+		return 1 <= $value;
 	}
 
 	/**

@@ -95,8 +95,7 @@ export function resolveDestinationPreview(args: {
 
   const destinationHelp =
     destination === 'custom'
-      ? (helpMessages?.customUrlRequired ??
-        'Enter a custom URL to preview it.')
+      ? (helpMessages?.customUrlRequired ?? 'Enter a custom URL to preview it.')
       : (helpMessages?.noUrlYet ??
         'This post snapshot has no URL yet; the link renders from the post data at send time.');
 

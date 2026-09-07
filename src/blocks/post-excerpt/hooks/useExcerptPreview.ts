@@ -1,9 +1,9 @@
-import { useSelect } from '@wordpress/data';
-import { useMemo } from '@wordpress/element';
-import { truncateExcerpt } from '../truncate';
+import { useEffect, useState } from '@wordpress/element';
+import { fetchPosts, type PostItem } from '../../shared/posts';
 
 /**
  * Returns a memoized plain-text excerpt preview for the editor.
+ * The preview is resolved server-side so it always matches the compiled email.
  * @param {Object}      params          - Hook parameters
  * @param {number|null} params.postId   - The post ID to get excerpt for
  * @param {string}      params.postType - The post type
@@ -16,44 +16,36 @@ interface ExcerptPreviewOptions {
   maxWords: number;
 }
 
-interface PostPreviewRecord {
-  excerpt?: { rendered?: string };
-}
-
-interface CoreSelectors {
-  getEntityRecord: (
-    kind: string,
-    name: string,
-    id: number
-  ) => PostPreviewRecord | null;
-}
-
 export function useExcerptPreview({
   postId,
   postType,
   maxWords,
 }: ExcerptPreviewOptions): string {
-  const post = useSelect(
-    s =>
-      postId
-        ? (s('core') as unknown as CoreSelectors).getEntityRecord(
-            'postType',
-            postType,
-            postId
-          )
-        : null,
-    [postId, postType]
-  );
+  const [post, setPost] = useState<PostItem | null>(null);
 
-  return useMemo(() => {
-    // Read the manual post excerpt only — the exact source the email renderer
-    // reads (post_excerpt). Capping with `truncateExcerpt` keeps the editor
-    // preview identical to the compiled email.
-    const raw = post?.excerpt?.rendered ?? '';
-    if (!raw) {
-      return '';
+  useEffect(() => {
+    if (!postId) {
+      setPost(null);
+      return;
     }
 
-    return truncateExcerpt(raw, maxWords);
-  }, [post, maxWords]);
+    let active = true;
+    fetchPosts(postType, maxWords)
+      .then(items => {
+        if (active) {
+          setPost(items.find(item => Number(item.id) === postId) ?? null);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setPost(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [postId, postType, maxWords]);
+
+  return post?.excerptPreview ?? '';
 }
