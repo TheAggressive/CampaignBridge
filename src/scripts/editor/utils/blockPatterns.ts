@@ -40,7 +40,7 @@ export const blockPatterns = [
       <!-- wp:campaignbridge/post-image /-->
       <!-- wp:campaignbridge/post-title /-->
       <!-- wp:campaignbridge/post-excerpt /-->
-      <!-- wp:campaignbridge/post-cta /-->
+      <!-- wp:campaignbridge/post-button /-->
       <!-- /wp:campaignbridge/post-card -->
     `,
   },
@@ -61,7 +61,7 @@ export const blockPatterns = [
       <!-- wp:campaignbridge/column {"width":65} -->
       <!-- wp:campaignbridge/post-title {"linkToPost":true} /-->
       <!-- wp:campaignbridge/post-excerpt /-->
-      <!-- wp:campaignbridge/post-cta {"style":"link"} /-->
+      <!-- wp:campaignbridge/post-button {"style":"link"} /-->
       <!-- /wp:campaignbridge/column -->
       <!-- /wp:campaignbridge/columns -->
       <!-- /wp:campaignbridge/post-card -->
@@ -81,7 +81,7 @@ export const blockPatterns = [
       <!-- wp:campaignbridge/column {"width":65} -->
       <!-- wp:campaignbridge/post-title {"linkToPost":true} /-->
       <!-- wp:campaignbridge/post-excerpt /-->
-      <!-- wp:campaignbridge/post-cta {"style":"link"} /-->
+      <!-- wp:campaignbridge/post-button {"style":"link"} /-->
       <!-- /wp:campaignbridge/column -->
       <!-- wp:campaignbridge/column {"width":35} -->
       <!-- wp:campaignbridge/post-image {"linkToPost":true} /-->

@@ -18,11 +18,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Renders an accessible CTA with a desktop Outlook VML fallback. */
-final class Post_Cta_Renderer extends Abstract_Renderer {
+/** Renders an accessible post button with a desktop Outlook VML fallback. */
+final class Post_Button_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function block_name(): string {
-		return 'campaignbridge/post-cta';
+		return 'campaignbridge/post-button';
 	}
 
 	/** {@inheritDoc} */
@@ -63,32 +63,20 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	public function validate( Block_Node $block, Render_Context $context ): array {
 		if ( '' === $block->attributes()['label'] ) {
 			return array(
-				Compile_Diagnostic::error( 'post.cta.label_empty', $block->path(), 'The post CTA requires a label.' ),
+				Compile_Diagnostic::error( 'post.button.label_empty', $block->path(), 'The post button requires a label.' ),
 			);
 		}
 
-		$url = $this->destination_url( $block, $context );
-
-		if ( null === $url ) {
-			$destination = $block->attributes()['destination'];
-			$diagnostics = array(
-				'article'         => array( 'post.cta.url_missing', 'The post CTA requires a snapshot HTTPS article URL.' ),
-				'postParent'      => array( 'post.cta.post_parent_url_missing', 'The post CTA requires the post parent HTTPS URL in its snapshot.' ),
-				'postTypeArchive' => array( 'post.cta.post_type_archive_url_missing', 'The post CTA requires the post type archive HTTPS URL in its snapshot.' ),
-				'custom'          => array( 'post.cta.custom_url_invalid', 'The post CTA custom destination must be an absolute HTTPS URL.' ),
-			);
+		if ( null === Renderer_Support::post_destination_url( $block->attributes(), $context ) ) {
+			list( $code, $message ) = Renderer_Support::missing_destination_diagnostics( 'post.button', (string) $block->attributes()['destination'] );
 			return array(
-				Compile_Diagnostic::error(
-					$diagnostics[ $destination ][0],
-					$block->path(),
-					$diagnostics[ $destination ][1]
-				),
+				Compile_Diagnostic::error( $code, $block->path(), $message ),
 			);
 		}
 
 		if ( 80 < strlen( $block->attributes()['label'] ) ) {
 			return array(
-				Compile_Diagnostic::error( 'post.cta.label_too_long', $block->path(), 'The post CTA label cannot exceed 80 bytes.' ),
+				Compile_Diagnostic::error( 'post.button.label_too_long', $block->path(), 'The post button label cannot exceed 80 bytes.' ),
 			);
 		}
 
@@ -104,7 +92,7 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$attributes = $block->attributes();
-		$url        = (string) $this->destination_url( $block, $context );
+		$url        = (string) Renderer_Support::post_destination_url( $attributes, $context );
 		$kit        = Renderer_Support::brand_kit( $context );
 
 		if ( 'link' === $attributes['style'] ) {
@@ -137,32 +125,6 @@ final class Post_Cta_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_text( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		return $block->attributes()['label'] . ': ' . (string) $this->destination_url( $block, $context ) . "\n";
-	}
-
-	/**
-	 * Resolve the selected immutable CTA destination.
-	 *
-	 * @param Block_Node     $block   Normalized CTA block.
-	 * @param Render_Context $context Immutable scoped context.
-	 */
-	private function destination_url( Block_Node $block, Render_Context $context ): ?string {
-		$destination = $block->attributes()['destination'];
-		if ( 'custom' === $destination ) {
-			return Renderer_Support::https_url( $block->attributes()['customUrl'] );
-		}
-
-		$post = $context->binding( 'post' );
-		if ( ! is_array( $post ) ) {
-			return null;
-		}
-
-		$field = match ( $destination ) {
-			'postParent'      => 'postParentUrl',
-			'postTypeArchive' => 'postTypeArchiveUrl',
-			default           => 'url',
-		};
-
-		return Renderer_Support::https_url( $post[ $field ] ?? null );
+		return $block->attributes()['label'] . ': ' . (string) Renderer_Support::post_destination_url( $block->attributes(), $context ) . "\n";
 	}
 }

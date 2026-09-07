@@ -91,7 +91,7 @@ before rendering and are frozen in the campaign snapshot.
 | `campaignbridge/post-title`   | Binding block  | Title field within a post composition           | Compiler-supported                                     |
 | `campaignbridge/post-image`   | Binding block  | Featured image within a post composition        | Compiler-supported                                     |
 | `campaignbridge/post-excerpt` | Binding block  | Bounded plain-text excerpt                      | Compiler-supported                                     |
-| `campaignbridge/post-cta`     | Binding block  | Post-aware call to action                       | Compiler-supported; bulletproof renderer               |
+| `campaignbridge/post-button`  | Binding block  | Post-aware button                               | Compiler-supported; bulletproof renderer               |
 | `campaignbridge/post-query`   | Binding block  | Snapshot a bounded, ordered collection of posts | Requires query budget and empty-result policy          |
 | `campaignbridge/post-list`    | Binding block  | Render the immutable result of a post query     | Requires deterministic item template and maximum count |
 

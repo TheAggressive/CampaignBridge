@@ -4,18 +4,19 @@ import React from 'react';
 
 import metadata from './block.json';
 import Edit from './edit';
+import { transforms } from './transforms';
 
 const { name }: { name: string } = metadata;
 export { metadata, name };
 
-export interface PostCTABlockSettings {
+export const settings: {
   edit: React.ComponentType<any>;
   save: () => null;
-}
-
-export const settings: PostCTABlockSettings = {
+  transforms: typeof transforms;
+} = {
   edit: Edit,
   save: () => null,
+  transforms,
 };
 
 export const init = (): void => {

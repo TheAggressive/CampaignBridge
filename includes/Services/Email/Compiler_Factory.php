@@ -19,9 +19,10 @@ use CampaignBridge\Services\Email\Renderer\Divider_Renderer;
 use CampaignBridge\Services\Email\Renderer\Heading_Renderer;
 use CampaignBridge\Services\Email\Renderer\Image_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Card_Renderer;
-use CampaignBridge\Services\Email\Renderer\Post_Cta_Renderer;
+use CampaignBridge\Services\Email\Renderer\Post_Button_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Excerpt_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Image_Renderer;
+use CampaignBridge\Services\Email\Renderer\Post_Link_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Title_Renderer;
 use CampaignBridge\Services\Email\Renderer\Preheader_Renderer;
 use CampaignBridge\Services\Email\Renderer\Section_Renderer;
@@ -64,7 +65,8 @@ final class Compiler_Factory {
 				new Post_Title_Renderer(),
 				new Post_Excerpt_Renderer(),
 				new Post_Image_Renderer(),
-				new Post_Cta_Renderer(),
+				new Post_Button_Renderer(),
+				new Post_Link_Renderer(),
 				new Compliance_Footer_Renderer(),
 			)
 		);

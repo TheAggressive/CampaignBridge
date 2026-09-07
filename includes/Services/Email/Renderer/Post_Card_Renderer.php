@@ -44,7 +44,8 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 			'campaignbridge/post-image',
 			'campaignbridge/post-title',
 			'campaignbridge/post-excerpt',
-			'campaignbridge/post-cta',
+			'campaignbridge/post-button',
+			'campaignbridge/post-link',
 		);
 	}
 

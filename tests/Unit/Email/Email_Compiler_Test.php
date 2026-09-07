@@ -124,7 +124,7 @@ final class Email_Compiler_Test extends TestCase {
 		$result = Compiler_Factory::create()->compile( $document, $this->context( false ) );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.cta.post_parent_url_missing', $result->diagnostics()[0]->code() );
+		self::assertSame( 'post.button.post_parent_url_missing', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_post_cta_can_target_immutable_post_type_archive(): void {
@@ -143,7 +143,7 @@ final class Email_Compiler_Test extends TestCase {
 		$result = Compiler_Factory::create()->compile( $document, $this->context( true, false ) );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.cta.post_type_archive_url_missing', $result->diagnostics()[0]->code() );
+		self::assertSame( 'post.button.post_type_archive_url_missing', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_post_cta_can_target_custom_https_url(): void {
@@ -164,7 +164,7 @@ final class Email_Compiler_Test extends TestCase {
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.cta.custom_url_invalid', $result->diagnostics()[0]->code() );
+		self::assertSame( 'post.button.custom_url_invalid', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_rejects_documents_over_block_budget(): void {
@@ -290,7 +290,7 @@ final class Email_Compiler_Test extends TestCase {
 								'innerBlocks' => array(),
 							),
 							array(
-								'blockName'   => 'campaignbridge/post-cta',
+								'blockName'   => 'campaignbridge/post-button',
 								'attrs'       => array(
 									'label'           => 'Read more',
 									'backgroundColor' => '#111111',

@@ -169,7 +169,7 @@ campaignbridge/
 │       └── ../Workflow/Email/    # Deterministic compilation workflow
 ├── src/blocks/                  # WordPress block definitions
 │   ├── post/                    # Post content blocks
-│   ├── post-cta/               # Call-to-action blocks
+│   ├── post-button/            # Post button blocks
 │   ├── post-excerpt/           # Post excerpt blocks
 │   ├── post-image/             # Featured image blocks
 │   └── post-title/             # Post title blocks

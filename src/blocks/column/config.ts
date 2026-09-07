@@ -15,5 +15,5 @@ export const COLUMN_ALLOWED_BLOCKS = [
   'campaignbridge/post-image',
   'campaignbridge/post-title',
   'campaignbridge/post-excerpt',
-  'campaignbridge/post-cta',
+  'campaignbridge/post-button',
 ];
