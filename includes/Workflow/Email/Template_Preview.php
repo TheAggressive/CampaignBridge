@@ -50,11 +50,11 @@ final class Template_Preview {
 		$kit = $this->brand_kit ?? Brand_Kit::defaults();
 
 		$context = new Render_Context(
-			$metadata,
+			array_merge( array( 'brandKit' => $kit ), $metadata ),
 			array( 'posts' => $this->snapshots->posts( Snapshot_References::collect( $blocks ) ) ),
 			array(),
 			Email_Compiler::PROFILE_VERSION
-		)->with_metadata( 'brandKit', $kit );
+		);
 
 		return Compiler_Factory::create()->compile( $blocks, $context );
 	}
