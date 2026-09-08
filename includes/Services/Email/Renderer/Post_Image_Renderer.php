@@ -27,7 +27,7 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'width', 'align', 'linkToPost', 'decorative' );
+		return array( 'width', 'align', 'linkToPost', 'decorative', 'style' );
 	}
 
 	/**
@@ -39,7 +39,7 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(

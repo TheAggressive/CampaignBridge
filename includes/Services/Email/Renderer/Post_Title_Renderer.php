@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -27,7 +28,7 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'level', 'align', 'textColor', 'linkToPost', 'fontSize' );
+		return array( 'level', 'align', 'textColor', 'linkToPost', 'fontSize', 'style' );
 	}
 
 	/**
@@ -36,15 +37,16 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(
+				'style'      => $attributes['style'],
 				'level'      => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
 				'align'      => Renderer_Support::alignment_attribute( $attributes, 'align' ),
 				'textColor'  => Renderer_Support::string_attribute( $attributes, 'textColor', '#111111' ),
 				'linkToPost' => Renderer_Support::boolean_attribute( $attributes, 'linkToPost', false ),
-				'fontSize'   => Renderer_Support::integer_attribute( $attributes, 'fontSize', 24, 14, 48 ),
+				'fontSize'   => Renderer_Support::integer_attribute( $attributes, 'fontSize', 24, 10, 72 ),
 			)
 		);
 	}
@@ -92,12 +94,13 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 		$font_size = $attributes['fontSize'];
 
 		return sprintf(
-			'<h%1$d align="%2$s" style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:%3$dpx;line-height:1.25;text-align:%2$s;color:%4$s">%5$s</h%1$d>',
+			'<h%1$d align="%2$s" style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:%3$dpx;line-height:1.25%6$s;text-align:%2$s;color:%4$s">%5$s</h%1$d>',
 			$attributes['level'],
 			$attributes['align'],
 			$font_size,
 			$text_color,
-			$title
+			$title,
+			isset( $attributes['style']['typography']['lineHeight'] ) ? ';line-height:' . Style_Resolver::line_height( $attributes ) : ''
 		);
 	}
 

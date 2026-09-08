@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -21,17 +22,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Renders the single email root and its bounded content cell. */
 final class Container_Renderer extends Abstract_Renderer {
 	private const DEFAULT_OUTER_PADDING = array(
-		'top'    => 20,
+		'top'    => 0,
 		'right'  => 0,
-		'bottom' => 20,
+		'bottom' => 0,
 		'left'   => 0,
 	);
 
 	private const DEFAULT_INNER_PADDING = array(
 		'top'    => 0,
-		'right'  => 24,
+		'right'  => 0,
 		'bottom' => 0,
-		'left'   => 24,
+		'left'   => 0,
 	);
 
 	/** {@inheritDoc} */
@@ -41,7 +42,7 @@ final class Container_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'maxWidth', 'outerPadding', 'padding', 'style', 'lock' );
+		return array( 'maxWidth', 'outerPadding', 'padding', 'style', 'lock', 'layout', 'textColor', 'backgroundColor' );
 	}
 
 	/** {@inheritDoc} */
@@ -60,15 +61,15 @@ final class Container_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 		$style      = Renderer_Support::object_attribute( $attributes, 'style', array() );
 		$colors     = Renderer_Support::object_attribute( $style, 'color', array(), 'style.color' );
 
 		return $block->with_attributes(
 			array(
 				'maxWidth'        => Renderer_Support::integer_attribute( $attributes, 'maxWidth', 600, 320, 900 ),
-				'outerPadding'    => Renderer_Support::spacing_attribute( $attributes, 'outerPadding', self::DEFAULT_OUTER_PADDING ),
-				'padding'         => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_INNER_PADDING ),
+				'outerPadding'    => Style_Resolver::spacing( $attributes, 'margin', Renderer_Support::spacing_attribute( $attributes, 'outerPadding', self::DEFAULT_OUTER_PADDING ) ),
+				'padding'         => Style_Resolver::spacing( $attributes, 'padding', Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_INNER_PADDING ) ),
 				'backgroundColor' => Renderer_Support::string_attribute( $colors, 'background', '#ffffff' ),
 				'textColor'       => Renderer_Support::string_attribute( $colors, 'text', '#111111' ),
 			)

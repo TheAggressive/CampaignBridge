@@ -19,16 +19,11 @@ export default function Edit({
   attributes,
   setAttributes,
 }: EmailBlockEditProps<HeadingAttributes>): JSX.Element {
-  const {
-    content = '',
-    level = 2,
-    align = 'left',
-    textColor = '#111111',
-  } = attributes;
+  const { content = '', level = 2, align = 'left' } = attributes;
   const headingTags = ['h1', 'h2', 'h3', 'h4'] as const;
   const tagName = headingTags[Math.max(1, Math.min(4, Number(level) || 2)) - 1];
   const heading = createElement(RichText, {
-    ...useBlockProps({ style: { textAlign: align, color: textColor } }),
+    ...useBlockProps({ style: { textAlign: align } }),
     tagName,
     value: content,
     allowedFormats: [],

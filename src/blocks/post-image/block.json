@@ -11,7 +11,8 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "align": true
+    "align": ["left", "center", "right"],
+    "customClassName": false
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
   "editorScript": "file:./index.js",

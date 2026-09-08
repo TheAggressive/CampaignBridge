@@ -1,38 +1,10 @@
-import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import { PanelBody, RangeControl } from '@wordpress/components';
+import { useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
-import type { EmailBlockEditProps } from '../types';
-
-interface SpacerAttributes {
-  height?: number;
-}
-
-export default function Edit({
-  attributes,
-  setAttributes,
-}: EmailBlockEditProps<SpacerAttributes>): JSX.Element {
-  const height = Number(attributes.height) || 24;
-
+export default function Edit(): JSX.Element {
   return (
     <div
-      {...useBlockProps({
-        style: { height, backgroundColor: 'rgba(0, 0, 0, 0.04)' },
-      })}
+      {...useBlockProps()}
       aria-label={__('Email spacer', 'campaignbridge')}
-    >
-      <InspectorControls>
-        <PanelBody title={__('Email spacer', 'campaignbridge')} initialOpen>
-          <RangeControl
-            label={__('Height', 'campaignbridge')}
-            value={height}
-            min={4}
-            max={120}
-            onChange={value => setAttributes({ height: Number(value) || 24 })}
-            __next40pxDefaultSize
-            __nextHasNoMarginBottom
-          />
-        </PanelBody>
-      </InspectorControls>
-    </div>
+    />
   );
 }

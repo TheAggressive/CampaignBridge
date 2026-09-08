@@ -12,18 +12,42 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "align": true,
-    "color": { "background": true, "text": true }
+    "align": ["left", "center", "right"],
+    "color": {
+      "background": true,
+      "text": true,
+      "gradients": false
+    },
+    "customClassName": false
   },
   "attributes": {
-    "label": { "type": "string", "default": "Learn more" },
-    "url": { "type": "string", "default": "" },
-    "align": { "type": "string", "default": "left" }
+    "label": {
+      "type": "string",
+      "default": "Learn more"
+    },
+    "url": {
+      "type": "string",
+      "default": ""
+    },
+    "align": {
+      "type": "string",
+      "default": "left"
+    }
   },
   "styles": [
-    { "name": "primary", "label": "Primary" },
-    { "name": "outline", "label": "Outline" },
-    { "name": "ghost", "label": "Ghost" }
+    {
+      "name": "primary",
+      "label": "Fill",
+      "isDefault": true
+    },
+    {
+      "name": "outline",
+      "label": "Outline"
+    },
+    {
+      "name": "ghost",
+      "label": "Text link"
+    }
   ],
   "editorScript": "file:./index.js"
 }

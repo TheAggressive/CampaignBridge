@@ -41,7 +41,7 @@ following are the foundation for every later wave.
 | `campaignbridge/container`         | Native block   | Locked email document root and width contract      | Compiler-supported |
 | `campaignbridge/preheader`         | Native block   | Hidden inbox preview text                          | Compiler-supported         |
 | `campaignbridge/section`           | Native block   | Full-width content row                             | Compiler-supported |
-| `campaignbridge/columns`           | Native block   | Portable one- or two-column layout                 | Compiler-supported         |
+| `campaignbridge/columns`           | Native block   | One to six columns with optional mobile stacking                 | Compiler-supported         |
 | `campaignbridge/column`            | Native block   | Constrained child of columns                       | Compiler-supported         |
 | `campaignbridge/text`              | Native block   | Safe rich text and HTTPS links                     | Compiler-supported |
 | `campaignbridge/heading`           | Native block   | Portable heading levels and typography             | Compiler-supported |

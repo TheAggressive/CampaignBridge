@@ -13,11 +13,17 @@
     "html": false,
     "innerBlocks": true,
     "reusable": false,
-    "color": { "background": true }
+    "color": {
+      "background": true,
+      "gradients": false,
+      "text": false
+    },
+    "customClassName": false
   },
   "attributes": {
-    "width": { "type": "number" },
-    "backgroundColor": { "type": "string" }
+    "width": {
+      "type": "number"
+    }
   },
   "editorScript": "file:./index.js"
 }

@@ -29,7 +29,7 @@ final class Button_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'url', 'align', 'style', 'backgroundColor', 'textColor' );
+		return array( 'label', 'url', 'align', 'style', 'backgroundColor', 'textColor', 'variant' );
 	}
 
 	/** {@inheritDoc} */
@@ -43,7 +43,7 @@ final class Button_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 		$styles     = array( 'primary', 'outline', 'ghost' );
 
 		return $block->with_attributes(
@@ -51,7 +51,7 @@ final class Button_Renderer extends Abstract_Renderer {
 				'label'           => trim( Renderer_Support::string_attribute( $attributes, 'label', 'Learn more' ) ),
 				'url'             => trim( Renderer_Support::string_attribute( $attributes, 'url', '' ) ),
 				'align'           => Renderer_Support::alignment_attribute( $attributes, 'align' ),
-				'style'           => Renderer_Support::choice_attribute( $attributes, 'style', 'primary', $styles ),
+				'style'           => Renderer_Support::choice_attribute( $attributes, 'variant', 'primary', $styles ),
 				'backgroundColor' => (string) Renderer_Support::string_attribute( $attributes, 'backgroundColor', '' ),
 				'textColor'       => (string) Renderer_Support::string_attribute( $attributes, 'textColor', '' ),
 			)
@@ -139,7 +139,7 @@ final class Button_Renderer extends Abstract_Renderer {
 		$value = $block->attributes()['backgroundColor'];
 
 		if ( '' !== $value ) {
-			return $this->resolve_color( $value, $kit );
+			return Renderer_Support::resolve_color( $value, $kit );
 		}
 
 		return $kit->color( Brand_Kit::SLOT_BRAND ) ?? '#1a6dcc';
@@ -157,56 +157,10 @@ final class Button_Renderer extends Abstract_Renderer {
 		$value = $block->attributes()['textColor'];
 
 		if ( '' !== $value ) {
-			return $this->resolve_color( $value, $kit );
+			return Renderer_Support::resolve_color( $value, $kit );
 		}
 
 		return $kit->color( Brand_Kit::SLOT_ON_BRAND ) ?? '#ffffff';
-	}
-
-	/**
-	 * Resolve a single colour value against the active Brand Kit.
-	 *
-	 * Accepts, in order:
-	 *  1. A portable hex (returned as-is, normalised to lower case).
-	 *  2. A design-system preset reference (`var:preset|color|<slug>`), expanded
-	 *     through the Style_Resolver.
-	 *  3. A bare Brand Kit slot slug (e.g. `brand`), expanded directly against
-	 *     the kit so editor palettes and saved blocks keep working.
-	 *
-	 * Anything else degrades to the kit's brand slot so a single bad colour
-	 * cannot break an entire send.
-	 *
-	 * @param string    $value Raw attribute value (hex, preset ref, or slug).
-	 * @param Brand_Kit $kit   Active Brand Kit.
-	 * @return string Portable hex color.
-	 */
-	private function resolve_color( string $value, Brand_Kit $kit ): string {
-		$normalized = trim( $value );
-
-		// 1. Portable hex passes straight through.
-		if ( 1 === preg_match( '/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $normalized ) ) {
-			return Brand_Kit::normalize_hex( $normalized ) ?? $normalized;
-		}
-
-		// 2. Design-system preset reference (var:preset|color|<slug>).
-		if ( str_starts_with( $normalized, 'var:preset|color|' ) ) {
-			$slug = substr( $normalized, strlen( 'var:preset|color|' ) );
-			$hex  = $kit->color( $slug );
-
-			if ( null !== $hex ) {
-				return $hex;
-			}
-
-			return $kit->color( Brand_Kit::SLOT_BRAND ) ?? '#1a6dcc';
-		}
-
-		// 3. Bare Brand Kit slot slug.
-		if ( null !== $kit->color( $normalized ) ) {
-			return $kit->color( $normalized );
-		}
-
-		// 4. Unknown value: degrade to the brand slot.
-		return $kit->color( Brand_Kit::SLOT_BRAND ) ?? '#1a6dcc';
 	}
 
 	/**

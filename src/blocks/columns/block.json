@@ -6,17 +6,38 @@
   "title": "Email Columns",
   "category": "campaignbridge-email",
   "icon": "columns",
-  "description": "Places one or two columns side by side, stacking on narrow screens.",
+  "description": "Arrange up to six email-safe columns with responsive stacking.",
   "textdomain": "campaignbridge",
   "parent": ["campaignbridge/post-card", "campaignbridge/section"],
   "supports": {
     "html": false,
     "innerBlocks": true,
-    "reusable": false
+    "reusable": false,
+    "customClassName": false,
+    "spacing": {
+      "blockGap": true
+    },
+    "layout": {
+      "allowSwitching": false,
+      "allowOrientation": false,
+      "allowJustification": false,
+      "allowVerticalAlignment": false,
+      "default": {
+        "type": "flex",
+        "flexWrap": "nowrap"
+      },
+      "allowInheriting": false
+    }
   },
   "attributes": {
-    "gap": { "type": "number", "default": 24 },
-    "verticalAlign": { "type": "string", "default": "top" }
+    "verticalAlign": {
+      "type": "string",
+      "default": "top"
+    },
+    "isStackedOnMobile": {
+      "type": "boolean",
+      "default": true
+    }
   },
   "editorScript": "file:./index.js"
 }

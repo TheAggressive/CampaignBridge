@@ -72,15 +72,38 @@ final class Post_Link_Renderer_Test extends TestCase {
 		self::assertSame( 'post.link.label_empty', $result->diagnostics()[0]->code() );
 	}
 
-	public function test_rejects_an_invalid_custom_url(): void {
+	public function test_accepts_an_http_custom_url(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['destination'] = 'custom';
-		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['customUrl']   = 'http://insecure.example.com';
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['customUrl']   = 'http://example.com/landing';
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
-		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.link.custom_url_invalid', $result->diagnostics()[0]->code() );
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'href="http://example.com/landing"', $result->html() );
+	}
+
+	public function test_accepts_an_http_snapshot_url_for_an_article_link(): void {
+		// HTTP-only development sites emit http:// permalinks; those must render, not fail post.url.invalid.
+		$context = new Render_Context(
+			array( 'title' => 'Post link fixture' ),
+			array(
+				'posts' => array(
+					'7' => array(
+						'title'   => 'Snapshot title',
+						'excerpt' => 'Snapshot excerpt copy.',
+						'url'     => 'http://localhost:8882/posts/7',
+					),
+				),
+			),
+			array(),
+			'universal@1'
+		);
+
+		$result = Compiler_Factory::create()->compile( $this->document(), $context );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'href="http://localhost:8882/posts/7"', $result->html() );
 	}
 
 	public function test_renders_to_plain_text(): void {

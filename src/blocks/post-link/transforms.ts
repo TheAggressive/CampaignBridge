@@ -1,6 +1,7 @@
 import { type Block } from '@wordpress/blocks';
 
 import type { PostLinkAttributes } from '../types';
+import { migrateNativeStyles } from '../shared/native-styles';
 import { align, present, safeCreateBlock } from '../shared/transforms';
 
 /**
@@ -21,12 +22,11 @@ export const transforms = {
           Array.isArray(source) ? source[0] : source
         ) as PostLinkAttributes;
 
-        const linkColor =
-          present(attributes.linkColor) &&
-          typeof attributes.linkColor === 'string'
-            ? attributes.linkColor
-            : undefined;
-
+        const native = migrateNativeStyles(
+          'campaignbridge/post-link',
+          attributes
+        );
+        const color = native.style?.elements?.link?.color?.text;
         return safeCreateBlock('campaignbridge/post-button', {
           label: present(attributes.label)
             ? (attributes.label as string)
@@ -37,7 +37,7 @@ export const transforms = {
           customUrl: present(attributes.customUrl)
             ? (attributes.customUrl as string)
             : undefined,
-          textColor: linkColor,
+          style: color ? { color: { text: color } } : undefined,
           align: align(attributes.align),
         }) as unknown as Block;
       },

@@ -76,7 +76,9 @@ describe('post-button → post-link transform', () => {
     });
 
     const attrs = mockCreateBlock.mock.calls[0][1] as Record<string, unknown>;
-    expect(attrs.linkColor).toBe('#0066cc');
+    expect(attrs.style).toEqual({
+      elements: { link: { color: { text: '#0066cc' } } },
+    });
   });
 
   it('falls back to textColor when linkColor is empty', () => {
@@ -93,7 +95,9 @@ describe('post-button → post-link transform', () => {
     });
 
     const attrs = mockCreateBlock.mock.calls[0][1] as Record<string, unknown>;
-    expect(attrs.linkColor).toBe('#aabbcc');
+    expect(attrs.style).toEqual({
+      elements: { link: { color: { text: '#aabbcc' } } },
+    });
   });
 
   it('does not leak backgroundColor or style into the link block', () => {
@@ -111,7 +115,7 @@ describe('post-button → post-link transform', () => {
 
     const attrs = mockCreateBlock.mock.calls[0][1] as Record<string, unknown>;
     expect(attrs).not.toHaveProperty('backgroundColor');
-    expect(attrs).not.toHaveProperty('style');
+    expect(attrs).not.toHaveProperty('style.color.background');
   });
 
   it('omits empty strings so block.json defaults apply', () => {
@@ -196,7 +200,7 @@ describe('post-link → post-button transform', () => {
     });
 
     const attrs = mockCreateBlock.mock.calls[0][1] as Record<string, unknown>;
-    expect(attrs.textColor).toBe('#0066cc');
+    expect(attrs.style).toEqual({ color: { text: '#0066cc' } });
   });
 
   it('does not hard-code backgroundColor — lets block.json defaults apply', () => {
@@ -211,7 +215,7 @@ describe('post-link → post-button transform', () => {
 
     const attrs = mockCreateBlock.mock.calls[0][1] as Record<string, unknown>;
     expect(attrs).not.toHaveProperty('backgroundColor');
-    expect(attrs).not.toHaveProperty('style');
+    expect(attrs).not.toHaveProperty('style.color.background');
   });
 
   it('omits empty strings so block.json defaults apply', () => {

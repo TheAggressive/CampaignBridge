@@ -42,7 +42,7 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'businessName', 'address', 'unsubscribeLabel', 'padding', 'textColor' );
+		return array( 'businessName', 'address', 'unsubscribeLabel', 'padding', 'textColor', 'align', 'style' );
 	}
 
 	/**
@@ -51,14 +51,16 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(
+				'align'            => Renderer_Support::alignment_attribute( $attributes, 'align', 'center' ),
+				'style'            => $attributes['style'],
 				'businessName'     => trim( Renderer_Support::string_attribute( $attributes, 'businessName', '' ) ),
 				'address'          => trim( preg_replace( '/\s+/u', ' ', Renderer_Support::string_attribute( $attributes, 'address', '' ) ) ?? '' ),
 				'unsubscribeLabel' => trim( Renderer_Support::string_attribute( $attributes, 'unsubscribeLabel', 'Unsubscribe' ) ),
-				'padding'          => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ),
+				'padding'          => \CampaignBridge\Domain\Email\Style_Resolver::spacing( $attributes, 'padding', Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ) ),
 				'textColor'        => Renderer_Support::string_attribute( $attributes, 'textColor', '#666666' ),
 			)
 		);
@@ -137,13 +139,14 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 		);
 
 		return sprintf(
-			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse"><tr><td align="center" style="padding:%1$dpx %2$dpx %3$dpx %4$dpx;color:%5$s;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;text-align:center">%6$s</td></tr></table>',
+			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse"><tr><td align="%7$s" style="padding:%1$dpx %2$dpx %3$dpx %4$dpx;color:%5$s;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;text-align:%7$s">%6$s</td></tr></table>',
 			$padding['top'],
 			$padding['right'],
 			$padding['bottom'],
 			$padding['left'],
 			$text_color,
-			implode( '<br>', $lines )
+			implode( '<br>', $lines ),
+			$attributes['align']
 		);
 	}
 

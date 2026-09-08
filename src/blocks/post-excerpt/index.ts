@@ -1,3 +1,4 @@
+import '../shared/native-styles';
 import type { BlockConfiguration } from '@wordpress/blocks';
 import { getBlockType, registerBlockType } from '@wordpress/blocks';
 import type { ComponentType } from 'react';

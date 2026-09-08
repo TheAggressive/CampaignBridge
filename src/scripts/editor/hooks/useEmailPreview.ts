@@ -2,7 +2,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { serialize } from '@wordpress/blocks';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
-import { useCallback, useState } from '@wordpress/element';
+import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import type { EmailPreviewResponse } from '../types';
 
 const PREVIEW_PATH = '/campaignbridge/v1/preview';
@@ -17,6 +17,10 @@ export interface EmailPreview {
     warnings: Array<{ code: string; message: string }>;
   };
   error: string | null;
+  width?: number;
+  compiledAt?: number;
+  durationMs?: number;
+  content?: string;
 }
 
 const EMPTY_DIAGNOSTICS = {
@@ -35,6 +39,7 @@ export interface UseEmailPreview {
   preview: EmailPreview;
   requestPreview: () => Promise<void>;
   resetPreview: () => void;
+  isStale: boolean;
 }
 
 /**
@@ -48,9 +53,22 @@ export interface UseEmailPreview {
 export function useEmailPreview(postId: number): UseEmailPreview {
   const [preview, setPreview] = useState<EmailPreview>(INITIAL_STATE);
 
+  const requestId = useRef(0);
+  useEffect(() => {
+    requestId.current++;
+    setPreview(INITIAL_STATE);
+    return () => {
+      // Invalidate whichever request is pending at cleanup, not the mount request.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      requestId.current++;
+    };
+  }, [postId]);
+
   const blocks = useSelect(select => select(blockEditorStore).getBlocks(), []);
 
   const requestPreview = useCallback(async () => {
+    const id = ++requestId.current;
+    const started = performance.now();
     setPreview({
       ...INITIAL_STATE,
       status: 'loading',
@@ -70,8 +88,23 @@ export function useEmailPreview(postId: number): UseEmailPreview {
         },
       });
 
+      if (id !== requestId.current) return;
+      const errors = (response.diagnostics ?? []).filter(
+        d => d.severity === 'error'
+      );
+      const layout = blocks[0]?.attributes?.layout as
+        { contentSize?: string; wideSize?: string } | undefined;
+      const legacyWidth = blocks[0]?.attributes?.maxWidth;
       setPreview({
-        status: 'success',
+        status: errors.length ? 'error' : 'success',
+        width:
+          Number.parseFloat(layout?.contentSize ?? layout?.wideSize ?? '') *
+            (/r?em$/.test(layout?.contentSize ?? layout?.wideSize ?? '')
+              ? 16
+              : 1) || (typeof legacyWidth === 'number' ? legacyWidth : 600),
+        compiledAt: Date.now(),
+        durationMs: performance.now() - started,
+        content: serialized,
         html: response.html,
         diagnostics: {
           errors: (response.diagnostics ?? []).filter(
@@ -84,8 +117,12 @@ export function useEmailPreview(postId: number): UseEmailPreview {
         error: null,
       });
     } catch (reason) {
+      if (id !== requestId.current) return;
       const message =
-        reason instanceof Error
+        reason &&
+        typeof reason === 'object' &&
+        'message' in reason &&
+        typeof reason.message === 'string'
           ? reason.message
           : 'Unable to compile the email preview.';
 
@@ -98,10 +135,17 @@ export function useEmailPreview(postId: number): UseEmailPreview {
   }, [blocks, postId]);
 
   const resetPreview = useCallback(() => {
+    requestId.current++;
     setPreview(INITIAL_STATE);
   }, []);
 
-  return { preview, requestPreview, resetPreview };
+  return {
+    preview,
+    requestPreview,
+    resetPreview,
+    isStale:
+      preview.content !== undefined && preview.content !== serialize(blocks),
+  };
 }
 
 export default useEmailPreview;

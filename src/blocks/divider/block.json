@@ -12,13 +12,18 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "align": true
+    "customClassName": false,
+    "__experimentalBorder": {
+      "color": true,
+      "width": true,
+      "style": true
+    }
   },
   "attributes": {
-    "color": { "type": "string", "default": "#dddddd" },
-    "thickness": { "type": "number", "default": 1 },
-    "width": { "type": "number", "default": 100 },
-    "style": { "type": "string", "default": "solid" }
+    "width": {
+      "type": "number",
+      "default": 100
+    }
   },
   "editorScript": "file:./index.js"
 }

@@ -138,8 +138,9 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 		$result = Compiler_Factory::create()->compile( $document, $context );
 
-		self::assertTrue( $result->is_success(), 'Expected an invalid divider color to degrade, not reject the block.' );
-		self::assertStringContainsString( 'border-top:2px solid #1a6dcc', $result->html() );
+		self::assertFalse( $result->is_success() );
+		self::assertSame( '', $result->html() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_rejects_partial_spacing_instead_of_filling_missing_sides(): void {
@@ -334,7 +335,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 		self::assertStringContainsString( ';color:#00ff00', $result->html() );
 	}
 
-	public function test_button_falls_back_to_normalized_color_when_slug_unknown(): void {
+	public function test_button_rejects_unknown_color_instead_of_changing_the_design(): void {
 		$kit = Brand_Kit::defaults();
 
 		$document                           = $this->document();
@@ -345,8 +346,8 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 		$result = Compiler_Factory::create()->compile( $document, $context );
 
-		self::assertTrue( $result->is_success(), 'Expected button with unknown slug to compile.' );
-		self::assertStringContainsString( 'background-color:#1a6dcc', $result->html() );
+		self::assertFalse( $result->is_success() );
+		self::assertSame( '', $result->html() );
 	}
 
 	public function test_button_accepts_hex_colors_directly(): void {

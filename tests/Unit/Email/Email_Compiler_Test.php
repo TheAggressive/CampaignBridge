@@ -39,6 +39,33 @@ final class Email_Compiler_Test extends TestCase {
 		);
 	}
 
+	public function test_post_card_compiles_native_editor_padding_and_background(): void {
+		$document                                        = $this->document();
+		$document[0]['innerBlocks'][0]['attrs']['style'] = array(
+			'spacing' => array(
+				'padding' => array(
+					'top'    => '0',
+					'right'  => 'var:preset|spacing|20',
+					'bottom' => '12px',
+					'left'   => '0',
+				),
+			),
+			'color'   => array( 'background' => '#abcdef' ),
+		);
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'background-color:#abcdef', $result->html() );
+		self::assertStringContainsString( '<td style="padding:0px 8px 12px 0px">', $result->html() );
+	}
+
+	public function test_post_card_rejects_invalid_native_padding(): void {
+		$document                                        = $this->document();
+		$document[0]['innerBlocks'][0]['attrs']['style'] = array( 'spacing' => array( 'padding' => array( 'top' => 'bogus' ) ) );
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+		self::assertFalse( $result->is_success() );
+		self::assertSame( '', $result->html() );
+	}
+
 	public function test_fingerprint_is_stable_for_equivalent_map_order(): void {
 		$compiler = Compiler_Factory::create();
 		$first    = $compiler->compile( $this->document(), $this->context() );

@@ -1,5 +1,5 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import { PanelBody, SelectControl, TextControl } from '@wordpress/components';
+import { PanelBody, TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import type { CSSProperties } from 'react';
 import type { EmailBlockEditProps } from '../types';
@@ -53,8 +53,17 @@ export default function Edit({
             textDecoration: 'none',
           };
 
+  const blockProps = useBlockProps({ style: { textAlign: align } });
+  const { style: nativeStyle, ...wrapperProps } = blockProps;
   return (
-    <div {...useBlockProps({ style: { textAlign: align } })}>
+    <div
+      {...wrapperProps}
+      className={wrapperProps.className
+        .split(' ')
+        .filter(name => !name.startsWith('has-'))
+        .join(' ')}
+      style={{ textAlign: align }}
+    >
       <InspectorControls>
         <PanelBody title={__('Email button', 'campaignbridge')} initialOpen>
           <TextControl
@@ -72,27 +81,20 @@ export default function Edit({
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
-          <SelectControl
-            label={__('Alignment', 'campaignbridge')}
-            value={align}
-            options={[
-              { label: __('Left', 'campaignbridge'), value: 'left' },
-              { label: __('Center', 'campaignbridge'), value: 'center' },
-              { label: __('Right', 'campaignbridge'), value: 'right' },
-            ]}
-            onChange={value => setAttributes({ align: value })}
-            __next40pxDefaultSize
-            __nextHasNoMarginBottom
-          />
         </PanelBody>
       </InspectorControls>
       <a
+        className={wrapperProps.className
+          .split(' ')
+          .filter(name => name.startsWith('has-'))
+          .join(' ')}
         href={url || '#'}
         style={{
           display: 'inline-block',
           borderRadius: 4,
           fontWeight: 700,
           ...buttonStyle,
+          ...nativeStyle,
         }}
       >
         {label}

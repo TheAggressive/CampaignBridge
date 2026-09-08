@@ -259,7 +259,9 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
     max-width: 520px;
     width: 100%;
     text-align: center;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 22px rgba(30, 40, 55, 0.1);
+    padding: 10px;
+    box-sizing: content-box;
   }
 
   &__empty-icon {
@@ -357,4 +359,665 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
       left: 16px;
     }
   }
+}
+
+/* =============================================================
+   Email preview modal — a large, stable, single-scroll workspace.
+   Scrolling model (intentional, one surface):
+   - The WP modal frame/content do NOT scroll (fixed to viewport).
+   - The preview workspace (`.cb-editor__preview-canvas`) is the ONLY
+     vertical scroll surface for inspecting the email.
+   - The iframe sizes to its rendered document height (no inner scroll).
+   ============================================================= */
+
+/* Bounded, centered modal — not edge-to-edge. Sized generously so the
+   compiled email is the dominant surface and the workspace fills the rest. */
+.cb-editor__preview-modal-frame.is-full-screen {
+  width: min(calc(100vw - 64px), 1270px);
+  height: calc(100dvh - 68px);
+  border-radius: 10px;
+  max-width: none;
+}
+
+@media (max-width: 781px) {
+  .cb-editor__preview-modal-frame.is-full-screen {
+    width: min(96vw, 720px);
+    height: 94vh;
+  }
+}
+
+/* The WP modal content region must not introduce its own scroll or padding. */
+.cb-editor__preview-modal-frame.is-full-screen .components-modal__content {
+  margin-top: 64px;
+  margin-bottom: 0;
+  padding: 0;
+  overflow: hidden;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Our single child (the preview modal column) fills the content region. */
+.cb-editor__preview-modal-frame .components-modal__children-container {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Reserve the title and actions row above the subject. */
+.cb-editor__preview-modal-frame .components-modal__header {
+  height: 64px;
+}
+
+/* Modal root: fill the frame and lay out as a column. */
+.cb-editor__preview-modal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Device controls and freshness beneath the subject row. */
+.cb-editor__preview-secondary {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px 22px;
+  border-top: 1px solid #d7dfe8;
+}
+
+.cb-editor__preview-subject {
+  display: -webkit-box;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  white-space: nowrap;
+}
+
+.cb-editor__preview-subject-label {
+  color: #50575e;
+  font-size: 14px;
+  margin-right: 4px;
+}
+
+.cb-editor__preview-subject-value {
+  color: #1e1e1e;
+  font-weight: 400;
+  min-width: 0;
+}
+
+/* Preview freshness / compile status: compact, unobtrusive, right-aligned. */
+.cb-editor__preview-status {
+  align-items: flex-start;
+  line-height: 20px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.cb-editor__preview-status-icon {
+  margin-top: 3px;
+  align-items: center;
+  color: currentColor;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 14px;
+  justify-content: center;
+  width: 14px;
+}
+
+.cb-editor__preview-status-icon svg {
+  height: 14px;
+  width: 14px;
+}
+
+.cb-editor__preview-status--ok {
+  color: #315d49;
+}
+
+.cb-editor__preview-status--loading {
+  color: #50575e;
+}
+
+.cb-editor__preview-status--stale {
+  color: #7a5a00;
+}
+
+.cb-editor__preview-status--warning {
+  color: #7a5a00;
+}
+
+.cb-editor__preview-status--error {
+  color: #8a3a3a;
+}
+
+.cb-editor__preview-status-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Modal header actions (diagnostics + Refresh + Source + Close). */
+.cb-editor__preview-modal-frame .components-modal__header .components-button {
+  height: 32px;
+}
+
+.cb-editor__preview-header-action {
+  margin-left: 8px;
+}
+
+/* Diagnostics warning-count pill in the secondary row. */
+.cb-editor__preview-diagnostics-toggle {
+  font-weight: 600;
+}
+
+.cb-editor__preview-diagnostics-toggle--error {
+  color: #b32d2e;
+}
+
+.cb-editor__preview-diagnostics-toggle--warning {
+  color: #b07d1e;
+}
+
+/* Diagnostics list: the <ul> of compile errors/warnings. */
+.cb-editor__preview-diagnostics-list {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  word-break: break-word;
+}
+
+.cb-editor__preview-diagnostics-list li {
+  margin: 0 0 6px;
+}
+
+.cb-editor__preview-diagnostics-list li:last-child {
+  margin-bottom: 0;
+}
+
+.cb-editor__preview-diagnostics-errors li {
+  color: #b32d2e;
+}
+
+.cb-editor__preview-diagnostics-warnings li {
+  color: #7a5a00;
+}
+
+/* Diagnostics container (error state, above the action). */
+.cb-editor__preview-diagnostics {
+  width: 100%;
+  max-width: 480px;
+}
+
+.cb-editor__preview-diagnostics .cb-editor__preview-diagnostics-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+/* Inline warnings banner (success state, above the email). */
+.cb-editor__preview-diagnostics--inline {
+  align-self: stretch;
+  background: #fff8e6;
+  border: 1px solid #f0d58c;
+  border-radius: 6px;
+  margin: 0 auto 16px;
+  max-width: 960px;
+  padding: 10px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cb-editor__preview-diagnostics--inline .cb-editor__preview-diagnostics-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.cb-editor__preview-diagnostics-header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.cb-editor__preview-diagnostics-heading {
+  color: #7a5a00;
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.cb-editor__preview-diagnostics-count {
+  align-items: center;
+  color: #b07d1e;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.cb-editor__preview-diagnostics-count svg {
+  height: 16px;
+  width: 16px;
+}
+
+/* Body: neutral workspace + optional source pane, side by side. */
+.cb-editor__preview-body {
+  align-items: stretch;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 16px;
+  justify-content: flex-start;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 22px;
+}
+
+/* Workspace: the single vertical scroll surface. Neutral so the white
+   email canvas reads as a distinct object. */
+.cb-editor__preview-canvas {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+  padding: 20px 16px 24px;
+  background: #e1e5e9;
+  border-radius: 4px;
+}
+
+/* Center the email at its real width; never stretch or scale it. */
+.cb-editor__preview-email {
+  flex: 0 0 auto;
+  align-items: center;
+  display: flex;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* The iframe is the compiled document, with no simulated email spacing. */
+.cb-editor__preview-iframe {
+  display: block;
+  flex: 0 0 auto;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+}
+
+/* Keep scrolling on the workspace, without native scrollbar arrow buttons. */
+.cb-editor__preview-canvas {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca8b7 transparent;
+}
+
+.cb-editor__preview-canvas::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cb-editor__preview-canvas::-webkit-scrollbar-thumb {
+  background: #9ca8b7;
+  border-radius: 4px;
+}
+
+.cb-editor__preview-canvas::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Loading / idle / error: clean diagnostic states. */
+.cb-editor__preview-state {
+  align-items: center;
+  color: #50575e;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: auto;
+  max-width: 360px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.cb-editor__preview-state p {
+  margin: 0;
+}
+
+.cb-editor__preview-state-action {
+  margin-top: 4px;
+}
+
+.cb-editor__preview-state--error {
+  color: #8a3a3a;
+}
+
+.cb-editor__preview-state-icon {
+  color: #b32d2e;
+  display: inline-flex;
+  padding: 8px;
+}
+
+.cb-editor__preview-state-icon svg {
+  height: 32px;
+  width: 32px;
+}
+
+.cb-editor__preview-state-message {
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* Source pane */
+.cb-editor__preview-source-pane {
+  background: #fff;
+  border: 1px solid #d5d7d9;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 400px;
+  min-width: 280px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cb-editor__preview-source-header {
+  align-items: center;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.cb-editor__preview-source-meta {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.cb-editor__preview-source-title {
+  color: #1e1e1e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cb-editor__preview-source-badge {
+  background: #f0f0f0;
+  border-radius: 10px;
+  color: #646464;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+}
+
+.cb-editor__preview-source-actions {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+.cb-editor__preview-source-copied {
+  align-items: center;
+  color: #00a32a;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 4px;
+}
+
+.cb-editor__preview-source-copied-icon {
+  align-items: center;
+  display: inline-flex;
+}
+
+.cb-editor__preview-source-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.cb-editor__preview-source-code {
+  font-family:
+    'SF Mono', 'Fira Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 12px 0;
+  tab-size: 2;
+  white-space: pre-wrap;
+  color: #1e1e1e;
+}
+
+.cb-editor__preview-subject-row {
+  padding: 0 22px 8px;
+}
+
+.cb-editor__preview-status {
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.cb-editor__preview-status-label small,
+.cb-editor__preview-footer small {
+  display: block;
+  color: #7c8b9f;
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+.cb-editor__preview-status--ok .cb-editor__preview-status-icon {
+  background: #18a15a;
+  border-radius: 50%;
+}
+
+.cb-editor__preview-status--ok .cb-editor__preview-status-icon svg {
+  display: none;
+}
+
+.cb-editor__preview-status--ok .cb-editor__preview-status-label {
+  color: #17202b;
+}
+
+.cb-editor__preview-modal-frame
+  .components-modal__header
+  .cb-editor__preview-header-action {
+  border: 1px solid #d0d9e5;
+  border-radius: 5px;
+  color: #1554e8;
+  height: 40px;
+  padding: 0 14px;
+}
+
+.cb-editor__preview-viewport-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 18px;
+}
+
+.cb-editor__preview-viewport-label svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.cb-editor__preview-toggle {
+  display: inline-flex;
+  border: 1px solid #d0d9e5;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.cb-editor__preview-toggle-option {
+  border: 0;
+  background: white;
+  color: #536175;
+  cursor: pointer;
+  font: inherit;
+  min-height: 40px;
+}
+
+.cb-editor__preview-toggle-option[aria-pressed='true'] {
+  background: #1d54e8;
+  color: white;
+}
+
+.cb-editor__preview-toggle-option:focus-visible {
+  outline: 2px solid #17202b;
+  outline-offset: -3px;
+}
+
+.cb-editor__preview-footer {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 16px;
+  padding: 18px 24px;
+  font-size: 14px;
+}
+
+.cb-editor__preview-footer-icon {
+  display: inline-flex;
+}
+
+.cb-editor__preview-footer-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.cb-editor__preview-status--ok .cb-editor__preview-footer-icon {
+  background: #18a15a;
+  color: white;
+  border-radius: 50%;
+}
+
+.cb-editor__preview-footer-meta {
+  margin-left: auto;
+  text-align: right;
+  color: #7c8b9f;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .cb-editor__preview-body {
+    flex-direction: column;
+  }
+
+  .cb-editor__preview-source-pane {
+    flex: 0 0 40%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .cb-editor__preview-modal-frame.is-full-screen {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .cb-editor__preview-modal-frame .components-modal__header {
+    padding: 0 12px;
+  }
+
+  .cb-editor__preview-modal-frame
+    .components-modal__header
+    .cb-editor__preview-header-action {
+    padding: 0 6px;
+    margin-left: 4px;
+  }
+
+  .cb-editor__preview-body {
+    padding: 0 12px;
+  }
+
+  .cb-editor__preview-secondary {
+    padding: 10px 12px;
+  }
+
+  .cb-editor__preview-footer {
+    padding: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+.cb-editor__preview-modal-frame .components-modal__header-heading-container {
+  min-width: 0;
+}
+
+.cb-editor__preview-modal-frame
+  .components-modal__header
+  .cb-editor__preview-header-action[aria-pressed='true'] {
+  background: #edf2ff;
+  color: #1554e8;
+}
+
+@media (max-width: 600px) {
+  .cb-editor__preview-modal-frame .components-modal__header-heading {
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .cb-editor__preview-modal-frame
+    .components-modal__header
+    .cb-editor__preview-header-action {
+    flex-shrink: 0;
+    padding: 0 6px;
+    margin-left: 4px;
+  }
+}
+
+.cb-editor__preview-source-code code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+}
+
+.cb-editor__preview-source-line {
+  display: flex;
+}
+
+.cb-editor__preview-source-line:hover {
+  background: #edf2fa;
+}
+
+.cb-editor__preview-source-line-number {
+  flex: 0 0 4ch;
+  padding: 0 10px;
+  border-right: 1px solid #e0e5ed;
+  color: #7c8b9f;
+  text-align: right;
+  user-select: none;
+}
+
+.cb-editor__preview-source-line-text {
+  min-width: 0;
+  padding: 0 12px;
+  overflow-wrap: anywhere;
+  color: #214a75;
 }

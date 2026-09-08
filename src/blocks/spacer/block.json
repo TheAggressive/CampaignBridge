@@ -9,9 +9,14 @@
   "description": "A bounded vertical spacer rendered with email-safe markup.",
   "textdomain": "campaignbridge",
   "parent": ["campaignbridge/section"],
-  "supports": { "html": false, "reusable": false },
-  "attributes": {
-    "height": { "type": "number", "default": 24 }
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "customClassName": false,
+    "dimensions": {
+      "minHeight": true
+    }
   },
+  "attributes": {},
   "editorScript": "file:./index.js"
 }

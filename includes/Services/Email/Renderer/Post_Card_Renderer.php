@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -34,7 +35,7 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'postId', 'postType', 'padding', 'backgroundColor' );
+		return array( 'postId', 'postType', 'padding', 'backgroundColor', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -55,13 +56,14 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(
 				'postId'          => Renderer_Support::integer_attribute( $attributes, 'postId', 0, 0, PHP_INT_MAX ),
 				'postType'        => Renderer_Support::string_attribute( $attributes, 'postType', 'post' ),
-				'padding'         => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ),
+				'padding'         => Style_Resolver::spacing( $attributes, 'padding', Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ) ),
+				'style'           => Renderer_Support::object_attribute( $attributes, 'style', array() ),
 				// Omitted stays null so a card never paints over its section.
 				'backgroundColor' => array_key_exists( 'backgroundColor', $attributes )
 					? Renderer_Support::string_attribute( $attributes, 'backgroundColor', '#ffffff' )
@@ -147,9 +149,11 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$attributes = $block->attributes();
 		$padding    = $attributes['padding'];
-		$background = null === $attributes['backgroundColor']
-			? ''
-			: sprintf( ';background-color:%s', Renderer_Support::resolve_color( $attributes['backgroundColor'], Renderer_Support::brand_kit( $context ) ) );
+		$kit        = Renderer_Support::brand_kit( $context );
+		$color      = null === $attributes['backgroundColor']
+			? Style_Resolver::color( array( 'style' => $attributes['style'] ), 'background', null, $kit )
+			: Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit );
+		$background = null === $color ? '' : sprintf( ';background-color:%s', $color );
 
 		return sprintf(
 			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse%1$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',

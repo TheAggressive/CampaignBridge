@@ -26,7 +26,7 @@ final class Spacer_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'height' );
+		return array( 'height', 'style' );
 	}
 
 	/**
@@ -35,10 +35,10 @@ final class Spacer_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
-			array( 'height' => Renderer_Support::integer_attribute( $attributes, 'height', 24, 4, 120 ) )
+			array( 'height' => Renderer_Support::integer_attribute( $attributes, 'height', 24, 0, 600 ) )
 		);
 	}
 

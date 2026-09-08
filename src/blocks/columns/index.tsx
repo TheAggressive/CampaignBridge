@@ -1,3 +1,4 @@
+import '../shared/native-styles';
 import { InnerBlocks } from '@wordpress/block-editor';
 import type { BlockConfiguration } from '@wordpress/blocks';
 import { getBlockType, registerBlockType } from '@wordpress/blocks';
@@ -10,6 +11,10 @@ export { metadata, name };
 
 export const settings = {
   edit: Edit,
+  template: [
+    ['campaignbridge/column', {}],
+    ['campaignbridge/column', {}],
+  ] as [string, Record<string, unknown>][],
   save: () => <InnerBlocks.Content />,
 };
 

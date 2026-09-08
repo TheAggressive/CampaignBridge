@@ -11,8 +11,14 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "color": { "background": true, "text": true, "link": true },
-    "align": true
+    "color": {
+      "background": true,
+      "text": true,
+      "link": true,
+      "gradients": false
+    },
+    "align": ["left", "center", "right"],
+    "customClassName": false
   },
   "attributes": {
     "label": {
@@ -28,27 +34,22 @@
       "type": "string",
       "default": ""
     },
-    "backgroundColor": {
-      "type": "string",
-      "default": "#111111"
-    },
-    "textColor": {
-      "type": "string",
-      "default": "#ffffff"
-    },
     "align": {
       "type": "string",
       "default": "left"
-    },
-    "style": {
-      "type": "string",
-      "default": "button"
-    },
-    "linkColor": {
-      "type": "string",
-      "default": "#111111"
     }
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],
-  "editorScript": "file:./index.js"
+  "editorScript": "file:./index.js",
+  "styles": [
+    {
+      "name": "button",
+      "label": "Button",
+      "isDefault": true
+    },
+    {
+      "name": "link",
+      "label": "Text link"
+    }
+  ]
 }

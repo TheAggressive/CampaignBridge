@@ -13,16 +13,16 @@
     "html": false,
     "innerBlocks": true,
     "reusable": false,
-    "align": true,
-    "color": { "background": true },
-    "spacing": { "padding": true, "margin": true }
-  },
-  "attributes": {
-    "padding": {
-      "type": "object",
-      "default": { "top": 24, "right": 0, "bottom": 24, "left": 0 }
+    "color": {
+      "background": true,
+      "gradients": false
     },
-    "backgroundColor": { "type": "string", "default": "#ffffff" }
+    "spacing": {
+      "padding": true,
+      "margin": true
+    },
+    "customClassName": false
   },
+  "attributes": {},
   "editorScript": "file:./index.js"
 }

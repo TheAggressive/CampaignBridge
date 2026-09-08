@@ -12,15 +12,31 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "align": true,
-    "color": { "text": true },
-    "typography": { "fontSize": true, "lineHeight": true }
+    "align": ["left", "center", "right"],
+    "color": {
+      "text": true,
+      "background": false,
+      "gradients": false
+    },
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true
+    },
+    "customClassName": false
   },
   "attributes": {
-    "content": { "type": "string", "default": "" },
-    "level": { "type": "number", "default": 2 },
-    "align": { "type": "string", "default": "left" },
-    "textColor": { "type": "string", "default": "#111111" }
+    "content": {
+      "type": "string",
+      "default": ""
+    },
+    "level": {
+      "type": "number",
+      "default": 2
+    },
+    "align": {
+      "type": "string",
+      "default": "left"
+    }
   },
   "editorScript": "file:./index.js"
 }

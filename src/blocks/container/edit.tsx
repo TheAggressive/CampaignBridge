@@ -21,21 +21,18 @@
 
 import {
   InnerBlocks,
-  InspectorControls,
   useBlockProps,
   useInnerBlocksProps,
 } from '@wordpress/block-editor';
 import type { BlockEditProps } from '@wordpress/blocks';
-import { PanelBody, RangeControl } from '@wordpress/components';
 import { useDispatch } from '@wordpress/data';
 import { useEffect } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
 import { useBlockSelection } from '../../scripts/editor/hooks/useBlockSelection';
 import { EMAIL_BLOCK_NESTING } from '../shared/nesting';
 import type { NormalizedSpacing } from '../shared/spacing';
 
 interface ContainerBlockAttributes {
-  maxWidth?: number;
+  layout?: { contentSize?: string; wideSize?: string };
   outerPadding?: NormalizedSpacing;
   padding?: NormalizedSpacing;
   backgroundColor?: string;
@@ -48,14 +45,12 @@ interface EditProps extends BlockEditProps<ContainerBlockAttributes> {
   clientId: string;
 }
 
-const DEFAULT_INNER_PADDING = { top: 0, right: 24, bottom: 0, left: 24 };
+const DEFAULT_INNER_PADDING = { top: 0, right: 0, bottom: 0, left: 0 };
 
-export default function Edit({
-  attributes,
-  setAttributes,
-  clientId,
-}: EditProps): JSX.Element {
-  const { maxWidth = 600, padding = DEFAULT_INNER_PADDING } = attributes;
+export default function Edit({ attributes, clientId }: EditProps): JSX.Element {
+  const { padding = DEFAULT_INNER_PADDING } = attributes;
+  const maxWidth =
+    attributes.layout?.contentSize ?? attributes.layout?.wideSize ?? '600px';
   const { updateBlockAttributes } = useDispatch('core/block-editor');
   const { hasInnerBlocks } = useBlockSelection(clientId);
 
@@ -90,26 +85,15 @@ export default function Edit({
   // Note: Background/Text colors come from core color support UI
   const blockProps = useBlockProps({
     style: {
+      maxWidth,
+      boxSizing: 'border-box' as const,
+      margin: '0 auto',
       padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
     },
   });
 
   return (
     <>
-      <InspectorControls>
-        <PanelBody title={__('Container', 'campaignbridge')} initialOpen>
-          <RangeControl
-            label={__('Max width (px)', 'campaignbridge')}
-            min={320}
-            max={900}
-            value={maxWidth}
-            onChange={v => setAttributes({ maxWidth: v })}
-            __next40pxDefaultSize
-            __nextHasNoMarginBottom
-          />
-        </PanelBody>
-      </InspectorControls>
-
       <div {...blockProps}>
         <div {...innerBlocksProps} />
       </div>
