@@ -121,7 +121,7 @@ final class Style_Resolver {
 			return $fallback;
 		}
 
-		return self::pixels( $value, $path, $minimum, $maximum );
+		return self::length( $value, $path, $minimum, $maximum );
 	}
 
 	/**
@@ -138,7 +138,7 @@ final class Style_Resolver {
 			return $fallback;
 		}
 
-		if ( 1 !== preg_match( '/^\d+(\.\d+)?$/', $value ) ) {
+		if ( 1 !== preg_match( '/^\d+(\.\d+)?$/', is_scalar( $value ) ? (string) $value : '' ) ) {
 			throw new Invalid_Block_Attribute( 'style.typography.lineHeight', 'must be a unitless number.' );
 		}
 
@@ -164,13 +164,18 @@ final class Style_Resolver {
 		$declared = self::style_value( $attributes, array( 'spacing', $group ) );
 		$resolved = $fallback;
 
+		if ( null !== $declared && ! is_array( $declared ) ) {
+			$length = self::length( $declared, 'style.spacing.' . $group, 0, $maximum );
+			return array_fill_keys( array( 'top', 'right', 'bottom', 'left' ), $length );
+		}
+
 		if ( is_array( $declared ) ) {
 			foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
 				if ( ! isset( $declared[ $side ] ) ) {
 					continue;
 				}
 
-				$resolved[ $side ] = self::pixels(
+				$resolved[ $side ] = self::length(
 					$declared[ $side ],
 					sprintf( 'style.spacing.%1$s.%2$s', $group, $side ),
 					0,
@@ -237,8 +242,8 @@ final class Style_Resolver {
 	 * @param int    $maximum Largest accepted value.
 	 * @throws Invalid_Block_Attribute When the length is not portable.
 	 */
-	private static function pixels( mixed $value, string $path, int $minimum, int $maximum ): int {
-		$resolved = self::resolve_preset_reference( $value, 'spacing' );
+	public static function length( mixed $value, string $path, int $minimum, int $maximum ): int {
+		$resolved = is_int( $value ) || is_float( $value ) ? (string) $value : self::resolve_preset_reference( $value, 'spacing' );
 
 		if ( null === $resolved ) {
 			throw new Invalid_Block_Attribute( $path, sprintf( 'is not a known spacing preset: %s.', is_string( $value ) ? $value : gettype( $value ) ) );

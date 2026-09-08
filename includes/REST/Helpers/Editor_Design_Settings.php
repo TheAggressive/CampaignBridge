@@ -77,6 +77,40 @@ final class Editor_Design_Settings {
 
 		$settings['__experimentalFeatures'] = $features;
 
+		// Core has already generated preset CSS from theme.json. Replacing the
+		// control settings alone leaves those old lengths active in the canvas.
+		$declarations = array();
+		foreach ( $spacing as $preset ) {
+			$declarations[] = sprintf( '--wp--preset--spacing--%s:%s', $preset['slug'], $preset['size'] );
+		}
+		foreach ( $palette as $preset ) {
+			$declarations[] = sprintf( '--wp--preset--color--%s:%s', $preset['slug'], $preset['color'] );
+		}
+		foreach ( $font_sizes as $preset ) {
+			$declarations[] = sprintf( '--wp--preset--font-size--%s:%s', $preset['slug'], $preset['size'] );
+		}
+		$styles             = isset( $settings['styles'] ) && is_array( $settings['styles'] ) ? $settings['styles'] : array();
+		$styles[]           = array(
+			'css' => '.editor-styles-wrapper{' . implode( ';', $declarations ) . '}',
+		);
+		$styles[]           = array(
+			'css' => ':where(.editor-styles-wrapper){font-family:Arial,sans-serif;font-size:16px;line-height:1.6}'
+							. ':where(.wp-block-campaignbridge-text,.wp-block-campaignbridge-post-excerpt){font-size:16px;line-height:1.6;color:#333333;margin:0 0 16px}'
+							. ':where(.wp-block-campaignbridge-post-title){font-size:24px;font-weight:bold;line-height:1.25;margin:0 0 12px}'
+							. ':where(.wp-block-campaignbridge-heading){font-weight:bold;line-height:1.25;margin:0 0 16px}'
+							. ':where(h1.wp-block-campaignbridge-heading){font-size:32px}:where(h2.wp-block-campaignbridge-heading){font-size:28px}:where(h3.wp-block-campaignbridge-heading){font-size:24px}:where(h4.wp-block-campaignbridge-heading){font-size:20px}'
+							. ':where(.wp-block-campaignbridge-columns){gap:24px}'
+							. '.wp-block-campaignbridge-columns{flex-wrap:nowrap!important}'
+							. '.wp-block-campaignbridge-columns>.wp-block-campaignbridge-column{min-width:0;margin:0;overflow-wrap:break-word}'
+							. '@media(max-width:480px){.wp-block-campaignbridge-columns:not(.is-not-stacked-on-mobile){flex-wrap:wrap!important}.wp-block-campaignbridge-columns:not(.is-not-stacked-on-mobile)>.wp-block-campaignbridge-column{flex-basis:100%!important}}'
+							. ':where(.wp-block-campaignbridge-spacer){min-height:24px}'
+							. ':where(.wp-block-campaignbridge-divider){border:0;border-top:1px solid #dddddd;width:100%}'
+							. ':where(.wp-block-campaignbridge-post-link a){color:#111111;text-decoration:underline}'
+							. ':where(.wp-block-campaignbridge-post-button a){background:#111111;color:#ffffff}'
+							. ':where(.wp-block-campaignbridge-post-button.is-style-link a){background:transparent;color:#111111}',
+		);
+		$settings['styles'] = $styles;
+
 		return $settings;
 	}
 }

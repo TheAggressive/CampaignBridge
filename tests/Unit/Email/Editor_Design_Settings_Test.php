@@ -48,6 +48,18 @@ final class Editor_Design_Settings_Test extends TestCase {
 		self::assertSame( Design_Presets::spacing_sizes(), $settings['__experimentalFeatures']['spacing']['spacingSizes']['theme'] );
 	}
 
+	public function test_canvas_css_uses_the_same_spacing_values_as_the_compiler(): void {
+		$existing = array( 'css' => ':root{--wp--preset--spacing--20:1.25rem}' );
+		$settings = Editor_Design_Settings::apply( array( 'styles' => array( $existing ) ), Brand_Kit::defaults() );
+		self::assertSame( $existing, $settings['styles'][0] );
+		$css = $settings['styles'][1]['css'];
+		self::assertStringContainsString( '.editor-styles-wrapper{', $css );
+		foreach ( Design_Presets::spacing_sizes() as $preset ) {
+			self::assertStringContainsString( '--wp--preset--spacing--' . $preset['slug'] . ':' . Design_Presets::spacing( $preset['slug'] ), $css );
+		}
+		self::assertStringContainsString( '--wp--preset--spacing--20:8px', $css );
+	}
+
 	/**
 	 * @param array<int, array{slug: string, color: string}> $palette Editor palette.
 	 */

@@ -1,13 +1,7 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import {
-  PanelBody,
-  SelectControl,
-  TextControl,
-  ColorPicker,
-} from '@wordpress/components';
+import { PanelBody, SelectControl, TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-import { toPortableHex } from '../../scripts/admin/brand-kit/color';
 import {
   isHttpsUrl,
   normalizeDestination,
@@ -27,11 +21,10 @@ export default function Edit({
   const destination = normalizeDestination(attributes.destination);
   const customUrl =
     typeof attributes.customUrl === 'string' ? attributes.customUrl : '';
-  const backgroundColor = attributes.backgroundColor || '#111111';
-  const textColor = attributes.textColor || '#ffffff';
-  const buttonStyle = attributes.style === 'link' ? 'link' : 'button';
+  const buttonStyle = attributes.className?.includes('is-style-link')
+    ? 'link'
+    : 'button';
   const align = attributes.align ?? 'left';
-  const linkColor = attributes.linkColor || '#111111';
 
   const { articleUrl, postParentUrl, postTypeArchiveUrl } = usePostDestination(
     postId,
@@ -46,18 +39,28 @@ export default function Edit({
     postTypeArchiveUrl: postTypeArchiveUrl ?? '',
     helpMessages: {
       customUrlRequired: __(
-        'Enter a custom HTTPS URL to preview it.',
+        'Enter a custom absolute URL to preview it.',
         'campaignbridge'
       ),
-      noHttpsUrlYet: __(
-        'This post snapshot has no HTTPS URL yet; the link renders from the post data at send time.',
+      noAbsoluteUrlYet: __(
+        'This post snapshot has no absolute URL yet; the link renders from the post data at send time.',
         'campaignbridge'
       ),
     },
   });
 
+  const blockProps = useBlockProps({ style: { textAlign: align } });
+  const { style: nativeStyle, ...wrapperProps } = blockProps;
+
   return (
-    <div {...useBlockProps({ style: { textAlign: align } })}>
+    <div
+      {...wrapperProps}
+      className={wrapperProps.className
+        .split(' ')
+        .filter(name => !name.startsWith('has-'))
+        .join(' ')}
+      style={{ textAlign: align }}
+    >
       <InspectorControls>
         <PanelBody title={__('Call to action', 'campaignbridge')} initialOpen>
           <TextControl
@@ -91,14 +94,14 @@ export default function Edit({
           />
           {destination === 'custom' && (
             <TextControl
-              label={__('Custom HTTPS URL', 'campaignbridge')}
+              label={__('Custom URL', 'campaignbridge')}
               type='url'
               value={customUrl}
               onChange={value => setAttributes({ customUrl: value })}
               help={
                 customUrl && !isHttpsUrl(customUrl)
                   ? __(
-                      'Enter an absolute URL beginning with https://.',
+                      'Enter an absolute URL beginning with http:// or https://.',
                       'campaignbridge'
                     )
                   : undefined
@@ -107,49 +110,22 @@ export default function Edit({
               __nextHasNoMarginBottom
             />
           )}
-          <SelectControl
-            label={__('Style', 'campaignbridge')}
-            value={buttonStyle}
-            options={[
-              { label: __('Button', 'campaignbridge'), value: 'button' },
-              { label: __('Text link', 'campaignbridge'), value: 'link' },
-            ]}
-            onChange={value =>
-              setAttributes({ style: value as 'button' | 'link' })
-            }
-            __next40pxDefaultSize
-            __nextHasNoMarginBottom
-          />
-          {buttonStyle === 'link' && (
-            <>
-              <p className='components-base-control__label'>
-                {__('Link color', 'campaignbridge')}
-              </p>
-              <ColorPicker
-                color={linkColor}
-                onChange={value => {
-                  const hex = toPortableHex(value);
-                  if (hex) {
-                    setAttributes({ linkColor: hex });
-                  }
-                }}
-              />
-            </>
-          )}
         </PanelBody>
       </InspectorControls>
       <a
+        className={wrapperProps.className
+          .split(' ')
+          .filter(name => name.startsWith('has-'))
+          .join(' ')}
         href={previewUrl || '#'}
         aria-disabled={!previewUrl}
         style={{
           display: 'inline-block',
           padding: buttonStyle === 'link' ? 0 : '12px 24px',
           borderRadius: buttonStyle === 'link' ? 0 : 4,
-          backgroundColor:
-            buttonStyle === 'link' ? 'transparent' : backgroundColor,
-          color: buttonStyle === 'link' ? linkColor : textColor,
           textDecoration: buttonStyle === 'link' ? 'underline' : 'none',
           fontWeight: buttonStyle === 'link' ? 400 : 700,
+          ...nativeStyle,
         }}
       >
         {label}

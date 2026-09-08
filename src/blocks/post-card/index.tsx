@@ -1,3 +1,4 @@
+import '../shared/native-styles';
 /**
  * CampaignBridge Post Card Block
  *

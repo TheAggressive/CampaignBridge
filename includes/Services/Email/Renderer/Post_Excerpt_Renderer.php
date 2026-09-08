@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -27,7 +28,7 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'maxWords', 'align', 'textColor', 'fontSize' );
+		return array( 'maxWords', 'align', 'textColor', 'fontSize', 'style' );
 	}
 
 	/**
@@ -36,14 +37,15 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(
+				'style'     => $attributes['style'],
 				'maxWords'  => Renderer_Support::integer_attribute( $attributes, 'maxWords', \CampaignBridge\REST\Rest_Constants::DEFAULT_EXCERPT_MAX_WORDS, 10, 150 ),
 				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
 				'textColor' => Renderer_Support::string_attribute( $attributes, 'textColor', '#333333' ),
-				'fontSize'  => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 12, 24 ),
+				'fontSize'  => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 10, 72 ),
 			)
 		);
 	}
@@ -77,11 +79,12 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 		$text_color = Renderer_Support::resolve_color( $attributes['textColor'], Renderer_Support::brand_kit( $context ) );
 
 		return sprintf(
-			'<p align="%1$s" style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:%2$dpx;line-height:1.6;text-align:%1$s;color:%3$s">%4$s</p>',
+			'<p align="%1$s" style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:%2$dpx;line-height:1.6%5$s;text-align:%1$s;color:%3$s">%4$s</p>',
 			$attributes['align'],
 			$attributes['fontSize'],
 			$text_color,
-			Renderer_Support::html( $this->excerpt( $block, $context ) )
+			Renderer_Support::html( $this->excerpt( $block, $context ) ),
+			isset( $attributes['style']['typography']['lineHeight'] ) ? ';line-height:' . Style_Resolver::line_height( $attributes ) : ''
 		);
 	}
 

@@ -20,19 +20,20 @@
       "gradients": false
     },
     "spacing": {
-      "padding": true
-    }
-  },
-  "attributes": {
-    "maxWidth": { "type": "number", "default": 600 },
-    "outerPadding": {
-      "type": "object",
-      "default": { "top": 20, "right": 0, "bottom": 20, "left": 0 }
+      "padding": true,
+      "margin": true
     },
-    "padding": {
-      "type": "object",
-      "default": { "top": 0, "right": 24, "bottom": 0, "left": 24 }
+    "customClassName": false,
+    "layout": {
+      "allowSwitching": false,
+      "allowEditing": true,
+      "default": {
+        "type": "constrained"
+      },
+      "allowInheriting": false,
+      "allowJustification": false
     }
   },
+  "attributes": {},
   "editorScript": "file:./index.js"
 }

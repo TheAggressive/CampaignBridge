@@ -12,10 +12,14 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "multiple": false
+    "multiple": false,
+    "customClassName": false
   },
   "attributes": {
-    "content": { "type": "string", "default": "" }
+    "content": {
+      "type": "string",
+      "default": ""
+    }
   },
   "editorScript": "file:./index.js"
 }

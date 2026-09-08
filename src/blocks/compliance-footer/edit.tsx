@@ -15,6 +15,7 @@ interface ComplianceFooterAttributes {
   unsubscribeLabel?: string;
   padding?: NormalizedSpacing;
   textColor?: string;
+  align?: 'left' | 'center' | 'right';
 }
 
 export default function Edit({
@@ -26,15 +27,15 @@ export default function Edit({
     address = '',
     unsubscribeLabel = 'Unsubscribe',
     padding = { top: 24, right: 0, bottom: 24, left: 0 },
-    textColor = '#666666',
+    align = 'center',
   } = attributes;
   const blockProps = useBlockProps({
     style: {
       padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`,
-      color: textColor,
+      color: '#666666',
       fontSize: '12px',
       lineHeight: '18px',
-      textAlign: 'center' as const,
+      textAlign: align,
     },
   });
 

@@ -145,6 +145,7 @@ export default [
         cancelAnimationFrame: 'readonly',
         performance: 'readonly',
         localStorage: 'readonly',
+        navigator: 'readonly',
         campaignbridgeAdmin: 'readonly',
       },
     },

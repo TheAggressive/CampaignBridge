@@ -13,18 +13,29 @@
     "html": false,
     "reusable": false,
     "multiple": false,
-    "align": true,
-    "color": { "text": true }
+    "align": ["left", "center", "right"],
+    "color": {
+      "text": true,
+      "gradients": false
+    },
+    "customClassName": false,
+    "spacing": {
+      "padding": true
+    }
   },
   "attributes": {
-    "businessName": { "type": "string", "default": "" },
-    "address": { "type": "string", "default": "" },
-    "unsubscribeLabel": { "type": "string", "default": "Unsubscribe" },
-    "padding": {
-      "type": "object",
-      "default": { "top": 24, "right": 0, "bottom": 24, "left": 0 }
+    "businessName": {
+      "type": "string",
+      "default": ""
     },
-    "textColor": { "type": "string", "default": "#666666" }
+    "address": {
+      "type": "string",
+      "default": ""
+    },
+    "unsubscribeLabel": {
+      "type": "string",
+      "default": "Unsubscribe"
+    }
   },
   "editorScript": "file:./index.js"
 }

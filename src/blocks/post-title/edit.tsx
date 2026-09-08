@@ -1,10 +1,5 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import {
-  PanelBody,
-  RangeControl,
-  SelectControl,
-  ToggleControl,
-} from '@wordpress/components';
+import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import { createElement } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -40,12 +35,7 @@ export default function Edit({
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
   const level = Number(attributes.level) || 2;
-  const {
-    align = 'left',
-    textColor = '#111111',
-    linkToPost = false,
-    fontSize = 24,
-  } = attributes;
+  const { align = 'left', linkToPost = false } = attributes;
   const post = useSelect(
     select =>
       postId
@@ -59,7 +49,7 @@ export default function Edit({
   );
   const title = decodeEntities(post?.title?.rendered || '');
   const tag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4';
-  const blockProps = useBlockProps();
+  const blockProps = useBlockProps({ style: { textAlign: align } });
 
   return (
     <>
@@ -73,13 +63,6 @@ export default function Edit({
             __next40pxDefaultSize
             __nextHasNoMarginBottom
           />
-          <RangeControl
-            label={__('Font size (px)', 'campaignbridge')}
-            value={fontSize}
-            min={14}
-            max={48}
-            onChange={value => setAttributes({ fontSize: value })}
-          />
           <ToggleControl
             label={__('Link to the post', 'campaignbridge')}
             checked={linkToPost}
@@ -92,11 +75,6 @@ export default function Edit({
         tag,
         {
           ...blockProps,
-          style: {
-            textAlign: align,
-            color: textColor,
-            fontSize: fontSize + 'px',
-          },
         },
         title || __('Post title', 'campaignbridge')
       )}

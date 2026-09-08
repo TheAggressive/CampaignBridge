@@ -1,7 +1,7 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
 import { getBlockType } from '@wordpress/blocks';
 import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
-import { EntityProvider } from '@wordpress/core-data';
+import { EntityProvider, useEntityProp } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useEffect, useCallback, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
@@ -241,8 +241,11 @@ function EditorChromeContent({
             />
             <PreviewController
               postId={postId}
+              postType={postType}
               isOpen={previewOpen}
               onRequestClose={handleClosePreview}
+              title={list.find(t => t.id === currentId)?.title || undefined}
+              hasEdits={hasEdits}
             />
             <InterfaceSkeleton
               className={skeletonClassName}
@@ -300,14 +303,34 @@ function EditorChromeContent({
  */
 function PreviewController({
   postId,
+  postType = 'campaignbridge_template',
   isOpen,
   onRequestClose,
+  title,
 }: {
   postId: number;
+  postType?: string;
   isOpen: boolean;
   onRequestClose: () => void;
+  title?: string;
+  hasEdits?: boolean;
 }): JSX.Element | null {
-  const { preview, requestPreview, resetPreview } = useEmailPreview(postId);
+  const { preview, requestPreview, resetPreview, isStale } =
+    useEmailPreview(postId);
+
+  const [rawMeta = {}] = useEntityProp(
+    'postType',
+    postType,
+    'meta',
+    postId
+  ) as [Record<string, unknown>, unknown, unknown];
+
+  const metaString = (key: string): string | undefined =>
+    typeof rawMeta[key] === 'string' && rawMeta[key] !== ''
+      ? (rawMeta[key] as string)
+      : undefined;
+
+  const subject = metaString('campaignbridge_subject');
 
   useEffect(() => {
     if (isOpen) {
@@ -328,6 +351,9 @@ function PreviewController({
       onRequestClose={onRequestClose}
       preview={preview}
       onRefresh={() => void requestPreview()}
+      title={title}
+      subject={subject}
+      hasEdits={isStale}
     />
   );
 }

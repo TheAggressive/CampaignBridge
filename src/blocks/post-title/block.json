@@ -11,8 +11,17 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "align": true,
-    "color": { "text": true }
+    "align": ["left", "center", "right"],
+    "color": {
+      "text": true,
+      "background": false,
+      "gradients": false
+    },
+    "customClassName": false,
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true
+    }
   },
   "attributes": {
     "level": {
@@ -23,17 +32,9 @@
       "type": "string",
       "default": "left"
     },
-    "textColor": {
-      "type": "string",
-      "default": "#111111"
-    },
     "linkToPost": {
       "type": "boolean",
       "default": false
-    },
-    "fontSize": {
-      "type": "number",
-      "default": 24
     }
   },
   "usesContext": ["campaignbridge:postId", "campaignbridge:postType"],

@@ -36,7 +36,7 @@ final class Post_Link_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		// Style is optional and may be injected by WordPress supports as a
 		// non-string value (e.g. a CSS object). Only coerce when it's a string.
@@ -47,6 +47,7 @@ final class Post_Link_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
+				'hoverColor'      => $attributes['hoverColor'] ?? null,
 				'label'           => trim( Renderer_Support::string_attribute( $attributes, 'label', 'Read more' ) ),
 				'destination'     => Renderer_Support::choice_attribute( $attributes, 'destination', 'article', array( 'article', 'postParent', 'postTypeArchive', 'custom' ) ),
 				'customUrl'       => trim( Renderer_Support::string_attribute( $attributes, 'customUrl', '' ) ),
@@ -100,12 +101,16 @@ final class Post_Link_Renderer extends Abstract_Renderer {
 		$url        = (string) Renderer_Support::post_destination_url( $attributes, $context );
 		$kit        = Renderer_Support::brand_kit( $context );
 
-		return sprintf(
-			'<p align="%1$s" style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;text-align:%1$s"><a href="%2$s" style="color:%3$s;text-decoration:underline">%4$s</a></p>',
-			$attributes['align'],
-			Renderer_Support::html( $url ),
-			Renderer_Support::resolve_color( $attributes['linkColor'], $kit ),
-			Renderer_Support::html( $attributes['label'] )
+		return Native_Style_Support::link_output(
+			sprintf(
+				'<p align="%1$s" style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;text-align:%1$s"><a href="%2$s" style="color:%3$s;text-decoration:underline">%4$s</a></p>',
+				$attributes['align'],
+				Renderer_Support::html( $url ),
+				Renderer_Support::resolve_color( $attributes['linkColor'], $kit ),
+				Renderer_Support::html( $attributes['label'] )
+			),
+			$block,
+			$context
 		);
 	}
 

@@ -75,7 +75,7 @@ The first production set should stay deliberately small:
 | Group     | Blocks                                                    |
 | --------- | --------------------------------------------------------- |
 | Document  | email root, preheader, section, compliance footer         |
-| Layout    | one-column row, two-column row, column, spacer, divider   |
+| Layout    | one- to six-column row, column, spacer, divider   |
 | Content   | text, heading, image, bullet list, button                 |
 | WordPress | post card, post image, post title, post excerpt, post CTA |
 
@@ -225,3 +225,39 @@ second rendering architecture.
 The phased work breakdown, proposed contracts, preview API, migration gates, and
 first pull request are defined in
 [`email-block-implementation-plan.md`](email-block-implementation-plan.md).
+
+## Native WordPress styling
+
+Email block authoring uses WordPress block supports and the native `style`
+object. Color and font presets retain core's top-level preset attributes;
+button variations use registered `is-style-*` classes. The email renderer
+resolves presets to portable values and emits inline CSS and presentation
+tables. It does not use the editor DOM as transport HTML.
+
+Supported controls are declared per block: text blocks expose color and
+font size/line height; containers, sections, cards and footers expose their
+supported spacing; columns use native block gap; spacers use minimum height;
+dividers use native borders. Container content width uses constrained layout.
+Gap applies only between columns, without adding outside gutters. The preview
+uses the compiled artifact for both desktop and mobile.
+
+Older CampaignBridge style attributes are converted during block parsing and
+saved through the native schema. Explicit native values take precedence over
+legacy values. Compiler compatibility accepts these older attributes while
+saved templates are converted; there is no second renderer. Regression fixtures
+cover migration and both forms of compiler input.
+
+Unsupported style properties and unresolved colors produce compiler errors
+instead of being silently discarded or replaced. Native link hover color is
+preserved as scoped CSS for clients that support hover; critical link color
+remains inline. Real email-client screenshot testing remains a separate release
+check from local compiler and browser verification.
+
+Columns distribute unspecified widths across the remaining space and normalize
+explicit proportions. The editor uses a nonwrapping flex row with zero minimum
+column widths; email output uses a fixed-layout presentation table. The column
+count control supports one through six columns, and the native toolbar sets
+vertical alignment. Mobile stacking is optional and starts at 480px, below the
+default 600px desktop email width. Stacked columns lose horizontal gutter
+padding and retain the chosen gap vertically. Clients without media-query
+support keep the table layout.

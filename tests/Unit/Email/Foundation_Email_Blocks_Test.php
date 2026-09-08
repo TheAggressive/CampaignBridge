@@ -22,6 +22,59 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 		self::assertSame( $this->fixture( 'foundation.txt' ), $result->text() );
 	}
 
+	public function test_uses_editor_padding_instead_of_legacy_spacing_on_both_viewports(): void {
+		$document = $this->document();
+		$document[0]['attrs']['style']['spacing']['padding']                   = array(
+			'top'    => '0',
+			'right'  => '0',
+			'bottom' => '0',
+			'left'   => '0',
+		);
+		$document[0]['innerBlocks'][1]['attrs']['padding']                     = array(
+			'top'    => 24,
+			'right'  => 0,
+			'bottom' => 24,
+			'left'   => 0,
+		);
+		$document[0]['innerBlocks'][1]['attrs']['style']['spacing']['padding'] = array(
+			'top'    => '0',
+			'right'  => 'var:preset|spacing|20',
+			'bottom' => '0',
+			'left'   => 'var:preset|spacing|20',
+		);
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( '<td align="center" style="padding:0px 0px 0px 0px">', $result->html() );
+		self::assertStringContainsString( 'class="cb-email-cell" style="padding:0px 0px 0px 0px"', $result->html() );
+		self::assertStringContainsString( '<td style="padding:0px 8px 0px 8px">', $result->html() );
+		self::assertStringNotContainsString( 'padding-left:16px!important', $result->html() );
+	}
+
+	public function test_container_has_no_implicit_side_padding_and_preserves_explicit_padding(): void {
+		$document = $this->document();
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'class="cb-email-cell" style="padding:0px 0px 0px 0px"', $result->html() );
+
+		$document[0]['attrs']['padding'] = array( 'top' => 4, 'right' => 24, 'bottom' => 8, 'left' => 24 );
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'class="cb-email-cell" style="padding:4px 24px 8px 24px"', $result->html() );
+	}
+
+	public function test_keeps_explicit_outer_padding(): void {
+		$document                             = $this->document();
+		$document[0]['attrs']['outerPadding'] = array(
+			'top'    => 12,
+			'right'  => 8,
+			'bottom' => 16,
+			'left'   => 4,
+		);
+		$result                               = Compiler_Factory::create()->compile( $document, $this->context() );
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( '<td align="center" style="padding:12px 8px 16px 4px">', $result->html() );
+	}
+
 	public function test_hides_preview_text_from_the_body_and_from_plain_text(): void {
 		$result = Compiler_Factory::create()->compile( $this->document(), $this->context() );
 
@@ -93,12 +146,14 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
-		self::assertStringContainsString( 'width="100%" style="width:100%;vertical-align:middle"', $result->html() );
+		self::assertStringContainsString( 'width="100%" style="width:100%;vertical-align:middle;overflow-wrap:break-word"', $result->html() );
 	}
 
 	public function test_rejects_more_columns_than_the_profile_supports(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'][] = $this->column( array() );
+		while ( count( $document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'] ) < 7 ) {
+            $document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'][] = $this->column( array() );
+        }
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
@@ -106,17 +161,17 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 		self::assertSame( 'columns.count.invalid', $result->diagnostics()[0]->code() );
 	}
 
-	public function test_rejects_widths_declared_on_only_some_columns(): void {
+	public function test_shares_remaining_width_among_automatic_columns(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'][0]['attrs']['width'] = 60;
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
-		self::assertFalse( $result->is_success() );
-		self::assertSame( 'columns.width.partial', $result->diagnostics()[0]->code() );
+		self::assertTrue( $result->is_success() );
+        self::assertStringContainsString( 'width="40%"', $result->html() );
 	}
 
-	public function test_rejects_column_widths_that_do_not_total_one_hundred(): void {
+	public function test_normalizes_explicit_column_proportions(): void {
 		$document                     = $this->document();
 		$columns                      = &$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'];
 		$columns[0]['attrs']['width'] = 60;
@@ -124,8 +179,8 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
-		self::assertFalse( $result->is_success() );
-		self::assertSame( 'columns.width.total', $result->diagnostics()[0]->code() );
+		self::assertTrue( $result->is_success() );
+        self::assertStringContainsString( 'width="50%"', $result->html() );
 	}
 
 	public function test_honours_explicit_column_widths_that_total_one_hundred(): void {
@@ -144,7 +199,7 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 	public function test_rejects_a_column_width_outside_the_documented_range(): void {
 		$document                     = $this->document();
 		$columns                      = &$document[0]['innerBlocks'][1]['innerBlocks'][0]['innerBlocks'];
-		$columns[0]['attrs']['width'] = 90;
+		$columns[0]['attrs']['width'] = 101;
 		$columns[1]['attrs']['width'] = 10;
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
@@ -152,6 +207,27 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 		self::assertFalse( $result->is_success() );
 		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
 	}
+
+    public function test_supports_six_columns_with_only_internal_gaps(): void {
+        $document = $this->document();
+        $row = &$document[0]['innerBlocks'][1]['innerBlocks'][0];
+        $row['innerBlocks'] = array_fill( 0, 6, $this->column( array() ) );
+        $result = Compiler_Factory::create()->compile( $document, $this->context() );
+        self::assertTrue( $result->is_success() );
+        self::assertSame( 6, substr_count( $result->html(), 'class="cb-col"' ) );
+        self::assertSame( 5, substr_count( $result->html(), ';padding-left:12px' ) );
+        self::assertSame( 5, substr_count( $result->html(), ';padding-right:12px' ) );
+        self::assertStringContainsString( 'width="16.6667%"', $result->html() );
+    }
+
+    public function test_can_keep_columns_side_by_side_on_mobile(): void {
+        $document = $this->document();
+        $document[0]['innerBlocks'][1]['innerBlocks'][0]['attrs']['isStackedOnMobile'] = false;
+        $result = Compiler_Factory::create()->compile( $document, $this->context() );
+        self::assertTrue( $result->is_success() );
+        self::assertStringContainsString( 'class="cb-columns"', $result->html() );
+        self::assertStringNotContainsString( 'class="cb-columns-stack', $result->html() );
+    }
 
 	public function test_requires_a_postal_address_in_the_compliance_footer(): void {
 		$document = $this->document();

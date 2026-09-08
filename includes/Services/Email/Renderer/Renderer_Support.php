@@ -172,6 +172,7 @@ final class Renderer_Support {
 	 * @param string    $value Raw colour (hex, preset reference, or slot slug).
 	 * @param Brand_Kit $kit   Active brand kit.
 	 * @return string Portable six-digit hex colour.
+	 * @throws Invalid_Block_Attribute When the colour cannot be resolved.
 	 */
 	public static function resolve_color( string $value, Brand_Kit $kit ): string {
 		$normalized = trim( $value );
@@ -196,8 +197,7 @@ final class Renderer_Support {
 			return $kit->color( $normalized );
 		}
 
-		// 4. Unknown value: degrade to the brand slot.
-		return $kit->color( Brand_Kit::SLOT_BRAND ) ?? '#1a6dcc';
+		throw new Invalid_Block_Attribute( 'color', 'must be a hexadecimal colour or a known colour preset.' );
 	}
 
 	/**
@@ -341,17 +341,21 @@ final class Renderer_Support {
 	 */
 	public static function missing_destination_diagnostics( string $code_prefix, string $destination ): array {
 		$diagnostics = array(
-			'article'         => array( $code_prefix . '.url_missing', 'A snapshot HTTPS article URL is required.' ),
-			'postParent'      => array( $code_prefix . '.post_parent_url_missing', 'The post parent HTTPS URL is required in the snapshot.' ),
-			'postTypeArchive' => array( $code_prefix . '.post_type_archive_url_missing', 'The post type archive HTTPS URL is required in the snapshot.' ),
-			'custom'          => array( $code_prefix . '.custom_url_invalid', 'The custom destination must be an absolute HTTPS URL.' ),
+			'article'         => array( $code_prefix . '.url_missing', 'A snapshot HTTP or HTTPS article URL is required.' ),
+			'postParent'      => array( $code_prefix . '.post_parent_url_missing', 'The post parent HTTP or HTTPS URL is required in the snapshot.' ),
+			'postTypeArchive' => array( $code_prefix . '.post_type_archive_url_missing', 'The post type archive HTTP or HTTPS URL is required in the snapshot.' ),
+			'custom'          => array( $code_prefix . '.custom_url_invalid', 'The custom destination must be an absolute HTTP or HTTPS URL.' ),
 		);
 
 		return $diagnostics[ $destination ] ?? $diagnostics['article'];
 	}
 
 	/**
-	 * Return an absolute HTTPS URL or null.
+	 * Return an absolute HTTP or HTTPS URL or null.
+	 *
+	 * Accepts either scheme so previews and sends work on HTTP development
+	 * sites as well as HTTPS production sites, while still rejecting relative
+	 * and non-HTTP(S) schemes (javascript:, data:, mailto:, …).
 	 *
 	 * @param mixed $value Candidate URL.
 	 */
@@ -362,7 +366,7 @@ final class Renderer_Support {
 
 		$scheme = parse_url( $value, PHP_URL_SCHEME ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Renderer normalization is intentionally WordPress-independent.
 
-		return 'https' === strtolower( is_string( $scheme ) ? $scheme : '' ) ? $value : null;
+		return in_array( strtolower( is_string( $scheme ) ? $scheme : '' ), array( 'http', 'https' ), true ) ? $value : null;
 	}
 
 	/**

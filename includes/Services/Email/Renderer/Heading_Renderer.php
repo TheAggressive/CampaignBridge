@@ -41,7 +41,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'content', 'level', 'align', 'textColor', 'style' );
+		return array( 'content', 'level', 'align', 'textColor', 'style', 'fontSize' );
 	}
 
 	/**
@@ -50,7 +50,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(
@@ -134,7 +134,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 		$font_size = null;
 		if ( isset( $style_tree['typography']['fontSize'] ) ) {
-			$font_size = Style_Resolver::font_size( $wrapper, null, 16, 48 );
+			$font_size = Style_Resolver::font_size( $wrapper, null, 10, 72 );
 		}
 		if ( null === $font_size ) {
 			$font_size = self::SIZE_BY_LEVEL[ $attributes['level'] ] ?? 24;

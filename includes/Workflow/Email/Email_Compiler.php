@@ -266,6 +266,42 @@ final class Email_Compiler {
 
 		try {
 			$block = $renderer->normalize( $block );
+
+
+			$diagnostics = array_merge( $diagnostics, $renderer->validate( $block, $context ) );
+			if ( $this->has_errors( $diagnostics ) ) {
+				return array(
+					'html'   => '',
+					'text'   => '',
+					'assets' => array(),
+				);
+			}
+
+			$child_context = $renderer->context_for_children( $block, $context );
+			$html          = '';
+			$text          = '';
+			$assets        = $renderer->referenced_assets( $block, $context );
+
+			foreach ( $block->children() as $child ) {
+				$fragment = $this->render_node( $child, $child_context, $diagnostics );
+				$html    .= $fragment['html'];
+				$text    .= $fragment['text'];
+				$assets   = array_merge( $assets, $fragment['assets'] );
+			}
+
+			if ( $this->has_errors( $diagnostics ) ) {
+				return array(
+					'html'   => '',
+					'text'   => '',
+					'assets' => array(),
+				);
+			}
+
+			return array(
+				'html'   => $renderer->render_html( $block, $html, $context ),
+				'text'   => $renderer->render_text( $block, $text, $context ),
+				'assets' => $assets,
+			);
 		} catch ( Invalid_Block_Attribute $exception ) {
 			$diagnostics[] = Compile_Diagnostic::error(
 				'block.attribute.invalid',
@@ -279,49 +315,14 @@ final class Email_Compiler {
 				'assets' => array(),
 			);
 		}
-
-		$diagnostics = array_merge( $diagnostics, $renderer->validate( $block, $context ) );
-		if ( $this->has_errors( $diagnostics ) ) {
-			return array(
-				'html'   => '',
-				'text'   => '',
-				'assets' => array(),
-			);
-		}
-
-		$child_context = $renderer->context_for_children( $block, $context );
-		$html          = '';
-		$text          = '';
-		$assets        = $renderer->referenced_assets( $block, $context );
-
-		foreach ( $block->children() as $child ) {
-			$fragment = $this->render_node( $child, $child_context, $diagnostics );
-			$html    .= $fragment['html'];
-			$text    .= $fragment['text'];
-			$assets   = array_merge( $assets, $fragment['assets'] );
-		}
-
-		if ( $this->has_errors( $diagnostics ) ) {
-			return array(
-				'html'   => '',
-				'text'   => '',
-				'assets' => array(),
-			);
-		}
-
-		return array(
-			'html'   => $renderer->render_html( $block, $html, $context ),
-			'text'   => $renderer->render_text( $block, $text, $context ),
-			'assets' => $assets,
-		);
 	}
 
 	/**
-	 * Fold a selected native block style into a semantic style attribute.
+	 * Fold a selected native block style into a semantic variant attribute.
 	 *
 	 * Block styles persist as `is-style-{slug}` classes inside `className`.
 	 * Renderers that opt in via `block_style_names()` receive the first
-	 * selected slug as their `style` attribute while `className` is dropped,
+	 * selected slug as their `variant` attribute while `className` is dropped,
 	 * so whitelist validation only ever sees semantic names. Blocks without
 	 * an opted-in slug are returned unchanged and fail the whitelist check
 	 * exactly as before.
@@ -357,7 +358,7 @@ final class Email_Compiler {
 		}
 
 		unset( $attributes['className'] );
-		$attributes['style'] = $style;
+		$attributes['variant'] = $style;
 
 		return $block->with_attributes( $attributes );
 	}

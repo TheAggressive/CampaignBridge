@@ -12,6 +12,7 @@ namespace CampaignBridge\Services\Email\Renderer;
 use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -60,11 +61,11 @@ final class Section_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(
-				'padding'         => Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ),
+				'padding'         => Style_Resolver::spacing( $attributes, 'padding', Renderer_Support::spacing_attribute( $attributes, 'padding', self::DEFAULT_PADDING ) ),
 				'backgroundColor' => Renderer_Support::string_attribute( $attributes, 'backgroundColor', '' ),
 				'style'           => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 			)
@@ -87,7 +88,7 @@ final class Section_Renderer extends Abstract_Renderer {
 			? '#ffffff'
 			: Renderer_Support::resolve_color( $raw, $kit );
 
-		return sprintf(
+		$html = sprintf(
 			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse;background-color:%1$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',
 			$background,
 			$padding['top'],
@@ -96,6 +97,20 @@ final class Section_Renderer extends Abstract_Renderer {
 			$padding['left'],
 			$children
 		);
+		if ( isset( $attributes['style']['spacing']['margin'] ) ) {
+			$margin = Style_Resolver::spacing(
+				$attributes,
+				'margin',
+				array(
+					'top'    => 0,
+					'right'  => 0,
+					'bottom' => 0,
+					'left'   => 0,
+				)
+			);
+			return sprintf( '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:%dpx %dpx %dpx %dpx">%s</td></tr></table>', $margin['top'], $margin['right'], $margin['bottom'], $margin['left'], $html );
+		}
+		return $html;
 	}
 
 	/**

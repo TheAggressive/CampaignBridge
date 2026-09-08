@@ -25,8 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * share of the row, read from the binding the parent supplies.
  */
 final class Column_Renderer extends Abstract_Renderer {
-	private const MIN_WIDTH = 20;
-	private const MAX_WIDTH = 80;
+	private const MIN_WIDTH = 1;
+	private const MAX_WIDTH = 100;
 
 	/** {@inheritDoc} */
 	public function block_name(): string {
@@ -35,7 +35,7 @@ final class Column_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'width', 'backgroundColor' );
+		return array( 'width', 'backgroundColor', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -65,10 +65,11 @@ final class Column_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(
+				'style'           => $attributes['style'],
 				'width'           => array_key_exists( 'width', $attributes )
 					? Renderer_Support::integer_attribute( $attributes, 'width', 50, self::MIN_WIDTH, self::MAX_WIDTH )
 					: null,
@@ -92,17 +93,29 @@ final class Column_Renderer extends Abstract_Renderer {
 		$binding    = $context->binding( 'columns' ) ?? array();
 		$count      = max( 1, (int) ( $binding['count'] ?? 1 ) );
 		$align      = (string) ( $binding['verticalAlign'] ?? 'top' );
-		$width      = $attributes['width'] ?? intdiv( 100, $count );
+		$width      = $binding['widths'][ $block->path() ] ?? ( $attributes['width'] ?? 100 / $count );
 
-		$background = null === $attributes['backgroundColor']
-			? ''
-			: sprintf( ';background-color:%s', Renderer_Support::resolve_color( $attributes['backgroundColor'], Renderer_Support::brand_kit( $context ) ) );
+		$spacing = '';
+		if ( $count > 1 && ( $binding['gap'] ?? 0 ) > 0 ) {
+			$gap     = (int) $binding['gap'];
+			$left    = $block->path() === ( $binding['firstPath'] ?? '' ) ? 0 : $gap - intdiv( $gap, 2 );
+			$right   = $block->path() === ( $binding['lastPath'] ?? '' ) ? 0 : intdiv( $gap, 2 );
+			$spacing = ( $left ? ';padding-left:' . $left . 'px' : '' ) . ( $right ? ';padding-right:' . $right . 'px' : '' );
+		}
+		$width = rtrim( rtrim( number_format( (float) $width, 4, '.', '' ), '0' ), '.' );
+		if ( null !== $attributes['backgroundColor'] ) {
+			$children = sprintf(
+				'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse;background-color:%1$s"><tr><td>%2$s</td></tr></table>',
+				Renderer_Support::resolve_color( $attributes['backgroundColor'], Renderer_Support::brand_kit( $context ) ),
+				$children
+			);
+		}
 
 		return sprintf(
-			'<td class="cb-col" valign="%1$s" width="%2$d%%" style="width:%2$d%%;vertical-align:%1$s%3$s">%4$s</td>',
+			'<td class="cb-col" valign="%1$s" width="%2$s%%" style="width:%2$s%%;vertical-align:%1$s;overflow-wrap:break-word%3$s">%4$s</td>',
 			$align,
 			$width,
-			$background,
+			$spacing,
 			$children
 		);
 	}

@@ -11,8 +11,14 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "color": { "link": true },
-    "align": true
+    "color": {
+      "background": false,
+      "text": false,
+      "link": true,
+      "gradients": false
+    },
+    "align": ["left", "center", "right"],
+    "customClassName": false
   },
   "attributes": {
     "label": {
@@ -27,10 +33,6 @@
     "customUrl": {
       "type": "string",
       "default": ""
-    },
-    "linkColor": {
-      "type": "string",
-      "default": "#111111"
     },
     "align": {
       "type": "string",

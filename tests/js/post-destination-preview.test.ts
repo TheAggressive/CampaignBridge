@@ -97,11 +97,11 @@ describe('resolveDestinationPreview', () => {
 
       expect(result.previewUrl).toBe('');
       expect(result.destinationHelp).toBe(
-        'Enter a custom HTTPS URL to preview it.'
+        'Enter a custom absolute URL to preview it.'
       );
     });
 
-    it('uses the no-HTTPS-URL message for non-custom destinations', () => {
+    it('uses the no-absolute-URL message for non-custom destinations', () => {
       const result = resolveDestinationPreview({
         destination: 'article',
         customUrl: '',
@@ -112,7 +112,7 @@ describe('resolveDestinationPreview', () => {
 
       expect(result.previewUrl).toBe('');
       expect(result.destinationHelp).toBe(
-        'This post snapshot has no HTTPS URL yet; the link renders from the post data at send time.'
+        'This post snapshot has no absolute URL yet; the link renders from the post data at send time.'
       );
     });
 
@@ -124,13 +124,13 @@ describe('resolveDestinationPreview', () => {
         postParentUrl: '',
         postTypeArchiveUrl: '',
         helpMessages: {
-          customUrlRequired: 'Enter a custom HTTPS URL to preview it.',
+          customUrlRequired: 'Enter a custom absolute URL to preview it.',
         },
       });
 
       expect(result.previewUrl).toBe('');
       expect(result.destinationHelp).toBe(
-        'Enter a custom HTTPS URL to preview it.'
+        'Enter a custom absolute URL to preview it.'
       );
     });
   });
@@ -143,11 +143,26 @@ describe('resolveDestinationPreview', () => {
       expect(normalizeDestination('postParent')).toBe('postParent');
     });
 
-    it('isHttpsUrl only accepts HTTPS URLs', () => {
+    it('isHttpsUrl only accepts absolute HTTP or HTTPS URLs', () => {
       expect(isHttpsUrl('https://example.com')).toBe(true);
-      expect(isHttpsUrl('http://example.com')).toBe(false);
+      expect(isHttpsUrl('http://example.com')).toBe(true);
+      expect(isHttpsUrl('HTTP://EXAMPLE.COM/path?q=1')).toBe(true);
+      expect(isHttpsUrl('http://localhost:8882/posts/7')).toBe(true);
+
+      // Dangerous and non-HTTP(S) schemes must be rejected.
       expect(isHttpsUrl('javascript:void(0)')).toBe(false);
+      expect(isHttpsUrl('JavaScript:alert(1)')).toBe(false);
+      expect(isHttpsUrl('data:text/html,<script>alert(1)</script>')).toBe(
+        false
+      );
+      expect(isHttpsUrl('vbscript:msgbox(1)')).toBe(false);
+      expect(isHttpsUrl('mailto:example@example.com')).toBe(false);
+
+      // Relative, protocol-relative, and malformed values must be rejected.
       expect(isHttpsUrl('not-a-url')).toBe(false);
+      expect(isHttpsUrl('example.com/a')).toBe(false);
+      expect(isHttpsUrl('//example.com/a')).toBe(false);
+      expect(isHttpsUrl('/relative/path')).toBe(false);
       expect(isHttpsUrl('')).toBe(false);
     });
   });

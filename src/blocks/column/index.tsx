@@ -1,3 +1,4 @@
+import '../shared/native-styles';
 import { InnerBlocks } from '@wordpress/block-editor';
 import type { BlockConfiguration } from '@wordpress/blocks';
 import { getBlockType, registerBlockType } from '@wordpress/blocks';

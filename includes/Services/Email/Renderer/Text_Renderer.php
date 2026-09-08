@@ -29,7 +29,7 @@ final class Text_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'content', 'align', 'textColor', 'fontSize', 'style' );
+		return array( 'content', 'align', 'textColor', 'fontSize', 'style', 'backgroundColor' );
 	}
 
 	/**
@@ -38,14 +38,14 @@ final class Text_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$attributes = $block->attributes();
+		$attributes = Native_Style_Support::attributes( $block );
 
 		return $block->with_attributes(
 			array(
 				'content'   => Renderer_Support::string_attribute( $attributes, 'content', '' ),
 				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
 				'textColor' => Renderer_Support::string_attribute( $attributes, 'textColor', '#333333' ),
-				'fontSize'  => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 12, 24 ),
+				'fontSize'  => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 10, 72 ),
 				'style'     => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 			)
 		);
@@ -124,12 +124,24 @@ final class Text_Renderer extends Abstract_Renderer {
 		$kit        = $context->metadata( 'brandKit' );
 		$kit        = $kit instanceof Brand_Kit ? $kit : Brand_Kit::defaults();
 
-		$style = 'margin:0 0 16px;font-family:Arial,sans-serif';
+		$margin = Style_Resolver::spacing(
+			$wrapper,
+			'margin',
+			array(
+				'top'    => 0,
+				'right'  => 0,
+				'bottom' => 16,
+				'left'   => 0,
+			)
+		);
+		$style  = isset( $style_tree['spacing']['margin'] )
+			? sprintf( 'margin:%dpx %dpx %dpx %dpx;font-family:Arial,sans-serif', $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] )
+			: 'margin:0 0 16px;font-family:Arial,sans-serif';
 
 		// Font size: design-system shape first, then the legacy number attr.
 		$font_size = null;
 		if ( isset( $style_tree['typography']['fontSize'] ) ) {
-			$font_size = Style_Resolver::font_size( $wrapper, null, 12, 24 );
+			$font_size = Style_Resolver::font_size( $wrapper, null, 10, 72 );
 		}
 		if ( null === $font_size ) {
 			$font_size = (int) $attributes['fontSize'];
@@ -166,7 +178,7 @@ final class Text_Renderer extends Abstract_Renderer {
 		);
 		if ( $this->has_spacing( $padding ) ) {
 			$style .= sprintf(
-				';padding:%s %s %s %s',
+				';padding:%dpx %dpx %dpx %dpx',
 				$padding['top'],
 				$padding['right'],
 				$padding['bottom'],

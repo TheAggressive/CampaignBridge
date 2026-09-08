@@ -18,7 +18,7 @@ export default function Edit({
   context = {},
 }: EmailBlockEditProps<PostExcerptAttributes>): JSX.Element {
   const maxWords = Number(attributes.maxWords) || DEFAULT_EXCERPT_MAX_WORDS;
-  const { align = 'left', textColor = '#333333', fontSize = 16 } = attributes;
+  const { align = 'left' } = attributes;
   const postId = Number(context['campaignbridge:postId']) || 0;
   const postType = context['campaignbridge:postType'] || 'post';
   const excerpt = useExcerptPreview({
@@ -32,8 +32,6 @@ export default function Edit({
       {...useBlockProps({
         style: {
           textAlign: align,
-          color: textColor,
-          fontSize: `${fontSize}px`,
         },
       })}
     >

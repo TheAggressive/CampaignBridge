@@ -35,7 +35,8 @@ export function normalizeDestination(value: unknown): Destination {
 
 export function isHttpsUrl(value: string): boolean {
   try {
-    return new URL(value).protocol === 'https:';
+    const protocol = new URL(value).protocol;
+    return protocol === 'https:' || protocol === 'http:';
   } catch {
     return false;
   }
@@ -62,7 +63,7 @@ export function resolveDestinationPreview(args: {
   postTypeArchiveUrl: string;
   helpMessages?: {
     customUrlRequired?: string;
-    noHttpsUrlYet?: string;
+    noAbsoluteUrlYet?: string;
   };
 }): DestinationPreview {
   const {
@@ -95,9 +96,9 @@ export function resolveDestinationPreview(args: {
   const destinationHelp =
     destination === 'custom'
       ? (helpMessages?.customUrlRequired ??
-        'Enter a custom HTTPS URL to preview it.')
-      : (helpMessages?.noHttpsUrlYet ??
-        'This post snapshot has no HTTPS URL yet; the link renders from the post data at send time.');
+        'Enter a custom absolute URL to preview it.')
+      : (helpMessages?.noAbsoluteUrlYet ??
+        'This post snapshot has no absolute URL yet; the link renders from the post data at send time.');
 
   return { previewUrl, destinationHelp };
 }

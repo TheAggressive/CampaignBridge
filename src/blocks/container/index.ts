@@ -1,3 +1,4 @@
+import '../shared/native-styles';
 /**
  * CampaignBridge Container Block
  *
