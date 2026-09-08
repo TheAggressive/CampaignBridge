@@ -260,55 +260,6 @@ class Validation_Manager {
 		return true;
 	}
 
-	/**
-	 * Validate legacy field (for Tab_Field_Validator compatibility)
-	 *
-	 * @param string               $field_name Field name.
-	 * @param mixed                $value      Field value.
-	 * @param array<string, mixed> $config     Field configuration.
-	 * @return array<string, mixed> Validation result with 'valid' and 'errors'.
-	 */
-	public function validate_legacy_field( string $field_name, $value, array $config ): array {
-		$errors   = array();
-		$is_valid = true;
-
-		// Basic required validation.
-		if ( isset( $config['required'] ) && $config['required'] && $this->is_empty_value( $value ) ) {
-			$errors[] = sprintf( '%s is required.', $field_name );
-			$is_valid = false;
-		}
-
-		// Type-specific validation.
-		$type = $config['type'] ?? 'text';
-
-		switch ( $type ) {
-			case 'email':
-				if ( ! is_email( $value ) ) {
-					$errors[] = Validation_Messages::get( 'invalid_email' );
-					$is_valid = false;
-				}
-				break;
-
-			case 'url':
-				if ( ! filter_var( $value, FILTER_VALIDATE_URL ) ) {
-					$errors[] = Validation_Messages::get( 'invalid_url' );
-					$is_valid = false;
-				}
-				break;
-
-			case 'number':
-				if ( ! is_numeric( $value ) ) {
-					$errors[] = Validation_Messages::get( 'invalid_number' );
-					$is_valid = false;
-				}
-				break;
-		}
-
-		return array(
-			'valid'  => $is_valid,
-			'errors' => $errors,
-		);
-	}
 
 	/**
 	 * Check if a value is considered empty

@@ -402,13 +402,6 @@ export class FormLoadingManager {
   }
 }
 
-/**
- * Legacy function for backward compatibility
- */
-export function initFormLoading(config: FormLoadingConfig): void {
-  FormLoadingManager.getInstance(config);
-}
-
 // Auto-initialize if config is available on window
 declare global {
   interface Window {

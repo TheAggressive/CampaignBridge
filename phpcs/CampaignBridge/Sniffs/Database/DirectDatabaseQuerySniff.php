@@ -163,7 +163,6 @@ class DirectDatabaseQuerySniff implements Sniff {
 	 */
 	private function is_within_allowed_class( File $phpcs_file, int $stack_ptr ): bool {
 		$allowed_classes = array(
-			'Performance_Optimizer', // Allowed for cleanup operations.
 		);
 
 		foreach ( $allowed_classes as $class_name ) {

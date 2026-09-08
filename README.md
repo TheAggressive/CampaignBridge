@@ -153,7 +153,6 @@ campaignbridge/
 │   │   ├── Pages/               # Admin page classes
 │   │   └── Asset_Manager.php     # Asset management
 │   ├── Core/                    # Core functionality
-│   │   ├── Service_Container.php # Dependency injection
 │   ├── Post_Types/               # Custom post type classes
 │   │   └── Post_Type_Email_Template.php    # Email template management
 │   ├── Providers/               # Email service providers
@@ -189,28 +188,9 @@ The plugin leverages official WordPress packages for consistent behavior:
 
 ### Key Classes and Components
 
-#### Service Container Pattern
-
-The plugin uses a service container for dependency injection:
-
-```php
-$container = new Service_Container();
-$container->initialize();
-$mailchimp = $container->get('mailchimp_provider');
-```
-
-#### Provider Interface
-
-All email service providers implement a common interface:
-
-```php
-interface ProviderInterface {
-    public function slug(): string;
-    public function label(): string;
-    public function send_campaign(array $blocks, array $settings);
-    // ... other methods
-}
-```
+`CampaignBridge\Plugin` initializes core systems, admin hooks, and REST
+controllers explicitly. See [Architecture](docs/architecture.md) for the
+composition root and provider boundary.
 
 #### REST API Architecture
 

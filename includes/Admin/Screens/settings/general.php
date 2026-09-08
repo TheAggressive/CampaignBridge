@@ -1,8 +1,7 @@
 <?php
 /**
- * General Settings Tab - Form System Demo
+ * General email settings.
  *
- * Demonstrates the modern fluent API for form creation
  * Auto-discovered as part of Settings screen
  * Controller: Settings_Controller (auto-discovered)
  *
@@ -25,6 +24,7 @@ $form = Form::make( 'general_settings' )
 		->end()
 
 	->email( 'from_email', 'From Email' )
+		->validation( 'email', true )
 		->default( \CampaignBridge\Core\Storage::get_option( 'admin_email' ) )
 		->required()
 		->description( 'The email address that appears in the "From" field.' )
@@ -33,6 +33,7 @@ $form = Form::make( 'general_settings' )
 		->end()
 
 	->email( 'reply_to', 'Reply-To Email' )
+		->validation( 'email', true )
 		->default( \CampaignBridge\Core\Storage::get_option( 'admin_email' ) )
 		->description( 'Optional. Email address where replies should be sent.' )
 		->class( 'regular-text' )

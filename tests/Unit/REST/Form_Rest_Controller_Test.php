@@ -10,7 +10,6 @@ namespace CampaignBridge\Tests\Unit\REST;
 use CampaignBridge\Admin\REST\Form_Rest_Controller;
 use CampaignBridge\Admin\Core\Form_Registry;
 use CampaignBridge\Admin\Core\Forms\Form_Config;
-use CampaignBridge\Admin\Core\Forms\Form_Container;
 use WP_REST_Request;
 use WP_Error;
 
@@ -22,12 +21,6 @@ class Form_Rest_Controller_Test extends \WP_UnitTestCase {
 	 */
 	private Form_Rest_Controller $controller;
 
-	/**
-	 * Form container mock.
-	 *
-	 * @var Form_Container|\PHPUnit\Framework\MockObject\MockObject
-	 */
-	private $container_mock;
 
 	/**
 	 * Test admin user ID for cleanup
@@ -47,7 +40,6 @@ class Form_Rest_Controller_Test extends \WP_UnitTestCase {
 		wp_set_current_user( $this->test_admin_user_id );
 
 		// Create mock container
-		$this->container_mock = $this->createMock( Form_Container::class );
 		$this->controller     = new Form_Rest_Controller();
 	}
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin Bootstrap - NEW System
+ * Admin screen registration.
  *
  * @package CampaignBridge\Admin
  */

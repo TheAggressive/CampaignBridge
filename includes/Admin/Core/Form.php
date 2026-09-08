@@ -1,43 +1,30 @@
 <?php
 /**
- * Form - The Most Developer Friendly Form API
- *
- * A fluent, intuitive API for creating forms with minimal code.
- * Makes form building as easy as writing sentences.
+ * Admin settings form composition and submission.
  *
  * @package CampaignBridge\Admin\Core
  */
 
+declare(strict_types=1);
+
 namespace CampaignBridge\Admin\Core;
 
-use CampaignBridge\Admin\Core\Form_Asset_Methods;
 use CampaignBridge\Admin\Core\Form_Builder;
 use CampaignBridge\Admin\Core\Form_Config_Methods;
 use CampaignBridge\Admin\Core\Form_Field_Methods;
-use CampaignBridge\Admin\Core\Form_Hook_Methods;
-use CampaignBridge\Admin\Core\Form_Layout_Methods;
-use CampaignBridge\Admin\Core\Form_Performance_Methods;
 use CampaignBridge\Admin\Core\Form_Registry;
 use CampaignBridge\Admin\Core\Forms\Form_Config;
-use CampaignBridge\Admin\Core\Forms\Form_Container;
-use CampaignBridge\Admin\Core\Forms\Form_Cache;
-use CampaignBridge\Admin\Core\Forms\Form_Query_Optimizer;
-use CampaignBridge\Admin\Core\Forms\Form_Asset_Optimizer;
 use CampaignBridge\Admin\Core\Forms\Form_Security;
 use CampaignBridge\Admin\Core\Forms\Form_Conditional_Manager;
 
 /**
- * Form Facade - The most developer friendly form API
+ * Forms shared by the settings and post type screens.
  *
  * @package CampaignBridge\Admin\Core
  */
 class Form {
 	use Form_Field_Methods;
-	use Form_Layout_Methods;
 	use Form_Config_Methods;
-	use Form_Hook_Methods;
-	use Form_Asset_Methods;
-	use Form_Performance_Methods;
 
 	/**
 	 * Form configuration
@@ -54,40 +41,11 @@ class Form {
 	private Form_Builder $builder;
 
 	/**
-	 * Dependency injection container
-	 *
-	 * @var Form_Container
-	 */
-	private Form_Container $container;
-
-	/**
-	 * Form cache for performance optimization
-	 *
-	 * @var Form_Cache
-	 */
-	private Form_Cache $cache;
-
-	/**
 	 * Track rendered fields for validation
 	 *
 	 * @var array<string>
 	 */
 	protected array $rendered_fields = array();
-
-
-	/**
-	 * Query optimizer for database performance
-	 *
-	 * @var Form_Query_Optimizer
-	 */
-	private Form_Query_Optimizer $query_optimizer;
-
-	/**
-	 * Asset optimizer for loading performance
-	 *
-	 * @var Form_Asset_Optimizer
-	 */
-	private Form_Asset_Optimizer $asset_optimizer;
 
 	/**
 	 * Security handler for form validation and protection
@@ -95,6 +53,13 @@ class Form {
 	 * @var Form_Security
 	 */
 	private Form_Security $security;
+
+	/**
+	 * Per-form validation, shared with submission and rendering.
+	 *
+	 * @var Forms\Form_Validator
+	 */
+	private Forms\Form_Validator $validator;
 
 	/**
 	 * Whether the form has been initialized
@@ -140,29 +105,12 @@ class Form {
 	 *
 	 * @param string               $form_id   Form ID.
 	 * @param array<string, mixed> $config    Initial config.
-	 * @param Form_Container       $container Dependency injection container.
 	 */
-	private function __construct( string $form_id, array $config = array(), ?Form_Container $container = null ) {
-		$this->container = $container ?? new Form_Container();
-
-		// Initialize configuration.
+	private function __construct( string $form_id, array $config = array() ) {
 		$this->config = new Form_Config( $config );
 		$this->config->set( 'form_id', $form_id );
-
-		// Initialize form builder.
 		$this->builder = new Form_Builder( $this->config, $this );
-
-		// Initialize cache for performance optimization.
-		$this->cache = $this->container->create_form_cache();
-
-		// Initialize query optimizer for database performance.
-		$this->query_optimizer = $this->container->create_query_optimizer();
-
-		// Initialize asset optimizer for loading performance.
-		$this->asset_optimizer = $this->container->create_asset_optimizer();
-
-		// Services will be initialized lazily to capture all fields.
-		// DO NOT call initialize_services() here - fields are added after construction!
+		// Initialize submission services after callers have declared the fields.
 	}
 
 	/**
@@ -189,12 +137,12 @@ class Form {
 		assert( null !== $this->data_manager, 'Data manager must be initialized' );
 		assert( null !== $this->handler, 'Handler must be initialized' );
 
-		$this->renderer = $this->container->create_form_renderer(
-			$this,
-			$this->config,
+		$this->renderer = new Forms\Form_Renderer(
+			$this->config->all(),
 			$this->config->get_fields(),
 			$this->data_manager->get_data(),
-			$this->handler
+			$this->security,
+			$this->validator
 		);
 	}
 
@@ -205,32 +153,23 @@ class Form {
 		$form_id = $this->config->get( 'form_id' );
 		$fields  = $this->config->get_fields();
 
-		// Get security instance configured for this form.
-		$this->security = $this->container->get( 'form_security' );
-		$this->security->set_form_id( $form_id );
-
-		// Get validator instance.
-		$validator = $this->container->get( 'form_validator' );
-
-		// Create configured services.
-		$this->data_manager = $this->container->create_form_data_manager(
-			$this,
-			$this->config,
-			$fields
-		);
-
-		$this->handler = $this->container->create_form_handler(
+		$this->security     = new Form_Security( $form_id );
+		$this->validator    = new Forms\Form_Validator();
+		$this->data_manager = new Forms\Form_Data_Manager( $this, $this->config->all(), $fields );
+		$this->handler      = new Forms\Form_Handler(
 			$this,
 			$this->config,
 			$fields,
-			$validator
+			$this->security,
+			$this->validator,
+			new Forms\Form_Notice_Handler()
 		);
 
 		// Set up conditional manager if form has conditional fields.
 		if ( $this->has_conditional_fields() ) {
-			$conditional_manager = $this->container->create_form_conditional_manager( $fields );
+			$conditional_manager = new Form_Conditional_Manager( $fields );
 			$this->handler->set_conditional_manager( $conditional_manager );
-			$validator->set_conditional_manager( $conditional_manager );
+			$this->validator->set_conditional_manager( $conditional_manager );
 		}
 
 		// Validate form configuration for potential issues.
@@ -248,7 +187,7 @@ class Form {
 			$hooks = $this->config->get( 'hooks', array() );
 			if ( ! isset( $hooks['save_data'] ) || ! is_callable( $hooks['save_data'] ) ) {
 				// Get notice handler and show warning.
-				$notice_handler = $this->container->get( 'form_notice_handler' );
+				$notice_handler = new Forms\Form_Notice_Handler();
 				$form_id        = $this->config->get( 'form_id', 'form' );
 
 				$notice_handler->trigger_warning(
@@ -434,16 +373,6 @@ class Form {
 	}
 
 	/**
-	 * Auto-detect optimal layout based on context
-	 *
-	 * @return self
-	 */
-	public function auto_layout(): self {
-		$this->builder->auto_layout();
-		return $this;
-	}
-
-	/**
 	 * Set error message
 	 *
 	 * @param string $message Error message.
@@ -552,15 +481,6 @@ class Form {
 	}
 
 	/**
-	 * Get the form cache instance for performance optimization.
-	 *
-	 * @return Form_Cache Form cache instance.
-	 */
-	public function get_cache(): Form_Cache {
-		return $this->cache;
-	}
-
-	/**
 	 * Get the form configuration (for debugging/testing purposes).
 	 *
 	 * @return Form_Config The form configuration.
@@ -600,41 +520,6 @@ class Form {
 	}
 
 	/**
-	 * Cache the current form configuration.
-	 *
-	 * @param int $expiry Cache expiry time in seconds (default: 1 hour).
-	 * @return bool True on success, false on failure.
-	 */
-	public function cache_config( int $expiry = HOUR_IN_SECONDS ): bool {
-		$form_id          = $this->config->get( 'form_id' );
-		$config_cache_key = "config_{$form_id}";
-
-		return $this->cache->set_form_config( $config_cache_key, $this->config->all(), $expiry );
-	}
-
-	/**
-	 * Cache the current form fields.
-	 *
-	 * @return bool True on success, false on failure.
-	 */
-	public function cache_fields(): bool {
-		$form_id = $this->config->get( 'form_id' );
-		$fields  = $this->config->get_fields();
-
-		return $this->cache->set_form_fields( $form_id, $fields );
-	}
-
-	/**
-	 * Clear all cache entries for this form.
-	 *
-	 * @return void
-	 */
-	public function clear_cache(): void {
-		$form_id = $this->config->get( 'form_id' );
-		$this->cache->invalidate_form_cache( $form_id );
-	}
-
-	/**
 	 * Enable security headers for this form.
 	 *
 	 * Adds comprehensive security headers including CSP, HSTS, and other protections
@@ -651,6 +536,56 @@ class Form {
 			}
 		);
 
+		return $this;
+	}
+	/**
+	 * Set table layout
+	 *
+	 * @return static
+	 */
+	public function table(): self {
+		$this->builder->table();
+		return $this;
+	}
+	/**
+	 * Set the form description.
+	 *
+	 * @param string $description Form description.
+	 * @return static
+	 */
+	public function description( string $description ): self {
+		$this->builder->description( $description );
+		return $this;
+	}
+	/**
+	 * Add a generic lifecycle hook
+	 *
+	 * @param string   $hook     Hook name.
+	 * @param callable $callback Hook callback.
+	 * @return static
+	 */
+	public function on( string $hook, callable $callback ): self {
+		$this->builder->on( $hook, $callback );
+		return $this;
+	}
+	/**
+	 * Add on success hook
+	 *
+	 * @param callable $callback Hook callback.
+	 * @return static
+	 */
+	public function on_success( callable $callback ): self {
+		$this->builder->on_success( $callback );
+		return $this;
+	}
+	/**
+	 * Add on error hook
+	 *
+	 * @param callable $callback Hook callback.
+	 * @return static
+	 */
+	public function on_error( callable $callback ): self {
+		$this->builder->on_error( $callback );
 		return $this;
 	}
 }
