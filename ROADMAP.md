@@ -40,15 +40,15 @@ them:
 CampaignBridge has a substantial engineering foundation, but it is not yet a
 complete campaign-management product.
 
-| Area               | Present today                                                                                                                             | Material gap                                                                                                                                        |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Template authoring | `core-data`-backed standalone editor, autosave, shared undo history, template metadata, constrained CampaignBridge email-block library    | Draft/publish/revision/duplication workflow, compiled iframe preview, test delivery, and browser E2E coverage                                        |
-| Email generation   | Email-native grammar, O(1) renderer registry, deterministic HTML/plain-text compiler, immutable snapshot contract, artifact fingerprinting | Snapshot creation/approval workflow, compliance blocks and validation, compiled-preview API, and representative email-client regression fixtures   |
-| Providers          | Provider interface, Mailchimp adapter, HTML export adapter, encrypted credential foundation                                               | The interface reduces delivery to `send_campaign`; there is no complete connection, audience, draft, test, schedule, status, or reporting lifecycle |
-| Campaigns          | README-level product concept                                                                                                              | No campaign domain model, persistence, state machine, content snapshot, operator workflow, or audit timeline                                        |
-| Admin              | File-based screens, secure form system, settings, post-type selection, status page                                                        | Demo/test screens remain, some status values are mocked, and provider settings are not yet one canonical connection model                           |
-| API                | Posts, post types, editor settings, and encrypted-field routes                                                                            | No provider discovery, campaign, compiled-preview, delivery, reconciliation, or reporting API                                                       |
-| Operations         | Hardened CI, signed commits, package verification, security controls, runbook, broad PHP test suites                                      | No durable job runner, delivery locks, webhook ingestion, reconciliation monitor, comprehensive browser E2E, or production metrics                  |
+| Area               | Present today                                                                                                                              | Material gap                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Template authoring | `core-data`-backed standalone editor, autosave, shared undo history, template metadata, constrained CampaignBridge email-block library     | Draft/publish/revision/duplication workflow, compiled iframe preview, test delivery, and browser E2E coverage                                       |
+| Email generation   | Email-native grammar, O(1) renderer registry, deterministic HTML/plain-text compiler, immutable snapshot contract, artifact fingerprinting | Snapshot creation/approval workflow, compliance blocks and validation, compiled-preview API, and representative email-client regression fixtures    |
+| Providers          | Provider interface, Mailchimp adapter, HTML export adapter, encrypted credential foundation                                                | The interface reduces delivery to `send_campaign`; there is no complete connection, audience, draft, test, schedule, status, or reporting lifecycle |
+| Campaigns          | README-level product concept                                                                                                               | No campaign domain model, persistence, state machine, content snapshot, operator workflow, or audit timeline                                        |
+| Admin              | File-based screens, secure form system, settings, post-type selection, status page                                                         | Demo/test screens remain, some status values are mocked, and provider settings are not yet one canonical connection model                           |
+| API                | Posts, post types, editor settings, and encrypted-field routes                                                                             | No provider discovery, campaign, compiled-preview, delivery, reconciliation, or reporting API                                                       |
+| Operations         | Hardened CI, signed commits, package verification, security controls, runbook, broad PHP test suites                                       | No durable job runner, delivery locks, webhook ingestion, reconciliation monitor, comprehensive browser E2E, or production metrics                  |
 
 The README describes several target-state capabilities as though they are
 already complete. Milestone 0 makes documentation and visible UI match shipped
@@ -113,6 +113,9 @@ Deliverables:
   creating campaigns, approving/sending campaigns, and viewing reports.
 - Define repository ports, provider DTOs, normalized error categories, campaign
   states, schema versioning, and migration/rollback rules.
+- Record consequential architecture and product decisions as short decision
+  records, including the supported extension points and compatibility promises
+  for blocks, providers, repositories, and workflow hooks.
 - Add architectural tests that prevent delivery code from bypassing workflow
   services or persistence ports.
 
@@ -141,8 +144,16 @@ Deliverables:
   create an immutable content snapshot for review.
 - Keep critical styles renderer-owned; if authored style sheets are introduced,
   select a maintained public inliner and deterministic sanitization pipeline.
+- Collect, validate, deduplicate, and deterministically order referenced assets,
+  including approved web fonts and their email-safe fallback stacks; reject
+  assets that cannot be represented safely in the selected target profile.
 - Enforce required sender, physical-address, unsubscribe, view-online, alt-text,
   and preheader rules before approval.
+- Add preflight diagnostics for empty or invalid links, unresolved
+  personalization/merge tokens, missing image dimensions, inaccessible images,
+  generated-message size and clipping risk, and target-profile compatibility.
+  Diagnostics must use stable codes and distinguish blocking errors from
+  actionable warnings.
 - Add desktop/mobile preview, generated-HTML inspection, and secure HTML download.
 - Add golden HTML fixtures, snapshot tests, URL normalization tests, and
   representative Outlook/Gmail/Apple Mail compatibility fixtures.
@@ -198,6 +209,9 @@ Deliverables:
   schedule, explicit send, and safe cancellation where Mailchimp permits it.
 - Normalize authentication, validation, rate-limit, transient, conflict, and
   uncertain-result failures.
+- Define per-operation connection and response timeouts, cancellation behavior,
+  and retry budgets; retries must honor provider guidance such as `Retry-After`
+  and remain disabled for mutations that are not proven idempotent.
 - Poll/reconcile remote state and prevent duplicate sends after timeouts.
 - Add provider contract tests and recorded/sandbox integration tests with secrets
   isolated from pull-request workflows.
@@ -301,6 +315,12 @@ Deliverables:
   queue latency, and provider synchronization.
 - Complete administrator, operator, developer, API, privacy, troubleshooting,
   backup/restore, and disaster-recovery documentation.
+- Document stable extension contracts with tested examples for providers,
+  compiler blocks, repositories, and workflow events; keep internal services
+  private until a compatibility commitment is intentional.
+- Test activation, deactivation, uninstall, and retention-policy behavior on
+  single-site and multisite installations, including preservation by default
+  and explicit destructive cleanup only after administrator confirmation.
 - Publish a support matrix for WordPress, PHP, MySQL/MariaDB, browsers, providers,
   and multisite behavior.
 - Run a release-candidate pilot with real operators and a non-production provider
