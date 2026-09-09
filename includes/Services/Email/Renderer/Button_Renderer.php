@@ -101,6 +101,8 @@ final class Button_Renderer extends Abstract_Renderer {
 			$text = $background;
 		}
 
+		$font_family = Renderer_Support::resolve_font( $attributes, $this->brand_kit( $context ), 'button' )['family'];
+
 		return Button_Markup::html(
 			$attributes['url'],
 			$attributes['label'],
@@ -108,8 +110,29 @@ final class Button_Renderer extends Abstract_Renderer {
 			$text,
 			$attributes['align'],
 			200,
-			$variant
+			$variant,
+			$font_family
 		);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$font = Renderer_Support::resolve_font( $block->attributes(), $this->brand_kit( $context ), 'button' );
+
+		return 'web' === $font['type'] && null !== $font['url']
+			? array(
+				array(
+					'type' => 'font',
+					'slug' => $font['slug'],
+					'url'  => $font['url'],
+				),
+			)
+			: array();
 	}
 
 	/**

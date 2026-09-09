@@ -86,8 +86,8 @@ class Admin_Security_Manager {
 		}
 
 		return array(
-			// Content Security Policy to limit script and form origins.
-			"Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; form-action 'self';",
+			// Content Security Policy to limit script, style, font, and worker origins.
+			"Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; worker-src 'self' blob:; form-action 'self';",
 			// Prevent clickjacking.
 			'X-Frame-Options: SAMEORIGIN',
 			// Legacy XSS filter for older clients.

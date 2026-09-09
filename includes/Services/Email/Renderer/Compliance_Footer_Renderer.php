@@ -138,8 +138,10 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 			Renderer_Support::html( (string) $attributes['unsubscribeLabel'] )
 		);
 
+		$font_family = Renderer_Support::resolve_font( $attributes, Renderer_Support::brand_kit( $context ) )['family'];
+
 		return sprintf(
-			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse"><tr><td align="%7$s" style="padding:%1$dpx %2$dpx %3$dpx %4$dpx;color:%5$s;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;text-align:%7$s">%6$s</td></tr></table>',
+			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse"><tr><td align="%7$s" style="padding:%1$dpx %2$dpx %3$dpx %4$dpx;color:%5$s;font-family:' . $font_family . ';font-size:12px;line-height:18px;text-align:%7$s">%6$s</td></tr></table>',
 			$padding['top'],
 			$padding['right'],
 			$padding['bottom'],
@@ -148,6 +150,27 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 			implode( '<br>', $lines ),
 			$attributes['align']
 		);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$kit  = Renderer_Support::brand_kit( $context );
+		$font = Renderer_Support::resolve_font( $block->attributes(), $kit );
+
+		return 'web' === $font['type'] && null !== $font['url']
+			? array(
+				array(
+					'type' => 'font',
+					'slug' => $font['slug'],
+					'url'  => $font['url'],
+				),
+			)
+			: array();
 	}
 
 	/**

@@ -12,6 +12,7 @@
 
 namespace CampaignBridge\Admin\Controllers;
 
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Theme_Brand_Mapper;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Theme_Style_Reader;
@@ -395,9 +396,18 @@ class Settings_Controller {
 			wp_die( esc_html__( 'You do not have permission to update the brand kit.', 'campaignbridge' ) );
 		}
 
-		$kit    = Theme_Brand_Mapper::from_theme( ( new Theme_Style_Reader() )->extract() );
-		$saved  = ( new Brand_Kit_Repository() )->save( $kit );
-		$result = $saved ? array( 'imported' => 'theme' ) : array( 'brand_error' => 'import' );
+		$repository = new Brand_Kit_Repository();
+		$current    = $repository->get();
+		$imported   = Theme_Brand_Mapper::from_theme( ( new Theme_Style_Reader() )->extract() );
+		$kit        = Brand_Kit::from_colors(
+			$imported->to_array()['colors'],
+			Brand_Kit::SOURCE_THEME,
+			$imported->theme_fingerprint(),
+			$current->fonts(),
+			$current->custom_font()
+		);
+		$saved      = $repository->save( $kit );
+		$result     = $saved ? array( 'imported' => 'theme' ) : array( 'brand_error' => 'import' );
 
 		wp_safe_redirect(
 			add_query_arg(

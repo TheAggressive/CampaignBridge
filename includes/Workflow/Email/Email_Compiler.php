@@ -88,8 +88,9 @@ final class Email_Compiler {
 			return $this->failure( $diagnostics );
 		}
 
-		$html = $this->document_renderer->render( $fragment['html'], $context );
-		$text = trim( $fragment['text'] ) . "\n";
+		$context = $this->with_font_assets( $context, $fragment['assets'] );
+		$html    = $this->document_renderer->render( $fragment['html'], $context );
+		$text    = trim( $fragment['text'] ) . "\n";
 
 		$fingerprint = $this->fingerprinter->fingerprint(
 			array(
@@ -315,6 +316,52 @@ final class Email_Compiler {
 				'assets' => array(),
 			);
 		}
+	}
+
+	/**
+	 * Collect the distinct web fonts referenced across a compile.
+	 *
+	 * Renderers register a `type => 'font'` asset for each web font they emit.
+	 * Several blocks can reference the same family, so dedupe by slug before
+	 * the document shell is rendered. System fonts carry no `url` and are
+	 * dropped here; their inline fallback stack stays on every element.
+	 *
+	 * @param Render_Context                   $context Source context.
+	 * @param array<int, array<string, mixed>> $assets  Merged renderer assets.
+	 * @return Render_Context Context carrying the `font_assets` metadata.
+	 */
+	private function with_font_assets( Render_Context $context, array $assets ): Render_Context {
+		$fonts   = array();
+		$by_slug = array();
+
+		foreach ( $assets as $asset ) {
+			if ( ! is_array( $asset ) || ( $asset['type'] ?? null ) !== 'font' ) {
+				continue;
+			}
+
+			$slug = $asset['slug'] ?? null;
+			$url  = $asset['url'] ?? null;
+
+			if ( ! is_string( $slug ) || '' === $slug || ! is_string( $url ) || '' === $url ) {
+				continue;
+			}
+
+			if ( isset( $by_slug[ $slug ] ) ) {
+				continue;
+			}
+
+			$by_slug[ $slug ] = array(
+				'slug' => $slug,
+				'url'  => $url,
+			);
+			$fonts[]          = $by_slug[ $slug ];
+		}
+
+		if ( array() === $fonts ) {
+			return $context;
+		}
+
+		return $context->with_metadata( 'font_assets', $fonts );
 	}
 
 	/**

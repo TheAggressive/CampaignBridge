@@ -18,6 +18,9 @@
       "text": true,
       "gradients": false
     },
+    "typography": {
+      "fontFamily": true
+    },
     "customClassName": false
   },
   "attributes": {

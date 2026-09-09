@@ -361,39 +361,4 @@ class Storage_Test extends WP_UnitTestCase {
 		}
 	}
 
-	/**
-	 * Test cache operations
-	 */
-	public function test_cache_operations(): void {
-		$key   = 'cache_test';
-		$value = 'cached_value';
-		$group = 'test_group';
-
-		// Store in cache
-		$result = Storage::set_cache( $key, $value, $group, 3600 );
-		$this->assertTrue( $result );
-
-		// Retrieve from cache
-		$retrieved = Storage::get_cache( $key, $group );
-		$this->assertEquals( $value, $retrieved );
-
-		// Delete from cache
-		$result = Storage::delete_cache( $key, $group );
-		$this->assertTrue( $result );
-
-		// Verify deletion
-		$this->assertFalse( Storage::get_cache( $key, $group ) );
-	}
-
-	/**
-	 * Test cache with default values
-	 */
-	public function test_cache_defaults(): void {
-		$key     = 'nonexistent_cache';
-		$group   = 'test_group';
-		$default = 'default_value';
-
-		$result = Storage::get_cache( $key, $group, $default );
-		$this->assertEquals( $default, $result );
-	}
 }

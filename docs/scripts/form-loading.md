@@ -76,18 +76,6 @@ loadingManager.resetLoading();
 loadingManager.destroy();
 ```
 
-### Legacy Function (Backward Compatibility)
-
-```typescript
-import { initFormLoading } from './form-loading';
-
-// Legacy function still works
-initFormLoading({
-  formId: 'legacy-form',
-  loadingText: 'Processing...'
-});
-```
-
 ### Auto-Initialization
 
 The system automatically initializes if configuration is provided on the window object:
@@ -231,35 +219,6 @@ The system automatically finds submit buttons using multiple selectors:
 - **Event Delegation**: Minimal event listeners
 - **Timeout Management**: Efficient timeout handling
 - **Memory Cleanup**: Prevents memory leaks in long-running apps
-
-## Migration from Legacy Version
-
-### Before (Legacy)
-```typescript
-initFormLoading({
-  formId: 'my-form',
-  loadingText: 'Loading...',
-  submitText: 'Submit'
-});
-// No cleanup, basic functionality
-```
-
-### After (New)
-```typescript
-const loadingManager = new FormLoadingManager({
-  formId: 'my-form',
-  loadingText: 'Loading...',
-  submitText: 'Submit',
-  timeout: 30000,
-  enableAccessibility: true
-});
-
-// Programmatic control
-loadingManager.startLoading();
-
-// Proper cleanup
-loadingManager.destroy();
-```
 
 ## Testing
 

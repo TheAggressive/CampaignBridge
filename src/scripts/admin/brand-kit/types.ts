@@ -7,9 +7,26 @@ export interface BrandSlot {
   color: string;
 }
 
+export interface FontOption {
+  slug: string;
+  name: string;
+  type: 'system' | 'web';
+  family: string;
+  url: string | null;
+}
+
 export interface BrandKitPayload {
   source: BrandKitSource;
   slots: BrandSlot[];
+  fonts: Record<string, string>;
+  fontOptions: FontOption[];
+  fontSlots: Record<string, string>;
+}
+
+export interface GoogleFontResult {
+  family: string;
+  category: string;
+  variants: string[];
 }
 
 export interface BrandKitI18n {
@@ -25,6 +42,19 @@ export interface BrandKitI18n {
   sourceTheme: string;
   sourceCustom: string;
   sourceDefaults: string;
+  typography: string;
+  fontSave: string;
+  fontSaved: string;
+  fontSaveFailed: string;
+  fontFamily: string;
+  fontChange: string;
+  fontLookup: string;
+  fontLookupHelp: string;
+  fontSearch: string;
+  fontSearchButton: string;
+  fontSearchEmpty: string;
+  fontAdd: string;
+  fontAdded: string;
 }
 
 export interface BrandKitConfig {

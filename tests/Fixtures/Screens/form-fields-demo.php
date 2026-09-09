@@ -24,7 +24,7 @@ use CampaignBridge\Admin\Core\Form;
 	<div class="campaignbridge-form-container">
 		<?php
 		$form = Form::make( 'form_fields_demo' )
-			->auto_layout() // Layout for admin screens.
+			->div()
 			->save_to_options() // Uses default: campaignbridge_form_fields_demo_.
 			->success() // Auto-generated: "Configuration saved successfully!".
 			->submit(); // Auto-generated: "Save Configuration".

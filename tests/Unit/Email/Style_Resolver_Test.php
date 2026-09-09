@@ -231,4 +231,21 @@ final class Style_Resolver_Test extends TestCase {
 			self::assertGreaterThan( 0, $spacing['top'], $preset['slug'] );
 		}
 	}
+
+	public function test_semantic_font_slots_resolve_independently(): void {
+		$kit = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array(
+				'heading' => 'georgia',
+				'body'    => 'arial',
+				'button'  => 'verdana',
+			)
+		);
+
+		self::assertSame( 'georgia', Style_Resolver::resolve_font( array(), $kit, 'heading' )['slug'] );
+		self::assertSame( 'arial', Style_Resolver::resolve_font( array(), $kit, 'body' )['slug'] );
+		self::assertSame( 'verdana', Style_Resolver::resolve_font( array(), $kit, 'button' )['slug'] );
+	}
 }

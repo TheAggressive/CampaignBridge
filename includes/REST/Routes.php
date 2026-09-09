@@ -62,13 +62,9 @@ class Routes extends Abstract_Rest_Controller {
 	/**
 	 * Initialize shared state.
 	 *
-	 * @param string               $option_name Options key used by the plugin.
-	 * @param array<string, mixed> $_providers  Registered providers map (reserved for future use).
 	 * @return void
 	 */
-	public static function init( string $option_name, array $_providers ): void {
-		// $_providers parameter accepted for future extensibility but not currently used.
-
+	public static function init(): void {
 		self::$editor_settings_routes = new Editor_Settings_Routes();
 		self::$preview_routes         = new Preview_Routes();
 		self::$form_controller        = new Form_Rest_Controller();
@@ -96,8 +92,6 @@ class Routes extends Abstract_Rest_Controller {
 
 		// Register encrypted field routes.
 		self::register_encrypted_field_routes();
-
-		// Mapping slots endpoint removed (block-based workflow).
 
 		// Register editor settings routes.
 		self::$editor_settings_routes->register();

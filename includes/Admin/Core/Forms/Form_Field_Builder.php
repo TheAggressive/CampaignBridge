@@ -10,8 +10,6 @@ namespace CampaignBridge\Admin\Core\Forms;
 use CampaignBridge\Admin\Core\Form_Builder;
 use CampaignBridge\Admin\Core\Form_Config_Methods;
 use CampaignBridge\Admin\Core\Form_Field_Methods;
-use CampaignBridge\Admin\Core\Form_Hook_Methods;
-use CampaignBridge\Admin\Core\Form_Layout_Methods;
 
 /**
  * Form Field Builder - Fluent API for field configuration
@@ -21,8 +19,6 @@ use CampaignBridge\Admin\Core\Form_Layout_Methods;
 class Form_Field_Builder {
 	use Form_Field_Methods;
 	use Form_Config_Methods;
-	use Form_Hook_Methods;
-	use Form_Layout_Methods;
 
 	/**
 	 * Parent form builder instance

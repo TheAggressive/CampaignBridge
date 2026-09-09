@@ -12,6 +12,7 @@ namespace CampaignBridge\Services\Email\Renderer;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -211,6 +212,23 @@ final class Renderer_Support {
 		$kit = $context->metadata( 'brandKit' );
 
 		return $kit instanceof Brand_Kit ? $kit : Brand_Kit::defaults();
+	}
+
+	/**
+	 * Resolve the font a block should render with.
+	 *
+	 * Delegates to Style_Resolver so the compiler has a single resolution
+	 * path: native preset reference, a bare known slug, then the active brand
+	 * kit slot, then the safe default. Unknown slugs and custom stacks degrade
+	 * to a safe face rather than failing the block.
+	 *
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param Brand_Kit            $kit        Active brand kit, for the slot default.
+	 * @param string               $slot       Semantic typography slot.
+	 * @return array<string, mixed>
+	 */
+	public static function resolve_font( array $attributes, Brand_Kit $kit, string $slot = 'body' ): array {
+		return Style_Resolver::resolve_font( $attributes, $kit, $slot );
 	}
 
 	/**
