@@ -64,7 +64,7 @@ class Admin_Form_Screens_Test extends Test_Case {
 	}
 
 	public function test_provider_screen_encrypts_credentials(): void {
-		$key = 'test-fake-key-0000000000000000-us20';
+		$key = 'mailchimp-test-fixture-us20';
 		$_POST = array(
 			'providers' => array( 'form_id' => 'providers', 'provider' => 'mailchimp', 'mailchimp_api_key' => $key, 'mailchimp_audience' => 'audience' ),
 			'providers_wpnonce' => wp_create_nonce( 'campaignbridge_form_providers' ),
