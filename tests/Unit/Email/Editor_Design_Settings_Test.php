@@ -60,6 +60,22 @@ final class Editor_Design_Settings_Test extends TestCase {
 		self::assertStringContainsString( '--wp--preset--spacing--20:8px', $css );
 	}
 
+	public function test_custom_brand_font_is_available_to_individual_blocks(): void {
+		$custom = array(
+			'name'    => 'Example Sans',
+			'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+			'weights' => array( 400, 700 ),
+			'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+		);
+		$kit = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'heading' => 'custom' ), $custom );
+
+		$settings = Editor_Design_Settings::apply( array(), $kit );
+		$fonts    = $settings['__experimentalFeatures']['typography']['fontFamilies']['theme'];
+
+		self::assertContains( Brand_Kit::CUSTOM_FONT_SLUG, array_column( $fonts, 'slug' ) );
+		self::assertStringContainsString( '--wp--preset--font-family--custom:Example Sans,Arial,Helvetica,sans-serif', $settings['styles'][0]['css'] );
+	}
+
 	/**
 	 * @param array<int, array{slug: string, color: string}> $palette Editor palette.
 	 */

@@ -47,6 +47,10 @@ export interface BrandKitI18n {
   fontSaved: string;
   fontSaveFailed: string;
   fontFamily: string;
+  preview: string;
+  headingUse: string;
+  bodyUse: string;
+  buttonUse: string;
   fontChange: string;
   fontLookup: string;
   fontLookupHelp: string;

@@ -1,29 +1,30 @@
 # CampaignBridge
 
-A comprehensive WordPress plugin for creating and managing professional email campaigns with dynamic content integration. Features Mailchimp API integration, custom email templates with block-based design, automated campaign generation, and seamless WordPress post type management.
+CampaignBridge is a WordPress email-template editor and deterministic email
+compiler under active development. It turns a constrained Gutenberg block
+grammar into portable HTML and plain text with explicit validation diagnostics.
 
 > **Product status:** CampaignBridge is under active development. Its secure
-> WordPress foundation, template editor, email-generation components, and
-> provider adapters are present; the complete campaign, delivery, scheduling,
+> WordPress foundation, template editor, compiler, and early provider adapters
+> are present; the complete campaign, audience, delivery, scheduling,
 > reconciliation, and reporting workflows are roadmap work. See
 > [ROADMAP.md](ROADMAP.md) for the current product contract and delivery plan.
 
-## ✨ Features
+## Shipped today
 
 ### 🎨 Email Template System
 
-- **Block-Based Email Design**: Create beautiful email templates using WordPress block editor
+- **Email-native block editor**: Author templates with a bounded Gutenberg block library
 - **Custom Post Type**: Dedicated `cb_templates` post type for template management
 - **Template Categories**: Organize templates by purpose (newsletter, promotional, welcome, etc.)
-- **Responsive Design**: Email-safe HTML generation with CSS inlining
+- **Compiled preview**: Preview canonical email HTML with visible compiler diagnostics
+- **Deterministic output**: Generate validated HTML and plain text with email-safe fallback styles
 
-### 📧 Email Service Provider Integration
+### Provider foundation
 
-- **Mailchimp API Integration**: Full integration with Mailchimp's powerful email platform
-- **Campaign Management**: Create and update campaigns directly from WordPress
-- **Audience Management**: Sync and manage Mailchimp audiences
-- **Template Mapping**: Map WordPress content to Mailchimp email templates
-- **Automated Campaign Generation**: Create campaigns from WordPress content automatically
+- **Provider contracts**: Mailchimp and HTML-export adapters establish the integration boundary
+- **Connection verification**: Credentials can be stored securely and checked explicitly
+- **Not yet shipped**: Audience synchronization, campaign drafts, tests, scheduling, sending, reconciliation, and reporting
 
 ### 🔧 Advanced Form System (Trait-Based Architecture)
 
@@ -40,7 +41,7 @@ A comprehensive WordPress plugin for creating and managing professional email ca
 
 - **Service Container**: Dependency injection for clean code organization
 - **Provider Interface**: Extensible architecture for multiple email providers
-- **REST API**: Complete REST API for all plugin operations
+- **REST endpoints**: Focused routes for the template editor, preview, settings, and current integrations
 - **Admin Interface**: Professional WordPress admin integration
 
 ### 🔒 Enterprise Security & Compliance
@@ -54,12 +55,12 @@ A comprehensive WordPress plugin for creating and managing professional email ca
 - **Security Logging**: Centralized, redacted diagnostic logging for security-relevant failures
 - **File Security**: MIME validation, size limits, and suspicious-content signature checks for uploads
 
-### 📊 Advanced Features & Performance
+### Quality and operations
 
-- **Rate Limiting**: Intelligent API rate limiting with exponential backoff
+- **Rate Limiting**: Bounded request controls on sensitive REST operations
 - **Error Handling**: Comprehensive error handling with user-friendly feedback and admin logging
 - **Debug Logging**: Structured debug-mode logging with performance metrics
-- **Performance Optimization**: Critical resource preloading, lazy loading, and intelligent caching
+- **Performance checks**: Query/request budgets and focused caching
 - **Automatic Validation**: PHPCS/PHPStan integration with custom security rules
 - **Trait-Based Extension**: Zero-configuration API extension with automatic type safety
 
@@ -93,54 +94,20 @@ CampaignBridge targets current evergreen Chrome, Firefox, Safari, and Edge relea
 3. Activate through **Plugins > Installed Plugins**
 4. Navigate to **CampaignBridge > Settings**
 
-## ⚙️ Configuration
-
-### Initial Setup
-
-1. Go to **CampaignBridge > Settings** in your admin menu
-2. Configure your email service provider (Mailchimp)
-3. Enter your API credentials
-4. Select your audience/list
-5. Save your configuration
-
-### Post Type Configuration
-
-1. Navigate to **CampaignBridge > Post Types**
-2. Select which post types should be available for campaigns
-3. Configure content inclusion rules
-4. Save your configuration
-
-### Template Setup
+## Current workflow
 
 1. Go to **CampaignBridge > Email Templates**
 2. Create new templates using the block editor
-3. Configure template settings (width, category, status)
-4. Preview and publish templates
+3. Configure the email Brand Kit and template metadata
+4. Compile and inspect the preview before publishing the template
 
-## 📖 Usage
+## Roadmap
 
-### Creating Email Campaigns
-
-1. **Select Content**: Choose posts from configured post types
-2. **Choose Template**: Select from available email templates
-3. **Configure Campaign**: Set campaign parameters and audience
-4. **Send Campaign**: Send immediately or schedule for later
-
-### Managing Templates
-
-1. **Template Editor**: Use WordPress block editor for design
-2. **Template Categories**: Organize templates by purpose
-3. **Template Preview**: Live preview of email appearance
-4. **Template Settings**: Configure width, category, and status
-
-### API Usage
-
-All plugin functionality is available via REST API:
-
-- `GET /wp-json/campaignbridge/v1/mailchimp/audiences`
-- `GET /wp-json/campaignbridge/v1/mailchimp/templates`
-- `POST /wp-json/campaignbridge/v1/mailchimp/verify`
-- Plus many more endpoints for full functionality
+The end-to-end product target is provider connection, content selection,
+review/approval, provider draft creation, test delivery, scheduling/sending,
+and reconciliation/reporting. Those workflows are deliberately tracked as
+roadmap work and should not be inferred from the current provider adapters.
+See [ROADMAP.md](ROADMAP.md) for milestone gates and the authoritative scope.
 
 ## 🏗️ Technical Architecture
 
@@ -194,7 +161,7 @@ composition root and provider boundary.
 
 #### REST API Architecture
 
-Complete REST API for all operations:
+Current REST endpoints share these safeguards:
 
 - Rate limiting protection
 - Permission-based access control
@@ -432,4 +399,4 @@ For issues and feature requests:
 
 ---
 
-**CampaignBridge** - Professional Email Campaign Management for WordPress
+**CampaignBridge** — email-native WordPress template authoring and compilation.

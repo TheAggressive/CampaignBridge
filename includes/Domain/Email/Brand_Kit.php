@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * without a colour.
  */
 final class Brand_Kit {
-	public const VERSION = 1;
+	public const VERSION = 2;
 
 	public const SOURCE_DEFAULTS = 'defaults';
 	public const SOURCE_CUSTOM   = 'custom';
@@ -113,6 +113,11 @@ final class Brand_Kit {
 	 * @throws \InvalidArgumentException When an explicit colour is not portable.
 	 */
 	public static function from_array( array $data ): self {
+		$version = isset( $data['version'] ) && is_int( $data['version'] ) ? $data['version'] : 1;
+		if ( $version < 1 || $version > self::VERSION ) {
+			throw new \InvalidArgumentException( 'Brand kit version is not supported.' );
+		}
+
 		$source = isset( $data['source'] ) && is_string( $data['source'] )
 			? $data['source']
 			: self::SOURCE_CUSTOM;
@@ -357,13 +362,13 @@ final class Brand_Kit {
 	 * when it is missing or unusable.
 	 *
 	 * A custom font is the kit's resolved Google Font: a family name, a set of
-	 * weights, and the @font-face CSS captured at save time. Tolerant on read —
-	 * malformed input is dropped rather than raised, so a corrupted kit degrades
-	 * to the catalogue defaults instead of breaking render.
+	 * weights, a stable CSS2 URL, and an email-safe fallback stack. Tolerant on
+	 * read — malformed input is dropped rather than raised, so a corrupted kit
+	 * degrades to the catalogue defaults instead of breaking render.
 	 *
 	 * @param mixed $raw Raw custom-font data.
 	 *
-	 * @return array{slug: string, name: string, family: string, weights: array<int, int>, url: string, css: string}|null
+	 * @return array{slug: string, name: string, family: string, weights: array<int, int>, url: string}|null
 	 */
 	private static function normalize_custom_font( $raw ): ?array {
 		if ( ! is_array( $raw ) ) {
@@ -403,8 +408,7 @@ final class Brand_Kit {
 		$weights = array_values( array_unique( $weights ) );
 
 		$url = is_string( $raw['url'] ?? null ) ? $raw['url'] : '';
-		$css = is_string( $raw['css'] ?? null ) ? trim( $raw['css'] ) : '';
-		if ( ! self::is_safe_custom_font_url( $url ) || ! self::is_safe_custom_font_css( $css ) ) {
+		if ( ! self::is_safe_custom_font_url( $url ) ) {
 			return null;
 		}
 
@@ -414,7 +418,6 @@ final class Brand_Kit {
 			'family'  => $family,
 			'weights' => $weights,
 			'url'     => $url,
-			'css'     => $css,
 		);
 	}
 
@@ -424,32 +427,10 @@ final class Brand_Kit {
 	 * @param string $url Stylesheet URL.
 	 */
 	private static function is_safe_custom_font_url( string $url ): bool {
-		return 'https' === wp_parse_url( $url, PHP_URL_SCHEME )
-			&& 'fonts.googleapis.com' === wp_parse_url( $url, PHP_URL_HOST )
-			&& '/css2' === wp_parse_url( $url, PHP_URL_PATH );
-	}
-
-	/**
-	 * Reject persisted CSS unless every asset is a Google-hosted WOFF2 face.
-	 *
-	 * @param string $css Font-face stylesheet.
-	 */
-	private static function is_safe_custom_font_css( string $css ): bool {
-		if ( '' === $css || strlen( $css ) > 200000 || str_contains( strtolower( $css ), '</style' ) || ! str_contains( $css, '@font-face' ) ) {
-			return false;
-		}
-		if ( ! preg_match_all( '/url\(([^)]+)\)/i', $css, $matches ) ) {
-			return false;
-		}
-		foreach ( $matches[1] as $raw_url ) {
-			$url = trim( (string) $raw_url, " \t\n\r\0\x0B\"'" );
-			if ( 'https' !== wp_parse_url( $url, PHP_URL_SCHEME )
-				|| 'fonts.gstatic.com' !== wp_parse_url( $url, PHP_URL_HOST )
-				|| ! str_ends_with( (string) wp_parse_url( $url, PHP_URL_PATH ), '.woff2' ) ) {
-				return false;
-			}
-		}
-
-		return true;
+		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Domain code must remain independent of WordPress functions.
+		return 'https' === parse_url( $url, PHP_URL_SCHEME )
+			&& 'fonts.googleapis.com' === parse_url( $url, PHP_URL_HOST )
+			&& '/css2' === parse_url( $url, PHP_URL_PATH );
+		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url
 	}
 }

@@ -20,7 +20,7 @@ export async function saveBrandFonts(
   fonts: Record<string, string>
 ): Promise<BrandKitPayload> {
   return apiFetch({
-    url: restUrl,
+    url: `${restUrl}/fonts`,
     method: 'PUT',
     data: {
       fonts,
@@ -44,7 +44,7 @@ export async function addGoogleFont(
   fonts: Record<string, string>
 ): Promise<BrandKitPayload> {
   return apiFetch({
-    url: restUrl,
+    url: `${restUrl}/fonts`,
     method: 'PUT',
     data: { fonts, customFontFamily: family },
   });

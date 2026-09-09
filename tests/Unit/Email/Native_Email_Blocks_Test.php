@@ -464,7 +464,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 		self::assertStringContainsString( 'color:#ff0000', $result->html() );
 	}
 
-	public function test_inlines_font_face_css_when_brand_kit_uses_web_font(): void {
+	public function test_links_stable_stylesheet_when_brand_kit_uses_web_font(): void {
 		$kit = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'body' => 'inter' ) );
 
 		$document = $this->document();
@@ -474,9 +474,8 @@ final class Native_Email_Blocks_Test extends TestCase {
 		$result = Compiler_Factory::create()->compile( $document, $context );
 
 		self::assertTrue( $result->is_success(), 'Expected compilation with a web font kit.' );
-		self::assertStringContainsString( "@font-face{font-family:'Inter'", $result->html() );
-		self::assertMatchesRegularExpression( '/src:url\(https:\/\/fonts\.gstatic\.com\/.+\.woff2\) format\(\'woff2\'\)/', $result->html() );
-		self::assertStringNotContainsString( '<link rel="stylesheet"', $result->html() );
+		self::assertStringContainsString( '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap">', $result->html() );
+		self::assertStringNotContainsString( 'fonts.gstatic.com', $result->html() );
 		self::assertStringContainsString( '<!--[if !mso]><!-->', $result->html() );
 	}
 

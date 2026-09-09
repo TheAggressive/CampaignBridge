@@ -1,4 +1,6 @@
 import { EMAIL_BLOCK_NESTING } from '../../src/blocks/shared/nesting';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /**
  * Parent/child nesting grammar for every container email block.
@@ -17,6 +19,23 @@ const PARENT_CHILDREN: Record<string, readonly string[]> = {
 };
 
 describe('email block nesting grammar', () => {
+  it('matches every child block parent declaration in block.json', () => {
+    for (const [parent, children] of Object.entries(PARENT_CHILDREN)) {
+      for (const child of children) {
+        const blockName = child.replace('campaignbridge/', '');
+        const metadataPath = path.resolve(
+          __dirname,
+          `../../src/blocks/${blockName}/block.json`
+        );
+        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8')) as {
+          parent?: string[];
+        };
+
+        expect(metadata.parent).toContain(parent);
+      }
+    }
+  });
+
   it('declares a non-empty allowlist for every container block', () => {
     for (const children of Object.values(PARENT_CHILDREN)) {
       expect(children.length).toBeGreaterThan(0);

@@ -35,6 +35,7 @@ final class Editor_Design_Settings {
 		$palette    = $kit->colors();
 		$font_sizes = Design_Presets::font_sizes();
 		$spacing    = Design_Presets::spacing_sizes();
+		$fonts      = self::fonts( $kit );
 
 		$settings['colors']                 = $palette;
 		$settings['fontSizes']              = $font_sizes;
@@ -65,7 +66,7 @@ final class Editor_Design_Settings {
 			'default' => array(),
 		);
 		$typography['fontFamilies']     = array(
-			'theme'   => Design_Presets::fonts(),
+			'theme'   => $fonts,
 			'default' => array(),
 		);
 		$typography['customFontSize']   = true;
@@ -94,7 +95,7 @@ final class Editor_Design_Settings {
 		foreach ( $font_sizes as $preset ) {
 			$declarations[] = sprintf( '--wp--preset--font-size--%s:%s', $preset['slug'], $preset['size'] );
 		}
-		foreach ( Design_Presets::fonts() as $preset ) {
+		foreach ( $fonts as $preset ) {
 			$declarations[] = sprintf( '--wp--preset--font-family--%s:%s', $preset['slug'], $preset['family'] );
 		}
 		$styles             = isset( $settings['styles'] ) && is_array( $settings['styles'] ) ? $settings['styles'] : array();
@@ -120,5 +121,29 @@ final class Editor_Design_Settings {
 		$settings['styles'] = $styles;
 
 		return $settings;
+	}
+
+	/**
+	 * Include the active Brand Kit Google Font in per-block font controls.
+	 *
+	 * @param Brand_Kit $kit Active brand kit.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function fonts( Brand_Kit $kit ): array {
+		$fonts  = Design_Presets::fonts();
+		$custom = $kit->custom_font();
+
+		if ( null !== $custom ) {
+			$fonts[] = array(
+				'slug'    => Brand_Kit::CUSTOM_FONT_SLUG,
+				'name'    => $custom['name'],
+				'family'  => $custom['family'],
+				'type'    => 'web',
+				'weights' => $custom['weights'],
+				'url'     => $custom['url'],
+			);
+		}
+
+		return $fonts;
 	}
 }

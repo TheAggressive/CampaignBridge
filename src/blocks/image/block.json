@@ -8,7 +8,7 @@
   "icon": "format-image",
   "description": "A dimensioned, accessible image with an optional link.",
   "textdomain": "campaignbridge",
-  "parent": ["campaignbridge/section"],
+  "parent": ["campaignbridge/column", "campaignbridge/section"],
   "supports": {
     "html": false,
     "reusable": false,

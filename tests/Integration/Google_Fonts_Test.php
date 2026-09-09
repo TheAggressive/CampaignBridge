@@ -35,7 +35,7 @@ final class Google_Fonts_Test extends Test_Case {
 		return 'secret-test-key';
 	}
 
-	public function test_searches_catalogue_and_snapshots_safe_google_css(): void {
+	public function test_searches_catalogue_and_resolves_a_stable_css2_url(): void {
 		$this->http_filter = static function ( mixed $preempt, array $args, string $url ): mixed {
 			if ( str_starts_with( $url, 'https://www.googleapis.com/webfonts/' ) ) {
 				self::assertStringNotContainsString( 'secret-test-key', $url );
@@ -55,8 +55,7 @@ final class Google_Fonts_Test extends Test_Case {
 				);
 			}
 
-				self::assertStringStartsWith( 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;600', $url );
-				return self::response( "@font-face { font-family: 'Example Sans'; src: url(https://fonts.gstatic.com/s/example/v1/example.woff2) format('woff2'); }" );
+			self::fail( 'Resolving a known family must not fetch or pin the CSS2 response.' );
 		};
 		add_filter(
 			'pre_http_request',
@@ -72,23 +71,7 @@ final class Google_Fonts_Test extends Test_Case {
 		self::assertFalse( is_wp_error( $font ) );
 		self::assertSame( array( 400, 600 ), $font['weights'] ?? null );
 		self::assertSame( 'custom', $font['slug'] ?? null );
-	}
-
-	public function test_rejects_non_google_font_assets(): void {
-		set_transient(
-			self::CACHE_KEY,
-			array(
-				array(
-					'family'   => 'Unsafe Sans',
-					'category' => 'sans-serif',
-					'variants' => array( 'regular' ),
-				),
-			) 
-		);
-		$this->http_filter = static fn(): array => self::response( "@font-face { font-family: 'Unsafe Sans'; src: url(https://evil.example/font.woff2); }" );
-		add_filter( 'pre_http_request', $this->http_filter );
-
-		self::assertWPError( ( new Google_Fonts() )->resolve( 'Unsafe Sans' ) );
+		self::assertSame( 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;600&display=swap', $font['url'] ?? null );
 	}
 
 	/**

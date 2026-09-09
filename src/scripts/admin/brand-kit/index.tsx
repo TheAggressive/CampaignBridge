@@ -120,6 +120,7 @@ interface FontRecord {
   slot: string;
   name: string;
   font: string;
+  description: string;
 }
 
 function FontsSection({
@@ -168,8 +169,14 @@ function FontsSection({
         slot,
         name,
         font: kit.fonts[slot],
+        description:
+          slot === 'heading'
+            ? config.i18n.headingUse
+            : slot === 'button'
+              ? config.i18n.buttonUse
+              : config.i18n.bodyUse,
       })),
-    [kit.fonts, kit.fontSlots]
+    [config.i18n, kit.fonts, kit.fontSlots]
   );
 
   const fields = useMemo<Field<FontRecord>[]>(
@@ -222,7 +229,7 @@ function FontsSection({
       },
       {
         id: 'preview',
-        label: 'Preview',
+        label: config.i18n.preview,
         enableSorting: false,
         enableHiding: false,
         enableGlobalSearch: false,
@@ -234,7 +241,7 @@ function FontsSection({
         id: 'description',
         label: config.i18n.use,
         enableSorting: false,
-        getValue: ({ item }) => item.name,
+        getValue: ({ item }) => item.description,
       },
     ],
     [config.i18n, config.restUrl, onSaved, kit.fonts, kit.fontOptions, saving]

@@ -8,7 +8,7 @@
   "icon": "image-flip-vertical",
   "description": "A bounded vertical spacer rendered with email-safe markup.",
   "textdomain": "campaignbridge",
-  "parent": ["campaignbridge/section"],
+  "parent": ["campaignbridge/column", "campaignbridge/section"],
   "supports": {
     "html": false,
     "reusable": false,
