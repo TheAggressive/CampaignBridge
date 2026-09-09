@@ -93,8 +93,10 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 
 		$font_size = $attributes['fontSize'];
 
+		$font_family = Renderer_Support::resolve_font( $attributes, Renderer_Support::brand_kit( $context ), 'heading' )['family'];
+
 		return sprintf(
-			'<h%1$d align="%2$s" style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:%3$dpx;line-height:1.25%6$s;text-align:%2$s;color:%4$s">%5$s</h%1$d>',
+			'<h%1$d align="%2$s" style="margin:0 0 12px;font-family:' . $font_family . ';font-size:%3$dpx;line-height:1.25%6$s;text-align:%2$s;color:%4$s">%5$s</h%1$d>',
 			$attributes['level'],
 			$attributes['align'],
 			$font_size,
@@ -102,6 +104,27 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 			$title,
 			isset( $attributes['style']['typography']['lineHeight'] ) ? ';line-height:' . Style_Resolver::line_height( $attributes ) : ''
 		);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$kit  = Renderer_Support::brand_kit( $context );
+		$font = Renderer_Support::resolve_font( $block->attributes(), $kit, 'heading' );
+
+		return 'web' === $font['type'] && null !== $font['url']
+			? array(
+				array(
+					'type' => 'font',
+					'slug' => $font['slug'],
+					'url'  => $font['url'],
+				),
+			)
+			: array();
 	}
 
 	/**

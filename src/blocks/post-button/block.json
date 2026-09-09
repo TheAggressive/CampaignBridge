@@ -17,6 +17,9 @@
       "link": true,
       "gradients": false
     },
+    "typography": {
+      "fontFamily": true
+    },
     "align": ["left", "center", "right"],
     "customClassName": false
   },

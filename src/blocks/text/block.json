@@ -24,6 +24,7 @@
     },
     "typography": {
       "fontSize": true,
+      "fontFamily": true,
       "lineHeight": true
     },
     "customClassName": false

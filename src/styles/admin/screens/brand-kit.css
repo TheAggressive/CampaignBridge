@@ -40,6 +40,55 @@
     width: 48px;
   }
 
+  &__font-preview {
+    display: inline-block;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  &__font-select {
+    max-width: 10rem;
+  }
+
+  &__typography {
+    margin-top: 32px;
+
+    h3 {
+      margin: 0 0 12px;
+    }
+  }
+
+  &__font-lookup {
+    max-width: 720px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #dcdcde;
+  }
+
+  &__font-search {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+
+    .components-base-control {
+      flex: 1;
+      margin-bottom: 0;
+    }
+  }
+
+  &__font-results {
+    margin: 16px 0 0;
+
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 0;
+      border-bottom: 1px solid #dcdcde;
+    }
+  }
+
   &__notice {
     margin: 0 0 16px;
   }

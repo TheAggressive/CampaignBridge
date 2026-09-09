@@ -20,6 +20,7 @@
     "customClassName": false,
     "typography": {
       "fontSize": true,
+      "fontFamily": true,
       "lineHeight": true
     }
   },

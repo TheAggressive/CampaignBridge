@@ -59,13 +59,18 @@ final class Editor_Design_Settings {
 		$color['customGradient']   = false;
 		$features['color']         = $color;
 
-		$typography                   = isset( $features['typography'] ) && is_array( $features['typography'] ) ? $features['typography'] : array();
-		$typography['fontSizes']      = array(
+		$typography                     = isset( $features['typography'] ) && is_array( $features['typography'] ) ? $features['typography'] : array();
+		$typography['fontSizes']        = array(
 			'theme'   => $font_sizes,
 			'default' => array(),
 		);
-		$typography['customFontSize'] = true;
-		$features['typography']       = $typography;
+		$typography['fontFamilies']     = array(
+			'theme'   => Design_Presets::fonts(),
+			'default' => array(),
+		);
+		$typography['customFontSize']   = true;
+		$typography['customFontFamily'] = true;
+		$features['typography']         = $typography;
 
 		$spacing_features                        = isset( $features['spacing'] ) && is_array( $features['spacing'] ) ? $features['spacing'] : array();
 		$spacing_features['spacingSizes']        = array(
@@ -88,6 +93,9 @@ final class Editor_Design_Settings {
 		}
 		foreach ( $font_sizes as $preset ) {
 			$declarations[] = sprintf( '--wp--preset--font-size--%s:%s', $preset['slug'], $preset['size'] );
+		}
+		foreach ( Design_Presets::fonts() as $preset ) {
+			$declarations[] = sprintf( '--wp--preset--font-family--%s:%s', $preset['slug'], $preset['family'] );
 		}
 		$styles             = isset( $settings['styles'] ) && is_array( $settings['styles'] ) ? $settings['styles'] : array();
 		$styles[]           = array(

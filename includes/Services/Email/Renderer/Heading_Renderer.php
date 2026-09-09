@@ -116,6 +116,27 @@ final class Heading_Renderer extends Abstract_Renderer {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$kit  = Renderer_Support::brand_kit( $context );
+		$font = Renderer_Support::resolve_font( $block->attributes(), $kit, 'heading' );
+
+		return 'web' === $font['type'] && null !== $font['url']
+			? array(
+				array(
+					'type' => 'font',
+					'slug' => $font['slug'],
+					'url'  => $font['url'],
+				),
+			)
+			: array();
+	}
+
+	/**
 	 * Build the portable inline style string for the heading block.
 	 *
 	 * Resolves the design-system style tree (color, typography) through the
@@ -156,12 +177,8 @@ final class Heading_Renderer extends Abstract_Renderer {
 			$color = Renderer_Support::resolve_color( (string) $attributes['textColor'], $kit );
 		}
 
-		return sprintf(
-			'margin:0 0 16px;font-family:Arial,sans-serif;font-size:%dpx;line-height:%s;text-align:%s;color:%s',
-			$font_size,
-			$line_height,
-			$attributes['align'],
-			$color
-		);
+		$font_family = Renderer_Support::resolve_font( $attributes, $kit, 'heading' )['family'];
+
+		return 'margin:0 0 16px;font-family:' . $font_family . ';font-size:' . (int) $font_size . 'px;line-height:' . (string) $line_height . ';text-align:' . $attributes['align'] . ';color:' . $color;
 	}
 }

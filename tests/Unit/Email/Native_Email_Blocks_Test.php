@@ -464,6 +464,47 @@ final class Native_Email_Blocks_Test extends TestCase {
 		self::assertStringContainsString( 'color:#ff0000', $result->html() );
 	}
 
+	public function test_inlines_font_face_css_when_brand_kit_uses_web_font(): void {
+		$kit = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'body' => 'inter' ) );
+
+		$document = $this->document();
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected compilation with a web font kit.' );
+		self::assertStringContainsString( "@font-face{font-family:'Inter'", $result->html() );
+		self::assertMatchesRegularExpression( '/src:url\(https:\/\/fonts\.gstatic\.com\/.+\.woff2\) format\(\'woff2\'\)/', $result->html() );
+		self::assertStringNotContainsString( '<link rel="stylesheet"', $result->html() );
+		self::assertStringContainsString( '<!--[if !mso]><!-->', $result->html() );
+	}
+
+	public function test_compiles_without_font_link_when_brand_kit_uses_system_font(): void {
+		$kit = Brand_Kit::defaults();
+
+		$document = $this->document();
+
+		$context = $this->context()->with_metadata( 'brandKit', $kit );
+
+		$result = Compiler_Factory::create()->compile( $document, $context );
+
+		self::assertTrue( $result->is_success(), 'Expected compilation with a system font kit.' );
+		self::assertStringNotContainsString( 'fonts.googleapis.com', $result->html() );
+	}
+
+	public function test_native_style_support_accepts_typography_font_family(): void {
+		$reflection = new \ReflectionClass( \CampaignBridge\Services\Email\Renderer\Native_Style_Support::class );
+		$constant   = $reflection->getConstant( 'SUPPORTED' );
+
+		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/text'], 'Text block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/button'], 'Button block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/heading'], 'Heading block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-title'], 'Post title block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-excerpt'], 'Post excerpt block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-button'], 'Post button block should allow typography.fontFamily.' );
+	}
+
 	private function context(): Render_Context {
 		return new Render_Context(
 			array(

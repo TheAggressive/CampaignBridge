@@ -96,16 +96,17 @@ final class Post_Button_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
-		$attributes = $block->attributes();
-		$url        = (string) Renderer_Support::post_destination_url( $attributes, $context );
-		$kit        = Renderer_Support::brand_kit( $context );
+		$attributes  = $block->attributes();
+		$url         = (string) Renderer_Support::post_destination_url( $attributes, $context );
+		$kit         = Renderer_Support::brand_kit( $context );
+		$font_family = Renderer_Support::resolve_font( $attributes, $kit, 'button' )['family'];
 
 		if ( 'link' === $attributes['style'] ) {
 			// A text link sits in the surrounding copy and uses neither the
 			// button fill nor its on-fill text colour.
 			return Native_Style_Support::link_output(
 				sprintf(
-					'<p align="%1$s" style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;text-align:%1$s"><a href="%2$s" style="color:%3$s;text-decoration:underline">%4$s</a></p>',
+					'<p align="%1$s" style="margin:0 0 16px;font-family:' . $font_family . ';font-size:16px;line-height:1.6;text-align:%1$s"><a href="%2$s" style="color:%3$s;text-decoration:underline">%4$s</a></p>',
 					$attributes['align'],
 					Renderer_Support::html( $url ),
 					Renderer_Support::resolve_color( $attributes['linkColor'], $kit ),
@@ -123,11 +124,34 @@ final class Post_Button_Renderer extends Abstract_Renderer {
 				Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit ),
 				Renderer_Support::resolve_color( $attributes['textColor'], $kit ),
 				'left' === $attributes['align'] ? null : $attributes['align'],
-				160
+				160,
+				'primary',
+				$font_family
 			),
 			$block,
 			$context
 		);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$kit  = Renderer_Support::brand_kit( $context );
+		$font = Renderer_Support::resolve_font( $block->attributes(), $kit, 'button' );
+
+		return 'web' === $font['type'] && null !== $font['url']
+			? array(
+				array(
+					'type' => 'font',
+					'slug' => $font['slug'],
+					'url'  => $font['url'],
+				),
+			)
+			: array();
 	}
 
 	/**

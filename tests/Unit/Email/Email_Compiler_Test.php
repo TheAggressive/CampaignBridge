@@ -58,6 +58,32 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertStringContainsString( '<td style="padding:0px 8px 12px 0px">', $result->html() );
 	}
 
+	public function test_inlines_pinned_font_face_css_for_referenced_web_fonts(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['style'] = array(
+			'typography' => array( 'fontFamily' => 'var:preset|font-family|inter' ),
+		);
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( "@font-face{font-family:'Inter'", $result->html() );
+		self::assertMatchesRegularExpression( '/src:url\(https:\/\/fonts\.gstatic\.com\/.+\.woff2\) format\(\'woff2\'\)/', $result->html() );
+		self::assertStringNotContainsString( '<link rel="stylesheet"', $result->html() );
+		self::assertStringNotContainsString( '@font-face', $result->text() );
+	}
+
+	public function test_system_fonts_emit_no_font_face_css_or_stylesheet_links(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['style'] = array(
+			'typography' => array( 'fontFamily' => 'var:preset|font-family|arial' ),
+		);
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringNotContainsString( '@font-face', $result->html() );
+		self::assertStringNotContainsString( '<link rel="stylesheet"', $result->html() );
+	}
+
 	public function test_post_card_rejects_invalid_native_padding(): void {
 		$document                                        = $this->document();
 		$document[0]['innerBlocks'][0]['attrs']['style'] = array( 'spacing' => array( 'padding' => array( 'top' => 'bogus' ) ) );

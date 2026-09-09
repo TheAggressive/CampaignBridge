@@ -71,4 +71,24 @@ final class Brand_Kit_Test extends TestCase {
 
 		self::assertSame( Brand_Kit::SLOTS, $slugs );
 	}
+
+	public function test_custom_google_font_round_trips_without_trusting_arbitrary_css(): void {
+		$custom = array(
+			'name'    => 'Example Sans',
+			'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+			'weights' => array( 700, 400, 700 ),
+			'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+			'css'     => "@font-face{font-family:'Example Sans';src:url(https://fonts.gstatic.com/s/example/v1/example.woff2) format('woff2');}",
+		);
+		$kit    = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'heading' => 'custom' ), $custom );
+
+		self::assertSame( 'custom', $kit->font( 'heading' ) );
+		self::assertSame( array( 400, 700 ), $kit->custom_font()['weights'] ?? null );
+		self::assertSame( $kit->to_array(), Brand_Kit::from_array( $kit->to_array() )->to_array() );
+
+		$custom['css'] = '</style><script>alert(1)</script>';
+		$unsafe        = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'heading' => 'custom' ), $custom );
+		self::assertNull( $unsafe->custom_font() );
+		self::assertSame( 'arial', $unsafe->font( 'heading' ) );
+	}
 }

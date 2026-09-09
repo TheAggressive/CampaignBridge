@@ -53,6 +53,9 @@ final class Admin_Security_Manager_Test extends Test_Case {
 		$this->assertStringContainsString( "default-src 'self'", $policy );
 		$this->assertStringContainsString( "form-action 'self'", $policy );
 		$this->assertStringContainsString( "connect-src 'self'", $policy );
+		$this->assertStringContainsString( "font-src 'self' data: https://fonts.gstatic.com", $policy );
+		$this->assertStringContainsString( "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", $policy );
+		$this->assertStringContainsString( "worker-src 'self' blob:", $policy );
 		$this->assertStringNotContainsString( 'unsafe-eval', $policy );
 	}
 

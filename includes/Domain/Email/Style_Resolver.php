@@ -188,6 +188,65 @@ final class Style_Resolver {
 	}
 
 	/**
+	 * Resolve the font a block should render with.
+	 *
+	 * This is the single resolution path for type: a native
+	 * `var:preset|font-family|<slug>` reference, or a bare known slug, is
+	 * expanded through the authoritative catalogue; anything else (an unknown
+	 * slug, a foreign preset, a literal/custom/theme stack) is ignored and the
+	 * safe default is returned. A block never forces compilation to fail over a
+	 * font it chose, and an arbitrary stack never reaches the email HTML.
+	 *
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param Brand_Kit|null       $kit        Active brand kit, for the slot default.
+	 * @param string               $slot       Semantic typography slot.
+	 * @return array<string, mixed>
+	 */
+	public static function resolve_font( array $attributes, ?Brand_Kit $kit = null, string $slot = 'body' ): array {
+		$kit  = $kit ?? Brand_Kit::defaults();
+		$slot = in_array( $slot, Brand_Kit::FONT_SLOTS, true ) ? $slot : 'body';
+
+		// Native preset attribute first, then the style-tree reference core writes.
+		$candidate = $attributes['fontFamily'] ?? null;
+		if ( null === $candidate || ! is_string( $candidate ) || '' === $candidate ) {
+			$candidate = self::style_value( $attributes, array( 'typography', 'fontFamily' ) );
+		}
+
+		$slug = null;
+		if ( is_string( $candidate ) ) {
+			$prefix = 'var:preset|font-family|';
+			if ( str_starts_with( $candidate, $prefix ) ) {
+				$slug = substr( $candidate, strlen( $prefix ) );
+			} else {
+				// A bare slug is tolerated; a literal/custom stack is not portable.
+				$slug = $candidate;
+			}
+		}
+
+		if ( is_string( $slug ) ) {
+			if ( Brand_Kit::CUSTOM_FONT_SLUG === $slug && null !== $kit->custom_font() ) {
+				return array_merge( $kit->custom_font(), array( 'type' => 'web' ) );
+			}
+			$font = Design_Presets::font( $slug );
+			if ( null !== $font ) {
+				return $font;
+			}
+		}
+
+		// Brand kit semantic slot, then the safe default.
+		$slot_slug = $kit->font( $slot );
+		if ( Brand_Kit::CUSTOM_FONT_SLUG === $slot_slug && null !== $kit->custom_font() ) {
+			return array_merge( $kit->custom_font(), array( 'type' => 'web' ) );
+		}
+		$font = Design_Presets::font( $slot_slug );
+		if ( null !== $font ) {
+			return $font;
+		}
+
+		return Design_Presets::default_font();
+	}
+
+	/**
 	 * Read a value from the nested style tree.
 	 *
 	 * @param array<string, mixed> $attributes Block attributes.

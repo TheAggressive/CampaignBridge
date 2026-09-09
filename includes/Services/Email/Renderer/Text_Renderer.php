@@ -124,7 +124,7 @@ final class Text_Renderer extends Abstract_Renderer {
 		$kit        = $context->metadata( 'brandKit' );
 		$kit        = $kit instanceof Brand_Kit ? $kit : Brand_Kit::defaults();
 
-		$margin = Style_Resolver::spacing(
+		$margin      = Style_Resolver::spacing(
 			$wrapper,
 			'margin',
 			array(
@@ -134,9 +134,10 @@ final class Text_Renderer extends Abstract_Renderer {
 				'left'   => 0,
 			)
 		);
-		$style  = isset( $style_tree['spacing']['margin'] )
-			? sprintf( 'margin:%dpx %dpx %dpx %dpx;font-family:Arial,sans-serif', $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] )
-			: 'margin:0 0 16px;font-family:Arial,sans-serif';
+		$font_family = Renderer_Support::resolve_font( $attributes, $kit )['family'];
+		$style       = isset( $style_tree['spacing']['margin'] )
+			? sprintf( 'margin:%dpx %dpx %dpx %dpx;font-family:' . $font_family, $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] )
+			: 'margin:0 0 16px;font-family:' . $font_family;
 
 		// Font size: design-system shape first, then the legacy number attr.
 		$font_size = null;
@@ -195,6 +196,27 @@ final class Text_Renderer extends Abstract_Renderer {
 		}
 
 		return $style;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$kit  = Renderer_Support::brand_kit( $context );
+		$font = Renderer_Support::resolve_font( $block->attributes(), $kit );
+
+		return 'web' === $font['type'] && null !== $font['url']
+			? array(
+				array(
+					'type' => 'font',
+					'slug' => $font['slug'],
+					'url'  => $font['url'],
+				),
+			)
+			: array();
 	}
 
 	/**
