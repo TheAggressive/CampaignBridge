@@ -339,43 +339,6 @@ class Storage {
 	}
 
 	/**
-	 * Store a value in the cache.
-	 *
-	 * @param string $key       Cache key.
-	 * @param mixed  $value     Value to store.
-	 * @param string $group     Cache group.
-	 * @param int    $expiration Expiration time in seconds.
-	 * @return bool True on success, false on failure.
-	 */
-	public static function set_cache( string $key, $value, string $group, int $expiration = 0 ): bool {
-		return self::wp_cache_set( $key, $value, $group, $expiration );
-	}
-
-	/**
-	 * Retrieve a value from the cache.
-	 *
-	 * @param string $key     Cache key.
-	 * @param string $group   Cache group.
-	 * @param mixed  $default Default value if key not found.
-	 * @return mixed Cached value or default.
-	 */
-	public static function get_cache( string $key, string $group, $default = false ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Public named parameter retained for backward compatibility.
-		$value = self::wp_cache_get( $key, $group );
-		return false === $value ? $default : $value;
-	}
-
-	/**
-	 * Delete a value from the cache.
-	 *
-	 * @param string $key   Cache key.
-	 * @param string $group Cache group.
-	 * @return bool True on success, false on failure.
-	 */
-	public static function delete_cache( string $key, string $group ): bool {
-		return self::wp_cache_delete( $key, $group );
-	}
-
-	/**
 	 * Update multiple meta keys for a single post.
 	 *
 	 * @param int                 $post_id   The post ID.

@@ -7,14 +7,12 @@ cd "$(dirname "$0")/../.."
 # Existing debt is explicit so new persistence access cannot spread while the
 # Repository layer is extracted incrementally.
 allowed=(
-	includes/Admin/Core/Forms/Form_Query_Optimizer.php
-	includes/Core/Performance_Optimizer.php
 	includes/Post_Types/Post_Type_Email_Template.php
 	includes/REST/Routes.php
 )
 
 mapfile -t candidates < <(
-	rg -l '\b(WP_Query|get_posts|get_post_meta|update_post_meta|delete_post_meta|get_option|update_option|delete_option)\s*\(|\$wpdb\b' includes -g '*.php' -g '!includes/Core/Storage.php' | sort
+	rg -l '\b(WP_Query|get_posts|get_post_meta|update_post_meta|delete_post_meta|get_option|update_option|delete_option)\s*\(|\$wpdb\b' includes -g '*.php' -g '!includes/Core/Storage.php' -g '!includes/Repository/**' | sort
 )
 
 matches=()

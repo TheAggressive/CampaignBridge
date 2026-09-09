@@ -9,8 +9,6 @@ namespace CampaignBridge\Admin\Core;
 
 use CampaignBridge\Admin\Core\Forms\Form_Config;
 use CampaignBridge\Admin\Core\Forms\Form_Field_Builder;
-use CampaignBridge\Admin\Core\Forms\Form_Field_Manager;
-use CampaignBridge\Admin\Core\Forms\Form_Builder_Intelligence;
 use CampaignBridge\Admin\Core\Forms\Form_Builder_Fields;
 
 /**
@@ -36,41 +34,14 @@ class Form_Builder {
 	private \CampaignBridge\Admin\Core\Form $form;
 
 	/**
-	 * Form field manager
-	 *
-	 * @var Form_Field_Manager
-	 */
-	private Form_Field_Manager $field_manager;
-
-	/**
-	 * Currently open field builder (for ->end() removal)
-	 *
-	 * @var Form_Field_Builder|null
-	 */
-	private ?Form_Field_Builder $current_field = null;
-
-	/**
 	 * Constructor
 	 *
 	 * @param Form_Config                     $config Form configuration instance.
 	 * @param \CampaignBridge\Admin\Core\Form $form   Parent form instance.
 	 */
 	public function __construct( Form_Config $config, \CampaignBridge\Admin\Core\Form $form ) {
-		$this->config        = $config;
-		$this->form          = $form;
-		$this->field_manager = new Form_Field_Manager( $config, $this );
-	}
-
-	/**
-	 * Automatically close any open field
-	 *
-	 * @return void
-	 */
-	private function auto_close_field(): void {
-		if ( $this->current_field ) {
-			// The field is automatically closed when we start a new field or call form methods.
-			$this->current_field = null;
-		}
+		$this->config = $config;
+		$this->form   = $form;
 	}
 
 	/**
@@ -113,7 +84,6 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function save_to_options( string $prefix = '' ): self {
-		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'options' );
 
 		// If no prefix provided, use default: campaignbridge_{form_id}_.
@@ -133,7 +103,6 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function save_to_post_meta( int $post_id = 0 ): self {
-		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'post_meta' );
 		if ( $post_id ) {
 			$this->config->set_post_id( $post_id );
@@ -148,7 +117,6 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function save_to_settings_api( string $settings_group = '' ): self {
-		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'settings' );
 		$this->config->set( 'data_source', 'settings' );
 
@@ -169,7 +137,6 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function save_to_custom( callable $callback ): self {
-		$this->auto_close_field(); // Close any open field.
 		$this->config->set_save_method( 'custom' );
 		$this->config->add_hook( 'save_data', $callback );
 
@@ -193,17 +160,6 @@ class Form_Builder {
 	 */
 	public function div(): self {
 		$this->config->set_layout( 'div' );
-		return $this;
-	}
-
-	/**
-	 * Auto-detect optimal layout based on context
-	 *
-	 * @return self
-	 */
-	public function auto_layout(): self {
-		$layout = Form_Builder_Intelligence::layout( $this->config );
-		$this->config->set_layout( $layout );
 		return $this;
 	}
 
@@ -240,11 +196,9 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function success( string $message = '' ): self {
-		$this->auto_close_field(); // Close any open field.
 
-		// Auto-generate success message if not provided.
 		if ( empty( $message ) ) {
-			$message = Form_Builder_Intelligence::success_message( $this->config );
+			$message = __( 'Saved successfully!', 'campaignbridge' );
 		}
 
 		$this->config->set_success_message( $message );
@@ -258,11 +212,9 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function error( string $message = '' ): self {
-		$this->auto_close_field(); // Close any open field.
 
-		// Auto-generate error message if not provided.
 		if ( empty( $message ) ) {
-			$message = Form_Builder_Intelligence::error_message( $this->config );
+			$message = __( 'An error occurred. Please try again.', 'campaignbridge' );
 		}
 
 		$this->config->set_error_message( $message );
@@ -299,11 +251,9 @@ class Form_Builder {
 	 * @return self
 	 */
 	public function submit( string $text = '', string $type = 'primary' ): self {
-		$this->auto_close_field(); // Close any open field.
 
-		// Auto-generate submit text if not provided.
 		if ( empty( $text ) ) {
-			$text = Form_Builder_Intelligence::submit_text( $this->config );
+			$text = __( 'Save', 'campaignbridge' );
 		}
 
 		$this->config->set_submit_button( $text, $type );
@@ -412,28 +362,24 @@ class Form_Builder {
 	 * @return Form_Field_Builder
 	 */
 	private function add_field( string $name, string $type, string $label = '' ): Form_Field_Builder {
-		// Automatically close any open field before starting a new one.
-		$this->auto_close_field();
+		$this->config->add_field(
+			$name,
+			array(
+				'type'  => $type,
+				'label' => $label,
+			)
+		);
 
-		// Smart field type auto-detection.
-		$detected_type = Form_Builder_Intelligence::field_type( $name, $type );
-		if ( $detected_type !== $type ) {
-			$type = $detected_type;
+		if ( 'custom' === $this->config->get( 'layout' ) ) {
+			$sequence   = $this->config->get( 'render_sequence', array() );
+			$sequence[] = array(
+				'type' => 'field',
+				'name' => $name,
+			);
+			$this->config->set( 'render_sequence', $sequence );
 		}
 
-		$field_builder       = $this->field_manager->add_field( $name, $type, $label );
-		$this->current_field = $field_builder;
-
-		// Auto-generate label if not provided.
-		if ( empty( $label ) ) {
-			$label = Form_Builder_Intelligence::label( $name );
-			$field_builder->label( $label );
-		}
-
-		// Auto-add smart validation rules.
-		Form_Builder_Intelligence::add_validation( $name, $type, $field_builder );
-
-		return $field_builder;
+		return new Form_Field_Builder( $this, $name );
 	}
 
 	/**
@@ -453,7 +399,6 @@ class Form_Builder {
 	public function valid(): bool {
 		return $this->form->valid();
 	}
-
 
 	/**
 	 * Get form data

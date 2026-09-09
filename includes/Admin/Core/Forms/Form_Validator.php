@@ -524,14 +524,8 @@ class Form_Validator {
 			),
 
 			'pattern'    => function ( $value, $rule_config, $field_label ) {
-				// Handle both string and array formats for backward compatibility.
-				if ( is_array( $rule_config ) ) {
-					$pattern = $rule_config['pattern'] ?? '';
-					$message = $rule_config['message'] ?? Validation_Messages::get( 'invalid_pattern' );
-				} else {
-					$pattern = $rule_config;
-					$message = Validation_Messages::get( 'invalid_pattern' );
-				}
+				$pattern = $rule_config['pattern'];
+				$message = $rule_config['message'] ?? Validation_Messages::get( 'invalid_pattern' );
 
 				if ( ! preg_match( $pattern, $value ) ) {
 					return new \WP_Error(

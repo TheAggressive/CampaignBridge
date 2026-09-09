@@ -3,7 +3,6 @@
  * Form Field Methods Trait - Provides fluent API for field creation
  *
  * Contains all field creation methods to reduce duplication in Form class
- * while maintaining perfect static analysis compatibility.
  *
  * @package CampaignBridge\Admin\Core
  */

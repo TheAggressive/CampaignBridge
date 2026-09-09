@@ -34,9 +34,11 @@ $form = Form::make( 'providers' )
 		->required()
 	->encrypted( 'mailchimp_api_key', 'Mailchimp API Key' )
 		->context( 'api_key' )
+		->validation( 'min_length', 10 )
 		->description( 'Get your API key from <a href="https://admin.mailchimp.com/account/api/" target="_blank">Mailchimp Account Settings</a>' )
 	->text( 'mailchimp_audience', 'Default Audience' )
 		->description( 'Optional. Default audience for new campaigns.' )
+		->end()
 	->before_save(
 		function ( $data ) {
 			// Save to options.

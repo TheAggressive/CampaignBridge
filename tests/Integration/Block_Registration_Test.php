@@ -189,10 +189,13 @@ class Block_Registration_Test extends WP_UnitTestCase {
 		$this->assertFalse( $container_block->supports['multiple'], 'Container should not support multiple instances' );
 		$this->assertTrue( $container_block->supports['innerBlocks'], 'Container should support inner blocks' );
 
-		// Test attributes
-		$this->assertArrayHasKey( 'maxWidth', $container_block->attributes, 'Container should have maxWidth attribute' );
-		$this->assertArrayHasKey( 'outerPadding', $container_block->attributes, 'Container should have outerPadding attribute' );
-		$this->assertArrayHasKey( 'padding', $container_block->attributes, 'Container should have padding attribute' );
+		// Core adds runtime attributes when its support handlers initialize.
+		// Assert the plugin's declared controls independently of that hook order.
+		$this->assertTrue( $container_block->supports['layout']['allowEditing'] );
+		$this->assertFalse( $container_block->supports['layout']['allowSwitching'] );
+		$this->assertTrue( $container_block->supports['spacing']['padding'] );
+		$this->assertTrue( $container_block->supports['spacing']['margin'] );
+		$this->assertSame( 'constrained', $container_block->supports['layout']['default']['type'] );
 	}
 
 	public function test_email_block_category_is_registered_once(): void {

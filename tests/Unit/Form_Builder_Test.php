@@ -11,7 +11,6 @@ use CampaignBridge\Admin\Core\Form_Builder;
 use CampaignBridge\Admin\Core\Forms\Form_Config;
 use CampaignBridge\Admin\Core\Form;
 use CampaignBridge\Admin\Core\Forms\Form_Field_Builder;
-use CampaignBridge\Admin\Core\Forms\Form_Container;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
 /**
@@ -53,6 +52,18 @@ class Form_Builder_Test extends Test_Case {
 		$form          = Form::make( 'test_form' );
 		$this->config  = $this->get_reflection_property( $form, 'config' )->getValue( $form );
 		$this->builder = $this->get_reflection_property( $form, 'builder' )->getValue( $form );
+	}
+
+	public function test_field_names_do_not_infer_types_or_validation(): void {
+		$form = Form::make( 'settings_api_profile' );
+		foreach ( array( 'email_required', 'api_key', 'timeout', 'url', 'password' ) as $name ) {
+			$form->text( $name, 'Explicit label' );
+			$field = $form->get_fields()[ $name ];
+			$this->assertSame( 'text', $field['type'] );
+			$this->assertSame( 'Explicit label', $field['label'] );
+			$this->assertEmpty( $field['validation'] ?? array() );
+			$this->assertEmpty( $field['required'] ?? false );
+		}
 	}
 
 	/**

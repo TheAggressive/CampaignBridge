@@ -74,17 +74,14 @@ pnpm test:any -- --testsuite=unit --coverage-html=coverage-unit
 
 ## Testing Patterns Used
 
-### Mocking and Stubbing
+### Form Behavior
 
-Unit tests use PHPUnit mocking for external dependencies:
+Exercise forms with their production dependencies:
 
 ```php
 // Example from Form_Test.php
-$mock_container = $this->createMock(Form_Container::class);
-$mock_container->method('get')
-    ->willReturn($mock_service);
-
-$form = new Form('test', [], $mock_container);
+$form = Form::make('test');
+$form->text('name', 'Name')->required();
 ```
 
 ### Test Data Factories
