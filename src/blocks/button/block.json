@@ -8,7 +8,7 @@
   "icon": "button",
   "description": "A bulletproof call-to-action with an Outlook VML fallback.",
   "textdomain": "campaignbridge",
-  "parent": ["campaignbridge/section"],
+  "parent": ["campaignbridge/column", "campaignbridge/section"],
   "supports": {
     "html": false,
     "reusable": false,

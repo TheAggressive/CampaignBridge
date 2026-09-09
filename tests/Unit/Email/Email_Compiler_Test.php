@@ -58,7 +58,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertStringContainsString( '<td style="padding:0px 8px 12px 0px">', $result->html() );
 	}
 
-	public function test_inlines_pinned_font_face_css_for_referenced_web_fonts(): void {
+	public function test_links_stable_stylesheet_for_referenced_web_fonts(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['style'] = array(
 			'typography' => array( 'fontFamily' => 'var:preset|font-family|inter' ),
@@ -66,9 +66,8 @@ final class Email_Compiler_Test extends TestCase {
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
-		self::assertStringContainsString( "@font-face{font-family:'Inter'", $result->html() );
-		self::assertMatchesRegularExpression( '/src:url\(https:\/\/fonts\.gstatic\.com\/.+\.woff2\) format\(\'woff2\'\)/', $result->html() );
-		self::assertStringNotContainsString( '<link rel="stylesheet"', $result->html() );
+		self::assertStringContainsString( '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap">', $result->html() );
+		self::assertStringNotContainsString( 'fonts.gstatic.com', $result->html() );
 		self::assertStringNotContainsString( '@font-face', $result->text() );
 	}
 

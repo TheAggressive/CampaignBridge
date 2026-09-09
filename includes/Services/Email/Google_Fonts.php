@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Services\Email;
 
 use CampaignBridge\Core\Http_Client;
+use CampaignBridge\Core\Storage;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -23,7 +24,6 @@ final class Google_Fonts {
 	private const CACHE_KEY     = 'campaignbridge_google_fonts_catalogue_v1';
 	private const CACHE_SECONDS = DAY_IN_SECONDS;
 	private const MAX_RESULTS   = 20;
-	private const MAX_CSS_BYTES = 200000;
 
 	/**
 	 * Search the official Google Web Fonts catalogue.
@@ -64,10 +64,10 @@ final class Google_Fonts {
 	}
 
 	/**
-	 * Resolve one exact catalogue family and snapshot its stylesheet.
+	 * Resolve one exact catalogue family to a stable CSS2 stylesheet URL.
 	 *
 	 * @param string $requested_family Exact catalogue family.
-	 * @return array{slug: string, name: string, family: string, weights: array<int, int>, url: string, css: string}|WP_Error
+	 * @return array{slug: string, name: string, family: string, weights: array<int, int>, url: string}|WP_Error
 	 */
 	public function resolve( string $requested_family ): array|WP_Error {
 		$requested_family = trim( $requested_family );
@@ -91,23 +91,7 @@ final class Google_Fonts {
 		$weights        = $this->weights( $match['variants'] ?? array() );
 		$encoded_family = str_replace( '%20', '+', rawurlencode( $family ) );
 		$css_url        = self::CSS_URL . '?family=' . $encoded_family . ':wght@' . implode( ';', $weights ) . '&display=swap';
-		$response       = Http_Client::get(
-			$css_url,
-			array(
-				'campaignbridge_retry' => false,
-				'headers'              => array( 'User-Agent' => 'Mozilla/5.0 CampaignBridge' ),
-			)
-		);
-		if ( is_wp_error( $response ) || 200 !== ( $response['status_code'] ?? 0 ) ) {
-			return new WP_Error( 'google_font_css_unavailable', __( 'Google Fonts could not provide that font right now.', 'campaignbridge' ) );
-		}
-
-		$css = is_string( $response['body'] ?? null ) ? trim( $response['body'] ) : '';
-		if ( ! $this->is_safe_css( $css, $family ) ) {
-			return new WP_Error( 'invalid_google_font_css', __( 'Google Fonts returned an unsafe or unsupported stylesheet.', 'campaignbridge' ) );
-		}
-
-		$fallback = 'serif' === ( $match['category'] ?? '' ) ? 'Georgia,serif' : 'Arial,Helvetica,sans-serif';
+		$fallback       = 'serif' === ( $match['category'] ?? '' ) ? 'Georgia,serif' : 'Arial,Helvetica,sans-serif';
 
 		return array(
 			'slug'    => 'custom',
@@ -115,7 +99,6 @@ final class Google_Fonts {
 			'family'  => $family . ',' . $fallback,
 			'weights' => $weights,
 			'url'     => $css_url,
-			'css'     => $css,
 		);
 	}
 
@@ -125,7 +108,7 @@ final class Google_Fonts {
 	 * @return array<int, array<string, mixed>>|WP_Error
 	 */
 	private function catalogue(): array|WP_Error {
-		$cached = get_transient( self::CACHE_KEY );
+		$cached = Storage::get_transient( self::CACHE_KEY );
 		if ( is_array( $cached ) ) {
 			return $cached;
 		}
@@ -153,7 +136,7 @@ final class Google_Fonts {
 			return new WP_Error( 'invalid_google_fonts_response', __( 'Google Fonts returned an invalid catalogue.', 'campaignbridge' ) );
 		}
 
-		set_transient( self::CACHE_KEY, $items, self::CACHE_SECONDS );
+		Storage::set_transient( self::CACHE_KEY, $items, self::CACHE_SECONDS );
 		return $items;
 	}
 
@@ -184,29 +167,5 @@ final class Google_Fonts {
 		}
 		$weights = array_values( array_intersect( array( 400, 600, 700 ), $available ) );
 		return array() !== $weights ? $weights : array( $available[0] ?? 400 );
-	}
-
-	/**
-	 * Validate the stylesheet before it crosses the persistence boundary.
-	 *
-	 * @param string $css    Remote stylesheet.
-	 * @param string $family Expected family.
-	 */
-	private function is_safe_css( string $css, string $family ): bool {
-		if ( '' === $css || strlen( $css ) > self::MAX_CSS_BYTES || str_contains( strtolower( $css ), '</style' ) ) {
-			return false;
-		}
-		if ( ! preg_match_all( '/url\(([^)]+)\)/i', $css, $urls ) || ! str_contains( $css, '@font-face' ) ) {
-			return false;
-		}
-		foreach ( $urls[1] as $url ) {
-			$url  = trim( (string) $url, " \t\n\r\0\x0B\"'" );
-			$host = wp_parse_url( $url, PHP_URL_HOST );
-			if ( 'https' !== wp_parse_url( $url, PHP_URL_SCHEME ) || 'fonts.gstatic.com' !== $host || ! str_ends_with( (string) wp_parse_url( $url, PHP_URL_PATH ), '.woff2' ) ) {
-				return false;
-			}
-		}
-
-		return str_contains( $css, "font-family: '" . $family . "'" ) || str_contains( $css, 'font-family: ' . $family );
 	}
 }

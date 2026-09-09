@@ -72,13 +72,30 @@ final class Brand_Kit_Test extends TestCase {
 		self::assertSame( Brand_Kit::SLOTS, $slugs );
 	}
 
-	public function test_custom_google_font_round_trips_without_trusting_arbitrary_css(): void {
+	public function test_normalizes_a_version_one_color_kit_to_version_two(): void {
+		$kit = Brand_Kit::from_array(
+			array(
+				'version' => 1,
+				'source'  => Brand_Kit::SOURCE_CUSTOM,
+				'colors'  => array( Brand_Kit::SLOT_BRAND => '#123456' ),
+			)
+		);
+
+		self::assertSame( 2, $kit->to_array()['version'] );
+		self::assertSame( Brand_Kit::FONT_DEFAULTS, $kit->fonts() );
+	}
+
+	public function test_rejects_a_future_brand_kit_version(): void {
+		$this->expectException( \InvalidArgumentException::class );
+		Brand_Kit::from_array( array( 'version' => Brand_Kit::VERSION + 1 ) );
+	}
+
+	public function test_custom_google_font_round_trips_with_a_valid_css2_url(): void {
 		$custom = array(
 			'name'    => 'Example Sans',
 			'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
 			'weights' => array( 700, 400, 700 ),
 			'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
-			'css'     => "@font-face{font-family:'Example Sans';src:url(https://fonts.gstatic.com/s/example/v1/example.woff2) format('woff2');}",
 		);
 		$kit    = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'heading' => 'custom' ), $custom );
 
@@ -86,7 +103,7 @@ final class Brand_Kit_Test extends TestCase {
 		self::assertSame( array( 400, 700 ), $kit->custom_font()['weights'] ?? null );
 		self::assertSame( $kit->to_array(), Brand_Kit::from_array( $kit->to_array() )->to_array() );
 
-		$custom['css'] = '</style><script>alert(1)</script>';
+		$custom['url'] = 'https://evil.example/font.css';
 		$unsafe        = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'heading' => 'custom' ), $custom );
 		self::assertNull( $unsafe->custom_font() );
 		self::assertSame( 'arial', $unsafe->font( 'heading' ) );

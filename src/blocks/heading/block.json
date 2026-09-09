@@ -8,7 +8,7 @@
   "icon": "heading",
   "description": "Portable email heading with explicit hierarchy and alignment.",
   "textdomain": "campaignbridge",
-  "parent": ["campaignbridge/section"],
+  "parent": ["campaignbridge/column", "campaignbridge/section"],
   "supports": {
     "html": false,
     "reusable": false,

@@ -92,10 +92,12 @@ class Status_Controller {
 	 * @return void
 	 */
 	private function load_integrations_info(): void {
+		$mailchimp_api_key = \CampaignBridge\Core\Storage::get_option( 'mailchimp_api_key', '' );
+
 		$this->data['integrations'] = array(
 			'mailchimp' => array(
 				'active'     => class_exists( 'CampaignBridge\\Providers\\Mailchimp_Provider' ),
-				'configured' => false, // Would check if API key is set.
+				'configured' => is_string( $mailchimp_api_key ) && '' !== $mailchimp_api_key,
 				'version'    => '1.0.0',
 			),
 			'html'      => array(
