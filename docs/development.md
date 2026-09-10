@@ -14,15 +14,21 @@ autoloading, and screen discovery require runtime wiring tests and consumer sear
 
 ## Google Fonts lookup
 
-The Brand screen can search the official Google Web Fonts API when its server-side
-API key is configured in `wp-config.php`:
+The Brand screen searches the versioned Google Fonts catalogue bundled with the
+plugin, so installations do not need a Google API key and catalogue search does
+not depend on a remote request. Refresh the snapshot from Google's official font
+repository with `pnpm build:font-catalog` before a release that updates it.
+Use `pnpm build:font-catalog --latest` to resolve the latest upstream commit;
+the committed provenance file pins that immutable revision and records the
+catalog checksum. Large catalog-count changes fail closed for manual review.
+
+An exact family that is newer than the snapshot is validated against Google's
+fixed CSS2 endpoint. These bounded validation requests use no API key, are cached,
+and cannot target a user-supplied host. Selected fonts retain email-safe fallback
+stacks because web-font support varies across email clients.
+
+Sites that prohibit external font requests can disable resolution and loading:
 
 ```php
-define( 'CAMPAIGNBRIDGE_GOOGLE_FONTS_API_KEY', 'your-restricted-api-key' );
+add_filter( 'campaignbridge_external_google_fonts_enabled', '__return_false' );
 ```
-
-Restrict the key to the Web Fonts Developer API and to the server addresses that
-host WordPress. CampaignBridge sends the key in a request header, caches the
-catalogue for one day, and never exposes the key to browser JavaScript. A deployment
-may supply the key from a secrets manager with the
-`campaignbridge_google_fonts_api_key` filter instead.

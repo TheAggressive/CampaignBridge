@@ -55,6 +55,7 @@ export default [
       sourceType: 'module',
       globals: {
         console: 'readonly',
+        fetch: 'readonly',
         process: 'readonly',
         URL: 'readonly',
       },

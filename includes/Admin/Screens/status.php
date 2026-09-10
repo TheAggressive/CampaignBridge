@@ -24,8 +24,8 @@ if ( $screen ) {
 <div class="campaignbridge-status">
 	<div class="campaignbridge-status__content">
 		<!-- System Information Section -->
-		<div class="campaignbridge-status__section">
-			<div class="campaignbridge-status__section-header">
+		<div class="cb-admin-card campaignbridge-status__section">
+			<div class="cb-admin-card__header campaignbridge-status__section-header">
 				<h2><?php esc_html_e( 'System Information', 'campaignbridge' ); ?></h2>
 			</div>
 
@@ -68,8 +68,8 @@ if ( $screen ) {
 		</div>
 
 		<!-- Plugin Information Section -->
-		<div class="campaignbridge-status__section">
-			<div class="campaignbridge-status__section-header">
+		<div class="cb-admin-card campaignbridge-status__section">
+			<div class="cb-admin-card__header campaignbridge-status__section-header">
 				<h2><?php esc_html_e( 'Plugin Information', 'campaignbridge' ); ?></h2>
 			</div>
 

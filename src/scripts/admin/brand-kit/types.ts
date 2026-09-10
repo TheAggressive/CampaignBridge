@@ -30,6 +30,8 @@ export interface GoogleFontResult {
 }
 
 export interface BrandKitI18n {
+  coloursTitle: string;
+  coloursHelp: string;
   edit: string;
   save: string;
   cancel: string;
@@ -44,10 +46,11 @@ export interface BrandKitI18n {
   sourceDefaults: string;
   typography: string;
   fontSave: string;
-  fontSaved: string;
   fontSaveFailed: string;
   fontFamily: string;
   preview: string;
+  primaryButton: string;
+  typographyHelp: string;
   headingUse: string;
   bodyUse: string;
   buttonUse: string;
@@ -59,12 +62,17 @@ export interface BrandKitI18n {
   fontSearchEmpty: string;
   fontAdd: string;
   fontAdded: string;
+  saving: string;
+  savedStatus: string;
+  contrastPass: string;
+  contrastFail: string;
 }
 
 export interface BrandKitConfig {
   restUrl: string;
   nonce: string;
   kit: BrandKitPayload;
+  externalFontsEnabled: boolean;
   i18n: BrandKitI18n;
 }
 

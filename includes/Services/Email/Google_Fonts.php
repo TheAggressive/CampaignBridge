@@ -19,11 +19,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Keeps remote Google data outside the domain model and admin UI. */
 final class Google_Fonts {
-	private const API_URL       = 'https://www.googleapis.com/webfonts/v1/webfonts';
-	private const CSS_URL       = 'https://fonts.googleapis.com/css2';
-	private const CACHE_KEY     = 'campaignbridge_google_fonts_catalogue_v1';
-	private const CACHE_SECONDS = DAY_IN_SECONDS;
-	private const MAX_RESULTS   = 20;
+	private const CSS_URL          = 'https://fonts.googleapis.com/css2';
+	private const CATALOG_FILE     = __DIR__ . '/google-fonts-catalog.json';
+	private const PROVENANCE_FILE  = __DIR__ . '/google-fonts-catalog.source.json';
+	private const MAX_CATALOG_SIZE = 1048576;
+	private const MAX_RESULTS      = 20;
+	private const MAX_CSS_SIZE     = 65536;
+	private const VALIDATION_TTL   = 30 * DAY_IN_SECONDS;
+	private const NEGATIVE_TTL     = DAY_IN_SECONDS;
+
+	/** Whether site policy permits requests to Google font hosts. */
+	public static function external_enabled(): bool {
+		return (bool) apply_filters( 'campaignbridge_external_google_fonts_enabled', true );
+	}
 
 	/**
 	 * Search the official Google Web Fonts catalogue.
@@ -59,6 +67,12 @@ final class Google_Fonts {
 				break;
 			}
 		}
+		if ( array() === $matches ) {
+			$remote = $this->validate_exact_family( $query );
+			if ( ! is_wp_error( $remote ) && null !== $remote ) {
+				$matches[] = $remote;
+			}
+		}
 
 		return $matches;
 	}
@@ -71,7 +85,10 @@ final class Google_Fonts {
 	 */
 	public function resolve( string $requested_family ): array|WP_Error {
 		$requested_family = trim( $requested_family );
-		$catalogue        = $this->catalogue();
+		if ( ! self::external_enabled() ) {
+			return new WP_Error( 'external_google_fonts_disabled', __( 'External Google Fonts are disabled by site policy.', 'campaignbridge' ) );
+		}
+		$catalogue = $this->catalogue();
 		if ( is_wp_error( $catalogue ) ) {
 			return $catalogue;
 		}
@@ -84,13 +101,19 @@ final class Google_Fonts {
 			}
 		}
 		if ( null === $match ) {
-			return new WP_Error( 'google_font_not_found', __( 'That family is not in the Google Fonts catalogue.', 'campaignbridge' ) );
+			$match = $this->validate_exact_family( $requested_family );
+			if ( is_wp_error( $match ) ) {
+				return $match;
+			}
+			if ( null === $match ) {
+				return new WP_Error( 'google_font_not_found', __( 'That family is not available from Google Fonts.', 'campaignbridge' ) );
+			}
 		}
 
 		$family         = (string) $match['family'];
-		$weights        = $this->weights( $match['variants'] ?? array() );
+		$weights        = array( 400 );
 		$encoded_family = str_replace( '%20', '+', rawurlencode( $family ) );
-		$css_url        = self::CSS_URL . '?family=' . $encoded_family . ':wght@' . implode( ';', $weights ) . '&display=swap';
+		$css_url        = self::CSS_URL . '?family=' . $encoded_family . '&display=swap';
 		$fallback       = 'serif' === ( $match['category'] ?? '' ) ? 'Georgia,serif' : 'Arial,Helvetica,sans-serif';
 
 		return array(
@@ -103,41 +126,79 @@ final class Google_Fonts {
 	}
 
 	/**
-	 * Fetch or read the cached remote catalogue.
+	 * Read the versioned catalogue shipped with the plugin.
 	 *
 	 * @return array<int, array<string, mixed>>|WP_Error
 	 */
 	private function catalogue(): array|WP_Error {
-		$cached = Storage::get_transient( self::CACHE_KEY );
-		if ( is_array( $cached ) ) {
-			return $cached;
+		$size = is_file( self::CATALOG_FILE ) ? filesize( self::CATALOG_FILE ) : false;
+		if ( false === $size || $size < 2 || $size > self::MAX_CATALOG_SIZE ) {
+			return new WP_Error( 'invalid_google_fonts_catalogue', __( 'The bundled Google Fonts catalogue is unavailable.', 'campaignbridge' ) );
 		}
 
-		$key = defined( 'CAMPAIGNBRIDGE_GOOGLE_FONTS_API_KEY' ) ? constant( 'CAMPAIGNBRIDGE_GOOGLE_FONTS_API_KEY' ) : '';
-		$key = apply_filters( 'campaignbridge_google_fonts_api_key', $key );
-		if ( ! is_string( $key ) || '' === trim( $key ) ) {
-			return new WP_Error( 'google_fonts_not_configured', __( 'Google Fonts lookup is not configured. Add CAMPAIGNBRIDGE_GOOGLE_FONTS_API_KEY to wp-config.php.', 'campaignbridge' ) );
+		// phpcs:ignore WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown,CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction -- Reading a size-checked, fixed packaged asset, never a URL.
+		$contents   = file_get_contents( self::CATALOG_FILE );
+		$provenance = is_file( self::PROVENANCE_FILE ) ? file_get_contents( self::PROVENANCE_FILE ) : false; // phpcs:ignore WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown,CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction -- Reading a fixed packaged asset, never a URL.
+		$metadata   = is_string( $provenance ) ? json_decode( $provenance, true ) : null;
+		if ( ! is_string( $contents ) || ! is_array( $metadata ) || ! hash_equals( (string) ( $metadata['sha256'] ?? '' ), hash( 'sha256', $contents ) ) ) {
+			return new WP_Error( 'invalid_google_fonts_catalogue', __( 'The bundled Google Fonts catalogue failed its integrity check.', 'campaignbridge' ) );
+		}
+		$decoded = json_decode( $contents, true );
+		return is_array( $decoded ) ? $decoded : new WP_Error( 'invalid_google_fonts_catalogue', __( 'The bundled Google Fonts catalogue is invalid.', 'campaignbridge' ) );
+	}
+
+	/**
+	 * Validate an exact, newly released family against Google's keyless CSS API.
+	 *
+	 * @param string $family Exact family name.
+	 * @return array{family: string, category: string, variants: array<int, string>}|null|WP_Error
+	 */
+	private function validate_exact_family( string $family ): array|null|WP_Error {
+		if ( ! self::external_enabled() ) {
+			return new WP_Error( 'external_google_fonts_disabled', __( 'External Google Fonts are disabled by site policy.', 'campaignbridge' ) );
+		}
+		$family = trim( $family );
+		if ( strlen( $family ) < 2 || strlen( $family ) > 80 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $family ) ) {
+			return null;
+		}
+
+		$cache_key = 'google_font_valid_' . hash( 'sha256', strtolower( $family ) );
+		$cached    = Storage::get_transient( $cache_key );
+		if ( 'valid' === $cached ) {
+			return array(
+				'family'   => $family,
+				'category' => 'sans-serif',
+				'variants' => array( 'regular' ),
+			);
+		}
+		if ( 'invalid' === $cached ) {
+			return null;
 		}
 
 		$response = Http_Client::get(
-			self::API_URL . '?sort=popularity&fields=items(family%2Ccategory%2Cvariants)',
+			self::CSS_URL . '?family=' . str_replace( '%20', '+', rawurlencode( $family ) ) . '&display=swap',
 			array(
 				'campaignbridge_retry' => false,
-				'headers'              => array( 'X-Goog-Api-Key' => trim( $key ) ),
+				'timeout'              => 3,
+				'limit_response_size'  => self::MAX_CSS_SIZE,
 			)
 		);
-		if ( is_wp_error( $response ) || 200 !== ( $response['status_code'] ?? 0 ) ) {
-			return new WP_Error( 'google_fonts_unavailable', __( 'The Google Fonts catalogue is temporarily unavailable.', 'campaignbridge' ) );
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error( 'google_fonts_unavailable', __( 'Google Fonts validation is temporarily unavailable.', 'campaignbridge' ) );
 		}
 
-		$decoded = json_decode( is_string( $response['body'] ?? null ) ? $response['body'] : '', true );
-		$items   = is_array( $decoded ) && is_array( $decoded['items'] ?? null ) ? $decoded['items'] : null;
-		if ( null === $items ) {
-			return new WP_Error( 'invalid_google_fonts_response', __( 'Google Fonts returned an invalid catalogue.', 'campaignbridge' ) );
+		$body = is_string( $response['body'] ?? null ) ? $response['body'] : '';
+		if ( 200 !== ( $response['status_code'] ?? 0 ) || ! str_contains( $body, '@font-face' ) ) {
+			Storage::set_transient( $cache_key, 'invalid', self::NEGATIVE_TTL );
+			return null;
 		}
 
-		Storage::set_transient( self::CACHE_KEY, $items, self::CACHE_SECONDS );
-		return $items;
+		Storage::set_transient( $cache_key, 'valid', self::VALIDATION_TTL );
+		return array(
+			'family'   => $family,
+			'category' => 'sans-serif',
+			'variants' => array( 'regular' ),
+		);
 	}
 
 	/**
@@ -148,24 +209,5 @@ final class Google_Fonts {
 	 */
 	private function variants( mixed $raw ): array {
 		return is_array( $raw ) ? array_values( array_filter( $raw, 'is_string' ) ) : array();
-	}
-
-	/**
-	 * Select portable weights that the family actually provides.
-	 *
-	 * @param mixed $variants Remote variants.
-	 * @return array<int, int>
-	 */
-	private function weights( mixed $variants ): array {
-		$available = array();
-		foreach ( $this->variants( $variants ) as $variant ) {
-			if ( 'regular' === $variant ) {
-				$available[] = 400;
-			} elseif ( 1 === preg_match( '/^[1-9]00$/', $variant ) ) {
-				$available[] = (int) $variant;
-			}
-		}
-		$weights = array_values( array_intersect( array( 400, 600, 700 ), $available ) );
-		return array() !== $weights ? $weights : array( $available[0] ?? 400 );
 	}
 }

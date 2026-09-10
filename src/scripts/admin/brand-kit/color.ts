@@ -25,3 +25,23 @@ export function toPortableHex(value: string): string | null {
     .map(index => Number(rgb[index]).toString(16).padStart(2, '0'))
     .join('')}`;
 }
+
+/** WCAG contrast ratio for two portable hexadecimal colours. */
+export function contrastRatio(foreground: string, background: string): number {
+  const luminance = (hex: string) => {
+    const channels = [1, 3, 5].map(offset =>
+      parseInt(hex.slice(offset, offset + 2), 16)
+    );
+    const linear = channels.map(channel => {
+      const value = channel / 255;
+      return value <= 0.04045
+        ? value / 12.92
+        : Math.pow((value + 0.055) / 1.055, 2.4);
+    });
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  };
+
+  const first = luminance(foreground);
+  const second = luminance(background);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}

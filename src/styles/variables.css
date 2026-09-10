@@ -27,7 +27,7 @@
     /* ===== BRAND COLORS ===== */
 
     /* Using Tailwind CSS color variables for easy customization */
-    --brand-primary: var(--color-purple-600);
+    --brand-primary: var(--color-blue-600);
     --brand-primary-hover: var(--color-blue-700);
     --brand-primary-active: var(--color-blue-800);
     --brand-primary-muted: var(--color-blue-50);

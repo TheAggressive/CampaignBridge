@@ -1,4 +1,7 @@
-import { toPortableHex } from '../../src/scripts/admin/brand-kit/color';
+import {
+  contrastRatio,
+  toPortableHex,
+} from '../../src/scripts/admin/brand-kit/color';
 
 describe('toPortableHex', () => {
   it('keeps six-digit hex', () => {
@@ -17,5 +20,12 @@ describe('toPortableHex', () => {
   it('rejects unportable values', () => {
     expect(toPortableHex('oklch(0.7 0.1 200)')).toBeNull();
     expect(toPortableHex('color-mix(in srgb, red 50%, blue)')).toBeNull();
+  });
+});
+
+describe('contrastRatio', () => {
+  it('calculates WCAG contrast for portable colours', () => {
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21);
+    expect(contrastRatio('#777777', '#ffffff')).toBeCloseTo(4.48, 2);
   });
 });

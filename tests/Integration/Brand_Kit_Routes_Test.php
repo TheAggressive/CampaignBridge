@@ -16,7 +16,7 @@ use CampaignBridge\Tests\Helpers\Test_Case;
 use WP_REST_Request;
 
 final class Brand_Kit_Routes_Test extends Test_Case {
-	private const ROUTE = '/campaignbridge/v1/brand-kit';
+	private const ROUTE       = '/campaignbridge/v1/brand-kit';
 	private const FONTS_ROUTE = '/campaignbridge/v1/brand-kit/fonts';
 
 	public function setUp(): void {
@@ -45,6 +45,30 @@ final class Brand_Kit_Routes_Test extends Test_Case {
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( 'inter', ( new Brand_Kit_Repository() )->get()->font( 'heading' ) );
+	}
+
+	public function test_font_updates_reject_unknown_slots_without_saving(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+		$before = ( new Brand_Kit_Repository() )->get()->to_array();
+
+		$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$request->set_param( 'fonts', array( 'madeUpSlot' => 'arial' ) );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( $before, ( new Brand_Kit_Repository() )->get()->to_array() );
+	}
+
+	public function test_font_updates_reject_non_string_slot_values_without_saving(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+		$before = ( new Brand_Kit_Repository() )->get()->to_array();
+
+		$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$request->set_param( 'fonts', array( 'heading' => array( 'slug' => 'arial' ) ) );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( $before, ( new Brand_Kit_Repository() )->get()->to_array() );
 	}
 
 	public function test_get_returns_the_seven_slots(): void {

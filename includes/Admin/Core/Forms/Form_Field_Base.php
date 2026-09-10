@@ -160,6 +160,14 @@ abstract class Form_Field_Base implements Form_Field_Interface {
 			$attributes[] = 'aria-required="true"';
 		}
 
+		if ( ! empty( $this->config['errors'] ) ) {
+			$field_id     = (string) ( $this->config['id'] ?? '' );
+			$attributes[] = 'aria-invalid="true"';
+			if ( '' !== $field_id && empty( $this->config['aria-describedby'] ) ) {
+				$attributes[] = sprintf( 'aria-describedby="%s_errors"', esc_attr( $field_id ) );
+			}
+		}
+
 		// Validation data attributes for real-time validation.
 		$validation_rules = $this->get_validation_rules();
 		if ( ! empty( $validation_rules ) ) {

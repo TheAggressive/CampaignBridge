@@ -231,20 +231,24 @@ class Screen_Registry {
 		$screen_class = sanitize_html_class( $screen_name );
 		$title_class  = 'editor' === $screen_name ? 'screen-reader-text' : '';
 
-		printf(
-			'<div class="wrap campaignbridge-screen campaignbridge-screen--%s">',
-			esc_attr( $screen_class )
-		);
-		printf(
-			'<h1 class="%s">%s</h1>',
-			esc_attr( $title_class ),
-			esc_html( $config['page_title'] )
-		);
-
-		// Start output buffering to capture screen content and process forms.
+		// Buffer the complete screen so notices can stay above the product header.
 		ob_start();
 
-		if ( ! empty( $config['description'] ) ) {
+		printf(
+			'<div class="wrap cb-admin-screen campaignbridge-screen campaignbridge-screen--%s">',
+			esc_attr( $screen_class )
+		);
+		if ( ! empty( $config['product_header'] ) ) {
+			$this->render_product_header( $config );
+		} else {
+			printf(
+				'<h1 class="%s">%s</h1>',
+				esc_attr( $title_class ),
+				esc_html( $config['page_title'] )
+			);
+		}
+
+		if ( empty( $config['product_header'] ) && ! empty( $config['description'] ) ) {
 			echo '<p class="description">' . esc_html( $config['description'] ) . '</p>';
 		}
 
@@ -253,6 +257,8 @@ class Screen_Registry {
 		} else {
 			$this->render_tabbed_screen( $screen_name, $controller, $config );
 		}
+
+		echo '</div>';
 
 		// Get the buffered screen content.
 		$screen_content = ob_get_clean();
@@ -276,8 +282,34 @@ class Screen_Registry {
 		// properly escape all dynamic values, we can safely output without additional sanitization.
 		// This avoids maintenance burden of maintaining HTML whitelists.
 		echo $screen_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
 
-		echo '</div>';
+	/**
+	 * Render the settings-style product header.
+	 *
+	 * @param array<string, mixed> $config Screen configuration.
+	 */
+	private function render_product_header( array $config ): void {
+		$editor_url       = \admin_url( 'admin.php?page=campaignbridge-editor' );
+		$new_template_url = \admin_url( 'post-new.php?post_type=cb_templates' );
+		?>
+		<header class="cb-admin-product-header campaignbridge-product-header">
+			<div class="campaignbridge-product-header__identity">
+				<span class="campaignbridge-product-header__mark" aria-hidden="true"><svg viewBox="0 0 24 24" role="img"><path d="M21.7 2.4a1 1 0 0 0-1.05-.16L2.8 10.55a1 1 0 0 0 .13 1.86l7.02 2.35 2.35 7.02a1 1 0 0 0 .9.68h.06a1 1 0 0 0 .9-.57L22.48 3.45a1 1 0 0 0-.78-1.05Zm-8.23 16.3-1.63-4.88 5.72-5.72-7.1 4.73-4.6-1.54 13.68-6.37-6.07 13.78Z"/></svg></span>
+				<div>
+					<h1><?php echo esc_html( $config['page_title'] ); ?></h1>
+					<?php if ( ! empty( $config['description'] ) ) : ?>
+						<p><?php echo esc_html( $config['description'] ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
+			<div class="campaignbridge-product-header__actions">
+				<span class="campaignbridge-version">v<?php echo esc_html( \CampaignBridge_Plugin::VERSION ); ?></span>
+				<a class="button" href="<?php echo esc_url( $editor_url ); ?>"><?php esc_html_e( 'Open editor', 'campaignbridge' ); ?><span class="dashicons dashicons-external"></span></a>
+				<a class="button button-primary" href="<?php echo esc_url( $new_template_url ); ?>"><span class="dashicons dashicons-plus-alt2"></span><?php esc_html_e( 'Create new template', 'campaignbridge' ); ?></a>
+			</div>
+		</header>
+		<?php
 	}
 
 	/**
@@ -344,7 +376,7 @@ class Screen_Registry {
 		}
 
 		$active_tab = $this->determine_active_tab( $tabs );
-		$this->render_tab_navigation( $tabs, $active_tab );
+		$this->render_tab_navigation( $tabs, $active_tab, ! empty( $config['show_journey'] ) );
 		$this->render_active_tab_content( $tabs, $active_tab, $screen_name, $controller, $config );
 	}
 
@@ -399,11 +431,12 @@ class Screen_Registry {
 	 * Render tab navigation.
 	 *
 	 * @param array<string, mixed> $tabs Available tabs.
-	 * @param string               $active_tab The active tab slug.
+	 * @param string               $active_tab   The active tab slug.
+	 * @param bool                 $show_journey Whether to show the product workflow.
 	 * @return void
 	 */
-	private function render_tab_navigation( array $tabs, string $active_tab ): void {
-		echo '<nav class="nav-tab-wrapper wp-clearfix">';
+	private function render_tab_navigation( array $tabs, string $active_tab, bool $show_journey = false ): void {
+		echo '<div class="campaignbridge-tab-bar"><nav class="nav-tab-wrapper wp-clearfix">';
 
 		foreach ( $tabs as $tab_slug => $tab_info ) {
 			$active_class = $active_tab === $tab_slug ? ' nav-tab-active' : '';
@@ -422,6 +455,10 @@ class Screen_Registry {
 		}
 
 		echo '</nav>';
+		if ( $show_journey ) {
+			echo '<p class="campaignbridge-journey" aria-label="CampaignBridge workflow">Build <span>•</span> Brand <span>•</span> Send <span>•</span> Grow</p>';
+		}
+		echo '</div>';
 	}
 
 	/**

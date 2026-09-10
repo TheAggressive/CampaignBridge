@@ -2,401 +2,185 @@
 
 CampaignBridge is a WordPress email-template editor and deterministic email
 compiler under active development. It turns a constrained Gutenberg block
-grammar into portable HTML and plain text with explicit validation diagnostics.
+grammar into portable HTML and plain text and reports unsupported or invalid
+content before it reaches a provider.
 
-> **Product status:** CampaignBridge is under active development. Its secure
-> WordPress foundation, template editor, compiler, and early provider adapters
-> are present; the complete campaign, audience, delivery, scheduling,
-> reconciliation, and reporting workflows are roadmap work. See
-> [ROADMAP.md](ROADMAP.md) for the current product contract and delivery plan.
+> **Product status:** The secure WordPress foundation, template editor,
+> compiler, Brand Kit, and early provider adapters are present. Complete
+> campaign, audience, delivery, scheduling, reconciliation, and reporting
+> workflows are roadmap work. See [ROADMAP.md](ROADMAP.md) for the product
+> contract and delivery plan.
 
-## Shipped today
+## What is available now
 
-### 🎨 Email Template System
+- A dedicated email-template post type and standalone block editor.
+- An email-native block grammar with deterministic HTML and plain-text output.
+- Compiled previews with visible validation diagnostics.
+- A Brand Kit for portable colors and typography.
+- Mailchimp connection settings and discovery foundations.
+- An HTML export provider boundary.
+- Capability-protected REST routes used by the editor and admin screens.
+- Encrypted storage for provider credentials.
 
-- **Email-native block editor**: Author templates with a bounded Gutenberg block library
-- **Custom Post Type**: Dedicated `cb_templates` post type for template management
-- **Template Categories**: Organize templates by purpose (newsletter, promotional, welcome, etc.)
-- **Compiled preview**: Preview canonical email HTML with visible compiler diagnostics
-- **Deterministic output**: Generate validated HTML and plain text with email-safe fallback styles
-
-### Provider foundation
-
-- **Provider contracts**: Mailchimp and HTML-export adapters establish the integration boundary
-- **Connection verification**: Credentials can be stored securely and checked explicitly
-- **Not yet shipped**: Audience synchronization, campaign drafts, tests, scheduling, sending, reconciliation, and reporting
-
-### 🔧 Advanced Form System (Trait-Based Architecture)
-
-- **Trait-Based Fluent API**: Modern composition-based form builder with automatic field management
-- **Comprehensive Security**: AES-256-GCM encryption, CSRF protection, input sanitization, and capability validation
-- **Dynamic Form Builder**: Type-safe fluent API with automatic field closing and context-aware methods
-- **Conditional Logic**: Advanced show/hide fields with AJAX evaluation and dependency management
-- **Secure File Uploads**: MIME validation, size limits, and suspicious-content signature checks with progress tracking
-- **Form Factory Pattern**: Pre-built form templates with security integration (contact, registration, settings)
-- **Data Preservation**: Form state maintained across submissions with encrypted sensitive data storage
-- **Accessibility Compliant**: WCAG 2.1 AA compliance with ARIA attributes and full keyboard navigation
-
-### 🛠️ Professional Architecture
-
-- **Service Container**: Dependency injection for clean code organization
-- **Provider Interface**: Extensible architecture for multiple email providers
-- **REST endpoints**: Focused routes for the template editor, preview, settings, and current integrations
-- **Admin Interface**: Professional WordPress admin integration
-
-### 🔒 Enterprise Security & Compliance
-
-- **AES-256-GCM Encryption**: Military-grade encryption for sensitive data with context-aware permissions
-- **CSRF Protection**: Unique nonces per form with comprehensive request validation
-- **Input Sanitization**: Type-aware sanitization for all user inputs with field-specific validation
-- **SQL Injection Prevention**: WordPress prepared statements with automatic parameter binding
-- **XSS Prevention**: Comprehensive output escaping and content filtering
-- **Access Control**: Capability-based permissions with admin-only sensitive data access
-- **Security Logging**: Centralized, redacted diagnostic logging for security-relevant failures
-- **File Security**: MIME validation, size limits, and suspicious-content signature checks for uploads
-
-### Quality and operations
-
-- **Rate Limiting**: Bounded request controls on sensitive REST operations
-- **Error Handling**: Comprehensive error handling with user-friendly feedback and admin logging
-- **Debug Logging**: Structured debug-mode logging with performance metrics
-- **Performance checks**: Query/request budgets and focused caching
-- **Automatic Validation**: PHPCS/PHPStan integration with custom security rules
-- **Trait-Based Extension**: Zero-configuration API extension with automatic type safety
-
-## 📋 Requirements
-
-### System Requirements
-
-- **WordPress**: 6.5.0 or higher
-- **PHP**: 8.2 or higher
-- **MySQL**: 5.6 or higher
-- **Memory**: 128MB RAM minimum (256MB recommended)
-- **HTTPS**: Required for secure API communications
-
-### Browser Support
-
-CampaignBridge targets current evergreen Chrome, Firefox, Safari, and Edge releases. Browser compatibility is enforced incrementally through the end-to-end test roadmap in `docs/testing-strategy.md`.
-
-## 🚀 Installation
-
-### Automatic Installation
-
-1. Go to **Plugins > Add New** in your WordPress admin
-2. Search for "CampaignBridge"
-3. Click **Install Now**
-4. Click **Activate**
-
-### Manual Installation
-
-1. Download the plugin from the WordPress plugin repository
-2. Upload to `/wp-content/plugins/` directory
-3. Activate through **Plugins > Installed Plugins**
-4. Navigate to **CampaignBridge > Settings**
+CampaignBridge does not yet provide the complete workflow for audiences,
+provider campaign drafts, test delivery, scheduling, sending, reconciliation,
+or reporting.
 
 ## Current workflow
 
-1. Go to **CampaignBridge > Email Templates**
-2. Create new templates using the block editor
-3. Configure the email Brand Kit and template metadata
-4. Compile and inspect the preview before publishing the template
+1. Open **CampaignBridge > Email Templates** in WordPress admin.
+2. Create a template with the CampaignBridge email blocks.
+3. Configure the Brand Kit and template metadata.
+4. Compile the template and resolve preview diagnostics before publishing it.
 
-## Roadmap
+The compiled preview is the source of truth for output. General-purpose core
+and third-party frontend blocks are not valid compiler input.
 
-The end-to-end product target is provider connection, content selection,
-review/approval, provider draft creation, test delivery, scheduling/sending,
-and reconciliation/reporting. Those workflows are deliberately tracked as
-roadmap work and should not be inferred from the current provider adapters.
-See [ROADMAP.md](ROADMAP.md) for milestone gates and the authoritative scope.
+## Requirements
 
-## 🏗️ Technical Architecture
+- WordPress 6.5 or newer.
+- PHP 8.2 or newer.
+- Node.js 24 and pnpm 11 for source builds and JavaScript development.
+- Composer and local MySQL server/client binaries for the PHP test suites.
 
-### Plugin Structure
+Production API connections must use HTTPS. Browser support targets current
+evergreen Chrome, Firefox, Safari, and Edge releases.
 
-```
-campaignbridge/
-├── includes/                    # Core PHP classes
-│   ├── Admin/                   # Admin interface classes
-│   │   ├── Pages/               # Admin page classes
-│   │   └── Asset_Manager.php     # Asset management
-│   ├── Core/                    # Core functionality
-│   ├── Post_Types/               # Custom post type classes
-│   │   └── Post_Type_Email_Template.php    # Email template management
-│   ├── Providers/               # Email service providers
-│   │   ├── Provider_Interface.php # Provider contract
-│   │   ├── Mailchimp_Provider.php # Mailchimp integration
-│   │   └── Html_Provider.php     # HTML export provider
-│   ├── REST/                    # REST API endpoints
-│   │   ├── Routes.php           # General REST routes
-│   │   ├── MailchimpRoutes.php  # Mailchimp-specific routes
-│   │   └── Editor_Settings_Routes.php # Editor settings
-│   └── Services/                # Business logic services
-│       ├── Email/                # Compiler composition and renderers
-│       └── ../Workflow/Email/    # Deterministic compilation workflow
-├── src/blocks/                  # WordPress block definitions
-│   ├── post/                    # Post content blocks
-│   ├── post-button/            # Post button blocks
-│   ├── post-excerpt/           # Post excerpt blocks
-│   ├── post-image/             # Featured image blocks
-│   └── post-title/             # Post title blocks
-├── languages/                   # Translation files
-├── assets/                      # Static assets
-└── uninstall.php               # Comprehensive uninstall script
-```
+## Installation
 
-### 🔧 WordPress Integration
+CampaignBridge is under active development and is not documented here as a
+WordPress.org install. To install a release package:
 
-The plugin leverages official WordPress packages for consistent behavior:
+1. Obtain a verified CampaignBridge release ZIP.
+2. In WordPress admin, open **Plugins > Add New Plugin > Upload Plugin**.
+3. Upload and activate the ZIP.
+4. Open **CampaignBridge > Settings**.
 
-- **@wordpress/data** - State management and data persistence
-- **@wordpress/components** - UI components with accessibility support
-- **@wordpress/block-editor** - Block-based email template editor
-- **@wordpress/i18n** - Internationalization support
-
-### Key Classes and Components
-
-`CampaignBridge\Plugin` initializes core systems, admin hooks, and REST
-controllers explicitly. See [Architecture](docs/architecture.md) for the
-composition root and provider boundary.
-
-#### REST API Architecture
-
-Current REST endpoints share these safeguards:
-
-- Rate limiting protection
-- Permission-based access control
-- Comprehensive error handling
-- JSON response formatting
-
-### File-Based Admin System
-
-CampaignBridge uses a modern file-based admin system that auto-discovers screens and provides a clean, maintainable architecture for WordPress admin pages.
-
-**Key Features:**
-
-- **Zero Configuration**: Just create files, everything works automatically
-- **Auto-Discovery**: Controllers, tabs, and assets auto-detected
-- **Convention Over Configuration**: Naming determines behavior
-- **Progressive Enhancement**: Start simple, add complexity when needed
-
-**Directory Structure:**
-
-```
-includes/Admin/
-├── Core/                    # System core files
-├── Screens/                 # Auto-discovered admin pages
-│   ├── dashboard.php       # Simple screen
-│   └── settings/           # Tabbed screen
-│       ├── general.php     # Tab 1
-│       └── mailchimp.php   # Tab 2
-├── Controllers/             # Optional business logic
-└── Models/                  # Optional data layer
-```
-
-**For complete developer documentation including:**
-
-- Screen types and creation
-- Controller auto-discovery
-- Configuration overrides
-- Screen context helper methods
-- Best practices and migration guide
-
-## 📖 Documentation
-
-- **[Developer Guide](docs/development.md)** - Contributor setup and development workflow
-- **[API Documentation](docs/api.md)** - REST namespace and security contract
-- **[Product Roadmap](ROADMAP.md)** - Current product state, target workflow, milestones, and release gates
-- **[Email Block Architecture](docs/email-block-architecture.md)** - Email-native block grammar, compiler, preview, and compatibility contract
-- **[Email Block Implementation Plan](docs/email-block-implementation-plan.md)** - Phases, contracts, migrations, tests, and first work package
-- **[Email Block Catalog](docs/email-block-catalog.md)** - Post-v1 block, pattern, commerce, automation, and integration map
-- **[Admin System Guide](docs/admin/admin-interface.md)** - Admin interface documentation
-- **[Form System Guide](docs/admin/form-system.md)** - Form building and validation
-
-## 🔒 Security Features
-
-- **Input Sanitization**: Comprehensive input validation with WordPress sanitization functions
-- **CSRF Protection**: Nonce verification for all form submissions and AJAX requests
-- **Rate Limiting**: Sliding window rate limiting (60 requests/minute per user)
-- **Request Origin Validation**: CSRF protection for AJAX endpoints
-- **File Upload Security**: MIME type validation, size limits, and malware content scanning
-- **Encryption System**: AES-256-GCM encryption for sensitive data with context-aware permissions
-- **Capability Checks**: Proper user capability validation throughout the application
-- **SQL Injection Prevention**: Prepared statements and WordPress database API
-- **XSS Protection**: Output escaping, Content Security Policy headers, and input filtering
-- **Security Headers**: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
-- **Secure Uninstall**: Complete data cleanup and encrypted data removal
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Plugin Not Loading
-
-1. Check PHP version (requires 8.2+)
-2. Verify WordPress version (requires 6.5.0+)
-3. Check for plugin conflicts
-4. Enable debug logging for detailed errors
-
-#### API Connection Issues
-
-1. Verify API credentials in settings
-2. Check network connectivity
-3. Review rate limiting settings
-4. Enable debug mode for API errors
-
-#### Template Editor Issues
-
-1. Clear browser cache
-2. Check WordPress block editor compatibility
-3. Verify PHP memory limits
-4. Check for JavaScript conflicts
-
-### Debug Mode
-
-Enable WordPress debug mode to see detailed error information:
-
-```php
-define('WP_DEBUG', true);
-define('WP_DEBUG_LOG', true);
-```
-
-### Support
-
-For technical support and bug reports, please:
-
-1. Check the WordPress error logs
-2. Verify plugin compatibility
-3. Test with default WordPress theme
-4. Contact the development team with detailed error information
-
-## 📝 Changelog
-
-### Version 0.2.0
-
-- ✅ **Major Refactoring**: Complete code organization improvements
-- ✅ **Enhanced Security**: Comprehensive security enhancements
-- ✅ **Professional Architecture**: Service container and interface patterns
-- ✅ **Better Performance**: Optimized database queries and caching
-- ✅ **Improved Documentation**: Comprehensive code documentation
-- ✅ **Standards Compliance**: WordPress coding standards throughout
-
-### Version 0.1.0
-
-- Initial release with basic functionality
-
-## 🛠️ Development
-
-### Environment Setup
+For source development, clone the repository into `wp-content/plugins/`, install
+the locked dependencies, build the assets, and activate the plugin:
 
 ```bash
-# WordPress development environment
-# Requires: WordPress 6.5.0+, PHP 8.2+, MySQL 5.6+
-
-# Plugin uses standard WordPress development practices
-# No external build tools required for core functionality
+composer install
+pnpm install --frozen-lockfile
+pnpm build
 ```
 
-### Code Organization
+## Architecture
 
-- **Service Container**: Dependency injection for clean architecture
-- **Provider Pattern**: Extensible email service provider system
-- **Interface Contracts**: Clear contracts for all major components
-- **REST API**: Modern API design with proper error handling
+`campaignbridge.php` checks runtime requirements and hands initialization to
+`CampaignBridge\Plugin`, the composition root. The intended dependency direction
+is:
 
-### Testing
+```text
+Delivery -> Workflow -> Domain <- Repository implementations
+```
 
-- Compatible with WordPress testing framework
-- Unit tests for core functionality
-- Integration tests for API endpoints
-- Security testing for user input handling
+- `Domain` contains provider-neutral email rules and value objects.
+- `Repository` contains WordPress persistence implementations.
+- `Workflow` coordinates use cases such as deterministic compilation and future
+  campaign operations.
+- `Delivery` contains admin screens, REST controllers, blocks, and provider
+  adapters.
 
-### Development Automation
+Provider adapters receive validated credentials only for an operation. Provider
+response shapes remain inside adapters, and potentially accepted remote
+mutations must not be retried without idempotency and reconciliation rules.
 
-CampaignBridge includes modern development automation to ensure code quality and streamline releases:
+The shared admin form code is an internal API for CampaignBridge screens, not a
+general-purpose form framework. Each form directly constructs its security,
+validation, data, handling, and rendering collaborators. There is no form
+service container, form factory, configuration cache, query optimizer, or asset
+optimizer.
 
-#### Pre-commit Hooks
+See [docs/architecture.md](docs/architecture.md) for the layer and provider
+boundaries.
 
-Automatic code quality checks run before every commit:
+## Repository layout
+
+```text
+campaignbridge.php        Plugin bootstrap and runtime guards
+includes/
+  Admin/                  Admin screens, controllers, assets, and form internals
+  Blocks/                 Server-side block registration
+  Core/                   Shared storage, encryption, HTTP, and error services
+  Domain/Email/           Provider-neutral email and Brand Kit rules
+  Post_Types/             Email-template post type
+  Providers/              Provider contracts and adapters
+  Repository/             WordPress persistence implementations
+  REST/                   Editor, preview, and Brand Kit REST controllers
+  Services/Email/         Deterministic compiler and renderers
+  Workflow/               Application workflows
+src/
+  blocks/                 Authored email block definitions
+  scripts/                Editor and admin TypeScript
+  styles/                 Authored CSS
+dist/                     Generated runtime assets; do not edit directly
+tests/                    PHP, JavaScript, integration, and browser tests
+bin/                      Test, CI, build, and release tooling
+docs/                     Architecture and contributor documentation
+```
+
+## Development
+
+CampaignBridge uses WordPress Studio for its local site but does not create or
+manage that site. From this plugin directory, WP-CLI commands can target the
+parent Studio site with:
 
 ```bash
-# Automatic linting and formatting
-✅ ESLint + Prettier for JavaScript/TypeScript
-✅ PHP CodeSniffer + PHPStan for PHP
-✅ CSS linting for stylesheets
-
-# Conventional commit validation
-✅ Commit message format enforcement
-✅ Semantic versioning compliance
+studio wp --path=../../.. <command>
 ```
 
-#### Automated Version Management
-
-Semantic versioning with automated releases:
+Common project commands:
 
 ```bash
-# Commit types determine version bumps:
-feat: add new feature     → MINOR version (1.2.3 → 1.3.0)
-fix: bug fix              → PATCH version (1.2.3 → 1.2.4)
-feat!: breaking change    → MAJOR version (1.2.3 → 2.0.0)
-
-# Automatic WordPress plugin updates:
-✅ package.json version sync
-✅ campaignbridge.php VERSION constant
-✅ campaignbridge.php header version
-✅ CHANGELOG.md generation
-✅ GitHub release creation
+pnpm build          # rebuild blocks and shared runtime assets
+pnpm start          # watch blocks and shared assets
+pnpm qa:fast        # lint, static analysis, tooling checks, and JS tests
+pnpm qa             # complete quality, security, JS, and PHP test gate
+pnpm test           # all native PHPUnit suites
+pnpm test:unit
+pnpm test:integration
+pnpm test:security
+pnpm test:e2e       # authenticated browser tests against WordPress Studio
+pnpm release:package
+pnpm release:verify
 ```
 
-#### CI/CD Pipeline
+PHP tests use disposable local fixtures under `.cache/tests/`; they must never
+run against the Studio database. Authored assets belong in `src/`. `pnpm build`
+cleans and recreates `dist/`, so generated files should not be edited directly.
 
-GitHub Actions automation for every pull request and push:
+Read [docs/development.md](docs/development.md) before contributing. New behavior
+should include tests at the narrowest useful level, followed by the relevant
+quality gate.
 
-```bash
-# Quality Assurance Suite:
-✅ PHP CodeSniffer linting
-✅ PHPStan static analysis
-✅ ESLint code quality
-✅ PHPUnit unit tests
-✅ Security checks
-✅ WordPress compatibility
-```
+## Security
 
-## 📄 License
+REST and form operations use explicit capability checks, nonces where
+appropriate, type-aware validation and sanitization, and output escaping.
+Provider credentials are encrypted at rest and must not appear in logs,
+responses, or provider-facing error messages. See [SECURITY.md](SECURITY.md) and
+[docs/threat-model.md](docs/threat-model.md) for the maintained security
+contract.
 
-This plugin is licensed under the GPL v2 or later.
+Please report vulnerabilities through the process in [SECURITY.md](SECURITY.md),
+not through a public issue.
 
-```
-Copyright (C) 2024 Aggressive Network, LLC
+## Documentation
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+- [Product roadmap](ROADMAP.md)
+- [Developer guide](docs/development.md)
+- [Architecture](docs/architecture.md)
+- [API documentation](docs/api.md)
+- [Email block architecture](docs/email-block-architecture.md)
+- [Email block catalog](docs/email-block-catalog.md)
+- [Admin interface guide](docs/admin/admin-interface.md)
+- [Internal form system](docs/admin/form-system.md)
+- [Testing strategy](docs/testing-strategy.md)
+- [Build and release contract](docs/build-and-release.md)
+- [Changelog](CHANGELOG.md)
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-```
+## License
 
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Follow WordPress coding standards
-4. Add tests for new functionality
-5. Submit a pull request
-
-## 📞 Support
-
-For issues and feature requests:
-
-- Check the WordPress plugin repository
-- Review the troubleshooting section above
-- Contact the development team with detailed information
-
----
-
-**CampaignBridge** — email-native WordPress template authoring and compilation.
+CampaignBridge is licensed under GPL-2.0-or-later, as declared in the plugin
+header.
