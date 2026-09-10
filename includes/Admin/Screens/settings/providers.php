@@ -20,24 +20,32 @@ $campaignbridge_provider           = $screen ? $screen->get( 'provider', \Campai
 $campaignbridge_mailchimp_api_key  = $screen ? $screen->get( 'mailchimp_api_key', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
 $campaignbridge_mailchimp_audience = $screen ? $screen->get( 'mailchimp_audience', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' );
 $campaignbridge_is_connected       = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
+$campaignbridge_is_mailchimp       = 'mailchimp' === $campaignbridge_provider;
+$campaignbridge_editor_url         = admin_url( 'admin.php?page=campaignbridge-editor' );
+
+if ( $screen ) {
+	$screen->asset_enqueue_script( 'campaignbridge-providers', 'dist/scripts/admin/providers.asset.php' );
+}
 
 // Create the form using the Form API.
 $form = Form::make( 'providers' )
-	->select( 'provider', 'Email Provider' )
+	->div()
+	->select( 'provider', __( 'Delivery method', 'campaignbridge' ) )
 		->options(
 			array(
-				'html'      => 'HTML Email (Default)',
-				'mailchimp' => 'Mailchimp',
+				'html'      => __( 'HTML Email (built in)', 'campaignbridge' ),
+				'mailchimp' => __( 'Mailchimp', 'campaignbridge' ),
 			)
 		)
 		->default( $campaignbridge_provider )
+		->description( __( 'Choose how CampaignBridge prepares your email templates for delivery.', 'campaignbridge' ) )
 		->required()
-	->encrypted( 'mailchimp_api_key', 'Mailchimp API Key' )
+	->encrypted( 'mailchimp_api_key', __( 'Mailchimp API key', 'campaignbridge' ) )
 		->context( 'api_key' )
 		->validation( 'min_length', 10 )
-		->description( 'Get your API key from <a href="https://admin.mailchimp.com/account/api/" target="_blank">Mailchimp Account Settings</a>' )
-	->text( 'mailchimp_audience', 'Default Audience' )
-		->description( 'Optional. Default audience for new campaigns.' )
+		->description( __( 'Create or copy a key from your Mailchimp account settings. Existing saved keys remain encrypted.', 'campaignbridge' ) )
+	->text( 'mailchimp_audience', __( 'Default audience', 'campaignbridge' ) )
+		->description( __( 'Optional audience identifier to use for new campaigns.', 'campaignbridge' ) )
 		->end()
 	->before_save(
 		function ( $data ) {
@@ -57,73 +65,67 @@ $form = Form::make( 'providers' )
 			return $data;
 		}
 	)
-	->success( 'Provider settings saved successfully!' )
-	->submit( 'Save Provider Settings' );
+	->success( __( 'Provider settings saved.', 'campaignbridge' ) )
+	->submit( __( 'Save provider settings', 'campaignbridge' ) );
 ?>
 
-<div class="providers-settings-tab">
-	<h2><?php esc_html_e( 'Email Provider Integration', 'campaignbridge' ); ?></h2>
-	<p class="description">
-		<?php esc_html_e( 'Configure your email service provider settings and API connections.', 'campaignbridge' ); ?>
-	</p>
+<div class="campaignbridge-providers">
+	<section class="cb-admin-card campaignbridge-providers__hero" aria-labelledby="campaignbridge-providers-title">
+		<div class="campaignbridge-providers__flow" aria-hidden="true">
+			<span class="campaignbridge-providers__content-mark dashicons dashicons-wordpress"></span>
+			<span class="dashicons dashicons-arrow-right-alt"></span>
+			<span class="campaignbridge-providers__provider-mark dashicons dashicons-email-alt"></span>
+		</div>
+		<div>
+			<h2 id="campaignbridge-providers-title"><?php echo $campaignbridge_is_connected ? esc_html__( 'Your email provider is connected', 'campaignbridge' ) : esc_html__( 'Connect your email provider', 'campaignbridge' ); ?></h2>
+			<p><?php esc_html_e( 'Choose how CampaignBridge prepares email templates for delivery. Use the built-in HTML workflow or connect Mailchimp.', 'campaignbridge' ); ?></p>
+			<a class="button button-primary" href="#campaignbridge-provider-configuration"><?php echo $campaignbridge_is_connected ? esc_html__( 'Manage connection', 'campaignbridge' ) : esc_html__( 'Configure delivery', 'campaignbridge' ); ?></a>
+		</div>
+	</section>
 
-	<?php
-	// Render the form - handles all HTML, validation, and conditional logic.
-	$form->render();
+	<aside class="cb-admin-card campaignbridge-providers__status" aria-labelledby="campaignbridge-provider-status-title">
+		<header class="cb-admin-card__header"><span class="dashicons dashicons-admin-links"></span><div><h2 id="campaignbridge-provider-status-title"><?php esc_html_e( 'Delivery status', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Your currently selected workflow.', 'campaignbridge' ); ?></p></div></header>
+		<div class="campaignbridge-providers__status-body">
+			<span class="campaignbridge-providers__status-icon <?php echo $campaignbridge_is_connected || ! $campaignbridge_is_mailchimp ? 'is-ready' : ''; ?>"><span class="dashicons <?php echo $campaignbridge_is_connected || ! $campaignbridge_is_mailchimp ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>"></span></span>
+			<div><strong><?php echo $campaignbridge_is_mailchimp ? esc_html__( 'Mailchimp', 'campaignbridge' ) : esc_html__( 'HTML Email', 'campaignbridge' ); ?></strong><span><?php echo $campaignbridge_is_mailchimp ? ( $campaignbridge_is_connected ? esc_html__( 'Connected and ready', 'campaignbridge' ) : esc_html__( 'API connection required', 'campaignbridge' ) ) : esc_html__( 'Built in and always available', 'campaignbridge' ); ?></span></div>
+		</div>
+	</aside>
 
-	// Show connection status if Mailchimp is selected.
-	if ( 'mailchimp' === $campaignbridge_provider ) {
-		echo '<div class="connection-status" style="margin-top: 20px;">';
-		echo '<h3>' . esc_html__( 'Connection Status', 'campaignbridge' ) . '</h3>';
+	<main class="campaignbridge-providers__main">
+		<section id="campaignbridge-provider-configuration" class="cb-admin-card campaignbridge-providers__configuration" aria-labelledby="campaignbridge-provider-configuration-title">
+			<header class="cb-admin-card__header"><span class="dashicons dashicons-admin-settings"></span><div><h2 id="campaignbridge-provider-configuration-title"><?php esc_html_e( 'Provider configuration', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Select a delivery method and securely store its connection details.', 'campaignbridge' ); ?></p></div><span class="cb-admin-badge <?php echo $campaignbridge_is_connected || ! $campaignbridge_is_mailchimp ? 'cb-admin-badge--success' : ''; ?>"><?php echo $campaignbridge_is_mailchimp ? ( $campaignbridge_is_connected ? esc_html__( 'Connected', 'campaignbridge' ) : esc_html__( 'Not connected', 'campaignbridge' ) ) : esc_html__( 'Ready', 'campaignbridge' ); ?></span></header>
+			<?php $form->form_start(); ?>
+			<div class="campaignbridge-providers__fields">
+				<?php $form->render_field( 'provider' ); ?>
+				<div data-mailchimp-field <?php echo $campaignbridge_is_mailchimp ? '' : 'hidden'; ?>><?php $form->render_field( 'mailchimp_api_key' ); ?></div>
+				<div data-mailchimp-field <?php echo $campaignbridge_is_mailchimp ? '' : 'hidden'; ?>><?php $form->render_field( 'mailchimp_audience' ); ?></div>
+			</div>
+			<footer class="cb-admin-card__footer campaignbridge-providers__save"><span><?php esc_html_e( 'Connection details are encrypted before storage.', 'campaignbridge' ); ?></span><?php $form->render_submit(); ?></footer>
+			<?php $form->form_end(); ?>
+		</section>
 
-		if ( $campaignbridge_is_connected ) {
-			echo '<span class="status-badge connected">';
-			echo '<span class="dashicons dashicons-yes-alt"></span> ';
-			echo '<strong>' . esc_html__( 'Connected', 'campaignbridge' ) . '</strong>';
-			echo '</span>';
-		} else {
-			echo '<span class="status-badge disconnected">';
-			echo '<span class="dashicons dashicons-dismiss"></span> ';
-			echo '<strong>' . esc_html__( 'Not Connected', 'campaignbridge' ) . '</strong>';
-			echo '</span>';
-		}
+		<section class="cb-admin-card campaignbridge-providers__html" aria-labelledby="campaignbridge-html-provider-title">
+			<div class="campaignbridge-providers__html-mark" aria-hidden="true">&lt;/&gt;</div>
+			<div><h2 id="campaignbridge-html-provider-title"><?php esc_html_e( 'HTML Email', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Compile and export provider-ready HTML without connecting an external account.', 'campaignbridge' ); ?></p></div>
+			<span class="cb-admin-badge cb-admin-badge--success"><?php esc_html_e( 'Always available', 'campaignbridge' ); ?></span>
+			<a class="button" href="<?php echo esc_url( $campaignbridge_editor_url ); ?>"><?php esc_html_e( 'Open editor', 'campaignbridge' ); ?></a>
+		</section>
 
-		echo '</div>';
-	}
-	?>
+		<section class="campaignbridge-providers__available" aria-labelledby="campaignbridge-available-title">
+			<header><h2 id="campaignbridge-available-title"><?php esc_html_e( 'More providers', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Additional integrations are planned but are not available yet.', 'campaignbridge' ); ?></p></header>
+			<div class="campaignbridge-providers__provider-grid">
+				<div class="cb-admin-card"><strong>Brevo</strong><span class="cb-admin-badge"><?php esc_html_e( 'Planned', 'campaignbridge' ); ?></span></div>
+				<div class="cb-admin-card"><strong>ConvertKit</strong><span class="cb-admin-badge"><?php esc_html_e( 'Planned', 'campaignbridge' ); ?></span></div>
+				<div class="cb-admin-card"><strong>MailerLite</strong><span class="cb-admin-badge"><?php esc_html_e( 'Planned', 'campaignbridge' ); ?></span></div>
+			</div>
+		</section>
+	</main>
 
+	<aside class="campaignbridge-providers__rail">
+		<section class="cb-admin-card campaignbridge-providers__help" aria-labelledby="campaignbridge-provider-help-title">
+			<header class="cb-admin-card__header"><span class="dashicons dashicons-lightbulb"></span><div><h2 id="campaignbridge-provider-help-title"><?php esc_html_e( 'Provider help', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Official resources for configuring Mailchimp.', 'campaignbridge' ); ?></p></div></header>
+			<a class="cb-admin-action-row" href="https://mailchimp.com/help/about-api-keys/" target="_blank" rel="noopener noreferrer"><span class="dashicons dashicons-admin-network"></span><span><strong><?php esc_html_e( 'Find your Mailchimp API key', 'campaignbridge' ); ?></strong><small><?php esc_html_e( 'Mailchimp account documentation', 'campaignbridge' ); ?></small></span><span class="dashicons dashicons-external"></span></a>
+			<a class="cb-admin-action-row" href="https://mailchimp.com/help/getting-started-with-audience/" target="_blank" rel="noopener noreferrer"><span class="dashicons dashicons-groups"></span><span><strong><?php esc_html_e( 'Choose an audience', 'campaignbridge' ); ?></strong><small><?php esc_html_e( 'Mailchimp audience documentation', 'campaignbridge' ); ?></small></span><span class="dashicons dashicons-external"></span></a>
+		</section>
+	</aside>
 </div>
-
-<style>
-	.providers-settings-tab {
-		background: white;
-		padding: 20px;
-		margin-top: 20px;
-		border: 1px solid #ddd;
-	}
-
-	.connection-status {
-		margin-top: 20px;
-		padding: 15px;
-		background: #f8f9fa;
-		border-radius: 4px;
-	}
-
-	.status-badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 5px;
-		padding: 5px 10px;
-		border-radius: 3px;
-	}
-
-	.status-badge.connected {
-		background: #d4edda;
-		color: #155724;
-	}
-
-	.status-badge.disconnected {
-		background: #f8d7da;
-		color: #721c24;
-	}
-</style>

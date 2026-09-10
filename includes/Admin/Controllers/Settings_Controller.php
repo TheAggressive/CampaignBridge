@@ -101,6 +101,11 @@ class Settings_Controller {
 			'from_name'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_name', get_bloginfo( 'name' ) ),
 			'from_email'          => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_email', get_option( 'admin_email' ) ),
 			'reply_to'            => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_reply_to', get_option( 'admin_email' ) ),
+			'default_footer'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_default_footer', '' ),
+			'enable_preview_text' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_enable_preview_text', true ),
+			'featured_image_size' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_featured_image_size', 'large' ),
+			'excerpt_length'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_excerpt_length', 120 ),
+			'cta_label'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cta_label', __( 'Read more', 'campaignbridge' ) ),
 
 			// Mailchimp integration data.
 			'mailchimp_api_key'   => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ),
@@ -205,6 +210,12 @@ class Settings_Controller {
 		$options_to_reset = array(
 			'campaignbridge_from_name',
 			'campaignbridge_from_email',
+			'campaignbridge_reply_to',
+			'campaignbridge_default_footer',
+			'campaignbridge_enable_preview_text',
+			'campaignbridge_featured_image_size',
+			'campaignbridge_excerpt_length',
+			'campaignbridge_cta_label',
 			'campaignbridge_mailchimp_api_key',
 			'campaignbridge_mailchimp_audience',
 			'campaignbridge_debug_mode',

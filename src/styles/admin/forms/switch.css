@@ -94,9 +94,10 @@
   }
 
   /* Checked hover states */
-  input:checked:hover + &__label &__slider {
-    background-color: hsl(var(--color-primary) / 0.9);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+  &:hover input:checked + &__label &__slider {
+    background-color: var(--brand-primary-hover, var(--color-primary));
+    border-color: var(--brand-primary-hover, var(--color-primary));
+    box-shadow: 0 0 0 2px rgb(37 99 235 / 30%);
   }
 
   /* Disabled states */

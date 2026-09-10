@@ -33,7 +33,7 @@ final class Brand_Kit_Copy {
 			Brand_Kit::SLOT_CARD       => __( 'Sections, cards, and inset panels.', 'campaignbridge' ),
 			Brand_Kit::SLOT_BORDER     => __( 'Dividers and rules.', 'campaignbridge' ),
 			Brand_Kit::SLOT_BRAND      => __( 'Buttons, links, and emphasis.', 'campaignbridge' ),
-			Brand_Kit::SLOT_ON_BRAND   => __( 'Text that sits on the brand colour.', 'campaignbridge' ),
+			Brand_Kit::SLOT_ON_BRAND   => __( 'Text that sits on the brand color.', 'campaignbridge' ),
 		);
 	}
 

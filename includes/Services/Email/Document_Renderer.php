@@ -60,6 +60,9 @@ final class Document_Renderer implements Document_Renderer_Interface {
 	 * @return string Empty string when no web fonts were referenced.
 	 */
 	private function font_links( Render_Context $context ): string {
+		if ( ! Google_Fonts::external_enabled() ) {
+			return '';
+		}
 		$fonts = $context->metadata( 'font_assets' );
 		if ( ! is_array( $fonts ) || array() === $fonts ) {
 			return '';

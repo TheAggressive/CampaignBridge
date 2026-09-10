@@ -42,8 +42,8 @@ $form = Form::make( 'post_types' )
 <div class="campaignbridge-post-types">
 	<div class="campaignbridge-post-types__content">
 		<!-- Available Post Types Section -->
-		<div class="campaignbridge-post-types__section">
-			<div class="campaignbridge-post-types__section-header">
+		<div class="cb-admin-card campaignbridge-post-types__section">
+			<div class="cb-admin-card__header campaignbridge-post-types__section-header">
 				<h2><?php esc_html_e( 'Included post types', 'campaignbridge' ); ?></h2>
 			</div>
 
@@ -60,7 +60,7 @@ $form = Form::make( 'post_types' )
 		</div>
 
 		<!-- Usage Information Section -->
-		<div class="campaignbridge-post-types__info-section">
+		<div class="cb-admin-notice cb-admin-notice--info campaignbridge-post-types__info-section">
 			<div class="campaignbridge-post-types__info-content">
 				<h3><?php esc_html_e( 'Usage Information', 'campaignbridge' ); ?></h3>
 				<p>

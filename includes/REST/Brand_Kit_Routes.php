@@ -84,9 +84,10 @@ final class Brand_Kit_Routes extends Abstract_Rest_Controller {
 					'permission_callback' => array( __CLASS__, 'can_manage' ),
 					'args'                => array(
 						'fonts'            => array(
-							'type'       => 'object',
-							'required'   => true,
-							'properties' => array(
+							'type'                 => 'object',
+							'required'             => true,
+							'additionalProperties' => false,
+							'properties'           => array(
 								'heading' => array( 'type' => 'string' ),
 								'body'    => array( 'type' => 'string' ),
 								'button'  => array( 'type' => 'string' ),
@@ -210,8 +211,17 @@ final class Brand_Kit_Routes extends Abstract_Rest_Controller {
 
 		$fonts         = $request->get_param( 'fonts' );
 		$custom_family = $request->get_param( 'customFontFamily' );
-		if ( ! is_array( $fonts ) || array() === array_filter( $fonts, 'is_string' ) ) {
+		if ( ! is_array( $fonts ) || array() === $fonts ) {
 			return self::create_error( 'invalid_brand_fonts', __( 'Choose at least one valid typography slot.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
+		}
+
+		foreach ( $fonts as $font_slot => $font_slug ) {
+			if ( ! is_string( $font_slot ) || ! in_array( $font_slot, Brand_Kit::FONT_SLOTS, true ) ) {
+				return self::create_error( 'invalid_brand_font_slot', __( 'Typography updates only support heading, body, and button slots.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
+			}
+			if ( ! is_string( $font_slug ) || '' === trim( $font_slug ) ) {
+				return self::create_error( 'invalid_brand_font', __( 'Each typography slot must contain a valid font slug.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
+			}
 		}
 
 		$repository  = new Brand_Kit_Repository();
@@ -226,9 +236,6 @@ final class Brand_Kit_Routes extends Abstract_Rest_Controller {
 
 		$merged_fonts = $kit->fonts();
 		foreach ( $fonts as $font_slot => $font_slug ) {
-			if ( ! in_array( $font_slot, Brand_Kit::FONT_SLOTS, true ) || ! is_string( $font_slug ) || '' === $font_slug ) {
-				continue;
-			}
 			if ( Brand_Kit::CUSTOM_FONT_SLUG === $font_slug && null === $custom_font ) {
 				return self::create_error( 'custom_font_not_configured', __( 'Choose a Google Font before assigning the custom font.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
 			}

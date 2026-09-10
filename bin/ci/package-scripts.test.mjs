@@ -24,3 +24,7 @@ test('watch and build use the same webpack configs', () => {
     assert.equal(config(scripts[`start:${target}`]), config(scripts[`build:${target}`]));
   }
 });
+
+test('Google Fonts catalog maintenance is part of the tooling gate', () => {
+  assert.match(scripts['test:tools'], /google-font-catalog\.test\.mjs/u);
+});
