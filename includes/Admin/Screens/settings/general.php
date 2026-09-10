@@ -12,7 +12,7 @@ use CampaignBridge\Post_Types\Post_Type_Email_Template;
 global $screen;
 
 $site_name           = get_bloginfo( 'name' );
-$admin_email         = (string) get_option( 'admin_email' );
+$admin_email         = (string) get_bloginfo( 'admin_email' );
 $from_name           = (string) Storage::get_option( 'campaignbridge_from_name', $site_name );
 $from_email          = (string) Storage::get_option( 'campaignbridge_from_email', $admin_email );
 $reply_to            = (string) Storage::get_option( 'campaignbridge_reply_to', $admin_email );
