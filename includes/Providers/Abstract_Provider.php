@@ -85,11 +85,15 @@ abstract class Abstract_Provider implements Provider_Interface {
 			'max_per_minute' => 60,
 		);
 		$this->capabilities        = array(
-			'audiences'  => true,
-			'templates'  => true,
-			'scheduling' => false,
-			'automation' => false,
-			'analytics'  => false,
+			'verify_connection'          => false,
+			'discover_template_sections' => false,
+			'discover_audiences'         => false,
+			'create_draft'               => false,
+			'send_test'                  => false,
+			'schedule'                   => false,
+			'send'                       => false,
+			'reconcile'                  => false,
+			'reports'                    => false,
 		);
 		$this->api_key_pattern     = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern by default.
 	}

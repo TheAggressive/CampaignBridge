@@ -1,7 +1,7 @@
 {
   "name": "campaignbridge",
   "version": "1.0.2",
-  "description": "Enterprise WordPress email campaign management with dynamic content and provider integrations.",
+  "description": "WordPress email template authoring and deterministic email-safe compilation.",
   "private": true,
   "type": "module",
   "engines": {
@@ -73,7 +73,7 @@
   },
   "keywords": [],
   "author": "Aggressive Network, LLC",
-  "license": "ISC",
+  "license": "GPL-2.0-or-later",
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",

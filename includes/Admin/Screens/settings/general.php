@@ -28,7 +28,8 @@ $new_template_url    = admin_url( 'post-new.php?post_type=' . Post_Type_Email_Te
 $providers_url       = add_query_arg( 'tab', 'providers' );
 $brand_url           = add_query_arg( 'tab', 'brand' );
 $integrations        = $screen ? (array) $screen->get( 'integrations', array() ) : array();
-$mailchimp_last_test = isset( $integrations['mailchimp']['last_test'] ) ? (string) $integrations['mailchimp']['last_test'] : __( 'Never tested', 'campaignbridge' );
+$mailchimp_status    = isset( $integrations['mailchimp']['status'] ) ? (string) $integrations['mailchimp']['status'] : __( 'Not configured', 'campaignbridge' );
+$mailchimp_last_test = isset( $integrations['mailchimp']['checked_at'] ) && is_string( $integrations['mailchimp']['checked_at'] ) ? $integrations['mailchimp']['checked_at'] : null;
 
 if ( $screen ) {
 	$screen->asset_enqueue_script( 'campaignbridge-general-settings', 'dist/scripts/admin/general.asset.php' );
@@ -121,7 +122,7 @@ $form = Form::make( 'general_settings' )
 		<?php $form->form_end(); ?>
 		<section class="cb-admin-card campaignbridge-card campaignbridge-general__provider" aria-labelledby="campaignbridge-provider-title">
 			<header class="cb-admin-card__header"><span class="dashicons dashicons-admin-links"></span><div><h2 id="campaignbridge-provider-title"><?php esc_html_e( 'Provider status', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Manage your email service provider connections.', 'campaignbridge' ); ?></p></div></header>
-			<div class="campaignbridge-general__provider-row"><span class="campaignbridge-general__provider-mark"><span class="dashicons dashicons-email-alt"></span></span><strong>Mailchimp</strong><span class="cb-admin-badge campaignbridge-badge <?php echo $mailchimp_connected ? 'cb-admin-badge--success is-connected' : ''; ?>"><?php echo $mailchimp_connected ? esc_html__( 'Connected', 'campaignbridge' ) : esc_html__( 'Not connected', 'campaignbridge' ); ?></span><span class="campaignbridge-general__provider-detail"><?php echo $mailchimp_connected ? esc_html( sprintf( __( 'Connected · Last checked %s', 'campaignbridge' ), $mailchimp_last_test ) ) : esc_html__( 'Connect Mailchimp to start sending.', 'campaignbridge' ); ?></span><a class="button" href="<?php echo esc_url( $providers_url ); ?>"><?php esc_html_e( 'Manage', 'campaignbridge' ); ?></a></div>
+			<div class="campaignbridge-general__provider-row"><span class="campaignbridge-general__provider-mark"><span class="dashicons dashicons-email-alt"></span></span><strong>Mailchimp</strong><span class="cb-admin-badge campaignbridge-badge <?php echo $mailchimp_connected ? 'cb-admin-badge--success is-connected' : ''; ?>"><?php echo $mailchimp_connected ? esc_html__( 'Connected', 'campaignbridge' ) : esc_html__( 'Not connected', 'campaignbridge' ); ?></span><span class="campaignbridge-general__provider-detail"><?php echo $mailchimp_connected && $mailchimp_last_test ? esc_html( sprintf( __( 'Verified · Last checked %s', 'campaignbridge' ), $mailchimp_last_test ) ) : esc_html( $mailchimp_status ); ?></span><a class="button" href="<?php echo esc_url( $providers_url ); ?>"><?php esc_html_e( 'Manage', 'campaignbridge' ); ?></a></div>
 			<a class="cb-admin-action-row campaignbridge-general__row-link" href="<?php echo esc_url( $providers_url ); ?>"><span class="cb-admin-icon-disc dashicons dashicons-plus-alt2"></span><span><strong><?php esc_html_e( 'Connect another provider', 'campaignbridge' ); ?></strong><small><?php esc_html_e( 'Configure Mailchimp and future provider integrations.', 'campaignbridge' ); ?></small></span><span class="dashicons dashicons-arrow-right-alt2"></span></a>
 		</section>
 	</div>

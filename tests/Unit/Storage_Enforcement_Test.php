@@ -64,6 +64,7 @@ class _Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 	 */
 	private const ALLOWED_DIRECTORIES = array(
 		'.cache/',
+		'release/',
 		'vendor/',
 		'node_modules/',
 		'tests/',
@@ -120,6 +121,22 @@ class _Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 		self::assertFalse(
 			$this->call_is_inside_string_literal( "\$value = get_option( 'thing' );", 'get_option' )
 		);
+	}
+
+	/** A wrapper call cannot hide a nested direct storage call. */
+	public function test_nested_direct_call_is_reported(): void {
+		$source = "<?php\nStorage::get_option( 'outer', get_option( 'inner' ) );";
+		$file   = tempnam( sys_get_temp_dir(), 'cb-storage-' );
+		self::assertIsString( $file );
+		file_put_contents( $file, $source );
+
+		try {
+			$violations = $this->scan_file_for_violations( $file );
+			self::assertCount( 1, $violations );
+			self::assertSame( 'get_option', $violations[0]['function'] );
+		} finally {
+			unlink( $file );
+		}
 	}
 
 	/**
@@ -368,53 +385,40 @@ class _Storage_Enforcement_Test extends \PHPUnit\Framework\TestCase {
 			return $violations;
 		}
 
-		$content = file_get_contents( $file_path );
+		$content = (string) file_get_contents( $file_path );
 		$lines   = explode( "\n", $content );
-
-		foreach ( $lines as $line_number => $line ) {
-			foreach ( self::FORBIDDEN_FUNCTIONS as $function ) {
-				// Enhanced pattern to catch more variations
-				$patterns = array(
-					'/\b' . preg_quote( $function, '/' ) . '\s*\(/',           // Direct calls: get_option(
-					'/\b\\\\' . preg_quote( $function, '/' ) . '\s*\(/',      // Namespaced: \get_option(
-					'/\$\w+\s*\(\s*[\'"]' . preg_quote( $function, '/' ) . '[\'"]\s*\)/', // Variable functions: $func('get_option')
-					'/call_user_func\s*\(\s*[\'"]' . preg_quote( $function, '/' ) . '[\'"]/', // call_user_func
-				);
-
-				foreach ( $patterns as $pattern ) {
-					if ( preg_match( $pattern, $line ) ) {
-						// Skip if it's a method call (contains :: or ->)
-						if ( str_contains( $line, '::' ) || str_contains( $line, '->' ) ) {
-							continue 2; // Continue to next pattern
-						}
-
-						// Skip if it's inside a comment
-						if ( preg_match( '/^\s*\/\//', $line ) || preg_match( '/^\s*\*/', $line ) ) {
-							continue 2; // Continue to next pattern
-						}
-
-						// Skip if it's inside a string literal
-						if ( $this->isInsideStringLiteral( $line, $function ) ) {
-							continue 2; // Continue to next pattern
-						}
-
-						// Skip if it's a function definition
-						if ( preg_match( '/^\s*function\s+' . preg_quote( $function, '/' ) . '\s*\(/', $line ) ) {
-							continue 2; // Continue to next pattern
-						}
-
-						$violations[] = array(
-							'file'         => $file_path,
-							'line'         => $line_number + 1,
-							'function'     => $function,
-							'line_content' => trim( $line ),
-						);
-					}
-				}
+		$tokens  = token_get_all( $content );
+		foreach ( $tokens as $index => $token ) {
+			if ( ! is_array( $token ) || T_STRING !== $token[0] || ! in_array( $token[1], self::FORBIDDEN_FUNCTIONS, true ) ) {
+				continue;
 			}
+			$previous = $this->adjacent_significant_token( $tokens, $index, -1 );
+			$next     = $this->adjacent_significant_token( $tokens, $index, 1 );
+			$is_method = is_array( $previous ) && in_array( $previous[0], array( T_DOUBLE_COLON, T_OBJECT_OPERATOR, T_FUNCTION, T_FN ), true );
+			if ( '(' !== $next || $is_method ) {
+				continue;
+			}
+			$violations[] = array(
+				'file'         => $file_path,
+				'line'         => $token[2],
+				'function'     => $token[1],
+				'line_content' => trim( $lines[ $token[2] - 1 ] ?? '' ),
+			);
 		}
 
 		return $violations;
+	}
+
+	/** Return the nearest token that is not whitespace or a comment. */
+	private function adjacent_significant_token( array $tokens, int $index, int $direction ): array|string|null {
+		for ( $cursor = $index + $direction, $count = count( $tokens ); $cursor >= 0 && $cursor < $count; $cursor += $direction ) {
+			$token = $tokens[ $cursor ];
+			if ( is_array( $token ) && in_array( $token[0], array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), true ) ) {
+				continue;
+			}
+			return $token;
+		}
+		return null;
 	}
 
 	/**

@@ -50,6 +50,18 @@ class Html_Provider extends Abstract_Provider {
 	}
 
 	/**
+	 * Verify that the local export provider is available.
+	 *
+	 * @param array<string, mixed> $settings Provider settings (unused).
+	 */
+	public function verify_connection( array $settings ): array|\WP_Error {
+		return array(
+			'provider' => $this->slug(),
+			'verified' => true,
+		);
+	}
+
+	/**
 	 * Get available template section keys for content mapping.
 	 *
 	 * HTML export supports all standard email template sections.
@@ -108,12 +120,16 @@ class Html_Provider extends Abstract_Provider {
 	 */
 	public function get_capabilities(): array {
 		return array(
-			'export'     => true,
-			'preview'    => true,
-			'templates'  => true,
-			'audiences'  => false,
-			'scheduling' => false,
-			'analytics'  => false,
+			'verify_connection'          => true,
+			'discover_template_sections' => true,
+			'export'                     => true,
+			'discover_audiences'         => false,
+			'create_draft'               => false,
+			'send_test'                  => false,
+			'schedule'                   => false,
+			'send'                       => false,
+			'reconcile'                  => false,
+			'reports'                    => false,
 		);
 	}
 }

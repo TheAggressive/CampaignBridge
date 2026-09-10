@@ -14,6 +14,9 @@ namespace CampaignBridge\Admin\Controllers;
 
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Theme_Brand_Mapper;
+use CampaignBridge\Core\Encryption;
+use CampaignBridge\Core\Storage;
+use CampaignBridge\Providers\Mailchimp_Provider;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Theme_Style_Reader;
 
@@ -96,11 +99,13 @@ class Settings_Controller {
 	 * @return void
 	 */
 	private function load_settings_data(): void {
-		$this->data = array(
+		$admin_email          = get_bloginfo( 'admin_email' );
+		$mailchimp_connection = $this->get_mailchimp_connection();
+		$this->data           = array(
 			// General settings data.
 			'from_name'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_name', get_bloginfo( 'name' ) ),
-			'from_email'          => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_email', get_option( 'admin_email' ) ),
-			'reply_to'            => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_reply_to', get_option( 'admin_email' ) ),
+			'from_email'          => Storage::get_option( 'campaignbridge_from_email', $admin_email ),
+			'reply_to'            => Storage::get_option( 'campaignbridge_reply_to', $admin_email ),
 			'default_footer'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_default_footer', '' ),
 			'enable_preview_text' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_enable_preview_text', true ),
 			'featured_image_size' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_featured_image_size', 'large' ),
@@ -110,7 +115,9 @@ class Settings_Controller {
 			// Mailchimp integration data.
 			'mailchimp_api_key'   => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ),
 			'mailchimp_audience'  => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ),
-			'mailchimp_connected' => $this->is_mailchimp_connected(),
+			'mailchimp_connected' => $mailchimp_connection['connected'],
+			'mailchimp_status'    => $mailchimp_connection['status'],
+			'mailchimp_last_test' => $mailchimp_connection['checked_at'],
 
 			// Advanced settings data.
 			'debug_mode'          => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_debug_mode', false ),
@@ -123,10 +130,6 @@ class Settings_Controller {
 			'wordpress_version'   => get_bloginfo( 'version' ),
 			'php_version'         => PHP_VERSION,
 
-			// Statistics.
-			'total_subscribers'   => $this->get_total_subscribers(),
-			'total_campaigns'     => $this->get_total_campaigns(),
-			'last_sync'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_last_sync', 'Never' ),
 		);
 	}
 
@@ -136,12 +139,13 @@ class Settings_Controller {
 	 * @return void
 	 */
 	private function load_integration_status(): void {
+		$connection                 = array(
+			'connected'  => (bool) ( $this->data['mailchimp_connected'] ?? false ),
+			'status'     => (string) ( $this->data['mailchimp_status'] ?? __( 'Not configured', 'campaignbridge' ) ),
+			'checked_at' => $this->data['mailchimp_last_test'] ?? null,
+		);
 		$this->data['integrations'] = array(
-			'mailchimp' => array(
-				'connected' => $this->is_mailchimp_connected(),
-				'status'    => $this->get_mailchimp_status(),
-				'last_test' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_last_test', 'Never tested' ),
-			),
+			'mailchimp' => $connection,
 			'sendgrid'  => array(
 				'connected' => false,
 				'status'    => 'Not configured',
@@ -151,39 +155,61 @@ class Settings_Controller {
 	}
 
 	/**
-	 * Check if Mailchimp is properly connected
+	 * Get a credential-specific, verified Mailchimp connection result.
+	 *
+	 * @return array{connected: bool, status: string, checked_at: string|null}
 	 */
-	private function is_mailchimp_connected(): bool {
-		$api_key = \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
-		return ! empty( $api_key ) && strlen( $api_key ) > 20;
-	}
-
-	/**
-	 * Get Mailchimp connection status
-	 */
-	private function get_mailchimp_status(): string {
-		if ( ! $this->is_mailchimp_connected() ) {
-			return 'Not connected';
+	private function get_mailchimp_connection(): array {
+		$stored_key = Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
+		if ( ! is_string( $stored_key ) || '' === $stored_key ) {
+			return array(
+				'connected'  => false,
+				'status'     => __( 'Not configured', 'campaignbridge' ),
+				'checked_at' => null,
+			);
 		}
 
-		// In a real implementation, you'd test the API connection.
-		return 'Connected';
-	}
+		try {
+			$api_key = Encryption::decrypt( $stored_key );
+		} catch ( \Throwable $error ) {
+			return array(
+				'connected'  => false,
+				'status'     => __( 'Stored credentials could not be read', 'campaignbridge' ),
+				'checked_at' => null,
+			);
+		}
 
-	/**
-	 * Get total subscribers count
-	 */
-	private function get_total_subscribers(): int {
-		// Mock data - in real implementation, aggregate from all lists.
-		return 1299;
-	}
+		$provider = new Mailchimp_Provider();
+		if ( ! $provider->is_configured( array( 'api_key' => $api_key ) ) ) {
+			return array(
+				'connected'  => false,
+				'status'     => __( 'Invalid API key format', 'campaignbridge' ),
+				'checked_at' => null,
+			);
+		}
 
-	/**
-	 * Get total campaigns count
-	 */
-	private function get_total_campaigns(): int {
-		// Mock data - in real implementation, count from database.
-		return 42;
+		$cache_key = 'mailchimp_connection_' . hash( 'sha256', $api_key );
+		$cached    = Storage::get_transient( $cache_key );
+		if ( is_array( $cached ) && isset( $cached['connected'], $cached['status'], $cached['checked_at'] ) ) {
+			return $cached;
+		}
+
+		$checked_at = current_time( 'mysql' );
+		$result     = $provider->verify_connection( array( 'api_key' => $api_key ) );
+		$connection = is_wp_error( $result )
+			? array(
+				'connected'  => false,
+				'status'     => $result->get_error_message(),
+				'checked_at' => $checked_at,
+			)
+			: array(
+				'connected'  => true,
+				'status'     => __( 'Connected', 'campaignbridge' ),
+				'checked_at' => $checked_at,
+			);
+
+		Storage::set_transient( $cache_key, $connection, 5 * MINUTE_IN_SECONDS );
+		return $connection;
 	}
 
 	/**

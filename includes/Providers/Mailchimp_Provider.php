@@ -2,9 +2,8 @@
 /**
  * Mailchimp Provider Implementation for CampaignBridge.
  *
- * Provides full integration with Mailchimp's API for email campaign management,
- * audience handling, and template synchronization following WordPress security
- * best practices and our established coding standards.
+ * Provides credential verification and template-section discovery through the
+ * Mailchimp API.
  *
  * @package CampaignBridge
  * @since 0.2.0
@@ -24,9 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Mailchimp email service provider implementation.
  *
- * Handles all Mailchimp API interactions including campaign creation,
- * audience management, and template synchronization with proper error
- * handling, rate limiting, and security measures.
+ * Implements only the operations CampaignBridge can call today.
  */
 class Mailchimp_Provider extends Abstract_Provider {
 	/**
@@ -38,6 +35,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * API endpoints
 	 */
 	private const ENDPOINT_TEMPLATES = '/templates';
+	private const ENDPOINT_PING      = '/ping';
 
 	/**
 	 * Constructor
@@ -47,11 +45,15 @@ class Mailchimp_Provider extends Abstract_Provider {
 
 		// Configure Mailchimp-specific capabilities.
 		$this->capabilities = array(
-			'audiences'  => true,
-			'templates'  => true,
-			'scheduling' => true,
-			'automation' => false,
-			'analytics'  => true,
+			'verify_connection'          => true,
+			'discover_template_sections' => true,
+			'discover_audiences'         => false,
+			'create_draft'               => false,
+			'send_test'                  => false,
+			'schedule'                   => false,
+			'send'                       => false,
+			'reconcile'                  => false,
+			'reports'                    => false,
 		);
 
 		// Mailchimp API key pattern.
@@ -82,6 +84,38 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 */
 	public function is_valid_api_key( string $api_key ): bool {
 		return preg_match( $this->api_key_pattern, $api_key ) === 1;
+	}
+
+	/**
+	 * Verify credentials using Mailchimp's read-only ping endpoint.
+	 *
+	 * @param array<string, mixed> $settings Provider settings.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public function verify_connection( array $settings ): array|WP_Error {
+		if ( ! $this->is_configured( $settings ) ) {
+			return $this->create_error( 'mailchimp_invalid_credentials', __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ), 400 );
+		}
+
+		$api_key  = (string) $settings['api_key'];
+		$response = \CampaignBridge\Core\Http_Client::get(
+			self::build_api_url( $api_key, self::ENDPOINT_PING ),
+			array(
+				'headers'              => array( 'Authorization' => 'Bearer ' . $api_key ),
+				'campaignbridge_retry' => false,
+			)
+		);
+		if ( is_wp_error( $response ) ) {
+			return $this->create_error( 'mailchimp_connection_unavailable', __( 'Mailchimp could not be reached.', 'campaignbridge' ), 503 );
+		}
+		if ( 200 !== ( $response['status_code'] ?? 0 ) ) {
+			return $this->create_error( 'mailchimp_connection_rejected', __( 'Mailchimp rejected the stored credentials.', 'campaignbridge' ), 401 );
+		}
+
+		return array(
+			'provider' => $this->slug(),
+			'verified' => true,
+		);
 	}
 
 		/**

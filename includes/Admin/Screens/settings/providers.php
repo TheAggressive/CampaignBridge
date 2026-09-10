@@ -20,6 +20,7 @@ $campaignbridge_provider           = $screen ? $screen->get( 'provider', \Campai
 $campaignbridge_mailchimp_api_key  = $screen ? $screen->get( 'mailchimp_api_key', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
 $campaignbridge_mailchimp_audience = $screen ? $screen->get( 'mailchimp_audience', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' );
 $campaignbridge_is_connected       = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
+$campaignbridge_mailchimp_status   = $screen ? $screen->get( 'mailchimp_status', __( 'Not configured', 'campaignbridge' ) ) : __( 'Not configured', 'campaignbridge' );
 $campaignbridge_is_mailchimp       = 'mailchimp' === $campaignbridge_provider;
 $campaignbridge_editor_url         = admin_url( 'admin.php?page=campaignbridge-editor' );
 
@@ -87,7 +88,7 @@ $form = Form::make( 'providers' )
 		<header class="cb-admin-card__header"><span class="dashicons dashicons-admin-links"></span><div><h2 id="campaignbridge-provider-status-title"><?php esc_html_e( 'Delivery status', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Your currently selected workflow.', 'campaignbridge' ); ?></p></div></header>
 		<div class="campaignbridge-providers__status-body">
 			<span class="campaignbridge-providers__status-icon <?php echo $campaignbridge_is_connected || ! $campaignbridge_is_mailchimp ? 'is-ready' : ''; ?>"><span class="dashicons <?php echo $campaignbridge_is_connected || ! $campaignbridge_is_mailchimp ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>"></span></span>
-			<div><strong><?php echo $campaignbridge_is_mailchimp ? esc_html__( 'Mailchimp', 'campaignbridge' ) : esc_html__( 'HTML Email', 'campaignbridge' ); ?></strong><span><?php echo $campaignbridge_is_mailchimp ? ( $campaignbridge_is_connected ? esc_html__( 'Connected and ready', 'campaignbridge' ) : esc_html__( 'API connection required', 'campaignbridge' ) ) : esc_html__( 'Built in and always available', 'campaignbridge' ); ?></span></div>
+			<div><strong><?php echo $campaignbridge_is_mailchimp ? esc_html__( 'Mailchimp', 'campaignbridge' ) : esc_html__( 'HTML Email', 'campaignbridge' ); ?></strong><span><?php echo $campaignbridge_is_mailchimp ? esc_html( (string) $campaignbridge_mailchimp_status ) : esc_html__( 'Built in and always available', 'campaignbridge' ); ?></span></div>
 		</div>
 	</aside>
 

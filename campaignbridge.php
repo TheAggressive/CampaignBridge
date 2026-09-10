@@ -1,7 +1,7 @@
 <?php // phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Standard.Sniffs.Logging.DirectLogging.DirectLoggingFunction -- Bootstrap error logging before Error_Handler is available.
 /**
  * Plugin Name: CampaignBridge
- * Description: A comprehensive WordPress plugin for creating and managing email campaigns with dynamic content from multiple post types. Features include Mailchimp integration, custom email templates, block-based email design, and automated campaign generation. Perfect for newsletters, promotional emails, and content marketing automation.
+ * Description: Build deterministic, email-safe templates from WordPress content, preview compiled output, and configure provider-ready delivery foundations.
  *
  * Version: 1.0.2
  *

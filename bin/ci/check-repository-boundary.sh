@@ -4,6 +4,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
+if ! command -v php >/dev/null 2>&1; then
+	echo "Repository boundary check requires PHP for token-based scanning." >&2
+	exit 1
+fi
+
 # Existing debt is explicit so new persistence access cannot spread while the
 # Repository layer is extracted incrementally.
 allowed=(
@@ -11,17 +16,7 @@ allowed=(
 	includes/REST/Routes.php
 )
 
-mapfile -t candidates < <(
-	rg -l '\b(WP_Query|get_posts|get_post_meta|update_post_meta|delete_post_meta|get_option|update_option|delete_option)\s*\(|\$wpdb\b' includes -g '*.php' -g '!includes/Core/Storage.php' -g '!includes/Repository/**' | sort
-)
-
-matches=()
-for candidate in "${candidates[@]}"; do
-	if rg '\b(WP_Query|get_posts|get_post_meta|update_post_meta|delete_post_meta|get_option|update_option|delete_option)\s*\(|\$wpdb\b' "${candidate}" \
-		| rg -v 'Storage::(get_option|update_option|delete_option|get_post_meta|update_post_meta|delete_post_meta)\s*\(' >/dev/null; then
-		matches+=( "${candidate}" )
-	fi
-done
+mapfile -t matches < <(php bin/ci/find-repository-boundary-violations.php)
 
 failed=0
 for file in "${matches[@]}"; do
