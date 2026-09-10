@@ -111,9 +111,9 @@ final class Google_Fonts {
 		}
 
 		$family         = (string) $match['family'];
-		$weights        = array( 400 );
+		$weights        = $this->email_weights( $match['variants'] ?? array() );
 		$encoded_family = str_replace( '%20', '+', rawurlencode( $family ) );
-		$css_url        = self::CSS_URL . '?family=' . $encoded_family . '&display=swap';
+		$css_url        = self::CSS_URL . '?family=' . $encoded_family . ':wght@' . implode( ';', $weights ) . '&display=swap';
 		$fallback       = 'serif' === ( $match['category'] ?? '' ) ? 'Georgia,serif' : 'Arial,Helvetica,sans-serif';
 
 		return array(
@@ -209,5 +209,28 @@ final class Google_Fonts {
 	 */
 	private function variants( mixed $raw ): array {
 		return is_array( $raw ) ? array_values( array_filter( $raw, 'is_string' ) ) : array();
+	}
+
+	/**
+	 * Request only the regular and common semibold/bold email weights that exist.
+	 *
+	 * @param mixed $raw Catalogue variants.
+	 * @return array<int, int>
+	 */
+	private function email_weights( mixed $raw ): array {
+		$variants  = $this->variants( $raw );
+		$available = array_map(
+			static fn ( string $variant ): int => 'regular' === $variant ? 400 : (int) $variant,
+			array_filter( $variants, static fn ( string $variant ): bool => 'regular' === $variant || 1 === preg_match( '/^[1-9]00$/', $variant ) )
+		);
+		$weights   = array_values( array_intersect( array( 400, 600, 700 ), $available ) );
+		$numeric   = array_values( array_filter( $available, static fn ( int $weight ): bool => $weight >= 100 && $weight <= 900 ) );
+		if ( count( $numeric ) >= 2 ) {
+			$minimum = min( $numeric );
+			$maximum = max( $numeric );
+			$weights = array_values( array_filter( array( 400, 600, 700 ), static fn ( int $weight ): bool => $weight >= $minimum && $weight <= $maximum ) );
+		}
+
+		return array() === $weights ? array( 400 ) : $weights;
 	}
 }

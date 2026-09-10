@@ -51,9 +51,17 @@ interface Provider_Interface {
 	 * provider-specific requirements.
 	 *
 	 * @param array<string, mixed> $settings Plugin settings array containing provider configuration.
-	 * @return bool True if provider is ready to send campaigns.
+	 * @return bool True if the required settings are present and well formed.
 	 */
 	public function is_configured( array $settings ): bool;
+
+	/**
+	 * Verify that the configured provider account is reachable and authorized.
+	 *
+	 * @param array<string, mixed> $settings Validated provider settings.
+	 * @return array<string, mixed>|\WP_Error Normalized account details or an error.
+	 */
+	public function verify_connection( array $settings ): array|\WP_Error;
 
 
 
@@ -104,8 +112,8 @@ interface Provider_Interface {
 	/**
 	 * Get provider capabilities and supported features.
 	 *
-	 * Returns an array of features this provider supports, which can be used
-	 * to conditionally show/hide UI elements or functionality.
+	 * Keys represent working CampaignBridge operations, not theoretical features
+	 * offered by the remote provider.
 	 *
 	 * @return array<string, mixed> Array of supported features. Examples:
 	 *               ['audiences' => true, 'templates' => true, 'scheduling' => false]

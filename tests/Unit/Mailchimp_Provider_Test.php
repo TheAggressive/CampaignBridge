@@ -17,6 +17,15 @@ use WP_UnitTestCase;
  * Verify provider-specific URL construction.
  */
 class Mailchimp_Provider_Test extends WP_UnitTestCase {
+	private ?\Closure $http_filter = null;
+
+	public function tearDown(): void {
+		if ( null !== $this->http_filter ) {
+			remove_filter( 'pre_http_request', $this->http_filter );
+		}
+		parent::tearDown();
+	}
+
 	public function test_credentials_are_redacted_without_changing_other_settings(): void {
 		$provider = new Mailchimp_Provider();
 		$settings = array( 'api_key' => 'private-fixture-us20', 'token' => 'short', 'audience_id' => 'audience' );
@@ -46,5 +55,33 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 
 		$this->expectException( \InvalidArgumentException::class );
 		$method->invoke( null, 'invalid-key', '/campaigns' );
+	}
+
+	public function test_connection_is_verified_against_ping_endpoint(): void {
+		$this->http_filter = static function ( mixed $preempt, array $args, string $url ): array {
+			self::assertSame( 'https://us20.api.mailchimp.com/3.0/ping', $url );
+			self::assertSame( 'GET', $args['method'] ?? null );
+			return array(
+				'headers' => array(),
+				'body' => '{"health_status":"Everything is Chimpy!"}',
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'cookies' => array(),
+				'filename' => null,
+			);
+		};
+		add_filter( 'pre_http_request', $this->http_filter, 10, 3 );
+
+		$result = ( new Mailchimp_Provider() )->verify_connection( array( 'api_key' => str_repeat( 'a', 32 ) . '-us20' ) );
+		self::assertFalse( is_wp_error( $result ) );
+		self::assertTrue( $result['verified'] ?? false );
+	}
+
+	public function test_capabilities_only_advertise_implemented_workflows(): void {
+		$capabilities = ( new Mailchimp_Provider() )->get_capabilities();
+		self::assertTrue( $capabilities['verify_connection'] );
+		self::assertTrue( $capabilities['discover_template_sections'] );
+		self::assertFalse( $capabilities['discover_audiences'] );
+		self::assertFalse( $capabilities['schedule'] );
+		self::assertFalse( $capabilities['reports'] );
 	}
 }

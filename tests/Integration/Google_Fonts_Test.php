@@ -40,7 +40,8 @@ final class Google_Fonts_Test extends Test_Case {
 		$font = $service->resolve( 'Roboto' );
 		self::assertFalse( is_wp_error( $font ) );
 		self::assertSame( 'custom', $font['slug'] ?? null );
-		self::assertSame( 'https://fonts.googleapis.com/css2?family=Roboto&display=swap', $font['url'] ?? null );
+		self::assertSame( array( 400, 600, 700 ), $font['weights'] ?? null );
+		self::assertSame( 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap', $font['url'] ?? null );
 	}
 
 	public function test_validates_an_exact_new_family_through_the_bounded_css_endpoint(): void {
@@ -57,6 +58,8 @@ final class Google_Fonts_Test extends Test_Case {
 		$font = ( new Google_Fonts() )->resolve( self::NEW_FAMILY );
 		self::assertFalse( is_wp_error( $font ) );
 		self::assertSame( self::NEW_FAMILY, $font['name'] ?? null );
+		self::assertSame( array( 400 ), $font['weights'] ?? null );
+		self::assertSame( 'https://fonts.googleapis.com/css2?family=Campaign+Bridge+Sans:wght@400&display=swap', $font['url'] ?? null );
 	}
 
 	public function test_caches_an_invalid_exact_family(): void {

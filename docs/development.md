@@ -32,3 +32,9 @@ Sites that prohibit external font requests can disable resolution and loading:
 ```php
 add_filter( 'campaignbridge_external_google_fonts_enabled', '__return_false' );
 ```
+
+Custom Google Fonts intentionally load at most weights 400, 600, and 700 when
+those variants exist in the bundled catalogue. This covers normal, semibold,
+and bold email typography without requesting every published family variant;
+newly validated families fall back to weight 400 until the catalogue includes
+their variant metadata.
