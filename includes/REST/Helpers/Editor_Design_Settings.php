@@ -9,8 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\REST\Helpers;
 
-use CampaignBridge\Domain\Email\Brand_Kit;
-use CampaignBridge\Domain\Email\Design_Presets;
+use CampaignBridge\Domain\Email\Resolved_Email_Design;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -25,23 +24,26 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Editor_Design_Settings {
 	/**
-	 * Overlay brand-kit presets onto block editor settings.
+	 * Adapt the resolved email design to block editor settings.
 	 *
-	 * @param array<string, mixed> $settings Core editor settings.
-	 * @param Brand_Kit            $kit      Active brand kit.
+	 * @param array<string, mixed>  $settings Core editor settings.
+	 * @param Resolved_Email_Design $design  Canonical runtime design.
 	 * @return array<string, mixed>
 	 */
-	public static function apply( array $settings, Brand_Kit $kit ): array {
-		$palette    = $kit->colors();
-		$font_sizes = Design_Presets::font_sizes();
-		$spacing    = Design_Presets::spacing_sizes();
-		$fonts      = self::fonts( $kit );
+	public static function apply( array $settings, Resolved_Email_Design $design ): array {
+		$palette    = $design->colors();
+		$font_sizes = self::pixel_presets( $design->font_sizes() );
+		$spacing    = self::pixel_presets( $design->spacing_sizes() );
+		$fonts      = $design->font_families();
 
-		$settings['colors']                 = $palette;
-		$settings['fontSizes']              = $font_sizes;
-		$settings['disableCustomColors']    = false;
-		$settings['disableCustomGradients'] = true;
-		$settings['gradients']              = array();
+		$settings['colors']                    = $palette;
+		$settings['fontSizes']                 = $font_sizes;
+		$settings['spacingSizes']              = $spacing;
+		$settings['disableCustomColors']       = ! $design->allows_custom_colors();
+		$settings['disableCustomFontSizes']    = ! $design->allows_custom_font_sizes();
+		$settings['disableCustomSpacingSizes'] = ! $design->allows_custom_spacing();
+		$settings['disableCustomGradients']    = true;
+		$settings['gradients']                 = array();
 
 		$features = isset( $settings['__experimentalFeatures'] ) && is_array( $settings['__experimentalFeatures'] )
 			? $settings['__experimentalFeatures']
@@ -54,7 +56,7 @@ final class Editor_Design_Settings {
 			'custom'  => array(),
 		);
 		$color['defaultPalette']   = false;
-		$color['custom']           = true;
+		$color['custom']           = $design->allows_custom_colors();
 		$color['gradients']        = false;
 		$color['defaultGradients'] = false;
 		$color['customGradient']   = false;
@@ -69,8 +71,8 @@ final class Editor_Design_Settings {
 			'theme'   => $fonts,
 			'default' => array(),
 		);
-		$typography['customFontSize']   = true;
-		$typography['customFontFamily'] = true;
+		$typography['customFontSize']   = $design->allows_custom_font_sizes();
+		$typography['customFontFamily'] = false;
 		$features['typography']         = $typography;
 
 		$spacing_features                        = isset( $features['spacing'] ) && is_array( $features['spacing'] ) ? $features['spacing'] : array();
@@ -79,6 +81,7 @@ final class Editor_Design_Settings {
 			'default' => array(),
 		);
 		$spacing_features['defaultSpacingSizes'] = false;
+		$spacing_features['customSpacingSize']   = $design->allows_custom_spacing();
 		$features['spacing']                     = $spacing_features;
 
 		$settings['__experimentalFeatures'] = $features;
@@ -124,26 +127,17 @@ final class Editor_Design_Settings {
 	}
 
 	/**
-	 * Include the active Brand Kit Google Font in per-block font controls.
+	 * Convert normalized pixel integers back to Gutenberg preset strings.
 	 *
-	 * @param Brand_Kit $kit Active brand kit.
+	 * @param array<int, array<string, mixed>> $presets Normalized presets.
 	 * @return array<int, array<string, mixed>>
 	 */
-	private static function fonts( Brand_Kit $kit ): array {
-		$fonts  = Design_Presets::fonts();
-		$custom = $kit->custom_font();
-
-		if ( null !== $custom ) {
-			$fonts[] = array(
-				'slug'    => Brand_Kit::CUSTOM_FONT_SLUG,
-				'name'    => $custom['name'],
-				'family'  => $custom['family'],
-				'type'    => 'web',
-				'weights' => $custom['weights'],
-				'url'     => $custom['url'],
-			);
+	private static function pixel_presets( array $presets ): array {
+		foreach ( $presets as &$preset ) {
+			$preset['size'] = (string) $preset['size'] . 'px';
 		}
+		unset( $preset );
 
-		return $fonts;
+		return $presets;
 	}
 }

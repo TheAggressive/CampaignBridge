@@ -139,6 +139,12 @@ class Editor_Settings_Routes_Test extends Test_Case {
 		$this->assertIsArray( $data );
 		$this->assertFalse( $data['__experimentalFeatures']['color']['defaultPalette'] );
 		$this->assertFalse( $data['__experimentalFeatures']['color']['gradients'] );
+		$this->assertTrue( $data['disableCustomColors'] );
+		$this->assertTrue( $data['disableCustomFontSizes'] );
+		$this->assertTrue( $data['disableCustomSpacingSizes'] );
+		$this->assertFalse( $data['__experimentalFeatures']['color']['custom'] );
+		$this->assertFalse( $data['__experimentalFeatures']['typography']['customFontSize'] );
+		$this->assertFalse( $data['__experimentalFeatures']['spacing']['customSpacingSize'] );
 
 		$palette = $data['__experimentalFeatures']['color']['palette']['theme'];
 		$slugs   = array_map( static fn( array $preset ): string => $preset['slug'], $palette );
