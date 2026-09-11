@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "settings": {
+    "layout": { "contentWidth": "640px" },
+    "color": {
+      "palette": [
+        { "slug": "brand", "name": "Parent brand", "color": "#224466" },
+        { "slug": "accent", "name": "Accent", "color": "#cc5500" }
+      ]
+    }
+  },
+  "styles": {
+    "blocks": {
+      "campaignbridge/heading": {
+        "color": { "text": "var:preset|color|accent" }
+      }
+    }
+  }
+}
