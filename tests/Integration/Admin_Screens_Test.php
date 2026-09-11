@@ -238,7 +238,7 @@ class Admin_Screens_Test extends Test_Case {
 		unset( $_GET['post_id'] );
 
 		$this->assertIsArray( $inline_scripts );
-		$preload_script = implode( "\n", $inline_scripts );
+		$preload_script = str_replace( '\\/', '/', implode( "\n", $inline_scripts ) );
 		$this->assertStringContainsString( 'createPreloadingMiddleware', $preload_script );
 		$this->assertStringContainsString( '/wp/v2/cb_templates/' . $template_id . '?context=edit', $preload_script );
 		$this->assertStringContainsString( '/campaignbridge/v1/editor-settings?post_type=cb_templates', $preload_script );
