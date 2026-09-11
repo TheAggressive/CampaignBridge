@@ -16,13 +16,19 @@ global $screen;
 if ( ! isset( $screen ) ) {
 	$screen = null; // Fallback for PHPStan.
 }
-$campaignbridge_provider           = $screen ? $screen->get( 'provider', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_provider', 'html' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_provider', 'html' );
-$campaignbridge_mailchimp_api_key  = $screen ? $screen->get( 'mailchimp_api_key', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
-$campaignbridge_mailchimp_audience = $screen ? $screen->get( 'mailchimp_audience', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' );
-$campaignbridge_is_connected       = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
-$campaignbridge_mailchimp_status   = $screen ? $screen->get( 'mailchimp_status', __( 'Not configured', 'campaignbridge' ) ) : __( 'Not configured', 'campaignbridge' );
-$campaignbridge_is_mailchimp       = 'mailchimp' === $campaignbridge_provider;
-$campaignbridge_editor_url         = admin_url( 'admin.php?page=campaignbridge-editor' );
+$campaignbridge_provider            = $screen ? $screen->get( 'provider', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_provider', 'html' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_provider', 'html' );
+$campaignbridge_mailchimp_api_key   = $screen ? $screen->get( 'mailchimp_api_key', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
+$campaignbridge_mailchimp_audience  = $screen ? $screen->get( 'mailchimp_audience', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' );
+$campaignbridge_is_connected        = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
+$campaignbridge_mailchimp_status    = $screen ? $screen->get( 'mailchimp_status', __( 'Not configured', 'campaignbridge' ) ) : __( 'Not configured', 'campaignbridge' );
+$campaignbridge_mailchimp_audiences = $screen ? $screen->get( 'mailchimp_audiences', array() ) : array();
+$campaignbridge_audience_error      = $screen ? $screen->get( 'mailchimp_audience_error', '' ) : '';
+$campaignbridge_is_mailchimp        = 'mailchimp' === $campaignbridge_provider;
+$campaignbridge_editor_url          = admin_url( 'admin.php?page=campaignbridge-editor' );
+$campaignbridge_audience_options    = is_array( $campaignbridge_mailchimp_audiences ) ? $campaignbridge_mailchimp_audiences : array();
+if ( '' !== $campaignbridge_mailchimp_audience && ! isset( $campaignbridge_audience_options[ $campaignbridge_mailchimp_audience ] ) ) {
+	$campaignbridge_audience_options[ $campaignbridge_mailchimp_audience ] = __( 'Current audience (temporarily unavailable)', 'campaignbridge' );
+}
 
 if ( $screen ) {
 	$screen->asset_enqueue_script( 'campaignbridge-providers', 'dist/scripts/admin/providers.asset.php' );
@@ -45,8 +51,19 @@ $form = Form::make( 'providers' )
 		->context( 'api_key' )
 		->validation( 'min_length', 10 )
 		->description( __( 'Create or copy a key from your Mailchimp account settings. Existing saved keys remain encrypted.', 'campaignbridge' ) )
-	->text( 'mailchimp_audience', __( 'Default audience', 'campaignbridge' ) )
-		->description( __( 'Optional audience identifier to use for new campaigns.', 'campaignbridge' ) )
+	->select( 'mailchimp_audience', __( 'Default audience', 'campaignbridge' ) )
+		->options(
+			array( '' => __( 'Select an audience', 'campaignbridge' ) )
+			+ $campaignbridge_audience_options
+		)
+		->default( $campaignbridge_mailchimp_audience )
+		->description(
+			$campaignbridge_audience_error
+				? sprintf( __( '%s Save a valid API key, then reload this page to try again.', 'campaignbridge' ), $campaignbridge_audience_error )
+				: ( $campaignbridge_is_connected
+					? __( 'Choose the audience CampaignBridge should use for new campaigns.', 'campaignbridge' )
+					: __( 'Save and verify your Mailchimp API key to choose an audience.', 'campaignbridge' ) )
+		)
 		->end()
 	->before_save(
 		function ( $data ) {
@@ -57,7 +74,7 @@ $form = Form::make( 'providers' )
 				if ( ! empty( $data['mailchimp_api_key'] ) ) {
 					\CampaignBridge\Core\Storage::update_option( 'campaignbridge_mailchimp_api_key', $data['mailchimp_api_key'] );
 				}
-				if ( ! empty( $data['mailchimp_audience'] ) ) {
+				if ( array_key_exists( 'mailchimp_audience', $data ) ) {
 					\CampaignBridge\Core\Storage::update_option( 'campaignbridge_mailchimp_audience', $data['mailchimp_audience'] );
 				}
 			}
@@ -99,7 +116,9 @@ $form = Form::make( 'providers' )
 			<div class="campaignbridge-providers__fields">
 				<?php $form->render_field( 'provider' ); ?>
 				<div data-mailchimp-field <?php echo $campaignbridge_is_mailchimp ? '' : 'hidden'; ?>><?php $form->render_field( 'mailchimp_api_key' ); ?></div>
-				<div data-mailchimp-field <?php echo $campaignbridge_is_mailchimp ? '' : 'hidden'; ?>><?php $form->render_field( 'mailchimp_audience' ); ?></div>
+				<?php if ( $campaignbridge_is_connected ) : ?>
+					<div data-mailchimp-field <?php echo $campaignbridge_is_mailchimp ? '' : 'hidden'; ?>><?php $form->render_field( 'mailchimp_audience' ); ?></div>
+				<?php endif; ?>
 			</div>
 			<footer class="cb-admin-card__footer campaignbridge-providers__save"><span><?php esc_html_e( 'Connection details are encrypted before storage.', 'campaignbridge' ); ?></span><?php $form->render_submit(); ?></footer>
 			<?php $form->form_end(); ?>
