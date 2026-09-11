@@ -63,7 +63,7 @@
 
   /* Required field indicator */
   &__required {
-    @apply ml-1 text-red-500;
+    @apply ml-1 text-red-600;
   }
 
   /* Modern help text with better styling and accessibility */

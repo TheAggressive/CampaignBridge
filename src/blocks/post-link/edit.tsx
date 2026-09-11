@@ -8,6 +8,7 @@ import {
   resolveDestinationPreview,
   usePostDestination,
 } from '../shared/post-destination';
+import { useAnnouncement } from '../shared/use-announcement';
 import type { EmailBlockEditProps, PostLinkAttributes } from '../types';
 
 export default function Edit({
@@ -27,6 +28,7 @@ export default function Edit({
     postId,
     postType
   );
+  const { region: announcementRegion, announce } = useAnnouncement();
 
   const { previewUrl, destinationHelp } = resolveDestinationPreview({
     destination,
@@ -94,7 +96,18 @@ export default function Edit({
               label={__('Custom URL', 'campaignbridge')}
               type='url'
               value={customUrl}
+              aria-invalid={Boolean(customUrl && !isHttpsUrl(customUrl))}
               onChange={value => setAttributes({ customUrl: value })}
+              onBlur={() => {
+                if (customUrl && !isHttpsUrl(customUrl)) {
+                  announce(
+                    __(
+                      'Enter an absolute URL beginning with http:// or https://.',
+                      'campaignbridge'
+                    )
+                  );
+                }
+              }}
               help={
                 customUrl && !isHttpsUrl(customUrl)
                   ? __(
@@ -123,6 +136,7 @@ export default function Edit({
       >
         {label}
       </a>
+      {announcementRegion}
     </div>
   );
 }

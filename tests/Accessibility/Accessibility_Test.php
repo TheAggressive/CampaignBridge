@@ -505,4 +505,335 @@ class Accessibility_Test extends Test_Case {
 		$this->assertEquals( 'form_one[test_field]', $normalized_config['id'] );
 		$this->assertEquals( 'form_one[test_field]', $normalized_config['name'] );
 	}
+
+	/**
+	 * Render a form and capture the HTML output for accessibility assertions.
+	 *
+	 * @param array<string, mixed> $config Form configuration.
+	 * @param array<string, mixed> $fields Field configurations keyed by field ID.
+	 * @param array<string, mixed> $data   Submitted form data.
+	 * @return string Complete rendered form HTML.
+	 */
+	private function render_form_html( array $config, array $fields, array $data = array() ): string {
+		$security  = new Form_Security( $config['form_id'] ?? 'test_form' );
+		$validator = new Form_Validator();
+		$renderer  = new Form_Renderer( $config, $fields, $data, $security, $validator );
+
+		ob_start();
+		$renderer->render_form_open();
+		$renderer->render_fields();
+		$renderer->render_submit_button();
+		$renderer->render_form_close();
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Build a standard div-layout form config for rendering tests.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function make_render_config(): array {
+		return array(
+			'form_id'       => 'test_form',
+			'layout'        => 'div',
+			'method'        => 'POST',
+			'action'        => '',
+			'enctype'       => 'multipart/form-data',
+			'classes'       => array( 'test-form' ),
+			'attributes'    => array(),
+			'submit_button' => array(
+				'text'       => 'Save Changes',
+				'type'       => 'primary',
+				'attributes' => array(),
+			),
+		);
+	}
+
+	/**
+	 * WCAG SC 1.3.1: Every <label for="X"> must have a matching input with id="X".
+	 */
+	public function test_rendered_html_label_for_pairing(): void {
+		$fields = array(
+			'email' => array(
+				'type'  => 'email',
+				'label' => 'Email Address',
+			),
+			'phone' => array(
+				'type'  => 'tel',
+				'label' => 'Phone Number',
+			),
+			'website' => array(
+				'type'  => 'url',
+				'label' => 'Website',
+			),
+		);
+
+		$html = $this->render_form_html( $this->make_render_config(), $fields );
+
+		preg_match_all( '/<label[^>]*for="([^"]+)"/', $html, $label_matches );
+		$label_for_values = $label_matches[1] ?? array();
+
+		preg_match_all( '/<input[^>]*id="([^"]+)"/', $html, $input_matches );
+		$input_id_values  = $input_matches[1] ?? array();
+
+		$this->assertNotEmpty( $label_for_values, 'Expected at least one <label for="..."> in rendered HTML' );
+		$this->assertNotEmpty( $input_id_values, 'Expected at least one <input id="..."> in rendered HTML' );
+
+		foreach ( $label_for_values as $for_value ) {
+			$this->assertContains(
+				$for_value,
+				$input_id_values,
+				sprintf( 'Label for="%s" must have a matching input with id="%s"', $for_value, $for_value )
+			);
+		}
+	}
+
+	/**
+	 * WCAG SC 4.1.2: Error containers must have role="alert" and aria-live="polite".
+	 */
+	public function test_rendered_html_error_containers_have_aria(): void {
+		$fields = array(
+			'email' => array(
+				'type'   => 'email',
+				'label'  => 'Email Address',
+				'errors' => array( 'Invalid email address' ),
+			),
+		);
+
+		$html = $this->render_form_html( $this->make_render_config(), $fields );
+
+		$this->assertStringContainsString(
+			'role="alert"',
+			$html,
+			'Error container must have role="alert" for screen reader announcement'
+		);
+
+		$this->assertStringContainsString(
+			'aria-live="polite"',
+			$html,
+			'Error container must have aria-live="polite" for dynamic updates'
+		);
+
+		$this->assertStringContainsString(
+			'Invalid email address',
+			$html,
+			'Error message text must be present in rendered HTML'
+		);
+
+		$this->assertMatchesRegularExpression(
+			'/id="test_form_email_errors"/',
+			$html,
+			'Error container must have an id linking it to the field'
+		);
+	}
+
+	/**
+	 * WCAG SC 1.3.1: Required fields must have the HTML required attribute.
+	 */
+	public function test_rendered_html_required_fields_have_required_attribute(): void {
+		$fields = array(
+			'username' => array(
+				'type'     => 'text',
+				'label'    => 'Username',
+				'required' => true,
+			),
+			'nickname' => array(
+				'type'  => 'text',
+				'label' => 'Nickname',
+			),
+		);
+
+		$html = $this->render_form_html( $this->make_render_config(), $fields );
+
+		$this->assertMatchesRegularExpression(
+			'/<input[^>]*id="test_form_username"[^>]*required/',
+			$html,
+			'Required field input must have the HTML required attribute'
+		);
+
+		$this->assertDoesNotMatchRegularExpression(
+			'/<input[^>]*id="test_form_nickname"[^>]*required/',
+			$html,
+			'Non-required field input must not have the HTML required attribute'
+		);
+	}
+
+	/**
+	 * WCAG SC 1.4.1: Required fields must not be indicated by color alone.
+	 */
+	public function test_rendered_html_required_fields_have_visible_indicator(): void {
+		$fields = array(
+			'username' => array(
+				'type'     => 'text',
+				'label'    => 'Username',
+				'required' => true,
+			),
+		);
+
+		$html = $this->render_form_html( $this->make_render_config(), $fields );
+
+		$this->assertStringContainsString(
+			'campaignbridge-field__required',
+			$html,
+			'Required field label must contain a visible indicator class (not color-only)'
+		);
+
+		$this->assertMatchesRegularExpression(
+			'/<label[^>]*>.*\*/s',
+			$html,
+			'Required field label must contain a visible * character indicator'
+		);
+	}
+
+	/**
+	 * WCAG SC 1.3.1: Radio button groups must use fieldset and legend.
+	 */
+	public function test_rendered_html_radio_groups_use_fieldset_legend(): void {
+		$fields = array(
+			'color' => array(
+				'type'    => 'radio',
+				'label'   => 'Preferred Color',
+				'options' => array(
+					'red'   => 'Red',
+					'blue'  => 'Blue',
+					'green' => 'Green',
+				),
+			),
+		);
+
+		$html = $this->render_form_html( $this->make_render_config(), $fields );
+
+		$this->assertStringContainsString(
+			'<fieldset',
+			$html,
+			'Radio group must be wrapped in <fieldset>'
+		);
+
+		$this->assertStringContainsString(
+			'<legend',
+			$html,
+			'Radio group must have a <legend>'
+		);
+
+		$this->assertStringContainsString(
+			'Preferred Color',
+			$html,
+			'Legend must contain the field label text'
+		);
+
+		$this->assertStringContainsString(
+			'</fieldset>',
+			$html,
+			'Radio group fieldset must be properly closed'
+		);
+
+		$this->assertMatchesRegularExpression(
+			'/<label[^>]*for="test_form_color_red"/',
+			$html,
+			'Each radio option must have an associated label'
+		);
+	}
+
+	/**
+	 * WCAG SC 1.3.5: Input types must match field purpose.
+	 */
+	public function test_rendered_html_input_types_match_field_purpose(): void {
+		$fields = array(
+			'email'   => array(
+				'type'  => 'email',
+				'label' => 'Email Address',
+			),
+			'phone'   => array(
+				'type'  => 'tel',
+				'label' => 'Phone Number',
+			),
+			'website' => array(
+				'type'  => 'url',
+				'label' => 'Website',
+			),
+		);
+
+		$html = $this->render_form_html( $this->make_render_config(), $fields );
+
+		$this->assertMatchesRegularExpression(
+			'/<input[^>]*type="email"[^>]*id="test_form_email"/',
+			$html,
+			'Email field must use type="email" for proper input purpose identification'
+		);
+
+		$this->assertMatchesRegularExpression(
+			'/<input[^>]*type="tel"[^>]*id="test_form_phone"/',
+			$html,
+			'Phone field must use type="tel" for proper input purpose identification'
+		);
+
+		$this->assertMatchesRegularExpression(
+			'/<input[^>]*type="url"[^>]*id="test_form_website"/',
+			$html,
+			'URL field must use type="url" for proper input purpose identification'
+		);
+	}
+
+	/**
+	 * WCAG SC 4.1.2: Forms with conditional fields must expose ARIA live region.
+	 */
+	public function test_rendered_html_form_has_aria_for_conditional_fields(): void {
+		$fields = array(
+			'has_pet'  => array(
+				'type'        => 'checkbox',
+				'label'       => 'Do you have a pet?',
+				'conditional' => array(
+					'show' => array( 'has_pet' => 'yes' ),
+				),
+			),
+			'pet_name' => array(
+				'type'        => 'text',
+				'label'       => 'Pet Name',
+				'conditional' => array(
+					'show' => array( 'has_pet' => 'yes' ),
+				),
+			),
+		);
+
+		$html = $this->render_form_html( $this->make_render_config(), $fields );
+
+		$this->assertStringContainsString(
+			'aria-live="polite"',
+			$html,
+			'Form with conditional fields must have aria-live="polite" for screen reader announcements'
+		);
+
+		$this->assertStringContainsString(
+			'aria-atomic="false"',
+			$html,
+			'Form with conditional fields must have aria-atomic="false" to avoid announcing unchanged content'
+		);
+	}
+
+	/**
+	 * WCAG SC 3.3.2: Form fields with descriptions must have visible instructions.
+	 */
+	public function test_rendered_html_field_descriptions_are_present(): void {
+		$fields = array(
+			'password' => array(
+				'type'        => 'password',
+				'label'       => 'Password',
+				'description' => 'Must be at least 8 characters long.',
+			),
+		);
+
+		$html = $this->render_form_html( $this->make_render_config(), $fields );
+
+		$this->assertStringContainsString(
+			'campaignbridge-field__description',
+			$html,
+			'Field description must be rendered with a semantic class'
+		);
+
+		$this->assertStringContainsString(
+			'Must be at least 8 characters long.',
+			$html,
+			'Field description text must be present in rendered HTML'
+		);
+	}
 }

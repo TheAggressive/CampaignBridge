@@ -4,6 +4,30 @@ import { expect, test as setup } from '@playwright/test';
 import { AUTH_STATE_PATH, BASE_URL } from './support/environment';
 
 setup('authenticate an administrator', async ({ page }) => {
+  // If a valid storage state already exists, verify the session and skip
+  // re-authentication. This avoids requiring credentials on every run.
+  if (fs.existsSync(AUTH_STATE_PATH)) {
+    try {
+      const state = JSON.parse(fs.readFileSync(AUTH_STATE_PATH, 'utf8'));
+      const cookies = Array.isArray(state.cookies) ? state.cookies : [];
+      if (cookies.length > 0) {
+        await page.context().addCookies(cookies);
+        await page.goto('/wp-admin/', { waitUntil: 'domcontentloaded' });
+        if (
+          !page.url().includes('wp-login.php') &&
+          (await page.locator('#wpadminbar').isVisible())
+        ) {
+          // Session is still valid — refresh the storage state and exit.
+          fs.mkdirSync(path.dirname(AUTH_STATE_PATH), { recursive: true });
+          await page.context().storageState({ path: AUTH_STATE_PATH });
+          return;
+        }
+      }
+    } catch {
+      // Treat unreadable or stale state as a cache miss and authenticate below.
+    }
+  }
+
   const autoLoginUrl = process.env.CB_E2E_AUTO_LOGIN_URL;
 
   if (autoLoginUrl) {

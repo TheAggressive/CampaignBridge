@@ -74,7 +74,7 @@
       }
 
       &--warning {
-        color: var(--color-yellow-600);
+        color: var(--color-yellow-700);
       }
 
       &--error {

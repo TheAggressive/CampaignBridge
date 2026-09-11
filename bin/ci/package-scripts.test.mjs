@@ -19,12 +19,24 @@ test('package scripts reference existing entrypoints and config files', () => {
 
 test('watch and build use the same webpack configs', () => {
   for (const target of ['blocks', 'assets']) {
-    const config = (command) => command.match(/--config\s+(\S+)/u)?.[1];
+    const config = command => command.match(/--config\s+(\S+)/u)?.[1];
     assert.ok(config(scripts[`build:${target}`]));
-    assert.equal(config(scripts[`start:${target}`]), config(scripts[`build:${target}`]));
+    assert.equal(
+      config(scripts[`start:${target}`]),
+      config(scripts[`build:${target}`])
+    );
   }
 });
 
 test('Google Fonts catalog maintenance is part of the tooling gate', () => {
   assert.match(scripts['test:tools'], /google-font-catalog\.test\.mjs/u);
+});
+
+test('accessibility QA combines PHP and browser coverage', () => {
+  assert.match(scripts['qa:accessibility'], /test:accessibility/u);
+  assert.match(scripts['qa:accessibility'], /test:e2e:accessibility/u);
+  assert.match(
+    scripts['test:e2e:accessibility:ci'],
+    /playwright test accessibility\.spec\.ts/u
+  );
 });

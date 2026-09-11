@@ -51,7 +51,7 @@
 
     /* Muted colors */
     --color-muted: var(--color-slate-100);
-    --color-muted-foreground: var(--color-slate-500);
+    --color-muted-foreground: var(--color-slate-600);
 
     /* Accent colors */
     --color-accent: var(--color-slate-100);
@@ -69,7 +69,7 @@
     --color-success-light: var(--color-green-50);
     --color-success-dark: var(--color-green-800);
 
-    --color-warning: var(--color-yellow-600);
+    --color-warning: var(--color-yellow-700);
     --color-warning-light: var(--color-yellow-50);
     --color-warning-dark: var(--color-yellow-800);
 
