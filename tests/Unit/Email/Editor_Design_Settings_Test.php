@@ -12,9 +12,12 @@ namespace CampaignBridge\Tests\Unit\Email;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Design_Presets;
 use CampaignBridge\REST\Helpers\Editor_Design_Settings;
+use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 use PHPUnit\Framework\TestCase;
 
+/** Tests the resolved-design adapter for Gutenberg editor settings. */
 final class Editor_Design_Settings_Test extends TestCase {
+	/** The manifest palette replaces any palette inherited from the site theme. */
 	public function test_replaces_the_theme_palette_with_the_brand_kit(): void {
 		$kit      = Brand_Kit::from_colors( array( Brand_Kit::SLOT_BRAND => '#ff5500' ) );
 		$settings = Editor_Design_Settings::apply(
@@ -32,7 +35,7 @@ final class Editor_Design_Settings_Test extends TestCase {
 					),
 				),
 			),
-			$kit
+			Email_Design_Factory::resolve( $kit )
 		);
 
 		$palette = $settings['__experimentalFeatures']['color']['palette']['theme'];
@@ -44,13 +47,21 @@ final class Editor_Design_Settings_Test extends TestCase {
 		self::assertFalse( $settings['__experimentalFeatures']['color']['defaultPalette'] );
 		self::assertFalse( $settings['__experimentalFeatures']['color']['gradients'] );
 		self::assertTrue( $settings['disableCustomGradients'] );
+		self::assertTrue( $settings['disableCustomColors'] );
+		self::assertTrue( $settings['disableCustomFontSizes'] );
+		self::assertTrue( $settings['disableCustomSpacingSizes'] );
+		self::assertFalse( $settings['__experimentalFeatures']['color']['custom'] );
+		self::assertFalse( $settings['__experimentalFeatures']['typography']['customFontSize'] );
+		self::assertFalse( $settings['__experimentalFeatures']['typography']['customFontFamily'] );
+		self::assertFalse( $settings['__experimentalFeatures']['spacing']['customSpacingSize'] );
 		self::assertSame( Design_Presets::font_sizes(), $settings['__experimentalFeatures']['typography']['fontSizes']['theme'] );
 		self::assertSame( Design_Presets::spacing_sizes(), $settings['__experimentalFeatures']['spacing']['spacingSizes']['theme'] );
 	}
 
+	/** Generated canvas variables use the resolved email spacing presets. */
 	public function test_canvas_css_uses_the_same_spacing_values_as_the_compiler(): void {
 		$existing = array( 'css' => ':root{--wp--preset--spacing--20:1.25rem}' );
-		$settings = Editor_Design_Settings::apply( array( 'styles' => array( $existing ) ), Brand_Kit::defaults() );
+		$settings = Editor_Design_Settings::apply( array( 'styles' => array( $existing ) ), Email_Design_Factory::resolve() );
 		self::assertSame( $existing, $settings['styles'][0] );
 		$css = $settings['styles'][1]['css'];
 		self::assertStringContainsString( '.editor-styles-wrapper{', $css );
@@ -60,6 +71,7 @@ final class Editor_Design_Settings_Test extends TestCase {
 		self::assertStringContainsString( '--wp--preset--spacing--20:8px', $css );
 	}
 
+	/** A configured brand font is exposed as a bounded editor preset. */
 	public function test_custom_brand_font_is_available_to_individual_blocks(): void {
 		$custom = array(
 			'name'    => 'Example Sans',
@@ -67,9 +79,9 @@ final class Editor_Design_Settings_Test extends TestCase {
 			'weights' => array( 400, 700 ),
 			'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
 		);
-		$kit = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'heading' => 'custom' ), $custom );
+		$kit    = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'heading' => 'custom' ), $custom );
 
-		$settings = Editor_Design_Settings::apply( array(), $kit );
+		$settings = Editor_Design_Settings::apply( array(), Email_Design_Factory::resolve( $kit ) );
 		$fonts    = $settings['__experimentalFeatures']['typography']['fontFamilies']['theme'];
 
 		self::assertContains( Brand_Kit::CUSTOM_FONT_SLUG, array_column( $fonts, 'slug' ) );
@@ -77,7 +89,10 @@ final class Editor_Design_Settings_Test extends TestCase {
 	}
 
 	/**
+	 * Find a color value by preset slug.
+	 *
 	 * @param array<int, array{slug: string, color: string}> $palette Editor palette.
+	 * @param string                                         $slug    Preset slug.
 	 */
 	private function color_for( array $palette, string $slug ): string {
 		foreach ( $palette as $preset ) {

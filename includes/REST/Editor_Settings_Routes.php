@@ -19,6 +19,7 @@ use CampaignBridge\REST\Helpers\Editor_Design_Settings;
 use CampaignBridge\REST\Helpers\Response_Formatter;
 use CampaignBridge\REST\Helpers\Input_Validator;
 use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -119,7 +120,8 @@ class Editor_Settings_Routes extends Abstract_Rest_Controller {
 		// and additionally verifies edit access to the requested template above.
 		$settings                      = Response_Formatter::filter_editor_settings( $settings );
 		$settings['allowedBlockTypes'] = Compiler_Factory::registry()->block_names();
-		$settings                      = Editor_Design_Settings::apply( $settings, ( new Brand_Kit_Repository() )->get() );
+		$design                        = Email_Design_Factory::resolve( ( new Brand_Kit_Repository() )->get() );
+		$settings                      = Editor_Design_Settings::apply( $settings, $design );
 
 		return $this->ensure_response( $settings );
 	}
