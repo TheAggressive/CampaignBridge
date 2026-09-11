@@ -205,6 +205,19 @@ final class Style_Resolver_Test extends TestCase {
 		Style_Resolver::line_height( array( 'style' => array( 'typography' => array( 'lineHeight' => '24px' ) ) ) );
 	}
 
+	public function test_resolves_a_portable_font_weight(): void {
+		self::assertSame(
+			700,
+			Style_Resolver::font_weight( array( 'style' => array( 'typography' => array( 'fontWeight' => 700 ) ) ) )
+		);
+		self::assertSame( 400, Style_Resolver::font_weight( array() ) );
+	}
+
+	public function test_rejects_a_nonportable_font_weight(): void {
+		$this->expectException( Invalid_Block_Attribute::class );
+		Style_Resolver::font_weight( array( 'style' => array( 'typography' => array( 'fontWeight' => 750 ) ) ) );
+	}
+
 	public function test_every_colour_preset_is_a_portable_six_digit_value(): void {
 		foreach ( Design_Presets::colors() as $preset ) {
 			self::assertMatchesRegularExpression( '/^#[0-9a-f]{6}$/', $preset['color'], $preset['slug'] );

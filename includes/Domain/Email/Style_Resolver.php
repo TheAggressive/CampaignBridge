@@ -151,6 +151,24 @@ final class Style_Resolver {
 	}
 
 	/**
+	 * Resolve a portable numeric font weight.
+	 *
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param int                  $fallback   Value when the author chose nothing.
+	 * @throws Invalid_Block_Attribute When an explicit value is not portable.
+	 */
+	public static function font_weight( array $attributes, int $fallback = 400 ): int {
+		$value = self::style_value( $attributes, array( 'typography', 'fontWeight' ) );
+		if ( null === $value ) {
+			return $fallback;
+		}
+		if ( ! is_int( $value ) || 100 > $value || 900 < $value || 0 !== $value % 100 ) {
+			throw new Invalid_Block_Attribute( 'style.typography.fontWeight', 'must be a numeric weight from 100 through 900.' );
+		}
+		return $value;
+	}
+
+	/**
 	 * Resolve one spacing group into whole pixels per side.
 	 *
 	 * @param array<string, mixed> $attributes Block attributes.

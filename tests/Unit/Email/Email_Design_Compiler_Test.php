@@ -11,6 +11,7 @@ namespace CampaignBridge\Tests\Unit\Email;
 
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
+use CampaignBridge\REST\Helpers\Editor_Design_Settings;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 use CampaignBridge\Workflow\Email\Email_Compiler;
@@ -49,6 +50,21 @@ final class Email_Design_Compiler_Test extends TestCase {
 		self::assertNotSame( $default->fingerprint(), $wide->fingerprint() );
 	}
 
+	/** Editor and compiler render the same resolved text defaults. */
+	public function test_editor_and_compiler_share_text_defaults(): void {
+		$design   = Email_Design_Factory::resolve();
+		$settings = Editor_Design_Settings::apply( array(), $design );
+		$result   = Compiler_Factory::create( $design )->compile( $this->text_document(), $this->context() );
+		$css      = $settings['styles'][1]['css'];
+
+		self::assertTrue( $result->is_success() );
+		foreach ( array( 'font-family:Arial,Helvetica,sans-serif', 'font-size:16px', 'line-height:1.6', 'color:#111111', 'margin:0 0 16px' ) as $declaration ) {
+			self::assertStringContainsString( $declaration, $css );
+			self::assertStringContainsString( $declaration, $result->html() );
+		}
+		self::assertStringNotContainsString( 'var:preset|', $result->html() );
+	}
+
 	/**
 	 * Build the smallest valid compiler document.
 	 *
@@ -60,6 +76,29 @@ final class Email_Design_Compiler_Test extends TestCase {
 				'blockName'   => 'campaignbridge/container',
 				'attrs'       => array(),
 				'innerBlocks' => array(),
+			),
+		);
+	}
+
+	/** @return array<int, array<string, mixed>> */
+	private function text_document(): array {
+		return array(
+			array(
+				'blockName'   => 'campaignbridge/container',
+				'attrs'       => array(),
+				'innerBlocks' => array(
+					array(
+						'blockName'   => 'campaignbridge/section',
+						'attrs'       => array(),
+						'innerBlocks' => array(
+							array(
+								'blockName'   => 'campaignbridge/text',
+								'attrs'       => array( 'content' => 'Shared defaults' ),
+								'innerBlocks' => array(),
+							),
+						),
+					),
+				),
 			),
 		);
 	}

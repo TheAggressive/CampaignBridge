@@ -106,20 +106,11 @@ final class Editor_Design_Settings {
 			'css' => '.editor-styles-wrapper{' . implode( ';', $declarations ) . '}',
 		);
 		$styles[]           = array(
-			'css' => ':where(.editor-styles-wrapper){font-family:Arial,sans-serif;font-size:16px;line-height:1.6}'
-							. ':where(.wp-block-campaignbridge-text,.wp-block-campaignbridge-post-excerpt){font-size:16px;line-height:1.6;color:#333333;margin:0 0 16px}'
-							. ':where(.wp-block-campaignbridge-post-title){font-size:24px;font-weight:bold;line-height:1.25;margin:0 0 12px}'
-							. ':where(.wp-block-campaignbridge-heading){font-weight:bold;line-height:1.25;margin:0 0 16px}'
+			'css' => self::design_css( $design )
 							. ':where(h1.wp-block-campaignbridge-heading){font-size:32px}:where(h2.wp-block-campaignbridge-heading){font-size:28px}:where(h3.wp-block-campaignbridge-heading){font-size:24px}:where(h4.wp-block-campaignbridge-heading){font-size:20px}'
-							. ':where(.wp-block-campaignbridge-columns){gap:24px}'
 							. '.wp-block-campaignbridge-columns{flex-wrap:nowrap!important}'
 							. '.wp-block-campaignbridge-columns>.wp-block-campaignbridge-column{min-width:0;margin:0;overflow-wrap:break-word}'
-							. '@media(max-width:480px){.wp-block-campaignbridge-columns:not(.is-not-stacked-on-mobile){flex-wrap:wrap!important}.wp-block-campaignbridge-columns:not(.is-not-stacked-on-mobile)>.wp-block-campaignbridge-column{flex-basis:100%!important}}'
-							. ':where(.wp-block-campaignbridge-spacer){min-height:24px}'
-							. ':where(.wp-block-campaignbridge-divider){border:0;border-top:1px solid #dddddd;width:100%}'
-							. ':where(.wp-block-campaignbridge-post-link a){color:#111111;text-decoration:underline}'
-							. ':where(.wp-block-campaignbridge-post-button a){background:#111111;color:#ffffff}'
-							. ':where(.wp-block-campaignbridge-post-button.is-style-link a){background:transparent;color:#111111}',
+							. '@media(max-width:480px){.wp-block-campaignbridge-columns:not(.is-not-stacked-on-mobile){flex-wrap:wrap!important}.wp-block-campaignbridge-columns:not(.is-not-stacked-on-mobile)>.wp-block-campaignbridge-column{flex-basis:100%!important}}',
 		);
 		$settings['styles'] = $styles;
 
@@ -139,5 +130,81 @@ final class Editor_Design_Settings {
 		unset( $preset );
 
 		return $presets;
+	}
+
+	/**
+	 * Build editor visual defaults from the canonical resolved design.
+	 *
+	 * @param Resolved_Email_Design $design Canonical runtime design.
+	 */
+	private static function design_css( Resolved_Email_Design $design ): string {
+		$css = ':where(.editor-styles-wrapper){' . self::declarations( $design->global_style() ) . '}';
+		foreach ( array(
+			'campaignbridge/text'         => '.wp-block-campaignbridge-text',
+			'campaignbridge/heading'      => '.wp-block-campaignbridge-heading',
+			'campaignbridge/post-title'   => '.wp-block-campaignbridge-post-title',
+			'campaignbridge/post-excerpt' => '.wp-block-campaignbridge-post-excerpt',
+			'campaignbridge/button'       => '.wp-block-campaignbridge-button a',
+			'campaignbridge/post-button'  => '.wp-block-campaignbridge-post-button a',
+			'campaignbridge/post-link'    => '.wp-block-campaignbridge-post-link a',
+		) as $block_name => $selector ) {
+			$css .= ':where(' . $selector . '){' . self::declarations( $design->block_style( $block_name ) ) . '}';
+		}
+
+		$columns = $design->block_style( 'campaignbridge/columns' );
+		$divider = $design->block_style( 'campaignbridge/divider' );
+		$spacer  = $design->block_style( 'campaignbridge/spacer' );
+		$global  = $design->global_style();
+		$border  = is_array( $divider['border'] ?? null ) ? $divider['border'] : array();
+		$colors  = is_array( $global['color'] ?? null ) ? $global['color'] : array();
+
+		$css .= sprintf( ':where(.wp-block-campaignbridge-columns){gap:%dpx}', (int) ( $columns['spacing']['blockGap'] ?? 0 ) );
+		$css .= sprintf(
+			':where(.wp-block-campaignbridge-divider){border:0;border-top:%dpx %s %s;width:100%%}',
+			(int) ( $border['width'] ?? 0 ),
+			(string) ( $border['style'] ?? 'solid' ),
+			(string) ( $border['color'] ?? 'transparent' )
+		);
+		$css .= sprintf( ':where(.wp-block-campaignbridge-spacer){min-height:%dpx}', (int) ( $spacer['dimensions']['minHeight'] ?? 0 ) );
+		$css .= ':where(.wp-block-campaignbridge-post-button.is-style-link a){background:transparent;color:' . ( $colors['text'] ?? 'inherit' ) . '}';
+
+		return $css;
+	}
+
+	/**
+	 * Convert one normalized design style to browser CSS declarations.
+	 *
+	 * @param array<string, mixed> $style Normalized design style.
+	 */
+	private static function declarations( array $style ): string {
+		$color      = is_array( $style['color'] ?? null ) ? $style['color'] : array();
+		$typography = is_array( $style['typography'] ?? null ) ? $style['typography'] : array();
+		$spacing    = is_array( $style['spacing'] ?? null ) ? $style['spacing'] : array();
+		$values     = array();
+
+		foreach ( array(
+			'background' => 'background-color',
+			'text'       => 'color',
+		) as $key => $property ) {
+			if ( isset( $color[ $key ] ) ) {
+				$values[] = $property . ':' . $color[ $key ];
+			}
+		}
+		foreach ( array(
+			'fontFamily' => 'font-family',
+			'fontSize'   => 'font-size',
+			'fontWeight' => 'font-weight',
+			'lineHeight' => 'line-height',
+		) as $key => $property ) {
+			if ( isset( $typography[ $key ] ) ) {
+				$suffix   = 'fontSize' === $key ? 'px' : '';
+				$values[] = $property . ':' . $typography[ $key ] . $suffix;
+			}
+		}
+		if ( isset( $spacing['marginBottom'] ) ) {
+			$values[] = 'margin:0 0 ' . $spacing['marginBottom'] . 'px';
+		}
+
+		return implode( ';', $values );
 	}
 }
