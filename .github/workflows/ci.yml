@@ -148,6 +148,68 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  minimum-supported-wordpress:
+    name: Minimum WordPress (6.5 / PHP 8.2)
+    runs-on: ubuntu-24.04
+    needs: quality
+    timeout-minutes: 20
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: campaignbridge_test
+          MYSQL_USER: campaignbridge
+          MYSQL_PASSWORD: campaignbridge
+          MYSQL_ROOT_PASSWORD: campaignbridge-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pcampaignbridge-root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, mbstring, xml
+          tools: composer:v2
+
+      - name: Install test dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          composer create-project wp-phpunit/wp-phpunit:6.5.0 \
+            "${RUNNER_TEMP}/wp-phpunit-6.5" \
+            --no-interaction \
+            --prefer-dist \
+            --no-progress
+
+      - name: Install checksum-verified WordPress 6.5
+        env:
+          CB_TESTS_WP_VERSION: '6.5'
+          CB_TESTS_WP_DIR: ${{ runner.temp }}/wordpress
+        run: bash bin/ci/install-wp-core.sh
+
+      - name: Run all PHP suites
+        env:
+          CB_TESTS_ABSPATH: ${{ runner.temp }}/wordpress
+          CB_TESTS_PLUGIN_DIR: ${{ github.workspace }}/..
+          CB_TESTS_DB_HOST: 127.0.0.1:3306
+          CB_TESTS_DB_NAME: campaignbridge_test
+          CB_TESTS_DB_USER: campaignbridge
+          CB_TESTS_DB_PASSWORD: campaignbridge
+          WP_PHPUNIT__TESTS_CONFIG: ${{ github.workspace }}/tests/wp-tests-config.php
+          WP_TESTS_DIR: ${{ runner.temp }}/wp-phpunit-6.5
+        run: vendor/bin/phpunit
+
   build:
     name: Build assets
     runs-on: ubuntu-24.04
@@ -314,7 +376,7 @@ jobs:
   package:
     name: Package plugin
     runs-on: ubuntu-24.04
-    needs: [build, phpunit]
+    needs: [build, phpunit, minimum-supported-wordpress, e2e]
     timeout-minutes: 10
 
     steps:
@@ -504,7 +566,17 @@ jobs:
   summary:
     name: CI summary
     runs-on: ubuntu-24.04
-    needs: [quality, phpunit, build, e2e, package, release, version-sync]
+    needs:
+      [
+        quality,
+        phpunit,
+        minimum-supported-wordpress,
+        build,
+        e2e,
+        package,
+        release,
+        version-sync,
+      ]
     if: always()
 
     steps:
@@ -516,6 +588,7 @@ jobs:
             echo '| --- | --- |'
             echo '| Quality | ${{ needs.quality.result }} |'
             echo '| PHPUnit | ${{ needs.phpunit.result }} |'
+            echo '| Minimum WordPress | ${{ needs.minimum-supported-wordpress.result }} |'
             echo '| Build | ${{ needs.build.result }} |'
             echo '| Browser E2E | ${{ needs.e2e.result }} |'
             echo '| Package | ${{ needs.package.result }} |'
@@ -527,6 +600,7 @@ jobs:
         if: >-
           needs.quality.result != 'success' ||
           needs.phpunit.result != 'success' ||
+          needs.minimum-supported-wordpress.result != 'success' ||
           needs.build.result != 'success' ||
           needs.e2e.result != 'success' ||
           needs.package.result != 'success' ||

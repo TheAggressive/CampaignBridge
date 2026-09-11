@@ -66,3 +66,21 @@ test('workflow-run policy resolves the pull request without an Actions API looku
     /actions\/runs\/\$\{WORKFLOW_RUN_ID\}\/pull_requests/u
   );
 });
+
+test('release packaging requires every runtime test gate', () => {
+  assert.match(
+    ciWorkflow,
+    /package:\s+[\s\S]*?needs: \[build, phpunit, minimum-supported-wordpress, e2e\]/u
+  );
+  assert.match(ciWorkflow, /release:\s+[\s\S]*?needs: package/u);
+});
+
+test('CI exercises the declared minimum WordPress and PHP versions', () => {
+  assert.match(ciWorkflow, /minimum-supported-wordpress:/u);
+  assert.match(ciWorkflow, /php-version: '8\.2'/u);
+  assert.match(ciWorkflow, /CB_TESTS_WP_VERSION: '6\.5'/u);
+  assert.match(
+    ciWorkflow,
+    /needs\.minimum-supported-wordpress\.result != 'success'/u
+  );
+});

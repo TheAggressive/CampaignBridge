@@ -19,7 +19,7 @@ The browser-facing development site is managed with WordPress Studio. The reposi
 
 PHPUnit runs natively with `pnpm test`. The runner starts a disposable MySQL instance under `.cache/tests/mysql`, downloads the pinned WordPress core under `.cache/tests/wordpress`, verifies core checksums through the pinned WP-CLI binary, and uses the Composer-pinned WordPress PHPUnit library. Use `pnpm test:setup` to prepare the environment without running tests and `pnpm db:local stop` to stop the database.
 
-CI uses the same WordPress version, test configuration, and PHPUnit library with a MySQL 8.4 service. Suite jobs are isolated from one another and do not depend on a long-lived development environment. Browser E2E tests install a disposable WordPress site natively, serve it with PHP, and retain Playwright traces, screenshots, video, and the server log on failure.
+CI runs the primary suites against the pinned current WordPress version and also runs every PHP suite against the declared minimum WordPress 6.5/PHP 8.2 platform with its matching PHPUnit library. Jobs use isolated MySQL 8.4 services and do not depend on a long-lived development environment. Browser E2E tests install a disposable WordPress site natively, serve it with PHP, and retain Playwright traces, screenshots, video, and the server log on failure. Packaging waits for the primary suites, minimum-platform suite, build, and browser E2E job, so a release cannot bypass a failed runtime gate.
 
 ## Failure policy
 
