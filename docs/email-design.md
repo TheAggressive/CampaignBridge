@@ -32,7 +32,10 @@ applied; explicit block values win last.
 
 The standard color slugs (`text`, `secondary`, `background`, `card`, `border`,
 `brand`, and `on-brand`) are identity slots. The packaged values are safe
-fallbacks. The active Brand Kit supplies the effective values for those slots.
+fallbacks. Palette declarations make slots available; the active Brand Kit
+supplies the effective values for those seven identity slots before manifest
+style rules resolve their references. Non-identity palette entries retain their
+manifest value.
 
 ## References and normalization
 
