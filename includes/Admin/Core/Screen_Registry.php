@@ -290,8 +290,7 @@ class Screen_Registry {
 	 * @param array<string, mixed> $config Screen configuration.
 	 */
 	private function render_product_header( array $config ): void {
-		$editor_url       = \admin_url( 'admin.php?page=campaignbridge-editor' );
-		$new_template_url = \admin_url( 'post-new.php?post_type=cb_templates' );
+		$editor_url = \admin_url( 'admin.php?page=campaignbridge-editor' );
 		?>
 		<header class="cb-admin-product-header campaignbridge-product-header">
 			<div class="campaignbridge-product-header__identity">
@@ -305,8 +304,7 @@ class Screen_Registry {
 			</div>
 			<div class="campaignbridge-product-header__actions">
 				<span class="campaignbridge-version">v<?php echo esc_html( \CampaignBridge_Plugin::VERSION ); ?></span>
-				<a class="button" href="<?php echo esc_url( $editor_url ); ?>"><?php esc_html_e( 'Open editor', 'campaignbridge' ); ?><span class="dashicons dashicons-external"></span></a>
-				<a class="button button-primary" href="<?php echo esc_url( $new_template_url ); ?>"><span class="dashicons dashicons-plus-alt2"></span><?php esc_html_e( 'Create new template', 'campaignbridge' ); ?></a>
+				<a class="button button-primary" href="<?php echo esc_url( $editor_url ); ?>"><?php esc_html_e( 'Open Template Editor', 'campaignbridge' ); ?><span class="dashicons dashicons-external"></span></a>
 			</div>
 		</header>
 		<?php
