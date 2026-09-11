@@ -92,18 +92,35 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 			);
 		}
 
-		$font_size = $attributes['fontSize'];
-
+		$font_size   = $attributes['fontSize'];
 		$font_family = Renderer_Support::resolve_font( $attributes, Renderer_Support::brand_kit( $context ), 'heading' )['family'];
+		$line_height = Style_Resolver::line_height( $attributes, 1.25 );
+		$font_weight = Style_Resolver::font_weight( $attributes, 700 );
+		$margin      = Style_Resolver::spacing(
+			$attributes,
+			'margin',
+			array(
+				'top'    => 0,
+				'right'  => 0,
+				'bottom' => 12,
+				'left'   => 0,
+			)
+		);
+		$margin_css  = 0 === $margin['top'] && 0 === $margin['right'] && 0 === $margin['left']
+			? sprintf( '0 0 %dpx', $margin['bottom'] )
+			: sprintf( '%dpx %dpx %dpx %dpx', $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] );
 
 		return sprintf(
-			'<h%1$d align="%2$s" style="margin:0 0 12px;font-family:' . $font_family . ';font-size:%3$dpx;line-height:1.25%6$s;text-align:%2$s;color:%4$s">%5$s</h%1$d>',
+			'<h%1$d align="%2$s" style="margin:%3$s;font-family:%4$s;font-size:%5$dpx;font-weight:%6$d;line-height:%7$s;text-align:%2$s;color:%8$s">%9$s</h%1$d>',
 			$attributes['level'],
 			$attributes['align'],
+			$margin_css,
+			$font_family,
 			$font_size,
+			$font_weight,
+			(string) $line_height,
 			$text_color,
-			$title,
-			isset( $attributes['style']['typography']['lineHeight'] ) ? ';line-height:' . Style_Resolver::line_height( $attributes ) : ''
+			$title
 		);
 	}
 

@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Compiles a bounded native block tree into one deterministic artifact. */
 final class Email_Compiler {
-	public const COMPILER_VERSION = '4';
+	public const COMPILER_VERSION = '5';
 	public const PROFILE_VERSION  = 'universal@1';
 
 	private const MAX_BLOCKS = 500;

@@ -179,7 +179,31 @@ final class Heading_Renderer extends Abstract_Renderer {
 		}
 
 		$font_family = Renderer_Support::resolve_font( $attributes, $kit, 'heading' )['family'];
+		$font_weight = Style_Resolver::font_weight( $wrapper, 700 );
+		$margin      = Style_Resolver::spacing(
+			$wrapper,
+			'margin',
+			array(
+				'top'    => 0,
+				'right'  => 0,
+				'bottom' => 16,
+				'left'   => 0,
+			)
+		);
 
-		return 'margin:0 0 16px;font-family:' . $font_family . ';font-size:' . (int) $font_size . 'px;line-height:' . (string) $line_height . ';text-align:' . $attributes['align'] . ';color:' . $color;
+		$margin_css = 0 === $margin['top'] && 0 === $margin['right'] && 0 === $margin['left']
+			? sprintf( '0 0 %dpx', $margin['bottom'] )
+			: sprintf( '%dpx %dpx %dpx %dpx', $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] );
+
+		return sprintf(
+			'margin:%1$s;font-family:%2$s;font-size:%3$dpx;font-weight:%4$d;line-height:%5$s;text-align:%6$s;color:%7$s',
+			$margin_css,
+			$font_family,
+			$font_size,
+			$font_weight,
+			(string) $line_height,
+			$attributes['align'],
+			$color
+		);
 	}
 }

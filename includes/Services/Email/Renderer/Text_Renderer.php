@@ -136,9 +136,9 @@ final class Text_Renderer extends Abstract_Renderer {
 			)
 		);
 		$font_family = Renderer_Support::resolve_font( $attributes, $kit )['family'];
-		$style       = isset( $style_tree['spacing']['margin'] )
-			? sprintf( 'margin:%dpx %dpx %dpx %dpx;font-family:' . $font_family, $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] )
-			: 'margin:0 0 16px;font-family:' . $font_family;
+		$style       = 0 === $margin['top'] && 0 === $margin['right'] && 0 === $margin['left']
+			? sprintf( 'margin:0 0 %dpx;font-family:' . $font_family, $margin['bottom'] )
+			: sprintf( 'margin:%dpx %dpx %dpx %dpx;font-family:' . $font_family, $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] );
 
 		// Font size: design-system shape first, then the legacy number attr.
 		$font_size = null;

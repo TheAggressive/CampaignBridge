@@ -30,6 +30,10 @@ final class Email_Design_Block_Defaults {
 			$global     = $design->global_style();
 			$style      = $this->merge_styles( array( 'color' => $global['color'] ?? array() ), $style );
 		}
+		if ( 'campaignbridge/post-button' === $block->name() && 'link' === ( $attributes['variant'] ?? null ) ) {
+			$global     = $design->global_style();
+			$attributes = $this->default_attribute( $attributes, 'linkColor', $global['color']['text'] ?? null );
+		}
 
 		$attributes = $this->apply_color_defaults( $block->name(), $attributes, $style );
 		$attributes = $this->apply_typography_defaults( $attributes, $style );
@@ -51,10 +55,7 @@ final class Email_Design_Block_Defaults {
 		if ( isset( $colors['background'] ) && ! $this->has_style( $attributes, array( 'color', 'background' ) ) ) {
 			$attributes = $this->default_attribute( $attributes, 'backgroundColor', $colors['background'] );
 		}
-		// PR 5 migrates these two legacy #333333 defaults to the semantic text
-		// slot after editor/compiler parity fixtures are in place.
-		$legacy_text_defaults = array( 'campaignbridge/text', 'campaignbridge/post-excerpt' );
-		if ( isset( $colors['text'] ) && ! in_array( $block_name, $legacy_text_defaults, true ) && ! $this->has_style( $attributes, array( 'color', 'text' ) ) ) {
+		if ( isset( $colors['text'] ) && ! $this->has_style( $attributes, array( 'color', 'text' ) ) ) {
 			$key        = 'campaignbridge/post-link' === $block_name ? 'linkColor' : 'textColor';
 			$attributes = $this->default_attribute( $attributes, $key, $colors['text'] );
 		}
@@ -75,6 +76,11 @@ final class Email_Design_Block_Defaults {
 				$attributes = $this->default_attribute( $attributes, $key, $typography[ $key ] );
 			}
 		}
+		foreach ( array( 'fontWeight', 'lineHeight' ) as $key ) {
+			if ( isset( $typography[ $key ] ) ) {
+				$attributes = $this->default_style( $attributes, array( 'typography', $key ), $typography[ $key ] );
+			}
+		}
 		return $attributes;
 	}
 
@@ -87,6 +93,15 @@ final class Email_Design_Block_Defaults {
 	 * @return array<string, mixed>
 	 */
 	private function apply_structural_defaults( string $block_name, array $attributes, array $style ): array {
+		$authored_margin = is_array( $attributes['style'] ?? null ) && is_array( $attributes['style']['spacing'] ?? null )
+			? ( $attributes['style']['spacing']['margin'] ?? null )
+			: null;
+		if (
+			isset( $style['spacing']['marginBottom'] )
+			&& ( ! $this->has_style( $attributes, array( 'spacing', 'margin' ) ) || is_array( $authored_margin ) )
+		) {
+			$attributes = $this->default_style( $attributes, array( 'spacing', 'margin', 'bottom' ), $style['spacing']['marginBottom'] );
+		}
 		if ( isset( $style['spacing']['blockGap'] ) && 'campaignbridge/columns' === $block_name ) {
 			$attributes = $this->default_attribute( $attributes, 'gap', $style['spacing']['blockGap'] );
 		}
@@ -114,6 +129,30 @@ final class Email_Design_Block_Defaults {
 		if ( null !== $value && ! array_key_exists( $key, $attributes ) ) {
 			$attributes[ $key ] = $value;
 		}
+		return $attributes;
+	}
+
+	/**
+	 * Set an omitted value within the native style tree.
+	 *
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param array<int, string>   $path       Native style path.
+	 * @param mixed                $value      Resolved default.
+	 * @return array<string, mixed>
+	 */
+	private function default_style( array $attributes, array $path, mixed $value ): array {
+		if ( $this->has_style( $attributes, $path ) || ( isset( $attributes['style'] ) && ! is_array( $attributes['style'] ) ) ) {
+			return $attributes;
+		}
+		$attributes['style'] = is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array();
+		$cursor              = &$attributes['style'];
+		foreach ( $path as $key ) {
+			if ( ! isset( $cursor[ $key ] ) || ! is_array( $cursor[ $key ] ) ) {
+				$cursor[ $key ] = array();
+			}
+			$cursor = &$cursor[ $key ];
+		}
+		$cursor = $value;
 		return $attributes;
 	}
 

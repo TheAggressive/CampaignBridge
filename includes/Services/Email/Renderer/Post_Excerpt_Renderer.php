@@ -80,14 +80,30 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 		$text_color = Renderer_Support::resolve_color( $attributes['textColor'], Renderer_Support::brand_kit( $context ) );
 
 		$font_family = Renderer_Support::resolve_font( $attributes, Renderer_Support::brand_kit( $context ) )['family'];
+		$line_height = Style_Resolver::line_height( $attributes, 1.6 );
+		$margin      = Style_Resolver::spacing(
+			$attributes,
+			'margin',
+			array(
+				'top'    => 0,
+				'right'  => 0,
+				'bottom' => 16,
+				'left'   => 0,
+			)
+		);
+		$margin_css  = 0 === $margin['top'] && 0 === $margin['right'] && 0 === $margin['left']
+			? sprintf( '0 0 %dpx', $margin['bottom'] )
+			: sprintf( '%dpx %dpx %dpx %dpx', $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] );
 
 		return sprintf(
-			'<p align="%1$s" style="margin:0 0 16px;font-family:' . $font_family . ';font-size:%2$dpx;line-height:1.6%5$s;text-align:%1$s;color:%3$s">%4$s</p>',
+			'<p align="%1$s" style="margin:%2$s;font-family:%3$s;font-size:%4$dpx;line-height:%5$s;text-align:%1$s;color:%6$s">%7$s</p>',
 			$attributes['align'],
+			$margin_css,
+			$font_family,
 			$attributes['fontSize'],
+			(string) $line_height,
 			$text_color,
-			Renderer_Support::html( $this->excerpt( $block, $context ) ),
-			isset( $attributes['style']['typography']['lineHeight'] ) ? ';line-height:' . Style_Resolver::line_height( $attributes ) : ''
+			Renderer_Support::html( $this->excerpt( $block, $context ) )
 		);
 	}
 
