@@ -101,35 +101,86 @@ class Settings_Controller {
 	private function load_settings_data(): void {
 		$admin_email          = get_bloginfo( 'admin_email' );
 		$mailchimp_connection = $this->get_mailchimp_connection();
+		$mailchimp_audiences  = $this->get_mailchimp_audiences( $mailchimp_connection['connected'] );
 		$this->data           = array(
 			// General settings data.
-			'from_name'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_name', get_bloginfo( 'name' ) ),
-			'from_email'          => Storage::get_option( 'campaignbridge_from_email', $admin_email ),
-			'reply_to'            => Storage::get_option( 'campaignbridge_reply_to', $admin_email ),
-			'default_footer'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_default_footer', '' ),
-			'enable_preview_text' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_enable_preview_text', true ),
-			'featured_image_size' => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_featured_image_size', 'large' ),
-			'excerpt_length'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_excerpt_length', 120 ),
-			'cta_label'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cta_label', __( 'Read more', 'campaignbridge' ) ),
+			'from_name'                => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_name', get_bloginfo( 'name' ) ),
+			'from_email'               => Storage::get_option( 'campaignbridge_from_email', $admin_email ),
+			'reply_to'                 => Storage::get_option( 'campaignbridge_reply_to', $admin_email ),
+			'default_footer'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_default_footer', '' ),
+			'enable_preview_text'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_enable_preview_text', true ),
+			'featured_image_size'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_featured_image_size', 'large' ),
+			'excerpt_length'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_excerpt_length', 120 ),
+			'cta_label'                => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cta_label', __( 'Read more', 'campaignbridge' ) ),
 
 			// Mailchimp integration data.
-			'mailchimp_api_key'   => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ),
-			'mailchimp_audience'  => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ),
-			'mailchimp_connected' => $mailchimp_connection['connected'],
-			'mailchimp_status'    => $mailchimp_connection['status'],
-			'mailchimp_last_test' => $mailchimp_connection['checked_at'],
+			'mailchimp_api_key'        => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ),
+			'mailchimp_audience'       => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ),
+			'mailchimp_connected'      => $mailchimp_connection['connected'],
+			'mailchimp_status'         => $mailchimp_connection['status'],
+			'mailchimp_last_test'      => $mailchimp_connection['checked_at'],
+			'mailchimp_audiences'      => $mailchimp_audiences['options'],
+			'mailchimp_audience_error' => $mailchimp_audiences['error'],
 
 			// Advanced settings data.
-			'debug_mode'          => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_debug_mode', false ),
-			'log_level'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_log_level', 'info' ),
-			'cache_duration'      => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cache_duration', 3600 ),
-			'rate_limit'          => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_rate_limit', 100 ),
+			'debug_mode'               => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_debug_mode', false ),
+			'log_level'                => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_log_level', 'info' ),
+			'cache_duration'           => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cache_duration', 3600 ),
+			'rate_limit'               => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_rate_limit', 100 ),
 
 			// System info.
-			'plugin_version'      => defined( 'CAMPAIGNBRIDGE_VERSION' ) ? \CampaignBridge_Plugin::VERSION : '1.0.0',
-			'wordpress_version'   => get_bloginfo( 'version' ),
-			'php_version'         => PHP_VERSION,
+			'plugin_version'           => defined( 'CAMPAIGNBRIDGE_VERSION' ) ? \CampaignBridge_Plugin::VERSION : '1.0.0',
+			'wordpress_version'        => get_bloginfo( 'version' ),
+			'php_version'              => PHP_VERSION,
 
+		);
+	}
+
+	/**
+	 * Get cached, normalized Mailchimp audience choices.
+	 *
+	 * @param bool $connected Whether the stored credential was verified.
+	 * @return array{options: array<string, string>, error: string}
+	 */
+	private function get_mailchimp_audiences( bool $connected ): array {
+		if ( ! $connected ) {
+			return array(
+				'options' => array(),
+				'error'   => '',
+			);
+		}
+
+		$stored_key = Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
+		try {
+			$api_key = is_string( $stored_key ) ? Encryption::decrypt( $stored_key ) : '';
+		} catch ( \Throwable $error ) {
+			return array(
+				'options' => array(),
+				'error'   => __( 'Reconnect Mailchimp to load audiences.', 'campaignbridge' ),
+			);
+		}
+
+		$cache_key = 'mailchimp_audiences_' . hash( 'sha256', $api_key );
+		$cached    = Storage::get_transient( $cache_key );
+		if ( is_array( $cached ) ) {
+			return array(
+				'options' => $cached,
+				'error'   => '',
+			);
+		}
+
+		$result = ( new Mailchimp_Provider() )->get_audiences( array( 'api_key' => $api_key ) );
+		if ( is_wp_error( $result ) ) {
+			return array(
+				'options' => array(),
+				'error'   => $result->get_error_message(),
+			);
+		}
+
+		Storage::set_transient( $cache_key, $result, 15 * MINUTE_IN_SECONDS );
+		return array(
+			'options' => $result,
+			'error'   => '',
 		);
 	}
 

@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 return array(
 	'application_screen' => true,
+	'menu_title'         => __( 'Template Editor', 'campaignbridge' ),
+	'page_title'         => __( 'Email Template Editor', 'campaignbridge' ),
 	'assets'             => array(
 		'asset_styles'  => array(
 			'campaignbridge-block-editor-styles' => array(

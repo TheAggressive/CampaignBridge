@@ -36,6 +36,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 */
 	private const ENDPOINT_TEMPLATES = '/templates';
 	private const ENDPOINT_PING      = '/ping';
+	private const ENDPOINT_AUDIENCES = '/lists?count=1000&fields=lists.id,lists.name,total_items';
 
 	/**
 	 * Constructor
@@ -47,7 +48,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 		$this->capabilities = array(
 			'verify_connection'          => true,
 			'discover_template_sections' => true,
-			'discover_audiences'         => false,
+			'discover_audiences'         => true,
 			'create_draft'               => false,
 			'send_test'                  => false,
 			'schedule'                   => false,
@@ -170,6 +171,51 @@ class Mailchimp_Provider extends Abstract_Provider {
 				'max_length' => 50,
 			),
 		);
+	}
+
+	/**
+	 * Get the audiences available to the configured Mailchimp account.
+	 *
+	 * Provider response details are normalized here so they do not leak into
+	 * the admin UI.
+	 *
+	 * @param array<string, mixed> $settings Provider settings.
+	 * @return array<string, string>|WP_Error Audience IDs keyed to display names.
+	 */
+	public function get_audiences( array $settings ): array|WP_Error {
+		if ( ! $this->is_configured( $settings ) ) {
+			return $this->create_error( 'mailchimp_invalid_credentials', __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ), 400 );
+		}
+
+		$api_key  = (string) $settings['api_key'];
+		$response = \CampaignBridge\Core\Http_Client::get(
+			self::build_api_url( $api_key, self::ENDPOINT_AUDIENCES ),
+			array(
+				'headers'              => array( 'Authorization' => 'Bearer ' . $api_key ),
+				'campaignbridge_retry' => false,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $this->create_error( 'mailchimp_audiences_unavailable', __( 'Mailchimp audiences could not be loaded.', 'campaignbridge' ), 503 );
+		}
+
+		$status_code = $response['status_code'] ?? 0;
+		if ( ! is_int( $status_code ) || $status_code < 200 || $status_code >= 300 ) {
+			return $this->create_error( 'mailchimp_audiences_error', __( 'Mailchimp audiences could not be loaded.', 'campaignbridge' ), is_int( $status_code ) ? $status_code : 500 );
+		}
+
+		$decoded = json_decode( (string) ( $response['body'] ?? '' ), true );
+		$lists   = is_array( $decoded ) && isset( $decoded['lists'] ) && is_array( $decoded['lists'] ) ? $decoded['lists'] : array();
+		$result  = array();
+		foreach ( $lists as $list ) {
+			if ( ! is_array( $list ) || ! isset( $list['id'], $list['name'] ) || ! is_string( $list['id'] ) || ! is_string( $list['name'] ) ) {
+				continue;
+			}
+			$result[ $list['id'] ] = $list['name'];
+		}
+
+		return $result;
 	}
 
 	/**

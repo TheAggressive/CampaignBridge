@@ -80,8 +80,26 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 		$capabilities = ( new Mailchimp_Provider() )->get_capabilities();
 		self::assertTrue( $capabilities['verify_connection'] );
 		self::assertTrue( $capabilities['discover_template_sections'] );
-		self::assertFalse( $capabilities['discover_audiences'] );
+		self::assertTrue( $capabilities['discover_audiences'] );
 		self::assertFalse( $capabilities['schedule'] );
 		self::assertFalse( $capabilities['reports'] );
+	}
+
+	public function test_audiences_are_normalized_for_the_admin_ui(): void {
+		$this->http_filter = static function ( mixed $preempt, array $args, string $url ): array {
+			self::assertSame( 'https://us20.api.mailchimp.com/3.0/lists?count=1000&fields=lists.id,lists.name,total_items', $url );
+			return array(
+				'headers'  => array(),
+				'body'     => '{"lists":[{"id":"abc123","name":"Customers"},{"id":"def456","name":"Newsletter"}],"total_items":2}',
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'cookies'  => array(),
+				'filename' => null,
+			);
+		};
+		add_filter( 'pre_http_request', $this->http_filter, 10, 3 );
+
+		$result = ( new Mailchimp_Provider() )->get_audiences( array( 'api_key' => str_repeat( 'a', 32 ) . '-us20' ) );
+
+		self::assertSame( array( 'abc123' => 'Customers', 'def456' => 'Newsletter' ), $result );
 	}
 }

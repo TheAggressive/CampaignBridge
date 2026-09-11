@@ -28,7 +28,7 @@ or reporting.
 
 ## Current workflow
 
-1. Open **CampaignBridge > Email Templates** in WordPress admin.
+1. Open **CampaignBridge > Template Editor** in WordPress admin.
 2. Create a template with the CampaignBridge email blocks.
 3. Configure the Brand Kit and template metadata.
 4. Compile the template and resolve preview diagnostics before publishing it.
