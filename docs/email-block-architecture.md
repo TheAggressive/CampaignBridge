@@ -234,6 +234,13 @@ button variations use registered `is-style-*` classes. The email renderer
 resolves presets to portable values and emits inline CSS and presentation
 tables. It does not use the editor DOM as transport HTML.
 
+The versioned design vocabulary and defaults are defined by the packaged
+[`email.json`](../includes/Email_Design/email.json) contract. Its architecture,
+precedence, and ownership boundaries are recorded in
+[`ADR 0001`](decisions/0001-email-design-contract.md). Runtime integration must
+resolve that manifest and Brand Kit into one immutable design consumed by both
+the editor adapter and compiler; neither consumer interprets raw manifest data.
+
 Supported controls are declared per block: text blocks expose color and
 font size/line height; containers, sections, cards and footers expose their
 supported spacing; columns use native block gap; spacers use minimum height;
