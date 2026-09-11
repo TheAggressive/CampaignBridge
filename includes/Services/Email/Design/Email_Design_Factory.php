@@ -18,10 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Builds the shared runtime design from packaged input and active identity. */
+/** Builds the shared runtime design from layered input and active identity. */
 final class Email_Design_Factory {
 	/**
-	 * Resolve the packaged design exactly once for a consumer workflow.
+	 * Resolve the packaged and active-theme design for a consumer workflow.
 	 *
 	 * @param Brand_Kit|null $brand_kit Active brand identity, when configured.
 	 */
@@ -29,6 +29,6 @@ final class Email_Design_Factory {
 		$loader = new Email_Design_Loader();
 
 		return ( new Email_Design_Resolver( new Email_Design_Validator( $loader->schema() ) ) )
-			->resolve( $loader->manifest(), $brand_kit );
+			->resolve_layers( $loader->layers(), $brand_kit );
 	}
 }

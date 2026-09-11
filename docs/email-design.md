@@ -1,10 +1,12 @@
 # Email design contract
 
-CampaignBridge's v1 email design contract is the packaged
+CampaignBridge's v1 email design contract starts with the packaged
 [`email.json`](../includes/Email_Design/email.json), validated by the adjacent
 [`email-design-v1.schema.json`](../includes/Email_Design/email-design-v1.schema.json).
-It is an email-safe design language, not a subset implementation of every
-`theme.json` feature.
+An active theme may provide a partial override at
+`campaignbridge/email.json`. Parent theme values load before child theme values,
+matching Core's `theme.json` hierarchy. It is an email-safe design language,
+not a subset implementation of every `theme.json` feature.
 
 ## V1 scope
 
@@ -36,6 +38,39 @@ fallbacks. Palette declarations make slots available; the active Brand Kit
 supplies the effective values for those seven identity slots before manifest
 style rules resolve their references. Non-identity palette entries retain their
 manifest value.
+
+## Theme overrides
+
+Theme manifests use the same v1 vocabulary and must declare `"version": 1`.
+They may contain only the settings and styles they override. Resolution order,
+from lowest to highest, is the packaged manifest, parent theme
+`campaignbridge/email.json`, child theme `campaignbridge/email.json`, Brand Kit
+identity values, and explicit block styles. Preset lists merge by stable slug so
+a theme can replace one packaged preset without copying the whole catalog.
+
+An invalid parent or child manifest is a blocking design error. CampaignBridge
+does not silently ignore malformed JSON, unsupported versions, unknown
+properties, unsafe values, or unresolved preset references.
+
+For example, `wp-content/themes/example/campaignbridge/email.json` can override
+only the email width and heading treatment:
+
+```json
+{
+  "$schema": "https://campaignbridge.dev/schemas/email-design-v1.json",
+  "version": 1,
+  "settings": {
+    "layout": { "contentWidth": "640px" }
+  },
+  "styles": {
+    "blocks": {
+      "campaignbridge/heading": {
+        "typography": { "fontWeight": 600 }
+      }
+    }
+  }
+}
+```
 
 ## References and normalization
 

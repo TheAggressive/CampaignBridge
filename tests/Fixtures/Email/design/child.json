@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "settings": {
+    "layout": { "contentWidth": "680px" },
+    "color": {
+      "palette": [
+        { "slug": "accent", "name": "Child accent", "color": "#0055cc" }
+      ]
+    }
+  },
+  "styles": {
+    "blocks": {
+      "campaignbridge/heading": {
+        "typography": { "fontWeight": 600 }
+      }
+    }
+  }
+}

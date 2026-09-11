@@ -44,6 +44,51 @@ final class Email_Design_Runtime_Test extends TestCase {
 		self::assertSame( '#ff5500', $design->block_style( 'campaignbridge/button' )['color']['background'] );
 	}
 
+	/** Parent and child theme manifests follow Core's low-to-high cascade. */
+	public function test_layers_parent_and_child_theme_email_designs(): void {
+		$fixture = dirname( __DIR__, 2 ) . '/Fixtures/Email/design/';
+		$loader  = new Email_Design_Loader( array( $fixture . 'parent.json', $fixture . 'child.json' ) );
+		$design  = ( new Email_Design_Resolver( new Email_Design_Validator( $loader->schema() ) ) )
+			->resolve_layers( $loader->layers() );
+
+		self::assertSame( 680, $design->content_width() );
+		self::assertSame( '#0055cc', $design->block_style( 'campaignbridge/heading' )['color']['text'] );
+		self::assertSame( 600, $design->block_style( 'campaignbridge/heading' )['typography']['fontWeight'] );
+		self::assertSame( '#111111', $design->global_style()['color']['text'] );
+	}
+
+	/** Brand Kit remains the user customization layer above theme files. */
+	public function test_brand_kit_overrides_theme_identity_slots(): void {
+		$fixture = dirname( __DIR__, 2 ) . '/Fixtures/Email/design/parent.json';
+		$loader  = new Email_Design_Loader( array( $fixture ) );
+		$kit     = Brand_Kit::from_colors( array( Brand_Kit::SLOT_BRAND => '#ff5500' ) );
+		$design  = ( new Email_Design_Resolver( new Email_Design_Validator( $loader->schema() ) ) )
+			->resolve_layers( $loader->layers(), $kit );
+
+		self::assertSame( '#ff5500', $this->color( $design->colors(), Brand_Kit::SLOT_BRAND ) );
+	}
+
+	/** Theme manifests must identify the contract they target. */
+	public function test_rejects_a_theme_manifest_without_a_version(): void {
+		$fixture = dirname( __DIR__, 2 ) . '/Fixtures/Email/design/versionless.json';
+		$loader  = new Email_Design_Loader( array( $fixture ) );
+
+		$this->expectException( Email_Design_Error::class );
+		$this->expectExceptionMessage( 'must declare its contract version' );
+		$loader->layers();
+	}
+
+	/** A valid child cannot hide an invalid parent source layer. */
+	public function test_rejects_an_invalid_parent_even_when_the_child_replaces_its_value(): void {
+		$fixture = dirname( __DIR__, 2 ) . '/Fixtures/Email/design/';
+		$loader  = new Email_Design_Loader( array( $fixture . 'invalid-parent.json', $fixture . 'child.json' ) );
+
+		$this->expectException( Email_Design_Error::class );
+		$this->expectExceptionMessage( '$.settings.layout.contentWidth' );
+		( new Email_Design_Resolver( new Email_Design_Validator( $loader->schema() ) ) )
+			->resolve_layers( $loader->layers() );
+	}
+
 	/** Equivalent input is stable while an output-affecting Brand Kit change is not. */
 	public function test_fingerprint_is_deterministic_and_includes_brand_identity(): void {
 		$first  = $this->resolve();

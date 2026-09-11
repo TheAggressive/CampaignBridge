@@ -1,6 +1,6 @@
 # ADR 0001: One versioned email design contract
 
-- Status: Accepted
+- Status: Amended
 - Date: 2026-09-10
 - Issue: [#43](https://github.com/TheAggressive/CampaignBridge/issues/43)
 
@@ -15,8 +15,9 @@ features that the email compiler cannot safely or deterministically reproduce.
 ## Decision
 
 CampaignBridge owns a deliberately narrow, versioned `email.json` format. The
-repository-packaged manifest at `includes/Email_Design/email.json` is the only v1
-manifest. Its canonical schema is stored beside it.
+repository-packaged manifest at `includes/Email_Design/email.json` is the v1
+base manifest. The active parent and child themes may provide partial manifests
+at `campaignbridge/email.json`. Its canonical schema is stored beside it.
 
 The governing rule is:
 
@@ -25,19 +26,22 @@ The governing rule is:
 
 V1 does not provide database persistence, uploads, user-created manifests,
 style switching, arbitrary CSS, selectors, HTML, URLs, or asset declarations.
+Theme manifests are code-owned layers and use the same closed contract.
 Font-family entries select from CampaignBridge's curated catalog by slug. Brand
 Kit remains the validated route for brand colors and a custom Google Font.
 
 The runtime precedence, from lowest to highest, is:
 
 1. CampaignBridge safe fallback values.
-2. Brand Kit identity values.
-3. The packaged `email.json` manifest.
-4. Future template design overrides.
-5. Future campaign snapshot overrides.
-6. Explicit native Gutenberg block styles.
+2. The packaged `email.json` manifest.
+3. Parent theme `campaignbridge/email.json`.
+4. Child theme `campaignbridge/email.json`.
+5. Brand Kit identity values.
+6. Future template design overrides.
+7. Future campaign snapshot overrides.
+8. Explicit native Gutenberg block styles.
 
-Later layers win. Layers 4 and 5 are reserved contract positions, not v1
+Later layers win. Layers 6 and 7 are reserved contract positions, not v1
 features. An explicit legacy raw value already accepted by the compiler remains
 readable for compatibility, but v1 editor settings do not offer arbitrary new
 colors, font sizes, or spacing values.
@@ -54,7 +58,8 @@ upper bound on author-visible controls and compilable behavior.
 
 ## Ownership boundaries
 
-- The loader locates and decodes the packaged file; it contains no policy.
+- The loader locates, decodes, and layers the packaged, parent-theme, and
+  child-theme files; it contains no rendering policy.
 - The v1 validator enforces the closed schema, bounds, known blocks, and values.
 - The normalizer produces one canonical typed representation and resolves
   preset references; raw JSON does not reach consumers.
