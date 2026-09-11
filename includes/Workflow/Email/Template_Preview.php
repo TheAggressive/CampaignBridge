@@ -14,6 +14,7 @@ use CampaignBridge\Domain\Email\Compile_Result;
 use CampaignBridge\Domain\Email\Post_Snapshot_Source;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -56,7 +57,7 @@ final class Template_Preview {
 			Email_Compiler::PROFILE_VERSION
 		);
 
-		return Compiler_Factory::create()->compile( $blocks, $context );
+		return Compiler_Factory::create( Email_Design_Factory::resolve( $kit ) )->compile( $blocks, $context );
 	}
 
 	/**

@@ -29,7 +29,7 @@ final class Button_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'url', 'align', 'style', 'backgroundColor', 'textColor', 'variant' );
+		return array( 'label', 'url', 'align', 'style', 'backgroundColor', 'textColor', 'fontFamily', 'variant' );
 	}
 
 	/** {@inheritDoc} */
@@ -54,6 +54,7 @@ final class Button_Renderer extends Abstract_Renderer {
 				'style'           => Renderer_Support::choice_attribute( $attributes, 'variant', 'primary', $styles ),
 				'backgroundColor' => (string) Renderer_Support::string_attribute( $attributes, 'backgroundColor', '' ),
 				'textColor'       => (string) Renderer_Support::string_attribute( $attributes, 'textColor', '' ),
+				'fontFamily'      => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
 			)
 		);
 	}

@@ -69,6 +69,9 @@ final class Native_Style_Support {
 				$attributes[ $key ] = $style['color'][ $slot ];
 			}
 		}
+		if ( isset( $style['typography']['fontFamily'] ) && ! isset( $attributes['fontFamily'] ) ) {
+			$attributes['fontFamily'] = $style['typography']['fontFamily'];
+		}
 		foreach ( array(
 			'text'       => 'textColor',
 			'background' => 'backgroundColor',
