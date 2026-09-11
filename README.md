@@ -137,6 +137,7 @@ pnpm build          # rebuild blocks and shared runtime assets
 pnpm start          # watch blocks and shared assets
 pnpm qa:fast        # lint, static analysis, tooling checks, and JS tests
 pnpm qa             # complete quality, security, JS, and PHP test gate
+pnpm qa:accessibility # PHP and Studio browser accessibility gate
 pnpm test           # all native PHPUnit suites
 pnpm test:unit
 pnpm test:integration

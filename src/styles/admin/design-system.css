@@ -246,7 +246,7 @@ a.cb-admin-action-row:focus-visible .cb-admin-icon-disc {
 }
 .cb-admin-screen
   :is(input, select, textarea):hover:not(:disabled):not([readonly]) {
-  border-color: #98a2b3;
+  border-color: #64748b;
 }
 .cb-admin-screen :is(input, select, textarea):focus {
   border-color: var(--cb-admin-primary);

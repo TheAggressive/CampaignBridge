@@ -285,6 +285,13 @@ jobs:
             sleep 1
           done
 
+      - name: Run browser accessibility tests
+        env:
+          CB_E2E_BASE_URL: http://127.0.0.1:8889
+          CB_E2E_ADMIN_USER: campaignbridge
+          CB_E2E_ADMIN_PASSWORD: campaignbridge-e2e
+        run: pnpm test:e2e:accessibility:ci
+
       - name: Run browser tests
         env:
           CB_E2E_BASE_URL: http://127.0.0.1:8889

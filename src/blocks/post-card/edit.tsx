@@ -20,6 +20,7 @@ import type { ComponentType } from 'react';
 
 import { fetchPosts, type PostItem } from '../shared/posts';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
+import { useAnnouncement } from '../shared/use-announcement';
 import { POST_CARD_ALLOWED_BLOCKS } from './config';
 import { detectActiveLayout, POST_CARD_VARIATIONS } from './variations';
 import type { NormalizedSpacing } from '../shared/spacing';
@@ -41,6 +42,7 @@ export default function Edit({
   const [postTypes, setPostTypes] = useState<PostTypeItem[]>([]);
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const { region: announcementRegion, announce } = useAnnouncement();
   const isSelected = useSelect(
     select => select(blockEditorStore).getSelectedBlockClientId() === clientId,
     [clientId]
@@ -79,12 +81,23 @@ export default function Edit({
 
     let active = true;
     setLoading(true);
+    announce(__('Loading posts…', 'campaignbridge'));
     fetchPosts(postType)
       .then(items => {
-        if (active) setPosts(items);
+        if (active) {
+          setPosts(items);
+          announce(
+            items.length > 0
+              ? __('Posts loaded.', 'campaignbridge')
+              : __('No posts found.', 'campaignbridge')
+          );
+        }
       })
       .catch(() => {
-        if (active) setPosts([]);
+        if (active) {
+          setPosts([]);
+          announce(__('Failed to load posts.', 'campaignbridge'));
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -93,7 +106,7 @@ export default function Edit({
     return () => {
       active = false;
     };
-  }, [isSelected, postType]);
+  }, [isSelected, postType, announce]);
 
   const postTypeOptions = postTypes.map(item => ({
     label: item.label ?? String(item.id),
@@ -184,6 +197,7 @@ export default function Edit({
         </PanelBody>
       </InspectorControls>
       <div {...innerBlocksProps} />
+      {announcementRegion}
     </>
   );
 }
