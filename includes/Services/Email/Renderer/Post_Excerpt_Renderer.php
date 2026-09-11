@@ -28,7 +28,7 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'maxWords', 'align', 'textColor', 'fontSize', 'style' );
+		return array( 'maxWords', 'align', 'textColor', 'fontSize', 'fontFamily', 'style' );
 	}
 
 	/**
@@ -41,11 +41,12 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'style'     => $attributes['style'],
-				'maxWords'  => Renderer_Support::integer_attribute( $attributes, 'maxWords', \CampaignBridge\REST\Rest_Constants::DEFAULT_EXCERPT_MAX_WORDS, 10, 150 ),
-				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
-				'textColor' => Renderer_Support::string_attribute( $attributes, 'textColor', '#333333' ),
-				'fontSize'  => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 10, 72 ),
+				'style'      => $attributes['style'],
+				'maxWords'   => Renderer_Support::integer_attribute( $attributes, 'maxWords', \CampaignBridge\REST\Rest_Constants::DEFAULT_EXCERPT_MAX_WORDS, 10, 150 ),
+				'align'      => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'textColor'  => Renderer_Support::string_attribute( $attributes, 'textColor', '#333333' ),
+				'fontSize'   => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 10, 72 ),
+				'fontFamily' => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
 			)
 		);
 	}

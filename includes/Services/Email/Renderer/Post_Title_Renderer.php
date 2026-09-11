@@ -28,7 +28,7 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'level', 'align', 'textColor', 'linkToPost', 'fontSize', 'style' );
+		return array( 'level', 'align', 'textColor', 'linkToPost', 'fontSize', 'fontFamily', 'style' );
 	}
 
 	/**
@@ -47,6 +47,7 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 				'textColor'  => Renderer_Support::string_attribute( $attributes, 'textColor', '#111111' ),
 				'linkToPost' => Renderer_Support::boolean_attribute( $attributes, 'linkToPost', false ),
 				'fontSize'   => Renderer_Support::integer_attribute( $attributes, 'fontSize', 24, 10, 72 ),
+				'fontFamily' => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
 			)
 		);
 	}

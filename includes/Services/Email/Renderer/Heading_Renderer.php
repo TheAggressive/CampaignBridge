@@ -41,7 +41,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'content', 'level', 'align', 'textColor', 'style', 'fontSize' );
+		return array( 'content', 'level', 'align', 'textColor', 'style', 'fontSize', 'fontFamily' );
 	}
 
 	/**
@@ -54,11 +54,12 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 		return $block->with_attributes(
 			array(
-				'content'   => Renderer_Support::string_attribute( $attributes, 'content', '' ),
-				'level'     => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
-				'align'     => Renderer_Support::alignment_attribute( $attributes, 'align' ),
-				'textColor' => Renderer_Support::string_attribute( $attributes, 'textColor', '#111111' ),
-				'style'     => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
+				'content'    => Renderer_Support::string_attribute( $attributes, 'content', '' ),
+				'level'      => Renderer_Support::integer_attribute( $attributes, 'level', 2, 1, 4 ),
+				'align'      => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'textColor'  => Renderer_Support::string_attribute( $attributes, 'textColor', '#111111' ),
+				'fontFamily' => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
+				'style'      => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 			)
 		);
 	}

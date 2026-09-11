@@ -13,10 +13,12 @@ use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Compile_Result;
 use CampaignBridge\Domain\Email\Document_Renderer_Interface;
+use CampaignBridge\Domain\Email\Email_Design_Block_Defaults;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Renderer_Interface;
 use CampaignBridge\Domain\Email\Renderer_Registry;
+use CampaignBridge\Domain\Email\Resolved_Email_Design;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -24,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Compiles a bounded native block tree into one deterministic artifact. */
 final class Email_Compiler {
-	public const COMPILER_VERSION = '3';
+	public const COMPILER_VERSION = '4';
 	public const PROFILE_VERSION  = 'universal@1';
 
 	private const MAX_BLOCKS = 500;
@@ -43,11 +45,15 @@ final class Email_Compiler {
 	 * @param Renderer_Registry           $registry          Immutable renderer registry.
 	 * @param Document_Renderer_Interface $document_renderer Document shell renderer.
 	 * @param Artifact_Fingerprinter      $fingerprinter     Deterministic fingerprinter.
+	 * @param Resolved_Email_Design       $design            Canonical runtime design.
+	 * @param Email_Design_Block_Defaults $design_defaults   Design-to-block adapter.
 	 */
 	public function __construct(
 		private readonly Renderer_Registry $registry,
 		private readonly Document_Renderer_Interface $document_renderer,
-		private readonly Artifact_Fingerprinter $fingerprinter
+		private readonly Artifact_Fingerprinter $fingerprinter,
+		private readonly Resolved_Email_Design $design,
+		private readonly Email_Design_Block_Defaults $design_defaults
 	) {}
 
 	/**
@@ -98,6 +104,7 @@ final class Email_Compiler {
 				'profile_version'  => self::PROFILE_VERSION,
 				'source'           => $nodes[0]->fingerprint_payload(),
 				'context'          => $context->fingerprint_payload(),
+				'design'           => $this->design->fingerprint(),
 				'html'             => $html,
 				'text'             => $text,
 				'assets'           => $fragment['assets'],
@@ -222,6 +229,7 @@ final class Email_Compiler {
 			);
 		}
 
+		$block = $this->design_defaults->apply( $block, $this->design );
 		$block = $this->apply_block_style( $block, $renderer );
 
 		$unsupported_attributes = array_diff( array_keys( $block->attributes() ), $renderer->attribute_names() );

@@ -9,7 +9,10 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Services\Email;
 
+use CampaignBridge\Domain\Email\Email_Design_Block_Defaults;
 use CampaignBridge\Domain\Email\Renderer_Registry;
+use CampaignBridge\Domain\Email\Resolved_Email_Design;
+use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 use CampaignBridge\Services\Email\Renderer\Button_Renderer;
 use CampaignBridge\Services\Email\Renderer\Column_Renderer;
 use CampaignBridge\Services\Email\Renderer\Columns_Renderer;
@@ -37,12 +40,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Composes the production compiler without service-locator lookups. */
 final class Compiler_Factory {
-	/** Create the production compiler graph. */
-	public static function create(): Email_Compiler {
+	/**
+	 * Create the production compiler graph.
+	 *
+	 * @param Resolved_Email_Design|null $design Canonical design, or packaged defaults.
+	 */
+	public static function create( ?Resolved_Email_Design $design = null ): Email_Compiler {
 		return new Email_Compiler(
 			self::registry(),
 			new Document_Renderer(),
-			new Artifact_Fingerprinter()
+			new Artifact_Fingerprinter(),
+			$design ?? Email_Design_Factory::resolve(),
+			new Email_Design_Block_Defaults()
 		);
 	}
 

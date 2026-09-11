@@ -31,7 +31,7 @@ final class Post_Button_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'destination', 'customUrl', 'backgroundColor', 'textColor', 'align', 'style', 'linkColor', 'variant' );
+		return array( 'label', 'destination', 'customUrl', 'backgroundColor', 'textColor', 'fontFamily', 'align', 'style', 'linkColor', 'variant' );
 	}
 
 	/**
@@ -50,6 +50,7 @@ final class Post_Button_Renderer extends Abstract_Renderer {
 				'customUrl'       => trim( Renderer_Support::string_attribute( $attributes, 'customUrl', '' ) ),
 				'backgroundColor' => Renderer_Support::string_attribute( $attributes, 'backgroundColor', '#111111' ),
 				'textColor'       => Renderer_Support::string_attribute( $attributes, 'linkColor', Renderer_Support::string_attribute( $attributes, 'textColor', '#ffffff' ) ),
+				'fontFamily'      => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
 				'align'           => Renderer_Support::alignment_attribute( $attributes, 'align' ),
 				'style'           => Renderer_Support::choice_attribute( $attributes, 'variant', 'button', array( 'button', 'link' ) ),
 				// Link style needs its own colour: textColor defaults to white

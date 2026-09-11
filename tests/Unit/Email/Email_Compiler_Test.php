@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Renderer_Registry;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Services\Email\Renderer\Container_Renderer;
+use CampaignBridge\Workflow\Email\Email_Compiler;
 use PHPUnit\Framework\TestCase;
 
 final class Email_Compiler_Test extends TestCase {
@@ -23,7 +24,7 @@ final class Email_Compiler_Test extends TestCase {
 		self::assertSame( $this->fixture( 'post-card.html' ), $result->html() );
 		self::assertSame( $this->fixture( 'post-card.txt' ), $result->text() );
 		self::assertMatchesRegularExpression( '/^sha256:[0-9a-f]{64}$/', $result->fingerprint() );
-		self::assertSame( '3', $result->compiler_version() );
+		self::assertSame( Email_Compiler::COMPILER_VERSION, $result->compiler_version() );
 		self::assertSame( 'universal@1', $result->profile_version() );
 		self::assertSame(
 			array(
