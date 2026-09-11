@@ -1,0 +1,147 @@
+{
+  "$schema": "https://campaignbridge.dev/schemas/email-design-v1.json",
+  "version": 1,
+  "settings": {
+    "layout": {
+      "contentWidth": "600px"
+    },
+    "color": {
+      "custom": false,
+      "palette": [
+        { "slug": "text", "name": "Text", "color": "#111111" },
+        { "slug": "secondary", "name": "Secondary text", "color": "#666666" },
+        { "slug": "background", "name": "Background", "color": "#ffffff" },
+        { "slug": "card", "name": "Card", "color": "#f4f4f4" },
+        { "slug": "border", "name": "Border", "color": "#e0e0e0" },
+        { "slug": "brand", "name": "Brand", "color": "#1a6dcc" },
+        { "slug": "on-brand", "name": "On brand", "color": "#ffffff" }
+      ]
+    },
+    "typography": {
+      "customFontSize": false,
+      "fontFamilies": [
+        { "slug": "arial", "name": "Arial" },
+        { "slug": "helvetica", "name": "Helvetica" },
+        { "slug": "verdana", "name": "Verdana" },
+        { "slug": "tahoma", "name": "Tahoma" },
+        { "slug": "trebuchet-ms", "name": "Trebuchet MS" },
+        { "slug": "georgia", "name": "Georgia" },
+        { "slug": "times-new-roman", "name": "Times New Roman" },
+        { "slug": "courier-new", "name": "Courier New" },
+        { "slug": "inter", "name": "Inter" },
+        { "slug": "open-sans", "name": "Open Sans" },
+        { "slug": "roboto", "name": "Roboto" },
+        { "slug": "lato", "name": "Lato" },
+        { "slug": "montserrat", "name": "Montserrat" },
+        { "slug": "merriweather", "name": "Merriweather" },
+        { "slug": "playfair", "name": "Playfair Display" },
+        { "slug": "source-sans-3", "name": "Source Sans 3" },
+        { "slug": "cormorant", "name": "Cormorant Garamond" },
+        { "slug": "noto-sans", "name": "Noto Sans" },
+        { "slug": "karla", "name": "Karla" },
+        { "slug": "oswald", "name": "Oswald" },
+        { "slug": "raleway", "name": "Raleway" },
+        { "slug": "fira-sans", "name": "Fira Sans" }
+      ],
+      "fontSizes": [
+        { "slug": "small", "name": "Small", "size": "14px" },
+        { "slug": "medium", "name": "Medium", "size": "16px" },
+        { "slug": "large", "name": "Large", "size": "20px" },
+        { "slug": "x-large", "name": "Extra large", "size": "28px" },
+        { "slug": "xx-large", "name": "Huge", "size": "36px" }
+      ]
+    },
+    "spacing": {
+      "custom": false,
+      "spacingSizes": [
+        { "slug": "20", "name": "1", "size": "8px" },
+        { "slug": "30", "name": "2", "size": "12px" },
+        { "slug": "40", "name": "3", "size": "16px" },
+        { "slug": "50", "name": "4", "size": "24px" },
+        { "slug": "60", "name": "5", "size": "32px" },
+        { "slug": "70", "name": "6", "size": "48px" },
+        { "slug": "80", "name": "7", "size": "64px" }
+      ]
+    }
+  },
+  "styles": {
+    "color": {
+      "background": "var:preset|color|background",
+      "text": "var:preset|color|text"
+    },
+    "typography": {
+      "fontFamily": "var:preset|font-family|arial",
+      "fontSize": "var:preset|font-size|medium",
+      "lineHeight": 1.6
+    },
+    "blocks": {
+      "campaignbridge/heading": {
+        "color": { "text": "var:preset|color|text" },
+        "typography": {
+          "fontFamily": "var:preset|font-family|arial",
+          "fontWeight": 700,
+          "lineHeight": 1.25
+        },
+        "spacing": { "marginBottom": "var:preset|spacing|40" }
+      },
+      "campaignbridge/text": {
+        "color": { "text": "var:preset|color|text" },
+        "typography": {
+          "fontFamily": "var:preset|font-family|arial",
+          "fontSize": "var:preset|font-size|medium",
+          "lineHeight": 1.6
+        },
+        "spacing": { "marginBottom": "var:preset|spacing|40" }
+      },
+      "campaignbridge/button": {
+        "color": {
+          "background": "var:preset|color|brand",
+          "text": "var:preset|color|on-brand"
+        },
+        "typography": { "fontFamily": "var:preset|font-family|arial" }
+      },
+      "campaignbridge/columns": {
+        "spacing": { "blockGap": "var:preset|spacing|50" }
+      },
+      "campaignbridge/divider": {
+        "border": {
+          "color": "var:preset|color|border",
+          "style": "solid",
+          "width": "1px"
+        }
+      },
+      "campaignbridge/spacer": {
+        "dimensions": { "minHeight": "var:preset|spacing|50" }
+      },
+      "campaignbridge/post-title": {
+        "color": { "text": "var:preset|color|text" },
+        "typography": {
+          "fontFamily": "var:preset|font-family|arial",
+          "fontSize": "24px",
+          "fontWeight": 700,
+          "lineHeight": 1.25
+        },
+        "spacing": { "marginBottom": "var:preset|spacing|30" }
+      },
+      "campaignbridge/post-excerpt": {
+        "color": { "text": "var:preset|color|text" },
+        "typography": {
+          "fontFamily": "var:preset|font-family|arial",
+          "fontSize": "var:preset|font-size|medium",
+          "lineHeight": 1.6
+        },
+        "spacing": { "marginBottom": "var:preset|spacing|40" }
+      },
+      "campaignbridge/post-link": {
+        "color": { "text": "var:preset|color|text" }
+      },
+      "campaignbridge/post-button": {
+        "color": {
+          "background": "var:preset|color|brand",
+          "text": "var:preset|color|on-brand"
+        },
+        "typography": { "fontFamily": "var:preset|font-family|arial" }
+      }
+    }
+  }
+}

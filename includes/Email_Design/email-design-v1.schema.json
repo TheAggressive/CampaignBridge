@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://campaignbridge.dev/schemas/email-design-v1.json",
+  "title": "CampaignBridge email design v1",
+  "description": "The closed, email-safe design contract consumed through Resolved_Email_Design.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "version", "settings", "styles"],
+  "properties": {
+    "$schema": { "const": "https://campaignbridge.dev/schemas/email-design-v1.json" },
+    "version": { "const": 1 },
+    "settings": { "$ref": "#/$defs/settings" },
+    "styles": { "$ref": "#/$defs/rootStyles" }
+  },
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "hexColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "pixelLength": { "type": "string", "pattern": "^(?:0|[1-9][0-9]{0,2})px$" },
+    "colorValue": {
+      "oneOf": [
+        { "$ref": "#/$defs/hexColor" },
+        { "type": "string", "pattern": "^var:preset\\|color\\|[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      ]
+    },
+    "fontSizeValue": {
+      "oneOf": [
+        { "$ref": "#/$defs/pixelLength" },
+        { "type": "string", "pattern": "^var:preset\\|font-size\\|[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      ]
+    },
+    "fontFamilyValue": {
+      "type": "string",
+      "pattern": "^var:preset\\|font-family\\|[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "spacingValue": {
+      "oneOf": [
+        { "$ref": "#/$defs/pixelLength" },
+        { "type": "string", "pattern": "^var:preset\\|spacing\\|[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      ]
+    },
+    "lineHeight": { "type": "number", "minimum": 0.5, "maximum": 4 },
+    "fontWeight": { "type": "integer", "enum": [400, 600, 700] },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layout", "color", "typography", "spacing"],
+      "properties": {
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contentWidth"],
+          "properties": { "contentWidth": { "type": "string", "pattern": "^(?:3[2-9][0-9]|[4-8][0-9]{2}|900)px$" } }
+        },
+        "color": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["custom", "palette"],
+          "properties": {
+            "custom": { "const": false },
+            "palette": {
+              "type": "array", "minItems": 1, "maxItems": 24,
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["slug", "name", "color"],
+                "properties": { "slug": { "$ref": "#/$defs/slug" }, "name": { "$ref": "#/$defs/name" }, "color": { "$ref": "#/$defs/hexColor" } }
+              }
+            }
+          }
+        },
+        "typography": {
+          "type": "object", "additionalProperties": false,
+          "required": ["customFontSize", "fontFamilies", "fontSizes"],
+          "properties": {
+            "customFontSize": { "const": false },
+            "fontFamilies": {
+              "type": "array", "minItems": 1, "maxItems": 24,
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["slug", "name"],
+                "properties": { "slug": { "$ref": "#/$defs/slug" }, "name": { "$ref": "#/$defs/name" } }
+              }
+            },
+            "fontSizes": {
+              "type": "array", "minItems": 1, "maxItems": 16,
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["slug", "name", "size"],
+                "properties": { "slug": { "$ref": "#/$defs/slug" }, "name": { "$ref": "#/$defs/name" }, "size": { "$ref": "#/$defs/pixelLength" } }
+              }
+            }
+          }
+        },
+        "spacing": {
+          "type": "object", "additionalProperties": false,
+          "required": ["custom", "spacingSizes"],
+          "properties": {
+            "custom": { "const": false },
+            "spacingSizes": {
+              "type": "array", "minItems": 1, "maxItems": 16,
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["slug", "name", "size"],
+                "properties": { "slug": { "$ref": "#/$defs/slug" }, "name": { "$ref": "#/$defs/name" }, "size": { "$ref": "#/$defs/pixelLength" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "colorStyles": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "background": { "$ref": "#/$defs/colorValue" }, "text": { "$ref": "#/$defs/colorValue" } },
+      "minProperties": 1
+    },
+    "typographyStyles": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "fontFamily": { "$ref": "#/$defs/fontFamilyValue" }, "fontSize": { "$ref": "#/$defs/fontSizeValue" },
+        "fontWeight": { "$ref": "#/$defs/fontWeight" }, "lineHeight": { "$ref": "#/$defs/lineHeight" }
+      },
+      "minProperties": 1
+    },
+    "spacingStyles": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "marginBottom": { "$ref": "#/$defs/spacingValue" }, "blockGap": { "$ref": "#/$defs/spacingValue" } },
+      "minProperties": 1
+    },
+    "borderStyles": {
+      "type": "object", "additionalProperties": false,
+      "required": ["color", "style", "width"],
+      "properties": { "color": { "$ref": "#/$defs/colorValue" }, "style": { "enum": ["solid", "dashed", "dotted"] }, "width": { "type": "string", "pattern": "^[1-8]px$" } }
+    },
+    "dimensionsStyles": {
+      "type": "object", "additionalProperties": false,
+      "required": ["minHeight"],
+      "properties": { "minHeight": { "$ref": "#/$defs/spacingValue" } }
+    },
+    "contentBlockStyle": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "properties": { "color": { "$ref": "#/$defs/colorStyles" }, "typography": { "$ref": "#/$defs/typographyStyles" }, "spacing": { "$ref": "#/$defs/spacingStyles" } }
+    },
+    "buttonBlockStyle": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "properties": { "color": { "$ref": "#/$defs/colorStyles" }, "typography": { "$ref": "#/$defs/typographyStyles" } }
+    },
+    "rootStyles": {
+      "type": "object", "additionalProperties": false,
+      "required": ["color", "typography", "blocks"],
+      "properties": {
+        "color": { "$ref": "#/$defs/colorStyles" },
+        "typography": { "$ref": "#/$defs/typographyStyles" },
+        "blocks": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "campaignbridge/heading": { "$ref": "#/$defs/contentBlockStyle" }, "campaignbridge/text": { "$ref": "#/$defs/contentBlockStyle" },
+            "campaignbridge/button": { "$ref": "#/$defs/buttonBlockStyle" },
+            "campaignbridge/columns": { "type": "object", "additionalProperties": false, "required": ["spacing"], "properties": { "spacing": { "$ref": "#/$defs/spacingStyles" } } },
+            "campaignbridge/divider": { "type": "object", "additionalProperties": false, "required": ["border"], "properties": { "border": { "$ref": "#/$defs/borderStyles" } } },
+            "campaignbridge/spacer": { "type": "object", "additionalProperties": false, "required": ["dimensions"], "properties": { "dimensions": { "$ref": "#/$defs/dimensionsStyles" } } },
+            "campaignbridge/post-title": { "$ref": "#/$defs/contentBlockStyle" }, "campaignbridge/post-excerpt": { "$ref": "#/$defs/contentBlockStyle" },
+            "campaignbridge/post-link": { "type": "object", "additionalProperties": false, "required": ["color"], "properties": { "color": { "$ref": "#/$defs/colorStyles" } } },
+            "campaignbridge/post-button": { "$ref": "#/$defs/buttonBlockStyle" }
+          }
+        }
+      }
+    }
+  }
+}
