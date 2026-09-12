@@ -55,7 +55,7 @@ class Form_Rest_Controller {
 	 * @return bool True if user has access.
 	 */
 	public function can_access_form(): bool {
-		return current_user_can( 'manage_options' );
+		return current_user_can( 'campaignbridge_manage' );
 	}
 
 	/**
@@ -169,7 +169,7 @@ class Form_Rest_Controller {
 		}
 
 		// WordPress built-in: Verify user permissions.
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'campaignbridge_manage' ) ) {
 			wp_send_json_error( 'Insufficient permissions.', 403 );
 		}
 

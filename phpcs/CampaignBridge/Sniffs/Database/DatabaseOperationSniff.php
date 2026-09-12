@@ -132,6 +132,11 @@ class DatabaseOperationSniff implements Sniff {
 	 * @return void
 	 */
 	private function validateWordPressDbUsage( File $phpcs_file, int $stack_ptr, string $method_name ): void {
+		// Skip validation if this is a method/function declaration (e.g. interface or class method).
+		if ( $this->isMethodDeclaration( $phpcs_file, $stack_ptr ) ) {
+			return;
+		}
+
 		// Skip validation if this appears to be an HTTP client operation.
 		if ( $this->isHttpClientOperation( $phpcs_file, $stack_ptr ) ) {
 			return;
@@ -150,6 +155,25 @@ class DatabaseOperationSniff implements Sniff {
 		if ( in_array( $method_name, array( 'query', 'get_var', 'get_row', 'get_col', 'get_results' ), true ) ) {
 			$this->validatePreparedStatement( $phpcs_file, $stack_ptr, $method_name );
 		}
+	}
+
+	/**
+	 * Checks if the current token is a method/function declaration name.
+	 *
+	 * @param File $phpcs_file The file being scanned.
+	 * @param int  $stack_ptr  The position of the current token in the stack.
+	 *
+	 * @return bool True if this is a method declaration, false otherwise.
+	 */
+	private function isMethodDeclaration( File $phpcs_file, int $stack_ptr ): bool {
+		// Look backwards for the 'function' keyword.
+		$prev = $phpcs_file->findPrevious( array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), $stack_ptr - 1, null, true );
+		if ( false === $prev ) {
+			return false;
+		}
+
+		$tokens = $phpcs_file->getTokens();
+		return T_FUNCTION === $tokens[ $prev ]['code'];
 	}
 
 	/**

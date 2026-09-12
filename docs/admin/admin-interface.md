@@ -601,7 +601,7 @@ return [
     // Page configuration
     'menu_title'   => __('Settings', 'campaignbridge'),
     'page_title'   => __('CampaignBridge Settings', 'campaignbridge'),
-    'capability'   => 'manage_options',
+    'capability'   => 'campaignbridge_manage',
     'position'     => 10,
     'description'  => __('Configure your email campaign settings and integrations.', 'campaignbridge'),
 
@@ -893,14 +893,14 @@ return array(
 
         'advanced' => array(
             'label'       => __('Advanced Options', 'campaignbridge'),
-            'capability'  => 'manage_options',                         // Higher permission
+            'capability'  => 'campaignbridge_manage',                         // Higher permission
             'order'       => 20,
             'description' => __('Advanced configuration for power users', 'campaignbridge'),
         ),
 
         'security' => array(
             'label'       => __('Security Settings', 'campaignbridge'),
-            'capability'  => 'manage_options',
+            'capability'  => 'campaignbridge_manage',
             'order'       => 5,                                         // Higher priority (lower number)
             'description' => __('Security and access control settings', 'campaignbridge'),
         ),
@@ -908,7 +908,7 @@ return array(
         // You can hide tabs by setting capability to false
         'debug' => array(
             'label'       => __('Debug Tools', 'campaignbridge'),
-            'capability'  => defined('WP_DEBUG') && WP_DEBUG ? 'manage_options' : false, // Conditional
+            'capability'  => defined('WP_DEBUG') && WP_DEBUG ? 'campaignbridge_manage' : false, // Conditional
             'order'       => 30,
         ),
     ),
@@ -931,7 +931,7 @@ return array(
 ```php
 'tabs' => array(
     'advanced' => array(
-        'capability' => current_user_can('manage_options') ? 'read' : false,
+        'capability' => current_user_can('campaignbridge_manage') ? 'read' : false,
     ),
 ),
 ```
@@ -1252,7 +1252,7 @@ class Context_Controller {
     public function get_data(): array {
         $base_data = [
             'user_role' => wp_get_current_user()->roles[0] ?? 'subscriber',
-            'is_admin' => current_user_can('manage_options'),
+            'is_admin' => current_user_can('campaignbridge_manage'),
         ];
 
         // Add admin-only data
@@ -1384,7 +1384,7 @@ public function handle_request(): void {
 
 private function handle_secure_file_upload(): void {
     // Check user capabilities
-    if (!current_user_can('manage_options')) {
+    if (!current_user_can('campaignbridge_manage')) {
         wp_die('Insufficient permissions');
     }
 
@@ -2262,7 +2262,7 @@ return array(
     // ===== CORE SETTINGS (Required for add_submenu_page) =====
     'menu_title'  => __('My Custom Screen', 'campaignbridge'),     // Menu item text
     'page_title'  => __('My Custom Screen - Full Title', 'campaignbridge'), // Page header
-    'capability'  => 'manage_options',                            // Required capability
+    'capability'  => 'campaignbridge_manage',                            // Required capability
     'position'    => 25,                                          // Menu position (optional)
 
     // ===== DISPLAY SETTINGS =====
@@ -2283,14 +2283,14 @@ return array(
 
         'advanced' => array(
             'label'       => __('Advanced Options', 'campaignbridge'),
-            'capability'  => 'manage_options',                         // Higher permission
+            'capability'  => 'campaignbridge_manage',                         // Higher permission
             'order'       => 20,
             'description' => __('Advanced configuration for power users', 'campaignbridge'),
         ),
 
         'security' => array(
             'label'       => __('Security Settings', 'campaignbridge'),
-            'capability'  => 'manage_options',
+            'capability'  => 'campaignbridge_manage',
             'order'       => 5,                                         // Higher priority (lower number)
             'description' => __('Security and access control settings', 'campaignbridge'),
         ),
@@ -2298,7 +2298,7 @@ return array(
         // You can hide tabs by setting capability to false
         'debug' => array(
             'label'       => __('Debug Tools', 'campaignbridge'),
-            'capability'  => defined('WP_DEBUG') && WP_DEBUG ? 'manage_options' : false, // Conditional
+            'capability'  => defined('WP_DEBUG') && WP_DEBUG ? 'campaignbridge_manage' : false, // Conditional
             'order'       => 30,
         ),
     ),
@@ -2365,7 +2365,7 @@ return array(
 return [
     'menu_title'  => 'My Custom Screen',
     'page_title'  => 'My Screen - Advanced Configuration',
-    'capability'  => 'manage_options',
+    'capability'  => 'campaignbridge_manage',
     'description' => 'Configure your custom settings here',
     'controller'  => 'My_Custom_Controller',
     'position'    => 30,
@@ -2382,7 +2382,7 @@ return [
 return [
     'menu_title'  => 'Settings',
     'page_title'  => 'Plugin Settings',
-    'capability'  => 'manage_options',
+    'capability'  => 'campaignbridge_manage',
     'description' => 'Configure plugin settings and preferences',
     'controller'  => 'Settings_Controller',
 
@@ -2476,7 +2476,7 @@ class Custom_Screen_Registry extends \CampaignBridge\Admin\Core\Screen_Registry 
                 'show_sidebar' => true,
             ],
             'wizard' => [
-                'capability' => 'manage_options',
+                'capability' => 'campaignbridge_manage',
                 'steps' => [],
                 'allow_skip' => false,
             ],
@@ -2595,7 +2595,7 @@ class Custom_Screen_Registry extends \CampaignBridge\Admin\Core\Screen_Registry 
      * Enqueue assets based on user capabilities
      */
     private function enqueue_conditional_assets(array $config): void {
-        if (current_user_can('manage_options')) {
+        if (current_user_can('campaignbridge_manage')) {
             // Admin-only assets
             wp_enqueue_script('admin-enhanced-features', '...');
         }

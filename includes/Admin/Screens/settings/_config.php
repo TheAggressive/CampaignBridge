@@ -9,7 +9,7 @@ return array(
 	// Page configuration.
 	'menu_title'     => __( 'Settings', 'campaignbridge' ),
 	'page_title'     => __( 'CampaignBridge Settings', 'campaignbridge' ),
-	'capability'     => 'manage_options',
+	'capability'     => 'campaignbridge_manage',
 	'position'       => 10,
 	'product_header' => true,
 	'show_journey'   => true,

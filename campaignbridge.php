@@ -254,11 +254,8 @@ class CampaignBridge_Plugin {
 			);
 		}
 
-		// Grant custom capability to administrators.
-		$admin_role = \get_role( 'administrator' );
-		if ( $admin_role && ! $admin_role->has_cap( 'campaignbridge_manage' ) ) {
-			$admin_role->add_cap( 'campaignbridge_manage' );
-		}
+		// Grant CampaignBridge capabilities to administrators.
+		\CampaignBridge\Core\Capabilities::register();
 
 		// Log activation (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

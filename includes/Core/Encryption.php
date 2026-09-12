@@ -164,8 +164,8 @@ class Encryption {
 	 * Decrypt data with context-aware permission checking.
 	 *
 	 * Different contexts have different permission requirements:
-	 * - 'api_key': Only administrators (manage_options)
-	 * - 'sensitive': Only administrators (manage_options)
+	 * - 'api_key': Only administrators (campaignbridge_manage)
+	 * - 'sensitive': Only administrators (campaignbridge_manage)
 	 * - 'personal': Logged-in users can access their own data
 	 * - 'public': No restrictions (for encrypted but non-sensitive data)
 	 *
@@ -189,7 +189,7 @@ class Encryption {
 	 * Decrypt data for display purposes (admin interface, settings pages).
 	 *
 	 * This is a convenience method that decrypts data for display in admin interfaces.
-	 * Requires administrator permissions (manage_options).
+	 * Requires administrator permissions (campaignbridge_manage).
 	 *
 	 * @param string $encrypted The encrypted data from storage.
 	 * @return string The decrypted data for display.
@@ -226,7 +226,7 @@ class Encryption {
 		switch ( $context ) {
 			case 'api_key':
 			case 'sensitive':
-				return \current_user_can( 'manage_options' );
+				return \current_user_can( 'campaignbridge_manage' );
 
 			case 'personal':
 				return is_user_logged_in();
@@ -236,7 +236,7 @@ class Encryption {
 
 			default:
 				// Unknown context - require admin.
-				return \current_user_can( 'manage_options' );
+				return \current_user_can( 'campaignbridge_manage' );
 		}
 	}
 

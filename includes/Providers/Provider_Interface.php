@@ -81,13 +81,6 @@ interface Provider_Interface {
 	public function get_section_keys( array $settings, bool $refresh = false );
 
 	/**
-	 * Get the required capability for this provider.
-	 *
-	 * @return string Capability slug (e.g., 'campaignbridge_manage').
-	 */
-	public function required_capability(): string;
-
-	/**
 	 * Get rate limiting policy for this provider.
 	 *
 	 * @return array<string, mixed> Array with 'bucket' and 'max_per_minute' keys.

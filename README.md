@@ -157,9 +157,10 @@ quality gate.
 
 ## Security
 
-REST and form operations use explicit capability checks, nonces where
-appropriate, type-aware validation and sanitization, and output escaping.
-Provider credentials are encrypted at rest and must not appear in logs,
+REST and form operations use explicit capability checks against the
+`campaignbridge_manage` capability (defined in `includes/Core/Capabilities.php`),
+nonces where appropriate, type-aware validation and sanitization, and output
+escaping. Provider credentials are encrypted at rest and must not appear in logs,
 responses, or provider-facing error messages. See [SECURITY.md](SECURITY.md) and
 [docs/threat-model.md](docs/threat-model.md) for the maintained security
 contract.

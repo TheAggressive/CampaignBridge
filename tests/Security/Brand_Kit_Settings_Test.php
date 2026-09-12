@@ -27,7 +27,7 @@ final class Brand_Kit_Settings_Test extends Test_Case {
 		( new Settings_Controller() )->handle_request();
 	}
 
-	public function test_import_rejects_a_user_without_manage_options(): void {
+	public function test_import_rejects_a_user_without_campaignbridge_manage(): void {
 		wp_set_current_user( $this->create_test_user( array( 'role' => 'subscriber' ) ) );
 		$_POST['import_brand_kit'] = '1';
 		$_POST['_wpnonce']         = wp_create_nonce( 'campaignbridge_import_brand' );

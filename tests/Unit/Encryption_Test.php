@@ -33,6 +33,9 @@ class Encryption_Test extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 
+		// Grant CampaignBridge capabilities to the admin role (simulates activation).
+		\CampaignBridge\Core\Capabilities::register();
+
 		// Set up admin user for testing (Encryption requires admin for key operations)
 		$this->test_admin_user_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $this->test_admin_user_id );

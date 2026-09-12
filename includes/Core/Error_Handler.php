@@ -297,7 +297,7 @@ class Error_Handler {
 
 			if ( $user_loaded ) {
 				// Security: Only allow admin users to access log level settings.
-				if ( ! \current_user_can( 'manage_options' ) ) {
+				if ( ! \current_user_can( 'campaignbridge_manage' ) ) {
 					return self::LOG_LEVEL_ERROR; // Default to most restrictive level for non-admins.
 				}
 			} else {
