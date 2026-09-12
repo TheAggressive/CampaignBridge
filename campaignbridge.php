@@ -254,8 +254,8 @@ class CampaignBridge_Plugin {
 			);
 		}
 
-		// Grant CampaignBridge capabilities to administrators.
-		\CampaignBridge\Core\Capabilities::register();
+		// Grant CampaignBridge capabilities to administrators and record schema version.
+		\CampaignBridge\Core\Capabilities::ensure_registered();
 
 		// Log activation (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

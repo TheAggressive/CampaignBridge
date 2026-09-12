@@ -10,6 +10,8 @@
 
 namespace CampaignBridge\Admin;
 
+use CampaignBridge\Core\Capabilities;
+
 /**
  * Admin Menu Manager Class
  *
@@ -46,7 +48,7 @@ class Admin_Menu_Manager {
 		add_menu_page(
 			__( 'CampaignBridge', 'campaignbridge' ),
 			__( 'CampaignBridge', 'campaignbridge' ),
-			'campaignbridge_manage',
+			Capabilities::MANAGE,
 			self::MENU_SLUG,
 			array( $this, 'redirect_to_first_submenu' ),
 			'dashicons-email-alt',

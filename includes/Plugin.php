@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace CampaignBridge;
 
 use CampaignBridge\Blocks\Blocks;
+use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Notices;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\REST\Routes as RestRoutes;
@@ -27,6 +28,7 @@ class Plugin {
 		Blocks::init();
 		Post_Type_Email_Template::init();
 		\CampaignBridge\Admin\Admin::get_instance();
+		\add_action( 'admin_init', array( Capabilities::class, 'ensure_registered' ), 5 );
 
 		RestRoutes::init();
 		\add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );

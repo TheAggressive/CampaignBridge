@@ -54,6 +54,19 @@ final class Capabilities {
 	);
 
 	/**
+	 * Current capability schema version.
+	 *
+	 * Increment this constant when the set of capabilities changes so that
+	 * existing installations are repaired on the next admin request.
+	 */
+	public const SCHEMA_VERSION = 1;
+
+	/**
+	 * Option name that stores the last-applied capability schema version.
+	 */
+	private const SCHEMA_OPTION = 'campaignbridge_capability_schema';
+
+	/**
 	 * Grant every CampaignBridge capability to the administrator role.
 	 *
 	 * Idempotent: safe to call on every activation.
@@ -71,6 +84,31 @@ final class Capabilities {
 				$role->add_cap( $cap );
 			}
 		}
+	}
+
+	/**
+	 * Ensure capabilities are registered, repairing existing installations
+	 * when the schema version has changed.
+	 *
+	 * Performs a single cached option read and only modifies roles when the
+	 * stored version does not match the current schema version. Safe to call
+	 * on every admin request.
+	 *
+	 * @return void
+	 */
+	public static function ensure_registered(): void {
+		$stored_version = (int) \get_option( self::SCHEMA_OPTION, 0 );
+
+		if ( self::SCHEMA_VERSION === $stored_version ) {
+			return;
+		}
+
+		if ( null === \get_role( 'administrator' ) ) {
+			return;
+		}
+
+		self::register();
+		\update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal schema repair, not user-facing.
 	}
 
 	/**
