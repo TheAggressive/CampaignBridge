@@ -126,23 +126,29 @@ class Settings_Persistence_Test extends Test_Case {
 
 		// Verify settings were saved to options
 		$this->assertEquals( $this->test_settings_data['campaignbridge_provider'], get_option( 'campaignbridge_provider' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_api_key'], get_option( 'campaignbridge_mailchimp_api_key' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_audience'], get_option( 'campaignbridge_mailchimp_audience' ) );
+		$repo = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$conn = $repo->get( 'mailchimp' );
+		$this->assertNotNull( $conn );
+		$this->assertSame( $this->test_settings_data['campaignbridge_mailchimp_api_key'], \CampaignBridge\Core\Encryption::decrypt_for_display( $conn->api_key() ) );
+		$this->assertSame( $this->test_settings_data['campaignbridge_mailchimp_audience'], $conn->audience_id() );
 
 		// Simulate fresh page load
 		$this->reset_request_state();
 
 		// Verify settings persist
 		$this->assertEquals( $this->test_settings_data['campaignbridge_provider'], get_option( 'campaignbridge_provider' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_api_key'], get_option( 'campaignbridge_mailchimp_api_key' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_audience'], get_option( 'campaignbridge_mailchimp_audience' ) );
+		$conn = $repo->get( 'mailchimp' );
+		$this->assertNotNull( $conn );
+		$this->assertSame( $this->test_settings_data['campaignbridge_mailchimp_api_key'], \CampaignBridge\Core\Encryption::decrypt_for_display( $conn->api_key() ) );
+		$this->assertSame( $this->test_settings_data['campaignbridge_mailchimp_audience'], $conn->audience_id() );
 
 		// Test that Settings_Controller loads the settings correctly
 		$controller = new Settings_Controller();
 		$data       = $controller->get_data();
 
 		$this->assertEquals( $this->test_settings_data['campaignbridge_provider'], $data['provider'] ?? get_option( 'campaignbridge_provider' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_api_key'], $data['mailchimp_api_key'] );
+		$this->assertTrue( \CampaignBridge\Core\Encryption::is_encrypted_value( $data['mailchimp_api_key'] ) );
+		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_api_key'], \CampaignBridge\Core\Encryption::decrypt_for_display( $data['mailchimp_api_key'] ) );
 		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_audience'], $data['mailchimp_audience'] );
 	}
 
@@ -390,14 +396,27 @@ class Settings_Persistence_Test extends Test_Case {
 		if ( isset( $_POST['providers'] ) ) {
 			$data = $_POST['providers'];
 
-			update_option( 'campaignbridge_provider', $data['provider'] );
+			\CampaignBridge\Core\Storage::update_option( 'campaignbridge_provider', $data['provider'] );
 
-			if ( $data['provider'] === 'mailchimp' ) {
+			if ( 'mailchimp' === $data['provider'] ) {
+				$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+				$existing   = $repository->get( 'mailchimp' );
+
 				if ( ! empty( $data['mailchimp_api_key'] ) ) {
-					update_option( 'campaignbridge_mailchimp_api_key', $data['mailchimp_api_key'] );
+					$key = \CampaignBridge\Core\Encryption::encrypt( $data['mailchimp_api_key'] );
+				} elseif ( $existing ) {
+					$key = $existing->api_key();
+				} else {
+					$key = '';
 				}
-				if ( ! empty( $data['mailchimp_audience'] ) ) {
-					update_option( 'campaignbridge_mailchimp_audience', $data['mailchimp_audience'] );
+
+				$audience = array_key_exists( 'mailchimp_audience', $data )
+					? $data['mailchimp_audience']
+					: ( $existing ? $existing->audience_id() : '' );
+
+				if ( '' !== $key ) {
+					$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $key, $audience );
+					$repository->save( $connection );
 				}
 			}
 		}
@@ -422,8 +441,7 @@ class Settings_Persistence_Test extends Test_Case {
 			'campaignbridge_from_email',
 			'campaignbridge_reply_to',
 			'campaignbridge_provider',
-			'campaignbridge_mailchimp_api_key',
-			'campaignbridge_mailchimp_audience',
+			'provider_connection_mailchimp',
 			'campaignbridge_debug_mode',
 			'campaignbridge_log_level',
 			'campaignbridge_cache_duration',
