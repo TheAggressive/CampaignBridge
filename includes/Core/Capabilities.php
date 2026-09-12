@@ -27,8 +27,8 @@ final class Capabilities {
 	/** Manage provider connections and credentials. */
 	public const MANAGE_CONNECTIONS = 'campaignbridge_manage_connections';
 
-	/** Create, edit, and delete email templates. */
-	public const EDIT_TEMPLATES = 'campaignbridge_edit_templates';
+	/** Create, edit, and delete email templates (maps to core post cap). */
+	public const EDIT_TEMPLATES = 'edit_posts';
 
 	/** Create and edit campaigns. */
 	public const CREATE_CAMPAIGNS = 'campaignbridge_create_campaigns';
@@ -47,7 +47,6 @@ final class Capabilities {
 	public const ALL = array(
 		self::MANAGE,
 		self::MANAGE_CONNECTIONS,
-		self::EDIT_TEMPLATES,
 		self::CREATE_CAMPAIGNS,
 		self::SEND_CAMPAIGNS,
 		self::VIEW_REPORTS,
@@ -59,7 +58,7 @@ final class Capabilities {
 	 * Increment this constant when the set of capabilities changes so that
 	 * existing installations are repaired on the next admin request.
 	 */
-	public const SCHEMA_VERSION = 1;
+	public const SCHEMA_VERSION = 2;
 
 	/**
 	 * Option name that stores the last-applied capability schema version.
@@ -109,6 +108,12 @@ final class Capabilities {
 
 		if ( null === \get_role( 'administrator' ) ) {
 			return;
+		}
+
+		// Remove legacy custom template cap replaced by core edit_posts.
+		$role = \get_role( 'administrator' );
+		if ( $role->has_cap( 'campaignbridge_edit_templates' ) ) {
+			$role->remove_cap( 'campaignbridge_edit_templates' );
 		}
 
 		self::register();

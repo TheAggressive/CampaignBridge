@@ -21,7 +21,7 @@ class Capabilities_Test extends Test_Case {
 	public function test_capability_constants_are_defined(): void {
 		$this->assertSame( 'campaignbridge_manage', Capabilities::MANAGE );
 		$this->assertSame( 'campaignbridge_manage_connections', Capabilities::MANAGE_CONNECTIONS );
-		$this->assertSame( 'campaignbridge_edit_templates', Capabilities::EDIT_TEMPLATES );
+		$this->assertSame( 'edit_posts', Capabilities::EDIT_TEMPLATES );
 		$this->assertSame( 'campaignbridge_create_campaigns', Capabilities::CREATE_CAMPAIGNS );
 		$this->assertSame( 'campaignbridge_send_campaigns', Capabilities::SEND_CAMPAIGNS );
 		$this->assertSame( 'campaignbridge_view_reports', Capabilities::VIEW_REPORTS );
@@ -35,7 +35,6 @@ class Capabilities_Test extends Test_Case {
 			array(
 				'campaignbridge_manage',
 				'campaignbridge_manage_connections',
-				'campaignbridge_edit_templates',
 				'campaignbridge_create_campaigns',
 				'campaignbridge_send_campaigns',
 				'campaignbridge_view_reports',

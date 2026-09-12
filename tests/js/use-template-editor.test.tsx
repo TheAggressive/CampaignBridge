@@ -1,0 +1,245 @@
+/** @jest-environment jsdom */
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import apiFetch from '@wordpress/api-fetch';
+import { store as coreStore } from '@wordpress/core-data';
+import { dispatch } from '@wordpress/data';
+import {
+  useTemplateEditor,
+  type UseTemplateEditor,
+} from '../../src/scripts/editor/hooks/useTemplateEditor';
+
+jest.mock('@wordpress/api-fetch', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+
+jest.mock('@wordpress/core-data', () => ({
+  store: 'core/store',
+  useEntityBlockEditor: () => [
+    [{ name: 'core/paragraph', attrs: {}, innerBlocks: [] }],
+    jest.fn(),
+    jest.fn(),
+  ],
+  useEntityRecord: jest.fn(),
+}));
+
+jest.mock('@wordpress/data', () => ({
+  dispatch: jest.fn(),
+  useSelect: jest.fn(),
+}));
+
+jest.mock('../../src/scripts/editor/hooks/useTemplates', () => ({
+  TEMPLATE_LIST_QUERY: { per_page: 100, status: 'draft,publish' },
+}));
+
+const mockRecord = {
+  id: 42,
+  title: { raw: 'My Template', rendered: 'My Template' },
+  status: 'draft',
+  content: '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->',
+};
+
+function setupEntityRecord() {
+  const { useEntityRecord } = require('@wordpress/core-data');
+  const mockSave = jest.fn().mockResolvedValue(true);
+  useEntityRecord.mockReturnValue({
+    edits: {},
+    hasEdits: false,
+    hasStarted: true,
+    isResolving: false,
+    record: mockRecord,
+    save: mockSave,
+  });
+  return mockSave;
+}
+
+function setupUseSelect() {
+  const { useSelect } = require('@wordpress/data');
+  useSelect.mockReturnValue({
+    isSaving: false,
+    loadError: null,
+    saveError: null,
+  });
+}
+
+let current: UseTemplateEditor;
+function Harness() {
+  current = useTemplateEditor({ postId: 42, postType: 'cb_templates' });
+  return null;
+}
+
+describe('useTemplateEditor', () => {
+  let root: Root;
+  let container: HTMLDivElement;
+  let mockSave: jest.Mock;
+
+  beforeEach(() => {
+    (
+      globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    jest.mocked(apiFetch).mockReset();
+    mockSave = setupEntityRecord();
+    setupUseSelect();
+    jest.mocked(dispatch).mockReturnValue({
+      editEntityRecord: jest.fn(),
+      invalidateResolution: jest.fn(),
+    } as any);
+    container = document.createElement('div');
+    root = createRoot(container);
+    act(() => root.render(<Harness />));
+  });
+
+  afterEach(() => act(() => root.unmount()));
+
+  describe('publish', () => {
+    it('dispatches editEntityRecord with publish status then saves', async () => {
+      const dispatchMock = jest.mocked(dispatch);
+      const dispatchReturn = dispatchMock(coreStore as any) as any;
+
+      await act(async () => {
+        const result = await current.publish();
+        expect(result).toBe(true);
+      });
+
+      expect(dispatchReturn.editEntityRecord).toHaveBeenCalledWith(
+        'postType',
+        'cb_templates',
+        42,
+        { status: 'publish' }
+      );
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it('returns false when save fails', async () => {
+      mockSave.mockRejectedValue(new Error('Save failed'));
+
+      await act(async () => {
+        const result = await current.publish();
+        expect(result).toBe(false);
+      });
+    });
+
+    it('returns false when already saving', async () => {
+      const { useSelect } = require('@wordpress/data');
+      useSelect.mockReturnValue({
+        isSaving: true,
+        loadError: null,
+        saveError: null,
+      });
+
+      act(() => root.render(<Harness />));
+
+      await act(async () => {
+        const result = await current.publish();
+        expect(result).toBe(false);
+      });
+      expect(mockSave).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('duplicate', () => {
+    it('creates a copy via apiFetch and invalidates the template list resolver', async () => {
+      jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
+
+      const dispatchMock = jest.mocked(dispatch);
+      const dispatchReturn = dispatchMock(coreStore as any) as any;
+
+      let newId: number | null = null;
+      await act(async () => {
+        newId = await current.duplicate();
+      });
+
+      expect(newId).toBe(99);
+      expect(apiFetch).toHaveBeenCalledWith({
+        path: '/wp/v2/cb_templates',
+        method: 'POST',
+        data: {
+          status: 'draft',
+          content: mockRecord.content,
+          title: 'My Template (Copy)',
+        },
+      });
+      expect(dispatchReturn.invalidateResolution).toHaveBeenCalledWith(
+        'getEntityRecords',
+        ['postType', 'cb_templates', expect.objectContaining({ per_page: 100 })]
+      );
+    });
+
+    it('returns null when apiFetch fails', async () => {
+      jest.mocked(apiFetch).mockRejectedValue(new Error('Network error'));
+
+      const dispatchMock = jest.mocked(dispatch);
+      const dispatchReturn = dispatchMock(coreStore as any) as any;
+
+      let newId: number | null = null;
+      await act(async () => {
+        newId = await current.duplicate();
+      });
+
+      expect(newId).toBeNull();
+      expect(dispatchReturn.invalidateResolution).not.toHaveBeenCalled();
+    });
+
+    it('returns null when no record is loaded', async () => {
+      const { useEntityRecord } = require('@wordpress/core-data');
+      useEntityRecord.mockReturnValue({
+        edits: {},
+        hasEdits: false,
+        hasStarted: true,
+        isResolving: false,
+        record: null,
+        save: jest.fn(),
+      });
+
+      act(() => root.render(<Harness />));
+
+      let newId: number | null = null;
+      await act(async () => {
+        newId = await current.duplicate();
+      });
+
+      expect(newId).toBeNull();
+      expect(apiFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restoreRevision', () => {
+    it('calls the restore endpoint and invalidates the entity record', async () => {
+      jest.mocked(apiFetch).mockResolvedValue({} as any);
+
+      const dispatchMock = jest.mocked(dispatch);
+      const dispatchReturn = dispatchMock(coreStore as any) as any;
+
+      let result: boolean = false;
+      await act(async () => {
+        result = await current.restoreRevision(7);
+      });
+
+      expect(result).toBe(true);
+      expect(apiFetch).toHaveBeenCalledWith({
+        path: '/wp/v2/cb_templates/42/revisions/7/restore',
+        method: 'POST',
+      });
+      expect(dispatchReturn.invalidateResolution).toHaveBeenCalledWith(
+        'getEntityRecord',
+        ['postType', 'cb_templates', 42]
+      );
+    });
+
+    it('returns false when the restore request fails', async () => {
+      jest.mocked(apiFetch).mockRejectedValue(new Error('Not found'));
+
+      const dispatchMock = jest.mocked(dispatch);
+      const dispatchReturn = dispatchMock(coreStore as any) as any;
+
+      let result: boolean = true;
+      await act(async () => {
+        result = await current.restoreRevision(7);
+      });
+
+      expect(result).toBe(false);
+      expect(dispatchReturn.invalidateResolution).not.toHaveBeenCalled();
+    });
+  });
+});

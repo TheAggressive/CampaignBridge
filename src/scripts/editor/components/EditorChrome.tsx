@@ -24,6 +24,7 @@ import EmailPreviewModal from './EmailPreviewModal';
 import { ErrorState, LoadingState } from './EditorStates';
 import Footer from './Footer';
 import Header from './Header';
+import RevisionHistory from './RevisionHistory';
 import SecondarySidebar from './Sidebars/SecondarySidebar';
 import { SidebarContent, SidebarHeader } from './Sidebars/Sidebar';
 import type { TemplateSummary } from '../types';
@@ -74,12 +75,15 @@ function EditorChromeContent({
   );
   const {
     blocks,
+    duplicate,
     hasEdits,
     isResolving,
     loadError,
     onChange,
     onInput,
+    publish,
     record,
+    restoreRevision,
     saveNow,
     saveStatus,
   } = useTemplateEditor({
@@ -88,6 +92,13 @@ function EditorChromeContent({
     onSave: handleSaveSuccess,
     onError: errorNotice,
   });
+
+  const handleDuplicate = useCallback(async () => {
+    const newId = await duplicate();
+    if (newId !== null) {
+      onSelect(newId);
+    }
+  }, [duplicate, onSelect]);
 
   const {
     settings: editorSettings,
@@ -129,6 +140,14 @@ function EditorChromeContent({
   }, []);
   const handleClosePreview = useCallback(() => {
     setPreviewOpen(false);
+  }, []);
+
+  const [revisionOpen, setRevisionOpen] = useState(false);
+  const handleOpenHistory = useCallback(() => {
+    setRevisionOpen(true);
+  }, []);
+  const handleRevisionClose = useCallback(() => {
+    setRevisionOpen(false);
   }, []);
 
   const handleBlockSelected = useCallback(() => {
@@ -247,6 +266,13 @@ function EditorChromeContent({
               title={list.find(t => t.id === currentId)?.title || undefined}
               hasEdits={hasEdits}
             />
+            <RevisionHistory
+              postId={postId}
+              postType={postType}
+              isOpen={revisionOpen}
+              onRequestClose={handleRevisionClose}
+              onRestore={restoreRevision}
+            />
             <InterfaceSkeleton
               className={skeletonClassName}
               header={
@@ -262,8 +288,12 @@ function EditorChromeContent({
                   toggleSecondary={toggleSecondary}
                   hasEdits={hasEdits}
                   onSave={saveNow}
+                  onPublish={publish}
+                  onDuplicate={handleDuplicate}
+                  status={record?.status}
                   saveStatus={saveStatus}
                   onOpenPreview={handleOpenPreview}
+                  onOpenHistory={handleOpenHistory}
                 />
               }
               content={<Content onSave={saveNow} styles={editorStyles} />}

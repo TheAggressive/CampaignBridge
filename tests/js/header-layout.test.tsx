@@ -16,6 +16,10 @@ jest.mock('@wordpress/i18n', () => ({
   __: text => text,
 }));
 
+jest.mock('@wordpress/icons', () => ({
+  time: 'time-icon',
+}));
+
 jest.mock('../../src/scripts/editor/components/TemplateToolbar', () => () => (
   <div data-testid='template-toolbar' />
 ));
@@ -40,6 +44,13 @@ jest.mock(
     FullscreenToggle: () => <button data-testid='fullscreen-toggle' />,
   })
 );
+
+jest.mock('../../src/scripts/editor/components/PreviewButton', () => ({
+  __esModule: true,
+  default: ({ onClick }) => (
+    <button data-testid='preview-button' onClick={onClick} />
+  ),
+}));
 
 describe('Header layout', () => {
   let container: HTMLDivElement;
@@ -91,5 +102,323 @@ describe('Header layout', () => {
         container.querySelector('[data-testid="primary-toggle"]')
       )
     ).toBe(true);
+  });
+
+  describe('publish and duplicate buttons', () => {
+    it('shows the Publish button when status is draft', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='draft'
+          />
+        );
+      });
+
+      const publishButton = container.querySelector(
+        '.cb-editor__publish-button'
+      );
+      expect(publishButton).not.toBeNull();
+      expect(publishButton?.textContent).toBe('Publish');
+    });
+
+    it('does not show the Publish button when status is publish', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='publish'
+          />
+        );
+      });
+
+      const publishButton = container.querySelector(
+        '.cb-editor__publish-button'
+      );
+      expect(publishButton).toBeNull();
+    });
+
+    it('shows the Duplicate button regardless of status', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='draft'
+          />
+        );
+      });
+
+      const duplicateButton = container.querySelector(
+        '.cb-editor__duplicate-button'
+      );
+      expect(duplicateButton).not.toBeNull();
+      expect(duplicateButton?.textContent).toBe('Duplicate');
+    });
+
+    it('calls onPublish when the Publish button is clicked', () => {
+      const onPublish = jest.fn();
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='draft'
+            onPublish={onPublish}
+          />
+        );
+      });
+
+      const publishButton = container.querySelector(
+        '.cb-editor__publish-button'
+      );
+      act(() => {
+        publishButton?.click();
+      });
+
+      expect(onPublish).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onDuplicate when the Duplicate button is clicked', () => {
+      const onDuplicate = jest.fn();
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='draft'
+            onDuplicate={onDuplicate}
+          />
+        );
+      });
+
+      const duplicateButton = container.querySelector(
+        '.cb-editor__duplicate-button'
+      );
+      act(() => {
+        duplicateButton?.click();
+      });
+
+      expect(onDuplicate).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables Publish and Duplicate buttons while saving', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='draft'
+            saveStatus='saving'
+          />
+        );
+      });
+
+      const publishButton = container.querySelector(
+        '.cb-editor__publish-button'
+      );
+      const duplicateButton = container.querySelector(
+        '.cb-editor__duplicate-button'
+      );
+      expect(publishButton?.hasAttribute('disabled')).toBe(true);
+      expect(duplicateButton?.hasAttribute('disabled')).toBe(true);
+    });
+  });
+
+  describe('status badge', () => {
+    it('shows a Draft badge when status is draft', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='draft'
+          />
+        );
+      });
+
+      const badge = container.querySelector('.cb-editor__status-badge');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toBe('Draft');
+      expect(badge?.classList.contains('cb-editor__status-badge--draft')).toBe(
+        true
+      );
+    });
+
+    it('shows a Published badge when status is publish', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='publish'
+          />
+        );
+      });
+
+      const badge = container.querySelector('.cb-editor__status-badge');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toBe('Published');
+      expect(
+        badge?.classList.contains('cb-editor__status-badge--published')
+      ).toBe(true);
+    });
+
+    it('hides the badge when status is undefined', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+          />
+        );
+      });
+
+      const badge = container.querySelector('.cb-editor__status-badge');
+      expect(badge).toBeNull();
+    });
+  });
+
+  describe('history button', () => {
+    it('renders the History button', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+          />
+        );
+      });
+
+      const historyButton = container.querySelector(
+        '.cb-editor__history-button'
+      );
+      expect(historyButton).not.toBeNull();
+    });
+
+    it('calls onOpenHistory when the History button is clicked', () => {
+      const onOpenHistory = jest.fn();
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            onOpenHistory={onOpenHistory}
+          />
+        );
+      });
+
+      const historyButton = container.querySelector(
+        '.cb-editor__history-button'
+      );
+      act(() => {
+        historyButton?.click();
+      });
+
+      expect(onOpenHistory).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables the History button while saving', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            saveStatus='saving'
+          />
+        );
+      });
+
+      const historyButton = container.querySelector(
+        '.cb-editor__history-button'
+      );
+      expect(historyButton?.hasAttribute('disabled')).toBe(true);
+    });
   });
 });

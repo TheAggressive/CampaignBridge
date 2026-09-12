@@ -1,17 +1,20 @@
 import type { Block } from '@wordpress/blocks';
+import apiFetch from '@wordpress/api-fetch';
 import {
   store as coreStore,
   useEntityBlockEditor,
   useEntityRecord,
 } from '@wordpress/core-data';
-import { useSelect } from '@wordpress/data';
+import { dispatch, useSelect } from '@wordpress/data';
 import { useCallback, useEffect, useRef } from '@wordpress/element';
 import type { SaveStatus } from '../types';
+import { TEMPLATE_LIST_QUERY } from './useTemplates';
 
 const AUTOSAVE_DELAY_MS = 2000;
 
 interface TemplateRecord {
   id: number;
+  title: string | { raw?: string; rendered?: string };
   status: string;
   content: string;
   meta?: Record<string, unknown>;
@@ -140,6 +143,76 @@ export function useTemplateEditor({
     }
   }, [hasEdits, isSaving, save]);
 
+  const publish = useCallback(async () => {
+    if (isSaving) {
+      return false;
+    }
+
+    try {
+      dispatch(coreStore).editEntityRecord('postType', postType, postId, {
+        status: 'publish',
+      });
+      await save();
+      return true;
+    } catch {
+      // The core-data error selector drives notices and retry state.
+      return false;
+    }
+  }, [postType, postId, isSaving, save]);
+
+  const duplicate = useCallback(async (): Promise<number | null> => {
+    if (!record) {
+      return null;
+    }
+
+    const title =
+      typeof record.title === 'string'
+        ? record.title
+        : record.title.raw || record.title.rendered || 'Untitled';
+
+    try {
+      const newTemplate = await apiFetch<{ id: number }>({
+        path: `/wp/v2/${postType}`,
+        method: 'POST',
+        data: {
+          status: 'draft',
+          content: record.content,
+          title: `${title} (Copy)`,
+        },
+      });
+      // Invalidate the template list resolver so useTemplates re-fetches.
+      dispatch(coreStore).invalidateResolution('getEntityRecords', [
+        'postType',
+        postType,
+        TEMPLATE_LIST_QUERY,
+      ]);
+      return newTemplate.id;
+    } catch {
+      return null;
+    }
+  }, [record, postType]);
+
+  const restoreRevision = useCallback(
+    async (revisionId: number): Promise<boolean> => {
+      try {
+        await apiFetch({
+          path: `/wp/v2/${postType}/${postId}/revisions/${revisionId}/restore`,
+          method: 'POST',
+        });
+        // Invalidate the entity record so the editor re-fetches restored content.
+        dispatch(coreStore).invalidateResolution('getEntityRecord', [
+          'postType',
+          postType,
+          postId,
+        ]);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [postType, postId]
+  );
+
   const saveStatus: SaveStatus = saveError
     ? 'error'
     : isSaving
@@ -150,12 +223,15 @@ export function useTemplateEditor({
 
   return {
     blocks: (rawBlocks ?? []) as Block[],
+    duplicate,
     hasEdits,
     isResolving: isResolving || !hasStarted,
     loadError,
     onChange,
     onInput,
+    publish,
     record,
+    restoreRevision,
     saveNow,
     saveStatus,
   };
