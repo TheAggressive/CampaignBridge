@@ -349,26 +349,34 @@ class Admin_Screens_Test extends Test_Case {
 	public function test_screen_registry_discovers_screens(): void {
 		global $menu, $submenu;
 
+		// Reset menu globals to avoid state leakage from other tests.
+		$menu    = array();
+		$submenu = array();
+
 		// Create and set admin user
 		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
 
-		// Trigger screen discovery
-		$this->trigger_screen_discovery();
+		// Register the admin menu hooks and trigger the admin_menu action.
+		$menu_manager = new \CampaignBridge\Admin\Admin_Menu_Manager();
+		$menu_manager->init();
+		$screen_registry = new \CampaignBridge\Admin\Core\Screen_Registry(
+			\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
+			'campaignbridge'
+		);
+		$screen_registry->init();
+		do_action( 'admin_menu' );
 
-		// Verify menu was created (only if admin_menu has run)
-		if ( isset( $menu ) && is_array( $menu ) ) {
-			$this->assertArrayHasKey( 'campaignbridge', $menu, 'Should create main menu item' );
-		}
+		// Verify main menu was created (menu items are keyed by position, slug is at index 2).
+		$slugs = array_map( static function ( $item ) {
+			return $item[2] ?? null;
+		}, array_values( $menu ) );
+		$this->assertContains( 'campaignbridge', $slugs, 'Should create main menu item' );
 
-		// Verify submenus were created for screens
-		if ( isset( $submenu ) && is_array( $submenu ) ) {
-			$this->assertArrayHasKey( 'campaignbridge', $submenu, 'Should create submenu' );
-			if ( isset( $submenu['campaignbridge'] ) ) {
-				$this->assertContains( 'Status', array_column( $submenu['campaignbridge'], 0 ), 'Should include Status submenu' );
-				$this->assertContains( 'Post Types', array_column( $submenu['campaignbridge'], 0 ), 'Should include Post Types submenu' );
-			}
-		}
+		// Verify submenus were created for screens (submenus ARE keyed by slug).
+		$this->assertArrayHasKey( 'campaignbridge', $submenu, 'Should create submenu' );
+		$this->assertContains( 'Status', array_column( $submenu['campaignbridge'], 0 ), 'Should include Status submenu' );
+		$this->assertContains( 'Post Types', array_column( $submenu['campaignbridge'], 0 ), 'Should include Post Types submenu' );
 	}
 
 	/**
