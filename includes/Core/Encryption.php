@@ -133,15 +133,11 @@ class Encryption {
 		}
 
 		try {
-			if ( str_starts_with( $encrypted, self::ENVELOPE_PREFIX ) ) {
-				return self::decrypt_envelope( $encrypted );
+			if ( ! str_starts_with( $encrypted, self::ENVELOPE_PREFIX ) ) {
+				throw new \RuntimeException( 'Refusing to decrypt plaintext or an unknown ciphertext format' );
 			}
 
-			if ( self::is_legacy_encrypted_value( $encrypted ) ) {
-				return self::decrypt_legacy( $encrypted );
-			}
-
-			throw new \RuntimeException( 'Refusing to decrypt plaintext or an unknown ciphertext format' );
+			return self::decrypt_envelope( $encrypted );
 
 		} catch ( \Throwable $e ) {
 			// Log the error for debugging but don't expose details.
@@ -337,24 +333,6 @@ class Encryption {
 	}
 
 	/**
-	 * Convert legacy plaintext or unversioned ciphertext to the current envelope.
-	 *
-	 * This method is intentionally explicit; normal decryption never accepts
-	 * plaintext as though it were protected.
-	 *
-	 * @param string $value Stored credential value.
-	 * @return string Current encrypted envelope.
-	 */
-	public static function migrate_legacy_value( string $value ): string {
-		if ( '' === $value || str_starts_with( $value, self::ENVELOPE_PREFIX ) ) {
-			return $value;
-		}
-
-		$plaintext = self::is_legacy_encrypted_value( $value ) ? self::decrypt_legacy( $value ) : $value;
-		return self::encrypt( $plaintext );
-	}
-
-	/**
 	 * Decrypt a versioned envelope.
 	 *
 	 * @param string $encrypted Versioned ciphertext.
@@ -374,26 +352,6 @@ class Encryption {
 		}
 
 		return self::decrypt_payload( $parts[3], self::key_material( $keys[ $key_id ] ) );
-	}
-
-	/**
-	 * Decrypt ciphertext written before versioned envelopes were introduced.
-	 *
-	 * @param string $encrypted Legacy base64 ciphertext.
-	 * @return string Plaintext.
-	 * @throws \RuntimeException When no retained key can decrypt the value.
-	 */
-	private static function decrypt_legacy( string $encrypted ): string {
-		foreach ( self::get_decryption_keys() as $stored_key ) {
-			try {
-				// Legacy code passed the base64 representation directly to OpenSSL.
-				return self::decrypt_payload( $encrypted, $stored_key );
-			} catch ( \RuntimeException $e ) {
-				continue;
-			}
-		}
-
-		throw new \RuntimeException( 'Invalid encrypted data' );
 	}
 
 	/**
@@ -544,21 +502,21 @@ class Encryption {
 	 * @return bool True if value appears to be encrypted.
 	 */
 	public static function is_encrypted_value( string $value ): bool {
-		if ( str_starts_with( $value, self::ENVELOPE_PREFIX ) ) {
-			$parts = explode( ':', $value, 4 );
-			return 4 === count( $parts ) && 16 === strlen( $parts[2] ) && self::is_legacy_encrypted_value( $parts[3] );
+		if ( ! str_starts_with( $value, self::ENVELOPE_PREFIX ) ) {
+			return false;
 		}
 
-		return self::is_legacy_encrypted_value( $value );
+		$parts = explode( ':', $value, 4 );
+		return 4 === count( $parts ) && 16 === strlen( $parts[2] ) && self::has_encrypted_payload_shape( $parts[3] );
 	}
 
 	/**
-	 * Detect the pre-envelope base64 format.
+	 * Check if a base64 payload has the shape of encrypted binary data.
 	 *
 	 * @param string $value Candidate value.
-	 * @return bool Whether the value has the legacy ciphertext shape.
+	 * @return bool Whether the value has the ciphertext payload shape.
 	 */
-	private static function is_legacy_encrypted_value( string $value ): bool {
+	private static function has_encrypted_payload_shape( string $value ): bool {
 		// Basic security: only accept reasonable length values.
 		// Allow up to ~10KB for encrypted data (handles large strings with base64 overhead).
 		if ( strlen( $value ) < 20 || strlen( $value ) > 10000 ) {

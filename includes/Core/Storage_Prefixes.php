@@ -89,7 +89,6 @@ class Storage_Prefixes {
 		'campaignbridge_master_key',
 		'campaignbridge_key_metadata',
 		'campaignbridge_retired_encryption_keys',
-		'campaignbridge_credential_schema_version',
 		'campaignbridge_mailchimp_audience',
 		'campaignbridge_debug_mode',
 		'campaignbridge_log_level',
