@@ -292,8 +292,6 @@ class Settings_Controller {
 			'campaignbridge_featured_image_size',
 			'campaignbridge_excerpt_length',
 			'campaignbridge_cta_label',
-			// 'campaignbridge_mailchimp_api_key' - now in repository,
-			// 'campaignbridge_mailchimp_audience' - now in repository,
 			'campaignbridge_debug_mode',
 			'campaignbridge_log_level',
 			'campaignbridge_cache_duration',
@@ -304,7 +302,10 @@ class Settings_Controller {
 		foreach ( $options_to_reset as $option ) {
 			\CampaignBridge\Core\Storage::delete_option( $option );
 		}
-		( new \CampaignBridge\Repository\Provider_Connection_Repository() )->delete( 'mailchimp' ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.InvalidWpdbUsage
+
+		if ( current_user_can( \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS ) ) {
+			( new \CampaignBridge\Repository\Provider_Connection_Repository() )->delete( 'mailchimp' ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.InvalidWpdbUsage
+		}
 
 		// Set rate limiting transient.
 		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, time(), 300 ); // 5 minutes

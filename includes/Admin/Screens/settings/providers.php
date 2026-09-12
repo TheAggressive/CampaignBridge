@@ -67,42 +67,7 @@ $form = Form::make( 'providers' )
 					: __( 'Save and verify your Mailchimp API key to choose an audience.', 'campaignbridge' ) )
 		)
 		->end()
-	->save_to_custom(
-		function ( array $data ): bool {
-			$provider = (string) ( $data['provider'] ?? 'html' );
-
-			if ( 'mailchimp' === $provider && ! current_user_can( \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS ) ) {
-				return false;
-			}
-
-			\CampaignBridge\Core\Storage::update_option( 'campaignbridge_provider', $provider );
-
-			if ( 'mailchimp' !== $provider ) {
-				return true;
-			}
-
-			$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
-			$existing   = $repository->get( 'mailchimp' );
-			$new_key    = trim( (string) ( $data['mailchimp_api_key'] ?? '' ) );
-			$audience   = (string) ( $data['mailchimp_audience'] ?? '' );
-
-			if ( '' === $new_key && null === $existing ) {
-				return false;
-			}
-
-			if ( '' !== $new_key ) {
-				$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create(
-					'mailchimp',
-					$new_key,
-					$audience
-				);
-			} else {
-				$connection = $existing->with_audience( $audience );
-			}
-
-			return $repository->save( $connection );
-		}
-	)
+	->save_to_custom( array( \CampaignBridge\Admin\Controllers\Provider_Save_Handler::class, 'handle' ) )
 	->success( __( 'Provider settings saved.', 'campaignbridge' ) )
 	->submit( __( 'Save provider settings', 'campaignbridge' ) );
 ?>
