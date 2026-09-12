@@ -48,10 +48,16 @@ final class Provider_Connection_Repository implements Provider_Connection_Source
 		}
 
 		try {
-			return Provider_Connection::from_array( $stored );
+			$connection = Provider_Connection::from_array( $stored );
 		} catch ( \InvalidArgumentException $e ) {
 			return null;
 		}
+
+		if ( $connection->provider_slug() !== $provider_slug ) {
+			return null;
+		}
+
+		return $connection;
 	}
 
 	/**

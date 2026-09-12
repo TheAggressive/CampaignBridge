@@ -49,7 +49,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 		// Configure Mailchimp-specific capabilities.
 		$this->capabilities = array(
 			'verify_connection'          => true,
-			'discover_template_sections' => true,
+			'discover_template_sections' => false,
 			'discover_audiences'         => true,
 			'create_draft'               => false,
 			'send_test'                  => false,
@@ -98,7 +98,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	public function verify_connection( array $settings ): Connection_Result {
 		if ( ! $this->is_configured( $settings ) ) {
 			return Connection_Result::failure(
-				$this->build_error( Provider_Error_Category::VALIDATION, 'mailchimp_invalid_credentials', 'The Mailchimp API key format is invalid.' )
+				$this->build_error( Provider_Error_Category::VALIDATION, 'mailchimp_invalid_credentials', __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ) )
 			);
 		}
 
@@ -216,19 +216,19 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 */
 	private function message_for_category( string $category ): string {
 		$map = array(
-			Provider_Error_Category::VALIDATION     => 'The Mailchimp API key format is invalid.',
-			Provider_Error_Category::AUTHENTICATION => 'Mailchimp rejected the stored credentials.',
-			Provider_Error_Category::AUTHORIZATION  => 'The Mailchimp account is not authorized.',
-			Provider_Error_Category::NOT_FOUND      => 'The Mailchimp resource was not found.',
-			Provider_Error_Category::CONFLICT       => 'The Mailchimp request conflicted with existing data.',
-			Provider_Error_Category::RATE_LIMITED   => 'Mailchimp rate limit reached. Try again later.',
-			Provider_Error_Category::TIMEOUT        => 'Mailchimp request timed out.',
-			Provider_Error_Category::NETWORK        => 'Mailchimp could not be reached.',
-			Provider_Error_Category::PROVIDER_ERROR => 'Mailchimp service returned an error.',
-			Provider_Error_Category::UNKNOWN        => 'Mailchimp returned an unexpected response.',
+			Provider_Error_Category::VALIDATION     => __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ),
+			Provider_Error_Category::AUTHENTICATION => __( 'Mailchimp rejected the stored credentials.', 'campaignbridge' ),
+			Provider_Error_Category::AUTHORIZATION  => __( 'The Mailchimp account is not authorized.', 'campaignbridge' ),
+			Provider_Error_Category::NOT_FOUND      => __( 'The Mailchimp resource was not found.', 'campaignbridge' ),
+			Provider_Error_Category::CONFLICT       => __( 'The Mailchimp request conflicted with existing data.', 'campaignbridge' ),
+			Provider_Error_Category::RATE_LIMITED   => __( 'Mailchimp rate limit reached. Try again later.', 'campaignbridge' ),
+			Provider_Error_Category::TIMEOUT        => __( 'Mailchimp request timed out.', 'campaignbridge' ),
+			Provider_Error_Category::NETWORK        => __( 'Mailchimp could not be reached.', 'campaignbridge' ),
+			Provider_Error_Category::PROVIDER_ERROR => __( 'Mailchimp service returned an error.', 'campaignbridge' ),
+			Provider_Error_Category::UNKNOWN        => __( 'Mailchimp returned an unexpected response.', 'campaignbridge' ),
 		);
 
-		return $map[ $category ] ?? 'Mailchimp returned an unexpected response.';
+		return $map[ $category ] ?? __( 'Mailchimp returned an unexpected response.', 'campaignbridge' );
 	}
 
 	/**

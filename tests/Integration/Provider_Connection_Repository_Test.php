@@ -122,15 +122,15 @@ final class Provider_Connection_Repository_Test extends Test_Case {
 
 	public function test_provider_slug_mismatch_returns_null(): void {
 		$repository = new Provider_Connection_Repository();
-		$connection = Provider_Connection::create( 'mailchimp', 'encrypted-abc123', 'aud-456' );
 
-		$this->assertTrue( $repository->save( $connection ) );
+		// Manually store a record whose provider_slug does not match the key.
+		update_option( 'campaignbridge_provider_connection_mailchimp', array(
+			'schema_version' => 1,
+			'provider_slug'  => 'other_provider',
+			'api_key'        => 'encrypted-abc123',
+		) );
 
-		$this->assertNull( $repository->get( 'other_provider' ) );
-
-		$loaded = $repository->get( 'mailchimp' );
-		$this->assertNotNull( $loaded );
-		$this->assertSame( 'mailchimp', $loaded->provider_slug() );
+		$this->assertNull( $repository->get( 'mailchimp' ) );
 	}
 
 	public function test_saving_unchanged_record_reports_success(): void {

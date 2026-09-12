@@ -103,7 +103,7 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 	public function test_capabilities_only_advertise_implemented_workflows(): void {
 		$capabilities = ( new Mailchimp_Provider() )->get_capabilities();
 		self::assertTrue( $capabilities['verify_connection'] );
-		self::assertTrue( $capabilities['discover_template_sections'] );
+		self::assertFalse( $capabilities['discover_template_sections'] );
 		self::assertTrue( $capabilities['discover_audiences'] );
 		self::assertFalse( $capabilities['schedule'] );
 		self::assertFalse( $capabilities['reports'] );
