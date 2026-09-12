@@ -46,7 +46,7 @@ complete campaign-management product.
 | Email generation   | Email-native grammar, O(1) renderer registry, deterministic HTML/plain-text compiler, immutable snapshot contract, artifact fingerprinting, compiled-preview API | Snapshot creation/approval workflow, remaining compliance validation, and representative email-client regression fixtures                         |
 | Providers          | Four-method provider contract (`slug`, `label`, `is_configured`, `verify_connection`), `Connection_Result` domain type, `Provider_Error` normalization, `Provider_Connection_Repository`, Mailchimp adapter, HTML export adapter | No complete audience, provider-draft, test-send, schedule/send, reconciliation, or reporting lifecycle                                             |
 | Campaigns          | `Campaign_State` enum, `Campaign_State_Machine` transition guard                                                                                   | No campaign persistence, content snapshot, operator workflow, or audit timeline                                        |
-| Admin              | File-based screens, secure form system, settings, post-type selection, status page                                                         | Legacy provider options still drive production settings; canonical connection migration and admin wiring remain pending                                                    |
+| Admin              | File-based screens, secure form system, settings, post-type selection, status page                                                         | Canonical provider connection persistence exists but is not yet wired into the production settings flow                                                    |
 | API                | Posts, post types, editor settings, encrypted-field routes, brand-kit routes, and compiled-preview routes                                  | No provider discovery, campaign, delivery, reconciliation, or reporting API                                                                          |
 | Operations         | Hardened CI, signed commits, package verification, security controls, runbook, broad PHP test suites                                       | No durable job runner, delivery locks, webhook ingestion, reconciliation monitor, comprehensive browser E2E, or production metrics                  |
 
@@ -101,8 +101,8 @@ build upon.
 
 Deliverables:
 
-- Replace scattered provider options with one versioned connection/settings
-  schema and migration path.
+- Replace scattered provider options with one canonical versioned
+  connection/settings schema.
 - Make connection status a real provider verification result; remove fabricated
   campaign and subscriber statistics.
 - Remove production menu exposure for conditional, repeater, and form demo
@@ -122,7 +122,8 @@ Deliverables:
 Exit gate:
 
 - No production screen reports mock data or a guessed provider connection.
-- Settings migrate safely from the current option keys.
+- Production settings use the canonical provider connection repository as
+  the single source of truth.
 - Documentation, registered routes, visible screens, and capabilities agree.
 
 ### Milestone 1 — Production template and email compiler
