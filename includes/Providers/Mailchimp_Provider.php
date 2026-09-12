@@ -20,6 +20,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use CampaignBridge\Domain\Campaign\Connection_Result;
+use CampaignBridge\Domain\Campaign\Provider_Error_Category;
+
 /**
  * Mailchimp email service provider implementation.
  *
@@ -34,7 +37,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * API endpoints
 	 */
-	private const ENDPOINT_TEMPLATES = '/templates';
 	private const ENDPOINT_PING      = '/ping';
 	private const ENDPOINT_AUDIENCES = '/lists?count=1000&fields=lists.id,lists.name,total_items';
 
@@ -47,7 +49,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 		// Configure Mailchimp-specific capabilities.
 		$this->capabilities = array(
 			'verify_connection'          => true,
-			'discover_template_sections' => true,
+			'discover_template_sections' => false,
 			'discover_audiences'         => true,
 			'create_draft'               => false,
 			'send_test'                  => false,
@@ -91,11 +93,13 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * Verify credentials using Mailchimp's read-only ping endpoint.
 	 *
 	 * @param array<string, mixed> $settings Provider settings.
-	 * @return array<string, mixed>|WP_Error
+	 * @return Connection_Result Normalized verification outcome.
 	 */
-	public function verify_connection( array $settings ): array|WP_Error {
+	public function verify_connection( array $settings ): Connection_Result {
 		if ( ! $this->is_configured( $settings ) ) {
-			return $this->create_error( 'mailchimp_invalid_credentials', __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ), 400 );
+			return Connection_Result::failure(
+				$this->build_error( Provider_Error_Category::VALIDATION, 'mailchimp_invalid_credentials', __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ) )
+			);
 		}
 
 		$api_key  = (string) $settings['api_key'];
@@ -107,53 +111,124 @@ class Mailchimp_Provider extends Abstract_Provider {
 			)
 		);
 		if ( is_wp_error( $response ) ) {
-			return $this->create_error( 'mailchimp_connection_unavailable', __( 'Mailchimp could not be reached.', 'campaignbridge' ), 503 );
+			$category = $this->categorize_http_error( $response );
+			return Connection_Result::failure(
+				$this->build_error( $category, $this->code_for_category( $category ), $this->message_for_category( $category ) )
+			);
 		}
 		if ( 200 !== ( $response['status_code'] ?? 0 ) ) {
-			return $this->create_error( 'mailchimp_connection_rejected', __( 'Mailchimp rejected the stored credentials.', 'campaignbridge' ), 401 );
+			$status   = (int) ( $response['status_code'] ?? 0 );
+			$category = $this->categorize_http_status( $status );
+			return Connection_Result::failure(
+				$this->build_error( $category, $this->code_for_category( $category ), $this->message_for_category( $category ) )
+			);
 		}
 
-		return array(
-			'provider' => $this->slug(),
-			'verified' => true,
+		return Connection_Result::success(
+			array(
+				'provider' => $this->slug(),
+				'verified' => true,
+			)
 		);
 	}
 
-		/**
-		 * Get available template section keys.
-		 *
-		 * @param array<string, mixed> $settings Plugin settings.
-		 * @param bool                 $refresh  Force refresh.
-		 * @return array<string>|WP_Error
-		 */
-	public function get_section_keys( array $settings, bool $refresh = false ) {
-		try {
-			if ( ! $this->is_configured( $settings ) ) {
-				return array();
-			}
+	/**
+	 * Map a WP_Error from an HTTP request to a provider error category.
+	 *
+	 * @param \WP_Error $error The HTTP error.
+	 * @return string
+	 */
+	private function categorize_http_error( \WP_Error $error ): string {
+		$code    = $error->get_error_code();
+		$message = strtolower( $error->get_error_message() );
 
-			$api_key = $settings['api_key'];
-
-			// Get Mailchimp templates.
-			$templates = $this->get_mailchimp_templates( $api_key );
-
-			if ( is_wp_error( $templates ) ) {
-				return $templates;
-			}
-
-			// Extract section keys from templates.
-			$section_keys = array();
-			foreach ( $templates as $template ) {
-				if ( isset( $template['sections'] ) ) {
-					$section_keys = array_merge( $section_keys, array_keys( $template['sections'] ) );
-				}
-			}
-
-			return array_map( 'strval', array_unique( $section_keys ) );
-
-		} catch ( \Exception $e ) {
-			return $this->create_error( 'section_keys_error', $e->getMessage() );
+		if ( in_array( $code, array( 'connect_timeout', 'timeout' ), true ) ) {
+			return Provider_Error_Category::TIMEOUT;
 		}
+		if ( str_contains( $message, 'timed out' ) || str_contains( $message, 'timeout' ) ) {
+			return Provider_Error_Category::TIMEOUT;
+		}
+		if ( 'http_request_failed' === $code ) {
+			return Provider_Error_Category::NETWORK;
+		}
+		if ( str_contains( $message, 'ssl' ) || str_contains( $message, 'certificate' ) ) {
+			return Provider_Error_Category::NETWORK;
+		}
+		return Provider_Error_Category::NETWORK;
+	}
+
+	/**
+	 * Map an HTTP status code to a provider error category.
+	 *
+	 * @param int $status HTTP status code.
+	 * @return string
+	 */
+	private function categorize_http_status( int $status ): string {
+		switch ( $status ) {
+			case 400:
+				return Provider_Error_Category::VALIDATION;
+			case 401:
+				return Provider_Error_Category::AUTHENTICATION;
+			case 403:
+				return Provider_Error_Category::AUTHORIZATION;
+			case 404:
+				return Provider_Error_Category::NOT_FOUND;
+			case 409:
+				return Provider_Error_Category::CONFLICT;
+			case 429:
+				return Provider_Error_Category::RATE_LIMITED;
+			default:
+				if ( $status >= 500 ) {
+					return Provider_Error_Category::PROVIDER_ERROR;
+				}
+				return Provider_Error_Category::UNKNOWN;
+		}
+	}
+
+	/**
+	 * Map a provider error category to a stable machine-readable code.
+	 *
+	 * @param string $category Normalized error category.
+	 * @return string Stable code prefixed with the provider slug.
+	 */
+	private function code_for_category( string $category ): string {
+		$map = array(
+			Provider_Error_Category::VALIDATION     => 'mailchimp_invalid_credentials',
+			Provider_Error_Category::AUTHENTICATION => 'mailchimp_authentication_failed',
+			Provider_Error_Category::AUTHORIZATION  => 'mailchimp_authorization_failed',
+			Provider_Error_Category::NOT_FOUND      => 'mailchimp_not_found',
+			Provider_Error_Category::CONFLICT       => 'mailchimp_conflict',
+			Provider_Error_Category::RATE_LIMITED   => 'mailchimp_rate_limited',
+			Provider_Error_Category::TIMEOUT        => 'mailchimp_connection_timeout',
+			Provider_Error_Category::NETWORK        => 'mailchimp_connection_unavailable',
+			Provider_Error_Category::PROVIDER_ERROR => 'mailchimp_provider_error',
+			Provider_Error_Category::UNKNOWN        => 'mailchimp_provider_error',
+		);
+
+		return $map[ $category ] ?? 'mailchimp_provider_error';
+	}
+
+	/**
+	 * Map a provider error category to an operator-facing message.
+	 *
+	 * @param string $category Normalized error category.
+	 * @return string Human-readable message for the operator.
+	 */
+	private function message_for_category( string $category ): string {
+		$map = array(
+			Provider_Error_Category::VALIDATION     => __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ),
+			Provider_Error_Category::AUTHENTICATION => __( 'Mailchimp rejected the stored credentials.', 'campaignbridge' ),
+			Provider_Error_Category::AUTHORIZATION  => __( 'The Mailchimp account is not authorized.', 'campaignbridge' ),
+			Provider_Error_Category::NOT_FOUND      => __( 'The Mailchimp resource was not found.', 'campaignbridge' ),
+			Provider_Error_Category::CONFLICT       => __( 'The Mailchimp request conflicted with existing data.', 'campaignbridge' ),
+			Provider_Error_Category::RATE_LIMITED   => __( 'Mailchimp rate limit reached. Try again later.', 'campaignbridge' ),
+			Provider_Error_Category::TIMEOUT        => __( 'Mailchimp request timed out.', 'campaignbridge' ),
+			Provider_Error_Category::NETWORK        => __( 'Mailchimp could not be reached.', 'campaignbridge' ),
+			Provider_Error_Category::PROVIDER_ERROR => __( 'Mailchimp service returned an error.', 'campaignbridge' ),
+			Provider_Error_Category::UNKNOWN        => __( 'Mailchimp returned an unexpected response.', 'campaignbridge' ),
+		);
+
+		return $map[ $category ] ?? __( 'Mailchimp returned an unexpected response.', 'campaignbridge' );
 	}
 
 	/**
@@ -218,39 +293,6 @@ class Mailchimp_Provider extends Abstract_Provider {
 		return $result;
 	}
 
-	/**
-	 * Get Mailchimp templates.
-	 *
-	 * @param string $api_key API key.
-	 * @return array<string, mixed>|WP_Error
-	 */
-	private function get_mailchimp_templates( string $api_key ) {
-		$response = \CampaignBridge\Core\Http_Client::get(
-			self::build_api_url( $api_key, self::ENDPOINT_TEMPLATES ),
-			array(
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $api_key,
-				),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$status_code = $response['status_code'];
-		$body        = $response['body'];
-
-		if ( $status_code < 200 || $status_code >= 300 ) {
-			$error_data  = json_decode( $body, true );
-			$error_msg   = $error_data['detail'] ?? sprintf( 'Failed to fetch templates with status %d', $status_code );
-			$safe_status = is_int( $status_code ) ? $status_code : 500;
-
-			return $this->create_error( 'mailchimp_templates_error', $error_msg, $safe_status );
-		}
-
-		return json_decode( $body, true )['templates'] ?? array();
-	}
 
 	/**
 	 * Build a Mailchimp API URL from the data center encoded in the API key.
@@ -276,25 +318,22 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 */
 	public function handle_api_error( $error ): \WP_Error {
 		if ( is_wp_error( $error ) ) {
-			return $error;
-		}
-
-		if ( is_array( $error ) && isset( $error['title'], $error['detail'] ) ) {
-			// Mailchimp API error format.
 			return new \WP_Error(
-				'mailchimp_api_error',
-				sprintf(
-					/* translators: 1: error title, 2: error detail */
-					__( 'Mailchimp API Error: %1$s - %2$s', 'campaignbridge' ),
-					$error['title'],
-					$error['detail']
-				)
+				'mailchimp_provider_error',
+				__( 'An error occurred while communicating with Mailchimp.', 'campaignbridge' )
 			);
 		}
 
-		// Generic error handling.
+		if ( is_array( $error ) && isset( $error['title'], $error['detail'] ) ) {
+			// Mailchimp API error format — do not expose raw provider detail.
+			return new \WP_Error(
+				'mailchimp_provider_error',
+				__( 'Mailchimp returned an unexpected error.', 'campaignbridge' )
+			);
+		}
+
 		return new \WP_Error(
-			'mailchimp_api_error',
+			'mailchimp_provider_error',
 			__( 'An error occurred while communicating with Mailchimp.', 'campaignbridge' )
 		);
 	}

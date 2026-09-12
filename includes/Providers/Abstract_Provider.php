@@ -17,6 +17,10 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Providers;
 
+use CampaignBridge\Domain\Campaign\Connection_Result;
+use CampaignBridge\Domain\Campaign\Provider_Error;
+use CampaignBridge\Domain\Campaign\Provider_Error_Category;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -448,5 +452,20 @@ abstract class Abstract_Provider implements Provider_Interface {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Build a normalized provider error for a failed operation.
+	 *
+	 * @param string $category Normalized error category.
+	 * @param string $code     Stable machine-readable error code.
+	 * @param string $message  Safe operator-facing message.
+	 */
+	protected function build_error(
+		string $category,
+		string $code,
+		string $message
+	): Provider_Error {
+		return Provider_Error::from_category( $category, $code, $message, $this->slug() );
 	}
 }

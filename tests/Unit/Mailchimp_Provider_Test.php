@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit;
 
+use CampaignBridge\Domain\Campaign\Connection_Result;
 use CampaignBridge\Providers\Mailchimp_Provider;
 use ReflectionMethod;
 use WP_UnitTestCase;
@@ -17,8 +18,15 @@ use WP_UnitTestCase;
  * Verify provider-specific URL construction.
  */
 class Mailchimp_Provider_Test extends WP_UnitTestCase {
+	/** HTTP request filter.
+	 *
+	 * @var \Closure|null
+	 */
 	private ?\Closure $http_filter = null;
 
+	/**
+	 * Clean up filters after each test.
+	 */
 	public function tearDown(): void {
 		if ( null !== $this->http_filter ) {
 			remove_filter( 'pre_http_request', $this->http_filter );
@@ -26,9 +34,16 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 		parent::tearDown();
 	}
 
+	/**
+	 * Test that credentials are redacted without changing other settings.
+	 */
 	public function test_credentials_are_redacted_without_changing_other_settings(): void {
 		$provider = new Mailchimp_Provider();
-		$settings = array( 'api_key' => 'private-fixture-us20', 'token' => 'short', 'audience_id' => 'audience' );
+		$settings = array(
+			'api_key'     => 'private-fixture-us20',
+			'token'       => 'short',
+			'audience_id' => 'audience',
+		);
 		$redacted = $provider->redact_settings( $settings );
 		$this->assertStringNotContainsString( $settings['api_key'], $redacted['api_key'] );
 		$this->assertStringNotContainsString( $settings['token'], $redacted['token'] );
@@ -57,41 +72,56 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 		$method->invoke( null, 'invalid-key', '/campaigns' );
 	}
 
+	/**
+	 * Connection verification hits the ping endpoint and returns a success result.
+	 */
 	public function test_connection_is_verified_against_ping_endpoint(): void {
 		$this->http_filter = static function ( mixed $preempt, array $args, string $url ): array {
 			self::assertSame( 'https://us20.api.mailchimp.com/3.0/ping', $url );
 			self::assertSame( 'GET', $args['method'] ?? null );
 			return array(
-				'headers' => array(),
-				'body' => '{"health_status":"Everything is Chimpy!"}',
-				'response' => array( 'code' => 200, 'message' => 'OK' ),
-				'cookies' => array(),
+				'headers'  => array(),
+				'body'     => '{"health_status":"Everything is Chimpy!"}',
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'cookies'  => array(),
 				'filename' => null,
 			);
 		};
 		add_filter( 'pre_http_request', $this->http_filter, 10, 3 );
 
 		$result = ( new Mailchimp_Provider() )->verify_connection( array( 'api_key' => str_repeat( 'a', 32 ) . '-us20' ) );
-		self::assertFalse( is_wp_error( $result ) );
-		self::assertTrue( $result['verified'] ?? false );
+		self::assertInstanceOf( Connection_Result::class, $result );
+		self::assertTrue( $result->is_success() );
 	}
 
+	/**
+	 * Capabilities advertise only the workflows that are actually implemented.
+	 */
 	public function test_capabilities_only_advertise_implemented_workflows(): void {
 		$capabilities = ( new Mailchimp_Provider() )->get_capabilities();
 		self::assertTrue( $capabilities['verify_connection'] );
-		self::assertTrue( $capabilities['discover_template_sections'] );
+		self::assertFalse( $capabilities['discover_template_sections'] );
 		self::assertTrue( $capabilities['discover_audiences'] );
 		self::assertFalse( $capabilities['schedule'] );
 		self::assertFalse( $capabilities['reports'] );
 	}
 
+	/**
+	 * Audiences are normalized into an id => name map for the admin UI.
+	 */
 	public function test_audiences_are_normalized_for_the_admin_ui(): void {
 		$this->http_filter = static function ( mixed $preempt, array $args, string $url ): array {
 			self::assertSame( 'https://us20.api.mailchimp.com/3.0/lists?count=1000&fields=lists.id,lists.name,total_items', $url );
 			return array(
 				'headers'  => array(),
 				'body'     => '{"lists":[{"id":"abc123","name":"Customers"},{"id":"def456","name":"Newsletter"}],"total_items":2}',
-				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
 				'cookies'  => array(),
 				'filename' => null,
 			);
@@ -100,6 +130,12 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 
 		$result = ( new Mailchimp_Provider() )->get_audiences( array( 'api_key' => str_repeat( 'a', 32 ) . '-us20' ) );
 
-		self::assertSame( array( 'abc123' => 'Customers', 'def456' => 'Newsletter' ), $result );
+		self::assertSame(
+			array(
+				'abc123' => 'Customers',
+				'def456' => 'Newsletter',
+			),
+			$result 
+		);
 	}
 }

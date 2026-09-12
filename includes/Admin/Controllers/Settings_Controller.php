@@ -197,11 +197,6 @@ class Settings_Controller {
 		);
 		$this->data['integrations'] = array(
 			'mailchimp' => $connection,
-			'sendgrid'  => array(
-				'connected' => false,
-				'status'    => 'Not configured',
-				'last_test' => 'Never tested',
-			),
 		);
 	}
 
@@ -247,10 +242,10 @@ class Settings_Controller {
 
 		$checked_at = current_time( 'mysql' );
 		$result     = $provider->verify_connection( array( 'api_key' => $api_key ) );
-		$connection = is_wp_error( $result )
+		$connection = ! $result->is_success()
 			? array(
 				'connected'  => false,
-				'status'     => $result->get_error_message(),
+				'status'     => $result->error() ? $result->error()->message() : '',
 				'checked_at' => $checked_at,
 			)
 			: array(

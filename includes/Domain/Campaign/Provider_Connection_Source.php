@@ -24,18 +24,17 @@ interface Provider_Connection_Source {
 	 * Load a provider connection by provider slug.
 	 *
 	 * @param string $provider_slug Provider slug identifier.
-	 * @return array<string, mixed>|null Connection record or null when missing.
+	 * @return Provider_Connection|null Connection record or null when missing.
 	 */
-	public function get( string $provider_slug ): ?array;
+	public function get( string $provider_slug ): ?Provider_Connection;
 
 	/**
 	 * Persist a provider connection record.
 	 *
-	 * @param string               $provider_slug Provider slug identifier.
-	 * @param array<string, mixed> $record        Connection data.
+	 * @param Provider_Connection $connection Connection to store.
 	 * @return bool True on success.
 	 */
-	public function save( string $provider_slug, array $record ): bool;
+	public function save( Provider_Connection $connection ): bool;
 
 	/**
 	 * Remove a provider connection record.
