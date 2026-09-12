@@ -124,6 +124,10 @@ class Capabilities_Test extends Test_Case {
 	 * on a fresh install (no stored schema version).
 	 */
 	public function test_ensure_registered_grants_all_capabilities_on_fresh_install(): void {
+		// Set current user to administrator (required for the repair path).
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
 		// Simulate a fresh install: no schema version stored.
 		delete_option( 'campaignbridge_capability_schema' );
 
@@ -266,6 +270,66 @@ class Capabilities_Test extends Test_Case {
 
 		// Verify schema version was NOT updated.
 		$this->assertSame( 0, (int) get_option( 'campaignbridge_capability_schema' ) );
+	}
+
+	/**
+	 * Test that activate() grants all capabilities with no current user.
+	 */
+	public function test_activate_grants_all_caps_without_current_user(): void {
+		// Ensure no current user is set.
+		wp_set_current_user( 0 );
+
+		// Remove all caps to simulate fresh state.
+		$role = get_role( 'administrator' );
+		if ( $role ) {
+			foreach ( Capabilities::ALL as $cap ) {
+				$role->remove_cap( $cap );
+			}
+		}
+		delete_option( 'campaignbridge_capability_schema' );
+
+		// Run activate (trusted context, no user required).
+		Capabilities::activate();
+
+		// Verify all capabilities were granted.
+		$role = get_role( 'administrator' );
+		$this->assertNotNull( $role );
+		foreach ( Capabilities::ALL as $cap ) {
+			$this->assertTrue(
+				$role->has_cap( $cap ),
+				"Administrator should have '{$cap}' after activate()"
+			);
+		}
+	}
+
+	/**
+	 * Test that activate() stamps the schema version.
+	 */
+	public function test_activate_stamps_schema_version(): void {
+		delete_option( 'campaignbridge_capability_schema' );
+
+		Capabilities::activate();
+
+		$this->assertSame(
+			Capabilities::SCHEMA_VERSION,
+			(int) get_option( 'campaignbridge_capability_schema' ),
+			'activate() should write SCHEMA_VERSION to the schema option'
+		);
+	}
+
+	/**
+	 * Test that activate() is idempotent.
+	 */
+	public function test_activate_is_idempotent(): void {
+		Capabilities::activate();
+		Capabilities::activate(); // Should not throw or error.
+
+		$role = get_role( 'administrator' );
+		$this->assertNotNull( $role );
+		foreach ( Capabilities::ALL as $cap ) {
+			$this->assertTrue( $role->has_cap( $cap ) );
+		}
+		$this->assertSame( Capabilities::SCHEMA_VERSION, (int) get_option( 'campaignbridge_capability_schema' ) );
 	}
 
 	/**

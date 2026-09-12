@@ -117,6 +117,23 @@ final class Capabilities {
 	}
 
 	/**
+	 * Trusted activation: grant capabilities and stamp the schema version.
+	 *
+	 * Called exclusively from the plugin activation hook (register_activation_hook).
+	 * Does not require a current user because the activation context is trusted
+	 * by WordPress core (admin panel or WP-CLI).
+	 *
+	 * Idempotent: safe to call multiple times.
+	 *
+	 * @return void
+	 */
+	public static function activate(): void {
+		self::register();
+		// Trusted activation context; no user authentication required.
+		\update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Called from register_activation_hook; trusted activation context, no form or nonce context.
+	}
+
+	/**
 	 * Remove every CampaignBridge capability from the administrator role.
 	 *
 	 * @return void
