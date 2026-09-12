@@ -247,15 +247,15 @@ class Settings_Controller {
 
 		$checked_at = current_time( 'mysql' );
 		$result     = $provider->verify_connection( array( 'api_key' => $api_key ) );
-		$connection = is_wp_error( $result )
+		$connection = $result->connected()
 			? array(
-				'connected'  => false,
-				'status'     => $result->get_error_message(),
+				'connected'  => true,
+				'status'     => __( 'Connected', 'campaignbridge' ),
 				'checked_at' => $checked_at,
 			)
 			: array(
-				'connected'  => true,
-				'status'     => __( 'Connected', 'campaignbridge' ),
+				'connected'  => false,
+				'status'     => $result->error() ? $result->error()->message() : __( 'Connection failed', 'campaignbridge' ),
 				'checked_at' => $checked_at,
 			);
 

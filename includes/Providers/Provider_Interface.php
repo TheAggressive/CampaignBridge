@@ -1,137 +1,58 @@
 <?php
 /**
- * Provider Interface for CampaignBridge Email Service Providers.
+ * Provider interface.
  *
- * Provider metadata, settings validation, and discovery.
- * Campaign compilation belongs to the email workflow.
+ * Defines the minimal contract that every email delivery provider must
+ * implement. This is the port that new providers (e.g. SendGrid) implement
+ * against without touching campaign, workflow, delivery, or block code.
  *
- * @package CampaignBridge
- * @since 0.1.0
+ * @package CampaignBridge\Providers
  */
 
-declare(strict_types=1);
-
 namespace CampaignBridge\Providers;
+
+use CampaignBridge\Domain\Campaign\Connection_Result;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName, Generic.WhiteSpace.DisallowSpaceIndent
 /**
- * Provider interface for CampaignBridge providers.
+ * Provider interface.
+ *
+ * Every email delivery provider must implement this contract. The port is
+ * intentionally minimal so that adding a new provider does not require
+ * changes to campaign, workflow, delivery, or block code.
  */
 interface Provider_Interface {
 
 	/**
-	 * Get unique slug for the provider.
+	 * Stable machine identifier for this provider.
 	 *
-	 * This slug is used as an identifier throughout the system and should
-	 * be unique across all providers. Examples: 'mailchimp', 'html', 'sendgrid'.
-	 *
-	 * @return string Provider slug identifier.
+	 * Used for option keys, status entries, and log correlation.
+	 * Must be lowercase alphanumeric with underscores.
 	 */
 	public function slug(): string;
 
 	/**
-	 * Get human-readable label for the provider.
-	 *
-	 * This label is displayed in the admin interface and should be
-	 * user-friendly. Examples: 'Mailchimp', 'HTML Export', 'SendGrid'.
-	 *
-	 * @return string Provider display name.
+	 * Human-readable display name for this provider.
 	 */
 	public function label(): string;
 
 	/**
-	 * Check if the provider has sufficient settings to operate.
+	 * Whether the supplied settings are sufficient to use this provider.
 	 *
-	 * Validates that all required configuration is present and valid.
-	 * This method should check for API keys, endpoints, and other
-	 * provider-specific requirements.
+	 * This is a local, offline validation — no network calls.
 	 *
-	 * @param array<string, mixed> $settings Plugin settings array containing provider configuration.
-	 * @return bool True if the required settings are present and well formed.
+	 * @param array<string, mixed> $settings Provider settings.
 	 */
 	public function is_configured( array $settings ): bool;
 
 	/**
-	 * Verify that the configured provider account is reachable and authorized.
+	 * Perform a live, read-only connection check against the provider.
 	 *
-	 * @param array<string, mixed> $settings Validated provider settings.
-	 * @return array<string, mixed>|\WP_Error Normalized account details or an error.
+	 * @param array<string, mixed> $settings Provider settings.
+	 * @return Connection_Result Domain-typed result wrapping success or a Provider_Error.
 	 */
-	public function verify_connection( array $settings ): array|\WP_Error;
-
-
-
-	/**
-	 * Get available template section keys for content mapping.
-	 *
-	 * Returns an array of section identifiers that this provider supports
-	 * for template mapping. These keys correspond to sections in email
-	 * templates where dynamic content can be inserted.
-	 *
-	 * Examples: ['header', 'body', 'footer'] or ['content', 'sidebar']
-	 *
-	 * @param array<string, mixed> $settings Plugin settings array (for provider-specific logic).
-	 * @param bool                 $refresh  Force refresh of cached data.
-	 * @return array<string>|\WP_Error Array of section key strings, or WP_Error if unsupported/unavailable.
-	 */
-	public function get_section_keys( array $settings, bool $refresh = false );
-
-	/**
-	 * Get rate limiting policy for this provider.
-	 *
-	 * @return array<string, mixed> Array with 'bucket' and 'max_per_minute' keys.
-	 */
-	public function rate_limit_policy(): array;
-
-	/**
-	 * Get settings schema for validation and redaction.
-	 *
-	 * @return array<string, mixed> Schema array with field definitions.
-	 */
-	public function settings_schema(): array;
-
-	/**
-	 * Redact sensitive settings for display/logging.
-	 *
-	 * @param array<string, mixed> $settings Raw settings array.
-	 * @return array<string, mixed> Redacted settings array.
-	 */
-	public function redact_settings( array $settings ): array;
-
-	/**
-	 * Get provider capabilities and supported features.
-	 *
-	 * Keys represent working CampaignBridge operations, not theoretical features
-	 * offered by the remote provider.
-	 *
-	 * @return array<string, mixed> Array of supported features. Examples:
-	 *               ['audiences' => true, 'templates' => true, 'scheduling' => false]
-	 */
-	public function get_capabilities(): array;
-
-	/**
-	 * Get API key validation pattern for this provider.
-	 *
-	 * Returns a regex pattern used to validate API keys specific to this provider.
-	 * This ensures that only valid API keys for the provider are accepted during
-	 * configuration and migration processes.
-	 *
-	 * @return string Regex pattern for API key validation.
-	 */
-	public function get_api_key_pattern(): string;
-
-	/**
-	 * Sanitize provider-specific settings based on schema.
-	 *
-	 * Validates and sanitizes settings according to the provider's schema definition.
-	 * This ensures that only valid, properly formatted settings are stored and used.
-	 *
-	 * @param array<string, mixed> $settings Raw settings array to sanitize.
-	 * @return array<string, mixed> Sanitized settings array.
-	 */
-	public function sanitize_settings( array $settings ): array;
+	public function verify_connection( array $settings ): Connection_Result;
 }

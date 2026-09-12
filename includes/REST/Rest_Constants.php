@@ -44,7 +44,6 @@ class Rest_Constants {
 	 * Cache key prefixes for rate limiting.
 	 */
 	public const CACHE_KEY_PREFIX_GENERAL = 'campaignbridge_rate_limit_';
-	public const CACHE_KEY_PREFIX_EDITOR  = 'campaignbridge_rate_limit_editor_settings_';
 
 	/**
 	 * HTTP status codes.

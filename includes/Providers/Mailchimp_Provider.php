@@ -2,7 +2,7 @@
 /**
  * Mailchimp Provider Implementation for CampaignBridge.
  *
- * Provides credential verification and template-section discovery through the
+ * Provides credential verification and audience discovery through the
  * Mailchimp API.
  *
  * @package CampaignBridge
@@ -13,7 +13,11 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Providers;
 
-use CampaignBridge\Core\Encryption;
+use CampaignBridge\Core\Http_Client_Interface;
+use CampaignBridge\Core\Http_Client_Instance;
+use CampaignBridge\Domain\Campaign\Connection_Result;
+use CampaignBridge\Domain\Campaign\Provider_Error;
+use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -23,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Mailchimp email service provider implementation.
  *
- * Implements only the operations CampaignBridge can call today.
+ * Implements the Provider_Interface port for Mailchimp.
  */
 class Mailchimp_Provider extends Abstract_Provider {
 	/**
@@ -34,31 +38,23 @@ class Mailchimp_Provider extends Abstract_Provider {
 	/**
 	 * API endpoints
 	 */
-	private const ENDPOINT_TEMPLATES = '/templates';
 	private const ENDPOINT_PING      = '/ping';
 	private const ENDPOINT_AUDIENCES = '/lists?count=1000&fields=lists.id,lists.name,total_items';
 
 	/**
-	 * Constructor
+	 * Mailchimp API key pattern
 	 */
-	public function __construct() {
-		parent::__construct( 'mailchimp', __( 'Mailchimp', 'campaignbridge' ) );
+	private const API_KEY_PATTERN = '/^[a-f0-9]{32}-us[0-9]+$/';
 
-		// Configure Mailchimp-specific capabilities.
-		$this->capabilities = array(
-			'verify_connection'          => true,
-			'discover_template_sections' => true,
-			'discover_audiences'         => true,
-			'create_draft'               => false,
-			'send_test'                  => false,
-			'schedule'                   => false,
-			'send'                       => false,
-			'reconcile'                  => false,
-			'reports'                    => false,
-		);
-
-		// Mailchimp API key pattern.
-		$this->api_key_pattern = '/^[a-f0-9]{32}-us[0-9]+$/';
+	/**
+	 * Constructor.
+	 *
+	 * @param Http_Client_Interface $http_client HTTP client for API calls.
+	 */
+	public function __construct(
+		Http_Client_Interface $http_client = new Http_Client_Instance()
+	) {
+		parent::__construct( 'mailchimp', __( 'Mailchimp', 'campaignbridge' ), $http_client );
 	}
 
 	/**
@@ -68,234 +64,114 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * @return bool
 	 */
 	public function is_configured( array $settings ): bool {
-		$required_fields = array( 'api_key' );
-		if ( ! $this->validate_required_settings( $settings, $required_fields ) ) {
+		$api_key = $settings['api_key'] ?? null;
+		if ( ! is_string( $api_key ) ) {
 			return false;
 		}
 
-		// Also validate API key format.
-		return $this->is_valid_api_key( $settings['api_key'] );
-	}
-
-	/**
-	 * Validate API key format.
-	 *
-	 * @param string $api_key API key to validate.
-	 * @return bool True if valid format.
-	 */
-	public function is_valid_api_key( string $api_key ): bool {
-		return preg_match( $this->api_key_pattern, $api_key ) === 1;
+		return 1 === preg_match( self::API_KEY_PATTERN, $api_key );
 	}
 
 	/**
 	 * Verify credentials using Mailchimp's read-only ping endpoint.
 	 *
 	 * @param array<string, mixed> $settings Provider settings.
-	 * @return array<string, mixed>|WP_Error
+	 * @return Connection_Result Domain-typed result wrapping success or a Provider_Error.
 	 */
-	public function verify_connection( array $settings ): array|WP_Error {
+	public function verify_connection( array $settings ): Connection_Result {
 		if ( ! $this->is_configured( $settings ) ) {
-			return $this->create_error( 'mailchimp_invalid_credentials', __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ), 400 );
-		}
-
-		$api_key  = (string) $settings['api_key'];
-		$response = \CampaignBridge\Core\Http_Client::get(
-			self::build_api_url( $api_key, self::ENDPOINT_PING ),
-			array(
-				'headers'              => array( 'Authorization' => 'Bearer ' . $api_key ),
-				'campaignbridge_retry' => false,
-			)
-		);
-		if ( is_wp_error( $response ) ) {
-			return $this->create_error( 'mailchimp_connection_unavailable', __( 'Mailchimp could not be reached.', 'campaignbridge' ), 503 );
-		}
-		if ( 200 !== ( $response['status_code'] ?? 0 ) ) {
-			return $this->create_error( 'mailchimp_connection_rejected', __( 'Mailchimp rejected the stored credentials.', 'campaignbridge' ), 401 );
-		}
-
-		return array(
-			'provider' => $this->slug(),
-			'verified' => true,
-		);
-	}
-
-		/**
-		 * Get available template section keys.
-		 *
-		 * @param array<string, mixed> $settings Plugin settings.
-		 * @param bool                 $refresh  Force refresh.
-		 * @return array<string>|WP_Error
-		 */
-	public function get_section_keys( array $settings, bool $refresh = false ) {
-		try {
-			if ( ! $this->is_configured( $settings ) ) {
-				return array();
-			}
-
-			$api_key = $settings['api_key'];
-
-			// Get Mailchimp templates.
-			$templates = $this->get_mailchimp_templates( $api_key );
-
-			if ( is_wp_error( $templates ) ) {
-				return $templates;
-			}
-
-			// Extract section keys from templates.
-			$section_keys = array();
-			foreach ( $templates as $template ) {
-				if ( isset( $template['sections'] ) ) {
-					$section_keys = array_merge( $section_keys, array_keys( $template['sections'] ) );
-				}
-			}
-
-			return array_map( 'strval', array_unique( $section_keys ) );
-
-		} catch ( \Exception $e ) {
-			return $this->create_error( 'section_keys_error', $e->getMessage() );
-		}
-	}
-
-	/**
-	 * Get settings schema for validation.
-	 *
-	 * @return array<string, array<string, mixed>>
-	 */
-	public function settings_schema(): array {
-		return array(
-			'api_key' => array(
-				'sensitive'  => true,
-				'required'   => true,
-				'pattern'    => $this->api_key_pattern,
-				'min_length' => 32,
-				'max_length' => 50,
-			),
-		);
-	}
-
-	/**
-	 * Get the audiences available to the configured Mailchimp account.
-	 *
-	 * Provider response details are normalized here so they do not leak into
-	 * the admin UI.
-	 *
-	 * @param array<string, mixed> $settings Provider settings.
-	 * @return array<string, string>|WP_Error Audience IDs keyed to display names.
-	 */
-	public function get_audiences( array $settings ): array|WP_Error {
-		if ( ! $this->is_configured( $settings ) ) {
-			return $this->create_error( 'mailchimp_invalid_credentials', __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ), 400 );
-		}
-
-		$api_key  = (string) $settings['api_key'];
-		$response = \CampaignBridge\Core\Http_Client::get(
-			self::build_api_url( $api_key, self::ENDPOINT_AUDIENCES ),
-			array(
-				'headers'              => array( 'Authorization' => 'Bearer ' . $api_key ),
-				'campaignbridge_retry' => false,
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return $this->create_error( 'mailchimp_audiences_unavailable', __( 'Mailchimp audiences could not be loaded.', 'campaignbridge' ), 503 );
-		}
-
-		$status_code = $response['status_code'] ?? 0;
-		if ( ! is_int( $status_code ) || $status_code < 200 || $status_code >= 300 ) {
-			return $this->create_error( 'mailchimp_audiences_error', __( 'Mailchimp audiences could not be loaded.', 'campaignbridge' ), is_int( $status_code ) ? $status_code : 500 );
-		}
-
-		$decoded = json_decode( (string) ( $response['body'] ?? '' ), true );
-		$lists   = is_array( $decoded ) && isset( $decoded['lists'] ) && is_array( $decoded['lists'] ) ? $decoded['lists'] : array();
-		$result  = array();
-		foreach ( $lists as $list ) {
-			if ( ! is_array( $list ) || ! isset( $list['id'], $list['name'] ) || ! is_string( $list['id'] ) || ! is_string( $list['name'] ) ) {
-				continue;
-			}
-			$result[ $list['id'] ] = $list['name'];
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Get Mailchimp templates.
-	 *
-	 * @param string $api_key API key.
-	 * @return array<string, mixed>|WP_Error
-	 */
-	private function get_mailchimp_templates( string $api_key ) {
-		$response = \CampaignBridge\Core\Http_Client::get(
-			self::build_api_url( $api_key, self::ENDPOINT_TEMPLATES ),
-			array(
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $api_key,
-				),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$status_code = $response['status_code'];
-		$body        = $response['body'];
-
-		if ( $status_code < 200 || $status_code >= 300 ) {
-			$error_data  = json_decode( $body, true );
-			$error_msg   = $error_data['detail'] ?? sprintf( 'Failed to fetch templates with status %d', $status_code );
-			$safe_status = is_int( $status_code ) ? $status_code : 500;
-
-			return $this->create_error( 'mailchimp_templates_error', $error_msg, $safe_status );
-		}
-
-		return json_decode( $body, true )['templates'] ?? array();
-	}
-
-	/**
-	 * Build a Mailchimp API URL from the data center encoded in the API key.
-	 *
-	 * @param string $api_key  Mailchimp API key.
-	 * @param string $endpoint API endpoint beginning with a slash.
-	 * @return string Fully qualified API URL.
-	 * @throws \InvalidArgumentException When the key has no valid data center.
-	 */
-	private static function build_api_url( string $api_key, string $endpoint ): string {
-		if ( 1 !== preg_match( '/-([a-z]{2}[0-9]+)$/', $api_key, $matches ) ) {
-			throw new \InvalidArgumentException( 'Mailchimp API key does not contain a valid data center.' );
-		}
-
-		return sprintf( self::API_BASE_URL_FORMAT, $matches[1] ) . '/' . ltrim( $endpoint, '/' );
-	}
-
-	/**
-	 * Handle API errors gracefully.
-	 *
-	 * @param mixed $error API error response.
-	 * @return \WP_Error Processed error.
-	 */
-	public function handle_api_error( $error ): \WP_Error {
-		if ( is_wp_error( $error ) ) {
-			return $error;
-		}
-
-		if ( is_array( $error ) && isset( $error['title'], $error['detail'] ) ) {
-			// Mailchimp API error format.
-			return new \WP_Error(
-				'mailchimp_api_error',
-				sprintf(
-					/* translators: 1: error title, 2: error detail */
-					__( 'Mailchimp API Error: %1$s - %2$s', 'campaignbridge' ),
-					$error['title'],
-					$error['detail']
+			return Connection_Result::failure(
+				Provider_Error::authentication(
+					'mailchimp_invalid_credentials',
+					__( 'The Mailchimp API key format is invalid.', 'campaignbridge' ),
+					$this->slug()
 				)
 			);
 		}
 
-		// Generic error handling.
-		return new \WP_Error(
-			'mailchimp_api_error',
-			__( 'An error occurred while communicating with Mailchimp.', 'campaignbridge' )
+		$api_key  = (string) $settings['api_key'];
+		$response = $this->http_client->get(
+			self::build_api_url( $api_key, self::ENDPOINT_PING ),
+			array(
+				'headers' => array( 'Authorization' => 'Bearer ' . $api_key ),
+			)
 		);
+
+		if ( $response instanceof WP_Error ) {
+			return Connection_Result::failure(
+				Provider_Error::from_category(
+					Provider_Error_Category::NETWORK,
+					'mailchimp_connection_unavailable',
+					__( 'Mailchimp could not be reached.', 'campaignbridge' ),
+					$this->slug()
+				)
+			);
+		}
+
+		if ( 200 !== (int) ( $response['status_code'] ?? 0 ) ) {
+			return Connection_Result::failure(
+				Provider_Error::authentication(
+					'mailchimp_connection_rejected',
+					__( 'Mailchimp rejected the stored credentials.', 'campaignbridge' ),
+					$this->slug()
+				)
+			);
+		}
+
+		return Connection_Result::success();
+	}
+
+	/**
+	 * Fetch the Mailchimp audiences (lists) for the admin UI.
+	 *
+	 * @param array<string, mixed> $settings Provider settings.
+	 * @return array<string, string>|WP_Error Normalized id => label map, or WP_Error.
+	 */
+	public function get_audiences( array $settings ): array|WP_Error {
+		if ( ! $this->is_configured( $settings ) ) {
+			return new WP_Error( 'mailchimp_invalid_credentials', __( 'The Mailchimp API key format is invalid.', 'campaignbridge' ) );
+		}
+
+		$api_key  = (string) $settings['api_key'];
+		$response = $this->http_client->get(
+			self::build_api_url( $api_key, self::ENDPOINT_AUDIENCES ),
+			array(
+				'headers' => array( 'Authorization' => 'Bearer ' . $api_key ),
+			)
+		);
+
+		if ( $response instanceof WP_Error ) {
+			return $response;
+		}
+
+		if ( 200 !== (int) ( $response['status_code'] ?? 0 ) ) {
+			return new WP_Error( 'mailchimp_audiences_failed', __( 'Could not load Mailchimp audiences.', 'campaignbridge' ) );
+		}
+
+		$body = $response['body'] ?? '';
+		$data = is_string( $body ) ? json_decode( $body, true ) : (array) $body;
+
+		$audiences = array();
+		foreach ( (array) ( $data['lists'] ?? array() ) as $list ) {
+			$list_id = $list['id'] ?? null;
+			$name    = $list['name'] ?? null;
+			if ( is_string( $list_id ) && is_string( $name ) && '' !== $name ) {
+				$audiences[ $list_id ] = $name;
+			}
+		}
+
+		return $audiences;
+	}
+
+	/**
+	 * Build a fully-qualified Mailchimp API URL.
+	 *
+	 * @param string $api_key  The API key (contains the data-center suffix).
+	 * @param string $endpoint The API endpoint path.
+	 * @return string
+	 */
+	private static function build_api_url( string $api_key, string $endpoint ): string {
+		$dc = substr( $api_key, strrpos( $api_key, '-' ) + 1 );
+		return sprintf( self::API_BASE_URL_FORMAT, $dc ) . $endpoint;
 	}
 }

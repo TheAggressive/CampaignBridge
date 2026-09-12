@@ -100,11 +100,6 @@ class Status_Controller {
 				'configured' => is_string( $mailchimp_api_key ) && '' !== $mailchimp_api_key,
 				'version'    => '1.0.0',
 			),
-			'html'      => array(
-				'active'     => class_exists( 'CampaignBridge\\Providers\\Html_Provider' ),
-				'configured' => true, // HTML export always works.
-				'version'    => '1.0.0',
-			),
 		);
 	}
 

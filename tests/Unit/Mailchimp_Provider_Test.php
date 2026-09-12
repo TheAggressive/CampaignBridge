@@ -9,31 +9,86 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit;
 
+use CampaignBridge\Core\Http_Client_Interface;
+use CampaignBridge\Domain\Campaign\Connection_Result;
 use CampaignBridge\Providers\Mailchimp_Provider;
 use ReflectionMethod;
+use WP_Error;
 use WP_UnitTestCase;
 
 /**
- * Verify provider-specific URL construction.
+ * A mock HTTP client for testing.
  */
-class Mailchimp_Provider_Test extends WP_UnitTestCase {
-	private ?\Closure $http_filter = null;
+class Mock_Http_Client implements Http_Client_Interface {
+	/**
+	 * @var array<string, mixed>|WP_Error
+	 */
+	private $response;
 
-	public function tearDown(): void {
-		if ( null !== $this->http_filter ) {
-			remove_filter( 'pre_http_request', $this->http_filter );
-		}
-		parent::tearDown();
+	/**
+	 * @var array<int, string>
+	 */
+	private array $requested_urls = array();
+
+	/**
+	 * Set the response to return.
+	 *
+	 * @param array<string, mixed>|WP_Error $response Response to return.
+	 */
+	public function set_response( array|WP_Error $response ): void {
+		$this->response = $response;
 	}
 
-	public function test_credentials_are_redacted_without_changing_other_settings(): void {
-		$provider = new Mailchimp_Provider();
-		$settings = array( 'api_key' => 'private-fixture-us20', 'token' => 'short', 'audience_id' => 'audience' );
-		$redacted = $provider->redact_settings( $settings );
-		$this->assertStringNotContainsString( $settings['api_key'], $redacted['api_key'] );
-		$this->assertStringNotContainsString( $settings['token'], $redacted['token'] );
-		$this->assertSame( 'audience', $redacted['audience_id'] );
-		$this->assertSame( 'private-fixture-us20', $settings['api_key'] );
+	/**
+	 * Get the URLs that were requested.
+	 *
+	 * @return array<int, string>
+	 */
+	public function get_requested_urls(): array {
+		return $this->requested_urls;
+	}
+
+	public function post( string $url, array $args = array() ) {
+		$this->requested_urls[] = $url;
+		return $this->response;
+	}
+
+	public function get( string $url, array $args = array() ) {
+		$this->requested_urls[] = $url;
+		return $this->response;
+	}
+
+	public function put( string $url, array $args = array() ) {
+		$this->requested_urls[] = $url;
+		return $this->response;
+	}
+
+	public function delete( string $url, array $args = array() ) {
+		$this->requested_urls[] = $url;
+		return $this->response;
+	}
+}
+
+/**
+ * Verify the Mailchimp provider implements the Provider_Interface port correctly.
+ */
+class Mailchimp_Provider_Test extends WP_UnitTestCase {
+	private const VALID_KEY = '0123456789abcdef' . '0123456789abcdef' . '-us20';
+
+	private function make_success_response( string $body = '' ): array {
+		return array(
+			'body'        => $body,
+			'headers'     => array(),
+			'status_code' => 200,
+		);
+	}
+
+	private function make_error_response( int $code, string $body = '' ): array {
+		return array(
+			'body'        => $body,
+			'headers'     => array(),
+			'status_code' => $code,
+		);
 	}
 
 	/**
@@ -42,64 +97,115 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 	public function test_api_url_uses_key_data_center(): void {
 		$method = new ReflectionMethod( Mailchimp_Provider::class, 'build_api_url' );
 
-		$url = $method->invoke( null, 'mailchimp-test-fixture-us20', '/campaigns' );
+		$url = $method->invoke( null, self::VALID_KEY, '/campaigns' );
 
 		$this->assertSame( 'https://us20.api.mailchimp.com/3.0/campaigns', $url );
 	}
 
 	/**
-	 * Invalid data centers fail before an outbound request is attempted.
+	 * A valid API key passes is_configured().
 	 */
-	public function test_api_url_rejects_invalid_key(): void {
-		$method = new ReflectionMethod( Mailchimp_Provider::class, 'build_api_url' );
-
-		$this->expectException( \InvalidArgumentException::class );
-		$method->invoke( null, 'invalid-key', '/campaigns' );
+	public function test_is_configured_with_valid_key(): void {
+		$provider = new Mailchimp_Provider();
+		$this->assertTrue( $provider->is_configured( array( 'api_key' => self::VALID_KEY ) ) );
 	}
 
-	public function test_connection_is_verified_against_ping_endpoint(): void {
-		$this->http_filter = static function ( mixed $preempt, array $args, string $url ): array {
-			self::assertSame( 'https://us20.api.mailchimp.com/3.0/ping', $url );
-			self::assertSame( 'GET', $args['method'] ?? null );
-			return array(
-				'headers' => array(),
-				'body' => '{"health_status":"Everything is Chimpy!"}',
-				'response' => array( 'code' => 200, 'message' => 'OK' ),
-				'cookies' => array(),
-				'filename' => null,
-			);
-		};
-		add_filter( 'pre_http_request', $this->http_filter, 10, 3 );
-
-		$result = ( new Mailchimp_Provider() )->verify_connection( array( 'api_key' => str_repeat( 'a', 32 ) . '-us20' ) );
-		self::assertFalse( is_wp_error( $result ) );
-		self::assertTrue( $result['verified'] ?? false );
+	/**
+	 * An invalid API key fails is_configured().
+	 */
+	public function test_is_configured_with_invalid_key(): void {
+		$provider = new Mailchimp_Provider();
+		$this->assertFalse( $provider->is_configured( array( 'api_key' => 'not-a-valid-key' ) ) );
+		$this->assertFalse( $provider->is_configured( array() ) );
 	}
 
-	public function test_capabilities_only_advertise_implemented_workflows(): void {
-		$capabilities = ( new Mailchimp_Provider() )->get_capabilities();
-		self::assertTrue( $capabilities['verify_connection'] );
-		self::assertTrue( $capabilities['discover_template_sections'] );
-		self::assertTrue( $capabilities['discover_audiences'] );
-		self::assertFalse( $capabilities['schedule'] );
-		self::assertFalse( $capabilities['reports'] );
+	/**
+	 * verify_connection() returns Connection_Result::success() on a 200 ping.
+	 */
+	public function test_verify_connection_returns_success_on_ping_200(): void {
+		$mock     = new Mock_Http_Client();
+		$mock->set_response( $this->make_success_response( '{"health_status":"Everything is Chimpy!"}' ) );
+
+		$provider = new Mailchimp_Provider( $mock );
+		$result   = $provider->verify_connection( array( 'api_key' => self::VALID_KEY ) );
+
+		self::assertInstanceOf( Connection_Result::class, $result );
+		self::assertTrue( $result->connected() );
+		self::assertNull( $result->error() );
+		self::assertSame( array( 'https://us20.api.mailchimp.com/3.0/ping' ), $mock->get_requested_urls() );
 	}
 
+	/**
+	 * verify_connection() returns a failure with an authentication error on 401.
+	 */
+	public function test_verify_connection_returns_failure_on_ping_401(): void {
+		$mock     = new Mock_Http_Client();
+		$mock->set_response( $this->make_error_response( 401, '{"detail":"Invalid API key"}' ) );
+
+		$provider = new Mailchimp_Provider( $mock );
+		$result   = $provider->verify_connection( array( 'api_key' => self::VALID_KEY ) );
+
+		self::assertInstanceOf( Connection_Result::class, $result );
+		self::assertFalse( $result->connected() );
+		self::assertNotNull( $result->error() );
+		self::assertSame( 'authentication', $result->error()->category() );
+		self::assertSame( 'mailchimp_connection_rejected', $result->error()->code() );
+	}
+
+	/**
+	 * verify_connection() returns a failure for an invalid key format (no network call).
+	 */
+	public function test_verify_connection_rejects_invalid_key_format(): void {
+		$provider = new Mailchimp_Provider();
+		$result   = $provider->verify_connection( array( 'api_key' => 'invalid' ) );
+
+		self::assertInstanceOf( Connection_Result::class, $result );
+		self::assertFalse( $result->connected() );
+		self::assertSame( 'authentication', $result->error()->category() );
+		self::assertSame( 'mailchimp_invalid_credentials', $result->error()->code() );
+	}
+
+	/**
+	 * verify_connection() returns a network error when the HTTP client fails.
+	 */
+	public function test_verify_connection_returns_network_error_on_http_failure(): void {
+		$mock     = new Mock_Http_Client();
+		$mock->set_response( new WP_Error( 'http_exception', 'HTTP request failed' ) );
+
+		$provider = new Mailchimp_Provider( $mock );
+		$result   = $provider->verify_connection( array( 'api_key' => self::VALID_KEY ) );
+
+		self::assertInstanceOf( Connection_Result::class, $result );
+		self::assertFalse( $result->connected() );
+		self::assertSame( 'network', $result->error()->category() );
+		self::assertSame( 'mailchimp_connection_unavailable', $result->error()->code() );
+	}
+
+	/**
+	 * get_audiences() normalizes the Mailchimp list response for the admin UI.
+	 */
 	public function test_audiences_are_normalized_for_the_admin_ui(): void {
-		$this->http_filter = static function ( mixed $preempt, array $args, string $url ): array {
-			self::assertSame( 'https://us20.api.mailchimp.com/3.0/lists?count=1000&fields=lists.id,lists.name,total_items', $url );
-			return array(
-				'headers'  => array(),
-				'body'     => '{"lists":[{"id":"abc123","name":"Customers"},{"id":"def456","name":"Newsletter"}],"total_items":2}',
-				'response' => array( 'code' => 200, 'message' => 'OK' ),
-				'cookies'  => array(),
-				'filename' => null,
-			);
-		};
-		add_filter( 'pre_http_request', $this->http_filter, 10, 3 );
+		$mock = new Mock_Http_Client();
+		$mock->set_response(
+			$this->make_success_response( '{"lists":[{"id":"abc123","name":"Customers"},{"id":"def456","name":"Newsletter"}],"total_items":2}' )
+		);
 
-		$result = ( new Mailchimp_Provider() )->get_audiences( array( 'api_key' => str_repeat( 'a', 32 ) . '-us20' ) );
+		$provider = new Mailchimp_Provider( $mock );
+		$result   = $provider->get_audiences( array( 'api_key' => self::VALID_KEY ) );
 
 		self::assertSame( array( 'abc123' => 'Customers', 'def456' => 'Newsletter' ), $result );
+		self::assertSame(
+			array( 'https://us20.api.mailchimp.com/3.0/lists?count=1000&fields=lists.id,lists.name,total_items' ),
+			$mock->get_requested_urls()
+		);
+	}
+
+	/**
+	 * Provider identity is stable.
+	 */
+	public function test_provider_identity(): void {
+		$provider = new Mailchimp_Provider();
+		$this->assertSame( 'mailchimp', $provider->slug() );
+		$this->assertNotEmpty( $provider->label() );
 	}
 }
