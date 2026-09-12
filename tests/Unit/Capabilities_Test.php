@@ -154,6 +154,10 @@ class Capabilities_Test extends Test_Case {
 	 * that is missing one capability.
 	 */
 	public function test_ensure_registered_repairs_missing_capability(): void {
+		// Set current user to administrator.
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
 		// Simulate an existing install with a stale schema version.
 		update_option( 'campaignbridge_capability_schema', 0 );
 
@@ -182,6 +186,10 @@ class Capabilities_Test extends Test_Case {
 	 * Test that ensure_registered is idempotent (safe to call multiple times).
 	 */
 	public function test_ensure_registered_is_idempotent(): void {
+		// Set current user to administrator.
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
 		// Run ensure_registered multiple times.
 		Capabilities::ensure_registered();
 		Capabilities::ensure_registered();
@@ -204,6 +212,10 @@ class Capabilities_Test extends Test_Case {
 	 * Test that ensure_registered does not grant capabilities to non-admin roles.
 	 */
 	public function test_ensure_registered_does_not_grant_caps_to_non_admin_roles(): void {
+		// Set current user to administrator.
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
 		// Simulate a fresh install.
 		delete_option( 'campaignbridge_capability_schema' );
 
@@ -223,6 +235,37 @@ class Capabilities_Test extends Test_Case {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Test that ensure_registered denies repair when the current user
+	 * lacks the manage_options capability.
+	 */
+	public function test_ensure_registered_denies_non_privileged_user(): void {
+		// Set current user to subscriber (no manage_options).
+		$sub_id = $this->factory->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $sub_id );
+
+		// Simulate a stale schema version.
+		update_option( 'campaignbridge_capability_schema', 0 );
+
+		// Remove one capability from administrator.
+		$role = get_role( 'administrator' );
+		$role->remove_cap( Capabilities::MANAGE );
+		$this->assertFalse( $role->has_cap( Capabilities::MANAGE ) );
+
+		// Run ensure_registered as a non-privileged user.
+		Capabilities::ensure_registered();
+
+		// Verify the capability was NOT restored.
+		$role = get_role( 'administrator' );
+		$this->assertFalse(
+			$role->has_cap( Capabilities::MANAGE ),
+			'Non-privileged user should not trigger capability repair'
+		);
+
+		// Verify schema version was NOT updated.
+		$this->assertSame( 0, (int) get_option( 'campaignbridge_capability_schema' ) );
 	}
 
 	/**

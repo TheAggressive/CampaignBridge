@@ -103,12 +103,17 @@ final class Capabilities {
 			return;
 		}
 
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
 		if ( null === \get_role( 'administrator' ) ) {
 			return;
 		}
 
 		self::register();
-		\update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal schema repair, not user-facing.
+		// Server-side schema repair on admin_init; authorized by manage_options above.
+		\update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Server-side repair guarded by current_user_can('manage_options'); no form context for nonce.
 	}
 
 	/**
