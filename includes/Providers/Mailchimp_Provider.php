@@ -113,14 +113,14 @@ class Mailchimp_Provider extends Abstract_Provider {
 		if ( is_wp_error( $response ) ) {
 			$category = $this->categorize_http_error( $response );
 			return Connection_Result::failure(
-				$this->build_error( $category, $this->code_for_category( $category ), 'Mailchimp could not be reached.' )
+				$this->build_error( $category, $this->code_for_category( $category ), $this->message_for_category( $category ) )
 			);
 		}
 		if ( 200 !== ( $response['status_code'] ?? 0 ) ) {
 			$status   = (int) ( $response['status_code'] ?? 0 );
 			$category = $this->categorize_http_status( $status );
 			return Connection_Result::failure(
-				$this->build_error( $category, $this->code_for_category( $category ), 'Mailchimp rejected the stored credentials.' )
+				$this->build_error( $category, $this->code_for_category( $category ), $this->message_for_category( $category ) )
 			);
 		}
 
@@ -206,6 +206,29 @@ class Mailchimp_Provider extends Abstract_Provider {
 		);
 
 		return $map[ $category ] ?? 'mailchimp_provider_error';
+	}
+
+	/**
+	 * Map a provider error category to an operator-facing message.
+	 *
+	 * @param string $category Normalized error category.
+	 * @return string Human-readable message for the operator.
+	 */
+	private function message_for_category( string $category ): string {
+		$map = array(
+			Provider_Error_Category::VALIDATION     => 'The Mailchimp API key format is invalid.',
+			Provider_Error_Category::AUTHENTICATION => 'Mailchimp rejected the stored credentials.',
+			Provider_Error_Category::AUTHORIZATION  => 'The Mailchimp account is not authorized.',
+			Provider_Error_Category::NOT_FOUND      => 'The Mailchimp resource was not found.',
+			Provider_Error_Category::CONFLICT       => 'The Mailchimp request conflicted with existing data.',
+			Provider_Error_Category::RATE_LIMITED   => 'Mailchimp rate limit reached. Try again later.',
+			Provider_Error_Category::TIMEOUT        => 'Mailchimp request timed out.',
+			Provider_Error_Category::NETWORK        => 'Mailchimp could not be reached.',
+			Provider_Error_Category::PROVIDER_ERROR => 'Mailchimp service returned an error.',
+			Provider_Error_Category::UNKNOWN        => 'Mailchimp returned an unexpected response.',
+		);
+
+		return $map[ $category ] ?? 'Mailchimp returned an unexpected response.';
 	}
 
 	/**
