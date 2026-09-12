@@ -366,10 +366,14 @@ class Security_Test extends Test_Case {
 
 		// Set up sensitive data (should be encrypted when stored)
 		$encrypted_key = Encryption::encrypt( $this->test_data['api_key'] );
-		update_option( 'campaignbridge_mailchimp_api_key', $encrypted_key );
+		$repository    = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$connection    = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $encrypted_key );
+		$repository->save( $connection );
 
-		// Test that the API key exists in settings
-		$saved_key = get_option( 'campaignbridge_mailchimp_api_key' );
+		// Test that the API key exists in the repository
+		$saved_conn = $repository->get( 'mailchimp' );
+		$this->assertNotNull( $saved_conn );
+		$saved_key = $saved_conn->api_key();
 		$this->assertNotSame( $this->test_data['api_key'], $saved_key );
 		$this->assertTrue( Encryption::is_encrypted_value( $saved_key ) );
 
@@ -834,7 +838,7 @@ class Security_Test extends Test_Case {
 		$test_options = array(
 			'test_test_field',
 			'test_content',
-			'campaignbridge_mailchimp_api_key',
+			'provider_connection_mailchimp',
 			'campaignbridge_user_data',
 			'test_security_test_field',
 		);

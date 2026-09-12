@@ -85,17 +85,14 @@ class Storage_Prefixes {
 		'campaignbridge_from_name',
 		'campaignbridge_from_email',
 		'campaignbridge_reply_to',
-		'campaignbridge_mailchimp_api_key',
 		'campaignbridge_master_key',
 		'campaignbridge_key_metadata',
 		'campaignbridge_retired_encryption_keys',
-		'campaignbridge_mailchimp_audience',
 		'campaignbridge_debug_mode',
 		'campaignbridge_log_level',
 		'campaignbridge_cache_duration',
 		'campaignbridge_rate_limit',
 		'campaignbridge_last_sync',
-		'campaignbridge_mailchimp_last_test',
 		'campaignbridge_included_post_types',
 	);
 

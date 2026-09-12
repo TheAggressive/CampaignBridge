@@ -102,6 +102,8 @@ class Settings_Controller {
 		$admin_email          = get_bloginfo( 'admin_email' );
 		$mailchimp_connection = $this->get_mailchimp_connection();
 		$mailchimp_audiences  = $this->get_mailchimp_audiences( $mailchimp_connection['connected'] );
+		$cb_repo              = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$cb_conn              = $cb_repo->get( 'mailchimp' );
 		$this->data           = array(
 			// General settings data.
 			'from_name'                => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_name', get_bloginfo( 'name' ) ),
@@ -114,8 +116,8 @@ class Settings_Controller {
 			'cta_label'                => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cta_label', __( 'Read more', 'campaignbridge' ) ),
 
 			// Mailchimp integration data.
-			'mailchimp_api_key'        => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ),
-			'mailchimp_audience'       => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ),
+			'mailchimp_api_key'        => $cb_conn ? $cb_conn->api_key() : '',
+			'mailchimp_audience'       => $cb_conn ? $cb_conn->audience_id() : '',
 			'mailchimp_connected'      => $mailchimp_connection['connected'],
 			'mailchimp_status'         => $mailchimp_connection['status'],
 			'mailchimp_last_test'      => $mailchimp_connection['checked_at'],
@@ -150,9 +152,9 @@ class Settings_Controller {
 			);
 		}
 
-		$stored_key = Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
+		$stored_key = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' ) ? ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' )->api_key() : '';
 		try {
-			$api_key = is_string( $stored_key ) ? Encryption::decrypt( $stored_key ) : '';
+			$api_key = '' !== $stored_key ? Encryption::decrypt( $stored_key ) : '';
 		} catch ( \Throwable $error ) {
 			return array(
 				'options' => array(),
@@ -206,8 +208,8 @@ class Settings_Controller {
 	 * @return array{connected: bool, status: string, checked_at: string|null}
 	 */
 	private function get_mailchimp_connection(): array {
-		$stored_key = Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
-		if ( ! is_string( $stored_key ) || '' === $stored_key ) {
+		$stored_key = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' ) ? ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' )->api_key() : '';
+		if ( '' === $stored_key ) {
 			return array(
 				'connected'  => false,
 				'status'     => __( 'Not configured', 'campaignbridge' ),
@@ -288,8 +290,8 @@ class Settings_Controller {
 			'campaignbridge_featured_image_size',
 			'campaignbridge_excerpt_length',
 			'campaignbridge_cta_label',
-			'campaignbridge_mailchimp_api_key',
-			'campaignbridge_mailchimp_audience',
+			// 'campaignbridge_mailchimp_api_key' - now in repository,
+			// 'campaignbridge_mailchimp_audience' - now in repository,
 			'campaignbridge_debug_mode',
 			'campaignbridge_log_level',
 			'campaignbridge_cache_duration',
@@ -300,6 +302,7 @@ class Settings_Controller {
 		foreach ( $options_to_reset as $option ) {
 			\CampaignBridge\Core\Storage::delete_option( $option );
 		}
+		( new \CampaignBridge\Repository\Provider_Connection_Repository() )->delete( 'mailchimp' ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.InvalidWpdbUsage
 
 		// Set rate limiting transient.
 		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, time(), 300 ); // 5 minutes

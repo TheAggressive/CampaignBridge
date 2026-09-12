@@ -70,7 +70,10 @@ class Admin_Form_Screens_Test extends Test_Case {
 			'providers_wpnonce' => wp_create_nonce( 'campaignbridge_form_providers' ),
 		);
 		$html = $this->render_screen( 'providers' );
-		$stored = get_option( 'campaignbridge_mailchimp_api_key' );
+		$repo     = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$conn     = $repo->get( 'mailchimp' );
+		$this->assertNotNull( $conn );
+		$stored = $conn->api_key();
 		$this->assertTrue( Encryption::is_encrypted_value( $stored ) );
 		$this->assertSame( $key, Encryption::decrypt_for_context( $stored, 'api_key' ) );
 		$this->assertStringNotContainsString( $key, $html );
