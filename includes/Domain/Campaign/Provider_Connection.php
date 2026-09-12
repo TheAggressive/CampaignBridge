@@ -28,12 +28,14 @@ final class Provider_Connection {
 	 * Create a provider connection value.
 	 *
 	 * @param string               $provider_slug  Provider slug identifier.
-	 * @param string               $api_key        Encrypted API key.
+	 * @param string               $api_key        Encrypted API key (opaque).
 	 * @param string               $audience_id    Audience reference (empty when unset).
 	 * @param int                  $schema_version Schema version stamp.
 	 * @param string|null          $last_verified_at ISO 8601 timestamp or null.
 	 * @param bool                 $verified       Whether the last verification succeeded.
 	 * @param array<string, mixed> $account_details Normalized account details from last verification.
+	 *
+	 * @throws \InvalidArgumentException When any field is invalid.
 	 */
 	private function __construct(
 		private readonly string $provider_slug,
@@ -43,7 +45,17 @@ final class Provider_Connection {
 		private readonly ?string $last_verified_at,
 		private readonly bool $verified,
 		private readonly array $account_details
-	) {}
+	) {
+		if ( '' === $provider_slug ) {
+			throw new \InvalidArgumentException( 'Provider slug must not be empty.' );
+		}
+		if ( '' === $api_key ) {
+			throw new \InvalidArgumentException( 'API key must not be empty.' );
+		}
+		if ( $schema_version < 1 || $schema_version > self::SCHEMA_VERSION ) {
+			throw new \InvalidArgumentException( 'Unsupported schema version.' );
+		}
+	}
 
 	/**
 	 * Create a new connection with unverified state.
@@ -67,30 +79,62 @@ final class Provider_Connection {
 	/**
 	 * Reconstitute a connection from a stored array.
 	 *
-	 * Tolerant reads: missing or legacy fields are normalized to defaults.
-	 * Rejects unknown future schema versions.
+	 * Strict validation: rejects missing, empty, or malformed required fields.
+	 * Rejects unsupported future schema versions.
 	 *
 	 * @param array<string, mixed> $data Stored connection data.
 	 *
-	 * @throws \InvalidArgumentException When the schema version is unsupported.
+	 * @throws \InvalidArgumentException When the record is malformed.
 	 */
 	public static function from_array( array $data ): self {
-		$version = (int) ( $data['schema_version'] ?? 0 );
-
+		$version = $data['schema_version'] ?? null;
+		if ( ! is_int( $version ) || $version < 1 ) {
+			throw new \InvalidArgumentException( 'Invalid schema version.' );
+		}
 		if ( $version > self::SCHEMA_VERSION ) {
 			throw new \InvalidArgumentException(
 				sprintf( 'Unsupported provider connection schema version %d.', $version )
 			);
 		}
 
+		$provider_slug = $data['provider_slug'] ?? null;
+		if ( ! is_string( $provider_slug ) || '' === $provider_slug ) {
+			throw new \InvalidArgumentException( 'Invalid provider slug.' );
+		}
+
+		$api_key = $data['api_key'] ?? null;
+		if ( ! is_string( $api_key ) || '' === $api_key ) {
+			throw new \InvalidArgumentException( 'Invalid API key.' );
+		}
+
+		$audience_id = $data['audience_id'] ?? '';
+		if ( ! is_string( $audience_id ) ) {
+			throw new \InvalidArgumentException( 'Invalid audience ID.' );
+		}
+
+		$last_verified_at = $data['last_verified_at'] ?? null;
+		if ( null !== $last_verified_at && ! is_string( $last_verified_at ) ) {
+			throw new \InvalidArgumentException( 'Invalid last_verified_at.' );
+		}
+
+		$verified = $data['verified'] ?? false;
+		if ( ! is_bool( $verified ) ) {
+			throw new \InvalidArgumentException( 'Invalid verified flag.' );
+		}
+
+		$account_details = $data['account_details'] ?? array();
+		if ( ! is_array( $account_details ) ) {
+			throw new \InvalidArgumentException( 'Invalid account details.' );
+		}
+
 		return new self(
-			(string) ( $data['provider_slug'] ?? '' ),
-			(string) ( $data['api_key'] ?? '' ),
-			(string) ( $data['audience_id'] ?? '' ),
-			$version > 0 ? $version : self::SCHEMA_VERSION,
-			isset( $data['last_verified_at'] ) && is_string( $data['last_verified_at'] ) ? $data['last_verified_at'] : null,
-			(bool) ( $data['verified'] ?? false ),
-			is_array( $data['account_details'] ?? null ) ? $data['account_details'] : array()
+			$provider_slug,
+			$api_key,
+			$audience_id,
+			$version,
+			$last_verified_at,
+			$verified,
+			$account_details
 		);
 	}
 

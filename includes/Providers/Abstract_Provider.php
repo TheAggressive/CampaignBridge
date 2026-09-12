@@ -457,19 +457,15 @@ abstract class Abstract_Provider implements Provider_Interface {
 	/**
 	 * Build a normalized provider error for a failed operation.
 	 *
-	 * @param string $category  Error category.
-	 * @param string $message   Safe user-facing message.
-	 * @param string $details   Provider-specific detail.
-	 * @param int    $http_code HTTP status code (0 when unknown).
-	 * @param bool   $retryable Whether the operation can be retried.
+	 * @param string $category Normalized error category.
+	 * @param string $code     Stable machine-readable error code.
+	 * @param string $message  Safe operator-facing message.
 	 */
 	protected function build_error(
 		string $category,
-		string $message,
-		string $details = '',
-		int $http_code = 0,
-		bool $retryable = false
+		string $code,
+		string $message
 	): Provider_Error {
-		return Provider_Error::from_category( $category, $message, $details, $this->slug() );
+		return Provider_Error::from_category( $category, $code, $message, $this->slug() );
 	}
 }
