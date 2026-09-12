@@ -278,12 +278,14 @@ class Security_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		$this->assertTrue( current_user_can( 'manage_options' ) );
+		$this->assertTrue( current_user_can( 'campaignbridge_manage' ) );
 
 		// Test with subscriber - should not have capabilities
 		$subscriber_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $subscriber_id );
 
 		$this->assertFalse( current_user_can( 'manage_options' ) );
+		$this->assertFalse( current_user_can( 'campaignbridge_manage' ) );
 	}
 
 	/**
@@ -418,19 +420,22 @@ class Security_Test extends Test_Case {
 	public function test_capability_checks_work_for_different_roles(): void {
 		$roles_and_caps = array(
 			'subscriber'    => array(
-				'read'           => true,
-				'edit_posts'     => false,
-				'manage_options' => false,
+				'read'                  => true,
+				'edit_posts'            => false,
+				'manage_options'        => false,
+				'campaignbridge_manage' => false,
 			),
 			'editor'        => array(
-				'read'           => true,
-				'edit_posts'     => true,
-				'manage_options' => false,
+				'read'                  => true,
+				'edit_posts'            => true,
+				'manage_options'        => false,
+				'campaignbridge_manage' => false,
 			),
 			'administrator' => array(
-				'read'           => true,
-				'edit_posts'     => true,
-				'manage_options' => true,
+				'read'                  => true,
+				'edit_posts'            => true,
+				'manage_options'        => true,
+				'campaignbridge_manage' => true,
 			),
 		);
 
@@ -800,11 +805,13 @@ class Security_Test extends Test_Case {
 
 		// Test that controller methods require proper permissions
 		$this->assertFalse( current_user_can( 'manage_options' ), 'Subscriber should not have manage_options' );
+		$this->assertFalse( current_user_can( 'campaignbridge_manage' ), 'Subscriber should not have campaignbridge_manage' );
 
 		// Test that we cannot access admin functions without permissions
 		// This tests that the controller logic would prevent access
 		$user = wp_get_current_user();
 		$this->assertFalse( user_can( $user, 'manage_options' ), 'User should not be able to manage options' );
+		$this->assertFalse( user_can( $user, 'campaignbridge_manage' ), 'User should not be able to manage CampaignBridge' );
 	}
 
 	/**

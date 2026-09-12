@@ -334,7 +334,7 @@ class Settings_Controller {
 		}
 
 		// Check user capabilities.
-		if ( ! \current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'campaignbridge_manage' ) ) {
 			wp_die( 'You do not have permission to export settings.' );
 		}
 
@@ -366,7 +366,7 @@ class Settings_Controller {
 		}
 
 		// Check user capabilities.
-		if ( ! \current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'campaignbridge_manage' ) ) {
 			wp_die( 'You do not have permission to import settings.' );
 		}
 
@@ -480,7 +480,7 @@ class Settings_Controller {
 			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
 		}
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'campaignbridge_manage' ) ) {
 			wp_die( esc_html__( 'You do not have permission to update the brand kit.', 'campaignbridge' ) );
 		}
 
@@ -523,7 +523,7 @@ class Settings_Controller {
 			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
 		}
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'campaignbridge_manage' ) ) {
 			wp_die( esc_html__( 'You do not have permission to update the brand kit.', 'campaignbridge' ) );
 		}
 

@@ -143,6 +143,7 @@ class Form_Test extends Test_Case {
 		wp_set_current_user( $admin_id );
 
 		$this->assertTrue( current_user_can( 'manage_options' ), 'Test user should have manage_options capability' );
+		$this->assertTrue( current_user_can( 'campaignbridge_manage' ), 'Test user should have campaignbridge_manage capability' );
 
 		// Test data - sensitive information that must be encrypted
 		$test_api_key = 'sk-live-1234567890123456789012345678901234567890';

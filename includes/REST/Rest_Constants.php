@@ -59,7 +59,7 @@ class Rest_Constants {
 	/**
 	 * Required capability for managing plugin settings.
 	 */
-	public const MANAGE_CAPABILITY = 'manage_options';
+	public const MANAGE_CAPABILITY = 'campaignbridge_manage';
 
 	/**
 	 * Query defaults for posts endpoint.

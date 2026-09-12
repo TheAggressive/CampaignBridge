@@ -67,6 +67,21 @@
     <severity>warning</severity>
   </rule>
 
+  <!-- Register CampaignBridge custom capabilities so the sniff recognises them
+       while still flagging misspelled or undeclared capability strings. -->
+  <rule ref="WordPress.WP.Capabilities">
+    <properties>
+      <property name="custom_capabilities" type="array">
+        <element value="campaignbridge_manage"/>
+        <element value="campaignbridge_manage_connections"/>
+        <element value="campaignbridge_edit_templates"/>
+        <element value="campaignbridge_create_campaigns"/>
+        <element value="campaignbridge_send_campaigns"/>
+        <element value="campaignbridge_view_reports"/>
+      </property>
+    </properties>
+  </rule>
+
   <!-- Allow WP_REST_Request type hints in REST API methods -->
   <rule ref="Squiz.Commenting.FunctionComment.IncorrectTypeHint">
     <exclude-pattern>includes/REST/*.php</exclude-pattern>

@@ -43,13 +43,6 @@ abstract class Abstract_Provider implements Provider_Interface {
 	protected string $label;
 
 	/**
-	 * Required capability for this provider.
-	 *
-	 * @var string
-	 */
-	protected string $required_capability;
-
-	/**
 	 * Default rate limiting policy.
 	 *
 	 * @var array<string, mixed>
@@ -77,14 +70,13 @@ abstract class Abstract_Provider implements Provider_Interface {
 	 * @param string $label Provider display name.
 	 */
 	public function __construct( string $slug, string $label ) {
-		$this->slug                = $slug;
-		$this->label               = $label;
-		$this->required_capability = 'campaignbridge_manage';
-		$this->rate_limit_policy   = array(
+		$this->slug              = $slug;
+		$this->label             = $label;
+		$this->rate_limit_policy = array(
 			'bucket'         => $slug,
 			'max_per_minute' => 60,
 		);
-		$this->capabilities        = array(
+		$this->capabilities      = array(
 			'verify_connection'          => false,
 			'discover_template_sections' => false,
 			'discover_audiences'         => false,
@@ -95,7 +87,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 			'reconcile'                  => false,
 			'reports'                    => false,
 		);
-		$this->api_key_pattern     = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern by default.
+		$this->api_key_pattern   = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern by default.
 	}
 
 	/**
@@ -145,15 +137,6 @@ abstract class Abstract_Provider implements Provider_Interface {
 			__( '%s email service provider integration.', 'campaignbridge' ),
 			$this->label()
 		);
-	}
-
-	/**
-	 * Get the required capability for this provider.
-	 *
-	 * @return string Capability slug.
-	 */
-	public function required_capability(): string {
-		return $this->required_capability;
 	}
 
 	/**

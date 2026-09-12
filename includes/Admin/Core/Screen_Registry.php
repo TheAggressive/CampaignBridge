@@ -105,7 +105,7 @@ class Screen_Registry {
 			array(
 				'menu_title' => Screen_Naming::title( $screen_name ),
 				'page_title' => Screen_Naming::title( $screen_name ),
-				'capability' => 'manage_options',
+				'capability' => 'campaignbridge_manage',
 			),
 			$config
 		);
@@ -137,7 +137,7 @@ class Screen_Registry {
 			array(
 				'menu_title' => Screen_Naming::title( $folder_name ),
 				'page_title' => Screen_Naming::title( $folder_name ),
-				'capability' => 'manage_options',
+				'capability' => 'campaignbridge_manage',
 			),
 			$config
 		);
@@ -575,7 +575,7 @@ class Screen_Registry {
 			'title'      => Screen_Naming::title( $tab_name ),
 			'slug'       => Screen_Naming::slug( $tab_name ),
 			'file'       => $file_path,
-			'capability' => $config['capability'] ?? 'manage_options',
+			'capability' => $config['capability'] ?? 'campaignbridge_manage',
 			'order'      => 10,
 			'controller' => null,
 		);
@@ -647,7 +647,7 @@ class Screen_Registry {
 		return array_filter(
 			$tabs,
 			function ( $tab_info ) {
-				$capability = $tab_info['capability'] ?? 'manage_options';
+				$capability = $tab_info['capability'] ?? 'campaignbridge_manage';
 
 				// Allow false to explicitly hide tabs.
 				if ( false === $capability ) {

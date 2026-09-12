@@ -46,7 +46,7 @@ class Admin_Menu_Manager {
 		add_menu_page(
 			__( 'CampaignBridge', 'campaignbridge' ),
 			__( 'CampaignBridge', 'campaignbridge' ),
-			'manage_options',
+			'campaignbridge_manage',
 			self::MENU_SLUG,
 			array( $this, 'redirect_to_first_submenu' ),
 			'dashicons-email-alt',

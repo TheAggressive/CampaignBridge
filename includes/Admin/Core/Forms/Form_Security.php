@@ -57,7 +57,7 @@ class Form_Security {
 		}
 
 		// Check user capabilities.
-		if ( ! \current_user_can( 'manage_options' ) ) {
+		if ( ! \current_user_can( 'campaignbridge_manage' ) ) {
 			return false;
 		}
 

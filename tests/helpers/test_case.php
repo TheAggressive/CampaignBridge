@@ -46,6 +46,16 @@ abstract class Test_Case extends WP_UnitTestCase {
 		if ( ! did_action( 'campaignbridge_init' ) ) {
 			do_action( 'campaignbridge_init' );
 		}
+
+		// Grant plugin capabilities to the administrator role (simulates activation).
+		$role = get_role( 'administrator' );
+		if ( $role ) {
+			foreach ( array( 'campaignbridge_manage' ) as $cap ) {
+				if ( ! $role->has_cap( $cap ) ) {
+					$role->add_cap( $cap );
+				}
+			}
+		}
 	}
 
 	/**
