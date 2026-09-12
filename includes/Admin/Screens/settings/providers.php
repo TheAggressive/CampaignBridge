@@ -67,40 +67,40 @@ $form = Form::make( 'providers' )
 					: __( 'Save and verify your Mailchimp API key to choose an audience.', 'campaignbridge' ) )
 		)
 		->end()
-	->before_save(
-		function ( $data ) {
-			// Save to repository.
-			$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
-			$existing   = $repository->get( 'mailchimp' );
+	->save_to_custom(
+		function ( array $data ): bool {
+			$provider = (string) ( $data['provider'] ?? 'html' );
 
-			if ( 'mailchimp' === $data['provider'] ) {
-				if ( ! empty( $data['mailchimp_api_key'] ) ) {
-					// Already encrypted by sanitize_field_value() for 'encrypted' field type.
-					$key = $data['mailchimp_api_key'];
-				} elseif ( $existing ) {
-					// Keep existing encrypted key.
-					$key = $existing->api_key();
-				} else {
-					$key = '';
-				}
-
-				$audience = array_key_exists( 'mailchimp_audience', $data )
-					? $data['mailchimp_audience']
-					: ( $existing ? $existing->audience_id() : '' );
-
-				if ( '' !== $key ) {
-					$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $key, $audience );
-					$repository->save( $connection );
-				}
+			if ( 'mailchimp' === $provider && ! current_user_can( \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS ) ) {
+				return false;
 			}
 
-			// Save provider selection (general setting, not a credential).
-			\CampaignBridge\Core\Storage::update_option( 'campaignbridge_provider', $data['provider'] );
+			\CampaignBridge\Core\Storage::update_option( 'campaignbridge_provider', $provider );
 
-			// Remove sensitive fields to prevent saving to options.
-			unset( $data['mailchimp_api_key'], $data['mailchimp_audience'] );
+			if ( 'mailchimp' !== $provider ) {
+				return true;
+			}
 
-			return $data;
+			$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+			$existing   = $repository->get( 'mailchimp' );
+			$new_key    = trim( (string) ( $data['mailchimp_api_key'] ?? '' ) );
+			$audience   = (string) ( $data['mailchimp_audience'] ?? '' );
+
+			if ( '' === $new_key && null === $existing ) {
+				return false;
+			}
+
+			if ( '' !== $new_key ) {
+				$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create(
+					'mailchimp',
+					$new_key,
+					$audience
+				);
+			} else {
+				$connection = $existing->with_audience( $audience );
+			}
+
+			return $repository->save( $connection );
 		}
 	)
 	->success( __( 'Provider settings saved.', 'campaignbridge' ) )

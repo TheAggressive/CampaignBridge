@@ -152,7 +152,8 @@ class Settings_Controller {
 			);
 		}
 
-		$stored_key = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' ) ? ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' )->api_key() : '';
+		$connection = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' );
+		$stored_key = $connection ? $connection->api_key() : '';
 		try {
 			$api_key = '' !== $stored_key ? Encryption::decrypt( $stored_key ) : '';
 		} catch ( \Throwable $error ) {
@@ -208,7 +209,8 @@ class Settings_Controller {
 	 * @return array{connected: bool, status: string, checked_at: string|null}
 	 */
 	private function get_mailchimp_connection(): array {
-		$stored_key = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' ) ? ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' )->api_key() : '';
+		$connection = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' );
+		$stored_key = $connection ? $connection->api_key() : '';
 		if ( '' === $stored_key ) {
 			return array(
 				'connected'  => false,
