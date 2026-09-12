@@ -94,6 +94,7 @@ class Storage_Prefixes {
 		'campaignbridge_rate_limit',
 		'campaignbridge_last_sync',
 		'campaignbridge_included_post_types',
+		'provider_connection_mailchimp',
 	);
 
 	/**

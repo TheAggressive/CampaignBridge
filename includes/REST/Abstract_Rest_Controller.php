@@ -39,6 +39,15 @@ abstract class Abstract_Rest_Controller {
 	}
 
 	/**
+	 * Check if current user can manage provider connections.
+	 *
+	 * @return bool True if user has required capability.
+	 */
+	public static function can_manage_connections(): bool {
+		return \current_user_can( Capabilities::MANAGE_CONNECTIONS );
+	}
+
+	/**
 	 * Validate post type parameter.
 	 *
 	 * @param string $value Post type value to validate.
