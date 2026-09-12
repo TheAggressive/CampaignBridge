@@ -48,14 +48,7 @@ abstract class Test_Case extends WP_UnitTestCase {
 		}
 
 		// Grant plugin capabilities to the administrator role (simulates activation).
-		$role = get_role( 'administrator' );
-		if ( $role ) {
-			foreach ( array( 'campaignbridge_manage' ) as $cap ) {
-				if ( ! $role->has_cap( $cap ) ) {
-					$role->add_cap( $cap );
-				}
-			}
-		}
+		\CampaignBridge\Core\Capabilities::register();
 	}
 
 	/**

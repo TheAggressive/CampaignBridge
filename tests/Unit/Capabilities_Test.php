@@ -118,4 +118,253 @@ class Capabilities_Test extends Test_Case {
 			}
 		}
 	}
+
+	/**
+	 * Test that ensure_registered grants all capabilities to administrator
+	 * on a fresh install (no stored schema version).
+	 */
+	public function test_ensure_registered_grants_all_capabilities_on_fresh_install(): void {
+		// Set current user to administrator (required for the repair path).
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		// Simulate a fresh install: no schema version stored.
+		delete_option( 'campaignbridge_capability_schema' );
+
+		// Remove all CampaignBridge capabilities from administrator.
+		$role = get_role( 'administrator' );
+		foreach ( Capabilities::ALL as $cap ) {
+			$role->remove_cap( $cap );
+		}
+
+		// Run ensure_registered.
+		Capabilities::ensure_registered();
+
+		// Verify all capabilities are granted.
+		$role = get_role( 'administrator' );
+		foreach ( Capabilities::ALL as $cap ) {
+			$this->assertTrue(
+				$role->has_cap( $cap ),
+				"Administrator should have '{$cap}' capability after ensure_registered"
+			);
+		}
+
+		// Verify schema version is stored.
+		$this->assertSame( Capabilities::SCHEMA_VERSION, get_option( 'campaignbridge_capability_schema' ) );
+	}
+
+	/**
+	 * Test that ensure_registered repairs an existing installation
+	 * that is missing one capability.
+	 */
+	public function test_ensure_registered_repairs_missing_capability(): void {
+		// Set current user to administrator.
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		// Simulate an existing install with a stale schema version.
+		update_option( 'campaignbridge_capability_schema', 0 );
+
+		// Remove one capability from administrator.
+		$role = get_role( 'administrator' );
+		$role->remove_cap( Capabilities::MANAGE );
+
+		// Verify it's missing before repair.
+		$this->assertFalse( $role->has_cap( Capabilities::MANAGE ) );
+
+		// Run ensure_registered.
+		Capabilities::ensure_registered();
+
+		// Verify the missing capability is restored.
+		$role = get_role( 'administrator' );
+		$this->assertTrue(
+			$role->has_cap( Capabilities::MANAGE ),
+			"Administrator should have 'campaignbridge_manage' capability after repair"
+		);
+
+		// Verify schema version is updated.
+		$this->assertSame( Capabilities::SCHEMA_VERSION, get_option( 'campaignbridge_capability_schema' ) );
+	}
+
+	/**
+	 * Test that ensure_registered is idempotent (safe to call multiple times).
+	 */
+	public function test_ensure_registered_is_idempotent(): void {
+		// Set current user to administrator.
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		// Run ensure_registered multiple times.
+		Capabilities::ensure_registered();
+		Capabilities::ensure_registered();
+		Capabilities::ensure_registered();
+
+		// Verify all capabilities are still present.
+		$role = get_role( 'administrator' );
+		foreach ( Capabilities::ALL as $cap ) {
+			$this->assertTrue(
+				$role->has_cap( $cap ),
+				"Administrator should retain '{$cap}' capability after repeated ensure_registered calls"
+			);
+		}
+
+		// Verify schema version is correct.
+		$this->assertSame( Capabilities::SCHEMA_VERSION, get_option( 'campaignbridge_capability_schema' ) );
+	}
+
+	/**
+	 * Test that ensure_registered does not grant capabilities to non-admin roles.
+	 */
+	public function test_ensure_registered_does_not_grant_caps_to_non_admin_roles(): void {
+		// Set current user to administrator.
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		// Simulate a fresh install.
+		delete_option( 'campaignbridge_capability_schema' );
+
+		// Run ensure_registered.
+		Capabilities::ensure_registered();
+
+		// Verify non-admin roles do not have any CampaignBridge capabilities.
+		$roles_to_check = array( 'editor', 'author', 'contributor', 'subscriber' );
+		foreach ( $roles_to_check as $role_name ) {
+			$role = get_role( $role_name );
+			if ( $role ) {
+				foreach ( Capabilities::ALL as $cap ) {
+					$this->assertFalse(
+						$role->has_cap( $cap ),
+						"Role '{$role_name}' should not have '{$cap}' capability"
+					);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Test that ensure_registered denies repair when the current user
+	 * lacks the manage_options capability.
+	 */
+	public function test_ensure_registered_denies_non_privileged_user(): void {
+		// Set current user to subscriber (no manage_options).
+		$sub_id = $this->factory->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $sub_id );
+
+		// Simulate a stale schema version.
+		update_option( 'campaignbridge_capability_schema', 0 );
+
+		// Remove one capability from administrator.
+		$role = get_role( 'administrator' );
+		$role->remove_cap( Capabilities::MANAGE );
+		$this->assertFalse( $role->has_cap( Capabilities::MANAGE ) );
+
+		// Run ensure_registered as a non-privileged user.
+		Capabilities::ensure_registered();
+
+		// Verify the capability was NOT restored.
+		$role = get_role( 'administrator' );
+		$this->assertFalse(
+			$role->has_cap( Capabilities::MANAGE ),
+			'Non-privileged user should not trigger capability repair'
+		);
+
+		// Verify schema version was NOT updated.
+		$this->assertSame( 0, (int) get_option( 'campaignbridge_capability_schema' ) );
+	}
+
+	/**
+	 * Test that activate() grants all capabilities with no current user.
+	 */
+	public function test_activate_grants_all_caps_without_current_user(): void {
+		// Ensure no current user is set.
+		wp_set_current_user( 0 );
+
+		// Remove all caps to simulate fresh state.
+		$role = get_role( 'administrator' );
+		if ( $role ) {
+			foreach ( Capabilities::ALL as $cap ) {
+				$role->remove_cap( $cap );
+			}
+		}
+		delete_option( 'campaignbridge_capability_schema' );
+
+		// Run activate (trusted context, no user required).
+		Capabilities::activate();
+
+		// Verify all capabilities were granted.
+		$role = get_role( 'administrator' );
+		$this->assertNotNull( $role );
+		foreach ( Capabilities::ALL as $cap ) {
+			$this->assertTrue(
+				$role->has_cap( $cap ),
+				"Administrator should have '{$cap}' after activate()"
+			);
+		}
+	}
+
+	/**
+	 * Test that activate() stamps the schema version.
+	 */
+	public function test_activate_stamps_schema_version(): void {
+		delete_option( 'campaignbridge_capability_schema' );
+
+		Capabilities::activate();
+
+		$this->assertSame(
+			Capabilities::SCHEMA_VERSION,
+			(int) get_option( 'campaignbridge_capability_schema' ),
+			'activate() should write SCHEMA_VERSION to the schema option'
+		);
+	}
+
+	/**
+	 * Test that activate() is idempotent.
+	 */
+	public function test_activate_is_idempotent(): void {
+		Capabilities::activate();
+		Capabilities::activate(); // Should not throw or error.
+
+		$role = get_role( 'administrator' );
+		$this->assertNotNull( $role );
+		foreach ( Capabilities::ALL as $cap ) {
+			$this->assertTrue( $role->has_cap( $cap ) );
+		}
+		$this->assertSame( Capabilities::SCHEMA_VERSION, (int) get_option( 'campaignbridge_capability_schema' ) );
+	}
+
+	/**
+	 * Test that the admin menu capability resolves to Capabilities::MANAGE.
+	 */
+	public function test_admin_menu_uses_manage_capability_constant(): void {
+		// Create an administrator user and set as current user.
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		// Ensure the current user has the capability.
+		$this->assertTrue( current_user_can( Capabilities::MANAGE ) );
+
+		// Reset the menu global to avoid duplicates.
+		global $menu;
+		$menu = array();
+
+		// Register the menu.
+		$manager = new \CampaignBridge\Admin\Admin_Menu_Manager();
+		$manager->add_parent_menu();
+
+		// Verify the menu is registered with the correct capability.
+		$found = false;
+		foreach ( $menu as $item ) {
+			if ( 'campaignbridge' === $item[2] ) {
+				$found = true;
+				$this->assertSame(
+					Capabilities::MANAGE,
+					$item[1],
+					'Admin menu should use Capabilities::MANAGE'
+				);
+				break;
+			}
+		}
+
+		$this->assertTrue( $found, 'CampaignBridge menu should be registered' );
+	}
 }
