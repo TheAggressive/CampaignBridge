@@ -17,8 +17,10 @@ if ( ! isset( $screen ) ) {
 	$screen = null; // Fallback for PHPStan.
 }
 $campaignbridge_provider            = $screen ? $screen->get( 'provider', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_provider', 'html' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_provider', 'html' );
-$campaignbridge_mailchimp_api_key   = $screen ? $screen->get( 'mailchimp_api_key', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_api_key', '' );
-$campaignbridge_mailchimp_audience  = $screen ? $screen->get( 'mailchimp_audience', \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' ) ) : \CampaignBridge\Core\Storage::get_option( 'campaignbridge_mailchimp_audience', '' );
+$cb_repo                            = new \CampaignBridge\Repository\Provider_Connection_Repository();
+$cb_conn                            = $cb_repo->get( 'mailchimp' );
+$campaignbridge_mailchimp_api_key   = $screen ? $screen->get( 'mailchimp_api_key', $cb_conn ? $cb_conn->api_key() : '' ) : ( $cb_conn ? $cb_conn->api_key() : '' );
+$campaignbridge_mailchimp_audience  = $screen ? $screen->get( 'mailchimp_audience', $cb_conn ? $cb_conn->audience_id() : '' ) : ( $cb_conn ? $cb_conn->audience_id() : '' );
 $campaignbridge_is_connected        = $screen ? $screen->get( 'mailchimp_connected', false ) : false;
 $campaignbridge_mailchimp_status    = $screen ? $screen->get( 'mailchimp_status', __( 'Not configured', 'campaignbridge' ) ) : __( 'Not configured', 'campaignbridge' );
 $campaignbridge_mailchimp_audiences = $screen ? $screen->get( 'mailchimp_audiences', array() ) : array();
@@ -65,24 +67,7 @@ $form = Form::make( 'providers' )
 					: __( 'Save and verify your Mailchimp API key to choose an audience.', 'campaignbridge' ) )
 		)
 		->end()
-	->before_save(
-		function ( $data ) {
-			// Save to options.
-					\CampaignBridge\Core\Storage::update_option( 'campaignbridge_provider', $data['provider'] );
-
-			if ( 'mailchimp' === $data['provider'] ) {
-				if ( ! empty( $data['mailchimp_api_key'] ) ) {
-					\CampaignBridge\Core\Storage::update_option( 'campaignbridge_mailchimp_api_key', $data['mailchimp_api_key'] );
-				}
-				if ( array_key_exists( 'mailchimp_audience', $data ) ) {
-					\CampaignBridge\Core\Storage::update_option( 'campaignbridge_mailchimp_audience', $data['mailchimp_audience'] );
-				}
-			}
-
-			// Return modified data if needed.
-			return $data;
-		}
-	)
+	->save_to_custom( array( \CampaignBridge\Admin\Controllers\Provider_Save_Handler::class, 'handle' ) )
 	->success( __( 'Provider settings saved.', 'campaignbridge' ) )
 	->submit( __( 'Save provider settings', 'campaignbridge' ) );
 ?>

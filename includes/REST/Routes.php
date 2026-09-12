@@ -164,7 +164,7 @@ class Routes extends Abstract_Rest_Controller {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( __CLASS__, 'r_decrypt_field' ),
-				'permission_callback' => array( __CLASS__, 'can_manage' ),
+				'permission_callback' => array( __CLASS__, 'can_manage_connections' ),
 				'args'                => array(
 					'encrypted_value' => array(
 						'type'              => 'string',
@@ -369,9 +369,10 @@ class Routes extends Abstract_Rest_Controller {
 
 		$encrypted_value = $request->get_param( 'encrypted_value' );
 		try {
-			// This route exposes a stored secret and therefore always uses the
-			// administrator-only sensitive context.
-			$decrypted = \CampaignBridge\Core\Encryption::decrypt_for_context( $encrypted_value, 'sensitive' );
+			// The REST permission callback already enforces MANAGE_CONNECTIONS.
+			// Use decrypt() directly to avoid the redundant MANAGE check in
+			// decrypt_for_context('sensitive').
+			$decrypted = \CampaignBridge\Core\Encryption::decrypt( $encrypted_value );
 
 			// Ensure the decrypted value is safe for JSON transmission.
 			// Remove any potential binary data or problematic characters.

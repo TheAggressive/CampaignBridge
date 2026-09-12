@@ -110,40 +110,38 @@ class Settings_Persistence_Test extends Test_Case {
 	 * Test that provider settings can be saved and persist.
 	 */
 	public function test_provider_settings_persist_across_requests(): void {
-		// Simulate form submission with provider settings
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_POST                     = array(
-			'providers'         => array(
-				'provider'           => $this->test_settings_data['campaignbridge_provider'],
-				'mailchimp_api_key'  => $this->test_settings_data['campaignbridge_mailchimp_api_key'],
-				'mailchimp_audience' => $this->test_settings_data['campaignbridge_mailchimp_audience'],
-			),
-			'providers_wpnonce' => wp_create_nonce( 'campaignbridge_form_providers' ),
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$plaintext_key = str_repeat( 'a', 32 ) . '-us1';
+		$encrypted_key = \CampaignBridge\Core\Encryption::encrypt( $plaintext_key );
+
+		$result = \CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+			array(
+				'provider'           => 'mailchimp',
+				'mailchimp_api_key'  => $encrypted_key,
+				'mailchimp_audience' => 'test-audience-456',
+			)
 		);
+		$this->assertTrue( $result );
 
-		// Simulate the providers settings screen form submission
-		$this->simulate_providers_settings_submission();
+		// Verify settings were saved to options.
+		$this->assertSame( 'mailchimp', get_option( 'campaignbridge_provider' ) );
+		$repo = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$conn = $repo->get( 'mailchimp' );
+		$this->assertNotNull( $conn );
+		$this->assertSame( $encrypted_key, $conn->api_key() );
+		$this->assertSame( 'test-audience-456', $conn->audience_id() );
 
-		// Verify settings were saved to options
-		$this->assertEquals( $this->test_settings_data['campaignbridge_provider'], get_option( 'campaignbridge_provider' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_api_key'], get_option( 'campaignbridge_mailchimp_api_key' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_audience'], get_option( 'campaignbridge_mailchimp_audience' ) );
-
-		// Simulate fresh page load
+		// Simulate fresh page load.
 		$this->reset_request_state();
 
-		// Verify settings persist
-		$this->assertEquals( $this->test_settings_data['campaignbridge_provider'], get_option( 'campaignbridge_provider' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_api_key'], get_option( 'campaignbridge_mailchimp_api_key' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_audience'], get_option( 'campaignbridge_mailchimp_audience' ) );
-
-		// Test that Settings_Controller loads the settings correctly
-		$controller = new Settings_Controller();
-		$data       = $controller->get_data();
-
-		$this->assertEquals( $this->test_settings_data['campaignbridge_provider'], $data['provider'] ?? get_option( 'campaignbridge_provider' ) );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_api_key'], $data['mailchimp_api_key'] );
-		$this->assertEquals( $this->test_settings_data['campaignbridge_mailchimp_audience'], $data['mailchimp_audience'] );
+		// Verify settings persist.
+		$this->assertSame( 'mailchimp', get_option( 'campaignbridge_provider' ) );
+		$conn = $repo->get( 'mailchimp' );
+		$this->assertNotNull( $conn );
+		$this->assertSame( $encrypted_key, $conn->api_key() );
+		$this->assertSame( 'test-audience-456', $conn->audience_id() );
 	}
 
 	/**
@@ -383,24 +381,220 @@ class Settings_Persistence_Test extends Test_Case {
 	}
 
 	/**
-	 * Helper method to simulate providers settings form submission.
+	 * Test that saving Mailchimp requires MANAGE_CONNECTIONS capability.
+	 *
+	 * A user with MANAGE but without MANAGE_CONNECTIONS cannot save.
 	 */
-	private function simulate_providers_settings_submission(): void {
-		// Simulate the custom save logic from providers.php
-		if ( isset( $_POST['providers'] ) ) {
-			$data = $_POST['providers'];
+	public function test_save_mailchimp_requires_manage_connections_capability(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'editor' ) );
+		$user    = new \WP_User( $user_id );
+		$user->add_cap( \CampaignBridge\Core\Capabilities::MANAGE );
+		wp_set_current_user( $user_id );
 
-			update_option( 'campaignbridge_provider', $data['provider'] );
+		$result = \CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+			array(
+				'provider'           => 'mailchimp',
+				'mailchimp_api_key'  => \CampaignBridge\Core\Encryption::encrypt( str_repeat( 'a', 32 ) . '-us1' ),
+				'mailchimp_audience' => 'aud-123',
+			)
+		);
 
-			if ( $data['provider'] === 'mailchimp' ) {
-				if ( ! empty( $data['mailchimp_api_key'] ) ) {
-					update_option( 'campaignbridge_mailchimp_api_key', $data['mailchimp_api_key'] );
-				}
-				if ( ! empty( $data['mailchimp_audience'] ) ) {
-					update_option( 'campaignbridge_mailchimp_audience', $data['mailchimp_audience'] );
-				}
-			}
-		}
+		$this->assertFalse( $result );
+		$this->assertNotSame( 'mailchimp', get_option( 'campaignbridge_provider', 'html' ) );
+		$this->assertFalse( get_option( 'campaignbridge_provider_connection_mailchimp' ) );
+	}
+
+	/**
+	 * Test that saving Mailchimp with no key and no existing connection fails.
+	 */
+	public function test_save_mailchimp_fails_without_key_or_existing(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$result = \CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+			array(
+				'provider'           => 'mailchimp',
+				'mailchimp_api_key'  => '',
+				'mailchimp_audience' => 'aud-123',
+			)
+		);
+
+		$this->assertFalse( $result );
+		$this->assertNotSame( 'mailchimp', get_option( 'campaignbridge_provider', 'html' ) );
+	}
+
+	/**
+	 * Test that a failed Mailchimp save does not change the existing provider selection.
+	 */
+	public function test_failed_save_leaves_provider_selection_unchanged(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		\CampaignBridge\Core\Storage::update_option( 'campaignbridge_provider', 'html' );
+
+		$invalid_key_encrypted = \CampaignBridge\Core\Encryption::encrypt( 'not-a-valid-mailchimp-key' );
+		$result                = \CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+			array(
+				'provider'           => 'mailchimp',
+				'mailchimp_api_key'  => $invalid_key_encrypted,
+				'mailchimp_audience' => 'aud-123',
+			)
+		);
+
+		$this->assertFalse( $result );
+		$this->assertSame( 'html', get_option( 'campaignbridge_provider' ) );
+		$this->assertFalse( get_option( 'campaignbridge_provider_connection_mailchimp' ) );
+	}
+
+	/**
+	 * Test that submitting the unchanged encrypted hidden value preserves verification metadata.
+	 */
+	public function test_unchanged_encrypted_value_preserves_verification_metadata(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$encrypted  = \CampaignBridge\Core\Encryption::encrypt( str_repeat( 'a', 32 ) . '-us1' );
+		$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $encrypted, 'aud-original' );
+		$connection = $connection->with_verification(
+			true,
+			'2025-01-15T10:30:00Z',
+			array( 'account_name' => 'Test Account', 'plan' => 'gold' )
+		);
+		$this->assertTrue( $repository->save( $connection ) );
+
+		$result = \CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+			array(
+				'provider'           => 'mailchimp',
+				'mailchimp_api_key'  => $encrypted,
+				'mailchimp_audience' => 'aud-new',
+			)
+		);
+
+		$this->assertTrue( $result );
+
+		$saved = $repository->get( 'mailchimp' );
+		$this->assertNotNull( $saved );
+		$this->assertSame( $encrypted, $saved->api_key() );
+		$this->assertSame( 'aud-new', $saved->audience_id() );
+		$this->assertTrue( $saved->is_verified() );
+		$this->assertSame( '2025-01-15T10:30:00Z', $saved->last_verified_at() );
+		$this->assertSame( array( 'account_name' => 'Test Account', 'plan' => 'gold' ), $saved->account_details() );
+		$this->assertSame( \CampaignBridge\Domain\Campaign\Provider_Connection::SCHEMA_VERSION, $saved->schema_version() );
+	}
+
+	/**
+	 * Test that an invalid new Mailchimp API key is rejected.
+	 */
+	public function test_invalid_new_key_is_rejected(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		\CampaignBridge\Core\Storage::update_option( 'campaignbridge_provider', 'html' );
+
+		$invalid_encrypted = \CampaignBridge\Core\Encryption::encrypt( 'invalid-key-format' );
+		$result            = \CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+			array(
+				'provider'           => 'mailchimp',
+				'mailchimp_api_key'  => $invalid_encrypted,
+				'mailchimp_audience' => 'aud-123',
+			)
+		);
+
+		$this->assertFalse( $result );
+		$this->assertFalse( get_option( 'campaignbridge_provider_connection_mailchimp' ) );
+		$this->assertSame( 'html', get_option( 'campaignbridge_provider' ) );
+	}
+
+	/**
+	 * Test that reset-all cannot delete the provider connection without MANAGE_CONNECTIONS.
+	 */
+	public function test_reset_cannot_delete_connection_without_manage_connections(): void {
+		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create(
+			'mailchimp',
+			\CampaignBridge\Core\Encryption::encrypt( str_repeat( 'a', 32 ) . '-us1' ),
+			'aud-123'
+		);
+		$this->assertTrue( $repository->save( $connection ) );
+		$this->assertNotFalse( get_option( 'campaignbridge_provider_connection_mailchimp' ) );
+
+		$editor_id = $this->create_test_user( array( 'role' => 'editor' ) );
+		$editor    = new \WP_User( $editor_id );
+		$editor->add_cap( \CampaignBridge\Core\Capabilities::MANAGE );
+		wp_set_current_user( $editor_id );
+
+		$this->assertFalse( current_user_can( \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS ) );
+		$this->assertNotFalse( get_option( 'campaignbridge_provider_connection_mailchimp' ) );
+	}
+
+	/**
+	 * Test that a valid Mailchimp API key is encrypted and persisted correctly.
+	 */
+	public function test_provider_screen_encrypts_credentials(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$plaintext_key = str_repeat( 'a', 32 ) . '-us1';
+		$encrypted_key = \CampaignBridge\Core\Encryption::encrypt( $plaintext_key );
+
+		$result = \CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+			array(
+				'provider'           => 'mailchimp',
+				'mailchimp_api_key'  => $encrypted_key,
+				'mailchimp_audience' => 'aud-789',
+			)
+		);
+
+		$this->assertTrue( $result );
+
+		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$saved      = $repository->get( 'mailchimp' );
+		$this->assertNotNull( $saved );
+		$this->assertSame( $encrypted_key, $saved->api_key() );
+		$this->assertNotSame( $plaintext_key, $saved->api_key() );
+		$this->assertTrue( \CampaignBridge\Core\Encryption::is_encrypted_value( $saved->api_key() ) );
+		$this->assertSame( 'aud-789', $saved->audience_id() );
+		$this->assertSame( 'mailchimp', get_option( 'campaignbridge_provider' ) );
+	}
+
+	/**
+	 * Test that the uninstall cleanup uses the correct option key.
+	 */
+	public function test_uninstall_cleanup_uses_correct_option_key(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+
+		$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', 'encrypted-key-abc', 'aud-123' );
+		$this->assertTrue( $repository->save( $connection ) );
+
+		$option_key = \CampaignBridge\Core\Storage_Prefixes::get_option_key( 'provider_connection_mailchimp' );
+		$this->assertSame( 'campaignbridge_provider_connection_mailchimp', $option_key );
+
+		$raw = get_option( 'campaignbridge_provider_connection_mailchimp' );
+		$this->assertIsArray( $raw );
+		$this->assertSame( 'mailchimp', $raw['provider_slug'] );
+
+		$this->assertContains( 'campaignbridge_provider_connection_mailchimp', \CampaignBridge\Core\Storage_Prefixes::INDIVIDUAL_OPTIONS );
+	}
+
+	/**
+	 * Test that the repository delete method cleans up the option.
+	 */
+	public function test_repository_delete_cleans_up_option(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+
+		$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', 'encrypted-key-abc', 'aud-123' );
+		$this->assertTrue( $repository->save( $connection ) );
+		$this->assertNotFalse( get_option( 'campaignbridge_provider_connection_mailchimp' ) );
+
+		$this->assertTrue( $repository->delete( 'mailchimp' ) );
+		$this->assertFalse( get_option( 'campaignbridge_provider_connection_mailchimp' ) );
 	}
 
 	/**
@@ -422,8 +616,7 @@ class Settings_Persistence_Test extends Test_Case {
 			'campaignbridge_from_email',
 			'campaignbridge_reply_to',
 			'campaignbridge_provider',
-			'campaignbridge_mailchimp_api_key',
-			'campaignbridge_mailchimp_audience',
+			'campaignbridge_provider_connection_mailchimp',
 			'campaignbridge_debug_mode',
 			'campaignbridge_log_level',
 			'campaignbridge_cache_duration',
