@@ -16,6 +16,7 @@ namespace CampaignBridge\REST;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_Error;
+use CampaignBridge\Core\Capabilities;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -34,7 +35,7 @@ abstract class Abstract_Rest_Controller {
 	 * @return bool True if user has required capability.
 	 */
 	public static function can_manage(): bool {
-		return \current_user_can( Rest_Constants::MANAGE_CAPABILITY );
+		return \current_user_can( Capabilities::MANAGE );
 	}
 
 	/**

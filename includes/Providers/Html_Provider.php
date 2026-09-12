@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Providers;
 
+use CampaignBridge\Domain\Campaign\Connection_Result;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -54,10 +56,9 @@ class Html_Provider extends Abstract_Provider {
 	 *
 	 * @param array<string, mixed> $settings Provider settings (unused).
 	 */
-	public function verify_connection( array $settings ): array|\WP_Error {
-		return array(
-			'provider' => $this->slug(),
-			'verified' => true,
+	public function verify_connection( array $settings ): Connection_Result {
+		return Connection_Result::success(
+			array( 'provider' => $this->slug() )
 		);
 	}
 

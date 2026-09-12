@@ -80,12 +80,7 @@ final class Campaign_State_Machine {
 	public static function assert_transition( string $from, string $to ): void {
 		if ( ! self::can_transition( $from, $to ) ) {
 			throw new \InvalidArgumentException(
-				sprintf(
-					/* translators: 1: source state, 2: target state */
-					__( 'Campaign state transition from %1$s to %2$s is not allowed.', 'campaignbridge' ),
-					$from,
-					$to
-				)
+				sprintf( 'Campaign state transition from %s to %s is not allowed.', $from, $to )
 			);
 		}
 	}

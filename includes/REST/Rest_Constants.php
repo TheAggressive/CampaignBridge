@@ -57,11 +57,6 @@ class Rest_Constants {
 	public const HTTP_FORBIDDEN             = 403;
 
 	/**
-	 * Required capability for managing plugin settings.
-	 */
-	public const MANAGE_CAPABILITY = 'campaignbridge_manage';
-
-	/**
 	 * Query defaults for posts endpoint.
 	 */
 	public const POSTS_PER_PAGE = 100;

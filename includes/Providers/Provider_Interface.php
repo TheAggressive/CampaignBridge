@@ -2,7 +2,7 @@
 /**
  * Provider Interface for CampaignBridge Email Service Providers.
  *
- * Provider metadata, settings validation, and discovery.
+ * Provider metadata, settings validation, and connectivity verification.
  * Campaign compilation belongs to the email workflow.
  *
  * @package CampaignBridge
@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Providers;
 
+use CampaignBridge\Domain\Campaign\Connection_Result;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -20,6 +22,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 // phpcs:disable WordPress.Files.FileName, WordPress.Classes.ClassFileName, Generic.WhiteSpace.DisallowSpaceIndent
 /**
  * Provider interface for CampaignBridge providers.
+ *
+ * Every provider adapter identifies itself, validates its configuration,
+ * and verifies connectivity. Failures are normalized into
+ * {@see \CampaignBridge\Domain\Campaign\Provider_Error} values carried
+ * inside a {@see Connection_Result}.
  */
 interface Provider_Interface {
 
@@ -58,80 +65,8 @@ interface Provider_Interface {
 	/**
 	 * Verify that the configured provider account is reachable and authorized.
 	 *
-	 * @param array<string, mixed> $settings Validated provider settings.
-	 * @return array<string, mixed>|\WP_Error Normalized account details or an error.
+	 * @param array<string, mixed> $settings Validated provider settings (plaintext credentials).
+	 * @return Connection_Result Normalized verification outcome.
 	 */
-	public function verify_connection( array $settings ): array|\WP_Error;
-
-
-
-	/**
-	 * Get available template section keys for content mapping.
-	 *
-	 * Returns an array of section identifiers that this provider supports
-	 * for template mapping. These keys correspond to sections in email
-	 * templates where dynamic content can be inserted.
-	 *
-	 * Examples: ['header', 'body', 'footer'] or ['content', 'sidebar']
-	 *
-	 * @param array<string, mixed> $settings Plugin settings array (for provider-specific logic).
-	 * @param bool                 $refresh  Force refresh of cached data.
-	 * @return array<string>|\WP_Error Array of section key strings, or WP_Error if unsupported/unavailable.
-	 */
-	public function get_section_keys( array $settings, bool $refresh = false );
-
-	/**
-	 * Get rate limiting policy for this provider.
-	 *
-	 * @return array<string, mixed> Array with 'bucket' and 'max_per_minute' keys.
-	 */
-	public function rate_limit_policy(): array;
-
-	/**
-	 * Get settings schema for validation and redaction.
-	 *
-	 * @return array<string, mixed> Schema array with field definitions.
-	 */
-	public function settings_schema(): array;
-
-	/**
-	 * Redact sensitive settings for display/logging.
-	 *
-	 * @param array<string, mixed> $settings Raw settings array.
-	 * @return array<string, mixed> Redacted settings array.
-	 */
-	public function redact_settings( array $settings ): array;
-
-	/**
-	 * Get provider capabilities and supported features.
-	 *
-	 * Keys represent working CampaignBridge operations, not theoretical features
-	 * offered by the remote provider.
-	 *
-	 * @return array<string, mixed> Array of supported features. Examples:
-	 *               ['audiences' => true, 'templates' => true, 'scheduling' => false]
-	 */
-	public function get_capabilities(): array;
-
-	/**
-	 * Get API key validation pattern for this provider.
-	 *
-	 * Returns a regex pattern used to validate API keys specific to this provider.
-	 * This ensures that only valid API keys for the provider are accepted during
-	 * configuration and migration processes.
-	 *
-	 * @return string Regex pattern for API key validation.
-	 */
-	public function get_api_key_pattern(): string;
-
-	/**
-	 * Sanitize provider-specific settings based on schema.
-	 *
-	 * Validates and sanitizes settings according to the provider's schema definition.
-	 * This ensures that only valid, properly formatted settings are stored and used.
-	 *
-	 * @param array<string, mixed> $settings Raw settings array to sanitize.
-	 * @return array<string, mixed> Sanitized settings array.
-	 */
-	public function sanitize_settings( array $settings ): array;
+	public function verify_connection( array $settings ): Connection_Result;
 }
