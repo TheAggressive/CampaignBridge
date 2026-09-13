@@ -13,7 +13,6 @@ return array(
 	'position'       => 10,
 	'product_header' => true,
 	'show_journey'   => true,
-	'description'    => __( 'Configure your email campaign settings and integrations.', 'campaignbridge' ),
 	'assets'         => array(
 		'asset_styles' => array(
 			'campaignbridge-settings' => 'dist/styles/admin/screens/settings.asset.php',

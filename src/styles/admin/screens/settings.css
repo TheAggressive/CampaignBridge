@@ -61,7 +61,6 @@
 .campaignbridge-product-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
   align-items: center;
   column-gap: 20px;
   padding: 16px 0 14px;
@@ -73,15 +72,14 @@
   &__identity h1 {
     grid-column: 1;
     grid-row: 1;
-    align-self: end;
-    margin: 0 0 6px;
+    margin: 0;
     padding: 0;
     line-height: 0;
   }
   /*
    * The official logo file keeps empty canvas around its artwork: 24% of its
    * height above and below, and 32.8% of its height to the left. Negative
-   * margins remove that space so the visible logo aligns with the text below.
+   * margins remove that space so the visible logo aligns with the page content.
    */
   &__identity h1 img {
     --cb-logo-height: 76px;
@@ -92,17 +90,9 @@
       calc(var(--cb-logo-height) * -0.2394)
       calc(var(--cb-logo-height) * -0.3277);
   }
-  &__identity p {
-    grid-column: 1;
-    grid-row: 2;
-    align-self: start;
-    margin: 0;
-    color: var(--cb-muted);
-    font-size: 13px;
-  }
   &__actions {
     grid-column: 2;
-    grid-row: 1 / 3;
+    grid-row: 1;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -126,17 +116,9 @@
     margin: 0 0 16px;
   }
 
-  &:has(.notice) &__identity h1 {
-    grid-row: 2;
-  }
-  &:has(.notice) &__identity p {
-    grid-row: 3;
-  }
+  &:has(.notice) &__identity h1,
   &:has(.notice) &__actions {
-    grid-row: 2 / 4;
-  }
-  &:has(.notice) {
-    grid-template-rows: auto auto auto;
+    grid-row: 2;
   }
 }
 
@@ -984,7 +966,6 @@
   .campaignbridge-product-header__identity h1 img {
     --cb-logo-height: 50px;
   }
-  .campaignbridge-product-header__identity p,
   .campaignbridge-version {
     display: none;
   }
