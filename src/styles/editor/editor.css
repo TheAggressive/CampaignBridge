@@ -150,14 +150,16 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
 
 /* Custom header styling */
 .cb-editor {
+  /* Equal flexible side tracks keep the center toolbar centered, while their
+     content-sized minimum prevents it from covering the header actions. */
   &__header {
     align-items: center;
     background: #fff;
     border-bottom: 1px solid #ddd;
-    display: flex;
+    display: grid;
     flex: 0 0 auto;
     gap: 12px;
-    justify-content: space-between;
+    grid-template-columns: 1fr auto 1fr;
     min-height: var(--cb-editor-header-height);
     padding: 8px 12px;
     position: relative;
@@ -174,19 +176,15 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
   }
 
   &__header-left {
-    flex: 1 1 auto;
     min-width: 0;
   }
 
   &__header-center {
-    left: 50%;
     min-width: 0;
-    position: absolute;
-    transform: translateX(-50%);
   }
 
   &__header-actions {
-    flex: 0 0 auto;
+    justify-content: flex-end;
   }
 
   &__toolbar {
