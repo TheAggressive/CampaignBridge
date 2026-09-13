@@ -66,10 +66,13 @@ class CampaignBridge_Plugin {
 	/**
 	 * Minimum WordPress version required.
 	 *
+	 * Written as WordPress reports its own release versions ("7.1", not
+	 * "7.1.0"): version_compare() treats "7.1" as older than "7.1.0".
+	 *
 	 * @since 0.1.0
 	 * @var string
 	 */
-	public const MIN_WP_VERSION = '7.1.0';
+	public const MIN_WP_VERSION = '7.1';
 
 	/**
 	 * Plugin path.
