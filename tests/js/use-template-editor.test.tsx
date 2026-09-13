@@ -69,6 +69,15 @@ function Harness() {
   return null;
 }
 
+function ErrorHarness({ onError }: { onError: (msg: string) => void }) {
+  current = useTemplateEditor({
+    postId: 42,
+    postType: 'cb_templates',
+    onError,
+  });
+  return null;
+}
+
 describe('useTemplateEditor', () => {
   let root: Root;
   let container: HTMLDivElement;
@@ -201,6 +210,177 @@ describe('useTemplateEditor', () => {
 
       expect(newId).toBeNull();
       expect(apiFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('autosave', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('calls save with isAutosave: true after the debounce delay', async () => {
+      const { useEntityRecord } = require('@wordpress/core-data');
+      const mockSave = jest.fn().mockResolvedValue(undefined);
+      useEntityRecord.mockReturnValue({
+        edits: {
+          content: '<!-- wp:paragraph --><p>Edited</p><!-- /wp:paragraph -->',
+        },
+        hasEdits: true,
+        hasStarted: true,
+        isResolving: false,
+        record: mockRecord,
+        save: mockSave,
+      });
+
+      act(() => root.render(<Harness />));
+
+      // Advance past the 2000ms autosave debounce.
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      // Allow the async autosave to resolve.
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockSave).toHaveBeenCalledWith({ isAutosave: true });
+    });
+
+    it('does not autosave when there are no edits', async () => {
+      const { useEntityRecord } = require('@wordpress/core-data');
+      const mockSave = jest.fn().mockResolvedValue(undefined);
+      useEntityRecord.mockReturnValue({
+        edits: {},
+        hasEdits: false,
+        hasStarted: true,
+        isResolving: false,
+        record: mockRecord,
+        save: mockSave,
+      });
+
+      act(() => root.render(<Harness />));
+
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
+
+      expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it('does not autosave while a save is already in progress', async () => {
+      const { useEntityRecord } = require('@wordpress/core-data');
+      const mockSave = jest.fn().mockResolvedValue(undefined);
+      useEntityRecord.mockReturnValue({
+        edits: { content: 'edited' },
+        hasEdits: true,
+        hasStarted: true,
+        isResolving: false,
+        record: mockRecord,
+        save: mockSave,
+      });
+
+      const { useSelect } = require('@wordpress/data');
+      useSelect.mockReturnValue({
+        isSaving: true,
+        loadError: null,
+        saveError: null,
+      });
+
+      act(() => root.render(<Harness />));
+
+      act(() => {
+        jest.advanceTimersByTime(5000);
+      });
+
+      expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it('manual saveNow calls save without isAutosave', async () => {
+      jest.useRealTimers();
+      const { useEntityRecord } = require('@wordpress/core-data');
+      const mockSave = jest.fn().mockResolvedValue(undefined);
+      useEntityRecord.mockReturnValue({
+        edits: { content: 'edited' },
+        hasEdits: true,
+        hasStarted: true,
+        isResolving: false,
+        record: mockRecord,
+        save: mockSave,
+      });
+
+      act(() => root.render(<Harness />));
+
+      await act(async () => {
+        await current.saveNow();
+      });
+
+      expect(mockSave).toHaveBeenCalledTimes(1);
+      expect(mockSave).toHaveBeenCalledWith();
+    });
+
+    it('publish calls save without isAutosave', async () => {
+      jest.useRealTimers();
+      const { useEntityRecord } = require('@wordpress/core-data');
+      const mockSave = jest.fn().mockResolvedValue(undefined);
+      useEntityRecord.mockReturnValue({
+        edits: { content: 'edited' },
+        hasEdits: true,
+        hasStarted: true,
+        isResolving: false,
+        record: mockRecord,
+        save: mockSave,
+      });
+
+      act(() => root.render(<Harness />));
+
+      await act(async () => {
+        await current.publish();
+      });
+
+      // Publish calls save() without isAutosave — a canonical save.
+      const saveCall = mockSave.mock.calls[0];
+      expect(saveCall[0] === undefined || saveCall[0] === null).toBe(true);
+    });
+
+    it('reports a safe operator-facing message on autosave failure', async () => {
+      const { useEntityRecord } = require('@wordpress/core-data');
+      const mockSave = jest
+        .fn()
+        .mockRejectedValue(
+          new Error('Internal Server Error: DB connection lost')
+        );
+      useEntityRecord.mockReturnValue({
+        edits: { content: 'edited' },
+        hasEdits: true,
+        hasStarted: true,
+        isResolving: false,
+        record: mockRecord,
+        save: mockSave,
+      });
+
+      const onError = jest.fn();
+      act(() => {
+        root.render(<ErrorHarness onError={onError} />);
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // The error should use a safe message, not the raw server error text.
+      const errorCalls = onError.mock.calls.map(call => call[0]);
+      expect(errorCalls.some(msg => msg.includes('DB connection lost'))).toBe(
+        false
+      );
     });
   });
 

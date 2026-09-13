@@ -77,19 +77,28 @@ export function useTemplateEditor({
   const wasSavingRef = useRef(false);
   const lastSaveErrorRef = useRef<unknown>(null);
 
+  // WordPress-native autosave: POSTs to /autosaves endpoint, preserves status,
+  // does not create a revision. The useEntityRecord save function accepts
+  // options (isAutosave, throwOnError) even though the type omits them.
+  const autosave = useCallback(async () => {
+    await (save as (opts?: { isAutosave?: boolean }) => Promise<void>)({
+      isAutosave: true,
+    });
+  }, [save]);
+
   useEffect(() => {
     if (!hasEdits || isResolving || isSaving) {
       return;
     }
 
     const timer = window.setTimeout(() => {
-      void save().catch(() => {
+      void autosave().catch(() => {
         // The core-data error selector drives the visible error state.
       });
     }, AUTOSAVE_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [edits, hasEdits, isResolving, isSaving, save]);
+  }, [edits, hasEdits, isResolving, isSaving, autosave]);
 
   useEffect(() => {
     if (wasSavingRef.current && !isSaving && !saveError && !hasEdits) {
@@ -101,11 +110,8 @@ export function useTemplateEditor({
 
   useEffect(() => {
     if (saveError && saveError !== lastSaveErrorRef.current) {
-      const message =
-        saveError instanceof Error
-          ? saveError.message
-          : 'Failed to save template changes.';
-      onError?.(message);
+      // Use a safe operator-facing message; never surface raw server error text.
+      onError?.('Template changes could not be saved. Please try again.');
     }
 
     lastSaveErrorRef.current = saveError;

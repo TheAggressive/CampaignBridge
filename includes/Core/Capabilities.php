@@ -59,7 +59,7 @@ final class Capabilities {
 	 * Increment this constant when the set of capabilities changes so that
 	 * existing installations are repaired on the next admin request.
 	 */
-	public const SCHEMA_VERSION = 3;
+	public const SCHEMA_VERSION = 1;
 
 	/**
 	 * Option name that stores the last-applied capability schema version.
