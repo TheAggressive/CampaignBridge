@@ -19,7 +19,7 @@ automation suite. Read `ROADMAP.md` before expanding product scope.
 
 - Version: `package.json` is the tracked source and `pnpm version:sync` updates
   the plugin header and `CampaignBridge_Plugin::VERSION`.
-- Minimum runtime: WordPress 7.1 and PHP 8.4.
+- Minimum runtime: WordPress 6.5 and PHP 8.2.
 - CI test target: see `.github/workflows/ci.yml`; do not hardcode it in docs.
 - Node 24 and pnpm 11 are pinned by `package.json` and CI.
 - Namespace: `CampaignBridge\\`.

@@ -38,8 +38,8 @@ and third-party frontend blocks are not valid compiler input.
 
 ## Requirements
 
-- WordPress 7.1 or newer.
-- PHP 8.4 or newer.
+- WordPress 6.5 or newer.
+- PHP 8.2 or newer.
 - Node.js 24 and pnpm 11 for source builds and JavaScript development.
 - Composer and local MySQL server/client binaries for the PHP test suites.
 

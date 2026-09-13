@@ -1,7 +1,7 @@
 ---
 name: wp-block-themes
 description: 'Use when developing WordPress block themes: theme.json (global settings/styles), templates and template parts, patterns, style variations, and Site Editor troubleshooting (style hierarchy, overrides, caching).'
-compatibility: 'CampaignBridge is a plugin targeting WordPress 7.1+ and PHP 8.4+. Use this skill only for explicitly requested adjacent block-theme work.'
+compatibility: 'CampaignBridge is a plugin targeting WordPress 6.5+ and PHP 8.2+. Use this skill only for explicitly requested adjacent block-theme work.'
 ---
 
 # WP Block Themes

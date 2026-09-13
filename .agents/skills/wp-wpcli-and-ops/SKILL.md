@@ -1,7 +1,7 @@
 ---
 name: wp-wpcli-and-ops
 description: 'Use when working with WP-CLI (wp) for WordPress operations: safe search-replace, db export/import, plugin/theme/user/content management, cron, cache flushing, multisite, and scripting/automation with wp-cli.yml.'
-compatibility: 'CampaignBridge targets WordPress 7.1+ and PHP 8.4+. The local browser site uses WordPress Studio; PHPUnit uses native disposable fixtures.'
+compatibility: 'CampaignBridge targets WordPress 6.5+ and PHP 8.2+. The local browser site uses WordPress Studio; PHPUnit uses native disposable fixtures.'
 ---
 
 # WP-CLI and Ops

@@ -1,7 +1,7 @@
 ---
 name: wp-plugin-development
 description: 'Use when developing WordPress plugins: architecture and hooks, activation/deactivation/uninstall, admin UI and Settings API, data storage, cron/tasks, security (nonces/capabilities/sanitization/escaping), and release packaging.'
-compatibility: 'CampaignBridge targets WordPress 7.1+ and PHP 8.4+. Filesystem-based agent with bash + Node 24/pnpm 11. Some workflows require WordPress Studio or WP-CLI.'
+compatibility: 'CampaignBridge targets WordPress 6.5+ and PHP 8.2+. Filesystem-based agent with bash + Node 24/pnpm 11. Some workflows require WordPress Studio or WP-CLI.'
 ---
 
 # WP Plugin Development

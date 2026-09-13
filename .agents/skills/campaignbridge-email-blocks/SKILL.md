@@ -1,7 +1,7 @@
 ---
 name: campaignbridge-email-blocks
 description: Design, implement, migrate, or review CampaignBridge email-native blocks and the deterministic compiler that renders them into compatible HTML and plain text. Use for block schemas, renderer registration, compiled previews, compatibility validation, and email golden fixtures; do not use for unrelated Gutenberg frontend blocks.
-compatibility: CampaignBridge; WordPress 7.1+; PHP 8.4+; Node 24 and pnpm 11.
+compatibility: CampaignBridge; WordPress 6.5+; PHP 8.2+; Node 24 and pnpm 11.
 ---
 
 # CampaignBridge email blocks
