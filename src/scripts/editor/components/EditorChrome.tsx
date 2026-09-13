@@ -77,6 +77,7 @@ function EditorChromeContent({
     blocks,
     duplicate,
     hasEdits,
+    isOperationPending,
     isResolving,
     loadError,
     onChange,
@@ -94,11 +95,14 @@ function EditorChromeContent({
   });
 
   const handleDuplicate = useCallback(async () => {
-    const newId = await duplicate();
-    if (newId !== null) {
-      onSelect(newId);
+    const result = await duplicate();
+    if (result.success && result.id) {
+      // Navigate only after exactly one copy was created.
+      onSelect(result.id);
+    } else if (result.error) {
+      errorNotice(result.error);
     }
-  }, [duplicate, onSelect]);
+  }, [duplicate, errorNotice, onSelect]);
 
   const {
     settings: editorSettings,
@@ -272,6 +276,7 @@ function EditorChromeContent({
               isOpen={revisionOpen}
               onRequestClose={handleRevisionClose}
               onRestore={restoreRevision}
+              hasEdits={hasEdits}
             />
             <InterfaceSkeleton
               className={skeletonClassName}
@@ -279,7 +284,10 @@ function EditorChromeContent({
                 <Header
                   list={list}
                   currentId={currentId}
-                  loading={loading || saveStatus === 'saving'}
+                  loading={
+                    loading || saveStatus === 'saving' || isOperationPending
+                  }
+                  isOperationPending={isOperationPending}
                   onSelect={handleTemplateSelect}
                   onNew={onNew}
                   isPrimaryOpen={isPrimaryOpen}

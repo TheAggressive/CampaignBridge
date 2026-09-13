@@ -267,6 +267,39 @@ describe('Header layout', () => {
       expect(publishButton?.hasAttribute('disabled')).toBe(true);
       expect(duplicateButton?.hasAttribute('disabled')).toBe(true);
     });
+
+    it('disables competing template actions while a duplicate or restore runs', () => {
+      act(() => {
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status='draft'
+            hasEdits={true}
+            saveStatus='dirty'
+            isOperationPending={true}
+          />
+        );
+      });
+
+      for (const selector of [
+        '.cb-editor__publish-button',
+        '.cb-editor__duplicate-button',
+        '.cb-editor__history-button',
+        '.cb-editor__save-button',
+      ]) {
+        expect(
+          container.querySelector(selector)?.hasAttribute('disabled')
+        ).toBe(true);
+      }
+    });
   });
 
   describe('status badge', () => {

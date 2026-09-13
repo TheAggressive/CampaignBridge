@@ -6,7 +6,8 @@ import { store as coreStore } from '@wordpress/core-data';
 import { dispatch } from '@wordpress/data';
 import {
   useTemplateEditor,
-  type UseTemplateEditor,
+  type DuplicateResult,
+  type RestoreResult,
 } from '../../src/scripts/editor/hooks/useTemplateEditor';
 
 jest.mock('@wordpress/api-fetch', () => ({
@@ -19,6 +20,15 @@ const mockBlockState = {
   blocks: [{ name: 'core/paragraph', attrs: {}, innerBlocks: [] }] as unknown[],
 };
 
+// The core-data state the hook reads at operation time.
+const mockCoreState = {
+  hasEdits: false,
+  isSaving: false,
+  rawRecord: undefined as Record<string, unknown> | undefined,
+};
+
+const mockRefetch = jest.fn();
+
 jest.mock('@wordpress/core-data', () => ({
   store: 'core/store',
   useEntityBlockEditor: () => [mockBlockState.blocks, jest.fn(), jest.fn()],
@@ -27,6 +37,12 @@ jest.mock('@wordpress/core-data', () => ({
 
 jest.mock('@wordpress/data', () => ({
   dispatch: jest.fn(),
+  resolveSelect: () => ({ getEntityRecord: mockRefetch }),
+  select: () => ({
+    getRawEntityRecord: () => mockCoreState.rawRecord,
+    hasEditsForEntityRecord: () => mockCoreState.hasEdits,
+    isSavingEntityRecord: () => mockCoreState.isSaving,
+  }),
   useSelect: jest.fn(),
 }));
 
@@ -41,30 +57,53 @@ const mockRecord = {
   content: '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->',
 };
 
-function setupEntityRecord() {
+// Raw values core-data holds for the saved template.
+const mockRawRecord = {
+  id: 42,
+  title: 'My Template',
+  status: 'publish',
+  content: '<!-- wp:paragraph --><p>Saved</p><!-- /wp:paragraph -->',
+  meta: { campaignbridge_subject: 'Saved subject' },
+};
+
+const UNSAVED_DUPLICATE = 'Save your changes before duplicating this template.';
+const UNSAVED_RESTORE = 'Save your changes before restoring a revision.';
+
+function setupEntityRecord(overrides: Record<string, unknown> = {}) {
   const { useEntityRecord } = require('@wordpress/core-data');
-  const mockSave = jest.fn().mockResolvedValue(true);
+  const save = jest.fn().mockResolvedValue(true);
   useEntityRecord.mockReturnValue({
     edits: {},
     hasEdits: false,
     hasStarted: true,
     isResolving: false,
     record: mockRecord,
-    save: mockSave,
+    save,
+    ...overrides,
   });
-  return mockSave;
+  return save;
 }
 
-function setupUseSelect() {
+function setupUseSelect(overrides: Record<string, unknown> = {}) {
   const { useSelect } = require('@wordpress/data');
   useSelect.mockReturnValue({
+    isAutosaving: false,
     isSaving: false,
     loadError: null,
     saveError: null,
+    ...overrides,
   });
 }
 
-let current: UseTemplateEditor;
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(settle => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
+let current: ReturnType<typeof useTemplateEditor>;
 function Harness() {
   current = useTemplateEditor({ postId: 42, postType: 'cb_templates' });
   return null;
@@ -83,21 +122,32 @@ describe('useTemplateEditor', () => {
   let root: Root;
   let container: HTMLDivElement;
   let mockSave: jest.Mock;
+  let coreDispatch: {
+    clearEntityRecordEdits: jest.Mock;
+    editEntityRecord: jest.Mock;
+    invalidateResolution: jest.Mock;
+  };
 
   beforeEach(() => {
     (
       globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
     jest.mocked(apiFetch).mockReset();
+    mockRefetch.mockReset().mockResolvedValue(mockRawRecord);
     mockBlockState.blocks = [
       { name: 'core/paragraph', attrs: {}, innerBlocks: [] },
     ];
+    mockCoreState.hasEdits = false;
+    mockCoreState.isSaving = false;
+    mockCoreState.rawRecord = mockRawRecord;
     mockSave = setupEntityRecord();
     setupUseSelect();
-    jest.mocked(dispatch).mockReturnValue({
+    coreDispatch = {
+      clearEntityRecordEdits: jest.fn(),
       editEntityRecord: jest.fn(),
       invalidateResolution: jest.fn(),
-    } as any);
+    };
+    jest.mocked(dispatch).mockReturnValue(coreDispatch as any);
     container = document.createElement('div');
     root = createRoot(container);
     act(() => root.render(<Harness />));
@@ -107,15 +157,11 @@ describe('useTemplateEditor', () => {
 
   describe('publish', () => {
     it('dispatches editEntityRecord with publish status then saves', async () => {
-      const dispatchMock = jest.mocked(dispatch);
-      const dispatchReturn = dispatchMock(coreStore as any) as any;
-
       await act(async () => {
-        const result = await current.publish();
-        expect(result).toBe(true);
+        expect(await current.publish()).toBe(true);
       });
 
-      expect(dispatchReturn.editEntityRecord).toHaveBeenCalledWith(
+      expect(coreDispatch.editEntityRecord).toHaveBeenCalledWith(
         'postType',
         'cb_templates',
         42,
@@ -128,92 +174,331 @@ describe('useTemplateEditor', () => {
       mockSave.mockRejectedValue(new Error('Save failed'));
 
       await act(async () => {
-        const result = await current.publish();
-        expect(result).toBe(false);
+        expect(await current.publish()).toBe(false);
       });
     });
 
     it('returns false when already saving', async () => {
-      const { useSelect } = require('@wordpress/data');
-      useSelect.mockReturnValue({
-        isSaving: true,
-        loadError: null,
-        saveError: null,
-      });
-
+      setupUseSelect({ isSaving: true });
       act(() => root.render(<Harness />));
 
       await act(async () => {
-        const result = await current.publish();
-        expect(result).toBe(false);
+        expect(await current.publish()).toBe(false);
       });
       expect(mockSave).not.toHaveBeenCalled();
     });
   });
 
   describe('duplicate', () => {
-    it('creates a copy via apiFetch and invalidates the template list resolver', async () => {
+    it('copies the saved template when core-data reports it clean', async () => {
       jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
 
-      const dispatchMock = jest.mocked(dispatch);
-      const dispatchReturn = dispatchMock(coreStore as any) as any;
-
-      let newId: number | null = null;
+      let result: DuplicateResult = { success: false };
       await act(async () => {
-        newId = await current.duplicate();
+        result = await current.duplicate();
       });
 
-      expect(newId).toBe(99);
+      expect(result).toEqual({ success: true, id: 99 });
+      expect(apiFetch).toHaveBeenCalledTimes(1);
       expect(apiFetch).toHaveBeenCalledWith({
         path: '/wp/v2/cb_templates',
         method: 'POST',
         data: {
           status: 'draft',
-          content: mockRecord.content,
+          content: mockRawRecord.content,
           title: 'My Template (Copy)',
+          meta: mockRawRecord.meta,
         },
       });
-      expect(dispatchReturn.invalidateResolution).toHaveBeenCalledWith(
+      expect(coreDispatch.invalidateResolution).toHaveBeenCalledWith(
         'getEntityRecords',
         ['postType', 'cb_templates', expect.objectContaining({ per_page: 100 })]
       );
     });
 
-    it('returns null when apiFetch fails', async () => {
-      jest.mocked(apiFetch).mockRejectedValue(new Error('Network error'));
+    it('refuses without a request while core-data reports unsaved edits', async () => {
+      mockCoreState.hasEdits = true;
 
-      const dispatchMock = jest.mocked(dispatch);
-      const dispatchReturn = dispatchMock(coreStore as any) as any;
-
-      let newId: number | null = null;
+      let result: DuplicateResult = { success: true };
       await act(async () => {
-        newId = await current.duplicate();
+        result = await current.duplicate();
       });
 
-      expect(newId).toBeNull();
-      expect(dispatchReturn.invalidateResolution).not.toHaveBeenCalled();
+      expect(result).toEqual({ success: false, error: UNSAVED_DUPLICATE });
+      expect(apiFetch).not.toHaveBeenCalled();
+      expect(coreDispatch.invalidateResolution).not.toHaveBeenCalled();
     });
 
-    it('returns null when no record is loaded', async () => {
-      const { useEntityRecord } = require('@wordpress/core-data');
-      useEntityRecord.mockReturnValue({
-        edits: {},
-        hasEdits: false,
-        hasStarted: true,
-        isResolving: false,
-        record: null,
-        save: jest.fn(),
+    it('ignores a request while a save is running', async () => {
+      mockCoreState.isSaving = true;
+
+      let result: DuplicateResult = { success: true };
+      await act(async () => {
+        result = await current.duplicate();
       });
 
+      expect(result).toEqual({ success: false });
+      expect(apiFetch).not.toHaveBeenCalled();
+    });
+
+    it('sends one create request when called twice at once', async () => {
+      const request = deferred<{ id: number }>();
+      jest.mocked(apiFetch).mockReturnValue(request.promise as any);
+
+      let first: Promise<DuplicateResult> = Promise.resolve({ success: false });
+      let second: DuplicateResult = { success: true };
+      await act(async () => {
+        first = current.duplicate();
+        second = await current.duplicate();
+        request.resolve({ id: 99 });
+      });
+
+      expect(second).toEqual({ success: false });
+      expect(await first).toEqual({ success: true, id: 99 });
+      expect(apiFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a safe failure and invalidates nothing when creation fails', async () => {
+      jest
+        .mocked(apiFetch)
+        .mockRejectedValue(new Error('SQLSTATE[HY000] raw database error'));
+
+      let result: DuplicateResult = { success: true };
+      await act(async () => {
+        result = await current.duplicate();
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'This template could not be duplicated.',
+      });
+      expect(coreDispatch.invalidateResolution).not.toHaveBeenCalled();
+    });
+
+    it('fails without a request when no saved record is loaded', async () => {
+      mockCoreState.rawRecord = undefined;
+
+      let result: DuplicateResult = { success: true };
+      await act(async () => {
+        result = await current.duplicate();
+      });
+
+      expect(result.success).toBe(false);
+      expect(apiFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restoreRevision', () => {
+    it('restores, waits for the refetch, then drops stale editor edits', async () => {
+      jest.mocked(apiFetch).mockResolvedValue({ success: true } as any);
+
+      let result: RestoreResult = { success: false };
+      await act(async () => {
+        result = await current.restoreRevision(7);
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(apiFetch).toHaveBeenCalledTimes(1);
+      expect(apiFetch).toHaveBeenCalledWith({
+        path: '/campaignbridge/v1/templates/42/revisions/7/restore',
+        method: 'POST',
+      });
+      expect(coreDispatch.invalidateResolution).toHaveBeenCalledWith(
+        'getEntityRecord',
+        ['postType', 'cb_templates', 42]
+      );
+      expect(mockRefetch).toHaveBeenCalledWith('postType', 'cb_templates', 42);
+      expect(coreDispatch.clearEntityRecordEdits).toHaveBeenCalledWith(
+        'postType',
+        'cb_templates',
+        42
+      );
+      expect(
+        coreDispatch.clearEntityRecordEdits.mock.invocationCallOrder[0]
+      ).toBeGreaterThan(mockRefetch.mock.invocationCallOrder[0]);
+    });
+
+    it('refuses without a request or invalidation while core-data reports unsaved edits', async () => {
+      mockCoreState.hasEdits = true;
+
+      let result: RestoreResult = { success: true };
+      await act(async () => {
+        result = await current.restoreRevision(7);
+      });
+
+      expect(result).toEqual({ success: false, error: UNSAVED_RESTORE });
+      expect(apiFetch).not.toHaveBeenCalled();
+      expect(coreDispatch.invalidateResolution).not.toHaveBeenCalled();
+      expect(coreDispatch.clearEntityRecordEdits).not.toHaveBeenCalled();
+    });
+
+    it('ignores a request while a save is running', async () => {
+      mockCoreState.isSaving = true;
+
+      let result: RestoreResult = { success: true };
+      await act(async () => {
+        result = await current.restoreRevision(7);
+      });
+
+      expect(result).toEqual({ success: false });
+      expect(apiFetch).not.toHaveBeenCalled();
+    });
+
+    it('sends one restore request when called twice at once', async () => {
+      const request = deferred<unknown>();
+      jest.mocked(apiFetch).mockReturnValue(request.promise as any);
+
+      let first: Promise<RestoreResult> = Promise.resolve({ success: false });
+      let second: RestoreResult = { success: true };
+      await act(async () => {
+        first = current.restoreRevision(7);
+        second = await current.restoreRevision(7);
+        request.resolve({ success: true });
+      });
+
+      expect(second).toEqual({ success: false });
+      expect(await first).toEqual({ success: true });
+      expect(apiFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns the failure and leaves core-data untouched when the request fails', async () => {
+      jest.mocked(apiFetch).mockRejectedValue(new Error('Not found'));
+
+      let result: RestoreResult = { success: true };
+      await act(async () => {
+        result = await current.restoreRevision(7);
+      });
+
+      expect(result).toMatchObject({ success: false, error: 'Not found' });
+      expect(coreDispatch.invalidateResolution).not.toHaveBeenCalled();
+      expect(coreDispatch.clearEntityRecordEdits).not.toHaveBeenCalled();
+    });
+
+    it('keeps edits that exist once the restored record has loaded', async () => {
+      jest.mocked(apiFetch).mockResolvedValue({ success: true } as any);
+      mockRefetch.mockImplementation(async () => {
+        mockCoreState.hasEdits = true;
+        return mockRawRecord;
+      });
+
+      await act(async () => {
+        await current.restoreRevision(7);
+      });
+
+      expect(coreDispatch.clearEntityRecordEdits).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('canonical operations and saving', () => {
+    it('keeps duplicate and restore blocked when a save fails', async () => {
+      mockCoreState.hasEdits = true;
+      mockSave = setupEntityRecord({ hasEdits: true, edits: { content: 'x' } });
+      mockSave.mockRejectedValue(new Error('Save failed'));
       act(() => root.render(<Harness />));
 
-      let newId: number | null = null;
       await act(async () => {
-        newId = await current.duplicate();
+        expect(await current.saveNow()).toBe(false);
       });
 
-      expect(newId).toBeNull();
+      let duplicated: DuplicateResult = { success: true };
+      let restored: RestoreResult = { success: true };
+      await act(async () => {
+        duplicated = await current.duplicate();
+        restored = await current.restoreRevision(7);
+      });
+
+      expect(duplicated).toEqual({ success: false, error: UNSAVED_DUPLICATE });
+      expect(restored).toEqual({ success: false, error: UNSAVED_RESTORE });
       expect(apiFetch).not.toHaveBeenCalled();
+    });
+
+    it('allows duplicate and restore once a save leaves core-data clean', async () => {
+      mockCoreState.hasEdits = true;
+      mockSave = setupEntityRecord({ hasEdits: true, edits: { content: 'x' } });
+      mockSave.mockImplementation(async () => {
+        // core-data clears the edits the server persisted.
+        mockCoreState.hasEdits = false;
+      });
+      act(() => root.render(<Harness />));
+      jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
+
+      await act(async () => {
+        expect(await current.saveNow()).toBe(true);
+      });
+
+      let duplicated: DuplicateResult = { success: false };
+      let restored: RestoreResult = { success: false };
+      await act(async () => {
+        duplicated = await current.duplicate();
+        restored = await current.restoreRevision(7);
+      });
+
+      expect(duplicated).toEqual({ success: true, id: 99 });
+      expect(restored).toEqual({ success: true });
+    });
+
+    it('does not treat an autosave as a canonical save', async () => {
+      jest.useFakeTimers();
+      try {
+        mockCoreState.hasEdits = true;
+        mockSave = setupEntityRecord({
+          hasEdits: true,
+          edits: { content: 'x' },
+        });
+        act(() => root.render(<Harness />));
+
+        act(() => {
+          jest.advanceTimersByTime(2000);
+        });
+        await act(async () => {
+          await Promise.resolve();
+        });
+        expect(mockSave).toHaveBeenCalledWith({ isAutosave: true });
+
+        // A published template's autosave leaves core-data dirty.
+        let duplicated: DuplicateResult = { success: true };
+        let restored: RestoreResult = { success: true };
+        await act(async () => {
+          duplicated = await current.duplicate();
+          restored = await current.restoreRevision(7);
+        });
+
+        expect(duplicated).toEqual({
+          success: false,
+          error: UNSAVED_DUPLICATE,
+        });
+        expect(restored).toEqual({ success: false, error: UNSAVED_RESTORE });
+        expect(apiFetch).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('refuses Save and Publish while a duplicate is running', async () => {
+      const request = deferred<{ id: number }>();
+      jest.mocked(apiFetch).mockReturnValue(request.promise as any);
+      mockSave = setupEntityRecord({ hasEdits: true, edits: { content: 'x' } });
+      act(() => root.render(<Harness />));
+
+      let pending: Promise<DuplicateResult> = Promise.resolve({
+        success: false,
+      });
+      await act(async () => {
+        pending = current.duplicate();
+      });
+      expect(current.isOperationPending).toBe(true);
+
+      await act(async () => {
+        expect(await current.saveNow()).toBe(false);
+        expect(await current.publish()).toBe(false);
+      });
+      expect(mockSave).not.toHaveBeenCalled();
+
+      await act(async () => {
+        request.resolve({ id: 99 });
+        await pending;
+      });
+      expect(current.isOperationPending).toBe(false);
     });
   });
 
@@ -227,27 +512,17 @@ describe('useTemplateEditor', () => {
     });
 
     it('calls save with isAutosave: true after the debounce delay', async () => {
-      const { useEntityRecord } = require('@wordpress/core-data');
-      const mockSave = jest.fn().mockResolvedValue(undefined);
-      useEntityRecord.mockReturnValue({
+      mockSave = setupEntityRecord({
         edits: {
           content: '<!-- wp:paragraph --><p>Edited</p><!-- /wp:paragraph -->',
         },
         hasEdits: true,
-        hasStarted: true,
-        isResolving: false,
-        record: mockRecord,
-        save: mockSave,
       });
-
       act(() => root.render(<Harness />));
 
-      // Advance past the 2000ms autosave debounce.
       act(() => {
         jest.advanceTimersByTime(2000);
       });
-
-      // Allow the async autosave to resolve.
       await act(async () => {
         await Promise.resolve();
       });
@@ -256,17 +531,6 @@ describe('useTemplateEditor', () => {
     });
 
     it('does not autosave when there are no edits', async () => {
-      const { useEntityRecord } = require('@wordpress/core-data');
-      const mockSave = jest.fn().mockResolvedValue(undefined);
-      useEntityRecord.mockReturnValue({
-        edits: {},
-        hasEdits: false,
-        hasStarted: true,
-        isResolving: false,
-        record: mockRecord,
-        save: mockSave,
-      });
-
       act(() => root.render(<Harness />));
 
       act(() => {
@@ -277,24 +541,11 @@ describe('useTemplateEditor', () => {
     });
 
     it('does not autosave while a save is already in progress', async () => {
-      const { useEntityRecord } = require('@wordpress/core-data');
-      const mockSave = jest.fn().mockResolvedValue(undefined);
-      useEntityRecord.mockReturnValue({
+      mockSave = setupEntityRecord({
         edits: { content: 'edited' },
         hasEdits: true,
-        hasStarted: true,
-        isResolving: false,
-        record: mockRecord,
-        save: mockSave,
       });
-
-      const { useSelect } = require('@wordpress/data');
-      useSelect.mockReturnValue({
-        isSaving: true,
-        loadError: null,
-        saveError: null,
-      });
-
+      setupUseSelect({ isSaving: true });
       act(() => root.render(<Harness />));
 
       act(() => {
@@ -306,17 +557,10 @@ describe('useTemplateEditor', () => {
 
     it('manual saveNow calls save without isAutosave', async () => {
       jest.useRealTimers();
-      const { useEntityRecord } = require('@wordpress/core-data');
-      const mockSave = jest.fn().mockResolvedValue(undefined);
-      useEntityRecord.mockReturnValue({
+      mockSave = setupEntityRecord({
         edits: { content: 'edited' },
         hasEdits: true,
-        hasStarted: true,
-        isResolving: false,
-        record: mockRecord,
-        save: mockSave,
       });
-
       act(() => root.render(<Harness />));
 
       await act(async () => {
@@ -329,17 +573,10 @@ describe('useTemplateEditor', () => {
 
     it('publish calls save without isAutosave', async () => {
       jest.useRealTimers();
-      const { useEntityRecord } = require('@wordpress/core-data');
-      const mockSave = jest.fn().mockResolvedValue(undefined);
-      useEntityRecord.mockReturnValue({
+      mockSave = setupEntityRecord({
         edits: { content: 'edited' },
         hasEdits: true,
-        hasStarted: true,
-        isResolving: false,
-        record: mockRecord,
-        save: mockSave,
       });
-
       act(() => root.render(<Harness />));
 
       await act(async () => {
@@ -352,18 +589,10 @@ describe('useTemplateEditor', () => {
     });
 
     it('does not re-arm autosave when a save attempt finishes with unchanged edits', async () => {
-      const { useEntityRecord } = require('@wordpress/core-data');
-      const { useSelect } = require('@wordpress/data');
-      const mockSave = jest.fn().mockResolvedValue(undefined);
-      useEntityRecord.mockReturnValue({
+      mockSave = setupEntityRecord({
         edits: { content: 'edited' },
         hasEdits: true,
-        hasStarted: true,
-        isResolving: false,
-        record: mockRecord,
-        save: mockSave,
       });
-
       act(() => root.render(<Harness />));
       act(() => {
         jest.advanceTimersByTime(2000);
@@ -371,19 +600,9 @@ describe('useTemplateEditor', () => {
       expect(mockSave).toHaveBeenCalledTimes(1);
 
       // Published autosaves and failed autosaves both leave the entity dirty.
-      useSelect.mockReturnValue({
-        isAutosaving: true,
-        isSaving: true,
-        loadError: null,
-        saveError: null,
-      });
+      setupUseSelect({ isAutosaving: true, isSaving: true });
       act(() => root.render(<Harness />));
-      useSelect.mockReturnValue({
-        isAutosaving: false,
-        isSaving: false,
-        loadError: null,
-        saveError: null,
-      });
+      setupUseSelect();
       act(() => root.render(<Harness />));
       act(() => {
         jest.advanceTimersByTime(10000);
@@ -403,7 +622,6 @@ describe('useTemplateEditor', () => {
     });
 
     it('does not report manual-save success when an autosave completes', () => {
-      const { useSelect } = require('@wordpress/data');
       const onSave = jest.fn();
       function SaveHarness() {
         current = useTemplateEditor({
@@ -414,54 +632,27 @@ describe('useTemplateEditor', () => {
         return null;
       }
 
-      useSelect.mockReturnValue({
-        isAutosaving: true,
-        isSaving: true,
-        loadError: null,
-        saveError: null,
-      });
+      setupUseSelect({ isAutosaving: true, isSaving: true });
       act(() => root.render(<SaveHarness />));
-      useSelect.mockReturnValue({
-        isAutosaving: false,
-        isSaving: false,
-        loadError: null,
-        saveError: null,
-      });
+      setupUseSelect();
       act(() => root.render(<SaveHarness />));
       expect(onSave).not.toHaveBeenCalled();
 
-      useSelect.mockReturnValue({
-        isAutosaving: false,
-        isSaving: true,
-        loadError: null,
-        saveError: null,
-      });
+      setupUseSelect({ isSaving: true });
       act(() => root.render(<SaveHarness />));
-      useSelect.mockReturnValue({
-        isAutosaving: false,
-        isSaving: false,
-        loadError: null,
-        saveError: null,
-      });
+      setupUseSelect();
       act(() => root.render(<SaveHarness />));
       expect(onSave).toHaveBeenCalledTimes(1);
     });
 
     it('reports a safe operator-facing message on autosave failure', async () => {
-      const { useEntityRecord } = require('@wordpress/core-data');
-      const mockSave = jest
-        .fn()
-        .mockRejectedValue(
-          new Error('Internal Server Error: DB connection lost')
-        );
-      useEntityRecord.mockReturnValue({
+      mockSave = setupEntityRecord({
         edits: { content: 'edited' },
         hasEdits: true,
-        hasStarted: true,
-        isResolving: false,
-        record: mockRecord,
-        save: mockSave,
       });
+      mockSave.mockRejectedValue(
+        new Error('Internal Server Error: DB connection lost')
+      );
 
       const onError = jest.fn();
       act(() => {
@@ -483,43 +674,7 @@ describe('useTemplateEditor', () => {
       );
     });
   });
-
-  describe('restoreRevision', () => {
-    it('calls the restore endpoint and invalidates the entity record', async () => {
-      jest.mocked(apiFetch).mockResolvedValue({} as any);
-
-      const dispatchMock = jest.mocked(dispatch);
-      const dispatchReturn = dispatchMock(coreStore as any) as any;
-
-      let result: { success: boolean; error?: string } = { success: false };
-      await act(async () => {
-        result = await current.restoreRevision(7);
-      });
-
-      expect(result).toEqual({ success: true });
-      expect(apiFetch).toHaveBeenCalledWith({
-        path: '/campaignbridge/v1/templates/42/revisions/7/restore',
-        method: 'POST',
-      });
-      expect(dispatchReturn.invalidateResolution).toHaveBeenCalledWith(
-        'getEntityRecord',
-        ['postType', 'cb_templates', 42]
-      );
-    });
-
-    it('returns failure with error message when the restore request fails', async () => {
-      jest.mocked(apiFetch).mockRejectedValue(new Error('Not found'));
-
-      const dispatchMock = jest.mocked(dispatch);
-      const dispatchReturn = dispatchMock(coreStore as any) as any;
-
-      let result: { success: boolean; error?: string } = { success: true };
-      await act(async () => {
-        result = await current.restoreRevision(7);
-      });
-
-      expect(result).toMatchObject({ success: false, error: 'Not found' });
-      expect(dispatchReturn.invalidateResolution).not.toHaveBeenCalled();
-    });
-  });
 });
+
+// Keep the coreStore import referenced for the mocked module contract.
+void coreStore;

@@ -84,6 +84,8 @@ interface HeaderProps {
   saveStatus?: SaveStatus;
   onOpenPreview?: () => void;
   onOpenHistory?: () => void;
+  /** A duplicate or revision restore is running. */
+  isOperationPending?: boolean;
 }
 
 export default function Header({
@@ -104,8 +106,11 @@ export default function Header({
   saveStatus = 'saved',
   onOpenPreview = () => {},
   onOpenHistory = () => {},
+  isOperationPending = false,
 }: HeaderProps): JSX.Element {
   const isSaving = saveStatus === 'saving';
+  // Competing template actions wait for a save, duplicate, or restore.
+  const actionsLocked = isSaving || isOperationPending;
   const isDraft = status === 'draft' || status === undefined;
   const saveLabel = isSaving
     ? __('Saving…', 'campaignbridge')
@@ -162,7 +167,7 @@ export default function Header({
             className='cb-editor__publish-button'
             variant='primary'
             onClick={() => void onPublish()}
-            disabled={isSaving}
+            disabled={actionsLocked}
             isBusy={isSaving}
             aria-label={publishLabel}
           >
@@ -173,7 +178,7 @@ export default function Header({
           className='cb-editor__duplicate-button'
           variant='tertiary'
           onClick={() => void onDuplicate()}
-          disabled={isSaving}
+          disabled={actionsLocked}
           aria-label={__('Duplicate template', 'campaignbridge')}
         >
           {__('Duplicate', 'campaignbridge')}
@@ -183,7 +188,7 @@ export default function Header({
           variant='tertiary'
           icon={time}
           onClick={onOpenHistory}
-          disabled={isSaving}
+          disabled={actionsLocked}
           aria-label={__('View revision history', 'campaignbridge')}
         />
         <PreviewButton onClick={onOpenPreview} />
@@ -191,7 +196,7 @@ export default function Header({
           className='cb-editor__save-button'
           variant={isDraft ? 'secondary' : 'primary'}
           onClick={() => void onSave()}
-          disabled={!hasEdits || isSaving}
+          disabled={!hasEdits || actionsLocked}
           isBusy={isSaving}
           aria-label={saveLabel}
         >

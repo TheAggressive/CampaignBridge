@@ -5,8 +5,9 @@ import {
   useEntityBlockEditor,
   useEntityRecord,
 } from '@wordpress/core-data';
-import { dispatch, useSelect } from '@wordpress/data';
-import { useCallback, useEffect, useRef } from '@wordpress/element';
+import { dispatch, resolveSelect, select, useSelect } from '@wordpress/data';
+import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import type { SaveStatus } from '../types';
 import { TEMPLATE_LIST_QUERY } from './useTemplates';
 
@@ -17,6 +18,7 @@ interface TemplateRecord {
   title: string | { raw?: string; rendered?: string };
   status: string;
   content: string;
+  excerpt?: string;
   meta?: Record<string, unknown>;
 }
 
@@ -34,6 +36,21 @@ interface UseTemplateEditorOptions {
 
   onError?: (message: string) => void;
 }
+
+export interface DuplicateResult {
+  success: boolean;
+  id?: number;
+  /** Operator-facing message; absent when a request is simply ignored. */
+  error?: string;
+}
+
+export interface RestoreResult {
+  success: boolean;
+  /** Operator-facing message; absent when a request is simply ignored. */
+  error?: string;
+}
+
+type CanonicalOperation = 'duplicate' | 'restore';
 
 /**
  * Bind the standalone email editor to WordPress's core-data entity lifecycle.
@@ -83,6 +100,10 @@ export function useTemplateEditor({
   const wasAutosavingRef = useRef(false);
   const lastSaveErrorRef = useRef<unknown>(null);
   const lastAutosaveSourceRef = useRef<readonly unknown[] | null>(null);
+  // A ref blocks a second call in the same tick; the state drives the UI.
+  const operationRef = useRef<CanonicalOperation | null>(null);
+  const [pendingOperation, setPendingOperation] =
+    useState<CanonicalOperation | null>(null);
 
   // WordPress-native autosave: POSTs to /autosaves endpoint, preserves status,
   // does not create a revision. The useEntityRecord save function accepts
@@ -99,7 +120,7 @@ export function useTemplateEditor({
   // another autosave; selection changes and save-time content serialization
   // do not.
   const editedTitle = edits?.title;
-  const editedExcerpt = (edits as Record<string, unknown> | undefined)?.excerpt;
+  const editedExcerpt = edits?.excerpt;
   const editedMeta = edits?.meta;
 
   useEffect(() => {
@@ -171,12 +192,51 @@ export function useTemplateEditor({
     return () => window.removeEventListener('beforeunload', warnBeforeUnload);
   }, [hasEdits]);
 
+  /**
+   * Duplicate and restore act on the saved template. They refuse while
+   * core-data reports unsaved canonical edits (a recovery autosave does not
+   * clear those), while a save is running, or while another of them runs.
+   * State is read from core-data at call time so no caller can bypass it.
+   */
+  const canonicalOperationBlocker = useCallback(():
+    'busy' | 'unsaved' | null => {
+    const core = select(coreStore) as any;
+
+    if (
+      operationRef.current ||
+      core.isSavingEntityRecord('postType', postType, postId)
+    ) {
+      return 'busy';
+    }
+
+    return core.hasEditsForEntityRecord('postType', postType, postId)
+      ? 'unsaved'
+      : null;
+  }, [postId, postType]);
+
+  const runCanonicalOperation = useCallback(
+    async <T>(
+      operation: CanonicalOperation,
+      task: () => Promise<T>
+    ): Promise<T> => {
+      operationRef.current = operation;
+      setPendingOperation(operation);
+      try {
+        return await task();
+      } finally {
+        operationRef.current = null;
+        setPendingOperation(null);
+      }
+    },
+    []
+  );
+
   const saveNow = useCallback(async () => {
     if (!hasEdits) {
       return true;
     }
 
-    if (isSaving) {
+    if (isSaving || operationRef.current) {
       return false;
     }
 
@@ -190,7 +250,7 @@ export function useTemplateEditor({
   }, [hasEdits, isSaving, save]);
 
   const publish = useCallback(async () => {
-    if (isSaving) {
+    if (isSaving || operationRef.current) {
       return false;
     }
 
@@ -206,64 +266,128 @@ export function useTemplateEditor({
     }
   }, [postType, postId, isSaving, save]);
 
-  const duplicate = useCallback(async (): Promise<number | null> => {
-    if (!record) {
-      return null;
+  const duplicate = useCallback(async (): Promise<DuplicateResult> => {
+    const blocker = canonicalOperationBlocker();
+    if ('busy' === blocker) {
+      return { success: false };
+    }
+    if ('unsaved' === blocker) {
+      return {
+        success: false,
+        error: __(
+          'Save your changes before duplicating this template.',
+          'campaignbridge'
+        ),
+      };
+    }
+
+    const failed: DuplicateResult = {
+      success: false,
+      error: __('This template could not be duplicated.', 'campaignbridge'),
+    };
+
+    // The template is clean, so the saved record is the canonical state the
+    // operator sees.
+    const saved = (select(coreStore) as any).getRawEntityRecord(
+      'postType',
+      postType,
+      postId
+    ) as TemplateRecord | undefined;
+    if (!saved) {
+      return failed;
     }
 
     const title =
-      typeof record.title === 'string'
-        ? record.title
-        : record.title.raw || record.title.rendered || 'Untitled';
+      typeof saved.title === 'string'
+        ? saved.title
+        : saved.title?.raw || saved.title?.rendered || 'Untitled';
 
-    try {
-      const newTemplate = await apiFetch<{ id: number }>({
-        path: `/wp/v2/${postType}`,
-        method: 'POST',
-        data: {
-          status: 'draft',
-          content: record.content,
-          title: `${title} (Copy)`,
-          meta: record.meta,
-        },
-      });
-      // Invalidate the template list resolver so useTemplates re-fetches.
-      dispatch(coreStore).invalidateResolution('getEntityRecords', [
-        'postType',
-        postType,
-        TEMPLATE_LIST_QUERY,
-      ]);
-      return newTemplate.id;
-    } catch {
-      return null;
-    }
-  }, [record, postType]);
+    return runCanonicalOperation('duplicate', async () => {
+      try {
+        const newTemplate = await apiFetch<{ id: number }>({
+          path: `/wp/v2/${postType}`,
+          method: 'POST',
+          data: {
+            status: 'draft',
+            content: saved.content,
+            title: `${title} (Copy)`,
+            meta: saved.meta,
+          },
+        });
+        // Invalidate the template list resolver so useTemplates re-fetches.
+        dispatch(coreStore).invalidateResolution('getEntityRecords', [
+          'postType',
+          postType,
+          TEMPLATE_LIST_QUERY,
+        ]);
+        return { success: true, id: newTemplate.id };
+      } catch {
+        return failed;
+      }
+    });
+  }, [canonicalOperationBlocker, postId, postType, runCanonicalOperation]);
 
   const restoreRevision = useCallback(
-    async (
-      revisionId: number
-    ): Promise<{ success: boolean; error?: string }> => {
-      try {
-        await apiFetch({
-          path: `/campaignbridge/v1/templates/${postId}/revisions/${revisionId}/restore`,
-          method: 'POST',
-        });
-        // Invalidate the entity record so the editor re-fetches restored content.
-        dispatch(coreStore).invalidateResolution('getEntityRecord', [
+    async (revisionId: number): Promise<RestoreResult> => {
+      const blocker = canonicalOperationBlocker();
+      if ('busy' === blocker) {
+        return { success: false };
+      }
+      if ('unsaved' === blocker) {
+        return {
+          success: false,
+          error: __(
+            'Save your changes before restoring a revision.',
+            'campaignbridge'
+          ),
+        };
+      }
+
+      return runCanonicalOperation('restore', async () => {
+        try {
+          await apiFetch({
+            path: `/campaignbridge/v1/templates/${postId}/revisions/${revisionId}/restore`,
+            method: 'POST',
+          });
+        } catch (err: unknown) {
+          const message =
+            err && typeof err === 'object' && 'message' in err
+              ? String((err as { message: string }).message)
+              : __('Failed to restore revision.', 'campaignbridge');
+          return { success: false, error: message };
+        }
+
+        const core = dispatch(coreStore) as any;
+        core.invalidateResolution('getEntityRecord', [
           'postType',
           postType,
           postId,
         ]);
+        await (resolveSelect(coreStore) as any).getEntityRecord(
+          'postType',
+          postType,
+          postId
+        );
+
+        // The editor keeps parsed blocks as a transient edit that core-data
+        // prefers over the refetched record, which would leave the replaced
+        // content on screen. The template was clean before the restore and
+        // the history modal blocks editing during it; clear only if that
+        // still holds.
+        if (
+          !(select(coreStore) as any).hasEditsForEntityRecord(
+            'postType',
+            postType,
+            postId
+          )
+        ) {
+          core.clearEntityRecordEdits('postType', postType, postId);
+        }
+
         return { success: true };
-      } catch (err: unknown) {
-        const message =
-          err && typeof err === 'object' && 'message' in err
-            ? String((err as { message: string }).message)
-            : 'Failed to restore revision.';
-        return { success: false, error: message };
-      }
+      });
     },
-    [postType, postId]
+    [canonicalOperationBlocker, postType, postId, runCanonicalOperation]
   );
 
   const saveStatus: SaveStatus = saveError
@@ -278,6 +402,7 @@ export function useTemplateEditor({
     blocks: (rawBlocks ?? []) as Block[],
     duplicate,
     hasEdits,
+    isOperationPending: pendingOperation !== null,
     isResolving: isResolving || !hasStarted,
     loadError,
     onChange,

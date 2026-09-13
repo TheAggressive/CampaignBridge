@@ -1,8 +1,8 @@
 import apiFetch from '@wordpress/api-fetch';
-import { Button, Modal, Spinner } from '@wordpress/components';
+import { Button, Modal, Notice, Spinner } from '@wordpress/components';
 import { time } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
-import { useCallback, useEffect, useState } from '@wordpress/element';
+import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 
 interface Revision {
   id: number;
@@ -30,6 +30,8 @@ interface RevisionHistoryProps {
   onRestore: (
     revisionId: number
   ) => Promise<{ success: boolean; error?: string }>;
+  /** The template has unsaved canonical edits, so restore cannot proceed. */
+  hasEdits?: boolean;
 }
 
 function formatRevisionDate(dateStr: string): string {
@@ -53,6 +55,7 @@ export default function RevisionHistory({
   isOpen,
   onRequestClose,
   onRestore,
+  hasEdits = false,
 }: RevisionHistoryProps): JSX.Element | null {
   const [revisions, setRevisions] = useState<Revision[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +63,8 @@ export default function RevisionHistory({
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  // Blocks a second confirm in the same tick, before the busy state renders.
+  const restoringRef = useRef(false);
 
   const fetchRevisions = useCallback(async () => {
     setIsLoading(true);
@@ -87,17 +92,24 @@ export default function RevisionHistory({
 
   const handleRestore = useCallback(
     async (revisionId: number) => {
+      if (restoringRef.current) {
+        return;
+      }
+
+      restoringRef.current = true;
       setRestoringId(revisionId);
       setRestoreError(null);
-      const result = await onRestore(revisionId);
-      setRestoringId(null);
-      setConfirmId(null);
-      if (result.success) {
-        onRequestClose();
-      } else {
-        setRestoreError(
-          result.error || __('Failed to restore revision.', 'campaignbridge')
-        );
+      try {
+        const result = await onRestore(revisionId);
+        if (result.success) {
+          onRequestClose();
+        } else if (result.error) {
+          setRestoreError(result.error);
+        }
+      } finally {
+        restoringRef.current = false;
+        setRestoringId(null);
+        setConfirmId(null);
       }
     },
     [onRestore, onRequestClose]
@@ -127,6 +139,19 @@ export default function RevisionHistory({
       }
     >
       <div className='cb-editor__revision-list'>
+        {hasEdits && (
+          <Notice
+            status='warning'
+            isDismissible={false}
+            className='cb-editor__revision-unsaved'
+          >
+            {__(
+              'You have unsaved changes. Save them before restoring a revision.',
+              'campaignbridge'
+            )}
+          </Notice>
+        )}
+
         {isLoading && revisions === null && (
           <div className='cb-editor__revision-loading'>
             <Spinner />
