@@ -104,19 +104,35 @@ final class Template_Routes extends Abstract_Rest_Controller {
 			return self::create_error( 'revision_is_autosave', __( 'Autosaves cannot be restored as template revisions.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
 		}
 
-		// WordPress restores the post fields and, through its
+		// WordPress restores the post fields and then, through its
 		// `wp_restore_post_revision` action, every meta key registered with
-		// `revisions_enabled`. The template meta registration is the only list.
+		// `revisions_enabled`. That action fires only after the post update
+		// succeeds, so a failed restore writes no meta. The template meta
+		// registration is the only list of revisioned keys.
 		//
-		// Core copies that meta only after wp_update_post() has already saved
-		// the restored state as a new revision, so that revision would pair the
-		// restored content with the replaced meta. Restoring the revisioned
-		// meta first, with core's own function, keeps history truthful.
-		\wp_restore_post_revision_meta( $template_id, $revision_id );
-		$result = \wp_restore_post_revision( $revision_id );
-		if ( is_wp_error( $result ) ) {
+		// The post update would also save a revision before that meta is copied
+		// back, pairing the restored content with the replaced meta. Defer that
+		// one revision for this template until the restore has completed.
+		$defer_revision = static function ( bool $post_has_changed, \WP_Post $latest_revision, \WP_Post $post ) use ( $template_id ): bool {
+			unset( $latest_revision );
+			return $template_id === $post->ID ? false : $post_has_changed;
+		};
+
+		\add_filter( 'wp_save_post_revision_post_has_changed', $defer_revision, PHP_INT_MAX, 3 );
+		try {
+			$result = \wp_restore_post_revision( $revision_id );
+		} finally {
+			\remove_filter( 'wp_save_post_revision_post_has_changed', $defer_revision, PHP_INT_MAX );
+		}
+
+		// WordPress reports failure as null, false, 0, or a WP_Error; success is
+		// exactly the restored template's ID.
+		if ( $template_id !== $result ) {
 			return self::create_error( 'restore_failed', __( 'The revision could not be restored.', 'campaignbridge' ), Rest_Constants::HTTP_INTERNAL_SERVER_ERROR );
 		}
+
+		// Record the fully restored content and meta as the newest revision.
+		\wp_save_post_revision( $template_id );
 
 		return new WP_REST_Response(
 			array(

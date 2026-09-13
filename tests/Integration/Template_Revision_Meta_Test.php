@@ -191,6 +191,53 @@ final class Template_Revision_Meta_Test extends Test_Case {
 		$this->assert_revisioned_meta_state( $newest->ID, 0 );
 	}
 
+	public function test_a_failed_restore_changes_nothing_and_reports_failure(): void {
+		$template_id = $this->create_template();
+		$this->save_state( $template_id, 0 );
+		$this->save_state( $template_id, 1 );
+		$revision_a     = $this->revision_with_content( $template_id, $this->content( 0 ) );
+		$meta_before    = $this->stored_template_meta( $template_id );
+		$history_before = array_keys( wp_get_post_revisions( $template_id ) );
+
+		// Make WordPress's own post update inside wp_restore_post_revision() fail.
+		add_filter( 'wp_insert_post_empty_content', '__return_true' );
+		try {
+			$response = $this->restore( $template_id, $revision_a->ID );
+		} finally {
+			remove_filter( 'wp_insert_post_empty_content', '__return_true' );
+		}
+
+		self::assertSame( 500, $response->get_status() );
+		self::assertSame( 'restore_failed', $response->get_data()['code'] );
+		self::assertArrayNotHasKey( 'success', $response->get_data() );
+		self::assertSame( $this->content( 1 ), get_post( $template_id )->post_content );
+		// Every template meta field keeps its exact values and presence.
+		self::assertSame( $meta_before, $this->stored_template_meta( $template_id ) );
+		self::assertSame( $history_before, array_keys( wp_get_post_revisions( $template_id ) ) );
+
+		// Nothing the failed attempt set up lingers: the next restore succeeds.
+		self::assertSame( 200, $this->restore( $template_id, $revision_a->ID )->get_status() );
+		self::assertSame( $this->content( 0 ), get_post( $template_id )->post_content );
+		$this->assert_revisioned_meta_state( $template_id, 0 );
+	}
+
+	/**
+	 * Capture every template meta field's stored values, or null when absent.
+	 *
+	 * @param int $template_id Template ID.
+	 * @return array<string, array<int, mixed>|null>
+	 */
+	private function stored_template_meta( int $template_id ): array {
+		$stored = array();
+		foreach ( array_keys( array_merge( self::REVISIONED, self::NOT_REVISIONED ) ) as $key ) {
+			$stored[ $key ] = metadata_exists( 'post', $template_id, $key )
+				? get_post_meta( $template_id, $key )
+				: null;
+		}
+
+		return $stored;
+	}
+
 	/**
 	 * Create an empty published template through the core REST endpoint.
 	 */
