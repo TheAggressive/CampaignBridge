@@ -16,7 +16,9 @@ interface RevisionHistoryProps {
   postType: string;
   isOpen: boolean;
   onRequestClose: () => void;
-  onRestore: (revisionId: number) => Promise<boolean>;
+  onRestore: (
+    revisionId: number
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 function formatRevisionDate(dateStr: string): string {
@@ -44,6 +46,7 @@ export default function RevisionHistory({
   const [revisions, setRevisions] = useState<Revision[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
 
@@ -67,17 +70,23 @@ export default function RevisionHistory({
       void fetchRevisions();
       setConfirmId(null);
       setRestoringId(null);
+      setRestoreError(null);
     }
   }, [isOpen, fetchRevisions]);
 
   const handleRestore = useCallback(
     async (revisionId: number) => {
       setRestoringId(revisionId);
-      const success = await onRestore(revisionId);
+      setRestoreError(null);
+      const result = await onRestore(revisionId);
       setRestoringId(null);
       setConfirmId(null);
-      if (success) {
+      if (result.success) {
         onRequestClose();
+      } else {
+        setRestoreError(
+          result.error || __('Failed to restore revision.', 'campaignbridge')
+        );
       }
     },
     [onRestore, onRequestClose]
@@ -132,49 +141,56 @@ export default function RevisionHistory({
             </p>
           )}
 
-        {!isLoading &&
-          !error &&
-          revisions !== null &&
-          revisions.map(revision => (
-            <li key={revision.id} className='cb-editor__revision-item'>
-              <span className='cb-editor__revision-date'>
-                {formatRevisionDate(revision.date)}
-              </span>
-              <span className='cb-editor__revision-actions'>
-                {confirmId === revision.id ? (
-                  <>
-                    <span className='cb-editor__revision-confirm'>
-                      {__('Restore this version?', 'campaignbridge')}
-                    </span>
+        {restoreError && (
+          <p className='cb-editor__revision-error' role='alert'>
+            {restoreError}
+          </p>
+        )}
+
+        {!isLoading && !error && revisions !== null && revisions.length > 0 && (
+          <ul className='cb-editor__revision-items'>
+            {revisions.map(revision => (
+              <li key={revision.id} className='cb-editor__revision-item'>
+                <span className='cb-editor__revision-date'>
+                  {formatRevisionDate(revision.date)}
+                </span>
+                <span className='cb-editor__revision-actions'>
+                  {confirmId === revision.id ? (
+                    <>
+                      <span className='cb-editor__revision-confirm'>
+                        {__('Restore this version?', 'campaignbridge')}
+                      </span>
+                      <Button
+                        variant='primary'
+                        onClick={() => void handleRestore(revision.id)}
+                        isBusy={restoringId === revision.id}
+                        disabled={restoringId !== null}
+                        className='cb-editor__revision-restore-confirm'
+                      >
+                        {__('Restore', 'campaignbridge')}
+                      </Button>
+                      <Button
+                        variant='tertiary'
+                        onClick={() => setConfirmId(null)}
+                        disabled={restoringId !== null}
+                      >
+                        {__('Cancel', 'campaignbridge')}
+                      </Button>
+                    </>
+                  ) : (
                     <Button
-                      variant='primary'
-                      onClick={() => void handleRestore(revision.id)}
-                      isBusy={restoringId === revision.id}
+                      variant='secondary'
+                      onClick={() => setConfirmId(revision.id)}
                       disabled={restoringId !== null}
-                      className='cb-editor__revision-restore-confirm'
                     >
                       {__('Restore', 'campaignbridge')}
                     </Button>
-                    <Button
-                      variant='tertiary'
-                      onClick={() => setConfirmId(null)}
-                      disabled={restoringId !== null}
-                    >
-                      {__('Cancel', 'campaignbridge')}
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant='secondary'
-                    onClick={() => setConfirmId(revision.id)}
-                    disabled={restoringId !== null}
-                  >
-                    {__('Restore', 'campaignbridge')}
-                  </Button>
-                )}
-              </span>
-            </li>
-          ))}
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </Modal>
   );

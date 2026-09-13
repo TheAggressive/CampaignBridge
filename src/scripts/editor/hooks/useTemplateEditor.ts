@@ -178,6 +178,7 @@ export function useTemplateEditor({
           status: 'draft',
           content: record.content,
           title: `${title} (Copy)`,
+          meta: record.meta,
         },
       });
       // Invalidate the template list resolver so useTemplates re-fetches.
@@ -193,10 +194,12 @@ export function useTemplateEditor({
   }, [record, postType]);
 
   const restoreRevision = useCallback(
-    async (revisionId: number): Promise<boolean> => {
+    async (
+      revisionId: number
+    ): Promise<{ success: boolean; error?: string }> => {
       try {
         await apiFetch({
-          path: `/wp/v2/${postType}/${postId}/revisions/${revisionId}/restore`,
+          path: `/campaignbridge/v1/templates/${postId}/revisions/${revisionId}/restore`,
           method: 'POST',
         });
         // Invalidate the entity record so the editor re-fetches restored content.
@@ -205,9 +208,13 @@ export function useTemplateEditor({
           postType,
           postId,
         ]);
-        return true;
-      } catch {
-        return false;
+        return { success: true };
+      } catch (err: unknown) {
+        const message =
+          err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: string }).message)
+            : 'Failed to restore revision.';
+        return { success: false, error: message };
       }
     },
     [postType, postId]

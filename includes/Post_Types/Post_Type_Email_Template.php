@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Post_Types;
 
+use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Core\Storage;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -239,7 +240,7 @@ class Post_Type_Email_Template {
 					'type'              => $config['type'],
 					'sanitize_callback' => $sanitize_callback,
 					'auth_callback'     => function () {
-						return \current_user_can( 'edit_posts' );
+						return \current_user_can( Capabilities::EDIT_TEMPLATES );
 					},
 				)
 			);

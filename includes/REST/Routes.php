@@ -100,6 +100,9 @@ class Routes extends Abstract_Rest_Controller {
 
 		// Register compiled preview routes.
 		self::$preview_routes->register();
+
+		// Register template revision restore routes.
+		( new Template_Routes() )->register();
 	}
 
 	/**

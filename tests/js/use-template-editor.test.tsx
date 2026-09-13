@@ -211,14 +211,14 @@ describe('useTemplateEditor', () => {
       const dispatchMock = jest.mocked(dispatch);
       const dispatchReturn = dispatchMock(coreStore as any) as any;
 
-      let result: boolean = false;
+      let result: { success: boolean; error?: string } = { success: false };
       await act(async () => {
         result = await current.restoreRevision(7);
       });
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ success: true });
       expect(apiFetch).toHaveBeenCalledWith({
-        path: '/wp/v2/cb_templates/42/revisions/7/restore',
+        path: '/campaignbridge/v1/templates/42/revisions/7/restore',
         method: 'POST',
       });
       expect(dispatchReturn.invalidateResolution).toHaveBeenCalledWith(
@@ -227,18 +227,18 @@ describe('useTemplateEditor', () => {
       );
     });
 
-    it('returns false when the restore request fails', async () => {
+    it('returns failure with error message when the restore request fails', async () => {
       jest.mocked(apiFetch).mockRejectedValue(new Error('Not found'));
 
       const dispatchMock = jest.mocked(dispatch);
       const dispatchReturn = dispatchMock(coreStore as any) as any;
 
-      let result: boolean = true;
+      let result: { success: boolean; error?: string } = { success: true };
       await act(async () => {
         result = await current.restoreRevision(7);
       });
 
-      expect(result).toBe(false);
+      expect(result).toMatchObject({ success: false, error: 'Not found' });
       expect(dispatchReturn.invalidateResolution).not.toHaveBeenCalled();
     });
   });
