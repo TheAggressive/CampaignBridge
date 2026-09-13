@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f99e9323f5f4edc958f18cc03957120f",
+    "content-hash": "770ae5a9caff935bd85c1b80770409fc",
     "packages": [],
     "packages-dev": [
         {
@@ -719,16 +719,16 @@
         },
         {
             "name": "php-stubs/wordpress-stubs",
-            "version": "v7.0.1",
+            "version": "v7.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-stubs/wordpress-stubs.git",
-                "reference": "4d0cc9d5c4efd2a46f8c53a40c38f1679a4194b6"
+                "reference": "394570301894799e69a4aa117c9c995427e3ba04"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-stubs/wordpress-stubs/zipball/4d0cc9d5c4efd2a46f8c53a40c38f1679a4194b6",
-                "reference": "4d0cc9d5c4efd2a46f8c53a40c38f1679a4194b6",
+                "url": "https://api.github.com/repos/php-stubs/wordpress-stubs/zipball/394570301894799e69a4aa117c9c995427e3ba04",
+                "reference": "394570301894799e69a4aa117c9c995427e3ba04",
                 "shasum": ""
             },
             "conflict": {
@@ -740,11 +740,11 @@
                 "php": "^7.4 || ^8.0",
                 "php-stubs/generator": "^0.9",
                 "phpdocumentor/reflection-docblock": "^6.0",
-                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan": "^2.2",
                 "phpunit/phpunit": "^9.5",
                 "symfony/polyfill-php80": "*",
-                "szepeviktor/phpcs-psr-12-neutron-hybrid-ruleset": "^1.1.1",
-                "wp-coding-standards/wpcs": "3.1.0 as 2.3.0"
+                "szepeviktor/phpcs-psr-12-neutron-hybrid-ruleset": "^1.2",
+                "wp-coding-standards/wpcs": "3.4.1 as 2.3.0"
             },
             "suggest": {
                 "paragonie/sodium_compat": "Pure PHP implementation of libsodium",
@@ -765,9 +765,9 @@
             ],
             "support": {
                 "issues": "https://github.com/php-stubs/wordpress-stubs/issues",
-                "source": "https://github.com/php-stubs/wordpress-stubs/tree/v7.0.1"
+                "source": "https://github.com/php-stubs/wordpress-stubs/tree/v7.1.0"
             },
-            "time": "2026-07-10T10:10:02+00:00"
+            "time": "2026-08-28T00:32:06+00:00"
         },
         {
             "name": "phpcsstandards/phpcsextra",
@@ -2855,16 +2855,16 @@
         },
         {
             "name": "wp-phpunit/wp-phpunit",
-            "version": "7.0.4",
+            "version": "7.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/wp-phpunit/wp-phpunit.git",
-                "reference": "0d17335392d78b12b3e7e6b519cd53db728df52a"
+                "reference": "797edc710afc958854852d859c93d9aa1de6447d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/wp-phpunit/wp-phpunit/zipball/0d17335392d78b12b3e7e6b519cd53db728df52a",
-                "reference": "0d17335392d78b12b3e7e6b519cd53db728df52a",
+                "url": "https://api.github.com/repos/wp-phpunit/wp-phpunit/zipball/797edc710afc958854852d859c93d9aa1de6447d",
+                "reference": "797edc710afc958854852d859c93d9aa1de6447d",
                 "shasum": ""
             },
             "type": "library",
@@ -2899,7 +2899,7 @@
                 "issues": "https://github.com/wp-phpunit/issues",
                 "source": "https://github.com/wp-phpunit/wp-phpunit"
             },
-            "time": "2026-07-10T02:38:55+00:00"
+            "time": "2026-08-20T00:59:59+00:00"
         },
         {
             "name": "yoast/phpunit-polyfills",
@@ -2971,11 +2971,11 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=8.2"
+        "php": ">=8.4"
     },
     "platform-dev": {},
     "platform-overrides": {
-        "php": "8.2.0"
+        "php": "8.4.0"
     },
     "plugin-api-version": "2.9.0"
 }
