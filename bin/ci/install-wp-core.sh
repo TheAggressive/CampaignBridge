@@ -4,7 +4,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-WP_VERSION="${CB_TESTS_WP_VERSION:-7.0.4}"
+WP_VERSION="${CB_TESTS_WP_VERSION:-7.1}"
 WP_DIR="${CB_TESTS_WP_DIR:-.cache/tests/wordpress}"
 WP_CLI="${CB_TESTS_TOOL_DIR:-.cache/tests}/wp"
 

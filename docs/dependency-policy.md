@@ -22,9 +22,10 @@ Some public packages intentionally stay on older major or minor lines:
 - Tailwind 4.1.17, postcss-nested 7.0.2, and postcss-lightningcss 1.0.2 are an
   exact pipeline: newer releases currently leave BEM suffix nesting unexpanded
   and fail the production CSS build.
-- WordPress core 7.0.4, wp-phpunit 7.0.4, and public stubs 7.0.1 are the newest
-  aligned releases with complete WordPress.org checksum coverage. WordPress 7.1
-  is deferred until its checksum manifest covers every file in its archive.
+- WordPress core 7.1, wp-phpunit 7.1.0, and public stubs 7.1.0 are one aligned
+  stack and move together. WordPress 7.1 is also the declared minimum, and its
+  WordPress.org checksum manifest verifies every file in its archive through
+  `bin/ci/install-wp-core.sh`.
 
 Dependabot groups non-major updates, applies cooldown periods, and opens review
 pull requests. Packages listed as compatibility locks are excluded from routine

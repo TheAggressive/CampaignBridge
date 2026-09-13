@@ -77,8 +77,8 @@ test('release packaging requires every runtime test gate', () => {
 
 test('CI exercises the declared minimum WordPress and PHP versions', () => {
   assert.match(ciWorkflow, /minimum-supported-wordpress:/u);
-  assert.match(ciWorkflow, /php-version: '8\.2'/u);
-  assert.match(ciWorkflow, /CB_TESTS_WP_VERSION: '6\.5'/u);
+  assert.match(ciWorkflow, /php-version: '8\.4'/u);
+  assert.match(ciWorkflow, /CB_TESTS_WP_VERSION: '7\.1'/u);
   assert.match(
     ciWorkflow,
     /needs\.minimum-supported-wordpress\.result != 'success'/u
