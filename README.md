@@ -1,4 +1,9 @@
-# CampaignBridge
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/CB_Horizontal_Color_Dark.svg">
+    <img src="assets/brand/CB_Horizontal_Color_Light.svg" alt="CampaignBridge" width="420">
+  </picture>
+</h1>
 
 CampaignBridge is a WordPress email-template editor and deterministic email
 compiler under active development. It turns a constrained Gutenberg block

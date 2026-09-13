@@ -294,7 +294,7 @@ class Screen_Registry {
 		?>
 		<header class="cb-admin-product-header campaignbridge-product-header">
 			<div class="campaignbridge-product-header__identity">
-				<span class="campaignbridge-product-header__mark" aria-hidden="true"><svg viewBox="0 0 24 24" role="img"><path d="M21.7 2.4a1 1 0 0 0-1.05-.16L2.8 10.55a1 1 0 0 0 .13 1.86l7.02 2.35 2.35 7.02a1 1 0 0 0 .9.68h.06a1 1 0 0 0 .9-.57L22.48 3.45a1 1 0 0 0-.78-1.05Zm-8.23 16.3-1.63-4.88 5.72-5.72-7.1 4.73-4.6-1.54 13.68-6.37-6.07 13.78Z"/></svg></span>
+				<span class="campaignbridge-product-header__mark" aria-hidden="true"><img src="<?php echo esc_url( \CampaignBridge\Admin\Brand_Assets::url( \CampaignBridge\Admin\Brand_Assets::HEADER_ICON ) ); ?>" alt="" width="29" height="29"></span>
 				<div>
 					<h1><?php echo esc_html( $config['page_title'] ); ?></h1>
 					<?php if ( ! empty( $config['description'] ) ) : ?>

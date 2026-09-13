@@ -96,14 +96,14 @@
     border-radius: 11px;
     display: grid;
     place-items: center;
-    color: #fff;
-    background: linear-gradient(145deg, #17a8f5, #0867e8);
-    box-shadow: 0 8px 20px rgb(8 103 232 / 20%);
+    /* CampaignBridge brand navy behind the white brand icon. */
+    background: #102a43;
+    box-shadow: 0 8px 20px rgb(16 42 67 / 22%);
   }
-  &__mark svg {
+  &__mark img {
+    display: block;
     width: 29px;
     height: 29px;
-    fill: currentcolor;
   }
   &__actions {
     grid-column: 3;
