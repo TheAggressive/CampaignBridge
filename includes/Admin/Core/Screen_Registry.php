@@ -294,13 +294,11 @@ class Screen_Registry {
 		?>
 		<header class="cb-admin-product-header campaignbridge-product-header">
 			<div class="campaignbridge-product-header__identity">
-				<span class="campaignbridge-product-header__mark" aria-hidden="true"><img src="<?php echo esc_url( \CampaignBridge\Admin\Brand_Assets::url( \CampaignBridge\Admin\Brand_Assets::HEADER_ICON ) ); ?>" alt="" width="29" height="29"></span>
-				<div>
-					<h1><?php echo esc_html( $config['page_title'] ); ?></h1>
-					<?php if ( ! empty( $config['description'] ) ) : ?>
-						<p><?php echo esc_html( $config['description'] ); ?></p>
-					<?php endif; ?>
-				</div>
+				<?php // The logo is the visible heading; its alt text keeps the page title for assistive technology. ?>
+				<h1><img src="<?php echo esc_url( \CampaignBridge\Admin\Brand_Assets::url( \CampaignBridge\Admin\Brand_Assets::HEADER_LOGO ) ); ?>" alt="<?php echo esc_attr( $config['page_title'] ); ?>" width="281" height="76"></h1>
+				<?php if ( ! empty( $config['description'] ) ) : ?>
+					<p><?php echo esc_html( $config['description'] ); ?></p>
+				<?php endif; ?>
 			</div>
 			<div class="campaignbridge-product-header__actions">
 				<span class="campaignbridge-version">v<?php echo esc_html( \CampaignBridge_Plugin::VERSION ); ?></span>

@@ -28,9 +28,10 @@ final class Brand_Assets {
 	public const MENU_ICON = 'CB_Icon_Mono_Dark.svg';
 
 	/**
-	 * White icon for the brand-colored mark in the admin product header.
+	 * Full-color horizontal logo for the admin product header, which sits on
+	 * the light admin background.
 	 */
-	public const HEADER_ICON = 'CB_Icon_Mono_Dark.svg';
+	public const HEADER_LOGO = 'CB_Horizontal_Color_Light.svg';
 
 	private const DIRECTORY = 'assets/brand/';
 

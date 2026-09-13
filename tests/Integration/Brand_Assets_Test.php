@@ -18,10 +18,10 @@ use CampaignBridge\Tests\Helpers\Test_Case;
  */
 final class Brand_Assets_Test extends Test_Case {
 	public function test_the_brand_files_used_by_the_admin_are_present(): void {
-		foreach ( array( Brand_Assets::MENU_ICON, Brand_Assets::HEADER_ICON ) as $file ) {
+		foreach ( array( Brand_Assets::MENU_ICON, Brand_Assets::HEADER_LOGO ) as $file ) {
 			self::assertFileIsReadable( Brand_Assets::path( $file ) );
 		}
-		self::assertStringEndsWith( '/assets/brand/' . Brand_Assets::HEADER_ICON, Brand_Assets::url( Brand_Assets::HEADER_ICON ) );
+		self::assertStringEndsWith( '/assets/brand/' . Brand_Assets::HEADER_LOGO, Brand_Assets::url( Brand_Assets::HEADER_LOGO ) );
 	}
 
 	public function test_the_menu_icon_is_the_monochrome_brand_svg_as_a_data_uri(): void {
