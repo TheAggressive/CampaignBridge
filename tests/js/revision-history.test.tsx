@@ -24,7 +24,12 @@ jest.mock('@wordpress/components', () => ({
       {children ?? text}
     </button>
   ),
-  Modal: ({ children }: any) => <div data-testid='modal'>{children}</div>,
+  Modal: ({ children, headerActions }: any) => (
+    <div data-testid='modal'>
+      {headerActions}
+      {children}
+    </div>
+  ),
   Notice: ({ children, className }: any) => (
     <div className={className}>{children}</div>
   ),
@@ -181,5 +186,56 @@ describe('RevisionHistory', () => {
     await act(async () => pending.resolve({ success: true }));
 
     expect(onRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a safe load failure and recovers when Refresh succeeds', async () => {
+    jest
+      .mocked(apiFetch)
+      .mockReset()
+      .mockRejectedValueOnce({ message: 'SQLSTATE[HY000] raw history failure' })
+      .mockResolvedValueOnce(REVISIONS as any);
+    await render({ onRestore: jest.fn() });
+
+    const alert = container.querySelector('[role="alert"]');
+    expect(alert?.textContent).toBe(
+      'Revision history could not be loaded. Please try again.'
+    );
+    expect(container.textContent).not.toContain('SQLSTATE');
+    expect(
+      container.querySelectorAll('.cb-editor__revision-item')
+    ).toHaveLength(0);
+
+    const refresh = container.querySelector(
+      '.cb-editor__revision-header-action'
+    ) as HTMLButtonElement;
+    expect(refresh.disabled).toBe(false);
+    await act(async () => refresh.click());
+
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(
+      container.querySelectorAll('.cb-editor__revision-item')
+    ).toHaveLength(1);
+  });
+
+  it('shows safe copy and clears the busy state when a restore rejects', async () => {
+    const onRestore = jest
+      .fn()
+      .mockRejectedValue(new Error('SQLSTATE[HY000] raw restore failure'));
+    const onRequestClose = jest.fn();
+    await render({ onRestore, onRequestClose });
+
+    const confirm = await confirmRestore();
+    await act(async () => confirm.click());
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      'This revision could not be restored. Please try again.'
+    );
+    expect(container.textContent).not.toContain('SQLSTATE');
+    expect(onRequestClose).not.toHaveBeenCalled();
+    // The list is usable again for a retry.
+    const restore = container.querySelector(
+      '.cb-editor__revision-item button'
+    ) as HTMLButtonElement;
+    expect(restore.disabled).toBe(false);
   });
 });

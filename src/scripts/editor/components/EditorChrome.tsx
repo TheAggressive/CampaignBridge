@@ -3,7 +3,7 @@ import { getBlockType } from '@wordpress/blocks';
 import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
 import { EntityProvider, useEntityProp } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { useEffect, useCallback, useState } from '@wordpress/element';
+import { useEffect, useCallback, useMemo, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import {
   ComplementaryArea,
@@ -15,13 +15,21 @@ import { LAYOUT_CONSTANTS, useEditorLayout } from '../hooks/useEditorLayout';
 import { useEditorSettings } from '../hooks/useEditorSettings';
 import { useNotices } from '../hooks/useNotices';
 import { SIDEBAR_CONSTANTS, useSidebarState } from '../hooks/useSidebarState';
-import { useTemplateEditor } from '../hooks/useTemplateEditor';
+import {
+  EDITOR_NOTICE_IDS,
+  editorMessages,
+  useTemplateEditor,
+} from '../hooks/useTemplateEditor';
 import { useEmailPreview } from '../hooks/useEmailPreview';
 import { blockPatternCategories, blockPatterns } from '../utils/blockPatterns';
 import Content from './Content';
 import EditorEffects from './EditorEffects';
 import EmailPreviewModal from './EmailPreviewModal';
-import { ErrorState, LoadingState } from './EditorStates';
+import {
+  ErrorState,
+  LoadingState,
+  type EditorStateAction,
+} from './EditorStates';
 import Footer from './Footer';
 import Header from './Header';
 import RevisionHistory from './RevisionHistory';
@@ -69,10 +77,6 @@ function EditorChromeContent({
   postType = 'post',
 }: EditorChromeProps): JSX.Element {
   const { success, error: errorNotice } = useNotices();
-  const handleSaveSuccess = useCallback(
-    () => success(__('Template saved.', 'campaignbridge')),
-    [success]
-  );
   const {
     blocks,
     duplicate,
@@ -80,6 +84,7 @@ function EditorChromeContent({
     isOperationPending,
     isResolving,
     loadError,
+    needsReload,
     onChange,
     onInput,
     publish,
@@ -90,7 +95,7 @@ function EditorChromeContent({
   } = useTemplateEditor({
     postId,
     postType,
-    onSave: handleSaveSuccess,
+    onSuccess: success,
     onError: errorNotice,
   });
 
@@ -100,7 +105,7 @@ function EditorChromeContent({
       // Navigate only after exactly one copy was created.
       onSelect(result.id);
     } else if (result.error) {
-      errorNotice(result.error);
+      errorNotice(result.error, { id: EDITOR_NOTICE_IDS.duplicate });
     }
   }, [duplicate, errorNotice, onSelect]);
 
@@ -173,6 +178,41 @@ function EditorChromeContent({
     [onSelect, postId, saveNow]
   );
 
+  const recoveryActions = useMemo((): EditorStateAction[] => {
+    const templateList = new URL(window.location.href);
+    templateList.searchParams.delete('post_id');
+
+    return [
+      {
+        label: __('Try again', 'campaignbridge'),
+        variant: 'primary',
+        onClick: () => window.location.reload(),
+      },
+      {
+        label: __('Back to templates', 'campaignbridge'),
+        variant: 'secondary',
+        href: templateList.toString(),
+      },
+    ];
+  }, []);
+
+  // The server restored a revision the editor could not load. Show no stale
+  // content that could be saved over the restore; only a reload continues.
+  if (needsReload) {
+    return (
+      <ErrorState
+        message={editorMessages.restoreRefreshFailed()}
+        actions={[
+          {
+            label: __('Reload editor', 'campaignbridge'),
+            variant: 'primary',
+            onClick: () => window.location.reload(),
+          },
+        ]}
+      />
+    );
+  }
+
   if (isResolving) {
     return (
       <LoadingState message={__('Initializing editor…', 'campaignbridge')} />
@@ -182,7 +222,8 @@ function EditorChromeContent({
   if (loadError || !record) {
     return (
       <ErrorState
-        message={__('Unable to load this email template.', 'campaignbridge')}
+        message={editorMessages.loadFailed()}
+        actions={recoveryActions}
       />
     );
   }
@@ -198,7 +239,11 @@ function EditorChromeContent({
   if (editorSettingsError) {
     return (
       <ErrorState
-        message={__('Error loading editor settings…', 'campaignbridge')}
+        message={__(
+          'Editor settings could not be loaded. Please try again.',
+          'campaignbridge'
+        )}
+        actions={recoveryActions}
       />
     );
   }

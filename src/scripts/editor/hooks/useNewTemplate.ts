@@ -1,4 +1,5 @@
 import { useCallback, useState } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import { createDraft } from '../services/api';
 import { setParamAndReload } from '../utils/url';
 
@@ -45,8 +46,12 @@ export function useNewTemplate(
       setBusy(false);
       setOpen(false);
       if (typeof onError === 'function') {
+        // Server and exception text can carry internal details.
         onError(
-          error instanceof Error ? error.message : 'Failed to create template.'
+          __(
+            'The template could not be created. Please try again.',
+            'campaignbridge'
+          )
         );
       }
     }

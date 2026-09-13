@@ -75,7 +75,12 @@ export default function RevisionHistory({
       });
       setRevisions(data.filter(revision => !isAutosave(revision)));
     } catch {
-      setError(__('Failed to load revision history.', 'campaignbridge'));
+      setError(
+        __(
+          'Revision history could not be loaded. Please try again.',
+          'campaignbridge'
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -106,6 +111,13 @@ export default function RevisionHistory({
         } else if (result.error) {
           setRestoreError(result.error);
         }
+      } catch {
+        setRestoreError(
+          __(
+            'This revision could not be restored. Please try again.',
+            'campaignbridge'
+          )
+        );
       } finally {
         restoringRef.current = false;
         setRestoringId(null);

@@ -238,15 +238,14 @@ domReady(() => {
       }
 
       reactRoot.render(<CampaignBridgeBlockEditor />);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : __('The email editor could not be initialized.', 'campaignbridge');
-
+    } catch {
+      // Initialization errors can carry internal details; show fixed copy.
       reactRoot.render(
         <Notice status='error' isDismissible={false}>
-          {message}
+          {__(
+            'The email editor could not be started. Reload the page to try again.',
+            'campaignbridge'
+          )}
         </Notice>
       );
     }

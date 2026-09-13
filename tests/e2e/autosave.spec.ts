@@ -322,8 +322,9 @@ const AUTOSAVE_DELAY_MS = 2000;
 // Long enough for a pending debounce to fire and its request to start; used
 // only to prove that no further autosave request happens.
 const AUTOSAVE_SETTLE_MS = AUTOSAVE_DELAY_MS + 1500;
+// Autosave is background recovery, so its failure copy differs from Save.
 const SAFE_SAVE_ERROR =
-  'Template changes could not be saved. Please try again.';
+  'Your recovery copy could not be saved. Your changes are still in the editor.';
 
 const TEXT_BLOCK_CONTENT =
   '<!-- wp:campaignbridge/container -->\n' +
