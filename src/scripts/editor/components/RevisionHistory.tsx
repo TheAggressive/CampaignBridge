@@ -9,6 +9,17 @@ interface Revision {
   date: string;
   date_gmt: string;
   author: number;
+  parent: number;
+  slug: string;
+}
+
+/**
+ * Core's revisions endpoint also returns autosaves. They are unsaved recovery
+ * state, not template history, and the restore route refuses them. This
+ * mirrors wp_is_post_autosave().
+ */
+function isAutosave(revision: Revision): boolean {
+  return revision.slug.includes(`${revision.parent}-autosave`);
 }
 
 interface RevisionHistoryProps {
@@ -57,7 +68,7 @@ export default function RevisionHistory({
       const data = await apiFetch<Revision[]>({
         path: `/wp/v2/${postType}/${postId}/revisions?per_page=20&order=desc`,
       });
-      setRevisions(data);
+      setRevisions(data.filter(revision => !isAutosave(revision)));
     } catch {
       setError(__('Failed to load revision history.', 'campaignbridge'));
     } finally {

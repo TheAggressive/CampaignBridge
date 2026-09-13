@@ -29,7 +29,7 @@ final class Template_Routes_Test extends Test_Case {
 	}
 
 	/**
-	 * Create a template post and a revision of it.
+	 * Create a template whose earlier state WordPress saved as a real revision.
 	 *
 	 * @return array{template_id: int, revision_id: int}
 	 */
@@ -37,18 +37,26 @@ final class Template_Routes_Test extends Test_Case {
 		$template_id = $this->factory->post->create(
 			array(
 				'post_type'    => 'cb_templates',
-				'post_title'   => 'Original Title',
-				'post_content' => 'Original content',
+				'post_title'   => 'Draft Title',
+				'post_content' => 'Draft content',
 			)
 		);
 
-		// Create a revision with different content.
-		$revision_id = $this->factory->post->create(
+		// Each update makes WordPress save a revision of the resulting state.
+		wp_update_post(
 			array(
-				'post_type'    => 'revision',
+				'ID'           => $template_id,
 				'post_title'   => 'Revised Title',
 				'post_content' => 'Revised content',
-				'post_parent'  => $template_id,
+			)
+		);
+		$revision_id = (int) array_key_first( wp_get_post_revisions( $template_id ) );
+
+		wp_update_post(
+			array(
+				'ID'           => $template_id,
+				'post_title'   => 'Current Title',
+				'post_content' => 'Current content',
 			)
 		);
 
@@ -143,29 +151,15 @@ final class Template_Routes_Test extends Test_Case {
 	public function test_revision_from_different_post_is_rejected(): void {
 		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
 
-		// Create two separate templates.
-		$template_a = $this->factory->post->create(
-			array(
-				'post_type'    => 'cb_templates',
-				'post_title'   => 'Template A',
-				'post_content' => 'Content A',
-			)
-		);
+		// A real revision belonging to Template A.
+		$template_a  = $this->make_template_with_revision();
+		$revision_id = $template_a['revision_id'];
+
 		$template_b = $this->factory->post->create(
 			array(
 				'post_type'    => 'cb_templates',
 				'post_title'   => 'Template B',
 				'post_content' => 'Content B',
-			)
-		);
-
-		// Create a revision belonging to Template A.
-		$revision_id = $this->factory->post->create(
-			array(
-				'post_type'    => 'revision',
-				'post_title'   => 'Revision of A',
-				'post_content' => 'Revision A content',
-				'post_parent'  => $template_a,
 			)
 		);
 

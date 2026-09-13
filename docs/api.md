@@ -1,6 +1,8 @@
 # CampaignBridge REST API
 
-The API namespace is `campaignbridge/v1`. Routes are registered in `includes/REST/Routes.php`, `includes/REST/Editor_Settings_Routes.php`, `includes/REST/Brand_Kit_Routes.php`, and `includes/REST/Preview_Routes.php`.
+The API namespace is `campaignbridge/v1`. Routes are registered in `includes/REST/Routes.php`, `includes/REST/Editor_Settings_Routes.php`, `includes/REST/Brand_Kit_Routes.php`, `includes/REST/Preview_Routes.php`, and `includes/REST/Template_Routes.php`.
+
+`POST /campaignbridge/v1/templates/{id}/revisions/{revision_id}/restore` restores a WordPress-created revision onto its `cb_templates` parent. Requires the template capability and a valid `wp_rest` nonce. The revision must belong to the template, and an autosave is refused with `400 revision_is_autosave` because it is unsaved recovery state, not template history. WordPress restores the post fields and every template meta key registered with `revisions_enabled` in `Post_Type_Email_Template`; that registration is the only list of revisioned template metadata. Organizational and targeting meta (`campaignbridge_template_category`, `campaignbridge_audience_tags`) is not revisioned and is never rolled back.
 
 `GET` and `PUT /campaignbridge/v1/brand-kit` read and update the stored email brand colours. `PUT` accepts one slot (`id` and a portable hex `color`). Both require the management capability.
 

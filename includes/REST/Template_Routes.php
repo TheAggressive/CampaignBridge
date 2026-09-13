@@ -98,25 +98,24 @@ final class Template_Routes extends Abstract_Rest_Controller {
 			return self::create_error( 'revision_mismatch', __( 'This revision does not belong to the specified template.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
 		}
 
-		// Restore the post content (title, content, excerpt, etc.).
+		// An autosave is unsaved recovery state, not template history. Restoring
+		// it would publish that state as if an operator had saved it.
+		if ( false !== \wp_is_post_autosave( $revision ) ) {
+			return self::create_error( 'revision_is_autosave', __( 'Autosaves cannot be restored as template revisions.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
+		}
+
+		// WordPress restores the post fields and, through its
+		// `wp_restore_post_revision` action, every meta key registered with
+		// `revisions_enabled`. The template meta registration is the only list.
+		//
+		// Core copies that meta only after wp_update_post() has already saved
+		// the restored state as a new revision, so that revision would pair the
+		// restored content with the replaced meta. Restoring the revisioned
+		// meta first, with core's own function, keeps history truthful.
+		\wp_restore_post_revision_meta( $template_id, $revision_id );
 		$result = \wp_restore_post_revision( $revision_id );
 		if ( is_wp_error( $result ) ) {
 			return self::create_error( 'restore_failed', __( 'The revision could not be restored.', 'campaignbridge' ), Rest_Constants::HTTP_INTERNAL_SERVER_ERROR );
-		}
-
-		// Restore revisionable meta fields (wp_restore_post_revision only copies
-		// post fields, not meta). Copy known revisionable meta from the revision
-		// onto the parent template.
-		$revisionable_meta = array(
-			'_cb_template_schema_version',
-			'_cb_template_blocks',
-			'_cb_template_brand_kit_id',
-		);
-		foreach ( $revisionable_meta as $meta_key ) {
-			$value = \get_post_meta( $revision_id, $meta_key, true );
-			if ( '' !== $value ) {
-				\update_post_meta( $template_id, $meta_key, $value );
-			}
 		}
 
 		return new WP_REST_Response(

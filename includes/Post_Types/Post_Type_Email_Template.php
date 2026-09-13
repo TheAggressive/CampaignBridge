@@ -49,71 +49,97 @@ class Post_Type_Email_Template {
 	/**
 	 * Meta field configuration for registration.
 	 * Defines all meta fields with their types, sanitization, and validation.
+	 *
+	 * Every field declares `revisions` explicitly so no field becomes part of
+	 * WordPress revision history by default:
+	 *
+	 * - `true`: the field defines the reusable email itself (what it says, how
+	 *   it complies, how its links are decorated). WordPress copies it onto
+	 *   each revision and restores it with the revision's content.
+	 * - `false`: the field organizes or targets the template rather than
+	 *   defining the email. Restoring older content must not silently move a
+	 *   template between library categories or change its audience targeting.
 	 */
 	private const META_FIELD_CONFIG = array(
 		// String fields.
 		'campaignbridge_subject'             => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
 		),
 		'campaignbridge_preheader'           => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
 		),
 		'campaignbridge_sender_name'         => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
 		),
 		'campaignbridge_sender_email'        => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_email',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_email',
+			'revisions' => true,
 		),
 		'campaignbridge_view_online_url'     => array(
-			'type'     => 'string',
-			'sanitize' => 'esc_url_raw',
+			'type'      => 'string',
+			'sanitize'  => 'esc_url_raw',
+			'revisions' => true,
 		),
 		'campaignbridge_unsubscribe_url'     => array(
-			'type'     => 'string',
-			'sanitize' => 'esc_url_raw',
+			'type'      => 'string',
+			'sanitize'  => 'esc_url_raw',
+			'revisions' => true,
 		),
 		'campaignbridge_utm_template'        => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
 		),
+		// Audience targeting belongs to campaigns and providers, not the email.
 		'campaignbridge_audience_tags'       => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => false,
 		),
 		'campaignbridge_footer_pattern'      => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
 		),
 
 		// Boolean fields.
 		'campaignbridge_view_online_enabled' => array(
-			'type'     => 'boolean',
-			'sanitize' => 'wp_validate_boolean',
+			'type'      => 'boolean',
+			'sanitize'  => 'wp_validate_boolean',
+			'revisions' => true,
 		),
 		'campaignbridge_utm_enabled'         => array(
-			'type'     => 'boolean',
-			'sanitize' => 'wp_validate_boolean',
+			'type'      => 'boolean',
+			'sanitize'  => 'wp_validate_boolean',
+			'revisions' => true,
 		),
 		'campaignbridge_footer_enabled'      => array(
-			'type'     => 'boolean',
-			'sanitize' => 'wp_validate_boolean',
+			'type'      => 'boolean',
+			'sanitize'  => 'wp_validate_boolean',
+			'revisions' => true,
 		),
 
 		// HTML field.
 		'campaignbridge_address_html'        => array(
-			'type'     => 'string',
-			'sanitize' => 'wp_kses_post',
+			'type'      => 'string',
+			'sanitize'  => 'wp_kses_post',
+			'revisions' => true,
 		),
 
-		// Category field with enum validation.
+		// Category field with enum validation. Library organization, like a
+		// taxonomy, is not revisioned.
 		'campaignbridge_template_category'   => array(
 			'type'         => 'string',
 			'sanitize'     => array( __CLASS__, 'sanitize_category_field' ),
 			'valid_values' => array( 'general', 'newsletter', 'promotional', 'welcome', 'custom' ),
+			'revisions'    => false,
 		),
 	);
 
@@ -242,6 +268,7 @@ class Post_Type_Email_Template {
 					'auth_callback'     => function () {
 						return \current_user_can( Capabilities::EDIT_TEMPLATES );
 					},
+					'revisions_enabled' => $config['revisions'],
 				)
 			);
 		}
@@ -251,13 +278,13 @@ class Post_Type_Email_Template {
 	 * Sanitize category field value.
 	 *
 	 * Used as sanitize callback for 'campaignbridge_template_category' meta field.
+	 * It must stay public: register_meta() only attaches callbacks WordPress can
+	 * call, and silently skips a private method.
 	 *
-	 * @param string $value The field value to sanitize.
+	 * @param mixed $value The field value to sanitize.
 	 * @return string The sanitized value.
-	 *
-	 * @phpstan-ignore-next-line Used as sanitize callback in meta field configuration
 	 */
-	private static function sanitize_category_field( string $value ): string {
+	public static function sanitize_category_field( mixed $value ): string {
 		$category_config = self::get_meta_field_config( 'campaignbridge_template_category' );
 		$valid_values    = $category_config['valid_values'] ?? array();
 		return in_array( $value, $valid_values, true ) ? $value : 'general';
