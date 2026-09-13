@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Request } from '@playwright/test';
 
 const EDITOR_PATH = '/wp-admin/admin.php?page=campaignbridge-editor';
 
@@ -310,13 +310,20 @@ test.describe('CampaignBridge Autosave REST API', () => {
 // ---------------------------------------------------------------------------
 // Editor-triggered autosave E2E tests
 //
-// These tests prove that the editor UI (useTemplateEditor hook) triggers
-// native WordPress autosaves through the standard core-data save pipeline.
-// They complement the REST API tests above (which verify server-side
-// semantics) by covering the editor-to-server round trip: debounce timing,
-// request shape, conflict with manual Save/Publish, failure recovery, and
-// dirty-state tracking.
+// These tests prove that a real operator edit in the editor canvas makes the
+// core-data entity dirty and that useTemplateEditor then triggers native
+// WordPress autosave through save({ isAutosave: true }). They complement the
+// REST API tests above (which verify server-side semantics) by covering the
+// editor-to-server round trip: debounce, request shape, conflict with manual
+// Save/Publish, failure recovery, notices, and dirty-state tracking.
 // ---------------------------------------------------------------------------
+
+const AUTOSAVE_DELAY_MS = 2000;
+// Long enough for a pending debounce to fire and its request to start; used
+// only to prove that no further autosave request happens.
+const AUTOSAVE_SETTLE_MS = AUTOSAVE_DELAY_MS + 1500;
+const SAFE_SAVE_ERROR =
+  'Template changes could not be saved. Please try again.';
 
 const TEXT_BLOCK_CONTENT =
   '<!-- wp:campaignbridge/container -->\n' +
@@ -325,293 +332,445 @@ const TEXT_BLOCK_CONTENT =
   '<!-- /wp:campaignbridge/section -->\n' +
   '<!-- /wp:campaignbridge/container -->';
 
+interface EditorEntityState {
+  hasEdits: boolean;
+  editedContent: string;
+  persistedContent: string;
+}
+
+// Sites without pretty permalinks (CI) send REST routes URL-encoded in
+// `?rest_route=`, so routes are matched against the decoded URL.
+function matchesRoute(url: string, route: RegExp): boolean {
+  return route.test(decodeURIComponent(url));
+}
+
+function autosaveRoute(templateId: number): RegExp {
+  return new RegExp(`/wp/v2/cb_templates/${templateId}/autosaves(?:[?&]|$)`);
+}
+
+function canonicalRoute(templateId: number): RegExp {
+  return new RegExp(`/wp/v2/cb_templates/${templateId}(?:[?&]|$)`);
+}
+
+function isAutosavePost(request: Request, templateId: number): boolean {
+  return (
+    request.method() === 'POST' &&
+    matchesRoute(request.url(), autosaveRoute(templateId))
+  );
+}
+
+// wp.apiFetch sends PUT as POST with an X-HTTP-Method-Override header.
+function isCanonicalWrite(request: Request, templateId: number): boolean {
+  return (
+    ['POST', 'PUT'].includes(request.method()) &&
+    matchesRoute(request.url(), canonicalRoute(templateId))
+  );
+}
+
+function trackAutosavePosts(page: Page, templateId: number): Request[] {
+  const requests: Request[] = [];
+  page.on('request', request => {
+    if (isAutosavePost(request, templateId)) {
+      requests.push(request);
+    }
+  });
+  return requests;
+}
+
+async function withTemplate(
+  page: Page,
+  title: string,
+  status: 'draft' | 'publish',
+  // eslint-disable-next-line no-unused-vars -- Documents the callback contract.
+  body: (templateId: number) => Promise<void>
+): Promise<void> {
+  const templateId = await createTemplate(
+    page,
+    title,
+    TEXT_BLOCK_CONTENT,
+    status
+  );
+  let primaryError: unknown = null;
+  try {
+    await body(templateId);
+  } catch (error) {
+    primaryError = error;
+  }
+
+  // A timed-out test closes the page; cleanup errors must never replace the
+  // primary assertion failure.
+  if (!page.isClosed()) {
+    try {
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+      await deleteTemplate(page, templateId);
+    } catch (cleanupError) {
+      if (!primaryError) {
+        throw cleanupError;
+      }
+    }
+  }
+
+  if (primaryError) {
+    throw primaryError;
+  }
+}
+
+async function getEditorEntityState(
+  page: Page,
+  templateId: number
+): Promise<EditorEntityState> {
+  return page.evaluate(id => {
+    const wp = (
+      globalThis as typeof globalThis & {
+        wp: {
+          blocks: { serialize: Function };
+          data: { select: Function };
+        };
+      }
+    ).wp;
+    const core = wp.data.select('core');
+    const edited = core.getEditedEntityRecord('postType', 'cb_templates', id);
+    const persisted = core.getRawEntityRecord('postType', 'cb_templates', id);
+    let editedContent = '';
+    if (Array.isArray(edited?.blocks)) {
+      editedContent = wp.blocks.serialize(edited.blocks);
+    } else if (typeof edited?.content === 'string') {
+      editedContent = edited.content;
+    }
+
+    return {
+      hasEdits: core.hasEditsForEntityRecord('postType', 'cb_templates', id),
+      editedContent,
+      persistedContent:
+        typeof persisted?.content === 'string' ? persisted.content : '',
+    };
+  }, templateId);
+}
+
 async function openEditorForTemplate(
   page: Page,
   templateId: number
 ): Promise<void> {
-  await page.goto(
-    `/wp-admin/admin.php?page=campaignbridge-editor&post_id=${templateId}`
-  );
+  await page.goto(`${EDITOR_PATH}&post_id=${templateId}`);
   await expect(page.locator('.cb-editor__header')).toBeVisible();
-  const frame = page.frameLocator('iframe[name="editor-canvas"]');
-  await frame
-    .locator('[data-type="campaignbridge/text"]')
-    .first()
-    .waitFor({ state: 'visible', timeout: 10000 });
+  await expect(textBlock(page)).toBeVisible();
+
+  // Opening a template is not an edit.
+  expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(false);
 }
 
-async function typeIntoTextBlock(page: Page, text: string): Promise<void> {
-  const url = new URL(page.url());
-  const templateId = parseInt(url.searchParams.get('post_id') || '0', 10);
+function textBlock(page: Page) {
+  return page
+    .frameLocator('iframe[name="editor-canvas"]')
+    .locator('[data-type="campaignbridge/text"][contenteditable="true"]')
+    .first();
+}
 
-  // Mark the entity as dirty via editEntityRecord. The editor's
-  // useTemplateEditor hook detects hasEdits=true and triggers its own
-  // autosave after the 2000ms debounce, going through the full
-  // saveEditedEntityRecord → saveEntityRecord pipeline.
-  await page.evaluate(
-    ({ text, templateId }) => {
-      const wp = (globalThis as any).wp;
-      if (!wp?.data) throw new Error('wp.data not available');
+/**
+ * Replace the text block's content through the rendered RichText field and
+ * prove the live core-data entity observed by useTemplateEditor became dirty.
+ */
+async function editTextBlock(
+  page: Page,
+  templateId: number,
+  text: string
+): Promise<void> {
+  const block = textBlock(page);
+  await block.click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type(text);
+  await expect(block).toHaveText(text);
 
-      const { dispatch, select } = wp.data;
-      const core = select('core');
-      const record = core.getEntityRecord(
-        'postType',
-        'cb_templates',
-        templateId
-      );
-      if (!record) throw new Error('record not found: ' + templateId);
+  const state = await getEditorEntityState(page, templateId);
+  expect(state.hasEdits).toBe(true);
+  expect(state.editedContent).toContain(text);
+  expect(state.editedContent).not.toBe(state.persistedContent);
+}
 
-      const contentRaw =
-        typeof record.content === 'string'
-          ? record.content
-          : record.content?.raw || '';
-
-      const newContent = contentRaw.replace(
-        '"content":"Hello"',
-        `"content":"${text}"`
-      );
-
-      dispatch('core').editEntityRecord(
-        'postType',
-        'cb_templates',
-        templateId,
-        { content: newContent }
-      );
-    },
-    { text, templateId }
-  );
+function snackbar(page: Page, text: string) {
+  return page.locator('.components-snackbar', { hasText: text });
 }
 
 test.describe('CampaignBridge Editor Autosave (E2E)', () => {
-  test('editor autosave (draft): triggers POST to /autosaves, status stays draft', async ({
+  test('editor autosave (draft): native autosave keeps draft status and cleans the editor', async ({
     page,
   }) => {
-    const templateId = await createTemplate(
+    await withTemplate(
       page,
       `Editor Autosave Draft ${Date.now()}`,
-      TEXT_BLOCK_CONTENT,
-      'draft'
+      'draft',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        const autosavePosts = trackAutosavePosts(page, templateId);
+        const autosaveResponse = page.waitForResponse(response =>
+          isAutosavePost(response.request(), templateId)
+        );
+
+        await editTextBlock(page, templateId, 'Autosave draft content');
+
+        expect((await autosaveResponse).status()).toBe(200);
+
+        // WordPress applies a draft author's autosave to the post itself and
+        // core-data clears the edits the server now holds.
+        await expect
+          .poll(
+            async () => (await getEditorEntityState(page, templateId)).hasEdits
+          )
+          .toBe(false);
+        await expect(page.locator('.cb-editor__save-button')).toHaveText(
+          'Saved'
+        );
+        await expect(page.locator('.cb-editor__status-badge')).toHaveText(
+          'Draft'
+        );
+
+        const canonical = await getTemplate(page, templateId);
+        expect(canonical.status).toBe('draft');
+        expect(canonical.content.raw).toContain('Autosave draft content');
+
+        await page.waitForTimeout(AUTOSAVE_SETTLE_MS);
+        expect(autosavePosts).toHaveLength(1);
+        // A background autosave is not the operator's Save.
+        await expect(snackbar(page, 'Template saved.')).toHaveCount(0);
+      }
     );
-    try {
-      await openEditorForTemplate(page, templateId);
-
-      const autosaveRequest = page.waitForRequest(
-        req => req.url().includes('/autosaves') && req.method() === 'POST',
-        { timeout: 10000 }
-      );
-
-      await typeIntoTextBlock(page, 'Autosave test content');
-
-      const request = await autosaveRequest;
-      expect(request.url()).toContain(
-        `/wp/v2/cb_templates/${templateId}/autosaves`
-      );
-      expect(request.method()).toBe('POST');
-
-      const statusBadge = page.locator('.cb-editor__status-badge');
-      await expect(statusBadge).toContainText('Draft');
-    } finally {
-      await deleteTemplate(page, templateId);
-    }
   });
 
-  test('editor autosave (published): canonical stays publish, autosave is separate', async ({
+  test('editor autosave (published): separate autosave, canonical unchanged, editor stays dirty', async ({
     page,
   }) => {
-    const templateId = await createTemplate(
+    await withTemplate(
       page,
       `Editor Autosave Published ${Date.now()}`,
-      TEXT_BLOCK_CONTENT,
-      'publish'
+      'publish',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        const autosavePosts = trackAutosavePosts(page, templateId);
+        const autosaveResponse = page.waitForResponse(response =>
+          isAutosavePost(response.request(), templateId)
+        );
+
+        await editTextBlock(page, templateId, 'Published autosave content');
+
+        const response = await autosaveResponse;
+        expect(response.status()).toBe(200);
+        const autosave = (await response.json()) as {
+          id: number;
+          parent: number;
+        };
+        expect(autosave.id).not.toBe(templateId);
+        expect(autosave.parent).toBe(templateId);
+
+        const canonical = await getTemplate(page, templateId);
+        expect(canonical.status).toBe('publish');
+        expect(canonical.content.raw).not.toContain(
+          'Published autosave content'
+        );
+        const autosaves = await getAutosaves(page, templateId);
+        expect(autosaves.map(record => record.id)).toContain(autosave.id);
+
+        await page.waitForTimeout(AUTOSAVE_SETTLE_MS);
+
+        // The canonical post is unchanged, so WordPress keeps the edits: the
+        // operator must still Save to publish them.
+        const state = await getEditorEntityState(page, templateId);
+        expect(state.hasEdits).toBe(true);
+        expect(state.editedContent).toContain('Published autosave content');
+        const saveButton = page.locator('.cb-editor__save-button');
+        await expect(saveButton).toHaveText('Save');
+        await expect(saveButton).toBeEnabled();
+        await expect(page.locator('.cb-editor__status-badge')).toHaveText(
+          'Published'
+        );
+
+        // Remaining dirty must not re-arm autosave without a new edit.
+        expect(autosavePosts).toHaveLength(1);
+        await expect(snackbar(page, 'Template saved.')).toHaveCount(0);
+      }
     );
-    try {
-      await openEditorForTemplate(page, templateId);
-
-      const before = await getTemplate(page, templateId);
-      expect(before.status).toBe('publish');
-
-      const autosaveRequest = page.waitForRequest(
-        req => req.url().includes('/autosaves') && req.method() === 'POST',
-        { timeout: 10000 }
-      );
-
-      await typeIntoTextBlock(page, 'Published autosave content');
-
-      const request = await autosaveRequest;
-      expect(request.url()).toContain(
-        `/wp/v2/cb_templates/${templateId}/autosaves`
-      );
-
-      const after = await getTemplate(page, templateId);
-      expect(after.status).toBe('publish');
-
-      const autosaves = await getAutosaves(page, templateId);
-      expect(autosaves.length).toBeGreaterThanOrEqual(1);
-    } finally {
-      await deleteTemplate(page, templateId);
-    }
   });
 
-  test('manual Save before debounce: no conflicting autosave follows', async ({
+  test('manual Save before debounce: canonical save wins, no autosave follows', async ({
     page,
   }) => {
-    const templateId = await createTemplate(
+    await withTemplate(
       page,
       `Editor Save Conflict ${Date.now()}`,
-      TEXT_BLOCK_CONTENT,
-      'draft'
+      'draft',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        const autosavePosts = trackAutosavePosts(page, templateId);
+
+        await editTextBlock(page, templateId, 'Save conflict test');
+        expect(autosavePosts).toHaveLength(0);
+
+        const saveResponse = page.waitForResponse(response =>
+          isCanonicalWrite(response.request(), templateId)
+        );
+        const saveButton = page.locator('.cb-editor__save-button');
+        await saveButton.click();
+
+        expect((await saveResponse).status()).toBe(200);
+        await expect(saveButton).toHaveText('Saved');
+        await expect(snackbar(page, 'Template saved.')).toBeVisible();
+
+        await page.waitForTimeout(AUTOSAVE_SETTLE_MS);
+        expect(autosavePosts).toHaveLength(0);
+        expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
+          false
+        );
+
+        const template = await getTemplate(page, templateId);
+        expect(template.content.raw).toContain('Save conflict test');
+        expect(template.status).toBe('draft');
+      }
     );
-    try {
-      await openEditorForTemplate(page, templateId);
-
-      const autosaveRequests: string[] = [];
-      page.on('request', req => {
-        if (req.url().includes('/autosaves') && req.method() === 'POST') {
-          autosaveRequests.push(req.url());
-        }
-      });
-
-      await typeIntoTextBlock(page, 'Save conflict test');
-
-      const saveButton = page.locator('.cb-editor__save-button');
-      await saveButton.click();
-
-      await expect(saveButton).toContainText('Saved', { timeout: 10000 });
-
-      await page.waitForTimeout(3000);
-
-      expect(autosaveRequests.length).toBe(0);
-
-      const template = await getTemplate(page, templateId);
-      expect(template.content.raw).toContain('Save conflict test');
-      expect(template.status).toBe('draft');
-    } finally {
-      await deleteTemplate(page, templateId);
-    }
   });
 
   test('Publish before debounce: final status is publish, no stale autosave', async ({
     page,
   }) => {
-    const templateId = await createTemplate(
+    await withTemplate(
       page,
       `Editor Publish Conflict ${Date.now()}`,
-      TEXT_BLOCK_CONTENT,
-      'draft'
+      'draft',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        const autosavePosts = trackAutosavePosts(page, templateId);
+
+        await editTextBlock(page, templateId, 'Publish conflict test');
+        expect(autosavePosts).toHaveLength(0);
+
+        const publishResponse = page.waitForResponse(response =>
+          isCanonicalWrite(response.request(), templateId)
+        );
+        await page.locator('.cb-editor__publish-button').click();
+
+        expect((await publishResponse).status()).toBe(200);
+        await expect(page.locator('.cb-editor__status-badge')).toHaveText(
+          'Published'
+        );
+
+        await page.waitForTimeout(AUTOSAVE_SETTLE_MS);
+        expect(autosavePosts).toHaveLength(0);
+        expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
+          false
+        );
+
+        const template = await getTemplate(page, templateId);
+        expect(template.status).toBe('publish');
+        expect(template.content.raw).toContain('Publish conflict test');
+        expect(await getAutosaves(page, templateId)).toHaveLength(0);
+      }
     );
-    try {
-      await openEditorForTemplate(page, templateId);
-
-      const autosaveRequests: string[] = [];
-      page.on('request', req => {
-        if (req.url().includes('/autosaves') && req.method() === 'POST') {
-          autosaveRequests.push(req.url());
-        }
-      });
-
-      await typeIntoTextBlock(page, 'Publish conflict test');
-
-      const publishButton = page.locator('.cb-editor__publish-button');
-      await publishButton.click();
-
-      const statusBadge = page.locator('.cb-editor__status-badge');
-      await expect(statusBadge).toContainText('Published', { timeout: 10000 });
-
-      await page.waitForTimeout(3000);
-
-      expect(autosaveRequests.length).toBe(0);
-
-      const template = await getTemplate(page, templateId);
-      expect(template.status).toBe('publish');
-      expect(template.content.raw).toContain('Publish conflict test');
-    } finally {
-      await deleteTemplate(page, templateId);
-    }
   });
 
-  test('autosave failure through editor: safe error message, edits preserved', async ({
+  test('autosave failure through editor: safe visible error, no retry loop, edits recoverable', async ({
     page,
   }) => {
-    const templateId = await createTemplate(
+    await withTemplate(
       page,
       `Editor Autosave Fail ${Date.now()}`,
-      TEXT_BLOCK_CONTENT,
-      'draft'
+      'draft',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        const autosavePosts = trackAutosavePosts(page, templateId);
+
+        await page.route(
+          url => matchesRoute(url.href, autosaveRoute(templateId)),
+          route =>
+            route.request().method() === 'POST'
+              ? route.fulfill({
+                  status: 500,
+                  contentType: 'application/json',
+                  body: JSON.stringify({
+                    code: 'internal_error',
+                    message: 'Simulated server failure',
+                  }),
+                })
+              : route.continue()
+        );
+        const failedResponse = page.waitForResponse(response =>
+          isAutosavePost(response.request(), templateId)
+        );
+
+        await editTextBlock(page, templateId, 'Failure test content');
+
+        expect((await failedResponse).status()).toBe(500);
+        await expect(snackbar(page, SAFE_SAVE_ERROR)).toBeVisible();
+        await expect(
+          page.locator('.components-snackbar-list')
+        ).not.toContainText('Simulated server failure');
+        await expect(snackbar(page, 'Template saved.')).toHaveCount(0);
+
+        // A failed autosave must not hammer the server without a new edit.
+        await page.waitForTimeout(AUTOSAVE_SETTLE_MS);
+        expect(autosavePosts).toHaveLength(1);
+
+        // The operator's edits survive the failure.
+        const state = await getEditorEntityState(page, templateId);
+        expect(state.hasEdits).toBe(true);
+        expect(state.editedContent).toContain('Failure test content');
+        await expect(textBlock(page)).toHaveText('Failure test content');
+        expect((await getTemplate(page, templateId)).content.raw).not.toContain(
+          'Failure test content'
+        );
+
+        // ...and can still be saved once the server recovers.
+        await page.unrouteAll({ behavior: 'ignoreErrors' });
+        const saveResponse = page.waitForResponse(response =>
+          isCanonicalWrite(response.request(), templateId)
+        );
+        const saveButton = page.locator('.cb-editor__save-button');
+        await expect(saveButton).toBeEnabled();
+        await saveButton.click();
+        expect((await saveResponse).status()).toBe(200);
+        await expect(saveButton).toHaveText('Saved');
+        expect((await getTemplate(page, templateId)).content.raw).toContain(
+          'Failure test content'
+        );
+      }
     );
-    try {
-      await openEditorForTemplate(page, templateId);
-
-      await page.route(
-        url =>
-          url.href.includes('/autosaves') &&
-          url.href.includes(`/cb_templates/${templateId}`),
-        route => {
-          if (route.request().method() === 'POST') {
-            route.fulfill({
-              status: 500,
-              contentType: 'application/json',
-              body: JSON.stringify({
-                code: 'internal_error',
-                message: 'Simulated server failure',
-              }),
-            });
-            return;
-          }
-          route.continue();
-        }
-      );
-
-      await typeIntoTextBlock(page, 'Failure test content');
-
-      await page.waitForTimeout(4000);
-
-      const snackbar = page.locator('.cb-editor__snackbar');
-      await expect(snackbar).toBeVisible({ timeout: 5000 });
-      const snackbarText = await snackbar.textContent();
-      expect(snackbarText).toContain('Template save failed');
-      expect(snackbarText).not.toContain('Simulated server failure');
-
-      const frame = page.frameLocator('iframe[name="editor-canvas"]');
-      const textBlock = frame
-        .locator('[data-type="campaignbridge/text"]')
-        .first();
-      const blockText = await textBlock.textContent();
-      expect(blockText).toContain('Failure test content');
-    } finally {
-      await deleteTemplate(page, templateId);
-    }
   });
 
-  test('dirty state: autosave clears dirty, new edit re-dirties, Save works', async ({
+  test('dirty state (draft): autosave cleans, a new edit re-dirties, Save persists', async ({
     page,
   }) => {
-    const templateId = await createTemplate(
+    await withTemplate(
       page,
       `Editor Dirty State ${Date.now()}`,
-      TEXT_BLOCK_CONTENT,
-      'draft'
+      'draft',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        const saveButton = page.locator('.cb-editor__save-button');
+
+        const firstAutosave = page.waitForResponse(response =>
+          isAutosavePost(response.request(), templateId)
+        );
+        await editTextBlock(page, templateId, 'Dirty state first edit');
+        await expect(saveButton).toHaveText('Save');
+        expect((await firstAutosave).status()).toBe(200);
+        await expect(saveButton).toHaveText('Saved');
+        await expect(saveButton).toBeDisabled();
+
+        await editTextBlock(page, templateId, 'Dirty state second edit');
+        await expect(saveButton).toHaveText('Save');
+        await expect(saveButton).toBeEnabled();
+
+        const saveResponse = page.waitForResponse(response =>
+          isCanonicalWrite(response.request(), templateId)
+        );
+        await saveButton.click();
+        expect((await saveResponse).status()).toBe(200);
+        await expect(saveButton).toHaveText('Saved');
+
+        expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
+          false
+        );
+        const template = await getTemplate(page, templateId);
+        expect(template.content.raw).toContain('Dirty state second edit');
+        expect(template.status).toBe('draft');
+      }
     );
-    try {
-      await openEditorForTemplate(page, templateId);
-
-      const saveButton = page.locator('.cb-editor__save-button');
-
-      await typeIntoTextBlock(page, 'Dirty state first edit');
-
-      await expect(saveButton).toContainText('Saved', { timeout: 10000 });
-
-      await typeIntoTextBlock(page, 'Dirty state second edit');
-      await expect(saveButton).toContainText('Save', { timeout: 5000 });
-
-      await saveButton.click();
-      await expect(saveButton).toContainText('Saved', { timeout: 10000 });
-
-      const template = await getTemplate(page, templateId);
-      expect(template.content.raw).toContain('Dirty state second edit');
-      expect(template.status).toBe('draft');
-    } finally {
-      await deleteTemplate(page, templateId);
-    }
   });
 });

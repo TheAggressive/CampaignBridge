@@ -14,13 +14,14 @@ jest.mock('@wordpress/api-fetch', () => ({
   default: jest.fn(),
 }));
 
+// core-data returns a stable blocks reference until the blocks change.
+const mockBlockState = {
+  blocks: [{ name: 'core/paragraph', attrs: {}, innerBlocks: [] }] as unknown[],
+};
+
 jest.mock('@wordpress/core-data', () => ({
   store: 'core/store',
-  useEntityBlockEditor: () => [
-    [{ name: 'core/paragraph', attrs: {}, innerBlocks: [] }],
-    jest.fn(),
-    jest.fn(),
-  ],
+  useEntityBlockEditor: () => [mockBlockState.blocks, jest.fn(), jest.fn()],
   useEntityRecord: jest.fn(),
 }));
 
@@ -88,6 +89,9 @@ describe('useTemplateEditor', () => {
       globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
     jest.mocked(apiFetch).mockReset();
+    mockBlockState.blocks = [
+      { name: 'core/paragraph', attrs: {}, innerBlocks: [] },
+    ];
     mockSave = setupEntityRecord();
     setupUseSelect();
     jest.mocked(dispatch).mockReturnValue({
@@ -345,6 +349,102 @@ describe('useTemplateEditor', () => {
       // Publish calls save() without isAutosave — a canonical save.
       const saveCall = mockSave.mock.calls[0];
       expect(saveCall[0] === undefined || saveCall[0] === null).toBe(true);
+    });
+
+    it('does not re-arm autosave when a save attempt finishes with unchanged edits', async () => {
+      const { useEntityRecord } = require('@wordpress/core-data');
+      const { useSelect } = require('@wordpress/data');
+      const mockSave = jest.fn().mockResolvedValue(undefined);
+      useEntityRecord.mockReturnValue({
+        edits: { content: 'edited' },
+        hasEdits: true,
+        hasStarted: true,
+        isResolving: false,
+        record: mockRecord,
+        save: mockSave,
+      });
+
+      act(() => root.render(<Harness />));
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+      expect(mockSave).toHaveBeenCalledTimes(1);
+
+      // Published autosaves and failed autosaves both leave the entity dirty.
+      useSelect.mockReturnValue({
+        isAutosaving: true,
+        isSaving: true,
+        loadError: null,
+        saveError: null,
+      });
+      act(() => root.render(<Harness />));
+      useSelect.mockReturnValue({
+        isAutosaving: false,
+        isSaving: false,
+        loadError: null,
+        saveError: null,
+      });
+      act(() => root.render(<Harness />));
+      act(() => {
+        jest.advanceTimersByTime(10000);
+      });
+      expect(mockSave).toHaveBeenCalledTimes(1);
+
+      // A new block change schedules the next autosave.
+      mockBlockState.blocks = [
+        { name: 'core/paragraph', attrs: { content: 'x' }, innerBlocks: [] },
+      ];
+      act(() => root.render(<Harness />));
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+      expect(mockSave).toHaveBeenCalledTimes(2);
+      expect(mockSave).toHaveBeenLastCalledWith({ isAutosave: true });
+    });
+
+    it('does not report manual-save success when an autosave completes', () => {
+      const { useSelect } = require('@wordpress/data');
+      const onSave = jest.fn();
+      function SaveHarness() {
+        current = useTemplateEditor({
+          postId: 42,
+          postType: 'cb_templates',
+          onSave,
+        });
+        return null;
+      }
+
+      useSelect.mockReturnValue({
+        isAutosaving: true,
+        isSaving: true,
+        loadError: null,
+        saveError: null,
+      });
+      act(() => root.render(<SaveHarness />));
+      useSelect.mockReturnValue({
+        isAutosaving: false,
+        isSaving: false,
+        loadError: null,
+        saveError: null,
+      });
+      act(() => root.render(<SaveHarness />));
+      expect(onSave).not.toHaveBeenCalled();
+
+      useSelect.mockReturnValue({
+        isAutosaving: false,
+        isSaving: true,
+        loadError: null,
+        saveError: null,
+      });
+      act(() => root.render(<SaveHarness />));
+      useSelect.mockReturnValue({
+        isAutosaving: false,
+        isSaving: false,
+        loadError: null,
+        saveError: null,
+      });
+      act(() => root.render(<SaveHarness />));
+      expect(onSave).toHaveBeenCalledTimes(1);
     });
 
     it('reports a safe operator-facing message on autosave failure', async () => {
