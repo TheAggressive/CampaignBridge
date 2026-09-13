@@ -31,7 +31,6 @@ required=(
 	includes/Autoloader.php
 	includes/Plugin.php
 	dist/styles/styles.css
-	assets/brand/CB_Icon_Mono_Light.svg
 	assets/brand/CB_Icon_Mono_Dark.svg
 )
 

@@ -21,10 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Brand_Assets {
 	/**
-	 * Monochrome icon without fill colors, so WordPress can recolor it for each
-	 * admin color scheme.
+	 * White monochrome icon for the dark admin menu. WordPress's SVG painter
+	 * replaces its declared fill to match each admin color scheme's menu,
+	 * hover, and current-page colors; an icon without a fill stays black.
 	 */
-	public const MENU_ICON = 'CB_Icon_Mono_Light.svg';
+	public const MENU_ICON = 'CB_Icon_Mono_Dark.svg';
 
 	/**
 	 * White icon for the brand-colored mark in the admin product header.

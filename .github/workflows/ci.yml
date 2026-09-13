@@ -208,7 +208,9 @@ jobs:
           CB_TESTS_DB_PASSWORD: campaignbridge
           WP_PHPUNIT__TESTS_CONFIG: ${{ github.workspace }}/tests/wp-tests-config.php
           WP_TESTS_DIR: ${{ runner.temp }}/wp-phpunit-7.1
-        run: vendor/bin/phpunit
+        # This job proves the minimum platform; coverage reports come from the
+        # suite jobs and exhaust PHP's memory limit on the full run.
+        run: vendor/bin/phpunit --no-coverage
 
   build:
     name: Build assets

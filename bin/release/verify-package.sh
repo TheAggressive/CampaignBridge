@@ -30,7 +30,7 @@ for forbidden in node_modules vendor tests bin src docs .git .github .husky comp
 	fi
 done
 
-for required in campaignbridge.php uninstall.php includes/Autoloader.php includes/Plugin.php dist/styles/styles.css assets/brand/CB_Icon_Mono_Light.svg assets/brand/CB_Icon_Mono_Dark.svg; do
+for required in campaignbridge.php uninstall.php includes/Autoloader.php includes/Plugin.php dist/styles/styles.css assets/brand/CB_Icon_Mono_Dark.svg; do
 	if ! grep -qxF "${slug}/${required}" <<< "${listing}"; then
 		echo "Required package file is missing: ${required}" >&2
 		exit 1

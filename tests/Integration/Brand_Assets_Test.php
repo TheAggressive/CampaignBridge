@@ -32,9 +32,10 @@ final class Brand_Assets_Test extends Test_Case {
 
 		$svg = base64_decode( substr( $icon, strlen( $prefix ) ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decodes the menu icon under test.
 		self::assertSame( file_get_contents( Brand_Assets::path( Brand_Assets::MENU_ICON ) ), $svg ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads the bundled fixture.
-		// WordPress can only recolor an icon that sets no colors of its own.
-		self::assertStringNotContainsString( 'fill', (string) $svg );
-		self::assertStringNotContainsString( 'stroke', (string) $svg );
+		// WordPress's SVG painter only recolors fills the icon declares, so the
+		// icon must declare one. Before the painter runs it renders white on
+		// the dark admin menu.
+		self::assertMatchesRegularExpression( '/style="fill:#fff"|fill="#fff(?:fff)?"/i', (string) $svg );
 	}
 
 	public function test_the_admin_menu_registers_the_brand_icon(): void {
