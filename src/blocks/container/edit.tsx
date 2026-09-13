@@ -51,7 +51,8 @@ export default function Edit({ attributes, clientId }: EditProps): JSX.Element {
   const { padding = DEFAULT_INNER_PADDING } = attributes;
   const maxWidth =
     attributes.layout?.contentSize ?? attributes.layout?.wideSize ?? '600px';
-  const { updateBlockAttributes } = useDispatch('core/block-editor');
+  const { __unstableMarkNextChangeAsNotPersistent, updateBlockAttributes } =
+    useDispatch('core/block-editor');
   const { hasInnerBlocks } = useBlockSelection(clientId);
 
   const innerBlocksProps = useInnerBlocksProps(
@@ -77,10 +78,19 @@ export default function Edit({ attributes, clientId }: EditProps): JSX.Element {
       return;
     }
 
+    // An automatic structural guard is not an operator edit: keep it out of
+    // undo history and the entity's dirty state so opening a template does
+    // not trigger an autosave.
+    __unstableMarkNextChangeAsNotPersistent();
     updateBlockAttributes(clientId, {
       lock: { remove: true, move: false },
     });
-  }, [attributes.lock, clientId, updateBlockAttributes]);
+  }, [
+    __unstableMarkNextChangeAsNotPersistent,
+    attributes.lock,
+    clientId,
+    updateBlockAttributes,
+  ]);
 
   // Note: Background/Text colors come from core color support UI
   const blockProps = useBlockProps({

@@ -55,11 +55,16 @@ export function useTemplateEditor({
     { id: postId } as any
   );
 
-  const { isSaving, loadError, saveError } = useSelect(
+  const { isAutosaving, isSaving, loadError, saveError } = useSelect(
     select => {
       const core = select(coreStore) as any;
 
       return {
+        isAutosaving: core.isAutosavingEntityRecord(
+          'postType',
+          postType,
+          postId
+        ),
         isSaving: core.isSavingEntityRecord('postType', postType, postId),
         loadError: core.getResolutionError('getEntityRecord', [
           'postType',
@@ -75,7 +80,9 @@ export function useTemplateEditor({
   const onInput = rawOnInput as ChangeHandler;
   const onChange = rawOnChange as ChangeHandler;
   const wasSavingRef = useRef(false);
+  const wasAutosavingRef = useRef(false);
   const lastSaveErrorRef = useRef<unknown>(null);
+  const lastAutosaveSourceRef = useRef<readonly unknown[] | null>(null);
 
   // WordPress-native autosave: POSTs to /autosaves endpoint, preserves status,
   // does not create a revision. The useEntityRecord save function accepts
@@ -86,27 +93,60 @@ export function useTemplateEditor({
     });
   }, [save]);
 
+  // The autosaved fields. Published templates stay dirty after an autosave and
+  // a failed autosave keeps its edits, so dirty state alone would re-arm the
+  // timer after every save attempt. Only a change to these values schedules
+  // another autosave; selection changes and save-time content serialization
+  // do not.
+  const editedTitle = edits?.title;
+  const editedExcerpt = (edits as Record<string, unknown> | undefined)?.excerpt;
+  const editedMeta = edits?.meta;
+
   useEffect(() => {
     if (!hasEdits || isResolving || isSaving) {
       return;
     }
 
+    const source = [rawBlocks, editedTitle, editedExcerpt, editedMeta];
+    const lastSource = lastAutosaveSourceRef.current;
+    if (lastSource && source.every((value, i) => value === lastSource[i])) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
+      lastAutosaveSourceRef.current = source;
       void autosave().catch(() => {
         // The core-data error selector drives the visible error state.
       });
     }, AUTOSAVE_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [edits, hasEdits, isResolving, isSaving, autosave]);
+  }, [
+    autosave,
+    editedExcerpt,
+    editedMeta,
+    editedTitle,
+    hasEdits,
+    isResolving,
+    isSaving,
+    rawBlocks,
+  ]);
 
   useEffect(() => {
-    if (wasSavingRef.current && !isSaving && !saveError && !hasEdits) {
+    // Autosave is a background recovery write, not the operator's Save.
+    if (
+      wasSavingRef.current &&
+      !wasAutosavingRef.current &&
+      !isSaving &&
+      !saveError &&
+      !hasEdits
+    ) {
       onSave?.();
     }
 
     wasSavingRef.current = isSaving;
-  }, [hasEdits, isSaving, onSave, saveError]);
+    wasAutosavingRef.current = isAutosaving;
+  }, [hasEdits, isAutosaving, isSaving, onSave, saveError]);
 
   useEffect(() => {
     if (saveError && saveError !== lastSaveErrorRef.current) {
