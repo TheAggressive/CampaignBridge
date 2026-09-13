@@ -55,6 +55,7 @@ class Rest_Constants {
 	public const HTTP_INTERNAL_SERVER_ERROR = 500;
 	public const HTTP_NOT_FOUND             = 404;
 	public const HTTP_FORBIDDEN             = 403;
+	public const HTTP_CONFLICT              = 409;
 
 	/**
 	 * Query defaults for posts endpoint.
