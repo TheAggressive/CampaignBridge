@@ -46,6 +46,8 @@ interface EditorChromeProps {
   onNew: () => void;
   postId: number;
   postType?: string;
+  /** Server-provided meta keys a duplicate copies. */
+  duplicableMetaKeys?: readonly string[] | null;
 }
 
 /**
@@ -75,6 +77,7 @@ function EditorChromeContent({
   onNew,
   postId,
   postType = 'post',
+  duplicableMetaKeys,
 }: EditorChromeProps): JSX.Element {
   const { success, error: errorNotice } = useNotices();
   const {
@@ -95,6 +98,7 @@ function EditorChromeContent({
   } = useTemplateEditor({
     postId,
     postType,
+    duplicableMetaKeys,
     onSuccess: success,
     onError: errorNotice,
   });

@@ -1,4 +1,5 @@
 import apiFetch from '@wordpress/api-fetch';
+import { UNTITLED_TEMPLATE_TITLE } from '../utils/templateDuplication';
 
 /**
  * Creates a new draft email template via the WordPress REST API.
@@ -17,7 +18,7 @@ export async function createDraft(title?: string): Promise<{ id: number }> {
       title:
         title && String(title).trim()
           ? String(title).trim()
-          : 'Untitled template',
+          : UNTITLED_TEMPLATE_TITLE,
     },
   });
 }

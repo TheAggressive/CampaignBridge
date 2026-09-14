@@ -9,6 +9,7 @@ import { dispatch, resolveSelect, select, useSelect } from '@wordpress/data';
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import type { SaveStatus } from '../types';
+import { buildDuplicatePayload } from '../utils/templateDuplication';
 import { TEMPLATE_LIST_QUERY } from './useTemplates';
 
 const AUTOSAVE_DELAY_MS = 2000;
@@ -37,6 +38,11 @@ export type NoticeOptions = {
 interface UseTemplateEditorOptions {
   postId: number;
   postType: string;
+  /**
+   * Server-provided meta keys a duplicate copies. Without them duplication
+   * refuses rather than copying an unclassified field.
+   */
+  duplicableMetaKeys?: readonly string[] | null;
   /** Receives CampaignBridge copy after a confirmed canonical save. */
   onSuccess?: (message: string) => void;
   /** Receives CampaignBridge copy for a failure; never raw server text. */
@@ -119,6 +125,7 @@ export const editorMessages = {
 export function useTemplateEditor({
   postId,
   postType,
+  duplicableMetaKeys,
   onSuccess,
   onError,
 }: UseTemplateEditorOptions) {
@@ -345,26 +352,18 @@ export function useTemplateEditor({
       postType,
       postId
     ) as TemplateRecord | undefined;
-    if (!saved) {
+    if (!saved || !Array.isArray(duplicableMetaKeys)) {
       return failed;
     }
 
-    const title =
-      typeof saved.title === 'string'
-        ? saved.title
-        : saved.title?.raw || saved.title?.rendered || 'Untitled';
+    const payload = buildDuplicatePayload(saved, duplicableMetaKeys);
 
     return runCanonicalOperation('duplicate', async () => {
       try {
         const newTemplate = await apiFetch<{ id: number }>({
           path: `/wp/v2/${postType}`,
           method: 'POST',
-          data: {
-            status: 'draft',
-            content: saved.content,
-            title: `${title} (Copy)`,
-            meta: saved.meta,
-          },
+          data: { ...payload },
         });
         // Invalidate the template list resolver so useTemplates re-fetches.
         dispatch(coreStore).invalidateResolution('getEntityRecords', [
@@ -377,7 +376,13 @@ export function useTemplateEditor({
         return failed;
       }
     });
-  }, [canonicalOperationBlocker, postId, postType, runCanonicalOperation]);
+  }, [
+    canonicalOperationBlocker,
+    duplicableMetaKeys,
+    postId,
+    postType,
+    runCanonicalOperation,
+  ]);
 
   const restoreRevision = useCallback(
     async (revisionId: number): Promise<RestoreResult> => {

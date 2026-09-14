@@ -10,4 +10,8 @@
 
 ?>
 
-<div id="cb-block-editor-root" class="editor-screen"></div>
+<div
+	id="cb-block-editor-root"
+	class="editor-screen"
+	data-duplicable-meta-keys="<?php echo esc_attr( (string) wp_json_encode( \CampaignBridge\Post_Types\Post_Type_Email_Template::get_duplicable_meta_keys() ) ); ?>"
+></div>

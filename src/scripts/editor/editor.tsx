@@ -12,6 +12,7 @@ import { useNewTemplate } from './hooks/useNewTemplate';
 import { useTemplateRouting } from './hooks/useTemplateRouting';
 import { useTemplates } from './hooks/useTemplates';
 import { registerCampaignBridgeBlocks } from './utils/registerCampaignBridgeBlocks';
+import { parseDuplicableMetaKeys } from './utils/templateDuplication';
 import type { TemplateSummary } from './types';
 
 /**
@@ -60,7 +61,12 @@ interface EmptyStateProps {
  * - Handling template selection and creation
  * - Rendering the appropriate UI based on current state
  */
-export default function CampaignBridgeBlockEditor(): JSX.Element {
+export default function CampaignBridgeBlockEditor({
+  duplicableMetaKeys,
+}: {
+  /** Server-provided meta keys a duplicate copies. */
+  duplicableMetaKeys: readonly string[] | null;
+}): JSX.Element {
   const [error, setError] = useState('');
   const {
     items: list,
@@ -122,6 +128,7 @@ export default function CampaignBridgeBlockEditor(): JSX.Element {
           onNew={onNew}
           postId={currentId}
           postType={POST_TYPE}
+          duplicableMetaKeys={duplicableMetaKeys}
         />
       ) : loading ? (
         <div className='cb-block-editor-loading'>
@@ -237,7 +244,13 @@ domReady(() => {
         throw new Error('The email block catalog could not be initialized.');
       }
 
-      reactRoot.render(<CampaignBridgeBlockEditor />);
+      reactRoot.render(
+        <CampaignBridgeBlockEditor
+          duplicableMetaKeys={parseDuplicableMetaKeys(
+            root.dataset.duplicableMetaKeys
+          )}
+        />
+      );
     } catch {
       // Initialization errors can carry internal details; show fixed copy.
       reactRoot.render(

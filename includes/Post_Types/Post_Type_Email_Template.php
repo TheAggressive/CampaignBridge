@@ -59,6 +59,17 @@ class Post_Type_Email_Template {
 	 * - `false`: the field organizes or targets the template rather than
 	 *   defining the email. Restoring older content must not silently move a
 	 *   template between library categories or change its audience targeting.
+	 *
+	 * Every field also declares `duplicate` explicitly, independently of
+	 * `revisions`. Duplicating a template copies only fields marked `true`: the
+	 * reusable email definition. A field without an explicit `true` is never
+	 * copied, so new metadata stays out of duplicates until it is classified.
+	 *
+	 * - `true`: the field is part of the reusable email definition (subject,
+	 *   sender, compliance content, link decoration, footer).
+	 * - `false`: the field targets or files one template. A copy starts with no
+	 *   audience targeting and in the default library category, so duplicating a
+	 *   template never duplicates a campaign or silently files the copy.
 	 */
 	private const META_FIELD_CONFIG = array(
 		// String fields.
@@ -66,47 +77,56 @@ class Post_Type_Email_Template {
 			'type'      => 'string',
 			'sanitize'  => 'sanitize_text_field',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_preheader'           => array(
 			'type'      => 'string',
 			'sanitize'  => 'sanitize_text_field',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_sender_name'         => array(
 			'type'      => 'string',
 			'sanitize'  => 'sanitize_text_field',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_sender_email'        => array(
 			'type'      => 'string',
 			'sanitize'  => 'sanitize_email',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_view_online_url'     => array(
 			'type'      => 'string',
 			'sanitize'  => 'esc_url_raw',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_unsubscribe_url'     => array(
 			'type'      => 'string',
 			'sanitize'  => 'esc_url_raw',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_utm_template'        => array(
 			'type'      => 'string',
 			'sanitize'  => 'sanitize_text_field',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		// Audience targeting belongs to campaigns and providers, not the email.
 		'campaignbridge_audience_tags'       => array(
 			'type'      => 'string',
 			'sanitize'  => 'sanitize_text_field',
 			'revisions' => false,
+			'duplicate' => false,
 		),
 		'campaignbridge_footer_pattern'      => array(
 			'type'      => 'string',
 			'sanitize'  => 'sanitize_text_field',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 
 		// Boolean fields.
@@ -114,16 +134,19 @@ class Post_Type_Email_Template {
 			'type'      => 'boolean',
 			'sanitize'  => 'wp_validate_boolean',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_utm_enabled'         => array(
 			'type'      => 'boolean',
 			'sanitize'  => 'wp_validate_boolean',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_footer_enabled'      => array(
 			'type'      => 'boolean',
 			'sanitize'  => 'wp_validate_boolean',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 
 		// HTML field.
@@ -131,15 +154,17 @@ class Post_Type_Email_Template {
 			'type'      => 'string',
 			'sanitize'  => 'wp_kses_post',
 			'revisions' => true,
+			'duplicate' => true,
 		),
 
 		// Category field with enum validation. Library organization, like a
-		// taxonomy, is not revisioned.
+		// taxonomy, is neither revisioned nor duplicated.
 		'campaignbridge_template_category'   => array(
 			'type'         => 'string',
 			'sanitize'     => array( __CLASS__, 'sanitize_category_field' ),
 			'valid_values' => array( 'general', 'newsletter', 'promotional', 'welcome', 'custom' ),
 			'revisions'    => false,
+			'duplicate'    => false,
 		),
 	);
 
@@ -496,6 +521,23 @@ class Post_Type_Email_Template {
 	 */
 	public static function get_meta_field_keys(): array {
 		return array_keys( self::META_FIELD_CONFIG );
+	}
+
+	/**
+	 * Get the meta keys a template duplicate copies.
+	 *
+	 * Fails closed: only fields that explicitly declare `duplicate => true`
+	 * are returned.
+	 *
+	 * @return array<int, string> Duplicable meta field keys.
+	 */
+	public static function get_duplicable_meta_keys(): array {
+		return array_keys(
+			array_filter(
+				self::get_meta_field_config(),
+				static fn ( mixed $config ): bool => is_array( $config ) && true === ( $config['duplicate'] ?? false )
+			)
+		);
 	}
 
 	/**

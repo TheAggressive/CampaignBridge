@@ -63,7 +63,22 @@ const mockRawRecord = {
   title: 'My Template',
   status: 'draft',
   content: '<!-- wp:paragraph --><p>Saved</p><!-- /wp:paragraph -->',
-  meta: { campaignbridge_subject: 'Saved subject' },
+  meta: {
+    campaignbridge_subject: 'Saved subject',
+    campaignbridge_utm_enabled: false,
+    campaignbridge_audience_tags: 'saved-list',
+    campaignbridge_template_category: 'newsletter',
+    campaignbridge_provider_campaign_id: 'remote-campaign-1',
+  },
+};
+
+// The server-provided duplication policy the editor receives.
+const DUPLICABLE_META_KEYS = [
+  'campaignbridge_subject',
+  'campaignbridge_utm_enabled',
+];
+const mockPolicy = {
+  duplicableMetaKeys: DUPLICABLE_META_KEYS as readonly string[] | null,
 };
 
 const RAW_SERVER_ERROR = 'SQLSTATE[HY000]: raw database failure in /var/www';
@@ -135,6 +150,7 @@ function Harness() {
   current = useTemplateEditor({
     postId: 42,
     postType: 'cb_templates',
+    duplicableMetaKeys: mockPolicy.duplicableMetaKeys,
     onSuccess: mockOnSuccess,
     onError: mockOnError,
   });
@@ -169,6 +185,7 @@ describe('useTemplateEditor', () => {
     mockCoreState.hasEdits = false;
     mockCoreState.isSaving = false;
     mockCoreState.rawRecord = mockRawRecord;
+    mockPolicy.duplicableMetaKeys = DUPLICABLE_META_KEYS;
     mockSave = setupEntityRecord();
     setupUseSelect();
     coreDispatch = {
@@ -393,15 +410,22 @@ describe('useTemplateEditor', () => {
   });
 
   describe('duplicate', () => {
-    it('copies the saved template when core-data reports it clean', async () => {
-      jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
-
+    async function duplicateNow(): Promise<DuplicateResult> {
       let result: DuplicateResult = { success: false };
       await act(async () => {
         result = await current.duplicate();
       });
+      return result;
+    }
 
-      expect(result).toEqual({ success: true, id: 99 });
+    function createPayload(): Record<string, unknown> {
+      return (jest.mocked(apiFetch).mock.calls[0][0] as any).data;
+    }
+
+    it('creates one draft of the saved template with only allowlisted meta', async () => {
+      jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
+
+      expect(await duplicateNow()).toEqual({ success: true, id: 99 });
       expect(apiFetch).toHaveBeenCalledTimes(1);
       expect(apiFetch).toHaveBeenCalledWith({
         path: '/wp/v2/cb_templates',
@@ -410,9 +434,100 @@ describe('useTemplateEditor', () => {
           status: 'draft',
           content: mockRawRecord.content,
           title: 'My Template (Copy)',
-          meta: mockRawRecord.meta,
+          meta: {
+            campaignbridge_subject: 'Saved subject',
+            campaignbridge_utm_enabled: false,
+          },
         },
       });
+    });
+
+    it('omits denied and unrecognized meta from the create payload', async () => {
+      jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
+
+      await duplicateNow();
+
+      const meta = createPayload().meta as Record<string, unknown>;
+      expect(meta).not.toHaveProperty('campaignbridge_audience_tags');
+      expect(meta).not.toHaveProperty('campaignbridge_template_category');
+      expect(meta).not.toHaveProperty('campaignbridge_provider_campaign_id');
+      expect(meta).not.toBe(mockRawRecord.meta);
+    });
+
+    it('creates a draft without source identity, status, or dates from a published template', async () => {
+      mockCoreState.rawRecord = {
+        ...mockRawRecord,
+        status: 'publish',
+        date: '2026-09-13T10:00:00',
+        date_gmt: '2026-09-13T10:00:00',
+        author: 3,
+        slug: 'my-template',
+        parent: 0,
+      };
+      jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
+
+      await duplicateNow();
+
+      const payload = createPayload();
+      expect(Object.keys(payload).sort()).toEqual([
+        'content',
+        'meta',
+        'status',
+        'title',
+      ]);
+      expect(payload.status).toBe('draft');
+    });
+
+    it('copies the saved content, not unsaved editor state', async () => {
+      setupEntityRecord({
+        edits: { content: 'Unsaved editor content' },
+        record: { ...mockRecord, content: 'Unsaved editor content' },
+      });
+      render();
+      jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
+
+      await duplicateNow();
+
+      expect(createPayload().content).toBe(mockRawRecord.content);
+    });
+
+    it('refuses without a request when the duplication policy is missing', async () => {
+      mockPolicy.duplicableMetaKeys = null;
+      render();
+
+      expect(await duplicateNow()).toEqual({
+        success: false,
+        error: MESSAGES.duplicateFailed,
+      });
+      expect(apiFetch).not.toHaveBeenCalled();
+    });
+
+    it('refuses without a request when the saved template is unavailable', async () => {
+      mockCoreState.rawRecord = undefined;
+
+      expect(await duplicateNow()).toEqual({
+        success: false,
+        error: MESSAGES.duplicateFailed,
+      });
+      expect(apiFetch).not.toHaveBeenCalled();
+    });
+
+    it('returns an ID to navigate to only after the create resolves', async () => {
+      const request = deferred<{ id: number }>();
+      jest.mocked(apiFetch).mockReturnValue(request.promise as any);
+
+      let settled: DuplicateResult | null = null;
+      await act(async () => {
+        void current.duplicate().then(result => {
+          settled = result;
+        });
+      });
+      expect(settled).toBeNull();
+      expect(current.isOperationPending).toBe(true);
+
+      await act(async () => request.resolve({ id: 99 }));
+      expect(settled).toEqual({ success: true, id: 99 });
+      expect(current.isOperationPending).toBe(false);
     });
 
     it('refuses without a request while core-data reports unsaved edits', async () => {
