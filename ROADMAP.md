@@ -2,7 +2,7 @@
 
 ## Product mission
 
-CampaignBridge should let a WordPress team turn site content into compliant,
+CampaignBridge lets a WordPress team turn site content into compliant,
 provider-ready email campaigns without leaving WordPress. It owns template
 composition, content selection, review, delivery orchestration, and operational
 history while the email service provider remains responsible for subscriber
@@ -15,354 +15,263 @@ The intended operator flow is:
 CampaignBridge is not intended to become a subscriber database, SMTP server, or
 general marketing-automation suite during the first production cycle.
 
+Actionable work is tracked in GitHub Issues. See
+[`docs/work-tracking.md`](docs/work-tracking.md) for the repository's planning
+convention and dependency-first execution order.
+
 ## Product assumptions
 
-These are the recommended defaults until a product decision explicitly changes
-them:
+These are durable product rules until an explicit decision changes them:
 
 - WordPress is the system of record for templates, campaigns, content snapshots,
   delivery attempts, and audit events.
 - Provider audiences, segments, tags, and subscriber records remain in the
   provider. CampaignBridge stores stable remote references, not audience PII.
-- Campaign content is snapshotted at approval time. Refreshing content after
-  approval is an explicit action that requires another review.
+- Campaign content is snapshotted for review/approval. Refreshing content after
+  approval is explicit and requires review again.
 - Remote campaigns are created as drafts first. Sending and scheduling are
   separate, explicit, capability-protected operations.
 - Every remote mutation has an idempotency strategy and a reconciliation path.
   An uncertain response must never cause an automatic duplicate send.
-- Mailchimp and HTML export are the first complete delivery paths. Additional
-  providers wait until the provider-neutral workflow is proven end to end.
-- Templates continue to use the `cb_templates` post type. Campaigns, jobs, and
-  audit events use repository abstractions backed by durable, indexed storage.
+- Mailchimp and HTML export prove the first complete delivery lifecycle before a
+  second provider is implemented.
+- Templates use the `cb_templates` post type. Campaigns, jobs, remote references,
+  delivery attempts, snapshots, and audit events use repository abstractions
+  backed by durable, indexed storage as their milestones introduce them.
 
 ## Current product state
 
-CampaignBridge has a substantial engineering foundation, but it is not yet a
-complete campaign-management product.
+CampaignBridge has a production-oriented template/editor/compiler foundation,
+but it is not yet a complete campaign-management and delivery product.
 
-| Area               | Present today                                                                                                                              | Material gap                                                                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Template authoring | `core-data`-backed standalone editor, autosave, shared undo history, template metadata, draft/publish lifecycle, native revisions with paginated history and safe restore, allowlisted duplication, constrained CampaignBridge email-block library, compiled iframe preview | Test delivery                                                        |
-| Email generation   | Email-native grammar, O(1) renderer registry, deterministic HTML/plain-text compiler, immutable snapshot contract, artifact fingerprinting, compiled-preview API | Snapshot creation/approval workflow, remaining compliance validation, and representative email-client regression fixtures                         |
-| Providers          | Four-method provider contract (`slug`, `label`, `is_configured`, `verify_connection`), `Connection_Result` domain type, `Provider_Error` normalization, `Provider_Connection_Repository`, Mailchimp adapter, HTML export adapter | No complete audience, provider-draft, test-send, schedule/send, reconciliation, or reporting lifecycle                                             |
-| Campaigns          | `Campaign_State` enum, `Campaign_State_Machine` transition guard                                                                                   | No campaign persistence, content snapshot, operator workflow, or audit timeline                                        |
-| Admin              | File-based screens, secure form system, settings, post-type selection, status page, provider connection settings with capability-gated save, provider verification status, audience selection UI, connection health display | No campaign management screens, delivery operations UI, or reporting views                                           |
-| API                | Posts, post types, editor settings, encrypted-field routes, brand-kit routes, template revision restore, and compiled-preview routes                                  | No provider discovery, campaign, delivery, reconciliation, or reporting API                                                                          |
-| Operations         | Hardened CI, signed commits, package verification, security controls, runbook, broad PHP test suites                                       | No durable job runner, delivery locks, webhook ingestion, reconciliation monitor, comprehensive browser E2E, or production metrics                  |
+| Area | Shipped today | Remaining product boundary |
+| --- | --- | --- |
+| Template authoring | Standalone `core-data` editor; draft/save/publish; autosave; native revisions with paginated history and safe restore; allowlisted duplication; constrained CampaignBridge block grammar | Dynamic content selection/snapshot and campaign-level review workflow |
+| Email generation | Deterministic HTML/plain compiler; renderer registry; compiled preview; shared resolved email design; Brand Kit; theme `campaignbridge/email.json`; structured diagnostics; artifact fingerprinting | M1 closeout: content snapshots, portable personalization, remaining preflight/compliance gaps, representative client fixtures |
+| Providers | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery foundations; HTML export boundary | Remote draft/content handoff, test send, guarded schedule/send/cancel, reconciliation/reporting |
+| Campaigns | Provider-neutral campaign state/state-machine foundations | Durable campaign/snapshot/attempt/audit storage and canonical workflows |
+| Admin | Settings, Brand Kit, provider connection/verification, audience-selection foundations, template editor lifecycle | Full campaign/operator workflow and delivery/recovery surfaces |
+| API | Editor/content support routes, Brand Kit, compiled preview, template revision restore and core template REST lifecycle | Campaign/delivery/reconciliation/reporting APIs |
+| Operations | Hardened CI, security/accessibility gates, signed/reproducible packaging, runbook foundations | Durable jobs/locks, webhooks, reconciliation monitor, operational metrics and support tooling |
 
-The README describes several target-state capabilities as though they are
-already complete. Milestone 0 makes documentation and visible UI match shipped
-behavior before broader product development continues.
+The README is intentionally conservative: only shipped capabilities belong in
+its "available now" claims.
 
 ## Target domain and architecture
 
-The existing dependency direction in `docs/architecture.md` remains the target:
+The dependency direction in [`docs/architecture.md`](docs/architecture.md)
+remains authoritative:
 
 `Delivery → Workflow → Domain ← Repository implementations`
 
-The first production domain should contain these concepts:
+The production campaign lifecycle builds around these concepts:
 
-- **Provider connection**: encrypted credentials, configuration, capabilities,
+- **Provider connection** — encrypted credentials, configuration, capabilities,
   health, and stable provider account identity.
-- **Template**: reusable block content and email metadata stored in WordPress.
-- **Campaign**: provider-neutral subject, sender, audience reference, content
-  snapshot, lifecycle state, and ownership.
-- **Delivery attempt**: one idempotent attempt to create, test, schedule, send,
-  cancel, or reconcile a remote campaign.
-- **Remote campaign reference**: provider, remote ID, last observed state, and
-  reconciliation cursor.
-- **Audit event**: actor, action, timestamp, target, result, and redacted context.
+- **Template** — reusable block content and email metadata stored in WordPress.
+- **Content snapshot** — immutable resolved WordPress content/design/compiler
+  inputs sufficient to reproduce reviewed output.
+- **Campaign** — provider-neutral subject, sender, audience reference, approved
+  artifact/snapshot, lifecycle state, ownership, and version.
+- **Delivery attempt** — one recorded create/test/schedule/send/cancel/reconcile
+  operation with idempotency and ambiguity semantics.
+- **Remote campaign reference** — provider, remote ID, normalized observed state,
+  and reconciliation metadata.
+- **Audit event** — actor, action, timestamp, target, result, and redacted context.
 
-The campaign lifecycle should be explicit and guarded:
+The guarded lifecycle remains conceptually:
 
 `draft → ready_for_review → approved → provider_draft → scheduled|sending → sent`
 
-Failure and recovery states must include `failed`, `cancelled`, and `unknown`.
-`unknown` is important: it prevents a timeout after an irreversible provider
-request from being mistaken for a safe retry.
+Failure/recovery states include `failed`, `cancelled`, and `unknown`.
+`unknown` is load-bearing: a timeout after an irreversible provider request is
+not evidence that the request failed or is safe to retry.
 
-The current provider interface should evolve from one coarse
-`send_campaign()` operation into capability-driven operations such as connection
-verification, audience discovery, remote draft creation, content update, test
-send, schedule, send, cancel, status lookup, and report retrieval. Provider DTOs
-and normalized errors must prevent provider response shapes from leaking into
-the domain or UI.
+Provider-specific response shapes and syntax remain inside adapters. Campaign,
+snapshot, personalization, workflow, and reporting contracts stay provider
+neutral and expose provider-specific capability only through explicit extension
+metadata/capability discovery.
 
 ## Delivery milestones
 
-Milestones are ordered by dependency and release outcome rather than calendar
-date. A milestone is complete only when its exit gate passes.
+Milestones are ordered by dependency and release outcome, not calendar date.
+The live implementation backlog for each milestone is its linked GitHub issue.
 
-### Milestone 0 — Product truth and stable contracts
+### Milestone 0 — Product truth and stable contracts *(complete)*
 
-**Outcome:** The repository, UI, and documentation accurately describe a secure
-template-building foundation, and new campaign work has stable contracts to
-build upon.
-
-Deliverables:
-
-- Replace scattered provider options with one canonical versioned
-  connection/settings schema.
-- Make connection status a real provider verification result; remove fabricated
-  campaign and subscriber statistics.
-- Remove production menu exposure for conditional, repeater, and form demo
-  screens, keeping examples in development documentation or fixtures.
-- Reconcile README and API documentation with routes and capabilities that
-  actually ship.
-- Define granular capabilities for managing connections, editing templates,
-  creating campaigns, approving/sending campaigns, and viewing reports.
-- Define repository ports, provider DTOs, normalized error categories, campaign
-  states, schema versioning, and migration/rollback rules.
-- Record consequential architecture and product decisions as short decision
-  records, including the supported extension points and compatibility promises
-  for blocks, providers, repositories, and workflow hooks.
-- Add architectural tests that prevent delivery code from bypassing workflow
-  services or persistence ports.
-
-Exit gate:
-
-- No production screen reports mock data or a guessed provider connection.
-- Production settings use the canonical provider connection repository as
-  the single source of truth.
-- Documentation, registered routes, visible screens, and capabilities agree.
+The repository now has truthful provider connection status, canonical provider
+connection persistence, normalized provider/domain contracts, granular
+capability foundations, architecture decision records, and boundary checks.
+M0 is historical foundation rather than an active backlog.
 
 ### Milestone 1 — Production template and email compiler
 
-**Outcome:** A template can be designed and compiled into deterministic,
-compliant, email-safe HTML before any provider is involved.
+**Tracking:** #62
 
-Deliverables:
+**Outcome:** A template can be designed, populated from selected WordPress
+content, validated, and compiled into deterministic, compliant, email-safe HTML
+before any provider is involved.
 
-- Establish the email-native block grammar and renderer registry described in
-  [`docs/email-block-architecture.md`](docs/email-block-architecture.md); accept
-  only explicitly supported CampaignBridge blocks and reject core or third-party
-  frontend markup. Follow the phased
-  [implementation plan](docs/email-block-implementation-plan.md).
-- Correct template draft, publish, revision, duplication, and autosave semantics.
-- Keep the compiler/editor supported-block matrix current and fail clearly for
-  all unsupported blocks instead of silently producing incomplete email.
-- Define dynamic content bindings for one or more selected WordPress posts and
-  create an immutable content snapshot for review.
-- Keep critical styles renderer-owned; if authored style sheets are introduced,
-  select a maintained public inliner and deterministic sanitization pipeline.
-- Collect, validate, deduplicate, and deterministically order referenced assets,
-  including approved web fonts and their email-safe fallback stacks; reject
-  assets that cannot be represented safely in the selected target profile.
-- Enforce required sender, physical-address, unsubscribe, view-online, alt-text,
-  and preheader rules before approval.
-- Add preflight diagnostics for empty or invalid links, unresolved
-  personalization/merge tokens, missing image dimensions, inaccessible images,
-  generated-message size and clipping risk, and target-profile compatibility.
-  Diagnostics must use stable codes and distinguish blocking errors from
-  actionable warnings.
-- Add desktop/mobile preview, generated-HTML inspection, and secure HTML download.
-- Add golden HTML fixtures, snapshot tests, URL normalization tests, and
-  representative Outlook/Gmail/Apple Mail compatibility fixtures.
+Current actionable slices:
 
-Exit gate:
+- #69 — WordPress content bindings and immutable review snapshot inputs.
+- #70 — Provider-neutral personalization/system-token contract.
+- #71 — Remaining preflight/compliance/artifact-inspection closeout.
+- #72 — Representative Outlook/Gmail/Apple Mail compatibility fixtures.
 
-- The same template and content snapshot always generate the same reviewed HTML.
-- Invalid or non-compliant output cannot advance to approval.
-- HTML export produces a verified, downloadable artifact with no provider
-  credentials or WordPress-only markup.
+**Exit gate:** the same template + content snapshot + resolved design always
+produces the same reviewed artifact; invalid/non-compliant output cannot advance
+to approval; export contains no provider credentials or WordPress-only markup.
 
 ### Milestone 2 — Provider-neutral campaign workflow
 
-**Outcome:** CampaignBridge can manage a complete campaign lifecycle without
-depending on Mailchimp-specific types or response shapes.
+**Tracking:** #63
 
-Deliverables:
+**Outcome:** CampaignBridge manages a complete local campaign lifecycle through
+approval without depending on Mailchimp-specific types or response shapes.
 
-- Add durable repositories and migrations for campaigns, content snapshots,
-  remote references, delivery attempts, and audit events.
-- Implement the campaign state machine and reject invalid transitions.
-- Implement create, edit, select audience, snapshot content, validate, preview,
-  approve, revoke approval, archive, and duplicate workflows.
-- Add idempotency keys, optimistic concurrency/version checks, actor attribution,
-  and immutable delivery history.
-- Add REST controllers with schemas, pagination, permissions, rate limits, and
-  consistent error envelopes.
-- Separate reversible draft operations from irreversible schedule/send
-  operations at service and capability boundaries.
+Current actionable slices:
 
-Exit gate:
+- #73 — Durable campaign/snapshot/remote-reference/delivery-attempt/audit storage.
+- #74 — Canonical campaign workflows, state transitions, concurrency and audit.
+- #75 — Stable REST adapter over those workflows.
 
-- Provider-neutral integration tests exercise every valid state transition and
-  reject invalid or duplicate transitions.
-- A campaign can reach `approved` using HTML export only, with a complete audit
-  history and no direct provider dependency.
+**Exit gate:** provider-neutral integration tests exercise every legal
+transition and reject illegal/duplicate transitions; a campaign reaches
+`approved` using HTML export only with a complete local audit history.
 
 ### Milestone 3 — Mailchimp end-to-end vertical slice
 
-**Outcome:** An administrator can safely take an approved WordPress campaign
-through Mailchimp draft creation, testing, scheduling or sending, and status
-reconciliation.
+**Tracking:** #64
 
-Deliverables:
+**Outcome:** An administrator can safely take an approved CampaignBridge
+campaign through Mailchimp draft creation, testing, scheduling/sending, and
+status reconciliation.
 
-- Verify credentials against the Mailchimp account and record redacted health
-  information without treating API-key length as connectivity.
-- Discover and cache audiences, segments/tags, sender identities, and relevant
-  provider capabilities with explicit refresh behavior.
-- Create a remote campaign draft, upload generated content, retain its remote ID,
-  and make repeated requests idempotent.
-- Support test delivery, provider preview links where available, explicit
-  schedule, explicit send, and safe cancellation where Mailchimp permits it.
-- Normalize authentication, validation, rate-limit, transient, conflict, and
-  uncertain-result failures.
-- Define per-operation connection and response timeouts, cancellation behavior,
-  and retry budgets; retries must honor provider guidance such as `Retry-After`
-  and remain disabled for mutations that are not proven idempotent.
-- Poll/reconcile remote state and prevent duplicate sends after timeouts.
-- Add provider contract tests and recorded/sandbox integration tests with secrets
-  isolated from pull-request workflows.
+Current actionable slices:
 
-Exit gate:
+- #76 — Provider capabilities, Mailchimp discovery and personalization mapping.
+- #77 — Idempotent Mailchimp draft/content handoff.
+- #78 — Test delivery.
+- #79 — Guarded schedule/send/cancel operations.
+- #80 — Remote-state reconciliation and ambiguous-outcome recovery.
 
-- A sandbox campaign completes the full operator flow with one remote campaign,
-  a local audit trail, and a reconciled terminal state.
-- Failure-injection tests prove that timeouts and retries cannot create a
-  duplicate remote send.
+**Exit gate:** one sandbox campaign completes the full lifecycle with one remote
+campaign, a local audit trail and a reconciled terminal state; failure injection
+proves retries/timeouts cannot duplicate a production send.
 
 ### Milestone 4 — Operator experience
 
+**Tracking:** #65
+
 **Outcome:** Non-developer WordPress operators can configure, compose, review,
-deliver, and troubleshoot campaigns without using raw APIs.
+approve, deliver, and troubleshoot campaigns without using raw APIs for normal
+operations.
 
-Deliverables:
+Decompose this milestone into action issues as the M2/M3 workflows stabilize;
+do not create UI tickets that need to invent missing business rules.
 
-- Add a first-run onboarding and provider-connection wizard.
-- Add campaign list, creation wizard, content picker, audience selector,
-  validation summary, preview, test, approval, and final confirmation screens.
-- Add campaign detail with state timeline, remote links, delivery attempts,
-  reconciliation status, and safe recovery actions.
-- Replace dashboard mock values with repository/provider-derived health and
-  campaign statistics.
-- Add clear empty, loading, permission, offline, partial-failure, and stale-data
-  states.
-- Complete keyboard, screen-reader, responsive, and reduced-motion behavior.
-
-Exit gate:
-
-- Browser E2E tests cover onboarding through provider draft creation and the
-  guarded schedule/send confirmation path.
-- Each operator role sees only authorized data and actions.
+**Exit gate:** browser E2E covers onboarding through provider draft creation and
+the guarded schedule/send confirmation path, with role-appropriate data/actions
+and complete accessible failure/empty/loading/stale states.
 
 ### Milestone 5 — Durable scheduling and operational reliability
 
-**Outcome:** Campaign work survives process crashes, cron delays, provider
-outages, and ambiguous network results without duplicate delivery.
+**Tracking:** #66
 
-Deliverables:
+**Outcome:** Campaign work survives crashes, cron delay, provider outage, and
+ambiguous remote results without duplicate delivery.
 
-- Add a durable queue/runner abstraction with claimed jobs, leases, heartbeats,
-  dead-letter handling, and WP-Cron-compatible dispatch.
-- Add per-campaign and per-remote-operation locks.
-- Apply bounded exponential backoff only to demonstrably safe operations.
-- Add reconciliation jobs for scheduled, sending, and unknown campaigns.
-- Add signed webhook ingestion where supported, with replay protection and
-  polling fallback.
-- Add WP-CLI commands for queue inspection, reconciliation, connection checks,
-  retrying safe jobs, and exporting redacted diagnostics.
-- Add Site Health checks and alerts for stalled jobs, broken cron, expired
-  connections, repeated failures, and schema drift.
+This milestone owns durable jobs/leases/locks, safe retries, scheduled
+reconciliation, signed webhooks with replay protection and polling fallback,
+WP-CLI recovery tools, and operational Site Health.
 
-Exit gate:
-
-- Failure-injection tests cover worker crashes, lock expiry, provider 429/5xx
-  responses, timeouts, duplicate webhooks, and delayed cron.
-- Every non-terminal campaign is recoverable or explicitly marked for operator
-  intervention.
+**Exit gate:** failure injection covers worker crashes, lock expiry, provider
+429/5xx responses, timeouts, duplicate webhooks and delayed cron; every
+non-terminal campaign is recoverable or explicitly requires operator action.
 
 ### Milestone 6 — Compliance, reporting, and governance
 
+**Tracking:** #67
+
 **Outcome:** Delivery is auditable, required email controls are enforced, and
-provider reporting is useful without fabricating or over-retaining data.
+normalized provider reporting is useful without fabricating freshness or
+precision and without over-retaining data.
 
-Deliverables:
+This milestone closes retention/privacy export-erasure, normalized
+provider-report provenance, redacted structured logs/support bundles, data-flow
+inventory, incident/threat-model updates, and credential-rotation procedures.
+Compliance checks needed to block earlier approval/send travel with those
+features rather than waiting until M6.
 
-- Enforce physical address, unsubscribe behavior, sender identity, and consent
-  configuration appropriate to the selected provider and campaign type.
-- Add configurable retention for campaigns, generated artifacts, job payloads,
-  provider responses, and audit context.
-- Integrate WordPress privacy export/erase hooks for locally stored personal data
-  and document which audience data remains provider-owned.
-- Synchronize normalized delivery, open, click, bounce, and unsubscribe metrics
-  where the provider exposes them.
-- Preserve provider totals and timestamps so reporting never implies fresher or
-  more precise data than the provider supplied.
-- Add redacted structured logs, correlation IDs, operational metrics, and an
-  exportable support bundle.
-- Update the threat model, incident runbook, data-flow inventory, and credential
-  rotation procedures.
-
-Exit gate:
-
-- Compliance validation blocks incomplete campaigns before provider draft/send.
-- Security review confirms credential, PII, retention, audit, webhook, and
-  deletion boundaries.
+**Exit gate:** incomplete campaigns cannot reach provider draft/send, and a
+security review confirms credential, PII, retention, audit, webhook and deletion
+boundaries.
 
 ### Milestone 7 — General availability
 
-**Outcome:** CampaignBridge is supportable as an enterprise WordPress plugin.
+**Tracking:** #68
 
-Deliverables:
+**Outcome:** CampaignBridge is supportable as a production WordPress plugin.
 
-- Add upgrade-path tests from every supported schema version and rollback-safe
-  release procedures.
-- Complete Playwright, Axe, visual, REST contract, package-install, multisite,
-  localization, timezone/DST, and large-dataset coverage.
-- Establish performance budgets for editor load, campaign queries, generation,
-  queue latency, and provider synchronization.
-- Complete administrator, operator, developer, API, privacy, troubleshooting,
-  backup/restore, and disaster-recovery documentation.
-- Document stable extension contracts with tested examples for providers,
-  compiler blocks, repositories, and workflow events; keep internal services
-  private until a compatibility commitment is intentional.
-- Test activation, deactivation, uninstall, and retention-policy behavior on
-  single-site and multisite installations, including preservation by default
-  and explicit destructive cleanup only after administrator confirmation.
-- Publish a support matrix for WordPress, PHP, MySQL/MariaDB, browsers, providers,
-  and multisite behavior.
-- Run a release-candidate pilot with real operators and a non-production provider
-  account before enabling production sends.
+GA closes upgrade/rollback coverage, browser/accessibility/REST/package/multisite
+and localization/timezone testing, representative large-data/performance
+budgets, operator/developer/privacy/recovery docs, stable public extension
+contracts, lifecycle/uninstall behavior, the support matrix, and an observed
+release-candidate pilot.
 
-Exit gate:
+**Exit gate:** the release candidate passes install, upgrade, rollback, full QA,
+browser E2E, security review, package verification, and an observed pilot
+campaign using a non-production provider account.
 
-- The release candidate passes install, upgrade, rollback, full QA, browser E2E,
-  security review, package verification, and an observed pilot campaign.
+## Cross-cutting tracks
+
+### WordPress Abilities API
+
+**Tracking:** #40
+
+Abilities are an adapter over canonical CampaignBridge workflows, not a second
+business layer. #82 and #83 are the only current implementation-ready slices.
+Campaign mutation/provider/delivery/reporting abilities wait for the respective
+M2/M3/M5/M6 contracts.
+
+### Additional providers
+
+**Tracking:** #81
+
+Provider expansion begins only after the Mailchimp vertical slice proves the
+provider-neutral lifecycle. Candidate provider APIs are re-verified when a
+provider is selected; implementation issues are then created against the proven
+capability/idempotency/reconciliation contract.
 
 ## Post-GA opportunities
 
-These are intentionally outside the first production scope:
+These remain product opportunities, not active implementation promises unless a
+tracked issue sequences them:
 
-- Additional providers implemented through the proven provider contract.
-- Editorial approval chains and separation-of-duties policies.
-- Recurring and event-triggered campaigns.
-- A/B subject/content testing.
-- Reusable campaign recipes, block patterns, and organization design systems.
-- Post-v1 email block waves for builder parity, WordPress content, commerce,
-  transactional events, and engagement integrations as mapped in
-  [`docs/email-block-catalog.md`](docs/email-block-catalog.md).
-- Network-level multisite connection and policy management.
-- Advanced analytics, attribution, and data-warehouse exports.
+- editorial approval chains and separation-of-duties policies;
+- recurring and event-triggered campaigns;
+- A/B subject/content testing;
+- reusable campaign recipes/patterns and organization design systems;
+- later email-block waves mapped in [`docs/email-block-catalog.md`](docs/email-block-catalog.md);
+- network-level multisite connection/policy management;
+- advanced analytics, attribution, and data-warehouse exports.
 
 ## Cross-cutting definition of done
 
-Every roadmap item must include, in the same change:
+Every relevant implementation change carries its own:
 
-- Capability and nonce enforcement at the server boundary.
-- Input validation, output escaping, credential/PII redaction, and rate limits.
-- Repository migrations and rollback behavior where persistence changes.
-- Unit/integration coverage plus provider or browser coverage proportional to the
-  affected boundary.
-- Idempotency and reconciliation behavior for remote mutations.
-- Accessibility states and translatable user-facing strings.
-- Updated operator, API, architecture, threat-model, and runbook documentation.
-- Production build and allowlisted package verification.
+- capability/object authorization and nonce/REST authentication behavior;
+- input validation, output escaping, credential/PII redaction, and bounded/rate-limited external surfaces;
+- persistence migrations/rollback behavior when data changes;
+- unit/integration/provider/browser evidence proportional to the boundary;
+- idempotency and reconciliation semantics for remote mutations;
+- accessibility and translatable user-facing states;
+- durable API/architecture/threat-model/runbook/operator documentation updates;
+- production build and allowlisted release-package verification.
 
-Mock data, demo screens, silent fallbacks, untracked provider state, and
-documentation-only capabilities do not satisfy the definition of done.
+Mock data, demo-only screens, silent fallbacks, untracked provider state, and
+documentation-only capabilities do not satisfy completion.
 
 ## Product success measures
 
@@ -371,5 +280,5 @@ documentation-only capabilities do not satisfy the definition of done.
 - Zero duplicate sends caused by CampaignBridge retries or ambiguous responses.
 - Queue age, provider error rate, reconciliation lag, and manual-recovery rate.
 - Preview-to-delivered HTML regression rate across supported email fixtures.
-- Accessibility and task-completion results for the operator workflow.
+- Accessibility and operator task-completion results.
 - Upgrade, rollback, and support-bundle success during release pilots.
