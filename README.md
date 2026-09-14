@@ -19,6 +19,9 @@ content before it reaches a provider.
 ## What is available now
 
 - A dedicated email-template post type and standalone block editor.
+- A WordPress-native template lifecycle: draft creation, Save, Publish,
+  autosave, revision history with safe restore, and duplication of the
+  reusable template definition.
 - An email-native block grammar with deterministic HTML and plain-text output.
 - Compiled previews with visible validation diagnostics.
 - A Brand Kit for portable colors and typography.
@@ -162,11 +165,13 @@ quality gate.
 
 ## Security
 
-REST and form operations use explicit capability checks against the
-`campaignbridge_manage` capability (defined in `includes/Core/Capabilities.php`),
-nonces where appropriate, type-aware validation and sanitization, and output
-escaping. Provider credentials are encrypted at rest and must not appear in logs,
-responses, or provider-facing error messages. See [SECURITY.md](SECURITY.md) and
+REST and form operations use explicit CampaignBridge capabilities (defined in
+`includes/Core/Capabilities.php`): administrative operations require
+`campaignbridge_manage`, and email templates require
+`campaignbridge_edit_templates` through the template post type's mapped
+capabilities. They also use nonces where appropriate, type-aware validation and
+sanitization, and output escaping. Provider credentials are encrypted at rest
+and must not appear in logs, responses, or provider-facing error messages. See [SECURITY.md](SECURITY.md) and
 [docs/threat-model.md](docs/threat-model.md) for the maintained security
 contract.
 
