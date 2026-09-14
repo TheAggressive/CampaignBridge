@@ -603,7 +603,6 @@ return [
     'page_title'   => __('CampaignBridge Settings', 'campaignbridge'),
     'capability'   => 'campaignbridge_manage',
     'position'     => 10,
-    'description'  => __('Configure your email campaign settings and integrations.', 'campaignbridge'),
 
     // Optional: Controller for business logic
     'controller'   => \CampaignBridge\Admin\Controllers\Settings_Controller::class,

@@ -51,6 +51,7 @@ const result = spawnSync(
       ...process.env,
       CB_E2E_AUTO_LOGIN_URL: autoLoginUrl.href,
       CB_E2E_BASE_URL: siteUrl.href,
+      CB_E2E_WP_CLI: JSON.stringify(['studio', 'wp', `--path=${sitePath}`]),
     },
     stdio: 'inherit',
   }

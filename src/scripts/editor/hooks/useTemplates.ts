@@ -1,6 +1,7 @@
 import { store as coreDataStore, useEntityRecords } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useEffect, useMemo } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import type { TemplateRestRecord, TemplateSummary } from '../types';
 
 const TEMPLATE_POST_TYPE = 'cb_templates';
@@ -28,12 +29,6 @@ function templateTitle(record: TemplateRestRecord): string {
   return record.title.raw || record.title.rendered || `#${record.id}`;
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message
-    ? error.message
-    : 'Failed to load templates.';
-}
-
 /** Read template summaries through WordPress core-data's resolver and cache. */
 export function useTemplates({ onError }: UseTemplatesOptions = {}) {
   const { records, isResolving, hasResolved } =
@@ -53,7 +48,10 @@ export function useTemplates({ onError }: UseTemplatesOptions = {}) {
     []
   );
 
-  const error = resolutionError ? errorMessage(resolutionError) : '';
+  // Server and exception text can carry internal details.
+  const error = resolutionError
+    ? __('Templates could not be loaded. Please try again.', 'campaignbridge')
+    : '';
 
   useEffect(() => {
     if (error) {

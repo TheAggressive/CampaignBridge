@@ -60,54 +60,39 @@
 
 .campaignbridge-product-header {
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: 15px;
+  column-gap: 20px;
   padding: 16px 0 14px;
 
-  &__identity,
-  &__identity > div {
+  &__identity {
     display: contents;
   }
+  /* The horizontal brand logo is the visible page heading. */
   &__identity h1 {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: end;
-    margin: 0 0 3px;
-    padding: 0;
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 1.25;
-  }
-  &__identity p {
-    grid-column: 2;
-    grid-row: 2;
-    align-self: start;
-    margin: 0;
-    color: var(--cb-muted);
-    font-size: 13px;
-  }
-  &__mark {
     grid-column: 1;
-    grid-row: 1 / 3;
-    width: 50px;
-    height: 50px;
-    border-radius: 11px;
-    display: grid;
-    place-items: center;
-    color: #fff;
-    background: linear-gradient(145deg, #17a8f5, #0867e8);
-    box-shadow: 0 8px 20px rgb(8 103 232 / 20%);
+    grid-row: 1;
+    margin: 0;
+    padding: 0;
+    line-height: 0;
   }
-  &__mark svg {
-    width: 29px;
-    height: 29px;
-    fill: currentcolor;
+  /*
+   * The official logo file keeps empty canvas around its artwork: 24% of its
+   * height above and below, and 32.8% of its height to the left. Negative
+   * margins remove that space so the visible logo aligns with the page content.
+   */
+  &__identity h1 img {
+    --cb-logo-height: 76px;
+    display: block;
+    width: auto;
+    height: var(--cb-logo-height);
+    margin: calc(var(--cb-logo-height) * -0.2393) 0
+      calc(var(--cb-logo-height) * -0.2394)
+      calc(var(--cb-logo-height) * -0.3277);
   }
   &__actions {
-    grid-column: 3;
-    grid-row: 1 / 3;
+    grid-column: 2;
+    grid-row: 1;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -131,18 +116,9 @@
     margin: 0 0 16px;
   }
 
-  &:has(.notice) &__mark,
-  &:has(.notice) &__identity h1 {
-    grid-row: 2;
-  }
-  &:has(.notice) &__identity p {
-    grid-row: 3;
-  }
+  &:has(.notice) &__identity h1,
   &:has(.notice) &__actions {
-    grid-row: 2 / 4;
-  }
-  &:has(.notice) {
-    grid-template-rows: auto auto auto;
+    grid-row: 2;
   }
 }
 
@@ -983,14 +959,13 @@
     margin-right: 10px;
   }
   .campaignbridge-product-header {
-    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
+    column-gap: 12px;
   }
-  .campaignbridge-product-header__mark {
-    width: 44px;
-    height: 44px;
+  .campaignbridge-product-header__identity h1 img {
+    --cb-logo-height: 50px;
   }
-  .campaignbridge-product-header__identity p,
   .campaignbridge-version {
     display: none;
   }

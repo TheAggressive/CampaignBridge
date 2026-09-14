@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Post_Types;
 
+use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Core\Storage;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -48,71 +49,122 @@ class Post_Type_Email_Template {
 	/**
 	 * Meta field configuration for registration.
 	 * Defines all meta fields with their types, sanitization, and validation.
+	 *
+	 * Every field declares `revisions` explicitly so no field becomes part of
+	 * WordPress revision history by default:
+	 *
+	 * - `true`: the field defines the reusable email itself (what it says, how
+	 *   it complies, how its links are decorated). WordPress copies it onto
+	 *   each revision and restores it with the revision's content.
+	 * - `false`: the field organizes or targets the template rather than
+	 *   defining the email. Restoring older content must not silently move a
+	 *   template between library categories or change its audience targeting.
+	 *
+	 * Every field also declares `duplicate` explicitly, independently of
+	 * `revisions`. Duplicating a template copies only fields marked `true`: the
+	 * reusable email definition. A field without an explicit `true` is never
+	 * copied, so new metadata stays out of duplicates until it is classified.
+	 *
+	 * - `true`: the field is part of the reusable email definition (subject,
+	 *   sender, compliance content, link decoration, footer).
+	 * - `false`: the field targets or files one template. A copy starts with no
+	 *   audience targeting and in the default library category, so duplicating a
+	 *   template never duplicates a campaign or silently files the copy.
 	 */
 	private const META_FIELD_CONFIG = array(
 		// String fields.
 		'campaignbridge_subject'             => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_preheader'           => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_sender_name'         => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_sender_email'        => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_email',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_email',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_view_online_url'     => array(
-			'type'     => 'string',
-			'sanitize' => 'esc_url_raw',
+			'type'      => 'string',
+			'sanitize'  => 'esc_url_raw',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_unsubscribe_url'     => array(
-			'type'     => 'string',
-			'sanitize' => 'esc_url_raw',
+			'type'      => 'string',
+			'sanitize'  => 'esc_url_raw',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_utm_template'        => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
+			'duplicate' => true,
 		),
+		// Audience targeting belongs to campaigns and providers, not the email.
 		'campaignbridge_audience_tags'       => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => false,
+			'duplicate' => false,
 		),
 		'campaignbridge_footer_pattern'      => array(
-			'type'     => 'string',
-			'sanitize' => 'sanitize_text_field',
+			'type'      => 'string',
+			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 
 		// Boolean fields.
 		'campaignbridge_view_online_enabled' => array(
-			'type'     => 'boolean',
-			'sanitize' => 'wp_validate_boolean',
+			'type'      => 'boolean',
+			'sanitize'  => 'wp_validate_boolean',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_utm_enabled'         => array(
-			'type'     => 'boolean',
-			'sanitize' => 'wp_validate_boolean',
+			'type'      => 'boolean',
+			'sanitize'  => 'wp_validate_boolean',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 		'campaignbridge_footer_enabled'      => array(
-			'type'     => 'boolean',
-			'sanitize' => 'wp_validate_boolean',
+			'type'      => 'boolean',
+			'sanitize'  => 'wp_validate_boolean',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 
 		// HTML field.
 		'campaignbridge_address_html'        => array(
-			'type'     => 'string',
-			'sanitize' => 'wp_kses_post',
+			'type'      => 'string',
+			'sanitize'  => 'wp_kses_post',
+			'revisions' => true,
+			'duplicate' => true,
 		),
 
-		// Category field with enum validation.
+		// Category field with enum validation. Library organization, like a
+		// taxonomy, is neither revisioned nor duplicated.
 		'campaignbridge_template_category'   => array(
 			'type'         => 'string',
 			'sanitize'     => array( __CLASS__, 'sanitize_category_field' ),
 			'valid_values' => array( 'general', 'newsletter', 'promotional', 'welcome', 'custom' ),
+			'revisions'    => false,
+			'duplicate'    => false,
 		),
 	);
 
@@ -239,8 +291,9 @@ class Post_Type_Email_Template {
 					'type'              => $config['type'],
 					'sanitize_callback' => $sanitize_callback,
 					'auth_callback'     => function () {
-						return \current_user_can( 'edit_posts' );
+						return \current_user_can( Capabilities::EDIT_TEMPLATES );
 					},
+					'revisions_enabled' => $config['revisions'],
 				)
 			);
 		}
@@ -250,13 +303,13 @@ class Post_Type_Email_Template {
 	 * Sanitize category field value.
 	 *
 	 * Used as sanitize callback for 'campaignbridge_template_category' meta field.
+	 * It must stay public: register_meta() only attaches callbacks WordPress can
+	 * call, and silently skips a private method.
 	 *
-	 * @param string $value The field value to sanitize.
+	 * @param mixed $value The field value to sanitize.
 	 * @return string The sanitized value.
-	 *
-	 * @phpstan-ignore-next-line Used as sanitize callback in meta field configuration
 	 */
-	private static function sanitize_category_field( string $value ): string {
+	public static function sanitize_category_field( mixed $value ): string {
 		$category_config = self::get_meta_field_config( 'campaignbridge_template_category' );
 		$valid_values    = $category_config['valid_values'] ?? array();
 		return in_array( $value, $valid_values, true ) ? $value : 'general';
@@ -283,6 +336,19 @@ class Post_Type_Email_Template {
 			'exclude_from_search' => true,
 			'capability_type'     => 'post',
 			'map_meta_cap'        => true,
+			'capabilities'        => array(
+				'edit_posts'             => Capabilities::EDIT_TEMPLATES,
+				'edit_others_posts'      => Capabilities::EDIT_TEMPLATES,
+				'publish_posts'          => Capabilities::EDIT_TEMPLATES,
+				'edit_published_posts'   => Capabilities::EDIT_TEMPLATES,
+				'edit_private_posts'     => Capabilities::EDIT_TEMPLATES,
+				'delete_posts'           => Capabilities::EDIT_TEMPLATES,
+				'delete_others_posts'    => Capabilities::EDIT_TEMPLATES,
+				'delete_published_posts' => Capabilities::EDIT_TEMPLATES,
+				'delete_private_posts'   => Capabilities::EDIT_TEMPLATES,
+				'create_posts'           => Capabilities::EDIT_TEMPLATES,
+				'read_private_posts'     => Capabilities::EDIT_TEMPLATES,
+			),
 			'hierarchical'        => false,
 			'menu_position'       => 30,
 			'menu_icon'           => 'dashicons-email-alt',
@@ -417,70 +483,6 @@ class Post_Type_Email_Template {
 		return $templates;
 	}
 
-	/**
-	 * Create a new email template.
-	 *
-	 * @param array<string, mixed> $template_data Template data.
-	 * @param string               $nonce         Nonce for security verification.
-	 * @return int|\WP_Error Template ID on success, WP_Error on failure.
-	 */
-	public static function create_template( array $template_data, string $nonce = '' ): int|\WP_Error {
-		// Security checks for template creation.
-		if ( ! \current_user_can( 'edit_posts' ) ) {
-			return new \WP_Error(
-				'insufficient_permissions',
-				__( 'You do not have permission to create email templates.', 'campaignbridge' )
-			);
-		}
-
-		// Verify nonce if provided.
-		if ( ! empty( $nonce ) && ! wp_verify_nonce( $nonce, 'create_email_template' ) ) {
-			return new \WP_Error(
-				'invalid_nonce',
-				__( 'Security check failed.', 'campaignbridge' )
-			);
-		}
-
-			// If no nonce provided, ensure we're in an admin context where verification occurred upstream.
-		if ( empty( $nonce ) && ! \is_admin() ) {
-			return new \WP_Error(
-				'invalid_context',
-				__( 'Templates can only be created from admin context.', 'campaignbridge' )
-			);
-		}
-
-		$post_data = array(
-			'post_title'   => sanitize_text_field( $template_data['title'] ?? '' ),
-			'post_content' => wp_kses_post( $template_data['content'] ?? '' ),
-			'post_excerpt' => sanitize_text_field( $template_data['excerpt'] ?? '' ),
-			'post_status'  => 'publish',
-			'post_type'    => self::POST_TYPE,
-		);
-
-		return wp_insert_post( $post_data );
-	}
-
-	/**
-	 * Duplicate an existing template.
-	 *
-	 * @param int $template_id The template ID to duplicate.
-	 * @return int|\WP_Error New template ID on success, WP_Error on failure.
-	 */
-	public static function duplicate_template( int $template_id ): int|\WP_Error {
-		$original = get_post( $template_id );
-		if ( ! $original || self::POST_TYPE !== $original->post_type ) {
-			return new \WP_Error( 'template_not_found', __( 'Template not found.', 'campaignbridge' ) );
-		}
-
-		$duplicate_data = array(
-			'title'   => $original->post_title . ' - ' . __( 'Copy', 'campaignbridge' ),
-			'content' => $original->post_content,
-			'excerpt' => $original->post_excerpt,
-		);
-
-		return self::create_template( $duplicate_data );
-	}
-
 		/**
 		 * Get template categories.
 		 *
@@ -519,6 +521,23 @@ class Post_Type_Email_Template {
 	 */
 	public static function get_meta_field_keys(): array {
 		return array_keys( self::META_FIELD_CONFIG );
+	}
+
+	/**
+	 * Get the meta keys a template duplicate copies.
+	 *
+	 * Fails closed: only fields that explicitly declare `duplicate => true`
+	 * are returned.
+	 *
+	 * @return array<int, string> Duplicable meta field keys.
+	 */
+	public static function get_duplicable_meta_keys(): array {
+		return array_keys(
+			array_filter(
+				self::get_meta_field_config(),
+				static fn ( mixed $config ): bool => is_array( $config ) && true === ( $config['duplicate'] ?? false )
+			)
+		);
 	}
 
 	/**

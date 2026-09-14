@@ -270,4 +270,200 @@ class Capability_Enforcement_Test extends Test_Case {
 
 		$this->assertEquals( 200, $response->get_status(), 'User with MANAGE_CONNECTIONS should be able to decrypt' );
 	}
+
+	/*
+	 * Template CPT capability boundary tests.
+	 *
+	 * The cb_templates CPT must enforce campaignbridge_edit_templates for all
+	 * REST create/edit/delete operations, not the generic edit_posts /
+	 * publish_posts / delete_posts capabilities that would otherwise be
+	 * inherited from capability_type = 'post'.
+	 */
+
+	/**
+	 * Helper: create a published cb_template as an administrator and return its ID.
+	 *
+	 * @return int The template post ID.
+	 */
+	private function create_template_as_admin(): int {
+		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		$request  = new \WP_REST_Request( 'POST', '/wp/v2/cb_templates' );
+		$request->set_param( 'title', 'Boundary Test Template' );
+		$request->set_param( 'content', '<p>Boundary test content</p>' );
+		$request->set_param( 'status', 'publish' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 201, $response->get_status(), 'Admin should be able to create a template' );
+		return (int) $response->get_data()['id'];
+	}
+
+	/**
+	 * Test that a user with edit_posts but without campaignbridge_edit_templates
+	 * cannot create a cb_template via REST.
+	 */
+	public function test_editor_without_plugin_cap_cannot_create_template(): void {
+		$editor_id = $this->create_test_user( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$this->assertTrue( current_user_can( 'edit_posts' ), 'Editor should have edit_posts' );
+		$this->assertFalse( current_user_can( Capabilities::EDIT_TEMPLATES ), 'Editor should NOT have campaignbridge_edit_templates' );
+
+		$request  = new \WP_REST_Request( 'POST', '/wp/v2/cb_templates' );
+		$request->set_param( 'title', 'Should Fail' );
+		$request->set_param( 'content', '<p>Should fail</p>' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 403, $response->get_status(), 'Editor without plugin cap should not be able to create template' );
+	}
+
+	/**
+	 * Test that a user with edit_posts but without campaignbridge_edit_templates
+	 * cannot edit a cb_template via REST.
+	 */
+	public function test_editor_without_plugin_cap_cannot_edit_template(): void {
+		$template_id = $this->create_template_as_admin();
+
+		$editor_id = $this->create_test_user( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$this->assertFalse( current_user_can( Capabilities::EDIT_TEMPLATES ), 'Editor should NOT have campaignbridge_edit_templates' );
+
+		$request  = new \WP_REST_Request( 'PUT', '/wp/v2/cb_templates/' . $template_id );
+		$request->set_param( 'title', 'Updated Title' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 403, $response->get_status(), 'Editor without plugin cap should not be able to edit template' );
+	}
+
+	/**
+	 * Test that a user with edit_posts but without campaignbridge_edit_templates
+	 * cannot delete a cb_template via REST.
+	 */
+	public function test_editor_without_plugin_cap_cannot_delete_template(): void {
+		$template_id = $this->create_template_as_admin();
+
+		$editor_id = $this->create_test_user( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$this->assertFalse( current_user_can( Capabilities::EDIT_TEMPLATES ), 'Editor should NOT have campaignbridge_edit_templates' );
+
+		$request  = new \WP_REST_Request( 'DELETE', '/wp/v2/cb_templates/' . $template_id );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 403, $response->get_status(), 'Editor without plugin cap should not be able to delete template' );
+	}
+
+	/**
+	 * Test that an administrator with campaignbridge_edit_templates CAN
+	 * create, edit, and delete cb_templates via REST.
+	 */
+	public function test_admin_with_plugin_cap_can_crud_templates(): void {
+		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		$this->assertTrue( current_user_can( Capabilities::EDIT_TEMPLATES ), 'Admin should have campaignbridge_edit_templates' );
+
+		// Create.
+		$request  = new \WP_REST_Request( 'POST', '/wp/v2/cb_templates' );
+		$request->set_param( 'title', 'CRUD Test' );
+		$request->set_param( 'content', '<p>CRUD test</p>' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+		$this->assertEquals( 201, $response->get_status(), 'Admin should be able to create template' );
+		$template_id = (int) $response->get_data()['id'];
+
+		// Edit.
+		$request  = new \WP_REST_Request( 'PUT', '/wp/v2/cb_templates/' . $template_id );
+		$request->set_param( 'title', 'CRUD Test Updated' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+		$this->assertEquals( 200, $response->get_status(), 'Admin should be able to edit template' );
+
+		// Delete.
+		$request  = new \WP_REST_Request( 'DELETE', '/wp/v2/cb_templates/' . $template_id );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+		$this->assertEquals( 200, $response->get_status(), 'Admin should be able to delete template' );
+	}
+
+	/**
+	 * Test that map_meta_cap resolves edit_post on cb_templates to the plugin capability.
+	 *
+	 * A user with only edit_posts (no campaignbridge_edit_templates) must fail
+	 * current_user_can( 'edit_post', $cb_template_id ), while a user with
+	 * campaignbridge_edit_templates must pass.
+	 */
+	public function test_map_meta_cap_resolves_to_plugin_capability(): void {
+		$template_id = $this->create_template_as_admin();
+
+		// Editor: has edit_posts, does NOT have campaignbridge_edit_templates.
+		$editor_id = $this->create_test_user( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+		$this->assertFalse(
+			current_user_can( 'edit_post', $template_id ),
+			'Editor with edit_posts should NOT pass edit_post meta-cap on cb_templates'
+		);
+		$this->assertFalse(
+			current_user_can( 'delete_post', $template_id ),
+			'Editor with edit_posts should NOT pass delete_post meta-cap on cb_templates'
+		);
+
+		// Administrator: has campaignbridge_edit_templates.
+		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+		$this->assertTrue(
+			current_user_can( 'edit_post', $template_id ),
+			'Admin with campaignbridge_edit_templates should pass edit_post meta-cap on cb_templates'
+		);
+		$this->assertTrue(
+			current_user_can( 'delete_post', $template_id ),
+			'Admin with campaignbridge_edit_templates should pass delete_post meta-cap on cb_templates'
+		);
+	}
+
+	/**
+	 * Test that a user with campaignbridge_edit_templates (but not edit_posts)
+	 * can still perform all template operations.
+	 *
+	 * This proves the capability boundary is the plugin cap, not the core cap.
+	 */
+	public function test_plugin_cap_alone_grants_template_access(): void {
+		// Create a subscriber with only the plugin cap.
+		$user_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		$user    = new \WP_User( $user_id );
+		$user->add_cap( Capabilities::EDIT_TEMPLATES );
+
+		wp_set_current_user( $user_id );
+
+		$this->assertFalse( current_user_can( 'edit_posts' ), 'Test user should NOT have edit_posts' );
+		$this->assertTrue( current_user_can( Capabilities::EDIT_TEMPLATES ), 'Test user should have campaignbridge_edit_templates' );
+
+		// Create.
+		$request  = new \WP_REST_Request( 'POST', '/wp/v2/cb_templates' );
+		$request->set_param( 'title', 'Plugin Cap Test' );
+		$request->set_param( 'content', '<p>Plugin cap test</p>' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+		$this->assertEquals( 201, $response->get_status(), 'User with plugin cap should be able to create template' );
+		$template_id = (int) $response->get_data()['id'];
+
+		// Edit.
+		$request  = new \WP_REST_Request( 'PUT', '/wp/v2/cb_templates/' . $template_id );
+		$request->set_param( 'title', 'Plugin Cap Test Updated' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+		$this->assertEquals( 200, $response->get_status(), 'User with plugin cap should be able to edit template' );
+
+		// Delete.
+		$request  = new \WP_REST_Request( 'DELETE', '/wp/v2/cb_templates/' . $template_id );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'wp_rest' ) );
+		$response = rest_do_request( $request );
+		$this->assertEquals( 200, $response->get_status(), 'User with plugin cap should be able to delete template' );
+	}
 }

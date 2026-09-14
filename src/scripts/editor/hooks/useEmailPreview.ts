@@ -3,6 +3,7 @@ import { serialize } from '@wordpress/blocks';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import type { EmailPreviewResponse } from '../types';
 
 const PREVIEW_PATH = '/campaignbridge/v1/preview';
@@ -116,20 +117,17 @@ export function useEmailPreview(postId: number): UseEmailPreview {
         },
         error: null,
       });
-    } catch (reason) {
+    } catch {
       if (id !== requestId.current) return;
-      const message =
-        reason &&
-        typeof reason === 'object' &&
-        'message' in reason &&
-        typeof reason.message === 'string'
-          ? reason.message
-          : 'Unable to compile the email preview.';
 
+      // Server and exception text can carry internal details.
       setPreview({
         ...INITIAL_STATE,
         status: 'error',
-        error: message,
+        error: __(
+          'The email preview could not be generated. Please try again.',
+          'campaignbridge'
+        ),
       });
     }
   }, [blocks, postId]);

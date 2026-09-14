@@ -51,7 +51,7 @@ class Admin_Menu_Manager {
 			Capabilities::MANAGE,
 			self::MENU_SLUG,
 			array( $this, 'redirect_to_first_submenu' ),
-			'dashicons-email-alt',
+			Brand_Assets::menu_icon(),
 			30
 		);
 	}

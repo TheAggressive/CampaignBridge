@@ -88,8 +88,11 @@ describe('useEmailPreview', () => {
     expect(current.preview.diagnostics.errors).toHaveLength(1);
     jest
       .mocked(apiFetch)
-      .mockRejectedValue({ message: 'Cannot preview this template' });
+      .mockRejectedValue({ message: 'SQLSTATE[HY000] raw preview failure' });
     await act(async () => current.requestPreview());
-    expect(current.preview.error).toBe('Cannot preview this template');
+    // Operators see fixed copy, never the server's message.
+    expect(current.preview.error).toBe(
+      'The email preview could not be generated. Please try again.'
+    );
   });
 });

@@ -22,8 +22,8 @@ env:
   PLUGIN_SLUG: campaignbridge
   NODE_VERSION: '24.18.1'
   PNPM_VERSION: '11.1.2'
-  PHP_VERSION: '8.2'
-  WP_VERSION: '7.0.4'
+  PHP_VERSION: '8.4'
+  WP_VERSION: '7.1'
 
 jobs:
   quality:
@@ -149,7 +149,7 @@ jobs:
           retention-days: 7
 
   minimum-supported-wordpress:
-    name: Minimum WordPress (6.5 / PHP 8.2)
+    name: Minimum WordPress (7.1 / PHP 8.4)
     runs-on: ubuntu-24.04
     needs: quality
     timeout-minutes: 20
@@ -179,22 +179,22 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           extensions: mysqli, mbstring, xml
           tools: composer:v2
 
       - name: Install test dependencies
         run: |
           composer install --no-interaction --prefer-dist --no-progress
-          composer create-project wp-phpunit/wp-phpunit:6.5.0 \
-            "${RUNNER_TEMP}/wp-phpunit-6.5" \
+          composer create-project wp-phpunit/wp-phpunit:7.1.0 \
+            "${RUNNER_TEMP}/wp-phpunit-7.1" \
             --no-interaction \
             --prefer-dist \
             --no-progress
 
-      - name: Install checksum-verified WordPress 6.5
+      - name: Install checksum-verified WordPress 7.1
         env:
-          CB_TESTS_WP_VERSION: '6.5'
+          CB_TESTS_WP_VERSION: '7.1'
           CB_TESTS_WP_DIR: ${{ runner.temp }}/wordpress
         run: bash bin/ci/install-wp-core.sh
 
@@ -207,8 +207,10 @@ jobs:
           CB_TESTS_DB_USER: campaignbridge
           CB_TESTS_DB_PASSWORD: campaignbridge
           WP_PHPUNIT__TESTS_CONFIG: ${{ github.workspace }}/tests/wp-tests-config.php
-          WP_TESTS_DIR: ${{ runner.temp }}/wp-phpunit-6.5
-        run: vendor/bin/phpunit
+          WP_TESTS_DIR: ${{ runner.temp }}/wp-phpunit-7.1
+        # This job proves the minimum platform; coverage reports come from the
+        # suite jobs and exhaust PHP's memory limit on the full run.
+        run: vendor/bin/phpunit --no-coverage
 
   build:
     name: Build assets
@@ -352,6 +354,7 @@ jobs:
           CB_E2E_BASE_URL: http://127.0.0.1:8889
           CB_E2E_ADMIN_USER: campaignbridge
           CB_E2E_ADMIN_PASSWORD: campaignbridge-e2e
+          CB_E2E_WP_CLI: '["php","${{ runner.temp }}/campaignbridge-tools/wp","--path=${{ runner.temp }}/wordpress"]'
         run: pnpm test:e2e:accessibility:ci
 
       - name: Run browser tests
@@ -359,6 +362,7 @@ jobs:
           CB_E2E_BASE_URL: http://127.0.0.1:8889
           CB_E2E_ADMIN_USER: campaignbridge
           CB_E2E_ADMIN_PASSWORD: campaignbridge-e2e
+          CB_E2E_WP_CLI: '["php","${{ runner.temp }}/campaignbridge-tools/wp","--path=${{ runner.temp }}/wordpress"]'
         run: pnpm test:e2e:ci
 
       - name: Upload browser diagnostics

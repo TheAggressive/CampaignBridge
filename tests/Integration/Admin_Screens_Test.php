@@ -162,6 +162,16 @@ class Admin_Screens_Test extends Test_Case {
 		// Verify editor screen structure
 		$this->assertStringContainsString( 'cb-block-editor-root', $output, 'Should contain editor root div' );
 		$this->assertStringContainsString( 'editor-screen', $output, 'Should contain editor CSS classes' );
+
+		// The editor receives the canonical duplication allowlist from the template model.
+		$document = new \DOMDocument();
+		$document->loadHTML( (string) $output, LIBXML_NOERROR );
+		$root = $document->getElementById( 'cb-block-editor-root' );
+		$this->assertInstanceOf( \DOMElement::class, $root );
+		$this->assertSame(
+			\CampaignBridge\Post_Types\Post_Type_Email_Template::get_duplicable_meta_keys(),
+			json_decode( $root->getAttribute( 'data-duplicable-meta-keys' ), true )
+		);
 	}
 
 	/**

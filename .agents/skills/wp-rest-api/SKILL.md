@@ -1,7 +1,7 @@
 ---
 name: wp-rest-api
 description: 'Use when building, extending, or debugging WordPress REST API endpoints/routes: register_rest_route, WP_REST_Controller/controller classes, schema/argument validation, permission_callback/authentication, response shaping, register_rest_field/register_meta, or exposing CPTs/taxonomies via show_in_rest.'
-compatibility: 'CampaignBridge targets WordPress 6.5+ and PHP 8.2+. Filesystem-based agent with bash + Node 24/pnpm 11. Some workflows require WordPress Studio or WP-CLI.'
+compatibility: 'CampaignBridge targets WordPress 7.1+ and PHP 8.4+. Filesystem-based agent with bash + Node 24/pnpm 11. Some workflows require WordPress Studio or WP-CLI.'
 ---
 
 # WP REST API

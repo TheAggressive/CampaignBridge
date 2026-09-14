@@ -7,9 +7,9 @@
  *
  * @note This version is automatically synced from package.json via pnpm version:sync
  *
- * Requires at least: 6.5.0
- * Tested up to: 7.0
- * Requires PHP: 8.2
+ * Requires at least: 7.1
+ * Tested up to: 7.1
+ * Requires PHP: 8.4
  * Author: Aggressive Network, LLC
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -61,15 +61,18 @@ class CampaignBridge_Plugin {
 	 * @since 0.1.0
 	 * @var string
 	 */
-	public const MIN_PHP_VERSION = '8.2.0';
+	public const MIN_PHP_VERSION = '8.4.0';
 
 	/**
 	 * Minimum WordPress version required.
 	 *
+	 * Written as WordPress reports its own release versions ("7.1", not
+	 * "7.1.0"): version_compare() treats "7.1" as older than "7.1.0".
+	 *
 	 * @since 0.1.0
 	 * @var string
 	 */
-	public const MIN_WP_VERSION = '6.5.0';
+	public const MIN_WP_VERSION = '7.1';
 
 	/**
 	 * Plugin path.

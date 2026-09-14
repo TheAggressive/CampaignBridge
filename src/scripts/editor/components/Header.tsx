@@ -1,4 +1,5 @@
 import { Button } from '@wordpress/components';
+import { time } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
 import { FullscreenToggle } from './Button/FullscreenToggle';
 import { PrimarySidebarToggle } from './Button/PrimarySidebarToggle';
@@ -77,8 +78,14 @@ interface HeaderProps {
   toggleSecondary: () => void;
   hasEdits?: boolean;
   onSave?: () => void | Promise<unknown>;
+  onPublish?: () => void | Promise<unknown>;
+  onDuplicate?: () => void | Promise<unknown>;
+  status?: string;
   saveStatus?: SaveStatus;
   onOpenPreview?: () => void;
+  onOpenHistory?: () => void;
+  /** A duplicate or revision restore is running. */
+  isOperationPending?: boolean;
 }
 
 export default function Header({
@@ -93,15 +100,26 @@ export default function Header({
   toggleSecondary,
   hasEdits = false,
   onSave = () => {},
+  onPublish = () => {},
+  onDuplicate = () => {},
+  status,
   saveStatus = 'saved',
   onOpenPreview = () => {},
+  onOpenHistory = () => {},
+  isOperationPending = false,
 }: HeaderProps): JSX.Element {
   const isSaving = saveStatus === 'saving';
+  // Competing template actions wait for a save, duplicate, or restore.
+  const actionsLocked = isSaving || isOperationPending;
+  const isDraft = status === 'draft' || status === undefined;
   const saveLabel = isSaving
     ? __('Saving…', 'campaignbridge')
     : hasEdits
       ? __('Save', 'campaignbridge')
       : __('Saved', 'campaignbridge');
+  const publishLabel = isSaving
+    ? __('Publishing…', 'campaignbridge')
+    : __('Publish', 'campaignbridge');
 
   return (
     <div
@@ -124,15 +142,61 @@ export default function Header({
           onSelect={onSelect}
           onNew={onNew}
         />
+        {status && (
+          <span
+            className={`cb-editor__status-badge cb-editor__status-badge--${
+              status === 'publish' ? 'published' : 'draft'
+            }`}
+            role='status'
+            aria-label={
+              status === 'publish'
+                ? __('Template is published', 'campaignbridge')
+                : __('Template is a draft', 'campaignbridge')
+            }
+          >
+            {status === 'publish'
+              ? __('Published', 'campaignbridge')
+              : __('Draft', 'campaignbridge')}
+          </span>
+        )}
       </div>
 
       <div className={CLASSES.HEADER_ACTIONS}>
+        {isDraft && (
+          <Button
+            className='cb-editor__publish-button'
+            variant='primary'
+            onClick={() => void onPublish()}
+            disabled={actionsLocked}
+            isBusy={isSaving}
+            aria-label={publishLabel}
+          >
+            {publishLabel}
+          </Button>
+        )}
+        <Button
+          className='cb-editor__duplicate-button'
+          variant='tertiary'
+          onClick={() => void onDuplicate()}
+          disabled={actionsLocked}
+          aria-label={__('Duplicate template', 'campaignbridge')}
+        >
+          {__('Duplicate', 'campaignbridge')}
+        </Button>
+        <Button
+          className='cb-editor__history-button'
+          variant='tertiary'
+          icon={time}
+          onClick={onOpenHistory}
+          disabled={actionsLocked}
+          aria-label={__('View revision history', 'campaignbridge')}
+        />
         <PreviewButton onClick={onOpenPreview} />
         <Button
           className='cb-editor__save-button'
-          variant='primary'
+          variant={isDraft ? 'secondary' : 'primary'}
           onClick={() => void onSave()}
-          disabled={!hasEdits || isSaving}
+          disabled={!hasEdits || actionsLocked}
           isBusy={isSaving}
           aria-label={saveLabel}
         >
