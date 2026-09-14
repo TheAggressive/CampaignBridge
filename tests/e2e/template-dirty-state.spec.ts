@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Request } from '@playwright/test';
+import { expect, test, type Page, type Request } from './support/fixtures';
 
 const EDITOR_PATH = '/wp-admin/admin.php?page=campaignbridge-editor';
 const UNSAVED_RESTORE = 'Save your changes before restoring a revision.';

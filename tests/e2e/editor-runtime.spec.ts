@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from './support/fixtures';
 
 const EDITOR_PATH = '/wp-admin/admin.php?page=campaignbridge-editor';
 

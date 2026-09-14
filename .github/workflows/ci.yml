@@ -354,6 +354,7 @@ jobs:
           CB_E2E_BASE_URL: http://127.0.0.1:8889
           CB_E2E_ADMIN_USER: campaignbridge
           CB_E2E_ADMIN_PASSWORD: campaignbridge-e2e
+          CB_E2E_WP_CLI: '["php","${{ runner.temp }}/campaignbridge-tools/wp","--path=${{ runner.temp }}/wordpress"]'
         run: pnpm test:e2e:accessibility:ci
 
       - name: Run browser tests
@@ -361,6 +362,7 @@ jobs:
           CB_E2E_BASE_URL: http://127.0.0.1:8889
           CB_E2E_ADMIN_USER: campaignbridge
           CB_E2E_ADMIN_PASSWORD: campaignbridge-e2e
+          CB_E2E_WP_CLI: '["php","${{ runner.temp }}/campaignbridge-tools/wp","--path=${{ runner.temp }}/wordpress"]'
         run: pnpm test:e2e:ci
 
       - name: Upload browser diagnostics
