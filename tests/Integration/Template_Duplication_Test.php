@@ -20,6 +20,13 @@ use WP_REST_Response;
  * Proves the duplication policy is explicit and complete, and that the
  * editor's duplicate payload creates an independent draft through the core
  * cb_templates REST controller.
+ *
+ * The source template's recovery autosave uses the real core autosaves
+ * endpoint, which defines DOING_AUTOSAVE for the rest of the PHP process and
+ * would disable revisions in unrelated tests, so each test runs in isolation.
+ *
+ * @runTestsInSeparateProcesses
+ * @preserveGlobalState disabled
  */
 final class Template_Duplication_Test extends Test_Case {
 	/**
