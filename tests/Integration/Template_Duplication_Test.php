@@ -20,13 +20,6 @@ use WP_REST_Response;
  * Proves the duplication policy is explicit and complete, and that the
  * editor's duplicate payload creates an independent draft through the core
  * cb_templates REST controller.
- *
- * The source template's recovery autosave uses the real core autosaves
- * endpoint, which defines DOING_AUTOSAVE for the rest of the PHP process and
- * would disable revisions in unrelated tests, so each test runs in isolation.
- *
- * @runTestsInSeparateProcesses
- * @preserveGlobalState disabled
  */
 final class Template_Duplication_Test extends Test_Case {
 	/**
@@ -109,8 +102,16 @@ final class Template_Duplication_Test extends Test_Case {
 		}
 	}
 
+	/**
+	 * The source's recovery autosave uses the real core autosaves endpoint,
+	 * which defines DOING_AUTOSAVE for the rest of the PHP process and would
+	 * disable revisions in unrelated tests, so this test runs in isolation.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
 	public function test_the_duplicate_payload_creates_an_independent_draft(): void {
-		$source_id = $this->create_published_source_with_history();
+		$source_id = $this->create_published_source_with_history_and_autosave();
 		$source    = $this->get_template( $source_id );
 		$revisions = wp_get_post_revisions( $source_id );
 		self::assertNotEmpty( $revisions );
@@ -214,7 +215,7 @@ final class Template_Duplication_Test extends Test_Case {
 	}
 
 	public function test_a_failed_update_never_deletes_the_existing_template(): void {
-		$source_id = $this->create_published_source_with_history();
+		$source_id = $this->create_published_source();
 		$source    = $this->get_template( $source_id );
 
 		$response = $this->dispatch(
@@ -269,9 +270,22 @@ final class Template_Duplication_Test extends Test_Case {
 	}
 
 	/**
-	 * Create a published template with revisions and a recovery autosave.
+	 * Create a published template with a revision and a recovery autosave.
+	 *
+	 * Calls the core autosaves endpoint; only a test running in a separate
+	 * process may use it.
 	 */
-	private function create_published_source_with_history(): int {
+	private function create_published_source_with_history_and_autosave(): int {
+		$source_id = $this->create_published_source();
+		$this->dispatch( 'POST', "/wp/v2/cb_templates/{$source_id}/autosaves", array( 'content' => 'Recovery content' ) );
+
+		return $source_id;
+	}
+
+	/**
+	 * Create a published template whose content update made a revision.
+	 */
+	private function create_published_source(): int {
 		$source_id = (int) $this->dispatch(
 			'POST',
 			'/wp/v2/cb_templates',
@@ -283,7 +297,6 @@ final class Template_Duplication_Test extends Test_Case {
 			)
 		)->get_data()['id'];
 		$this->dispatch( 'PUT', "/wp/v2/cb_templates/{$source_id}", array( 'content' => self::CONTENT ) );
-		$this->dispatch( 'POST', "/wp/v2/cb_templates/{$source_id}/autosaves", array( 'content' => 'Recovery content' ) );
 
 		return $source_id;
 	}
