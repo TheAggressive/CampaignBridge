@@ -1106,3 +1106,17 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
 .cb-editor__revision-header-action {
   margin-left: 8px;
 }
+
+.cb-editor__revision-more {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 4px 0;
+}
+
+.cb-editor__revision-status {
+  color: #50575e;
+  font-size: 12px;
+  margin: 0;
+}
