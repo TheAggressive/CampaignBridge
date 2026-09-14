@@ -172,11 +172,13 @@ test.describe('CampaignBridge template lifecycle (E2E)', () => {
     await page.getByLabel('Template name').fill(title);
     const createdResponse = waitFor(page, 'POST', createRoute);
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    const createResponse = await createdResponse;
-    expect(createResponse.status()).toBe(201);
-    const id = ((await createResponse.json()) as { id: number }).id;
+    expect((await createdResponse).status()).toBe(201);
+    // Creating reloads the editor for the new template, which discards the
+    // create response body, so the new ID is read from the reloaded URL.
+    await page.waitForURL(/[?&]post_id=\d+(?:&|$)/);
+    const id = Number(new URL(page.url()).searchParams.get('post_id'));
+    expect(id).toBeGreaterThan(0);
     created.push(id);
-    await expect(page).toHaveURL(new RegExp(`post_id=${id}(?:&|$)`));
     await expect(badge).toHaveText('Draft');
     await expect(saveButton).toHaveText('Saved');
     expect(await isDirty(page, id)).toBe(false);
