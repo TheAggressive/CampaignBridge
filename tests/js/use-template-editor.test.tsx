@@ -239,6 +239,50 @@ describe('useTemplateEditor', () => {
       expect(mockSave).toHaveBeenCalledTimes(2);
       expect(mockOnSuccess).toHaveBeenCalledWith(MESSAGES.saved);
     });
+
+    it('sends one canonical save when Save is triggered twice in the same tick', async () => {
+      const pending = deferred<boolean>();
+      mockSave.mockReturnValueOnce(pending.promise);
+
+      let first: Promise<boolean> = Promise.resolve(false);
+      let second = true;
+      await act(async () => {
+        first = current.saveNow();
+        second = await current.saveNow();
+      });
+      await act(async () => pending.resolve(true));
+
+      expect(second).toBe(false);
+      expect(await first).toBe(true);
+      expect(mockSave).toHaveBeenCalledTimes(1);
+      expect(mockOnSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses Publish, Duplicate, and Restore while a Save started in the same tick is running', async () => {
+      const pending = deferred<boolean>();
+      mockSave.mockReturnValueOnce(pending.promise);
+      mockCoreState.hasEdits = false;
+
+      let published = true;
+      let duplicated: DuplicateResult = { success: true };
+      let restored: RestoreResult = { success: true };
+      let saving: Promise<boolean> = Promise.resolve(false);
+      await act(async () => {
+        saving = current.saveNow();
+        published = await current.publish();
+        duplicated = await current.duplicate();
+        restored = await current.restoreRevision(7);
+      });
+      await act(async () => pending.resolve(true));
+
+      expect(published).toBe(false);
+      expect(duplicated).toEqual({ success: false });
+      expect(restored).toEqual({ success: false });
+      expect(coreDispatch.editEntityRecord).not.toHaveBeenCalled();
+      expect(apiFetch).not.toHaveBeenCalled();
+      expect(mockSave).toHaveBeenCalledTimes(1);
+      expect(await saving).toBe(true);
+    });
   });
 
   describe('publish', () => {
@@ -292,6 +336,24 @@ describe('useTemplateEditor', () => {
         expect(await current.publish()).toBe(false);
       });
       expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it('sends one publish save when Publish is triggered twice in the same tick', async () => {
+      const pending = deferred<boolean>();
+      mockSave.mockReturnValueOnce(pending.promise);
+
+      let first: Promise<boolean> = Promise.resolve(false);
+      let second = true;
+      await act(async () => {
+        first = current.publish();
+        second = await current.publish();
+      });
+      await act(async () => pending.resolve(true));
+
+      expect(second).toBe(false);
+      expect(await first).toBe(true);
+      expect(mockSave).toHaveBeenCalledTimes(1);
+      expect(coreDispatch.editEntityRecord).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -489,6 +551,27 @@ describe('useTemplateEditor', () => {
       await duplicateNow();
 
       expect(createPayload().content).toBe(mockRawRecord.content);
+    });
+
+    it('gives no navigation target when the editor unmounts before the copy is created', async () => {
+      const request = deferred<{ id: number }>();
+      jest.mocked(apiFetch).mockReturnValue(request.promise as any);
+      const otherContainer = document.createElement('div');
+      const otherRoot = createRoot(otherContainer);
+      act(() => otherRoot.render(<Harness />));
+
+      let settled: Promise<DuplicateResult> = Promise.resolve({
+        success: false,
+      });
+      await act(async () => {
+        settled = current.duplicate();
+      });
+      act(() => otherRoot.unmount());
+      await act(async () => request.resolve({ id: 99 }));
+
+      // The copy exists, but the operator is not moved to it.
+      expect(await settled).toEqual({ success: true });
+      expect(apiFetch).toHaveBeenCalledTimes(1);
     });
 
     it('refuses without a request when the duplication policy is missing', async () => {

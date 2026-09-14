@@ -165,6 +165,19 @@ export function useTemplateEditor({
   // editor then holds replaced content, so nothing may be written from it.
   const needsReloadRef = useRef(false);
   const [needsReload, setNeedsReload] = useState(false);
+  // core-data checks for edits before it takes its per-record save lock, so
+  // two Save or Publish calls in the same tick would each send a canonical
+  // save. This ref admits one until it settles.
+  const savingRef = useRef(false);
+  // A duplicate that finishes after the operator left this template must not
+  // navigate them away from where they went.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // WordPress-native autosave: POSTs to /autosaves endpoint, preserves status,
   // does not create a revision. The useEntityRecord save function accepts
@@ -247,6 +260,7 @@ export function useTemplateEditor({
 
     if (
       operationRef.current ||
+      savingRef.current ||
       needsReloadRef.current ||
       core.isSavingEntityRecord('postType', postType, postId)
     ) {
@@ -280,10 +294,16 @@ export function useTemplateEditor({
       return true;
     }
 
-    if (isSaving || operationRef.current || needsReloadRef.current) {
+    if (
+      isSaving ||
+      savingRef.current ||
+      operationRef.current ||
+      needsReloadRef.current
+    ) {
       return false;
     }
 
+    savingRef.current = true;
     try {
       await save();
       onSuccess?.(editorMessages.saved());
@@ -292,11 +312,18 @@ export function useTemplateEditor({
       // core-data keeps the edits, so the operator can retry.
       onError?.(editorMessages.saveFailed(), { id: EDITOR_NOTICE_IDS.save });
       return false;
+    } finally {
+      savingRef.current = false;
     }
   }, [hasEdits, isSaving, onError, onSuccess, save]);
 
   const publish = useCallback(async () => {
-    if (isSaving || operationRef.current || needsReloadRef.current) {
+    if (
+      isSaving ||
+      savingRef.current ||
+      operationRef.current ||
+      needsReloadRef.current
+    ) {
       return false;
     }
 
@@ -309,6 +336,7 @@ export function useTemplateEditor({
       ) as TemplateRecord | undefined
     )?.status;
 
+    savingRef.current = true;
     try {
       core.editEntityRecord('postType', postType, postId, {
         status: 'publish',
@@ -328,6 +356,8 @@ export function useTemplateEditor({
         id: EDITOR_NOTICE_IDS.publish,
       });
       return false;
+    } finally {
+      savingRef.current = false;
     }
   }, [isSaving, onError, onSuccess, postId, postType, save]);
 
@@ -371,6 +401,10 @@ export function useTemplateEditor({
           postType,
           TEMPLATE_LIST_QUERY,
         ]);
+        // The copy exists, but the operator has already moved elsewhere.
+        if (!mountedRef.current) {
+          return { success: true };
+        }
         return { success: true, id: newTemplate.id };
       } catch {
         return failed;
