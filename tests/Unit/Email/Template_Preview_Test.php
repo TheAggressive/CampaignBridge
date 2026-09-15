@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit\Email;
 
 use CampaignBridge\Domain\Email\Brand_Kit;
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Post_Snapshot_Source;
 use CampaignBridge\Workflow\Email\Snapshot_References;
 use CampaignBridge\Workflow\Email\Template_Preview;
@@ -158,7 +159,7 @@ final class Template_Preview_Test extends TestCase {
 				 * {@inheritDoc}
 				 *
 				 * @param array<int, array{id: int, type: string}> $references Requested posts.
-				 * @return array<int|string, array<string, mixed>>
+				 * @return array<int|string, Post_Snapshot>
 				 */
 				public function posts( array $references ): array {
 					return array();
@@ -190,7 +191,7 @@ final class Template_Preview_Test extends TestCase {
 				 * {@inheritDoc}
 				 *
 				 * @param array<int, array{id: int, type: string}> $references Requested posts.
-				 * @return array<int|string, array<string, mixed>>
+				 * @return array<int|string, Post_Snapshot>
 				 */
 				public function posts( array $references ): array {
 					$snapshots = array();
@@ -200,10 +201,14 @@ final class Template_Preview_Test extends TestCase {
 							continue;
 						}
 
-						$snapshots[ (string) $reference['id'] ] = array(
-							'title'   => 'Snapshot title',
-							'excerpt' => 'Snapshot excerpt.',
-							'url'     => 'https://example.com/posts/7',
+						$snapshots[ (string) $reference['id'] ] = Post_Snapshot::create(
+							7,
+							'post',
+							array(
+								'title'   => 'Snapshot title',
+								'excerpt' => 'Snapshot excerpt.',
+								'url'     => 'https://example.com/posts/7',
+							)
 						);
 					}
 

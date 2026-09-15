@@ -50,9 +50,15 @@ final class Template_Preview {
 
 		$kit = $this->brand_kit ?? Brand_Kit::defaults();
 
+		$snapshots = $this->snapshots->posts( Snapshot_References::collect( $blocks ) );
+		$posts     = array();
+		foreach ( $snapshots as $id => $snapshot ) {
+			$posts[ $id ] = $snapshot->to_array()['values'];
+		}
+
 		$context = new Render_Context(
 			array_merge( array( 'brandKit' => $kit ), $metadata ),
-			array( 'posts' => $this->snapshots->posts( Snapshot_References::collect( $blocks ) ) ),
+			array( 'posts' => $posts ),
 			array(),
 			Email_Compiler::PROFILE_VERSION
 		);
