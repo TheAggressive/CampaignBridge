@@ -82,7 +82,7 @@ export function useAutosaveRecovery(
 
   // Like dismissing WordPress's recovery notice, this is session UI state.
   // The autosave row remains owned by WordPress and is never deleted here.
-  const discard = useCallback(() => setState('dismissed'), []);
+  const ignore = useCallback(() => setState('dismissed'), []);
 
-  return { state, restore, discard, blocksPersistence: state !== 'dismissed' };
+  return { state, restore, ignore, blocksPersistence: state !== 'dismissed' };
 }

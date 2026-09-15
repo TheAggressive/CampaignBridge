@@ -704,12 +704,12 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
     );
   });
 
-  test('discarding published recovery keeps canonical content untouched', async ({
+  test('ignoring published recovery keeps canonical content untouched', async ({
     page,
   }) => {
     await withTemplate(
       page,
-      `Discard recovery ${Date.now()}`,
+      `Ignore recovery ${Date.now()}`,
       'publish',
       async templateId => {
         await openEditorForTemplate(page, templateId);
@@ -717,12 +717,12 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         const response = page.waitForResponse(response =>
           isAutosavePost(response.request(), templateId)
         );
-        await editTextBlock(page, templateId, 'Discard this recovery');
+        await editTextBlock(page, templateId, 'Ignore this recovery');
         expect((await response).status()).toBe(200);
         page.on('dialog', dialog => void dialog.accept());
         await page.reload();
         await page
-          .getByRole('button', { name: 'Discard autosave', exact: true })
+          .getByRole('button', { name: 'Ignore for now', exact: true })
           .click();
         await expect(textBlock(page)).toHaveText('Hello');
         expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(

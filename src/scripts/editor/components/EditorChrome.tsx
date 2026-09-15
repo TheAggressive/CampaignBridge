@@ -386,8 +386,8 @@ function EditorChromeContent({
                           disabled: hasEdits || isPersisting,
                         },
                         {
-                          label: __('Discard autosave', 'campaignbridge'),
-                          onClick: recovery.discard,
+                          label: __('Ignore for now', 'campaignbridge'),
+                          onClick: recovery.ignore,
                         },
                       ]}
                     >
@@ -397,7 +397,7 @@ function EditorChromeContent({
                       )}
                       <p>
                         {__(
-                          'Restore it as unsaved changes, or discard this prompt for this editing session.',
+                          'Restore autosave loads the recovery copy as unsaved edits. Ignore for now continues with the saved template without deleting the recovery copy.',
                           'campaignbridge'
                         )}
                       </p>

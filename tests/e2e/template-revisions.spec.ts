@@ -135,7 +135,7 @@ test('restores revisioned metadata through the editor and hides autosaves from h
 
     // Resolve the new recovery prompt before operating on canonical history.
     await page
-      .getByRole('button', { name: 'Discard autosave', exact: true })
+      .getByRole('button', { name: 'Ignore for now', exact: true })
       .click();
     expect(await getSubject(page, templateId)).toBe('Revision B subject');
 

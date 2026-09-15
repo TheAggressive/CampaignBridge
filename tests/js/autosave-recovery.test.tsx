@@ -94,9 +94,9 @@ describe('native autosave recovery', () => {
     expect(current.state).toBe('dismissed');
   });
 
-  it('discards only the prompt without writing or clearing canonical edits', async () => {
+  it('ignores recovery for this session without writing or clearing canonical edits', async () => {
     await mount();
-    act(() => current.discard());
+    act(() => current.ignore());
     expect(current.blocksPersistence).toBe(false);
     expect(mockActions.editEntityRecord).not.toHaveBeenCalled();
     expect(mockActions.clearEntityRecordEdits).not.toHaveBeenCalled();
