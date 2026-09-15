@@ -156,48 +156,40 @@ final class Post_Snapshot_Repository_Test extends Test_Case {
 			)
 		);
 
-		$upload_dir = wp_upload_dir();
-		$file_path  = $upload_dir['basedir'] . '/test-image.png';
-		file_put_contents( $file_path, base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' ) );
-
 		$attachment_id = $this->factory->attachment->create_object(
 			array(
 				'post_mime_type' => 'image/png',
 				'post_parent'    => $post_id,
-				'guid'           => $upload_dir['baseurl'] . '/test-image.png',
-			),
-			$file_path
+			)
 		);
 
-		update_post_meta( $attachment_id, '_wp_attached_file', 'test-image.png' );
 		update_post_meta( $attachment_id, '_wp_attachment_image_alt', 'Test alt text' );
-		update_post_meta( $attachment_id, '_wp_attachment_image_metadata', array(
-			'width'  => 800,
-			'height' => 600,
-			'file'   => 'test-image.png',
-		) );
-		set_post_thumbnail( $post_id, $attachment_id );
+		update_post_meta( $post_id, '_thumbnail_id', $attachment_id );
 
-		// Verify the thumbnail is set correctly.
-		$this->assertSame( $attachment_id, (int) get_post_thumbnail_id( $post_id ) );
+		// Provide a deterministic image source so the fixture is reliable
+		// regardless of file-system state in the test environment.
+		add_filter(
+			'wp_get_attachment_image_src',
+			static function () {
+				return array( 'https://example.com/uploads/test-image.png', 800, 600, false );
+			},
+			10,
+			3
+		);
 
 		$result   = $this->repository->posts( array( array( 'id' => $post_id, 'type' => 'post' ) ) );
 		$snapshot = $result[ (string) $post_id ];
 
-		// If the image resolves, verify its structure.
-		if ( $snapshot->has( 'image' ) ) {
-			$image = $snapshot->get( 'image' );
-			$this->assertIsArray( $image );
-			$this->assertArrayHasKey( 'url', $image );
-			$this->assertArrayHasKey( 'alt', $image );
-			$this->assertSame( 'Test alt text', $image['alt'] );
-			$this->assertIsInt( $image['width'] );
-			$this->assertIsInt( $image['height'] );
-			$this->assertGreaterThan( 0, $image['width'] );
-			$this->assertGreaterThan( 0, $image['height'] );
-		}
+		$this->assertTrue( $snapshot->has( 'image' ), 'Snapshot must contain an image binding when a featured image is set.' );
 
-		unlink( $file_path );
+		$image = $snapshot->get( 'image' );
+		$this->assertIsArray( $image );
+		$this->assertSame( 'https://example.com/uploads/test-image.png', $image['url'] );
+		$this->assertSame( 'Test alt text', $image['alt'] );
+		$this->assertSame( 800, $image['width'] );
+		$this->assertSame( 600, $image['height'] );
+
+		remove_all_filters( 'wp_get_attachment_image_src' );
 	}
 
 	public function test_missing_image_is_allowed(): void {
@@ -305,8 +297,21 @@ final class Post_Snapshot_Repository_Test extends Test_Case {
 		$result   = $this->repository->posts( array( array( 'id' => $post_id, 'type' => 'post' ) ) );
 		$snapshot = $result[ (string) $post_id ];
 
-		$this->assertNotSame( 'sensitive-data', $snapshot->get( 'title' ) );
-		$this->assertNotSame( 'sensitive-data', $snapshot->get( 'excerpt' ) );
+		// Arbitrary post meta keys must be absent from the snapshot.
+		$values = $snapshot->to_array()['values'];
+		$this->assertArrayNotHasKey( 'secret_meta', $values, 'Arbitrary meta key "secret_meta" must not appear in the snapshot.' );
+		$this->assertArrayNotHasKey( 'another_meta', $values, 'Arbitrary meta key "another_meta" must not appear in the snapshot.' );
+
+		// The snapshot must contain only the canonical allowlisted fields.
+		$allowed_fields = array( 'title', 'excerpt', 'url', 'image', 'postParentUrl', 'postTypeArchiveUrl' );
+
+		foreach ( array_keys( $values ) as $key ) {
+			$this->assertContains( $key, $allowed_fields, sprintf( 'Snapshot contains non-canonical field "%s".', $key ) );
+		}
+
+		// For this fixture (no thumbnail, no parent), only these fields should be present.
+		$expected_keys = array( 'title', 'excerpt', 'url', 'postTypeArchiveUrl' );
+		$this->assertSame( $expected_keys, array_keys( $values ) );
 	}
 
 	public function test_multiple_references_preserve_deterministic_order(): void {
