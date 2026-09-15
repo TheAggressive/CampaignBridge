@@ -24,12 +24,14 @@ final class Render_Context {
 	 *        string lookup in snapshot() resolves through the same coercion.
 	 * @param array<string, array<string, mixed>>                                  $bindings  Active parent bindings.
 	 * @param string                                                               $profile   Versioned target profile.
+	 * @param Post_Snapshot|null                                                   $post_binding Active scoped post snapshot.
 	 */
 	public function __construct(
 		private readonly array $metadata = array(),
 		private readonly array $snapshots = array(),
 		private readonly array $bindings = array(),
-		private readonly string $profile = 'universal@1'
+		private readonly string $profile = 'universal@1',
+		private readonly ?Post_Snapshot $post_binding = null
 	) {}
 
 	/** Get the versioned target profile. */
@@ -89,6 +91,22 @@ final class Render_Context {
 		return $this->bindings[ $name ] ?? null;
 	}
 
+	/** Get the active canonical post snapshot, if scoped. */
+	public function post_binding(): ?Post_Snapshot {
+		return $this->post_binding;
+	}
+
+	/**
+	 * Return a context copy with the active post snapshot set or cleared.
+	 *
+	 * This keeps the same object as derived render state, outside fingerprint input.
+	 *
+	 * @param Post_Snapshot|null $snapshot Active snapshot, or null to clear the scope.
+	 */
+	public function with_post_binding( ?Post_Snapshot $snapshot ): self {
+		return new self( $this->metadata, $this->snapshots, $this->bindings, $this->profile, $snapshot );
+	}
+
 	/**
 	 * Return a context copy with a metadata value set.
 	 *
@@ -99,7 +117,7 @@ final class Render_Context {
 		$metadata         = $this->metadata;
 		$metadata[ $key ] = $value;
 
-		return new self( $metadata, $this->snapshots, $this->bindings, $this->profile );
+		return new self( $metadata, $this->snapshots, $this->bindings, $this->profile, $this->post_binding );
 	}
 
 	/**
@@ -112,7 +130,7 @@ final class Render_Context {
 		$bindings          = $this->bindings;
 		$bindings[ $name ] = $value;
 
-		return new self( $this->metadata, $this->snapshots, $bindings, $this->profile );
+		return new self( $this->metadata, $this->snapshots, $bindings, $this->profile, $this->post_binding );
 	}
 
 	/**

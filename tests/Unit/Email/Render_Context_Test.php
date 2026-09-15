@@ -15,6 +15,66 @@ use CampaignBridge\Workflow\Email\Artifact_Fingerprinter;
 use PHPUnit\Framework\TestCase;
 
 final class Render_Context_Test extends TestCase {
+	public function test_typed_post_binding_keeps_the_canonical_instance_without_an_array_binding(): void {
+		$post    = $this->post();
+		$context = new Render_Context( array(), array( 'posts' => array( 7 => $post ) ) );
+		$scoped  = $context->with_post_binding( $post );
+
+		self::assertNull( $context->post_binding() );
+		self::assertSame( $post, $scoped->post_binding() );
+		self::assertSame( $scoped->post_snapshot( '7' ), $scoped->post_binding() );
+		self::assertNull( $scoped->binding( 'post' ), 'Typed scope must not create a second values-array binding.' );
+		$view = $scoped->snapshot( 'posts', '7' );
+		$view['title'] = 'Changed view';
+		self::assertSame( 'Snapshot title', $scoped->post_binding()->get( 'title' ) );
+	}
+
+	public function test_context_copies_preserve_typed_scope_and_generic_bindings_independently(): void {
+		$post    = $this->post();
+		$context = new Render_Context(
+			array( 'title' => 'Original' ),
+			array( 'posts' => array( 7 => $post ) ),
+			array( 'section' => array( 'width' => 600 ) ),
+			'custom@1'
+		);
+		$scoped   = $context->with_post_binding( $post );
+		$metadata = $scoped->with_metadata( 'title', 'Updated' );
+		$generic  = $metadata->with_binding( 'section', array( 'width' => 400 ) );
+		$other    = $this->post( 9 );
+		$rebound  = $generic->with_post_binding( $other );
+
+		self::assertSame( $post, $metadata->post_binding() );
+		self::assertSame( $post, $generic->post_binding() );
+		self::assertSame( $other, $rebound->post_binding() );
+		self::assertSame( 'Original', $scoped->metadata( 'title' ) );
+		self::assertSame( 'Updated', $rebound->metadata( 'title' ) );
+		self::assertSame( array( 'width' => 600 ), $scoped->binding( 'section' ) );
+		self::assertSame( array( 'width' => 400 ), $rebound->binding( 'section' ) );
+		self::assertSame( 'custom@1', $rebound->profile() );
+		self::assertSame( $post, $rebound->post_snapshot( '7' ) );
+		self::assertNull( $rebound->post_snapshot( '9' ), 'Scoping must not change the canonical collection.' );
+	}
+
+	public function test_adding_replacing_and_clearing_typed_scope_does_not_affect_fingerprints(): void {
+		$post    = $this->post();
+		$context = new Render_Context( array(), array( 'posts' => array( 7 => $post ) ) );
+		$scoped  = $context->with_post_binding( $post );
+		$rebound = $scoped->with_post_binding( $this->post( 9, 'Different scoped content' ) );
+		$cleared = $rebound->with_post_binding( null );
+		$hasher  = new Artifact_Fingerprinter();
+
+		self::assertNull( $cleared->post_binding() );
+		self::assertSame( $post, $scoped->post_binding() );
+		self::assertSame( $post, $cleared->post_snapshot( '7' ) );
+		foreach ( array( $scoped, $rebound, $cleared ) as $copy ) {
+			self::assertSame( $context->fingerprint_payload(), $copy->fingerprint_payload() );
+			self::assertSame(
+				$hasher->fingerprint( $context->fingerprint_payload() ),
+				$hasher->fingerprint( $copy->fingerprint_payload() )
+			);
+		}
+	}
+
 	public function test_retains_the_same_snapshot_through_immutable_context_copies(): void {
 		$snapshot = $this->post();
 		$posts    = array( 7 => $snapshot );
