@@ -168,28 +168,26 @@ final class Post_Snapshot_Repository_Test extends Test_Case {
 
 		// Provide a deterministic image source so the fixture is reliable
 		// regardless of file-system state in the test environment.
-		add_filter(
-			'wp_get_attachment_image_src',
-			static function () {
-				return array( 'https://example.com/uploads/test-image.png', 800, 600, false );
-			},
-			10,
-			3
-		);
+		$image_src_filter = static function () {
+			return array( 'https://example.com/uploads/test-image.png', 800, 600, false );
+		};
+		add_filter( 'wp_get_attachment_image_src', $image_src_filter, 10, 3 );
 
-		$result   = $this->repository->posts( array( array( 'id' => $post_id, 'type' => 'post' ) ) );
-		$snapshot = $result[ (string) $post_id ];
+		try {
+			$result   = $this->repository->posts( array( array( 'id' => $post_id, 'type' => 'post' ) ) );
+			$snapshot = $result[ (string) $post_id ];
 
-		$this->assertTrue( $snapshot->has( 'image' ), 'Snapshot must contain an image binding when a featured image is set.' );
+			$this->assertTrue( $snapshot->has( 'image' ), 'Snapshot must contain an image binding when a featured image is set.' );
 
-		$image = $snapshot->get( 'image' );
-		$this->assertIsArray( $image );
-		$this->assertSame( 'https://example.com/uploads/test-image.png', $image['url'] );
-		$this->assertSame( 'Test alt text', $image['alt'] );
-		$this->assertSame( 800, $image['width'] );
-		$this->assertSame( 600, $image['height'] );
-
-		remove_all_filters( 'wp_get_attachment_image_src' );
+			$image = $snapshot->get( 'image' );
+			$this->assertIsArray( $image );
+			$this->assertSame( 'https://example.com/uploads/test-image.png', $image['url'] );
+			$this->assertSame( 'Test alt text', $image['alt'] );
+			$this->assertSame( 800, $image['width'] );
+			$this->assertSame( 600, $image['height'] );
+		} finally {
+			remove_filter( 'wp_get_attachment_image_src', $image_src_filter, 10 );
+		}
 	}
 
 	public function test_missing_image_is_allowed(): void {
