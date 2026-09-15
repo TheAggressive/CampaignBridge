@@ -92,11 +92,24 @@ final class Render_Context {
 	/**
 	 * Return a context copy with the active post snapshot set or cleared.
 	 *
-	 * This keeps the same object as derived render state, outside fingerprint input.
+	 * The snapshot must be the exact canonical instance already present in the
+	 * `posts` collection. A different instance with equal data, or a snapshot
+	 * whose source ID is absent from the collection, is rejected.
 	 *
 	 * @param Post_Snapshot|null $snapshot Active snapshot, or null to clear the scope.
+	 *
+	 * @throws \InvalidArgumentException When the snapshot is not the canonical instance.
 	 */
 	public function with_post_binding( ?Post_Snapshot $snapshot ): self {
+		if ( null !== $snapshot ) {
+			$canonical = $this->post_snapshot( (string) $snapshot->source_id() );
+			if ( $canonical !== $snapshot ) {
+				throw new \InvalidArgumentException(
+					sprintf( 'Post binding must be the canonical snapshot for source ID %d.', $snapshot->source_id() )
+				);
+			}
+		}
+
 		return new self( $this->metadata, $this->snapshots, $this->bindings, $this->profile, $snapshot );
 	}
 

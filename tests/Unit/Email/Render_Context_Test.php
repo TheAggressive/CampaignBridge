@@ -30,16 +30,16 @@ final class Render_Context_Test extends TestCase {
 
 	public function test_context_copies_preserve_typed_scope_and_generic_bindings_independently(): void {
 		$post    = $this->post();
+		$other   = $this->post( 9 );
 		$context = new Render_Context(
 			array( 'title' => 'Original' ),
-			array( 'posts' => array( 7 => $post ) ),
+			array( 'posts' => array( 7 => $post, 9 => $other ) ),
 			array( 'section' => array( 'width' => 600 ) ),
 			'custom@1'
 		);
 		$scoped   = $context->with_post_binding( $post );
 		$metadata = $scoped->with_metadata( 'title', 'Updated' );
 		$generic  = $metadata->with_binding( 'section', array( 'width' => 400 ) );
-		$other    = $this->post( 9 );
 		$rebound  = $generic->with_post_binding( $other );
 
 		self::assertSame( $post, $metadata->post_binding() );
@@ -51,20 +51,23 @@ final class Render_Context_Test extends TestCase {
 		self::assertSame( array( 'width' => 400 ), $rebound->binding( 'section' ) );
 		self::assertSame( 'custom@1', $rebound->profile() );
 		self::assertSame( $post, $rebound->post_snapshot( '7' ) );
-		self::assertNull( $rebound->post_snapshot( '9' ), 'Scoping must not change the canonical collection.' );
+		self::assertSame( $other, $rebound->post_snapshot( '9' ) );
 	}
 
 	public function test_adding_replacing_and_clearing_typed_scope_does_not_affect_fingerprints(): void {
 		$post    = $this->post();
-		$context = new Render_Context( array(), array( 'posts' => array( 7 => $post ) ) );
+		$other   = $this->post( 9, 'Different scoped content' );
+		$context = new Render_Context( array(), array( 'posts' => array( 7 => $post, 9 => $other ) ) );
 		$scoped  = $context->with_post_binding( $post );
-		$rebound = $scoped->with_post_binding( $this->post( 9, 'Different scoped content' ) );
+		$rebound = $scoped->with_post_binding( $other );
 		$cleared = $rebound->with_post_binding( null );
 		$hasher  = new Artifact_Fingerprinter();
 
 		self::assertNull( $cleared->post_binding() );
 		self::assertSame( $post, $scoped->post_binding() );
+		self::assertSame( $other, $rebound->post_binding() );
 		self::assertSame( $post, $cleared->post_snapshot( '7' ) );
+		self::assertSame( $other, $cleared->post_snapshot( '9' ) );
 		foreach ( array( $scoped, $rebound, $cleared ) as $copy ) {
 			self::assertSame( $context->fingerprint_payload(), $copy->fingerprint_payload() );
 			self::assertSame(
@@ -184,6 +187,44 @@ final class Render_Context_Test extends TestCase {
 			$fingerprinter->fingerprint( $first->fingerprint_payload() ),
 			$fingerprinter->fingerprint( $second->fingerprint_payload() )
 		);
+	}
+
+	public function test_rejects_a_non_canonical_snapshot_instance_with_equal_data(): void {
+		$canonical = $this->post();
+		$context   = new Render_Context( array(), array( 'posts' => array( 7 => $canonical ) ) );
+		$impostor  = Post_Snapshot::create(
+			7,
+			'post',
+			array(
+				'title'   => 'Snapshot title',
+				'excerpt' => 'Snapshot excerpt.',
+				'url'     => 'https://example.com/posts/7',
+			)
+		);
+
+		self::assertNotSame( $canonical, $impostor );
+		self::assertSame( $canonical->to_array(), $impostor->to_array() );
+
+		try {
+			$context->with_post_binding( $impostor );
+			self::fail( 'Expected InvalidArgumentException for non-canonical snapshot instance.' );
+		} catch ( \InvalidArgumentException $e ) {
+			self::assertStringContainsString( 'canonical', $e->getMessage() );
+		}
+	}
+
+	public function test_rejects_a_snapshot_whose_source_id_is_not_in_the_collection(): void {
+		$context = new Render_Context( array(), array( 'posts' => array( 7 => $this->post() ) ) );
+		$orphan  = $this->post( 99, 'Orphan post' );
+
+		self::assertNull( $context->post_snapshot( '99' ) );
+
+		try {
+			$context->with_post_binding( $orphan );
+			self::fail( 'Expected InvalidArgumentException for snapshot with absent source ID.' );
+		} catch ( \InvalidArgumentException $e ) {
+			self::assertStringContainsString( 'canonical', $e->getMessage() );
+		}
 	}
 
 	private function post( int $id = 7, string $title = 'Snapshot title' ): Post_Snapshot {
