@@ -82,6 +82,7 @@ interface HeaderProps {
   onDuplicate?: () => void | Promise<unknown>;
   status?: string;
   saveStatus?: SaveStatus;
+  isAutosaving?: boolean;
   onOpenPreview?: () => void;
   onOpenHistory?: () => void;
   /** A duplicate or revision restore is running. */
@@ -104,13 +105,14 @@ export default function Header({
   onDuplicate = () => {},
   status,
   saveStatus = 'saved',
+  isAutosaving = false,
   onOpenPreview = () => {},
   onOpenHistory = () => {},
   isOperationPending = false,
 }: HeaderProps): JSX.Element {
   const isSaving = saveStatus === 'saving';
   // Competing template actions wait for a save, duplicate, or restore.
-  const actionsLocked = isSaving || isOperationPending;
+  const actionsLocked = isSaving || isAutosaving || isOperationPending;
   const isDraft = status === 'draft' || status === undefined;
   const saveLabel = isSaving
     ? __('Saving…', 'campaignbridge')
@@ -162,6 +164,13 @@ export default function Header({
       </div>
 
       <div className={CLASSES.HEADER_ACTIONS}>
+        {isAutosaving && (
+          <span role='status'>
+            {status === 'publish'
+              ? __('Autosaving recovery copy…', 'campaignbridge')
+              : __('Autosaving…', 'campaignbridge')}
+          </span>
+        )}
         {isDraft && (
           <Button
             className='cb-editor__publish-button'

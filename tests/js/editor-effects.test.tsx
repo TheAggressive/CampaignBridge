@@ -56,6 +56,50 @@ describe('EditorEffects', () => {
     expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(1);
   });
 
+  it('creates a new edit boundary after a draft autosave cleans the entity', () => {
+    act(() =>
+      root.render(
+        <EditorEffects
+          saveStatus='dirty'
+          isPersisting
+          onBlockSelected={jest.fn()}
+        />
+      )
+    );
+    act(() =>
+      root.render(
+        <EditorEffects
+          saveStatus='saved'
+          isPersisting={false}
+          onBlockSelected={jest.fn()}
+        />
+      )
+    );
+    expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not treat a published recovery autosave as a canonical save', () => {
+    act(() =>
+      root.render(
+        <EditorEffects
+          saveStatus='dirty'
+          isPersisting
+          onBlockSelected={jest.fn()}
+        />
+      )
+    );
+    act(() =>
+      root.render(
+        <EditorEffects
+          saveStatus='dirty'
+          isPersisting={false}
+          onBlockSelected={jest.fn()}
+        />
+      )
+    );
+    expect(mockMarkLastChangeAsPersistent).not.toHaveBeenCalled();
+  });
+
   it('reports block selection from the scoped editor registry', () => {
     const onBlockSelected = jest.fn();
 

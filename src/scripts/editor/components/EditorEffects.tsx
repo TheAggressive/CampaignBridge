@@ -6,6 +6,7 @@ import { usePersistentChangeBoundary } from '../wordpress/usePersistentChangeBou
 
 interface EditorEffectsProps {
   saveStatus: string;
+  isPersisting?: boolean;
   onBlockSelected: () => void;
 }
 
@@ -15,6 +16,7 @@ interface EditorEffectsProps {
  */
 export default function EditorEffects({
   saveStatus,
+  isPersisting = saveStatus === 'saving',
   onBlockSelected,
 }: EditorEffectsProps): null {
   const selectedClientId = useSelect(
@@ -31,7 +33,7 @@ export default function EditorEffects({
   }, [onBlockSelected, selectedClientId]);
 
   useEffect(() => {
-    const isSaving = saveStatus === 'saving';
+    const isSaving = isPersisting;
 
     if (wasSavingRef.current && saveStatus === 'saved') {
       // Match core/editor's successful regular-save lifecycle. Without this
@@ -41,7 +43,7 @@ export default function EditorEffects({
     }
 
     wasSavingRef.current = isSaving;
-  }, [markLastChangeAsPersistent, saveStatus]);
+  }, [markLastChangeAsPersistent, saveStatus, isPersisting]);
 
   return null;
 }

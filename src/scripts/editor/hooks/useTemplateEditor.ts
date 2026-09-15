@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import type { SaveStatus } from '../types';
 import { buildDuplicatePayload } from '../utils/templateDuplication';
+import { useAutosaveRecovery } from './useAutosaveRecovery';
 import { TEMPLATE_LIST_QUERY } from './useTemplates';
 
 const AUTOSAVE_DELAY_MS = 2000;
@@ -137,12 +138,17 @@ export function useTemplateEditor({
     { id: postId } as any
   );
 
-  const { isSaving, loadError, saveError } = useSelect(
+  const { isSaving, isAutosaving, loadError, saveError } = useSelect(
     select => {
       const core = select(coreStore) as any;
 
       return {
         isSaving: core.isSavingEntityRecord('postType', postType, postId),
+        isAutosaving: core.isAutosavingEntityRecord(
+          'postType',
+          postType,
+          postId
+        ),
         loadError: core.getResolutionError('getEntityRecord', [
           'postType',
           postType,
@@ -179,6 +185,24 @@ export function useTemplateEditor({
     };
   }, []);
 
+  const canRestoreAutosave = useCallback(() => {
+    const core = select(coreStore) as any;
+    return !(
+      operationRef.current ||
+      savingRef.current ||
+      needsReloadRef.current ||
+      core.isSavingEntityRecord('postType', postType, postId) ||
+      core.hasEditsForEntityRecord('postType', postType, postId)
+    );
+  }, [postId, postType]);
+  const recovery = useAutosaveRecovery(
+    postType,
+    postId,
+    Boolean(record) && !isResolving,
+    canRestoreAutosave
+  );
+  const recoveryBlocked = recovery.blocksPersistence;
+
   // WordPress-native autosave: POSTs to /autosaves endpoint, preserves status,
   // does not create a revision. The useEntityRecord save function accepts
   // options (isAutosave, throwOnError) even though the type omits them.
@@ -205,7 +229,13 @@ export function useTemplateEditor({
   const editedMeta = edits?.meta;
 
   useEffect(() => {
-    if (!hasEdits || isResolving || isSaving || needsReload) {
+    if (
+      !hasEdits ||
+      isResolving ||
+      isSaving ||
+      needsReload ||
+      recoveryBlocked
+    ) {
       return;
     }
 
@@ -231,6 +261,7 @@ export function useTemplateEditor({
     isSaving,
     needsReload,
     rawBlocks,
+    recoveryBlocked,
   ]);
 
   useEffect(() => {
@@ -259,6 +290,7 @@ export function useTemplateEditor({
     const core = select(coreStore) as any;
 
     if (
+      recoveryBlocked ||
       operationRef.current ||
       savingRef.current ||
       needsReloadRef.current ||
@@ -270,7 +302,7 @@ export function useTemplateEditor({
     return core.hasEditsForEntityRecord('postType', postType, postId)
       ? 'unsaved'
       : null;
-  }, [postId, postType]);
+  }, [postId, postType, recoveryBlocked]);
 
   const runCanonicalOperation = useCallback(
     async <T>(
@@ -295,6 +327,7 @@ export function useTemplateEditor({
     }
 
     if (
+      recoveryBlocked ||
       isSaving ||
       savingRef.current ||
       operationRef.current ||
@@ -306,6 +339,10 @@ export function useTemplateEditor({
     savingRef.current = true;
     try {
       await save();
+      dispatch(coreStore).invalidateResolution('getAutosaves', [
+        postType,
+        postId,
+      ]);
       onSuccess?.(editorMessages.saved());
       return true;
     } catch {
@@ -315,10 +352,20 @@ export function useTemplateEditor({
     } finally {
       savingRef.current = false;
     }
-  }, [hasEdits, isSaving, onError, onSuccess, save]);
+  }, [
+    hasEdits,
+    isSaving,
+    onError,
+    onSuccess,
+    save,
+    recoveryBlocked,
+    postType,
+    postId,
+  ]);
 
   const publish = useCallback(async () => {
     if (
+      recoveryBlocked ||
       isSaving ||
       savingRef.current ||
       operationRef.current ||
@@ -342,6 +389,10 @@ export function useTemplateEditor({
         status: 'publish',
       });
       await save();
+      dispatch(coreStore).invalidateResolution('getAutosaves', [
+        postType,
+        postId,
+      ]);
       onSuccess?.(editorMessages.published());
       return true;
     } catch {
@@ -359,7 +410,7 @@ export function useTemplateEditor({
     } finally {
       savingRef.current = false;
     }
-  }, [isSaving, onError, onSuccess, postId, postType, save]);
+  }, [isSaving, onError, onSuccess, postId, postType, save, recoveryBlocked]);
 
   const duplicate = useCallback(async (): Promise<DuplicateResult> => {
     const blocker = canonicalOperationBlocker();
@@ -474,6 +525,7 @@ export function useTemplateEditor({
           core.clearEntityRecordEdits('postType', postType, postId);
         }
 
+        core.invalidateResolution('getAutosaves', [postType, postId]);
         return { success: true };
       });
     },
@@ -482,7 +534,7 @@ export function useTemplateEditor({
 
   const saveStatus: SaveStatus = saveError
     ? 'error'
-    : isSaving
+    : isSaving && !isAutosaving
       ? 'saving'
       : hasEdits
         ? 'dirty'
@@ -492,7 +544,10 @@ export function useTemplateEditor({
     blocks: (rawBlocks ?? []) as Block[],
     duplicate,
     hasEdits,
-    isOperationPending: pendingOperation !== null,
+    isAutosaving,
+    isPersisting: isSaving,
+    recovery,
+    isOperationPending: pendingOperation !== null || recoveryBlocked,
     isResolving: isResolving || !hasStarted,
     loadError,
     needsReload,
