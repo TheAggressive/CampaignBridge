@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace CampaignBridge\Repository;
 
 use CampaignBridge\Core\Storage;
+use CampaignBridge\Domain\Email\Invalid_Post_Snapshot;
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Post_Snapshot_Source;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -20,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Freezes published WordPress posts into compiler snapshots.
  *
  * This is the only place the email pipeline reads live post data. Everything
- * downstream sees an immutable array, so a compile cannot vary with a post
+ * downstream sees a canonical immutable object, so a compile cannot vary with a post
  * edited midway through rendering.
  */
 final class Post_Snapshot_Repository implements Post_Snapshot_Source {
@@ -28,7 +30,7 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 	 * {@inheritDoc}
 	 *
 	 * @param array<int, array{id: int, type: string}> $references Requested posts.
-	 * @return array<int|string, array<string, mixed>>
+	 * @return array<int|string, Post_Snapshot>
 	 */
 	public function posts( array $references ): array {
 		$snapshots = array();
@@ -49,9 +51,8 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 	 *
 	 * @param int    $post_id   Post identifier.
 	 * @param string $post_type Expected post type.
-	 * @return array<string, mixed>|null
 	 */
-	private function snapshot( int $post_id, string $post_type ): ?array {
+	private function snapshot( int $post_id, string $post_type ): ?Post_Snapshot {
 		$post = get_post( $post_id );
 
 		if ( ! $post instanceof \WP_Post || $post->post_type !== $post_type ) {
@@ -59,7 +60,7 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 		}
 
 		// A reader must be able to open what the email links to.
-		if ( 'publish' !== $post->post_status ) {
+		if ( 'publish' !== $post->post_status || '' !== $post->post_password || ! is_post_publicly_viewable( $post ) ) {
 			return null;
 		}
 
@@ -68,7 +69,7 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 			return null;
 		}
 
-		$snapshot = array(
+		$values = array(
 			'title'   => (string) get_the_title( $post ),
 			'excerpt' => $this->excerpt( $post ),
 			'url'     => $permalink,
@@ -76,20 +77,24 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 
 		$image = $this->image( $post_id );
 		if ( null !== $image ) {
-			$snapshot['image'] = $image;
+			$values['image'] = $image;
 		}
 
 		$parent_url = 0 < (int) $post->post_parent ? get_permalink( (int) $post->post_parent ) : null;
 		if ( is_string( $parent_url ) ) {
-			$snapshot['postParentUrl'] = $parent_url;
+			$values['postParentUrl'] = $parent_url;
 		}
 
 		$archive_url = get_post_type_archive_link( $post_type );
 		if ( is_string( $archive_url ) ) {
-			$snapshot['postTypeArchiveUrl'] = $archive_url;
+			$values['postTypeArchiveUrl'] = $archive_url;
 		}
 
-		return $snapshot;
+		try {
+			return Post_Snapshot::create( $post_id, $post_type, $values );
+		} catch ( Invalid_Post_Snapshot ) {
+			return null;
+		}
 	}
 
 	/**

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Services\Email\Renderer\Renderer_Support;
@@ -84,11 +85,11 @@ final class Post_Excerpt_Renderer_Test extends TestCase {
 			array( 'title' => 'Post excerpt fixture' ),
 			array(
 				'posts' => array(
-					'7' => array(
+					'7' => Post_Snapshot::create( 7, 'post', array(
 						'title'   => 'Snapshot title',
 						'excerpt' => $excerpt,
 						'url'     => 'https://example.com/posts/7',
-					),
+					) ),
 				),
 			),
 			array(),

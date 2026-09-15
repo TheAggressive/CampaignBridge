@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Renderer_Registry;
 use CampaignBridge\Services\Email\Compiler_Factory;
@@ -105,18 +106,21 @@ final class Email_Compiler_Test extends TestCase {
 				),
 				array(
 					'posts' => array(
-						'42' => array(
-							'postParentUrl'      => 'https://example.com/parent-page',
-							'postTypeArchiveUrl' => 'https://example.com/news',
-							'url'                => 'https://example.com/posts/42',
-							'excerpt'            => '<strong>This</strong> excerpt has safe text.',
-							'title'              => 'Enterprise & safe',
-							'id'                 => 42,
-							'image'              => array(
-								'height' => 400,
-								'alt'    => 'A "safe" image',
-								'url'    => 'https://example.com/image.jpg',
-								'width'  => 600,
+						'42' => Post_Snapshot::create(
+							42,
+							'post',
+							array(
+								'postParentUrl'      => 'https://example.com/parent-page',
+								'postTypeArchiveUrl' => 'https://example.com/news',
+								'url'                => 'https://example.com/posts/42',
+								'excerpt'            => '<strong>This</strong> excerpt has safe text.',
+								'title'              => 'Enterprise & safe',
+								'image'              => array(
+									'height' => 400,
+									'alt'    => 'A "safe" image',
+									'url'    => 'https://example.com/image.jpg',
+									'width'  => 600,
+								),
 							),
 						),
 					),
@@ -125,6 +129,49 @@ final class Email_Compiler_Test extends TestCase {
 		);
 
 		self::assertSame( $first->fingerprint(), $second->fingerprint() );
+	}
+
+	public function test_canonical_snapshot_collection_order_does_not_change_the_artifact(): void {
+		$post = $this->context()->post_snapshot( '42' );
+		self::assertInstanceOf( Post_Snapshot::class, $post );
+		$other = Post_Snapshot::create( 9, 'post', array( 'title' => 'Other', 'excerpt' => '', 'url' => 'https://example.com/9' ) );
+		$first = Compiler_Factory::create()->compile(
+			$this->document(),
+			new Render_Context( array(), array( 'posts' => array( 42 => $post, 9 => $other ) ) )
+		);
+		$second = Compiler_Factory::create()->compile(
+			$this->document(),
+			new Render_Context( array(), array( 'posts' => array( 9 => $other, 42 => Post_Snapshot::from_array( $post->to_array() ) ) ) )
+		);
+
+		self::assertTrue( $first->is_success() );
+		self::assertTrue( $second->is_success() );
+		self::assertSame( $first->html(), $second->html() );
+		self::assertSame( $first->text(), $second->text() );
+		self::assertSame( $first->assets(), $second->assets() );
+		self::assertSame( $first->fingerprint(), $second->fingerprint() );
+	}
+
+	public function test_changed_canonical_snapshot_changes_the_artifact_fingerprint(): void {
+		$context = $this->context();
+		$post = $context->post_snapshot( '42' );
+		self::assertInstanceOf( Post_Snapshot::class, $post );
+		$data = $post->to_array();
+		$data['values']['title'] = 'Updated snapshot title';
+		$first = Compiler_Factory::create()->compile( $this->document(), $context );
+		$second = Compiler_Factory::create()->compile(
+			$this->document(),
+			new Render_Context(
+				$context->fingerprint_payload()['metadata'],
+				array( 'posts' => array( 42 => Post_Snapshot::from_array( $data ) ) )
+			)
+		);
+
+		self::assertTrue( $first->is_success() );
+		self::assertTrue( $second->is_success() );
+		self::assertStringContainsString( 'Updated snapshot title', $second->html() );
+		self::assertNotSame( $first->html(), $second->html() );
+		self::assertNotSame( $first->fingerprint(), $second->fingerprint() );
 	}
 
 	public function test_rejects_unsupported_core_block_without_partial_artifact(): void {
@@ -360,7 +407,6 @@ final class Email_Compiler_Test extends TestCase {
 
 	private function context( bool $include_parent_url = true, bool $include_archive_url = true ): Render_Context {
 		$post = array(
-			'id'      => 42,
 			'title'   => 'Enterprise & safe',
 			'excerpt' => '<strong>This</strong> excerpt has safe text.',
 			'url'     => 'https://example.com/posts/42',
@@ -388,7 +434,7 @@ final class Email_Compiler_Test extends TestCase {
 			),
 			array(
 				'posts' => array(
-					'42' => $post,
+					'42' => Post_Snapshot::create( 42, 'post', $post ),
 				),
 			)
 		);

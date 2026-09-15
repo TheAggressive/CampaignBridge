@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use PHPUnit\Framework\TestCase;
@@ -89,11 +90,11 @@ final class Post_Link_Renderer_Test extends TestCase {
 			array( 'title' => 'Post link fixture' ),
 			array(
 				'posts' => array(
-					'7' => array(
+					'7' => Post_Snapshot::create( 7, 'post', array(
 						'title'   => 'Snapshot title',
 						'excerpt' => 'Snapshot excerpt copy.',
 						'url'     => 'http://localhost:8882/posts/7',
-					),
+					) ),
 				),
 			),
 			array(),
@@ -154,11 +155,11 @@ final class Post_Link_Renderer_Test extends TestCase {
 			array( 'title' => 'Post link fixture' ),
 			array(
 				'posts' => array(
-					'7' => array(
+					'7' => Post_Snapshot::create( 7, 'post', array(
 						'title'   => 'Snapshot title',
 						'excerpt' => 'Snapshot excerpt copy.',
 						'url'     => 'https://example.com/posts/7',
-					),
+					) ),
 				),
 			),
 			array(),

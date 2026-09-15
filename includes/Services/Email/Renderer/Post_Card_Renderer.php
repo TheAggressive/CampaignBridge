@@ -90,7 +90,7 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 		}
 
 		$post_id = (string) $block->attributes()['postId'];
-		$post    = $context->snapshot( 'posts', $post_id );
+		$post    = $context->post_snapshot( $post_id );
 
 		if ( null === $post ) {
 			return array(
@@ -101,26 +101,9 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 				),
 			);
 		}
-
-		foreach ( array( 'title', 'excerpt', 'url' ) as $field ) {
-			if ( ! isset( $post[ $field ] ) || ! is_string( $post[ $field ] ) ) {
-				return array(
-					Compile_Diagnostic::error(
-						'post.snapshot.invalid',
-						$block->path(),
-						sprintf( 'The post snapshot requires a string %s field.', $field )
-					),
-				);
-			}
-		}
-
-		if ( null === Renderer_Support::https_url( $post['url'] ) ) {
+		if ( $post->source_id() !== (int) $post_id || $post->source_post_type() !== $block->attributes()['postType'] ) {
 			return array(
-				Compile_Diagnostic::error(
-					'post.url.invalid',
-					$block->path(),
-					'The post snapshot URL must be an absolute URL.'
-				),
+				Compile_Diagnostic::error( 'post.snapshot.mismatch', $block->path(), 'The snapshot source does not match the selected post and type.' ),
 			);
 		}
 
@@ -134,9 +117,9 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable parent context.
 	 */
 	public function context_for_children( Block_Node $block, Render_Context $context ): Render_Context {
-		$post = $context->snapshot( 'posts', (string) $block->attributes()['postId'] );
+		$post = $context->post_snapshot( (string) $block->attributes()['postId'] );
 
-		return null === $post ? $context : $context->with_binding( 'post', $post );
+		return null === $post ? $context : $context->with_post_binding( $post );
 	}
 
 	/**

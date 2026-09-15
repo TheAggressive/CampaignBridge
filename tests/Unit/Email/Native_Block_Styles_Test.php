@@ -3,6 +3,7 @@
 declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use PHPUnit\Framework\TestCase;
@@ -165,11 +166,11 @@ final class Native_Block_Styles_Test extends TestCase {
 			array( 'unsubscribe_url' => 'https://example.com/unsubscribe' ),
 			array(
 				'posts' => array(
-					'42' => array(
+					'42' => Post_Snapshot::create( 42, 'post', array(
 						'title'   => 'Title',
 						'excerpt' => 'Excerpt',
 						'url'     => 'https://example.com/post',
-					),
+					) ),
 				),
 				)
 		);

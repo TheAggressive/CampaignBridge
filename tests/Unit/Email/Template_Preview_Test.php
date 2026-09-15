@@ -10,12 +10,42 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit\Email;
 
 use CampaignBridge\Domain\Email\Brand_Kit;
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Post_Snapshot_Source;
+use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Design\Email_Design_Factory;
+use CampaignBridge\Workflow\Email\Email_Compiler;
 use CampaignBridge\Workflow\Email\Snapshot_References;
 use CampaignBridge\Workflow\Email\Template_Preview;
 use PHPUnit\Framework\TestCase;
 
 final class Template_Preview_Test extends TestCase {
+	public function test_malformed_reference_types_reach_compiler_diagnostics_without_content_reads(): void {
+		foreach ( array( '{"postId":[7]}', '{"postId":7,"postType":["post"]}', '{"postId":7,"postType":null}', '{"postId":"7"}' ) as $attributes ) {
+			$source = $this->createMock( Post_Snapshot_Source::class );
+			$source->expects( self::once() )->method( 'posts' )->with( array() )->willReturn( array() );
+			$result = ( new Template_Preview( $source ) )->compile(
+				'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/post-card ' . $attributes . ' /--><!-- /wp:campaignbridge/container -->'
+			);
+			self::assertFalse( $result->is_success() );
+			self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+			self::assertSame( '', $result->html() );
+		}
+	}
+
+	public function test_repeated_frozen_compilation_does_not_resolve_content_again(): void {
+		$source = $this->createMock( Post_Snapshot_Source::class );
+		$source->expects( self::once() )->method( 'posts' )->willReturn( array() );
+		$preview = new Template_Preview( $source );
+		$input = $preview->capture( '<!-- wp:campaignbridge/container /-->' );
+		$first = $preview->compile_frozen( $input );
+		$second = $preview->compile_frozen( $input );
+		self::assertTrue( $first->is_success() );
+		self::assertTrue( $second->is_success() );
+		self::assertSame( $first->fingerprint(), $second->fingerprint() );
+	}
+
 	public function test_collects_each_distinct_post_binding_once(): void {
 		$blocks = parse_blocks(
 			'<!-- wp:campaignbridge/container -->'
@@ -48,6 +78,75 @@ final class Template_Preview_Test extends TestCase {
 		$blocks = parse_blocks( '<!-- wp:campaignbridge/post-card {"postId":0} /-->' );
 
 		self::assertSame( array(), Snapshot_References::collect( $blocks ) );
+	}
+
+	public function test_references_preserve_first_seen_order_and_distinct_post_types(): void {
+		$blocks = parse_blocks(
+			'<!-- wp:campaignbridge/container -->'
+			. '<!-- wp:campaignbridge/post-card {"postId":9,"postType":"page"} /-->'
+			. '<!-- wp:campaignbridge/section -->'
+			. '<!-- wp:campaignbridge/post-card {"postId":7,"postType":"post"} /-->'
+			. '<!-- wp:campaignbridge/post-card {"postId":9,"postType":"page"} /-->'
+			. '<!-- wp:campaignbridge/post-card {"postId":7,"postType":"page"} /-->'
+			. '<!-- /wp:campaignbridge/section -->'
+			. '<!-- /wp:campaignbridge/container -->'
+		);
+
+		self::assertSame(
+			array(
+				array( 'id' => 9, 'type' => 'page' ),
+				array( 'id' => 7, 'type' => 'post' ),
+				array( 'id' => 7, 'type' => 'page' ),
+			),
+			Snapshot_References::collect( $blocks )
+		);
+	}
+
+	public function test_preview_preserves_canonical_snapshot_data_through_the_compiler(): void {
+		$content = '<!-- wp:campaignbridge/container -->'
+			. '<!-- wp:campaignbridge/post-card {"postId":7,"postType":"post"} -->'
+			. '<!-- wp:campaignbridge/post-title /-->'
+			. '<!-- /wp:campaignbridge/post-card -->'
+			. '<!-- /wp:campaignbridge/container -->';
+		$values = array(
+			'title'   => 'Snapshot title',
+			'excerpt' => 'Snapshot excerpt.',
+			'url'     => 'https://example.com/posts/7',
+		);
+		$snapshot = Post_Snapshot::create( 7, 'post', $values );
+		$source = $this->createMock( Post_Snapshot_Source::class );
+		$source->expects( self::once() )
+			->method( 'posts' )
+			->with( array( array( 'id' => 7, 'type' => 'post' ) ) )
+			->willReturn( array( 7 => $snapshot ) );
+		$kit = Brand_Kit::defaults();
+		$metadata = array( 'title' => 'Canonical preview' );
+		$actual = ( new Template_Preview( $source, $kit ) )->compile( $content, $metadata );
+		$expected = Compiler_Factory::create( Email_Design_Factory::resolve( $kit ) )->compile(
+			parse_blocks( $content ),
+			new Render_Context(
+				array_merge( array( 'brandKit' => $kit ), $metadata ),
+				array( 'posts' => array( 7 => $snapshot ) ),
+				array(),
+				Email_Compiler::PROFILE_VERSION
+			)
+		);
+
+		self::assertTrue( $actual->is_success() );
+		self::assertTrue( $expected->is_success() );
+		self::assertSame( $expected->html(), $actual->html() );
+		self::assertSame( $expected->text(), $actual->text() );
+		self::assertSame( $expected->fingerprint(), $actual->fingerprint() );
+
+		// A snapshot for a different post type cannot satisfy the selected binding.
+		$other_source = $this->createMock( Post_Snapshot_Source::class );
+		$other_source->method( 'posts' )->willReturn( array( 7 => Post_Snapshot::create( 7, 'page', $values ) ) );
+		$other = ( new Template_Preview( $other_source, $kit ) )->compile( $content, $metadata );
+
+		self::assertFalse( $other->is_success() );
+		self::assertSame( 'post.snapshot.mismatch', $other->diagnostics()[0]->code() );
+		self::assertSame( '', $other->html() );
+		self::assertSame( '', $other->fingerprint() );
 	}
 
 	public function test_finds_bindings_nested_below_layout_blocks(): void {
@@ -158,7 +257,7 @@ final class Template_Preview_Test extends TestCase {
 				 * {@inheritDoc}
 				 *
 				 * @param array<int, array{id: int, type: string}> $references Requested posts.
-				 * @return array<int|string, array<string, mixed>>
+				 * @return array<int|string, Post_Snapshot>
 				 */
 				public function posts( array $references ): array {
 					return array();
@@ -190,7 +289,7 @@ final class Template_Preview_Test extends TestCase {
 				 * {@inheritDoc}
 				 *
 				 * @param array<int, array{id: int, type: string}> $references Requested posts.
-				 * @return array<int|string, array<string, mixed>>
+				 * @return array<int|string, Post_Snapshot>
 				 */
 				public function posts( array $references ): array {
 					$snapshots = array();
@@ -200,10 +299,14 @@ final class Template_Preview_Test extends TestCase {
 							continue;
 						}
 
-						$snapshots[ (string) $reference['id'] ] = array(
-							'title'   => 'Snapshot title',
-							'excerpt' => 'Snapshot excerpt.',
-							'url'     => 'https://example.com/posts/7',
+						$snapshots[ (string) $reference['id'] ] = Post_Snapshot::create(
+							7,
+							'post',
+							array(
+								'title'   => 'Snapshot title',
+								'excerpt' => 'Snapshot excerpt.',
+								'url'     => 'https://example.com/posts/7',
+							)
 						);
 					}
 

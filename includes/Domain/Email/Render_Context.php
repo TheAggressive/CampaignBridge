@@ -18,18 +18,20 @@ final class Render_Context {
 	/**
 	 * Create a render context.
 	 *
-	 * @param array<string, mixed>                                   $metadata  Email metadata and design tokens.
-	 * @param array<string, array<int|string, array<string, mixed>>> $snapshots Immutable content snapshots.
+	 * @param array<string, mixed>                                                 $metadata  Email metadata and design tokens.
+	 * @param array<string, array<int|string, Post_Snapshot|array<string, mixed>>> $snapshots Immutable content snapshots.
 	 *        Record keys are post ids, which PHP stores as int when numeric; the
 	 *        string lookup in snapshot() resolves through the same coercion.
-	 * @param array<string, array<string, mixed>>                    $bindings  Active parent bindings.
-	 * @param string                                                 $profile   Versioned target profile.
+	 * @param array<string, array<string, mixed>>                                  $bindings  Active parent bindings.
+	 * @param string                                                               $profile   Versioned target profile.
+	 * @param Post_Snapshot|null                                                   $post_binding Active scoped post snapshot.
 	 */
 	public function __construct(
 		private readonly array $metadata = array(),
 		private readonly array $snapshots = array(),
 		private readonly array $bindings = array(),
-		private readonly string $profile = 'universal@1'
+		private readonly string $profile = 'universal@1',
+		private readonly ?Post_Snapshot $post_binding = null
 	) {}
 
 	/** Get the versioned target profile. */
@@ -49,7 +51,7 @@ final class Render_Context {
 	}
 
 	/**
-	 * Get one immutable snapshot record.
+	 * Get a generic non-post snapshot record.
 	 *
 	 * @param string $collection Snapshot collection.
 	 * @param string $id         Stable record identifier.
@@ -62,6 +64,17 @@ final class Render_Context {
 	}
 
 	/**
+	 * Get the canonical post snapshot without converting or resolving it.
+	 *
+	 * @param string $id Post identifier.
+	 */
+	public function post_snapshot( string $id ): ?Post_Snapshot {
+		$value = $this->snapshots['posts'][ $id ] ?? null;
+
+		return $value instanceof Post_Snapshot ? $value : null;
+	}
+
+	/**
 	 * Get an active parent binding.
 	 *
 	 * @param string $name Binding name.
@@ -69,6 +82,35 @@ final class Render_Context {
 	 */
 	public function binding( string $name ): ?array {
 		return $this->bindings[ $name ] ?? null;
+	}
+
+	/** Get the active canonical post snapshot, if scoped. */
+	public function post_binding(): ?Post_Snapshot {
+		return $this->post_binding;
+	}
+
+	/**
+	 * Return a context copy with the active post snapshot set or cleared.
+	 *
+	 * The snapshot must be the exact canonical instance already present in the
+	 * `posts` collection. A different instance with equal data, or a snapshot
+	 * whose source ID is absent from the collection, is rejected.
+	 *
+	 * @param Post_Snapshot|null $snapshot Active snapshot, or null to clear the scope.
+	 *
+	 * @throws \InvalidArgumentException When the snapshot is not the canonical instance.
+	 */
+	public function with_post_binding( ?Post_Snapshot $snapshot ): self {
+		if ( null !== $snapshot ) {
+			$canonical = $this->post_snapshot( (string) $snapshot->source_id() );
+			if ( $canonical !== $snapshot ) {
+				throw new \InvalidArgumentException(
+					sprintf( 'Post binding must be the canonical snapshot for source ID %d.', $snapshot->source_id() )
+				);
+			}
+		}
+
+		return new self( $this->metadata, $this->snapshots, $this->bindings, $this->profile, $snapshot );
 	}
 
 	/**
@@ -81,7 +123,7 @@ final class Render_Context {
 		$metadata         = $this->metadata;
 		$metadata[ $key ] = $value;
 
-		return new self( $metadata, $this->snapshots, $this->bindings, $this->profile );
+		return new self( $metadata, $this->snapshots, $this->bindings, $this->profile, $this->post_binding );
 	}
 
 	/**
@@ -94,7 +136,7 @@ final class Render_Context {
 		$bindings          = $this->bindings;
 		$bindings[ $name ] = $value;
 
-		return new self( $this->metadata, $this->snapshots, $bindings, $this->profile );
+		return new self( $this->metadata, $this->snapshots, $bindings, $this->profile, $this->post_binding );
 	}
 
 	/**
@@ -103,9 +145,23 @@ final class Render_Context {
 	 * @return array<string, mixed>
 	 */
 	public function fingerprint_payload(): array {
+		$snapshots = $this->snapshots;
+		foreach ( $snapshots as $collection => $records ) {
+			foreach ( $records as $id => $snapshot ) {
+				if ( $snapshot instanceof Post_Snapshot ) {
+					$snapshots[ $collection ][ $id ] = $snapshot->fingerprint_payload();
+				}
+			}
+		}
+
+		// Post IDs form a map, independent of the source's first-seen order.
+		if ( isset( $snapshots['posts'] ) ) {
+			ksort( $snapshots['posts'], SORT_STRING );
+		}
+
 		return array(
 			'metadata'  => $this->metadata,
-			'snapshots' => $this->snapshots,
+			'snapshots' => $snapshots,
 			'profile'   => $this->profile,
 		);
 	}

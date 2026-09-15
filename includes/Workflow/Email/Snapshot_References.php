@@ -44,11 +44,11 @@ final class Snapshot_References {
 
 			if ( self::BINDING_BLOCK === ( $block['blockName'] ?? null ) ) {
 				$attributes = is_array( $block['attrs'] ?? null ) ? $block['attrs'] : array();
-				$id         = (int) ( $attributes['postId'] ?? 0 );
-				$type       = (string) ( $attributes['postType'] ?? 'post' );
+				$id         = $attributes['postId'] ?? 0;
+				$type       = array_key_exists( 'postType', $attributes ) ? $attributes['postType'] : 'post';
 
-				// A card with no selection yet is not a resolvable reference.
-				if ( 0 < $id ) {
+				// Leave malformed attributes to compiler diagnostics, without coercion or reads.
+				if ( is_int( $id ) && 0 < $id && is_string( $type ) ) {
 					$found[ $type . ':' . $id ] = array(
 						'id'   => $id,
 						'type' => $type,

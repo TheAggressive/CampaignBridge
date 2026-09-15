@@ -30,7 +30,7 @@ interface Post_Snapshot_Source {
 	 * which is more useful than a partially invented record.
 	 *
 	 * @param array<int, array{id: int, type: string}> $references Requested posts.
-	 * @return array<int|string, array<string, mixed>> Snapshots keyed by post id.
+	 * @return array<int|string, Post_Snapshot> Snapshots keyed by post id.
 	 *         PHP casts a numeric key to int, which the compiler looks up
 	 *         with the same coercion.
 	 */

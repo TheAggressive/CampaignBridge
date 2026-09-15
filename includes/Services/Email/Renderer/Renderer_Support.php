@@ -336,8 +336,8 @@ final class Renderer_Support {
 			return self::https_url( $attributes['customUrl'] );
 		}
 
-		$post = $context->binding( 'post' );
-		if ( ! is_array( $post ) ) {
+		$post = $context->post_binding();
+		if ( null === $post ) {
 			return null;
 		}
 
@@ -347,7 +347,7 @@ final class Renderer_Support {
 			default           => 'url',
 		};
 
-		return self::https_url( $post[ $field ] ?? null );
+		return self::https_url( $post->get( $field ) );
 	}
 
 	/**

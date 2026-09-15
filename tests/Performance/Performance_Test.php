@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Performance;
 
 use CampaignBridge\Admin\Core\Form;
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Tests\Helpers\Test_Case;
@@ -482,12 +483,11 @@ class Performance_Test extends Test_Case {
 			),
 			array(
 				'posts' => array(
-					'1' => array(
-						'id'      => 1,
+					'1' => Post_Snapshot::create( 1, 'post', array(
 						'title'   => 'Enterprise compiler post',
 						'excerpt' => 'A deterministic immutable content snapshot.',
 						'url'     => 'https://example.com/post',
-					),
+					) ),
 				),
 			)
 		);

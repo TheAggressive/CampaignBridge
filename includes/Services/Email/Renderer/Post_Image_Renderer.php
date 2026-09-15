@@ -61,8 +61,8 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array {
-		$post  = $context->binding( 'post' );
-		$image = is_array( $post ) && is_array( $post['image'] ?? null ) ? $post['image'] : null;
+		$post  = $context->post_binding();
+		$image = $post?->get( 'image' );
 
 		if ( null === $image ) {
 			return array(
@@ -98,8 +98,8 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$post  = $context->binding( 'post' );
-		$image = is_array( $post ) && is_array( $post['image'] ?? null ) ? $post['image'] : null;
+		$post  = $context->post_binding();
+		$image = $post?->get( 'image' );
 		if ( null === $image ) {
 			return '';
 		}
@@ -117,7 +117,7 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 			$decorative ? ' role="presentation"' : ''
 		);
 
-		$url = $attributes['linkToPost'] ? Renderer_Support::https_url( $post['url'] ?? null ) : null;
+		$url = $attributes['linkToPost'] ? Renderer_Support::https_url( $post?->get( 'url' ) ) : null;
 		if ( null !== $url ) {
 			$markup = '<a href="' . Renderer_Support::html( $url ) . '" style="text-decoration:none">' . $markup . '</a>';
 		}
@@ -170,8 +170,8 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function referenced_assets( Block_Node $block, Render_Context $context ): array {
-		$post  = $context->binding( 'post' );
-		$image = is_array( $post ) && is_array( $post['image'] ?? null ) ? $post['image'] : null;
+		$post  = $context->post_binding();
+		$image = $post?->get( 'image' );
 		if ( null === $image ) {
 			return array();
 		}
