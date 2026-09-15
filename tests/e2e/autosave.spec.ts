@@ -14,6 +14,8 @@ type ApiFetch = <T>(
 interface TemplateRecord {
   id: number;
   status: string;
+  title: { raw: string };
+  meta: Record<string, unknown>;
   content: { raw: string; rendered: string };
 }
 
@@ -533,6 +535,13 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         expect(autosavePosts).toHaveLength(1);
         // A background autosave is not the operator's Save.
         await expect(snackbar(page, 'Template saved.')).toHaveCount(0);
+        await page.reload();
+        await expect(textBlock(page)).toHaveText('Autosave draft content');
+        await expect(
+          page.getByRole('button', { name: 'Restore autosave', exact: true })
+        ).toHaveCount(0);
+        // The next edit after an in-place autosave must still become dirty.
+        await editTextBlock(page, templateId, 'Next draft edit');
       }
     );
   });
@@ -587,6 +596,222 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         // Remaining dirty must not re-arm autosave without a new edit.
         expect(autosavePosts).toHaveLength(1);
         await expect(snackbar(page, 'Template saved.')).toHaveCount(0);
+      }
+    );
+  });
+
+  test('published recovery restores unsaved content and manual Save makes it canonical', async ({
+    page,
+  }) => {
+    await withTemplate(
+      page,
+      `Recovery ${Date.now()}`,
+      'publish',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        const canonical = await getTemplate(page, templateId);
+        const response = page.waitForResponse(response =>
+          isAutosavePost(response.request(), templateId)
+        );
+        await editTextBlock(page, templateId, 'Recover this published content');
+        await page.evaluate(id => {
+          const wp = (
+            globalThis as typeof globalThis & {
+              wp: { data: { dispatch: Function } };
+            }
+          ).wp;
+          wp.data
+            .dispatch('core')
+            .editEntityRecord('postType', 'cb_templates', id, {
+              title: 'Recovered template title',
+              meta: { campaignbridge_subject: 'Recovered subject' },
+            });
+        }, templateId);
+
+        expect((await response).status()).toBe(200);
+        page.on('dialog', dialog => void dialog.accept());
+        await page.reload();
+        await expect(
+          page.locator('.components-notice', {
+            hasText: 'A newer autosave of this template is available.',
+          })
+        ).toBeVisible();
+        await expect(textBlock(page)).toHaveText('Hello');
+        await page
+          .getByRole('button', { name: 'Restore autosave', exact: true })
+          .click();
+        await expect(textBlock(page)).toHaveText(
+          'Recover this published content'
+        );
+        expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
+          true
+        );
+        const recoveredFields = await page.evaluate(id => {
+          const wp = (
+            globalThis as typeof globalThis & {
+              wp: { data: { select: Function } };
+            }
+          ).wp;
+          const edited = wp.data
+            .select('core')
+            .getEditedEntityRecord('postType', 'cb_templates', id);
+          return {
+            title: edited.title,
+            subject: edited.meta.campaignbridge_subject,
+          };
+        }, templateId);
+        expect(recoveredFields).toEqual({
+          title: 'Recovered template title',
+          subject: 'Recovered subject',
+        });
+        expect((await getTemplate(page, templateId)).title.raw).toBe(
+          canonical.title.raw
+        );
+        expect((await getTemplate(page, templateId)).meta).toEqual(
+          canonical.meta
+        );
+
+        expect((await getTemplate(page, templateId)).content.raw).toBe(
+          canonical.content.raw
+        );
+        await expect(page.locator('.cb-editor__status-badge')).toHaveText(
+          'Published'
+        );
+        const saved = page.waitForResponse(response =>
+          isCanonicalWrite(response.request(), templateId)
+        );
+        await page.getByRole('button', { name: 'Save', exact: true }).click();
+        expect((await saved).status()).toBe(200);
+        await expect(page.locator('.cb-editor__save-button')).toHaveText(
+          'Saved'
+        );
+        expect((await getTemplate(page, templateId)).content.raw).toContain(
+          'Recover this published content'
+        );
+        const savedFields = await getTemplate(page, templateId);
+        expect(savedFields.title.raw).toBe('Recovered template title');
+        expect(savedFields.meta.campaignbridge_subject).toBe(
+          'Recovered subject'
+        );
+        await page.reload();
+        await expect(textBlock(page)).toHaveText(
+          'Recover this published content'
+        );
+        await expect(
+          page.getByRole('button', { name: 'Restore autosave', exact: true })
+        ).toHaveCount(0);
+      }
+    );
+  });
+
+  test('ignoring published recovery keeps canonical content untouched', async ({
+    page,
+  }) => {
+    await withTemplate(
+      page,
+      `Ignore recovery ${Date.now()}`,
+      'publish',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        const canonical = await getTemplate(page, templateId);
+        const response = page.waitForResponse(response =>
+          isAutosavePost(response.request(), templateId)
+        );
+        await editTextBlock(page, templateId, 'Ignore this recovery');
+        expect((await response).status()).toBe(200);
+        page.on('dialog', dialog => void dialog.accept());
+        await page.reload();
+        await page
+          .getByRole('button', { name: 'Ignore for now', exact: true })
+          .click();
+        await expect(textBlock(page)).toHaveText('Hello');
+        expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
+          false
+        );
+        expect((await getTemplate(page, templateId)).content.raw).toBe(
+          canonical.content.raw
+        );
+        await expect(
+          page.getByRole('button', { name: 'Restore autosave', exact: true })
+        ).toHaveCount(0);
+      }
+    );
+  });
+
+  test('an in-flight recovery autosave never labels manual Save as Saving', async ({
+    page,
+  }) => {
+    await withTemplate(
+      page,
+      `Autosave UI ${Date.now()}`,
+      'publish',
+      async templateId => {
+        await openEditorForTemplate(page, templateId);
+        let release!: () => void;
+        const held = new Promise<void>(resolve => {
+          release = resolve;
+        });
+        await page.route(
+          url => matchesRoute(url.toString(), autosaveRoute(templateId)),
+          async route => {
+            if (route.request().method() === 'POST') await held;
+            await route.continue();
+          }
+        );
+        const response = page.waitForResponse(response =>
+          isAutosavePost(response.request(), templateId)
+        );
+        await editTextBlock(page, templateId, 'Background copy');
+        await expect(
+          page.getByText('Autosaving recovery copy…', { exact: true })
+        ).toBeVisible();
+        const button = page.locator('.cb-editor__save-button');
+        await expect(button).toHaveText('Save');
+        await expect(snackbar(page, 'Template saved.')).toHaveCount(0);
+        release();
+        expect((await response).status()).toBe(200);
+        await expect(button).toHaveText('Save');
+        await expect(button).toBeEnabled();
+        expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
+          true
+        );
+      }
+    );
+  });
+
+  test('recovery lookup failure leaves canonical content untouched and offers a safe reload', async ({
+    page,
+  }) => {
+    await withTemplate(
+      page,
+      `Recovery unavailable ${Date.now()}`,
+      'publish',
+      async templateId => {
+        const canonical = await getTemplate(page, templateId);
+        await page.route(
+          url => matchesRoute(url.toString(), autosaveRoute(templateId)),
+          route =>
+            route.fulfill({
+              status: 500,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                code: 'test_error',
+                message: 'Private database details',
+              }),
+            })
+        );
+        await page.goto(`${EDITOR_PATH}&post_id=${templateId}`);
+        await expect(
+          page.getByText(
+            'Autosave recovery could not be loaded. Reload the editor to try again. Your saved template has not been changed.',
+            { exact: true }
+          )
+        ).toBeVisible();
+        await expect(page.locator('.cb-editor__save-button')).toHaveCount(0);
+        await expect(page.getByText('Private database details')).toHaveCount(0);
+        expect((await getTemplate(page, templateId)).content.raw).toBe(
+          canonical.content.raw
+        );
       }
     );
   });

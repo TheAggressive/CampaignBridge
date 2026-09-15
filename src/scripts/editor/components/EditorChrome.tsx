@@ -1,6 +1,11 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
 import { getBlockType } from '@wordpress/blocks';
-import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
+import {
+  Notice,
+  Popover,
+  SlotFillProvider,
+  SnackbarList,
+} from '@wordpress/components';
 import { EntityProvider, useEntityProp } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useEffect, useCallback, useMemo, useState } from '@wordpress/element';
@@ -85,6 +90,9 @@ function EditorChromeContent({
     duplicate,
     hasEdits,
     isOperationPending,
+    isAutosaving,
+    isPersisting,
+    recovery,
     isResolving,
     loadError,
     needsReload,
@@ -217,7 +225,7 @@ function EditorChromeContent({
     );
   }
 
-  if (isResolving) {
+  if (isResolving || (record && !loadError && recovery.state === 'checking')) {
     return (
       <LoadingState message={__('Initializing editor…', 'campaignbridge')} />
     );
@@ -227,6 +235,18 @@ function EditorChromeContent({
     return (
       <ErrorState
         message={editorMessages.loadFailed()}
+        actions={recoveryActions}
+      />
+    );
+  }
+
+  if (recovery.state === 'error') {
+    return (
+      <ErrorState
+        message={__(
+          'Autosave recovery could not be loaded. Reload the editor to try again. Your saved template has not been changed.',
+          'campaignbridge'
+        )}
         actions={recoveryActions}
       />
     );
@@ -308,6 +328,7 @@ function EditorChromeContent({
             settings={mergedEditorSettings}
           >
             <EditorEffects
+              isPersisting={isPersisting}
               saveStatus={saveStatus}
               onBlockSelected={handleBlockSelected}
             />
@@ -333,10 +354,9 @@ function EditorChromeContent({
                 <Header
                   list={list}
                   currentId={currentId}
-                  loading={
-                    loading || saveStatus === 'saving' || isOperationPending
-                  }
+                  loading={loading || isPersisting || isOperationPending}
                   isOperationPending={isOperationPending}
+                  isAutosaving={isAutosaving}
                   onSelect={handleTemplateSelect}
                   onNew={onNew}
                   isPrimaryOpen={isPrimaryOpen}
@@ -353,7 +373,39 @@ function EditorChromeContent({
                   onOpenHistory={handleOpenHistory}
                 />
               }
-              content={<Content onSave={saveNow} styles={editorStyles} />}
+              content={
+                <>
+                  {recovery.state === 'available' && (
+                    <Notice
+                      status='warning'
+                      isDismissible={false}
+                      actions={[
+                        {
+                          label: __('Restore autosave', 'campaignbridge'),
+                          onClick: recovery.restore,
+                          disabled: hasEdits || isPersisting,
+                        },
+                        {
+                          label: __('Ignore for now', 'campaignbridge'),
+                          onClick: recovery.ignore,
+                        },
+                      ]}
+                    >
+                      {__(
+                        'A newer autosave of this template is available.',
+                        'campaignbridge'
+                      )}
+                      <p>
+                        {__(
+                          'Restore autosave loads the recovery copy as unsaved edits. Ignore for now continues with the saved template without deleting the recovery copy.',
+                          'campaignbridge'
+                        )}
+                      </p>
+                    </Notice>
+                  )}
+                  <Content onSave={saveNow} styles={editorStyles} />
+                </>
+              }
               sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
               secondarySidebar={
                 isSecondaryOpen ? (

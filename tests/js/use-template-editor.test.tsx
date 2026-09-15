@@ -10,6 +10,10 @@ import {
   type RestoreResult,
 } from '../../src/scripts/editor/hooks/useTemplateEditor';
 
+jest.mock('../../src/scripts/editor/hooks/useAutosaveRecovery', () => ({
+  useAutosaveRecovery: () => ({ blocksPersistence: false, state: 'dismissed' }),
+}));
+
 jest.mock('@wordpress/api-fetch', () => ({
   __esModule: true,
   default: jest.fn(),
@@ -117,6 +121,7 @@ function setupUseSelect(overrides: Record<string, unknown> = {}) {
   const { useSelect } = require('@wordpress/data');
   useSelect.mockReturnValue({
     isSaving: false,
+    isAutosaving: false,
     loadError: null,
     saveError: null,
     ...overrides,
@@ -200,6 +205,16 @@ describe('useTemplateEditor', () => {
   });
 
   afterEach(() => act(() => root.unmount()));
+
+  it('keeps canonical Save dirty during a native background autosave', () => {
+    setupEntityRecord({ hasEdits: true });
+    setupUseSelect({ isSaving: true, isAutosaving: true });
+    render();
+    expect(current.saveStatus).toBe('dirty');
+    expect(current.isAutosaving).toBe(true);
+    expect(current.isPersisting).toBe(true);
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
 
   describe('manual Save', () => {
     beforeEach(() => {
