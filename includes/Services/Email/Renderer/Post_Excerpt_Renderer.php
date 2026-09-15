@@ -58,8 +58,8 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array {
-		$post = $context->binding( 'post' );
-		if ( ! is_array( $post ) || ! is_string( $post['excerpt'] ?? null ) ) {
+		$post = $context->post_binding();
+		if ( null === $post ) {
 			return array(
 				Compile_Diagnostic::error( 'post.excerpt.missing', $block->path(), 'The post snapshot requires an excerpt.' ),
 			);
@@ -146,8 +146,8 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	private function excerpt( Block_Node $block, Render_Context $context ): string {
-		$post  = $context->binding( 'post' );
-		$raw   = (string) ( $post['excerpt'] ?? '' );
+		$post  = $context->post_binding();
+		$raw   = (string) ( $post?->get( 'excerpt' ) ?? '' );
 		$limit = (int) $block->attributes()['maxWords'];
 		$limit = $limit > 0 ? $limit : 50;
 

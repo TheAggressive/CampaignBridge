@@ -21,6 +21,31 @@ use CampaignBridge\Workflow\Email\Template_Preview;
 use PHPUnit\Framework\TestCase;
 
 final class Template_Preview_Test extends TestCase {
+	public function test_malformed_reference_types_reach_compiler_diagnostics_without_content_reads(): void {
+		foreach ( array( '{"postId":[7]}', '{"postId":7,"postType":["post"]}', '{"postId":7,"postType":null}', '{"postId":"7"}' ) as $attributes ) {
+			$source = $this->createMock( Post_Snapshot_Source::class );
+			$source->expects( self::once() )->method( 'posts' )->with( array() )->willReturn( array() );
+			$result = ( new Template_Preview( $source ) )->compile(
+				'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/post-card ' . $attributes . ' /--><!-- /wp:campaignbridge/container -->'
+			);
+			self::assertFalse( $result->is_success() );
+			self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+			self::assertSame( '', $result->html() );
+		}
+	}
+
+	public function test_repeated_frozen_compilation_does_not_resolve_content_again(): void {
+		$source = $this->createMock( Post_Snapshot_Source::class );
+		$source->expects( self::once() )->method( 'posts' )->willReturn( array() );
+		$preview = new Template_Preview( $source );
+		$input = $preview->capture( '<!-- wp:campaignbridge/container /-->' );
+		$first = $preview->compile_frozen( $input );
+		$second = $preview->compile_frozen( $input );
+		self::assertTrue( $first->is_success() );
+		self::assertTrue( $second->is_success() );
+		self::assertSame( $first->fingerprint(), $second->fingerprint() );
+	}
+
 	public function test_collects_each_distinct_post_binding_once(): void {
 		$blocks = parse_blocks(
 			'<!-- wp:campaignbridge/container -->'
@@ -113,15 +138,15 @@ final class Template_Preview_Test extends TestCase {
 		self::assertSame( $expected->text(), $actual->text() );
 		self::assertSame( $expected->fingerprint(), $actual->fingerprint() );
 
-		// Source identity must survive preview even when the rendered values match.
+		// A snapshot for a different post type cannot satisfy the selected binding.
 		$other_source = $this->createMock( Post_Snapshot_Source::class );
 		$other_source->method( 'posts' )->willReturn( array( 7 => Post_Snapshot::create( 7, 'page', $values ) ) );
 		$other = ( new Template_Preview( $other_source, $kit ) )->compile( $content, $metadata );
 
-		self::assertTrue( $other->is_success() );
-		self::assertSame( $actual->html(), $other->html() );
-		self::assertSame( $actual->text(), $other->text() );
-		self::assertNotSame( $actual->fingerprint(), $other->fingerprint() );
+		self::assertFalse( $other->is_success() );
+		self::assertSame( 'post.snapshot.mismatch', $other->diagnostics()[0]->code() );
+		self::assertSame( '', $other->html() );
+		self::assertSame( '', $other->fingerprint() );
 	}
 
 	public function test_finds_bindings_nested_below_layout_blocks(): void {

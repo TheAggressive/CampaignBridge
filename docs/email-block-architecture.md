@@ -62,6 +62,10 @@ global request input, mutate persistence, call providers, or fetch live post
 content. Dynamic WordPress content is resolved before rendering and frozen in
 the campaign snapshot.
 
+The implemented [content snapshot and review-input contract](content-snapshots.md)
+defines canonical post objects, typed renderer scopes, frozen compilation,
+explicit refresh revisions, and the boundary with future campaign persistence.
+
 Normalization supplies documented defaults for omitted attributes and performs
 lossless canonicalization such as trimming URL fields. It must not clamp,
 substitute, or otherwise repair explicitly malformed persisted input. Invalid

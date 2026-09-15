@@ -59,8 +59,8 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array {
-		$post = $context->binding( 'post' );
-		if ( ! is_array( $post ) || ! is_string( $post['title'] ?? null ) || '' === trim( $post['title'] ) ) {
+		$post = $context->post_binding();
+		if ( null === $post || '' === trim( $post->get( 'title' ) ) ) {
 			return array(
 				Compile_Diagnostic::error( 'post.title.missing', $block->path(), 'The post snapshot requires a non-empty title.' ),
 			);
@@ -77,11 +77,11 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
-		$post       = $context->binding( 'post' );
-		$title      = Renderer_Support::html( (string) ( $post['title'] ?? '' ) );
+		$post       = $context->post_binding();
+		$title      = Renderer_Support::html( (string) ( $post?->get( 'title' ) ?? '' ) );
 		$attributes = $block->attributes();
 		$text_color = Renderer_Support::resolve_color( $attributes['textColor'], Renderer_Support::brand_kit( $context ) );
-		$url        = $attributes['linkToPost'] ? Renderer_Support::https_url( $post['url'] ?? null ) : null;
+		$url        = $attributes['linkToPost'] ? Renderer_Support::https_url( $post?->get( 'url' ) ) : null;
 
 		if ( null !== $url ) {
 			$title = sprintf(
@@ -153,8 +153,8 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_text( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$post = $context->binding( 'post' );
+		$post = $context->post_binding();
 
-		return trim( (string) ( $post['title'] ?? '' ) ) . "\n";
+		return trim( (string) ( $post?->get( 'title' ) ?? '' ) ) . "\n";
 	}
 }

@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Freezes published WordPress posts into compiler snapshots.
  *
  * This is the only place the email pipeline reads live post data. Everything
- * downstream sees an immutable array, so a compile cannot vary with a post
+ * downstream sees a canonical immutable object, so a compile cannot vary with a post
  * edited midway through rendering.
  */
 final class Post_Snapshot_Repository implements Post_Snapshot_Source {
@@ -60,7 +60,7 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 		}
 
 		// A reader must be able to open what the email links to.
-		if ( 'publish' !== $post->post_status ) {
+		if ( 'publish' !== $post->post_status || '' !== $post->post_password || ! is_post_publicly_viewable( $post ) ) {
 			return null;
 		}
 

@@ -24,8 +24,7 @@ final class Render_Context_Test extends TestCase {
 		self::assertSame( $post, $scoped->post_binding() );
 		self::assertSame( $scoped->post_snapshot( '7' ), $scoped->post_binding() );
 		self::assertNull( $scoped->binding( 'post' ), 'Typed scope must not create a second values-array binding.' );
-		$view = $scoped->snapshot( 'posts', '7' );
-		$view['title'] = 'Changed view';
+		self::assertNull( $scoped->snapshot( 'posts', '7' ) );
 		self::assertSame( 'Snapshot title', $scoped->post_binding()->get( 'title' ) );
 	}
 
@@ -92,16 +91,16 @@ final class Render_Context_Test extends TestCase {
 		self::assertSame( array( 'width' => 600 ), $binding->binding( 'section' ) );
 	}
 
-	public function test_values_view_cannot_mutate_the_canonical_snapshot(): void {
+	public function test_serialized_export_cannot_mutate_the_canonical_snapshot(): void {
 		$snapshot = $this->post();
 		$context  = new Render_Context( array(), array( 'posts' => array( 7 => $snapshot ) ) );
-		$view     = $context->snapshot( 'posts', '7' );
+		$view     = $snapshot->to_array()['values'];
 
 		self::assertSame( $snapshot->to_array()['values'], $view );
 		$view['title'] = 'Changed view';
 
 		self::assertSame( $snapshot, $context->post_snapshot( '7' ) );
-		self::assertSame( 'Snapshot title', $context->snapshot( 'posts', '7' )['title'] );
+		self::assertNull( $context->snapshot( 'posts', '7' ) );
 		self::assertSame( 'Snapshot title', $snapshot->get( 'title' ) );
 	}
 

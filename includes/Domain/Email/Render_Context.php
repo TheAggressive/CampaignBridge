@@ -51,10 +51,7 @@ final class Render_Context {
 	}
 
 	/**
-	 * Get a snapshot values view for existing renderers.
-	 *
-	 * Post values are derived on demand from the canonical object. This is the
-	 * temporary compatibility boundary until post renderers use post_snapshot().
+	 * Get a generic non-post snapshot record.
 	 *
 	 * @param string $collection Snapshot collection.
 	 * @param string $id         Stable record identifier.
@@ -62,10 +59,6 @@ final class Render_Context {
 	 */
 	public function snapshot( string $collection, string $id ): ?array {
 		$value = $this->snapshots[ $collection ][ $id ] ?? null;
-
-		if ( $value instanceof Post_Snapshot ) {
-			return $value->to_array()['values'];
-		}
 
 		return is_array( $value ) ? $value : null;
 	}

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use PHPUnit\Framework\TestCase;
@@ -308,7 +309,7 @@ final class Post_Block_Parity_Test extends TestCase {
 			array( 'title' => 'Parity fixture' ),
 			array(
 				'posts' => array(
-					'7' => array(
+					'7' => Post_Snapshot::create( 7, 'post', array(
 						'title'   => 'Snapshot title',
 						'excerpt' => 'Snapshot excerpt copy.',
 						'url'     => 'https://example.com/posts/7',
@@ -318,7 +319,7 @@ final class Post_Block_Parity_Test extends TestCase {
 							'width'  => 600,
 							'height' => 320,
 						),
-					),
+					) ),
 				),
 			),
 			array(),
