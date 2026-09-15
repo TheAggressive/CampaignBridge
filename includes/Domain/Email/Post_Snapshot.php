@@ -99,8 +99,8 @@ final class Post_Snapshot {
 			throw new Invalid_Post_Snapshot( 'Source ID must be a positive integer.' );
 		}
 
-		if ( '' === $source_post_type || ! preg_match( '/^[a-z0-9_]+$/', $source_post_type ) ) {
-			throw new Invalid_Post_Snapshot( 'Source post type must be a lowercase alphanumeric slug.' );
+		if ( '' === $source_post_type || ! preg_match( '/^[a-z0-9_-]{1,20}$/', $source_post_type ) ) {
+			throw new Invalid_Post_Snapshot( 'Source post type must be a valid WordPress post-type slug.' );
 		}
 
 		foreach ( array_keys( $values ) as $field ) {
@@ -197,28 +197,76 @@ final class Post_Snapshot {
 	}
 
 	/**
-	 * Return the resolved binding values as a plain array in canonical order.
+	 * Return the canonical serialized representation.
+	 *
+	 * This is the single canonical shape for persistence and reconstitution.
 	 *
 	 * @return array<string, mixed>
 	 */
 	public function to_array(): array {
-		return $this->values;
+		return array(
+			'schema_version'   => $this->schema_version,
+			'source_id'        => $this->source_id,
+			'source_post_type' => $this->source_post_type,
+			'values'           => $this->values,
+		);
+	}
+
+	/**
+	 * Reconstitute a snapshot from its canonical serialized form.
+	 *
+	 * Strictly validates the schema version, source identity, and values.
+	 * Rejects unknown top-level fields (fail-closed).
+	 *
+	 * @param array<string, mixed> $data Stored snapshot data.
+	 *
+	 * @throws Invalid_Post_Snapshot When the record is malformed or unsupported.
+	 */
+	public static function from_array( array $data ): self {
+		$allowed_keys = array( 'schema_version', 'source_id', 'source_post_type', 'values' );
+		foreach ( array_keys( $data ) as $key ) {
+			if ( ! in_array( $key, $allowed_keys, true ) ) {
+				throw new Invalid_Post_Snapshot(
+					sprintf( 'Unknown snapshot field "%s" is not part of the serialization contract.', $key )
+				);
+			}
+		}
+
+		$version = $data['schema_version'] ?? null;
+		if ( ! is_int( $version ) || self::SCHEMA_VERSION !== $version ) {
+			throw new Invalid_Post_Snapshot(
+				sprintf( 'Unsupported snapshot schema version %s. Only version %d is supported.', is_scalar( $version ) ? (string) $version : gettype( $version ), self::SCHEMA_VERSION )
+			);
+		}
+
+		$source_id = $data['source_id'] ?? null;
+		if ( ! is_int( $source_id ) || 1 > $source_id ) {
+			throw new Invalid_Post_Snapshot( 'Source ID must be a positive integer.' );
+		}
+
+		$source_post_type = $data['source_post_type'] ?? null;
+		if ( ! is_string( $source_post_type ) || '' === $source_post_type || ! preg_match( '/^[a-z0-9_-]{1,20}$/', $source_post_type ) ) {
+			throw new Invalid_Post_Snapshot( 'Source post type must be a valid WordPress post-type slug.' );
+		}
+
+		$values = $data['values'] ?? null;
+		if ( ! is_array( $values ) ) {
+			throw new Invalid_Post_Snapshot( 'Values must be an array.' );
+		}
+
+		return self::create( $source_id, $source_post_type, $values );
 	}
 
 	/**
 	 * Return the canonical fingerprint payload.
 	 *
-	 * Deterministic: the same input always produces the same structure.
+	 * Reuses the serialized representation as the single source of truth
+	 * for deterministic hashing.
 	 *
 	 * @return array<string, mixed>
 	 */
 	public function fingerprint_payload(): array {
-		return array(
-			'schemaVersion'  => $this->schema_version,
-			'sourceId'       => $this->source_id,
-			'sourcePostType' => $this->source_post_type,
-			'values'         => $this->values,
-		);
+		return $this->to_array();
 	}
 
 	/**
@@ -235,11 +283,11 @@ final class Post_Snapshot {
 	 *
 	 * @param mixed $value Candidate title.
 	 *
-	 * @throws Invalid_Post_Snapshot When the value is not a non-empty string.
+	 * @throws Invalid_Post_Snapshot When the value is not a string.
 	 */
 	private static function validate_title( mixed $value ): void {
-		if ( ! is_string( $value ) || '' === trim( $value ) ) {
-			throw new Invalid_Post_Snapshot( 'Binding "title" must be a non-empty string.' );
+		if ( ! is_string( $value ) ) {
+			throw new Invalid_Post_Snapshot( 'Binding "title" must be a string.' );
 		}
 	}
 
@@ -248,11 +296,11 @@ final class Post_Snapshot {
 	 *
 	 * @param mixed $value Candidate excerpt.
 	 *
-	 * @throws Invalid_Post_Snapshot When the value is not a non-empty string.
+	 * @throws Invalid_Post_Snapshot When the value is not a string.
 	 */
 	private static function validate_excerpt( mixed $value ): void {
-		if ( ! is_string( $value ) || '' === trim( $value ) ) {
-			throw new Invalid_Post_Snapshot( 'Binding "excerpt" must be a non-empty string.' );
+		if ( ! is_string( $value ) ) {
+			throw new Invalid_Post_Snapshot( 'Binding "excerpt" must be a string.' );
 		}
 	}
 

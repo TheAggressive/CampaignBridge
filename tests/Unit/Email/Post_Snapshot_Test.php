@@ -144,14 +144,51 @@ final class Post_Snapshot_Test extends TestCase {
 	}
 
 	/**
-	 * Empty title is rejected.
+	 * Empty title is accepted (WordPress posts may have empty titles).
 	 */
-	public function test_empty_title_is_rejected(): void {
+	public function test_empty_title_is_accepted(): void {
 		$values          = $this->valid_values();
 		$values['title'] = '';
 
+		$snapshot = Post_Snapshot::create( 42, 'post', $values );
+
+		self::assertSame( '', $snapshot->get( 'title' ) );
+	}
+
+	/**
+	 * Empty excerpt is accepted (WordPress posts may have empty excerpts).
+	 */
+	public function test_empty_excerpt_is_accepted(): void {
+		$values            = $this->valid_values();
+		$values['excerpt'] = '';
+
+		$snapshot = Post_Snapshot::create( 42, 'post', $values );
+
+		self::assertSame( '', $snapshot->get( 'excerpt' ) );
+	}
+
+	/**
+	 * Non-string title is rejected.
+	 */
+	public function test_non_string_title_is_rejected(): void {
+		$values          = $this->valid_values();
+		$values['title'] = 123;
+
 		$this->expectException( Invalid_Post_Snapshot::class );
-		$this->expectExceptionMessage( 'Binding "title" must be a non-empty string.' );
+		$this->expectExceptionMessage( 'Binding "title" must be a string.' );
+
+		Post_Snapshot::create( 42, 'post', $values );
+	}
+
+	/**
+	 * Non-string excerpt is rejected.
+	 */
+	public function test_non_string_excerpt_is_rejected(): void {
+		$values            = $this->valid_values();
+		$values['excerpt'] = array( 'not', 'a', 'string' );
+
+		$this->expectException( Invalid_Post_Snapshot::class );
+		$this->expectExceptionMessage( 'Binding "excerpt" must be a string.' );
 
 		Post_Snapshot::create( 42, 'post', $values );
 	}
@@ -206,13 +243,55 @@ final class Post_Snapshot_Test extends TestCase {
 	}
 
 	/**
-	 * Invalid post type slug is rejected.
+	 * Hyphenated post type is accepted.
 	 */
-	public function test_invalid_post_type_is_rejected(): void {
+	public function test_hyphenated_post_type_is_accepted(): void {
+		$snapshot = Post_Snapshot::create( 42, 'my-post-type', $this->valid_values() );
+
+		self::assertSame( 'my-post-type', $snapshot->source_post_type() );
+	}
+
+	/**
+	 * 20-character post type is accepted (maximum length).
+	 */
+	public function test_twenty_char_post_type_is_accepted(): void {
+		$post_type = 'abcdefghijklmnopqrst'; // exactly 20 chars.
+
+		$snapshot = Post_Snapshot::create( 42, $post_type, $this->valid_values() );
+
+		self::assertSame( $post_type, $snapshot->source_post_type() );
+	}
+
+	/**
+	 * Post type over 20 characters is rejected.
+	 */
+	public function test_post_type_over_twenty_chars_is_rejected(): void {
+		$post_type = 'abcdefghijklmnopqrstu'; // 21 chars.
+
 		$this->expectException( Invalid_Post_Snapshot::class );
-		$this->expectExceptionMessage( 'Source post type must be a lowercase alphanumeric slug.' );
+		$this->expectExceptionMessage( 'Source post type must be a valid WordPress post-type slug.' );
+
+		Post_Snapshot::create( 42, $post_type, $this->valid_values() );
+	}
+
+	/**
+	 * Invalid post type characters are rejected.
+	 */
+	public function test_invalid_post_type_characters_are_rejected(): void {
+		$this->expectException( Invalid_Post_Snapshot::class );
+		$this->expectExceptionMessage( 'Source post type must be a valid WordPress post-type slug.' );
 
 		Post_Snapshot::create( 42, 'Invalid-Type', $this->valid_values() );
+	}
+
+	/**
+	 * Post type with special characters is rejected.
+	 */
+	public function test_post_type_with_special_characters_is_rejected(): void {
+		$this->expectException( Invalid_Post_Snapshot::class );
+		$this->expectExceptionMessage( 'Source post type must be a valid WordPress post-type slug.' );
+
+		Post_Snapshot::create( 42, 'post type', $this->valid_values() );
 	}
 
 	/**
@@ -236,18 +315,100 @@ final class Post_Snapshot_Test extends TestCase {
 	}
 
 	/**
-	 * Round-tripping through to_array() produces an identical snapshot.
+	 * The to_array() output includes schema version, source identity, and values.
 	 */
-	public function test_round_trip_produces_identical_snapshot(): void {
+	public function test_to_array_returns_full_serialized_shape(): void {
+		$snapshot = Post_Snapshot::create( 42, 'post', $this->valid_values() );
+		$array    = $snapshot->to_array();
+
+		self::assertArrayHasKey( 'schema_version', $array );
+		self::assertArrayHasKey( 'source_id', $array );
+		self::assertArrayHasKey( 'source_post_type', $array );
+		self::assertArrayHasKey( 'values', $array );
+
+		self::assertSame( 1, $array['schema_version'] );
+		self::assertSame( 42, $array['source_id'] );
+		self::assertSame( 'post', $array['source_post_type'] );
+		self::assertSame( $this->valid_values(), $array['values'] );
+	}
+
+	/**
+	 * Round-trips through from_array() to an identical snapshot.
+	 */
+	public function test_from_array_round_trip(): void {
 		$original = Post_Snapshot::create( 42, 'post', $this->full_values() );
-		$restored = Post_Snapshot::create(
-			$original->source_id(),
-			$original->source_post_type(),
-			$original->to_array()
-		);
+		$restored = Post_Snapshot::from_array( $original->to_array() );
 
 		self::assertSame( $original->to_array(), $restored->to_array() );
 		self::assertSame( $original->fingerprint_payload(), $restored->fingerprint_payload() );
+	}
+
+	/**
+	 * Rejects malformed stored data missing the values key.
+	 */
+	public function test_from_array_rejects_missing_values(): void {
+		$this->expectException( Invalid_Post_Snapshot::class );
+		$this->expectExceptionMessage( 'Values must be an array.' );
+
+		Post_Snapshot::from_array(
+			array(
+				'schema_version'   => 1,
+				'source_id'        => 42,
+				'source_post_type' => 'post',
+			)
+		);
+	}
+
+	/**
+	 * Rejects future schema versions during reconstitution.
+	 */
+	public function test_from_array_rejects_future_version(): void {
+		$this->expectException( Invalid_Post_Snapshot::class );
+		$this->expectExceptionMessage( 'Unsupported snapshot schema version 2. Only version 1 is supported.' );
+
+		Post_Snapshot::from_array(
+			array(
+				'schema_version'   => 2,
+				'source_id'        => 42,
+				'source_post_type' => 'post',
+				'values'           => $this->valid_values(),
+			)
+		);
+	}
+
+	/**
+	 * Rejects unknown top-level fields during reconstitution.
+	 */
+	public function test_from_array_rejects_unknown_fields(): void {
+		$this->expectException( Invalid_Post_Snapshot::class );
+		$this->expectExceptionMessage( 'Unknown snapshot field "arbitrary" is not part of the serialization contract.' );
+
+		Post_Snapshot::from_array(
+			array(
+				'schema_version'   => 1,
+				'source_id'        => 42,
+				'source_post_type' => 'post',
+				'values'           => $this->valid_values(),
+				'arbitrary'        => 'data',
+			)
+		);
+	}
+
+	/**
+	 * Rejects non-integer source_id during reconstitution.
+	 */
+	public function test_from_array_rejects_invalid_source_id(): void {
+		$this->expectException( Invalid_Post_Snapshot::class );
+		$this->expectExceptionMessage( 'Source ID must be a positive integer.' );
+
+		Post_Snapshot::from_array(
+			array(
+				'schema_version'   => 1,
+				'source_id'        => 'not-an-int',
+				'source_post_type' => 'post',
+				'values'           => $this->valid_values(),
+			)
+		);
 	}
 
 	/**
@@ -348,8 +509,8 @@ final class Post_Snapshot_Test extends TestCase {
 		$snapshot_a = Post_Snapshot::create( 42, 'post', $this->full_values() );
 		$snapshot_b = Post_Snapshot::create( 42, 'post', $this->full_values() );
 
-		$hash_a = hash( 'sha256', wp_json_encode( $snapshot_a->fingerprint_payload() ) );
-		$hash_b = hash( 'sha256', wp_json_encode( $snapshot_b->fingerprint_payload() ) );
+		$hash_a = hash( 'sha256', json_encode( $snapshot_a->fingerprint_payload() ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure domain contract test, intentionally WordPress-independent.
+		$hash_b = hash( 'sha256', json_encode( $snapshot_b->fingerprint_payload() ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure domain contract test, intentionally WordPress-independent.
 
 		self::assertSame( $hash_a, $hash_b );
 	}
