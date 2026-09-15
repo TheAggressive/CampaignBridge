@@ -13,7 +13,8 @@ delivery attempts, and audit history. Providers own audiences, subscribers,
 and final delivery.
 
 CampaignBridge is not a subscriber database, SMTP server, or general marketing
-automation suite. Read `ROADMAP.md` before expanding product scope.
+automation suite. Read `ROADMAP.md` and `docs/work-tracking.md` before
+expanding product scope or creating implementation work.
 
 ## Runtime and toolchain
 
@@ -247,7 +248,8 @@ not proof that the distributable is valid.
 ## Canonical references
 
 - `README.md` — shipped product overview
-- `ROADMAP.md` — target product and gated milestones
+- `ROADMAP.md` — durable product map, milestone outcomes, and exit gates
+- `docs/work-tracking.md` — issue-backed work tracking convention and execution order
 - `docs/development.md` — local setup and contributor workflow
 - `docs/api.md` — REST namespace and security contract
 - `docs/architecture.md` — dependency boundaries
