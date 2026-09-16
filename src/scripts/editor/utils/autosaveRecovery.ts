@@ -27,14 +27,17 @@ export function getRecoveryEdits(
     throw new Error('Incomplete autosave.');
   }
   const excerpt = raw(autosave.excerpt);
-  const meta = autosave.meta
-    ? { ...(currentMeta ?? {}), ...autosave.meta }
-    : undefined;
-  if (meta && currentMeta && autosave.meta) {
-    for (const key of revisionedMetaKeys) {
-      if (!Object.prototype.hasOwnProperty.call(autosave.meta, key)) {
-        meta[key] = '';
+  let meta: Record<string, unknown> | undefined;
+  if (autosave.meta) {
+    meta = { ...(currentMeta ?? {}) };
+    if (currentMeta && revisionedMetaKeys.length > 0) {
+      for (const key of revisionedMetaKeys) {
+        meta[key] = Object.prototype.hasOwnProperty.call(autosave.meta, key)
+          ? autosave.meta[key]
+          : '';
       }
+    } else {
+      Object.assign(meta, autosave.meta);
     }
   }
   return {

@@ -480,15 +480,15 @@ export function useTemplateEditor({
             path: `/wp/v2/${postType}/${postId}/revisions/${revisionId}?context=edit`,
           });
 
+          const canonical = await apiFetch<TemplateRecord>({
+            path: `/wp/v2/${postType}/${postId}?context=edit`,
+          });
+
           // A partial payload must be rejected before any editor state is
           // touched. getRecoveryEdits throws on incomplete data.
           const edits = getRecoveryEdits(
             revision,
-            (select(coreStore) as any).getRawEntityRecord(
-              'postType',
-              postType,
-              postId
-            )?.meta,
+            canonical.meta,
             revisionedMetaKeys
           );
 

@@ -695,7 +695,10 @@ describe('useTemplateEditor', () => {
 
   describe('restoreRevision', () => {
     it('loads the native single revision as unsaved edits without saving', async () => {
-      jest.mocked(apiFetch).mockResolvedValue(REVISION_7);
+      jest
+        .mocked(apiFetch)
+        .mockResolvedValueOnce(REVISION_7)
+        .mockResolvedValueOnce(mockRawRecord);
 
       let result: RestoreResult | null = null;
       await act(async () => {
@@ -703,10 +706,14 @@ describe('useTemplateEditor', () => {
       });
 
       expect(result).toEqual({ success: true });
-      // The native single-revision route is the only request restore makes.
-      expect(apiFetch).toHaveBeenCalledTimes(1);
+      // Restore reads the native revision and the current canonical record
+      // before applying unsaved edits.
+      expect(apiFetch).toHaveBeenCalledTimes(2);
       expect(apiFetch.mock.calls[0][0]).toEqual({
         path: '/wp/v2/cb_templates/42/revisions/7?context=edit',
+      });
+      expect(apiFetch.mock.calls[1][0]).toEqual({
+        path: '/wp/v2/cb_templates/42?context=edit',
       });
 
       // The payload passes through the recovery validator and lands in
@@ -753,7 +760,10 @@ describe('useTemplateEditor', () => {
     });
 
     it('persists the restored content only after an explicit save', async () => {
-      jest.mocked(apiFetch).mockResolvedValue(REVISION_7);
+      jest
+        .mocked(apiFetch)
+        .mockResolvedValueOnce(REVISION_7)
+        .mockResolvedValueOnce(mockRawRecord);
 
       let result: RestoreResult | null = null;
       await act(async () => {
@@ -832,7 +842,10 @@ describe('useTemplateEditor', () => {
 
     it('sends one revision request when called twice at once', async () => {
       const request = deferred<typeof REVISION_7>();
-      jest.mocked(apiFetch).mockReturnValue(request.promise as any);
+      jest
+        .mocked(apiFetch)
+        .mockReturnValueOnce(request.promise as any)
+        .mockResolvedValueOnce(mockRawRecord);
 
       let first: Promise<RestoreResult> = Promise.resolve({ success: false });
       let second: RestoreResult = { success: true };
@@ -845,7 +858,7 @@ describe('useTemplateEditor', () => {
       // The second call is ignored while the first restore owns the operation.
       expect(second).toEqual({ success: false });
       expect(await first).toEqual({ success: true });
-      expect(apiFetch).toHaveBeenCalledTimes(1);
+      expect(apiFetch).toHaveBeenCalledTimes(2);
     });
   });
 
