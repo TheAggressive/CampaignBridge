@@ -35,7 +35,12 @@ export default function EditorEffects({
   useEffect(() => {
     const isSaving = isPersisting;
 
-    if (wasSavingRef.current && saveStatus === 'saved') {
+    if (!wasSavingRef.current && isSaving) {
+      // The request has captured its edits. Start a native undo/change boundary
+      // now so typing into the same attribute during the request produces a
+      // new persistent edit that core-data will retain when the response lands.
+      markLastChangeAsPersistent();
+    } else if (wasSavingRef.current && saveStatus === 'saved') {
       // Match core/editor's successful regular-save lifecycle. Without this
       // boundary, another edit to the same attribute remains transient and
       // never marks the entity dirty again.

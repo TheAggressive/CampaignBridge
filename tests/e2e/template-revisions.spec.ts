@@ -74,7 +74,7 @@ async function saveSubject(
   );
   await page.locator('.cb-editor__save-button').click();
   expect((await saveResponse).status()).toBe(200);
-  await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
+  await expect(page.locator('.cb-editor__save-button')).toHaveText('Updated');
   expect(await getSubject(page, templateId)).toBe(subject);
 }
 
@@ -135,7 +135,7 @@ test('restores revisioned metadata through the editor and hides autosaves from h
 
     // Resolve the new recovery prompt before operating on canonical history.
     await page
-      .getByRole('button', { name: 'Ignore for now', exact: true })
+      .getByRole('button', { name: 'Use saved version', exact: true })
       .click();
     expect(await getSubject(page, templateId)).toBe('Revision B subject');
 
@@ -151,9 +151,17 @@ test('restores revisioned metadata through the editor and hides autosaves from h
     await expect(page.getByLabel('Subject Line')).toHaveValue(
       'Revision A subject'
     );
+    expect(await getSubject(page, templateId)).toBe('Revision B subject');
+    expect(await hasEdits(page, templateId)).toBe(true);
+    await expect(page.locator('.cb-editor__save-button')).toHaveText('Update');
+    const updated = page.waitForResponse(response =>
+      isCanonicalWrite(response.request(), templateId)
+    );
+    await page.locator('.cb-editor__save-button').click();
+    expect((await updated).status()).toBe(200);
     expect(await getSubject(page, templateId)).toBe('Revision A subject');
     expect(await hasEdits(page, templateId)).toBe(false);
-    await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
+    await expect(page.locator('.cb-editor__save-button')).toHaveText('Updated');
   } catch (error) {
     primaryError = error;
   }

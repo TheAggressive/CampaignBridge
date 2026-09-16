@@ -191,6 +191,12 @@ body.is-fullscreen-mode .campaignbridge-screen--editor {
     min-width: 0;
   }
 
+  &__autosave-status {
+    color: #757575;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
   &__status-badge {
     align-items: center;
     border-radius: 9999px;

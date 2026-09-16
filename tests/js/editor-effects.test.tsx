@@ -53,7 +53,7 @@ describe('EditorEffects', () => {
       );
     });
 
-    expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(1);
+    expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(2);
   });
 
   it('creates a new edit boundary after a draft autosave cleans the entity', () => {
@@ -75,10 +75,10 @@ describe('EditorEffects', () => {
         />
       )
     );
-    expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(1);
+    expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(2);
   });
 
-  it('does not treat a published recovery autosave as a canonical save', () => {
+  it('creates a start boundary during autosave without a canonical completion boundary', () => {
     act(() =>
       root.render(
         <EditorEffects
@@ -97,7 +97,7 @@ describe('EditorEffects', () => {
         />
       )
     );
-    expect(mockMarkLastChangeAsPersistent).not.toHaveBeenCalled();
+    expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(1);
   });
 
   it('reports block selection from the scoped editor registry', () => {

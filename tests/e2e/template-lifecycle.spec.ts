@@ -138,7 +138,11 @@ async function saveTemplate(page: Page, templateId: number) {
   const saved = waitFor(page, 'POST', canonicalRoute(templateId));
   await page.locator('.cb-editor__save-button').click();
   expect((await saved).status()).toBe(200);
-  await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
+  await expect(page.locator('.cb-editor__save-button')).toHaveText(
+    (await getTemplate(page, templateId)).status === 'publish'
+      ? 'Updated'
+      : 'Saved'
+  );
   expect(await isDirty(page, templateId)).toBe(false);
 }
 
@@ -240,7 +244,7 @@ test.describe('CampaignBridge template lifecycle (E2E)', () => {
     expect(template.status).toBe('publish');
     expect(template.content.raw).not.toContain('Published edit');
     expect(await isDirty(page, id)).toBe(true);
-    await expect(saveButton).toHaveText('Save');
+    await expect(saveButton).toHaveText('Update');
 
     // SAVE the published edit.
     await saveTemplate(page, id);
@@ -259,7 +263,7 @@ test.describe('CampaignBridge template lifecycle (E2E)', () => {
     expect(listed).toEqual(history.map(revision => revision.id));
     expect(listed).not.toContain(autosave.id);
 
-    // RESTORE the manual draft Save.
+    // RESTORE the manual draft Save as unsaved changes.
     const savedDraft = history.find(revision =>
       revision.content.raw.includes('Saved draft')
     );
@@ -272,20 +276,32 @@ test.describe('CampaignBridge template lifecycle (E2E)', () => {
       .click();
     const restored = waitFor(
       page,
-      'POST',
-      /\/campaignbridge\/v1\/templates\/\d+\/revisions\/\d+\/restore/
+      'GET',
+      new RegExp(
+        `/wp/v2/cb_templates/${id}/revisions/${savedDraft?.id}(?:[?&]|$)`
+      )
     );
     await page.locator('.cb-editor__revision-restore-confirm').click();
     expect((await restored).status()).toBe(200);
     await expect(page.locator('.cb-editor__revision-items')).toBeHidden();
+
+    // The editor shows the restored revision as unsaved changes only.
     await expect(textBlock(page)).toHaveText('Saved draft');
-    expect(await isDirty(page, id)).toBe(false);
-    await expect(saveButton).toHaveText('Saved');
+    expect(await isDirty(page, id)).toBe(true);
+    await expect(saveButton).toHaveText('Update');
     await expect(badge).toHaveText('Published');
-    const source = await getTemplate(page, id);
+
+    // The canonical template keeps the published edit until an explicit Save.
+    let source = await getTemplate(page, id);
+    expect(source.content.raw).toContain('Published edit');
+    expect(source.status).toBe('publish');
+
+    // An explicit Save makes the restored revision canonical and keeps the
+    // organizational/targeting meta from the revision snapshot.
+    await saveTemplate(page, id);
+    source = await getTemplate(page, id);
     expect(source.content.raw).toContain('Saved draft');
     expect(source.status).toBe('publish');
-    // Restore keeps organizational/targeting meta and adds one revision.
     expect(source.meta[SUBJECT]).toBe('Lifecycle subject');
     expect(source.meta[AUDIENCE]).toBe('launch-list');
     const afterRestore = await normalRevisions(page, id);

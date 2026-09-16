@@ -91,11 +91,11 @@ function EditorChromeContent({
     hasEdits,
     isOperationPending,
     isAutosaving,
+    hasAutosaved,
     isPersisting,
     recovery,
     isResolving,
     loadError,
-    needsReload,
     onChange,
     onInput,
     publish,
@@ -207,23 +207,6 @@ function EditorChromeContent({
       },
     ];
   }, []);
-
-  // The server restored a revision the editor could not load. Show no stale
-  // content that could be saved over the restore; only a reload continues.
-  if (needsReload) {
-    return (
-      <ErrorState
-        message={editorMessages.restoreRefreshFailed()}
-        actions={[
-          {
-            label: __('Reload editor', 'campaignbridge'),
-            variant: 'primary',
-            onClick: () => window.location.reload(),
-          },
-        ]}
-      />
-    );
-  }
 
   if (isResolving || (record && !loadError && recovery.state === 'checking')) {
     return (
@@ -357,6 +340,7 @@ function EditorChromeContent({
                   loading={loading || isPersisting || isOperationPending}
                   isOperationPending={isOperationPending}
                   isAutosaving={isAutosaving}
+                  hasAutosaved={hasAutosaved}
                   onSelect={handleTemplateSelect}
                   onNew={onNew}
                   isPrimaryOpen={isPrimaryOpen}
@@ -381,23 +365,23 @@ function EditorChromeContent({
                       isDismissible={false}
                       actions={[
                         {
-                          label: __('Restore autosave', 'campaignbridge'),
+                          label: __('Recover changes', 'campaignbridge'),
                           onClick: recovery.restore,
                           disabled: hasEdits || isPersisting,
                         },
                         {
-                          label: __('Ignore for now', 'campaignbridge'),
+                          label: __('Use saved version', 'campaignbridge'),
                           onClick: recovery.ignore,
                         },
                       ]}
                     >
                       {__(
-                        'A newer autosave of this template is available.',
+                        'We found unsaved changes from your last editing session.',
                         'campaignbridge'
                       )}
                       <p>
                         {__(
-                          'Restore autosave loads the recovery copy as unsaved edits. Ignore for now continues with the saved template without deleting the recovery copy.',
+                          'Recover changes to continue editing, then save when you’re ready. Use saved version to keep the currently saved template.',
                           'campaignbridge'
                         )}
                       </p>

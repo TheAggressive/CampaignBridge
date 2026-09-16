@@ -273,7 +273,7 @@ test.describe('CampaignBridge revision history (E2E)', () => {
     await expect(loadMore).toHaveCount(0);
   });
 
-  test('C: a revision from a later page restores content and meta', async ({
+  test('C: a restored revision stays unsaved until an explicit save', async ({
     page,
   }) => {
     const id = await createTemplate(page, created, 21);
@@ -292,14 +292,37 @@ test.describe('CampaignBridge revision history (E2E)', () => {
     await page.locator('.cb-editor__revision-restore-confirm').click();
     await expect(page.locator('.cb-editor__revision-items')).toBeHidden();
 
+    // The editor shows the restored revision as unsaved changes only.
     await expect(textBlock(page)).toHaveText('Version 01');
-    const template = await apiFetch<TemplateRecord>(page, {
+    expect(await isDirty(page, id)).toBe(true);
+    const saveButton = page.locator('.cb-editor__save-button');
+    await expect(saveButton).toHaveText('Update');
+
+    // The canonical template keeps Version 21 until an explicit Save.
+    let template = await apiFetch<TemplateRecord>(page, {
+      path: `/wp/v2/cb_templates/${id}?context=edit`,
+    });
+    expect(template.content.raw).toContain('Version 21');
+    expect(template.meta[SUBJECT]).toBe('Subject 21');
+
+    // An explicit Save makes the restored revision canonical.
+    const saved = page.waitForResponse(
+      response =>
+        ['POST', 'PUT'].includes(response.request().method()) &&
+        new RegExp(`/wp/v2/cb_templates/${id}(?:[?&]|$)`).test(
+          decodeURIComponent(response.url())
+        )
+    );
+    await saveButton.click();
+    expect((await saved).status()).toBe(200);
+
+    await expect(saveButton).toHaveText('Updated');
+    expect(await isDirty(page, id)).toBe(false);
+    template = await apiFetch<TemplateRecord>(page, {
       path: `/wp/v2/cb_templates/${id}?context=edit`,
     });
     expect(template.content.raw).toContain('Version 01');
     expect(template.meta[SUBJECT]).toBe('Subject 01');
-    expect(await isDirty(page, id)).toBe(false);
-    await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
 
     // Reopened history starts with the new revision of the restored state.
     const after = await canonicalRevisionIds(page, id);

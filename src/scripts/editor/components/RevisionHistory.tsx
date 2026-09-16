@@ -385,7 +385,10 @@ export default function RevisionHistory({
                     {confirmId === revision.id ? (
                       <>
                         <span className='cb-editor__revision-confirm'>
-                          {__('Restore this version?', 'campaignbridge')}
+                          {__(
+                            'Restoring loads this revision as unsaved changes. The saved template stays unchanged until you save.',
+                            'campaignbridge'
+                          )}
                         </span>
                         <Button
                           variant='primary'

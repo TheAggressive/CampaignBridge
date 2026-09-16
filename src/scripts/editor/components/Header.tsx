@@ -83,6 +83,7 @@ interface HeaderProps {
   status?: string;
   saveStatus?: SaveStatus;
   isAutosaving?: boolean;
+  hasAutosaved?: boolean;
   onOpenPreview?: () => void;
   onOpenHistory?: () => void;
   /** A duplicate or revision restore is running. */
@@ -106,6 +107,7 @@ export default function Header({
   status,
   saveStatus = 'saved',
   isAutosaving = false,
+  hasAutosaved = false,
   onOpenPreview = () => {},
   onOpenHistory = () => {},
   isOperationPending = false,
@@ -115,10 +117,16 @@ export default function Header({
   const actionsLocked = isSaving || isAutosaving || isOperationPending;
   const isDraft = status === 'draft' || status === undefined;
   const saveLabel = isSaving
-    ? __('Saving…', 'campaignbridge')
+    ? isDraft
+      ? __('Saving…', 'campaignbridge')
+      : __('Updating…', 'campaignbridge')
     : hasEdits
-      ? __('Save', 'campaignbridge')
-      : __('Saved', 'campaignbridge');
+      ? isDraft
+        ? __('Save draft', 'campaignbridge')
+        : __('Update', 'campaignbridge')
+      : isDraft
+        ? __('Saved', 'campaignbridge')
+        : __('Updated', 'campaignbridge');
   const publishLabel = isSaving
     ? __('Publishing…', 'campaignbridge')
     : __('Publish', 'campaignbridge');
@@ -161,16 +169,23 @@ export default function Header({
               : __('Draft', 'campaignbridge')}
           </span>
         )}
+        {(isAutosaving || hasAutosaved) && !isSaving && (
+          <small
+            className='cb-editor__autosave-status'
+            role='status'
+            title={__(
+              'Autosave protects unfinished changes. Use the primary action to save the template.',
+              'campaignbridge'
+            )}
+          >
+            {isAutosaving
+              ? __('Autosaving…', 'campaignbridge')
+              : __('Autosaved', 'campaignbridge')}
+          </small>
+        )}
       </div>
 
       <div className={CLASSES.HEADER_ACTIONS}>
-        {isAutosaving && (
-          <span role='status'>
-            {status === 'publish'
-              ? __('Autosaving recovery copy…', 'campaignbridge')
-              : __('Autosaving…', 'campaignbridge')}
-          </span>
-        )}
         {isDraft && (
           <Button
             className='cb-editor__publish-button'

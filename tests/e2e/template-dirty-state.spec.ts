@@ -53,8 +53,13 @@ function matches(request: Request, method: string, route: RegExp): boolean {
 }
 
 const createRoute = /\/wp\/v2\/cb_templates(?:[?&]|$)/;
-const restoreRoute =
-  /\/campaignbridge\/v1\/templates\/\d+\/revisions\/\d+\/restore/;
+
+/** Native single-revision payload fetched by the unsaved-edit restore. */
+function revisionRoute(templateId: number): RegExp {
+  return new RegExp(
+    `/wp/v2/cb_templates/${templateId}/revisions/\\d+(?:[?&]|$)`
+  );
+}
 
 function autosaveRoute(templateId: number): RegExp {
   return new RegExp(`/wp/v2/cb_templates/${templateId}/autosaves(?:[?&]|$)`);
@@ -157,7 +162,7 @@ async function saveTemplate(page: Page, templateId: number) {
   );
   await page.locator('.cb-editor__save-button').click();
   expect((await saved).status()).toBe(200);
-  await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
+  await expect(page.locator('.cb-editor__save-button')).toHaveText('Updated');
   expect(await isDirty(page, templateId)).toBe(false);
 }
 
@@ -170,7 +175,7 @@ async function expectAutosaveKeepsTemplateDirty(
     matches(response.request(), 'POST', autosaveRoute(templateId))
   );
   expect(autosave.status()).toBe(200);
-  await expect(page.locator('.cb-editor__save-button')).toHaveText('Save');
+  await expect(page.locator('.cb-editor__save-button')).toHaveText('Update');
   expect(await isDirty(page, templateId)).toBe(true);
 }
 
@@ -193,7 +198,7 @@ test.describe('CampaignBridge unsaved editor state (E2E)', () => {
     page,
   }) => {
     const { id } = await openTemplateWithHistory(page, created);
-    const restoreRequests = track(page, 'POST', restoreRoute);
+    const revisionGets = track(page, 'GET', revisionRoute(id));
 
     await editText(page, id, 'Unsaved edit');
     await expectAutosaveKeepsTemplateDirty(page, id);
@@ -219,7 +224,7 @@ test.describe('CampaignBridge unsaved editor state (E2E)', () => {
     await expect(
       page.getByRole('alert').filter({ hasText: UNSAVED_RESTORE })
     ).toBeVisible();
-    expect(restoreRequests).toHaveLength(0);
+    expect(revisionGets).toHaveLength(0);
 
     await page.getByRole('button', { name: 'Close' }).click();
     await expect(textBlock(page)).toHaveText('Unsaved edit');
@@ -227,12 +232,11 @@ test.describe('CampaignBridge unsaved editor state (E2E)', () => {
     expect((await getTemplate(page, id)).content.raw).toContain('Version B');
   });
 
-  test('B: after Save, restore sends one request and refreshes the editor', async ({
+  test('B: after Save, restore applies unsaved changes until an explicit save', async ({
     page,
   }) => {
     const { id } = await openTemplateWithHistory(page, created);
-    const restoreRequests = track(page, 'POST', restoreRoute);
-    const autosaves = track(page, 'POST', autosaveRoute(id));
+    const revisionGets = track(page, 'GET', revisionRoute(id));
 
     await editText(page, id, 'Saved edit');
     await saveTemplate(page, id);
@@ -244,21 +248,26 @@ test.describe('CampaignBridge unsaved editor state (E2E)', () => {
     await items.nth(2).getByRole('button', { name: 'Restore' }).click();
 
     const restored = page.waitForResponse(response =>
-      matches(response.request(), 'POST', restoreRoute)
+      matches(response.request(), 'GET', revisionRoute(id))
     );
     await page.locator('.cb-editor__revision-restore-confirm').dblclick();
     expect((await restored).status()).toBe(200);
     await expect(page.locator('.cb-editor__revision-items')).toBeHidden();
 
+    // The restored revision is an unsaved change: the canonical template
+    // keeps Version B until an explicit Save.
     await expect(textBlock(page)).toHaveText('Version A');
-    expect((await getTemplate(page, id)).content.raw).toContain('Version A');
-    expect(await isDirty(page, id)).toBe(false);
-    await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
+    expect(await isDirty(page, id)).toBe(true);
+    await expect(page.locator('.cb-editor__save-button')).toHaveText('Update');
+    expect((await getTemplate(page, id)).content.raw).toContain('Version B');
 
-    // No delayed autosave can write the replaced content back.
+    // An explicit Save makes the restored revision canonical.
+    await saveTemplate(page, id);
+    expect((await getTemplate(page, id)).content.raw).toContain('Version A');
+
+    // No delayed autosave can write anything over the saved state.
     await page.waitForTimeout(AUTOSAVE_SETTLE_MS);
-    expect(restoreRequests).toHaveLength(1);
-    expect(autosaves).toHaveLength(0);
+    expect(revisionGets).toHaveLength(1);
     await expect(textBlock(page)).toHaveText('Version A');
     expect((await getTemplate(page, id)).content.raw).toContain('Version A');
   });
