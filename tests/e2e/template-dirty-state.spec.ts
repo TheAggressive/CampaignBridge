@@ -162,7 +162,7 @@ async function saveTemplate(page: Page, templateId: number) {
   );
   await page.locator('.cb-editor__save-button').click();
   expect((await saved).status()).toBe(200);
-  await expect(page.locator('.cb-editor__save-button')).toHaveText('Updated');
+  await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
   expect(await isDirty(page, templateId)).toBe(false);
 }
 
@@ -175,7 +175,7 @@ async function expectAutosaveKeepsTemplateDirty(
     matches(response.request(), 'POST', autosaveRoute(templateId))
   );
   expect(autosave.status()).toBe(200);
-  await expect(page.locator('.cb-editor__save-button')).toHaveText('Update');
+  await expect(page.locator('.cb-editor__save-button')).toHaveText('Save');
   expect(await isDirty(page, templateId)).toBe(true);
 }
 
@@ -258,7 +258,7 @@ test.describe('CampaignBridge unsaved editor state (E2E)', () => {
     // keeps Version B until an explicit Save.
     await expect(textBlock(page)).toHaveText('Version A');
     expect(await isDirty(page, id)).toBe(true);
-    await expect(page.locator('.cb-editor__save-button')).toHaveText('Update');
+    await expect(page.locator('.cb-editor__save-button')).toHaveText('Save');
     expect((await getTemplate(page, id)).content.raw).toContain('Version B');
 
     // An explicit Save makes the restored revision canonical.

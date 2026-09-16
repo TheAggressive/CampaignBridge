@@ -69,13 +69,13 @@ describe('Header layout', () => {
   });
 
   it.each([
-    ['draft', true, 'dirty', false, 'Save draft', false],
+    ['draft', true, 'dirty', false, 'Save', false],
     ['draft', false, 'saved', false, 'Saved', true],
     ['draft', true, 'saving', false, 'Saving…', true],
-    ['publish', false, 'saved', false, 'Updated', true],
-    ['publish', true, 'dirty', false, 'Update', false],
-    ['publish', true, 'saving', false, 'Updating…', true],
-    ['publish', true, 'dirty', true, 'Update', true],
+    ['publish', false, 'saved', false, 'Saved', true],
+    ['publish', true, 'dirty', false, 'Save', false],
+    ['publish', true, 'saving', false, 'Saving…', true],
+    ['publish', true, 'dirty', true, 'Save', false],
   ])(
     'renders %s canonical state with label %s',
     (status, hasEdits, saveStatus, isAutosaving, label, disabled) => {

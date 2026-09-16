@@ -74,7 +74,7 @@ async function saveSubject(
   );
   await page.locator('.cb-editor__save-button').click();
   expect((await saveResponse).status()).toBe(200);
-  await expect(page.locator('.cb-editor__save-button')).toHaveText('Updated');
+  await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
   expect(await getSubject(page, templateId)).toBe(subject);
 }
 
@@ -153,7 +153,7 @@ test('restores revisioned metadata through the editor and hides autosaves from h
     );
     expect(await getSubject(page, templateId)).toBe('Revision B subject');
     expect(await hasEdits(page, templateId)).toBe(true);
-    await expect(page.locator('.cb-editor__save-button')).toHaveText('Update');
+    await expect(page.locator('.cb-editor__save-button')).toHaveText('Save');
     const updated = page.waitForResponse(response =>
       isCanonicalWrite(response.request(), templateId)
     );
@@ -161,7 +161,7 @@ test('restores revisioned metadata through the editor and hides autosaves from h
     expect((await updated).status()).toBe(200);
     expect(await getSubject(page, templateId)).toBe('Revision A subject');
     expect(await hasEdits(page, templateId)).toBe(false);
-    await expect(page.locator('.cb-editor__save-button')).toHaveText('Updated');
+    await expect(page.locator('.cb-editor__save-button')).toHaveText('Saved');
   } catch (error) {
     primaryError = error;
   }

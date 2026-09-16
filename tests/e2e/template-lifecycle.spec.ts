@@ -140,7 +140,7 @@ async function saveTemplate(page: Page, templateId: number) {
   expect((await saved).status()).toBe(200);
   await expect(page.locator('.cb-editor__save-button')).toHaveText(
     (await getTemplate(page, templateId)).status === 'publish'
-      ? 'Updated'
+      ? 'Saved'
       : 'Saved'
   );
   expect(await isDirty(page, templateId)).toBe(false);
@@ -244,7 +244,7 @@ test.describe('CampaignBridge template lifecycle (E2E)', () => {
     expect(template.status).toBe('publish');
     expect(template.content.raw).not.toContain('Published edit');
     expect(await isDirty(page, id)).toBe(true);
-    await expect(saveButton).toHaveText('Update');
+    await expect(saveButton).toHaveText('Save');
 
     // SAVE the published edit.
     await saveTemplate(page, id);
@@ -288,7 +288,7 @@ test.describe('CampaignBridge template lifecycle (E2E)', () => {
     // The editor shows the restored revision as unsaved changes only.
     await expect(textBlock(page)).toHaveText('Saved draft');
     expect(await isDirty(page, id)).toBe(true);
-    await expect(saveButton).toHaveText('Update');
+    await expect(saveButton).toHaveText('Save');
     await expect(badge).toHaveText('Published');
 
     // The canonical template keeps the published edit until an explicit Save.

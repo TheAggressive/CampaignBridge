@@ -114,19 +114,13 @@ export default function Header({
 }: HeaderProps): JSX.Element {
   const isSaving = saveStatus === 'saving';
   // Competing template actions wait for a save, duplicate, or restore.
-  const actionsLocked = isSaving || isAutosaving || isOperationPending;
+  const actionsLocked = isSaving || isOperationPending;
   const isDraft = status === 'draft' || status === undefined;
   const saveLabel = isSaving
-    ? isDraft
-      ? __('Saving…', 'campaignbridge')
-      : __('Updating…', 'campaignbridge')
+    ? __('Saving…', 'campaignbridge')
     : hasEdits
-      ? isDraft
-        ? __('Save draft', 'campaignbridge')
-        : __('Update', 'campaignbridge')
-      : isDraft
-        ? __('Saved', 'campaignbridge')
-        : __('Updated', 'campaignbridge');
+      ? __('Save', 'campaignbridge')
+      : __('Saved', 'campaignbridge');
   const publishLabel = isSaving
     ? __('Publishing…', 'campaignbridge')
     : __('Publish', 'campaignbridge');

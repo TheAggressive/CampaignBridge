@@ -296,7 +296,7 @@ test.describe('CampaignBridge revision history (E2E)', () => {
     await expect(textBlock(page)).toHaveText('Version 01');
     expect(await isDirty(page, id)).toBe(true);
     const saveButton = page.locator('.cb-editor__save-button');
-    await expect(saveButton).toHaveText('Update');
+    await expect(saveButton).toHaveText('Save');
 
     // The canonical template keeps Version 21 until an explicit Save.
     let template = await apiFetch<TemplateRecord>(page, {
@@ -316,7 +316,7 @@ test.describe('CampaignBridge revision history (E2E)', () => {
     await saveButton.click();
     expect((await saved).status()).toBe(200);
 
-    await expect(saveButton).toHaveText('Updated');
+    await expect(saveButton).toHaveText('Saved');
     expect(await isDirty(page, id)).toBe(false);
     template = await apiFetch<TemplateRecord>(page, {
       path: `/wp/v2/cb_templates/${id}?context=edit`,

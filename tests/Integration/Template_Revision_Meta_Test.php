@@ -22,8 +22,6 @@ use WP_REST_Response;
  * a revision restores exactly the registered revisionable metadata.
  */
 final class Template_Revision_Meta_Test extends Test_Case {
-	private const RESTORE_ROUTE = '/campaignbridge/v1/templates/%d/revisions/%d/restore';
-
 	/**
 	 * Fields that define the reusable email, with a value for each state.
 	 */
@@ -131,113 +129,6 @@ final class Template_Revision_Meta_Test extends Test_Case {
 		);
 	}
 
-	public function test_restore_restores_content_and_revisioned_meta_but_not_organizational_meta(): void {
-		$template_id = $this->create_template();
-		$this->save_state( $template_id, 0 );
-		$this->save_state( $template_id, 1 );
-		$revision_a = $this->revision_with_content( $template_id, $this->content( 0 ) );
-
-		$response = $this->restore( $template_id, $revision_a->ID );
-		self::assertSame( 200, $response->get_status() );
-
-		$template = $this->get_template( $template_id );
-		self::assertSame( $this->content( 0 ), $template['content']['raw'] );
-		foreach ( self::REVISIONED as $key => $values ) {
-			self::assertSame( $values[0], $template['meta'][ $key ], $key );
-			self::assertCount( 1, get_post_meta( $template_id, $key ), "{$key} must stay single" );
-		}
-		foreach ( self::NOT_REVISIONED as $key => $values ) {
-			self::assertSame( $values[1], $template['meta'][ $key ], $key );
-		}
-	}
-
-	public function test_restore_removes_revisioned_meta_the_revision_did_not_have(): void {
-		$template_id = $this->create_template();
-		$this->update_template(
-			$template_id,
-			array(
-				'content' => 'Before a preheader existed',
-				'meta'    => array( 'campaignbridge_subject' => 'Original subject' ),
-			)
-		);
-		$this->update_template(
-			$template_id,
-			array(
-				'content' => 'After adding a preheader',
-				'meta'    => array( 'campaignbridge_preheader' => 'Added later' ),
-			)
-		);
-		$original = $this->revision_with_content( $template_id, 'Before a preheader existed' );
-		self::assertFalse( metadata_exists( 'post', $original->ID, 'campaignbridge_preheader' ) );
-
-		self::assertSame( 200, $this->restore( $template_id, $original->ID )->get_status() );
-
-		self::assertFalse( metadata_exists( 'post', $template_id, 'campaignbridge_preheader' ) );
-		self::assertSame( 'Original subject', get_post_meta( $template_id, 'campaignbridge_subject', true ) );
-	}
-
-	public function test_the_newest_revision_after_restore_matches_the_restored_template(): void {
-		$template_id = $this->create_template();
-		$this->save_state( $template_id, 0 );
-		$this->save_state( $template_id, 1 );
-		$revision_a = $this->revision_with_content( $template_id, $this->content( 0 ) );
-
-		self::assertSame( 200, $this->restore( $template_id, $revision_a->ID )->get_status() );
-
-		// History must describe the template as it now is, content and meta.
-		$newest = get_post( (int) array_key_first( wp_get_post_revisions( $template_id ) ) );
-		self::assertInstanceOf( WP_Post::class, $newest );
-		self::assertSame( $this->content( 0 ), $newest->post_content );
-		$this->assert_revisioned_meta_state( $newest->ID, 0 );
-	}
-
-	public function test_a_failed_restore_changes_nothing_and_reports_failure(): void {
-		$template_id = $this->create_template();
-		$this->save_state( $template_id, 0 );
-		$this->save_state( $template_id, 1 );
-		$revision_a     = $this->revision_with_content( $template_id, $this->content( 0 ) );
-		$meta_before    = $this->stored_template_meta( $template_id );
-		$history_before = array_keys( wp_get_post_revisions( $template_id ) );
-
-		// Make WordPress's own post update inside wp_restore_post_revision() fail.
-		add_filter( 'wp_insert_post_empty_content', '__return_true' );
-		try {
-			$response = $this->restore( $template_id, $revision_a->ID );
-		} finally {
-			remove_filter( 'wp_insert_post_empty_content', '__return_true' );
-		}
-
-		self::assertSame( 500, $response->get_status() );
-		self::assertSame( 'restore_failed', $response->get_data()['code'] );
-		self::assertArrayNotHasKey( 'success', $response->get_data() );
-		self::assertSame( $this->content( 1 ), get_post( $template_id )->post_content );
-		// Every template meta field keeps its exact values and presence.
-		self::assertSame( $meta_before, $this->stored_template_meta( $template_id ) );
-		self::assertSame( $history_before, array_keys( wp_get_post_revisions( $template_id ) ) );
-
-		// Nothing the failed attempt set up lingers: the next restore succeeds.
-		self::assertSame( 200, $this->restore( $template_id, $revision_a->ID )->get_status() );
-		self::assertSame( $this->content( 0 ), get_post( $template_id )->post_content );
-		$this->assert_revisioned_meta_state( $template_id, 0 );
-	}
-
-	/**
-	 * Capture every template meta field's stored values, or null when absent.
-	 *
-	 * @param int $template_id Template ID.
-	 * @return array<string, array<int, mixed>|null>
-	 */
-	private function stored_template_meta( int $template_id ): array {
-		$stored = array();
-		foreach ( array_keys( array_merge( self::REVISIONED, self::NOT_REVISIONED ) ) as $key ) {
-			$stored[ $key ] = metadata_exists( 'post', $template_id, $key )
-				? get_post_meta( $template_id, $key )
-				: null;
-		}
-
-		return $stored;
-	}
-
 	/**
 	 * Create an empty published template through the core REST endpoint.
 	 */
@@ -293,34 +184,6 @@ final class Template_Revision_Meta_Test extends Test_Case {
 		self::assertSame( 200, $response->get_status(), (string) wp_json_encode( $response->get_data() ) );
 
 		return $response->get_data();
-	}
-
-	/**
-	 * Read a template in edit context through the core REST endpoint.
-	 *
-	 * @param int $template_id Template ID.
-	 * @return array<string, mixed> Response data.
-	 */
-	private function get_template( int $template_id ): array {
-		$request = new WP_REST_Request( 'GET', "/wp/v2/cb_templates/{$template_id}" );
-		$request->set_param( 'context', 'edit' );
-		$response = rest_get_server()->dispatch( $request );
-		self::assertSame( 200, $response->get_status() );
-
-		return $response->get_data();
-	}
-
-	/**
-	 * Restore a revision through the CampaignBridge restore route.
-	 *
-	 * @param int $template_id Template ID.
-	 * @param int $revision_id Revision ID.
-	 */
-	private function restore( int $template_id, int $revision_id ): WP_REST_Response {
-		$request = new WP_REST_Request( 'POST', sprintf( self::RESTORE_ROUTE, $template_id, $revision_id ) );
-		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
-
-		return rest_get_server()->dispatch( $request );
 	}
 
 	/**

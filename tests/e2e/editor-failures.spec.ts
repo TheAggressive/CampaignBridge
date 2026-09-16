@@ -219,7 +219,7 @@ test.describe('CampaignBridge editor failure UX (E2E)', () => {
     await expectNoRawServerText(page);
     await expect(textBlock(page)).toHaveText('Edit that fails to save');
     expect(await isDirty(page, id)).toBe(true);
-    await expect(page.locator('.cb-editor__save-button')).toHaveText('Update');
+    await expect(page.locator('.cb-editor__save-button')).toHaveText('Save');
     await expect(page.locator('.cb-editor__save-button')).toBeEnabled();
     expect((await getTemplate(page, id)).content.raw).toContain('Version B');
 
@@ -362,7 +362,7 @@ test.describe('CampaignBridge editor failure UX (E2E)', () => {
     await expect(textBlock(page)).toHaveText('Version A');
     expect(await isDirty(page, id)).toBe(true);
     const saveButton = page.locator('.cb-editor__save-button');
-    await expect(saveButton).toHaveText('Update');
+    await expect(saveButton).toHaveText('Save');
 
     // The canonical saved template stays Version B until an explicit Save.
     expect((await getTemplate(page, id)).content.raw).toContain('Version B');

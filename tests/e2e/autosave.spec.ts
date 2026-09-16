@@ -587,7 +587,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         expect(state.hasEdits).toBe(true);
         expect(state.editedContent).toContain('Published autosave content');
         const saveButton = page.locator('.cb-editor__save-button');
-        await expect(saveButton).toHaveText('Update');
+        await expect(saveButton).toHaveText('Save');
         await expect(saveButton).toBeEnabled();
         await expect(page.locator('.cb-editor__status-badge')).toHaveText(
           'Published'
@@ -680,10 +680,10 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         const saved = page.waitForResponse(response =>
           isCanonicalWrite(response.request(), templateId)
         );
-        await page.getByRole('button', { name: 'Update', exact: true }).click();
+        await page.getByRole('button', { name: 'Save', exact: true }).click();
         expect((await saved).status()).toBe(200);
         await expect(page.locator('.cb-editor__save-button')).toHaveText(
-          'Updated'
+          'Saved'
         );
         expect((await getTemplate(page, templateId)).content.raw).toContain(
           'Recover this published content'
@@ -738,7 +738,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
     );
   });
 
-  test('native autosave lock is secondary and never labels Update as Updating', async ({
+  test('native autosave stays independent from the primary Save action', async ({
     page,
   }) => {
     await withTemplate(
@@ -769,12 +769,12 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
           )
         ).toBeVisible();
         const button = page.locator('.cb-editor__save-button');
-        await expect(button).toHaveText('Update');
-        await expect(button).toBeDisabled();
+        await expect(button).toHaveText('Save');
+        await expect(button).toBeEnabled();
         await expect(snackbar(page, 'Template saved.')).toHaveCount(0);
         release();
         expect((await response).status()).toBe(200);
-        await expect(button).toHaveText('Update');
+        await expect(button).toHaveText('Save');
         await expect(button).toBeEnabled();
         await expect(page.locator('.cb-editor__autosave-status')).toHaveText(
           'Autosaved'
@@ -786,7 +786,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
     );
   });
 
-  test('Update uses one canonical write and preserves edits made while it is pending', async ({
+  test('Save uses one canonical write and preserves edits made while it is pending', async ({
     page,
   }) => {
     await withTemplate(
@@ -796,7 +796,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
       async templateId => {
         await openEditorForTemplate(page, templateId);
         const button = page.locator('.cb-editor__save-button');
-        await expect(button).toHaveText('Updated');
+        await expect(button).toHaveText('Saved');
         await expect(button).toBeDisabled();
         const writes: Request[] = [];
         const autosaves = trackAutosavePosts(page, templateId);
@@ -823,7 +823,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         );
         await button.click();
         await requested;
-        await expect(button).toHaveText('Updating…');
+        await expect(button).toHaveText('Saving…');
         await expect(button).toBeDisabled();
         await editTextBlock(page, templateId, 'Newer edit while updating');
         await page.waitForTimeout(AUTOSAVE_SETTLE_MS);
@@ -831,7 +831,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         expect(autosaves).toHaveLength(0);
         release();
         expect((await response).status()).toBe(200);
-        await expect(button).toHaveText('Update');
+        await expect(button).toHaveText('Save');
         await expect(button).toBeEnabled();
         await expect(textBlock(page)).toHaveText('Newer edit while updating');
         expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
@@ -845,7 +845,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         );
         await button.click();
         expect((await updated).status()).toBe(200);
-        await expect(button).toHaveText('Updated');
+        await expect(button).toHaveText('Saved');
         expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
           false
         );
@@ -889,9 +889,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
           release();
           expect((await response).status()).toBe(200);
           const button = page.locator('.cb-editor__save-button');
-          await expect(button).toHaveText(
-            status === 'publish' ? 'Update' : 'Save draft'
-          );
+          await expect(button).toHaveText('Save');
           await expect(button).toBeEnabled();
           expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
             true
@@ -904,9 +902,7 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
           );
           await button.click();
           expect((await saved).status()).toBe(200);
-          await expect(button).toHaveText(
-            status === 'publish' ? 'Updated' : 'Saved'
-          );
+          await expect(button).toHaveText('Saved');
           expect((await getTemplate(page, templateId)).content.raw).toContain(
             'Newer edit during autosave'
           );
