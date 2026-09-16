@@ -541,6 +541,20 @@ class Post_Type_Email_Template {
 	}
 
 	/**
+	 * Get the meta keys WordPress includes in revision history.
+	 *
+	 * @return array<int, string> Revisioned meta field keys.
+	 */
+	public static function get_revisioned_meta_keys(): array {
+		return array_keys(
+			array_filter(
+				self::get_meta_field_config(),
+				static fn ( mixed $config ): bool => is_array( $config ) && true === ( $config['revisions'] ?? false )
+			)
+		);
+	}
+
+	/**
 	 * Get meta field configuration.
 	 *
 	 * @param string|null $field_key Optional field key to get specific config.

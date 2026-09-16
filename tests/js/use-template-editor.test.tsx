@@ -166,6 +166,10 @@ function Harness() {
   current = useTemplateEditor({
     postId: 42,
     postType: 'cb_templates',
+    revisionedMetaKeys: [
+      'campaignbridge_subject',
+      'campaignbridge_utm_enabled',
+    ],
     duplicableMetaKeys: mockPolicy.duplicableMetaKeys,
     onSuccess: mockOnSuccess,
     onError: mockOnError,
@@ -707,7 +711,10 @@ describe('useTemplateEditor', () => {
 
       // The payload passes through the recovery validator and lands in
       // core-data as unsaved edits: clear transient edits, then write.
-      const expectedEdits = getRecoveryEdits(REVISION_7);
+      const expectedEdits = getRecoveryEdits(REVISION_7, mockRawRecord.meta, [
+        'campaignbridge_subject',
+        'campaignbridge_utm_enabled',
+      ]);
       expect(coreDispatch.clearEntityRecordEdits).toHaveBeenCalledTimes(1);
       expect(coreDispatch.editEntityRecord).toHaveBeenCalledTimes(1);
       expect(coreDispatch.editEntityRecord).toHaveBeenCalledWith(

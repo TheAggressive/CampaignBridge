@@ -53,6 +53,8 @@ interface EditorChromeProps {
   postType?: string;
   /** Server-provided meta keys a duplicate copies. */
   duplicableMetaKeys?: readonly string[] | null;
+  /** Server-provided meta keys WordPress stores in revisions. */
+  revisionedMetaKeys?: readonly string[] | null;
 }
 
 /**
@@ -83,6 +85,7 @@ function EditorChromeContent({
   postId,
   postType = 'post',
   duplicableMetaKeys,
+  revisionedMetaKeys,
 }: EditorChromeProps): JSX.Element {
   const { success, error: errorNotice } = useNotices();
   const {
@@ -107,6 +110,7 @@ function EditorChromeContent({
     postId,
     postType,
     duplicableMetaKeys,
+    revisionedMetaKeys: revisionedMetaKeys ?? [],
     onSuccess: success,
     onError: errorNotice,
   });

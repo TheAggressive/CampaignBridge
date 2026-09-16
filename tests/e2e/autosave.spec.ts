@@ -772,15 +772,19 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
         await expect(button).toHaveText('Save');
         await expect(button).toBeEnabled();
         await expect(snackbar(page, 'Template saved.')).toHaveCount(0);
+        const saved = page.waitForResponse(response =>
+          isCanonicalWrite(response.request(), templateId)
+        );
+        await button.click();
         release();
         expect((await response).status()).toBe(200);
-        await expect(button).toHaveText('Save');
-        await expect(button).toBeEnabled();
-        await expect(page.locator('.cb-editor__autosave-status')).toHaveText(
-          'Autosaved'
-        );
+        expect((await saved).status()).toBe(200);
+        await expect(button).toHaveText('Saved');
         expect((await getEditorEntityState(page, templateId)).hasEdits).toBe(
-          true
+          false
+        );
+        expect((await getTemplate(page, templateId)).content.raw).toContain(
+          'Background copy'
         );
       }
     );
@@ -1106,13 +1110,13 @@ test.describe('CampaignBridge Editor Autosave (E2E)', () => {
           isAutosavePost(response.request(), templateId)
         );
         await editTextBlock(page, templateId, 'Dirty state first edit');
-        await expect(saveButton).toHaveText('Save draft');
+        await expect(saveButton).toHaveText('Save');
         expect((await firstAutosave).status()).toBe(200);
         await expect(saveButton).toHaveText('Saved');
         await expect(saveButton).toBeDisabled();
 
         await editTextBlock(page, templateId, 'Dirty state second edit');
-        await expect(saveButton).toHaveText('Save draft');
+        await expect(saveButton).toHaveText('Save');
         await expect(saveButton).toBeEnabled();
 
         const saveResponse = page.waitForResponse(response =>

@@ -41,6 +41,7 @@ export type NoticeOptions = {
 interface UseTemplateEditorOptions {
   postId: number;
   postType: string;
+  revisionedMetaKeys?: readonly string[];
   /**
    * Server-provided meta keys a duplicate copies. Without them duplication
    * refuses rather than copying an unclassified field.
@@ -121,6 +122,7 @@ export const editorMessages = {
 export function useTemplateEditor({
   postId,
   postType,
+  revisionedMetaKeys = [],
   duplicableMetaKeys,
   onSuccess,
   onError,
@@ -317,12 +319,7 @@ export function useTemplateEditor({
       return true;
     }
 
-    if (
-      recoveryBlocked ||
-      isSaving ||
-      savingRef.current ||
-      operationRef.current
-    ) {
+    if (recoveryBlocked || savingRef.current || operationRef.current) {
       return false;
     }
 
@@ -343,21 +340,12 @@ export function useTemplateEditor({
     } finally {
       savingRef.current = false;
     }
-  }, [
-    hasEdits,
-    isSaving,
-    onError,
-    onSuccess,
-    save,
-    recoveryBlocked,
-    postType,
-    postId,
-  ]);
+  }, [hasEdits, onError, onSuccess, save, recoveryBlocked, postType, postId]);
 
   const publish = useCallback(async () => {
     if (
       recoveryBlocked ||
-      isSaving ||
+      (isSaving && !isAutosaving) ||
       savingRef.current ||
       operationRef.current
     ) {
@@ -401,7 +389,16 @@ export function useTemplateEditor({
     } finally {
       savingRef.current = false;
     }
-  }, [isSaving, onError, onSuccess, postId, postType, save, recoveryBlocked]);
+  }, [
+    isAutosaving,
+    isSaving,
+    onError,
+    onSuccess,
+    postId,
+    postType,
+    save,
+    recoveryBlocked,
+  ]);
 
   const duplicate = useCallback(async (): Promise<DuplicateResult> => {
     const blocker = canonicalOperationBlocker();
@@ -485,7 +482,15 @@ export function useTemplateEditor({
 
           // A partial payload must be rejected before any editor state is
           // touched. getRecoveryEdits throws on incomplete data.
-          const edits = getRecoveryEdits(revision);
+          const edits = getRecoveryEdits(
+            revision,
+            (select(coreStore) as any).getRawEntityRecord(
+              'postType',
+              postType,
+              postId
+            )?.meta,
+            revisionedMetaKeys
+          );
 
           // Refuse if edits arrived during the revision fetch.
           if (
@@ -512,7 +517,13 @@ export function useTemplateEditor({
         }
       });
     },
-    [canonicalOperationBlocker, postType, postId, runCanonicalOperation]
+    [
+      canonicalOperationBlocker,
+      postType,
+      postId,
+      revisionedMetaKeys,
+      runCanonicalOperation,
+    ]
   );
 
   const saveStatus: SaveStatus = saveError

@@ -255,11 +255,11 @@ test.describe('CampaignBridge unsaved editor state (E2E)', () => {
     await expect(page.locator('.cb-editor__revision-items')).toBeHidden();
 
     // The restored revision is an unsaved change: the canonical template
-    // keeps Version B until an explicit Save.
+    // keeps the explicitly saved edit until an explicit Save.
     await expect(textBlock(page)).toHaveText('Version A');
     expect(await isDirty(page, id)).toBe(true);
     await expect(page.locator('.cb-editor__save-button')).toHaveText('Save');
-    expect((await getTemplate(page, id)).content.raw).toContain('Version B');
+    expect((await getTemplate(page, id)).content.raw).toContain('Saved edit');
 
     // An explicit Save makes the restored revision canonical.
     await saveTemplate(page, id);

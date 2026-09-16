@@ -15,7 +15,11 @@ function raw(value: RecoveryRecord['content']): string | undefined {
   return typeof value === 'string' ? value : value?.raw;
 }
 
-export function getRecoveryEdits(autosave: RecoveryRecord) {
+export function getRecoveryEdits(
+  autosave: RecoveryRecord,
+  currentMeta?: Record<string, unknown>,
+  revisionedMetaKeys: readonly string[] = []
+) {
   const title = raw(autosave.title);
   const content = raw(autosave.content);
   // A partial/rendered-only response must never erase the editor's content.
@@ -23,11 +27,21 @@ export function getRecoveryEdits(autosave: RecoveryRecord) {
     throw new Error('Incomplete autosave.');
   }
   const excerpt = raw(autosave.excerpt);
+  const meta = autosave.meta
+    ? { ...(currentMeta ?? {}), ...autosave.meta }
+    : undefined;
+  if (meta && currentMeta && autosave.meta) {
+    for (const key of revisionedMetaKeys) {
+      if (!Object.prototype.hasOwnProperty.call(autosave.meta, key)) {
+        meta[key] = '';
+      }
+    }
+  }
   return {
     title,
     content,
     ...(excerpt !== undefined ? { excerpt } : {}),
-    ...(autosave.meta ? { meta: autosave.meta } : {}),
+    ...(meta ? { meta } : {}),
   };
 }
 
