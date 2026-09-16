@@ -1,19 +1,7 @@
 <?php
-/**
- * Native autosave interoperability with revisioned template metadata.
- *
- * @package CampaignBridge
- */
-
 declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Integration;
-
-use CampaignBridge\Post_Types\Post_Type_Email_Template;
-use CampaignBridge\REST\Routes;
-use CampaignBridge\Tests\Helpers\Test_Case;
-use WP_REST_Request;
-use WP_REST_Response;
 
 /**
  * Exercises the real core autosaves endpoint the editor calls.
@@ -24,6 +12,13 @@ use WP_REST_Response;
  * @runTestsInSeparateProcesses
  * @preserveGlobalState disabled
  */
+
+use CampaignBridge\Post_Types\Post_Type_Email_Template;
+use CampaignBridge\REST\Routes;
+use CampaignBridge\Tests\Helpers\Test_Case;
+use WP_REST_Request;
+use WP_REST_Response;
+
 final class Template_Autosave_Revision_Meta_Test extends Test_Case {
 	/**
 	 * Set up an administrator and the REST routes.
@@ -72,40 +67,6 @@ final class Template_Autosave_Revision_Meta_Test extends Test_Case {
 		self::assertSame( 'newsletter', get_post_meta( $template_id, 'campaignbridge_template_category', true ) );
 		self::assertSame( $normal_revisions, $this->normal_revision_ids( $template_id ) );
 
-		// Restoring a normal revision uses canonical history, not the autosave.
-		$first   = $this->normal_revision_with_content( $template_id, 'First canonical' );
-		$restore = new WP_REST_Request( 'POST', "/campaignbridge/v1/templates/{$template_id}/revisions/{$first}/restore" );
-		$restore->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
-		self::assertSame( 200, rest_get_server()->dispatch( $restore )->get_status() );
-
-		self::assertSame( 'First canonical', get_post( $template_id )->post_content );
-		self::assertSame( 'First subject', get_post_meta( $template_id, 'campaignbridge_subject', true ) );
-		self::assertSame( 'Recovery subject', get_post_meta( $autosave->ID, 'campaignbridge_subject', true ) );
-	}
-
-	public function test_an_autosave_cannot_be_restored_as_template_history(): void {
-		$template_id = $this->create_template( 'publish' );
-		$this->update_template( $template_id, 'Canonical content', 'Canonical subject', 'newsletter' );
-		$response = $this->dispatch(
-			'POST',
-			"/wp/v2/cb_templates/{$template_id}/autosaves",
-			array(
-				'content' => 'Recovery content',
-				'meta'    => array( 'campaignbridge_subject' => 'Recovery subject' ),
-			)
-		);
-		self::assertSame( 200, $response->get_status() );
-		$autosave_id = (int) $response->get_data()['id'];
-		self::assertNotFalse( wp_is_post_autosave( $autosave_id ) );
-
-		$restore = new WP_REST_Request( 'POST', "/campaignbridge/v1/templates/{$template_id}/revisions/{$autosave_id}/restore" );
-		$restore->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
-		$result = rest_get_server()->dispatch( $restore );
-
-		self::assertSame( 400, $result->get_status() );
-		self::assertSame( 'revision_is_autosave', $result->get_data()['code'] );
-		self::assertSame( 'Canonical content', get_post( $template_id )->post_content );
-		self::assertSame( 'Canonical subject', get_post_meta( $template_id, 'campaignbridge_subject', true ) );
 	}
 
 	public function test_draft_autosave_updates_draft_fields_without_meta_or_a_revision(): void {
@@ -192,22 +153,6 @@ final class Template_Autosave_Revision_Meta_Test extends Test_Case {
 		}
 
 		return $ids;
-	}
-
-	/**
-	 * Find the normal revision holding the given content.
-	 *
-	 * @param int    $template_id Template ID.
-	 * @param string $content     Post content.
-	 */
-	private function normal_revision_with_content( int $template_id, string $content ): int {
-		foreach ( wp_get_post_revisions( $template_id ) as $revision ) {
-			if ( $content === $revision->post_content && ! wp_is_post_autosave( $revision ) ) {
-				return $revision->ID;
-			}
-		}
-
-		self::fail( "No normal revision holds content: {$content}" );
 	}
 
 	/**

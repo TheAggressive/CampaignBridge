@@ -63,9 +63,12 @@ interface EmptyStateProps {
  */
 export default function CampaignBridgeBlockEditor({
   duplicableMetaKeys,
+  revisionedMetaKeys,
 }: {
   /** Server-provided meta keys a duplicate copies. */
   duplicableMetaKeys: readonly string[] | null;
+  /** Server-provided meta keys WordPress stores in revisions. */
+  revisionedMetaKeys: readonly string[] | null;
 }): JSX.Element {
   const [error, setError] = useState('');
   const {
@@ -129,6 +132,7 @@ export default function CampaignBridgeBlockEditor({
           postId={currentId}
           postType={POST_TYPE}
           duplicableMetaKeys={duplicableMetaKeys}
+          revisionedMetaKeys={revisionedMetaKeys}
         />
       ) : loading ? (
         <div className='cb-block-editor-loading'>
@@ -248,6 +252,9 @@ domReady(() => {
         <CampaignBridgeBlockEditor
           duplicableMetaKeys={parseDuplicableMetaKeys(
             root.dataset.duplicableMetaKeys
+          )}
+          revisionedMetaKeys={parseDuplicableMetaKeys(
+            root.dataset.revisionedMetaKeys
           )}
         />
       );

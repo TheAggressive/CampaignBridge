@@ -82,6 +82,8 @@ interface HeaderProps {
   onDuplicate?: () => void | Promise<unknown>;
   status?: string;
   saveStatus?: SaveStatus;
+  isAutosaving?: boolean;
+  hasAutosaved?: boolean;
   onOpenPreview?: () => void;
   onOpenHistory?: () => void;
   /** A duplicate or revision restore is running. */
@@ -104,6 +106,8 @@ export default function Header({
   onDuplicate = () => {},
   status,
   saveStatus = 'saved',
+  isAutosaving = false,
+  hasAutosaved = false,
   onOpenPreview = () => {},
   onOpenHistory = () => {},
   isOperationPending = false,
@@ -158,6 +162,20 @@ export default function Header({
               ? __('Published', 'campaignbridge')
               : __('Draft', 'campaignbridge')}
           </span>
+        )}
+        {(isAutosaving || hasAutosaved) && !isSaving && (
+          <small
+            className='cb-editor__autosave-status'
+            role='status'
+            title={__(
+              'Autosave protects unfinished changes. Use the primary action to save the template.',
+              'campaignbridge'
+            )}
+          >
+            {isAutosaving
+              ? __('Autosaving…', 'campaignbridge')
+              : __('Autosaved', 'campaignbridge')}
+          </small>
         )}
       </div>
 

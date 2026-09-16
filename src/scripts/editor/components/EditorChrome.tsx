@@ -1,6 +1,11 @@
 import { BlockEditorProvider } from '@wordpress/block-editor';
 import { getBlockType } from '@wordpress/blocks';
-import { Popover, SlotFillProvider, SnackbarList } from '@wordpress/components';
+import {
+  Notice,
+  Popover,
+  SlotFillProvider,
+  SnackbarList,
+} from '@wordpress/components';
 import { EntityProvider, useEntityProp } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 import { useEffect, useCallback, useMemo, useState } from '@wordpress/element';
@@ -48,6 +53,8 @@ interface EditorChromeProps {
   postType?: string;
   /** Server-provided meta keys a duplicate copies. */
   duplicableMetaKeys?: readonly string[] | null;
+  /** Server-provided meta keys WordPress stores in revisions. */
+  revisionedMetaKeys?: readonly string[] | null;
 }
 
 /**
@@ -78,6 +85,7 @@ function EditorChromeContent({
   postId,
   postType = 'post',
   duplicableMetaKeys,
+  revisionedMetaKeys,
 }: EditorChromeProps): JSX.Element {
   const { success, error: errorNotice } = useNotices();
   const {
@@ -85,9 +93,12 @@ function EditorChromeContent({
     duplicate,
     hasEdits,
     isOperationPending,
+    isAutosaving,
+    hasAutosaved,
+    isPersisting,
+    recovery,
     isResolving,
     loadError,
-    needsReload,
     onChange,
     onInput,
     publish,
@@ -99,6 +110,7 @@ function EditorChromeContent({
     postId,
     postType,
     duplicableMetaKeys,
+    revisionedMetaKeys: revisionedMetaKeys ?? [],
     onSuccess: success,
     onError: errorNotice,
   });
@@ -200,24 +212,7 @@ function EditorChromeContent({
     ];
   }, []);
 
-  // The server restored a revision the editor could not load. Show no stale
-  // content that could be saved over the restore; only a reload continues.
-  if (needsReload) {
-    return (
-      <ErrorState
-        message={editorMessages.restoreRefreshFailed()}
-        actions={[
-          {
-            label: __('Reload editor', 'campaignbridge'),
-            variant: 'primary',
-            onClick: () => window.location.reload(),
-          },
-        ]}
-      />
-    );
-  }
-
-  if (isResolving) {
+  if (isResolving || (record && !loadError && recovery.state === 'checking')) {
     return (
       <LoadingState message={__('Initializing editor…', 'campaignbridge')} />
     );
@@ -227,6 +222,18 @@ function EditorChromeContent({
     return (
       <ErrorState
         message={editorMessages.loadFailed()}
+        actions={recoveryActions}
+      />
+    );
+  }
+
+  if (recovery.state === 'error') {
+    return (
+      <ErrorState
+        message={__(
+          'Autosave recovery could not be loaded. Reload the editor to try again. Your saved template has not been changed.',
+          'campaignbridge'
+        )}
         actions={recoveryActions}
       />
     );
@@ -308,6 +315,7 @@ function EditorChromeContent({
             settings={mergedEditorSettings}
           >
             <EditorEffects
+              isPersisting={isPersisting}
               saveStatus={saveStatus}
               onBlockSelected={handleBlockSelected}
             />
@@ -333,10 +341,10 @@ function EditorChromeContent({
                 <Header
                   list={list}
                   currentId={currentId}
-                  loading={
-                    loading || saveStatus === 'saving' || isOperationPending
-                  }
+                  loading={loading || isPersisting || isOperationPending}
                   isOperationPending={isOperationPending}
+                  isAutosaving={isAutosaving}
+                  hasAutosaved={hasAutosaved}
                   onSelect={handleTemplateSelect}
                   onNew={onNew}
                   isPrimaryOpen={isPrimaryOpen}
@@ -353,7 +361,39 @@ function EditorChromeContent({
                   onOpenHistory={handleOpenHistory}
                 />
               }
-              content={<Content onSave={saveNow} styles={editorStyles} />}
+              content={
+                <>
+                  {recovery.state === 'available' && (
+                    <Notice
+                      status='warning'
+                      isDismissible={false}
+                      actions={[
+                        {
+                          label: __('Recover changes', 'campaignbridge'),
+                          onClick: recovery.restore,
+                          disabled: hasEdits || isPersisting,
+                        },
+                        {
+                          label: __('Use saved version', 'campaignbridge'),
+                          onClick: recovery.ignore,
+                        },
+                      ]}
+                    >
+                      {__(
+                        'We found unsaved changes from your last editing session.',
+                        'campaignbridge'
+                      )}
+                      <p>
+                        {__(
+                          'Recover changes to continue editing, then save when you’re ready. Use saved version to keep the currently saved template.',
+                          'campaignbridge'
+                        )}
+                      </p>
+                    </Notice>
+                  )}
+                  <Content onSave={saveNow} styles={editorStyles} />
+                </>
+              }
               sidebar={<ComplementaryArea.Slot {...primarySidebarProps} />}
               secondarySidebar={
                 isSecondaryOpen ? (

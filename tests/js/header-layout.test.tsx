@@ -68,6 +68,51 @@ describe('Header layout', () => {
     container.remove();
   });
 
+  it.each([
+    ['draft', true, 'dirty', false, 'Save', false],
+    ['draft', false, 'saved', false, 'Saved', true],
+    ['draft', true, 'saving', false, 'Saving…', true],
+    ['publish', false, 'saved', false, 'Saved', true],
+    ['publish', true, 'dirty', false, 'Save', false],
+    ['publish', true, 'saving', false, 'Saving…', true],
+    ['publish', true, 'dirty', true, 'Save', false],
+  ])(
+    'renders %s canonical state with label %s',
+    (status, hasEdits, saveStatus, isAutosaving, label, disabled) => {
+      act(() =>
+        root.render(
+          <Header
+            list={[]}
+            currentId={1}
+            loading={false}
+            onSelect={jest.fn()}
+            onNew={jest.fn()}
+            isPrimaryOpen={false}
+            isSecondaryOpen={false}
+            togglePrimary={jest.fn()}
+            toggleSecondary={jest.fn()}
+            status={status as string}
+            hasEdits={hasEdits as boolean}
+            saveStatus={saveStatus as any}
+            isAutosaving={isAutosaving as boolean}
+          />
+        )
+      );
+      const button = container.querySelector(
+        '.cb-editor__save-button'
+      ) as HTMLButtonElement;
+      expect(button.textContent).toBe(label);
+      expect(button.disabled).toBe(disabled);
+      if (isAutosaving) {
+        expect(
+          container.querySelector(
+            '.cb-editor__header-center .cb-editor__autosave-status'
+          )?.textContent
+        ).toBe('Autosaving…');
+      }
+    }
+  );
+
   it('keeps template controls in a dedicated center group', () => {
     act(() => {
       root.render(

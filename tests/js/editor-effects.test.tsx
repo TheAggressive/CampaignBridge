@@ -53,6 +53,50 @@ describe('EditorEffects', () => {
       );
     });
 
+    expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(2);
+  });
+
+  it('creates a new edit boundary after a draft autosave cleans the entity', () => {
+    act(() =>
+      root.render(
+        <EditorEffects
+          saveStatus='dirty'
+          isPersisting
+          onBlockSelected={jest.fn()}
+        />
+      )
+    );
+    act(() =>
+      root.render(
+        <EditorEffects
+          saveStatus='saved'
+          isPersisting={false}
+          onBlockSelected={jest.fn()}
+        />
+      )
+    );
+    expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(2);
+  });
+
+  it('creates a start boundary during autosave without a canonical completion boundary', () => {
+    act(() =>
+      root.render(
+        <EditorEffects
+          saveStatus='dirty'
+          isPersisting
+          onBlockSelected={jest.fn()}
+        />
+      )
+    );
+    act(() =>
+      root.render(
+        <EditorEffects
+          saveStatus='dirty'
+          isPersisting={false}
+          onBlockSelected={jest.fn()}
+        />
+      )
+    );
     expect(mockMarkLastChangeAsPersistent).toHaveBeenCalledTimes(1);
   });
 

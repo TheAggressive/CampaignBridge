@@ -9,6 +9,11 @@ import {
   type DuplicateResult,
   type RestoreResult,
 } from '../../src/scripts/editor/hooks/useTemplateEditor';
+import { getRecoveryEdits } from '../../src/scripts/editor/utils/autosaveRecovery';
+
+jest.mock('../../src/scripts/editor/hooks/useAutosaveRecovery', () => ({
+  useAutosaveRecovery: () => ({ blocksPersistence: false, state: 'dismissed' }),
+}));
 
 jest.mock('@wordpress/api-fetch', () => ({
   __esModule: true,
@@ -87,12 +92,22 @@ const MESSAGES = {
   published: 'Template published.',
   saveFailed: 'Template changes could not be saved. Please try again.',
   publishFailed: 'Template could not be published. Please try again.',
-  autosaveFailed:
-    'Your recovery copy could not be saved. Your changes are still in the editor.',
+  autosaveFailed: 'Autosave failed. Your changes are still in the editor.',
   duplicateFailed: 'This template could not be duplicated.',
   duplicateUnsaved: 'Save your changes before duplicating this template.',
   restoreFailed: 'This revision could not be restored. Please try again.',
   restoreUnsaved: 'Save your changes before restoring a revision.',
+};
+
+// Native single-revision REST payload (title/content as { raw, rendered }).
+const REVISION_7 = {
+  id: 7,
+  title: { raw: 'My Template', rendered: 'My Template' },
+  content: {
+    raw: '<!-- wp:paragraph --><p>Revision seven</p><!-- /wp:paragraph -->',
+    rendered: '<p>Revision seven</p>',
+  },
+  meta: { campaignbridge_subject: 'Revised subject' },
 };
 
 const mockOnSuccess = jest.fn();
@@ -117,6 +132,7 @@ function setupUseSelect(overrides: Record<string, unknown> = {}) {
   const { useSelect } = require('@wordpress/data');
   useSelect.mockReturnValue({
     isSaving: false,
+    isAutosaving: false,
     loadError: null,
     saveError: null,
     ...overrides,
@@ -150,6 +166,10 @@ function Harness() {
   current = useTemplateEditor({
     postId: 42,
     postType: 'cb_templates',
+    revisionedMetaKeys: [
+      'campaignbridge_subject',
+      'campaignbridge_utm_enabled',
+    ],
     duplicableMetaKeys: mockPolicy.duplicableMetaKeys,
     onSuccess: mockOnSuccess,
     onError: mockOnError,
@@ -200,6 +220,16 @@ describe('useTemplateEditor', () => {
   });
 
   afterEach(() => act(() => root.unmount()));
+
+  it('keeps canonical Save dirty during a native background autosave', () => {
+    setupEntityRecord({ hasEdits: true });
+    setupUseSelect({ isSaving: true, isAutosaving: true });
+    render();
+    expect(current.saveStatus).toBe('dirty');
+    expect(current.isAutosaving).toBe(true);
+    expect(current.isPersisting).toBe(true);
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
 
   describe('manual Save', () => {
     beforeEach(() => {
@@ -664,24 +694,100 @@ describe('useTemplateEditor', () => {
   });
 
   describe('restoreRevision', () => {
-    it('restores, waits for the refetch, then drops stale editor edits', async () => {
-      jest.mocked(apiFetch).mockResolvedValue({ success: true } as any);
+    it('loads the native single revision as unsaved edits without saving', async () => {
+      jest
+        .mocked(apiFetch)
+        .mockResolvedValueOnce(REVISION_7)
+        .mockResolvedValueOnce(mockRawRecord);
 
-      let result: RestoreResult = { success: false };
+      let result: RestoreResult | null = null;
       await act(async () => {
         result = await current.restoreRevision(7);
       });
 
       expect(result).toEqual({ success: true });
-      expect(apiFetch).toHaveBeenCalledWith({
-        path: '/campaignbridge/v1/templates/42/revisions/7/restore',
-        method: 'POST',
+      // Restore reads the native revision and the current canonical record
+      // before applying unsaved edits.
+      expect(apiFetch).toHaveBeenCalledTimes(2);
+      expect(apiFetch.mock.calls[0][0]).toEqual({
+        path: '/wp/v2/cb_templates/42/revisions/7?context=edit',
       });
-      expect(mockRefetch).toHaveBeenCalledWith('postType', 'cb_templates', 42);
+      expect(apiFetch.mock.calls[1][0]).toEqual({
+        path: '/wp/v2/cb_templates/42?context=edit',
+      });
+
+      // The payload passes through the recovery validator and lands in
+      // core-data as unsaved edits: clear transient edits, then write.
+      const expectedEdits = getRecoveryEdits(REVISION_7, mockRawRecord.meta, [
+        'campaignbridge_subject',
+        'campaignbridge_utm_enabled',
+      ]);
+      expect(coreDispatch.clearEntityRecordEdits).toHaveBeenCalledTimes(1);
+      expect(coreDispatch.editEntityRecord).toHaveBeenCalledTimes(1);
+      expect(coreDispatch.editEntityRecord).toHaveBeenCalledWith(
+        'postType',
+        'cb_templates',
+        42,
+        expectedEdits
+      );
       expect(
         coreDispatch.clearEntityRecordEdits.mock.invocationCallOrder[0]
-      ).toBeGreaterThan(mockRefetch.mock.invocationCallOrder[0]);
-      expect(current.needsReload).toBe(false);
+      ).toBeLessThan(coreDispatch.editEntityRecord.mock.invocationCallOrder[0]);
+
+      // Restore never saves; canonical content changes only on explicit save.
+      expect(mockSave).not.toHaveBeenCalled();
+      expect(current.isOperationPending).toBe(false);
+    });
+
+    it('keeps newer edits when they arrive during a revision fetch', async () => {
+      const request = deferred<unknown>();
+      jest.mocked(apiFetch).mockReturnValue(request.promise as any);
+      let pending: Promise<RestoreResult>;
+      await act(async () => {
+        pending = current.restoreRevision(7);
+      });
+      mockCoreState.hasEdits = true;
+      await act(async () => {
+        request.resolve(REVISION_7);
+      });
+      expect(await pending!).toEqual({
+        success: false,
+        error: MESSAGES.restoreUnsaved,
+      });
+      expect(coreDispatch.clearEntityRecordEdits).not.toHaveBeenCalled();
+      expect(coreDispatch.editEntityRecord).not.toHaveBeenCalled();
+      expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it('persists the restored content only after an explicit save', async () => {
+      jest
+        .mocked(apiFetch)
+        .mockResolvedValueOnce(REVISION_7)
+        .mockResolvedValueOnce(mockRawRecord);
+
+      let result: RestoreResult | null = null;
+      await act(async () => {
+        result = await current.restoreRevision(7);
+      });
+      expect(result).toEqual({ success: true });
+      expect(mockSave).not.toHaveBeenCalled();
+
+      // The editor now holds the restored content as unsaved edits.
+      mockCoreState.hasEdits = true;
+      mockSave = setupEntityRecord({
+        hasEdits: true,
+        edits: { content: 'Revision seven' },
+      });
+      render();
+
+      let saved: boolean | null = null;
+      await act(async () => {
+        saved = await current.saveNow();
+      });
+
+      expect(saved).toBe(true);
+      expect(mockSave).toHaveBeenCalledTimes(1);
+      expect(mockOnSuccess).toHaveBeenCalledWith(MESSAGES.saved);
     });
 
     it('refuses without a request or invalidation while core-data reports unsaved edits', async () => {
@@ -700,97 +806,59 @@ describe('useTemplateEditor', () => {
       expect(coreDispatch.invalidateResolution).not.toHaveBeenCalled();
     });
 
-    it('returns safe copy and leaves core-data untouched when the restore fails', async () => {
+    it('returns a safe error and leaves core-data untouched when the revision request fails', async () => {
       jest.mocked(apiFetch).mockRejectedValue({
-        code: 'restore_failed',
+        code: 'rest_invalid_param',
         message: RAW_SERVER_ERROR,
       });
 
-      let result: RestoreResult = { success: true };
+      let result: RestoreResult | null = null;
       await act(async () => {
         result = await current.restoreRevision(7);
       });
 
       expect(result).toEqual({ success: false, error: MESSAGES.restoreFailed });
       expect(JSON.stringify(result)).not.toContain('SQLSTATE');
-      expect(coreDispatch.invalidateResolution).not.toHaveBeenCalled();
+      expect(shownMessages().join(' ')).not.toContain(RAW_SERVER_ERROR);
       expect(coreDispatch.clearEntityRecordEdits).not.toHaveBeenCalled();
+      expect(coreDispatch.editEntityRecord).not.toHaveBeenCalled();
+      expect(mockSave).not.toHaveBeenCalled();
       expect(current.isOperationPending).toBe(false);
-      expect(current.needsReload).toBe(false);
     });
 
-    it.each([
-      ['rejects', () => mockRefetch.mockRejectedValue(new Error('500'))],
-      ['returns nothing', () => mockRefetch.mockResolvedValue(undefined)],
-    ])(
-      'reports a successful restore truthfully and locks the stale editor when the refetch %s',
-      async (_label, failRefetch) => {
-        jest.mocked(apiFetch).mockResolvedValue({ success: true } as any);
-        failRefetch();
+    it('refuses an incomplete revision payload before touching editor state', async () => {
+      jest.mocked(apiFetch).mockResolvedValue({ id: 7, title: 'My Template' });
 
-        let result: RestoreResult = { success: false };
-        await act(async () => {
-          result = await current.restoreRevision(7);
-        });
-
-        // The server restored the revision, so it is not reported as failed.
-        expect(result).toEqual({ success: true, needsReload: true });
-        expect(current.needsReload).toBe(true);
-        expect(coreDispatch.clearEntityRecordEdits).not.toHaveBeenCalled();
-
-        // Nothing may write the stale editor content back.
-        mockSave = setupEntityRecord({
-          hasEdits: true,
-          edits: { content: 'stale' },
-        });
-        render();
-        await act(async () => {
-          expect(await current.saveNow()).toBe(false);
-          expect(await current.publish()).toBe(false);
-          expect(await current.duplicate()).toEqual({ success: false });
-        });
-        expect(mockSave).not.toHaveBeenCalled();
-      }
-    );
-
-    it('does not autosave stale content after a failed refetch', async () => {
-      jest.mocked(apiFetch).mockResolvedValue({ success: true } as any);
-      mockRefetch.mockRejectedValue(new Error('500'));
+      let result: RestoreResult | null = null;
       await act(async () => {
-        await current.restoreRevision(7);
+        result = await current.restoreRevision(7);
       });
 
-      jest.useFakeTimers();
-      try {
-        mockSave = setupEntityRecord({
-          hasEdits: true,
-          edits: { content: 'stale' },
-        });
-        render();
-        act(() => {
-          jest.advanceTimersByTime(5000);
-        });
-        expect(mockSave).not.toHaveBeenCalled();
-      } finally {
-        jest.useRealTimers();
-      }
+      // getRecoveryEdits rejects partial payloads before any edit is written.
+      expect(result).toEqual({ success: false, error: MESSAGES.restoreFailed });
+      expect(coreDispatch.clearEntityRecordEdits).not.toHaveBeenCalled();
+      expect(coreDispatch.editEntityRecord).not.toHaveBeenCalled();
     });
 
-    it('sends one restore request when called twice at once', async () => {
-      const request = deferred<unknown>();
-      jest.mocked(apiFetch).mockReturnValue(request.promise as any);
+    it('sends one revision request when called twice at once', async () => {
+      const request = deferred<typeof REVISION_7>();
+      jest
+        .mocked(apiFetch)
+        .mockReturnValueOnce(request.promise as any)
+        .mockResolvedValueOnce(mockRawRecord);
 
       let first: Promise<RestoreResult> = Promise.resolve({ success: false });
       let second: RestoreResult = { success: true };
       await act(async () => {
         first = current.restoreRevision(7);
         second = await current.restoreRevision(7);
-        request.resolve({ success: true });
+        request.resolve(REVISION_7);
       });
 
+      // The second call is ignored while the first restore owns the operation.
       expect(second).toEqual({ success: false });
       expect(await first).toEqual({ success: true });
-      expect(apiFetch).toHaveBeenCalledTimes(1);
+      expect(apiFetch).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -825,7 +893,11 @@ describe('useTemplateEditor', () => {
         mockCoreState.hasEdits = false;
       });
       render();
-      jest.mocked(apiFetch).mockResolvedValue({ id: 99 } as any);
+      // Duplicate returns a new record; restore returns the native revision payload.
+      jest
+        .mocked(apiFetch)
+        .mockResolvedValueOnce({ id: 99 } as any)
+        .mockResolvedValue(REVISION_7);
 
       await act(async () => {
         expect(await current.saveNow()).toBe(true);

@@ -100,23 +100,6 @@ final class Template_Meta_Authorization_Test extends Test_Case {
 		self::assertSame( 'Original subject', get_post_meta( $this->template_id, 'campaignbridge_subject', true ) );
 	}
 
-	public function test_a_user_without_the_template_capability_cannot_restore_revisioned_meta(): void {
-		$revision_id = (int) array_key_first( wp_get_post_revisions( $this->template_id ) );
-		$this->dispatch(
-			'PUT',
-			"/wp/v2/cb_templates/{$this->template_id}",
-			array( 'meta' => array( 'campaignbridge_subject' => 'Current subject' ) )
-		);
-
-		wp_set_current_user( $this->create_test_user( array( 'role' => 'editor' ) ) );
-		$request = new WP_REST_Request( 'POST', "/campaignbridge/v1/templates/{$this->template_id}/revisions/{$revision_id}/restore" );
-		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
-		$response = rest_get_server()->dispatch( $request );
-
-		self::assertSame( 403, $response->get_status() );
-		self::assertSame( 'Current subject', get_post_meta( $this->template_id, 'campaignbridge_subject', true ) );
-	}
-
 	public function test_rest_saves_store_sanitized_template_meta(): void {
 		$response = $this->dispatch(
 			'PUT',

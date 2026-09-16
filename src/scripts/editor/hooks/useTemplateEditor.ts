@@ -5,11 +5,14 @@ import {
   useEntityBlockEditor,
   useEntityRecord,
 } from '@wordpress/core-data';
-import { dispatch, resolveSelect, select, useSelect } from '@wordpress/data';
+import { dispatch, select, useSelect } from '@wordpress/data';
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import type { SaveStatus } from '../types';
+import { getRecoveryEdits } from '../utils/autosaveRecovery';
+import type { RecoveryRecord } from '../utils/autosaveRecovery';
 import { buildDuplicatePayload } from '../utils/templateDuplication';
+import { useAutosaveRecovery } from './useAutosaveRecovery';
 import { TEMPLATE_LIST_QUERY } from './useTemplates';
 
 const AUTOSAVE_DELAY_MS = 2000;
@@ -38,6 +41,7 @@ export type NoticeOptions = {
 interface UseTemplateEditorOptions {
   postId: number;
   postType: string;
+  revisionedMetaKeys?: readonly string[];
   /**
    * Server-provided meta keys a duplicate copies. Without them duplication
    * refuses rather than copying an unclassified field.
@@ -60,8 +64,6 @@ export interface RestoreResult {
   success: boolean;
   /** Operator-facing message; absent when a request is simply ignored. */
   error?: string;
-  /** The server restored the revision but the editor could not load it. */
-  needsReload?: boolean;
 }
 
 type CanonicalOperation = 'duplicate' | 'restore';
@@ -95,7 +97,7 @@ export const editorMessages = {
     __('Template could not be published. Please try again.', 'campaignbridge'),
   autosaveFailed: () =>
     __(
-      'Your recovery copy could not be saved. Your changes are still in the editor.',
+      'Autosave failed. Your changes are still in the editor.',
       'campaignbridge'
     ),
   duplicateFailed: () =>
@@ -109,11 +111,6 @@ export const editorMessages = {
     ),
   restoreUnsaved: () =>
     __('Save your changes before restoring a revision.', 'campaignbridge'),
-  restoreRefreshFailed: () =>
-    __(
-      'The revision was restored, but the editor could not load it. Reload the editor to continue.',
-      'campaignbridge'
-    ),
 };
 
 /**
@@ -125,6 +122,7 @@ export const editorMessages = {
 export function useTemplateEditor({
   postId,
   postType,
+  revisionedMetaKeys = [],
   duplicableMetaKeys,
   onSuccess,
   onError,
@@ -137,12 +135,17 @@ export function useTemplateEditor({
     { id: postId } as any
   );
 
-  const { isSaving, loadError, saveError } = useSelect(
+  const { isSaving, isAutosaving, loadError, saveError } = useSelect(
     select => {
       const core = select(coreStore) as any;
 
       return {
         isSaving: core.isSavingEntityRecord('postType', postType, postId),
+        isAutosaving: core.isAutosavingEntityRecord(
+          'postType',
+          postType,
+          postId
+        ),
         loadError: core.getResolutionError('getEntityRecord', [
           'postType',
           postType,
@@ -161,10 +164,6 @@ export function useTemplateEditor({
   const operationRef = useRef<CanonicalOperation | null>(null);
   const [pendingOperation, setPendingOperation] =
     useState<CanonicalOperation | null>(null);
-  // Set when the server restored a revision the editor could not load. The
-  // editor then holds replaced content, so nothing may be written from it.
-  const needsReloadRef = useRef(false);
-  const [needsReload, setNeedsReload] = useState(false);
   // core-data checks for edits before it takes its per-record save lock, so
   // two Save or Publish calls in the same tick would each send a canonical
   // save. This ref admits one until it settles.
@@ -179,21 +178,48 @@ export function useTemplateEditor({
     };
   }, []);
 
+  const canRestoreAutosave = useCallback(() => {
+    const core = select(coreStore) as any;
+    return !(
+      operationRef.current ||
+      savingRef.current ||
+      core.isSavingEntityRecord('postType', postType, postId) ||
+      core.hasEditsForEntityRecord('postType', postType, postId)
+    );
+  }, [postId, postType]);
+  const recovery = useAutosaveRecovery(
+    postType,
+    postId,
+    Boolean(record) && !isResolving,
+    canRestoreAutosave
+  );
+  const recoveryBlocked = recovery.blocksPersistence;
+
+  // Completion feedback only; dirty state and persistence remain in core-data.
+  const [autosavedSource, setAutosavedSource] = useState<
+    readonly unknown[] | null
+  >(null);
+
   // WordPress-native autosave: POSTs to /autosaves endpoint, preserves status,
   // does not create a revision. The useEntityRecord save function accepts
   // options (isAutosave, throwOnError) even though the type omits them.
-  const autosave = useCallback(async () => {
-    try {
-      await (save as (opts?: { isAutosave?: boolean }) => Promise<void>)({
-        isAutosave: true,
-      });
-    } catch {
-      // A background recovery write: the edits stay in the editor.
-      onError?.(editorMessages.autosaveFailed(), {
-        id: EDITOR_NOTICE_IDS.autosave,
-      });
-    }
-  }, [onError, save]);
+  const autosave = useCallback(
+    async (source: readonly unknown[]) => {
+      try {
+        await (save as (opts?: { isAutosave?: boolean }) => Promise<void>)({
+          isAutosave: true,
+        });
+        setAutosavedSource(source);
+      } catch {
+        setAutosavedSource(null);
+        // A background recovery write: the edits stay in the editor.
+        onError?.(editorMessages.autosaveFailed(), {
+          id: EDITOR_NOTICE_IDS.autosave,
+        });
+      }
+    },
+    [onError, save]
+  );
 
   // The autosaved fields. Published templates stay dirty after an autosave and
   // a failed autosave keeps its edits, so dirty state alone would re-arm the
@@ -205,7 +231,7 @@ export function useTemplateEditor({
   const editedMeta = edits?.meta;
 
   useEffect(() => {
-    if (!hasEdits || isResolving || isSaving || needsReload) {
+    if (!hasEdits || isResolving || isSaving || recoveryBlocked) {
       return;
     }
 
@@ -217,7 +243,7 @@ export function useTemplateEditor({
 
     const timer = window.setTimeout(() => {
       lastAutosaveSourceRef.current = source;
-      void autosave();
+      void autosave(source);
     }, AUTOSAVE_DELAY_MS);
 
     return () => window.clearTimeout(timer);
@@ -229,8 +255,8 @@ export function useTemplateEditor({
     hasEdits,
     isResolving,
     isSaving,
-    needsReload,
     rawBlocks,
+    recoveryBlocked,
   ]);
 
   useEffect(() => {
@@ -248,20 +274,19 @@ export function useTemplateEditor({
   }, [hasEdits]);
 
   /**
-   * Duplicate and restore act on the saved template. They refuse while
+   * Duplicate and restore start from the saved template. They refuse while
    * core-data reports unsaved canonical edits (a recovery autosave does not
-   * clear those), while a save is running, while another of them runs, or
-   * while the editor must reload. State is read from core-data at call time
-   * so no caller can bypass it.
+   * clear those), while a save is running, or while another of them runs.
+   * State is read from core-data at call time so no caller can bypass it.
    */
   const canonicalOperationBlocker = useCallback(():
     'busy' | 'unsaved' | null => {
     const core = select(coreStore) as any;
 
     if (
+      recoveryBlocked ||
       operationRef.current ||
       savingRef.current ||
-      needsReloadRef.current ||
       core.isSavingEntityRecord('postType', postType, postId)
     ) {
       return 'busy';
@@ -270,7 +295,7 @@ export function useTemplateEditor({
     return core.hasEditsForEntityRecord('postType', postType, postId)
       ? 'unsaved'
       : null;
-  }, [postId, postType]);
+  }, [postId, postType, recoveryBlocked]);
 
   const runCanonicalOperation = useCallback(
     async <T>(
@@ -294,18 +319,18 @@ export function useTemplateEditor({
       return true;
     }
 
-    if (
-      isSaving ||
-      savingRef.current ||
-      operationRef.current ||
-      needsReloadRef.current
-    ) {
+    if (recoveryBlocked || savingRef.current || operationRef.current) {
       return false;
     }
 
     savingRef.current = true;
     try {
       await save();
+      setAutosavedSource(null);
+      dispatch(coreStore).invalidateResolution('getAutosaves', [
+        postType,
+        postId,
+      ]);
       onSuccess?.(editorMessages.saved());
       return true;
     } catch {
@@ -315,14 +340,14 @@ export function useTemplateEditor({
     } finally {
       savingRef.current = false;
     }
-  }, [hasEdits, isSaving, onError, onSuccess, save]);
+  }, [hasEdits, onError, onSuccess, save, recoveryBlocked, postType, postId]);
 
   const publish = useCallback(async () => {
     if (
-      isSaving ||
+      recoveryBlocked ||
+      (isSaving && !isAutosaving) ||
       savingRef.current ||
-      operationRef.current ||
-      needsReloadRef.current
+      operationRef.current
     ) {
       return false;
     }
@@ -342,6 +367,11 @@ export function useTemplateEditor({
         status: 'publish',
       });
       await save();
+      setAutosavedSource(null);
+      dispatch(coreStore).invalidateResolution('getAutosaves', [
+        postType,
+        postId,
+      ]);
       onSuccess?.(editorMessages.published());
       return true;
     } catch {
@@ -359,7 +389,16 @@ export function useTemplateEditor({
     } finally {
       savingRef.current = false;
     }
-  }, [isSaving, onError, onSuccess, postId, postType, save]);
+  }, [
+    isAutosaving,
+    isSaving,
+    onError,
+    onSuccess,
+    postId,
+    postType,
+    save,
+    recoveryBlocked,
+  ]);
 
   const duplicate = useCallback(async (): Promise<DuplicateResult> => {
     const blocker = canonicalOperationBlocker();
@@ -428,61 +467,68 @@ export function useTemplateEditor({
         return { success: false, error: editorMessages.restoreUnsaved() };
       }
 
+      // Like autosave recovery, restoring a revision loads its content into
+      // the editor as unsaved edits; the canonical template stays unchanged
+      // until an explicit save. Data comes from WordPress's native
+      // single-revision route.
       return runCanonicalOperation('restore', async () => {
         try {
-          await apiFetch({
-            path: `/campaignbridge/v1/templates/${postId}/revisions/${revisionId}/restore`,
-            method: 'POST',
+          // context=edit is required for WordPress to include the raw
+          // title/content fields; a view-context payload has no .raw and must
+          // be rejected as incomplete.
+          const revision = await apiFetch<RecoveryRecord>({
+            path: `/wp/v2/${postType}/${postId}/revisions/${revisionId}?context=edit`,
           });
+
+          const canonical = await apiFetch<TemplateRecord>({
+            path: `/wp/v2/${postType}/${postId}?context=edit`,
+          });
+
+          // A partial payload must be rejected before any editor state is
+          // touched. getRecoveryEdits throws on incomplete data.
+          const edits = getRecoveryEdits(
+            revision,
+            canonical.meta,
+            revisionedMetaKeys
+          );
+
+          // Refuse if edits arrived during the revision fetch.
+          if (
+            (select(coreStore) as any).hasEditsForEntityRecord(
+              'postType',
+              postType,
+              postId
+            )
+          ) {
+            return { success: false, error: editorMessages.restoreUnsaved() };
+          }
+
+          // A clean editor may still hold transient parsed blocks that would
+          // otherwise win over the new content; clear them so
+          // useEntityBlockEditor parses the revision. The template was clean
+          // when this started and the history modal blocks editing meanwhile.
+          const core = dispatch(coreStore) as any;
+          core.clearEntityRecordEdits('postType', postType, postId);
+          core.editEntityRecord('postType', postType, postId, edits);
+          return { success: true };
         } catch {
+          // A failed fetch or incomplete payload changed nothing canonical.
           return { success: false, error: editorMessages.restoreFailed() };
         }
-
-        // The server has restored the revision; from here a failure is a
-        // refresh failure, not a restore failure.
-        const core = dispatch(coreStore) as any;
-        try {
-          core.invalidateResolution('getEntityRecord', [
-            'postType',
-            postType,
-            postId,
-          ]);
-          const refreshed = await (
-            resolveSelect(coreStore) as any
-          ).getEntityRecord('postType', postType, postId);
-          if (!refreshed) {
-            throw new Error('The restored template did not load.');
-          }
-        } catch {
-          needsReloadRef.current = true;
-          setNeedsReload(true);
-          return { success: true, needsReload: true };
-        }
-
-        // The editor keeps parsed blocks as a transient edit that core-data
-        // prefers over the refetched record, which would leave the replaced
-        // content on screen. The template was clean before the restore and
-        // the history modal blocks editing during it; clear only if that
-        // still holds.
-        if (
-          !(select(coreStore) as any).hasEditsForEntityRecord(
-            'postType',
-            postType,
-            postId
-          )
-        ) {
-          core.clearEntityRecordEdits('postType', postType, postId);
-        }
-
-        return { success: true };
       });
     },
-    [canonicalOperationBlocker, postType, postId, runCanonicalOperation]
+    [
+      canonicalOperationBlocker,
+      postType,
+      postId,
+      revisionedMetaKeys,
+      runCanonicalOperation,
+    ]
   );
 
   const saveStatus: SaveStatus = saveError
     ? 'error'
-    : isSaving
+    : isSaving && !isAutosaving
       ? 'saving'
       : hasEdits
         ? 'dirty'
@@ -492,10 +538,19 @@ export function useTemplateEditor({
     blocks: (rawBlocks ?? []) as Block[],
     duplicate,
     hasEdits,
-    isOperationPending: pendingOperation !== null,
+    isAutosaving,
+    hasAutosaved:
+      autosavedSource !== null &&
+      !saveError &&
+      (!hasEdits ||
+        [rawBlocks, editedTitle, editedExcerpt, editedMeta].every(
+          (value, index) => value === autosavedSource[index]
+        )),
+    isPersisting: isSaving,
+    recovery,
+    isOperationPending: pendingOperation !== null || recoveryBlocked,
     isResolving: isResolving || !hasStarted,
     loadError,
-    needsReload,
     onChange,
     onInput,
     publish,

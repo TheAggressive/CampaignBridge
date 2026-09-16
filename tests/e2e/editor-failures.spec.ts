@@ -10,8 +10,6 @@ const MESSAGES = {
   publishFailed: 'Template could not be published. Please try again.',
   duplicateFailed: 'This template could not be duplicated.',
   restoreFailed: 'This revision could not be restored. Please try again.',
-  restoreRefreshFailed:
-    'The revision was restored, but the editor could not load it. Reload the editor to continue.',
 };
 
 type ApiFetch = <T>(
@@ -62,8 +60,9 @@ function matches(request: Request, method: string, route: RegExp): boolean {
 }
 
 const createRoute = /\/wp\/v2\/cb_templates(?:[?&]|$)/;
-const restoreRoute =
-  /\/campaignbridge\/v1\/templates\/\d+\/revisions\/\d+\/restore/;
+// The editor restores by fetching the native single-revision payload.
+const singleRevisionRoute =
+  /\/wp\/v2\/cb_templates\/\d+\/revisions\/\d+(?:[?&]|$)/;
 
 function canonicalRoute(templateId: number): RegExp {
   return new RegExp(`/wp/v2/cb_templates/${templateId}(?:[?&]|$)`);
@@ -315,8 +314,8 @@ test.describe('CampaignBridge editor failure UX (E2E)', () => {
     const { id } = await openTemplate(page, created, 'publish');
     const confirm = await openHistoryAndConfirmVersionA(page);
 
-    await failRequests(page, 'POST', restoreRoute);
-    const failed = waitForResponse(page, 'POST', restoreRoute);
+    await failRequests(page, 'GET', singleRevisionRoute);
+    const failed = waitForResponse(page, 'GET', singleRevisionRoute);
     await confirm.click();
     expect((await failed).status()).toBe(500);
 
@@ -326,47 +325,52 @@ test.describe('CampaignBridge editor failure UX (E2E)', () => {
     await expectNoRawServerText(page);
     const items = page.locator('.cb-editor__revision-item');
     await expect(items).toHaveCount(2);
+    // The failed fetch mutated no editor state.
+    expect(await isDirty(page, id)).toBe(false);
+    await expect(textBlock(page)).toHaveText('Version B');
     const retryRestore = items.nth(1).getByRole('button', { name: 'Restore' });
     await expect(retryRestore).toBeEnabled();
     expect((await getTemplate(page, id)).content.raw).toContain('Version B');
 
+    // A retry with a working server applies the revision as unsaved edits only.
     await page.unrouteAll({ behavior: 'ignoreErrors' });
     await retryRestore.click();
-    const restored = waitForResponse(page, 'POST', restoreRoute);
+    const restored = waitForResponse(page, 'GET', singleRevisionRoute);
     await page.locator('.cb-editor__revision-restore-confirm').click();
     expect((await restored).status()).toBe(200);
     await expect(page.locator('.cb-editor__revision-items')).toBeHidden();
     await expect(textBlock(page)).toHaveText('Version A');
+    expect(await isDirty(page, id)).toBe(true);
+    // Canonical content stays Version B until an explicit Save.
+    expect((await getTemplate(page, id)).content.raw).toContain('Version B');
   });
 
-  test('E: a restore whose editor refresh fails is reported truthfully', async ({
+  test('E: a successful restore applies the revision as unsaved changes only', async ({
     page,
   }) => {
     const { id } = await openTemplate(page, created, 'publish');
     const confirm = await openHistoryAndConfirmVersionA(page);
+    const urlBefore = page.url();
 
-    // The restore itself succeeds; only the editor's reload of the template fails.
-    await failRequests(page, 'GET', canonicalRoute(id));
-    const restored = waitForResponse(page, 'POST', restoreRoute);
-    const refreshFailed = waitForResponse(page, 'GET', canonicalRoute(id));
+    // The restore fetches the native single-revision payload.
+    const restored = waitForResponse(page, 'GET', singleRevisionRoute);
     await confirm.click();
     expect((await restored).status()).toBe(200);
-    expect((await refreshFailed).status()).toBe(500);
+    await expect(page.locator('.cb-editor__revision-items')).toBeHidden();
 
-    await expect(
-      page.getByRole('alert').filter({ hasText: MESSAGES.restoreRefreshFailed })
-    ).toBeVisible();
-    await expect(page.getByText(MESSAGES.restoreFailed)).toHaveCount(0);
-    await expectNoRawServerText(page);
-    // No stale editor content remains that could be saved over the restore.
-    await expect(page.locator('iframe[name="editor-canvas"]')).toHaveCount(0);
-    await expect(page.locator('.cb-editor__save-button')).toHaveCount(0);
-
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
-    expect((await getTemplate(page, id)).content.raw).toContain('Version A');
-
-    await page.getByRole('button', { name: 'Reload editor' }).click();
+    // The editor canvas shows the revision as unsaved changes.
     await expect(textBlock(page)).toHaveText('Version A');
-    expect(await isDirty(page, id)).toBe(false);
+    expect(await isDirty(page, id)).toBe(true);
+    const saveButton = page.locator('.cb-editor__save-button');
+    await expect(saveButton).toHaveText('Save');
+
+    // The canonical saved template stays Version B until an explicit Save.
+    expect((await getTemplate(page, id)).content.raw).toContain('Version B');
+
+    // No full-page reload or reload prompt: same session and URL.
+    expect(page.url()).toBe(urlBefore);
+    await expect(
+      page.getByRole('button', { name: 'Reload editor' })
+    ).toHaveCount(0);
   });
 });
