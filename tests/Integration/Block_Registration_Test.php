@@ -286,20 +286,25 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'Blocks are not built. Run npm run build to generate blocks.' );
 		}
 
-		$container = \WP_Block_Type_Registry::get_instance()->get_registered( 'campaignbridge/container' );
+		$registry = \WP_Block_Type_Registry::get_instance();
 
-		$this->assertNotNull( $container );
-		$this->assertNotEmpty( $container->editor_script_handles );
+		foreach ( $this->expected_blocks() as $block_name ) {
+			$block = $registry->get_registered( $block_name );
 
-		$handle = $container->editor_script_handles[0];
-		$script = wp_scripts()->registered[ $handle ] ?? null;
+			$this->assertNotNull( $block );
+			$this->assertNotEmpty( $block->editor_script_handles );
 
-		$this->assertInstanceOf( \_WP_Dependency::class, $script );
-		$this->assertStringStartsWith(
-			\CampaignBridge_Plugin::url() . 'dist/blocks/container/',
-			$script->src,
-			'Block asset URLs must resolve through the installed plugin directory.'
-		);
+			$handle = $block->editor_script_handles[0];
+			$script = wp_scripts()->registered[ $handle ] ?? null;
+			$slug   = substr( $block_name, strlen( 'campaignbridge/' ) );
+
+			$this->assertInstanceOf( \_WP_Dependency::class, $script );
+			$this->assertStringStartsWith(
+				\CampaignBridge_Plugin::url() . "dist/blocks/{$slug}/",
+				$script->src,
+				"Block asset URL for '{$block_name}' must resolve through the installed plugin directory."
+			);
+		}
 	}
 
 	/**
