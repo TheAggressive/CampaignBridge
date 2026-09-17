@@ -94,7 +94,13 @@ class Blocks {
 	 * @return string The full path to the blocks build directory.
 	 */
 	private static function get_build_directory(): string {
-		return trailingslashit( \CampaignBridge_Plugin::path() ) . self::BUILD_DIR;
+		$plugin_basename = \CampaignBridge_Plugin::basename();
+		$plugin_dirname  = dirname( $plugin_basename );
+		$installed_path  = '.' === $plugin_dirname
+			? WP_PLUGIN_DIR
+			: WP_PLUGIN_DIR . '/' . $plugin_dirname;
+
+		return trailingslashit( $installed_path ) . self::BUILD_DIR;
 	}
 
 	/**
