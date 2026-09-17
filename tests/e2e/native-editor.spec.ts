@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Request } from './support/fixtures';
 import AxeBuilder from '@axe-core/playwright';
+import { dismissEditorWelcomeGuide } from './support/editor';
 
 const NEW_TEMPLATE_PATH = '/wp-admin/post-new.php?post_type=cb_templates';
 
@@ -35,6 +36,7 @@ async function waitForNativeEditor(page: Page): Promise<void> {
         'cb_templates' && wp?.blocks?.getBlockType?.('campaignbridge/container')
     );
   });
+  await dismissEditorWelcomeGuide(page);
   await expect(page.locator('#campaignbridge-native-editor-js')).toHaveCount(1);
   await expect(
     page.locator('#cb-campaignbridge-block-editor-script-js')

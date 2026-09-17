@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { AxeResults, Result } from 'axe-core';
+import { dismissEditorWelcomeGuide } from './support/editor';
 import { expect, test, type Page } from './support/fixtures';
 
 const NEW_TEMPLATE_PATH = '/wp-admin/post-new.php?post_type=cb_templates';
@@ -36,6 +37,7 @@ async function waitForNativeEditor(page: Page): Promise<number> {
         'cb_templates' && wp?.blocks?.getBlockType?.('campaignbridge/container')
     );
   });
+  await dismissEditorWelcomeGuide(page);
 
   return page.evaluate(() => {
     const wp = (globalThis as typeof globalThis & { wp: any }).wp;
