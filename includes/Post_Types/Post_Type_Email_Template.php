@@ -327,7 +327,7 @@ class Post_Type_Email_Template {
 			'public'              => false,
 			'publicly_queryable'  => true,
 			'show_ui'             => true,
-			'show_in_menu'        => false,
+			'show_in_menu'        => 'campaignbridge',
 			'show_in_admin_bar'   => false,
 			'show_in_nav_menus'   => false,
 			'show_in_rest'        => true,
@@ -359,6 +359,17 @@ class Post_Type_Email_Template {
 				'excerpt',
 				'custom-fields',
 				'revisions',
+			),
+			'template'            => array(
+				array(
+					'campaignbridge/container',
+					array(
+						'lock' => array(
+							'move'   => false,
+							'remove' => true,
+						),
+					),
+				),
 			),
 			'rewrite'             => false,
 			'query_var'           => false,
