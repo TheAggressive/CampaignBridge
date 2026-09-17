@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace CampaignBridge\REST\Helpers;
+namespace CampaignBridge\Admin;
 
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
 
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Replaces the site theme palette with the email brand kit.
  *
- * Core's get_block_editor_settings() copies theme.json into the standalone
+ * Core's get_block_editor_settings() supplies theme.json values to the native
  * editor. Email cannot honour that palette, so the Styles sidebar must be
  * shown the same slots the compiler resolves.
  */

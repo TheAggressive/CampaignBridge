@@ -2,11 +2,25 @@ import apiFetch from '@wordpress/api-fetch';
 import { serialize } from '@wordpress/blocks';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { useSelect } from '@wordpress/data';
-import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import type { EmailPreviewResponse } from '../types';
 
 const PREVIEW_PATH = '/campaignbridge/v1/preview';
+
+interface EmailPreviewResponse {
+  html: string;
+  diagnostics: Array<{
+    severity: string;
+    code: string;
+    message: string;
+  }>;
+}
 
 export type PreviewStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -22,6 +36,7 @@ export interface EmailPreview {
   compiledAt?: number;
   durationMs?: number;
   content?: string;
+  title?: string;
 }
 
 const EMPTY_DIAGNOSTICS = {
@@ -48,10 +63,12 @@ export interface UseEmailPreview {
  * `POST /preview` endpoint and expose the resulting HTML and
  * diagnostics to the preview UI.
  *
- * Must be rendered inside the `BlockEditorProvider` scoped data registry so
- * the `core/block-editor` selectors resolve against the active template.
+ * Reads the `core/block-editor` store owned by WordPress's native post editor.
  */
-export function useEmailPreview(postId: number): UseEmailPreview {
+export function useEmailPreview(
+  postId: number,
+  title: string
+): UseEmailPreview {
   const [preview, setPreview] = useState<EmailPreview>(INITIAL_STATE);
 
   const requestId = useRef(0);
@@ -66,6 +83,7 @@ export function useEmailPreview(postId: number): UseEmailPreview {
   }, [postId]);
 
   const blocks = useSelect(select => select(blockEditorStore).getBlocks(), []);
+  const serializedContent = useMemo(() => serialize(blocks), [blocks]);
 
   const requestPreview = useCallback(async () => {
     const id = ++requestId.current;
@@ -77,15 +95,13 @@ export function useEmailPreview(postId: number): UseEmailPreview {
     });
 
     try {
-      const serialized = serialize(blocks);
-
       const response = await apiFetch<EmailPreviewResponse>({
         path: PREVIEW_PATH,
         method: 'POST',
         data: {
           template_id: postId,
-          content: serialized,
-          metadata: {},
+          content: serializedContent,
+          metadata: { title },
         },
       });
 
@@ -105,7 +121,8 @@ export function useEmailPreview(postId: number): UseEmailPreview {
               : 1) || (typeof legacyWidth === 'number' ? legacyWidth : 600),
         compiledAt: Date.now(),
         durationMs: performance.now() - started,
-        content: serialized,
+        content: serializedContent,
+        title,
         html: response.html,
         diagnostics: {
           errors: (response.diagnostics ?? []).filter(
@@ -130,7 +147,7 @@ export function useEmailPreview(postId: number): UseEmailPreview {
         ),
       });
     }
-  }, [blocks, postId]);
+  }, [blocks, postId, serializedContent, title]);
 
   const resetPreview = useCallback(() => {
     requestId.current++;
@@ -142,7 +159,8 @@ export function useEmailPreview(postId: number): UseEmailPreview {
     requestPreview,
     resetPreview,
     isStale:
-      preview.content !== undefined && preview.content !== serialize(blocks),
+      preview.content !== undefined &&
+      (preview.content !== serializedContent || preview.title !== title),
   };
 }
 

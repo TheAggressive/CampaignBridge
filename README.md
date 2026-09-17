@@ -18,10 +18,9 @@ content before it reaches a provider.
 
 ## What is available now
 
-- A dedicated email-template post type and standalone block editor.
+- A dedicated email-template post type in WordPress's native block editor.
 - A WordPress-native template lifecycle: draft creation, Save, Publish,
-  autosave, revision history with safe restore, and duplication of the
-  reusable template definition.
+  autosave, and revision history.
 - An email-native block grammar with deterministic HTML and plain-text output.
 - Compiled previews with visible validation diagnostics.
 - A Brand Kit for portable colors and typography.
@@ -36,7 +35,7 @@ or reporting.
 
 ## Current workflow
 
-1. Open **CampaignBridge > Template Editor** in WordPress admin.
+1. Open **CampaignBridge > Email Templates** in WordPress admin.
 2. Create a template with the CampaignBridge email blocks.
 3. Configure the Brand Kit and template metadata.
 4. Compile the template and resolve preview diagnostics before publishing it.

@@ -8,8 +8,8 @@ import { media, mediaAndText, stack } from '@wordpress/icons';
  * The same three compositions as the Post Card patterns (stacked, media
  * left, media right) exposed as inserter variations, so any layout can be
  * inserted with a single click. The inner block templates mirror the
- * pattern content in src/scripts/editor/utils/blockPatterns.ts; keep the
- * two in sync.
+ * post-card examples and fixture content; keep those definitions aligned when
+ * changing the variation.
  *
  * Variations are scoped to the inserter so they are never auto-applied to an
  * existing card. The Post Card editor (see edit.tsx) additionally exposes an

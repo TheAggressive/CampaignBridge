@@ -31,9 +31,10 @@ The compiler foundation now replaces the prototype rendering paths:
   snapshots, depth, and block-count violations;
 - HTML, plain text, diagnostics, versions, and a deterministic fingerprint are
   returned together;
-- the standalone editor registers only compiler-supported CampaignBridge blocks;
-- the standalone editor uses core-data entity editing, core undo/redo, and the
-  core block canvas instead of parallel parsing, history, and persistence code;
+- the native WordPress editor registers only compiler-supported CampaignBridge
+  blocks for `cb_templates`;
+- WordPress Core owns entity editing, undo/redo, the block canvas, history, and
+  persistence while CampaignBridge supplies email-specific extensions;
 - new templates remain drafts through autosave and start with one canonical
   container;
 - block `render.php`, `Email_Generator`, `BlockProcessor`, `CssProcessor`, and
@@ -58,7 +59,7 @@ Existing prototype templates are not a compatibility boundary for the compiler.
 5. **Use explicit renderers.** One registered renderer owns each supported block
    name. Duplicate registration fails during composition.
 6. **Expose only native email blocks.** Core and third-party frontend blocks are
-   rejected compiler input and are not registered in the standalone editor.
+   rejected compiler input and are not registered for email templates.
 7. **Fail closed.** Unsupported blocks, invalid nesting, unresolved required
    content, or compliance failures prevent approval and delivery.
 8. **Snapshot before approval.** Post bindings resolve to immutable content before
@@ -141,25 +142,25 @@ There is no compatibility facade or parallel transport renderer.
 
 This is the exact compiler/editor allowlist after the clean cutover:
 
-| Block name                    | Role                   | Key constraints                              |
-| ----------------------------- | ---------------------- | -------------------------------------------- |
-| `campaignbridge/container`    | One document root      | Exactly one root; 320–900 px; locked         |
-| `campaignbridge/section`      | Full-width content row | Child of container; spacing/background       |
-| `campaignbridge/text`         | Rich email text        | Safe inline marks and HTTPS links only       |
-| `campaignbridge/heading`      | Heading                | Levels 1–4; portable typography              |
-| `campaignbridge/image`        | Email image            | HTTPS URL, dimensions, explicit alt choice   |
-| `campaignbridge/button`       | Bulletproof CTA        | HTTPS URL, alignment, Outlook VML fallback   |
-| `campaignbridge/divider`      | Horizontal divider     | Bounded width/thickness and style allowlist  |
-| `campaignbridge/spacer`       | Vertical spacing       | Bounded 4–120 px height                      |
-| `campaignbridge/post-card`    | Immutable post binding | Child of container/section; snapshot needed; padding, background |
-| `campaignbridge/post-image`   | Featured image binding | Child of post card or column; width, align, link-to-post, decorative |
-| `campaignbridge/post-title`   | Post title binding | Child of post card or column; levels 1–4, align, colour, link-to-post |
-| `campaignbridge/post-excerpt` | Post excerpt binding | Child of post card or column; 10–150 words, align, colour, 12–24px |
-| `campaignbridge/post-button`  | Post button binding | Article, parent, archive, custom; HTTPS; button or text link |
-| `campaignbridge/preheader`    | Hidden inbox preview   | First child of container; at most one; 1-150 characters |
-| `campaignbridge/columns`      | One or two columns     | Child of section; 1-2 columns; gap 0-48 px   |
-| `campaignbridge/column`       | Column content         | Child of columns; width 20-80% totalling 100 |
-| `campaignbridge/compliance-footer` | Sender and unsubscribe controls | Last child of container; at most one; address required |
+| Block name                         | Role                            | Key constraints                                                       |
+| ---------------------------------- | ------------------------------- | --------------------------------------------------------------------- |
+| `campaignbridge/container`         | One document root               | Exactly one root; 320–900 px; locked                                  |
+| `campaignbridge/section`           | Full-width content row          | Child of container; spacing/background                                |
+| `campaignbridge/text`              | Rich email text                 | Safe inline marks and HTTPS links only                                |
+| `campaignbridge/heading`           | Heading                         | Levels 1–4; portable typography                                       |
+| `campaignbridge/image`             | Email image                     | HTTPS URL, dimensions, explicit alt choice                            |
+| `campaignbridge/button`            | Bulletproof CTA                 | HTTPS URL, alignment, Outlook VML fallback                            |
+| `campaignbridge/divider`           | Horizontal divider              | Bounded width/thickness and style allowlist                           |
+| `campaignbridge/spacer`            | Vertical spacing                | Bounded 4–120 px height                                               |
+| `campaignbridge/post-card`         | Immutable post binding          | Child of container/section; snapshot needed; padding, background      |
+| `campaignbridge/post-image`        | Featured image binding          | Child of post card or column; width, align, link-to-post, decorative  |
+| `campaignbridge/post-title`        | Post title binding              | Child of post card or column; levels 1–4, align, colour, link-to-post |
+| `campaignbridge/post-excerpt`      | Post excerpt binding            | Child of post card or column; 10–150 words, align, colour, 12–24px    |
+| `campaignbridge/post-button`       | Post button binding             | Article, parent, archive, custom; HTTPS; button or text link          |
+| `campaignbridge/preheader`         | Hidden inbox preview            | First child of container; at most one; 1-150 characters               |
+| `campaignbridge/columns`           | One or two columns              | Child of section; 1-2 columns; gap 0-48 px                            |
+| `campaignbridge/column`            | Column content                  | Child of columns; width 20-80% totalling 100                          |
+| `campaignbridge/compliance-footer` | Sender and unsubscribe controls | Last child of container; at most one; address required                |
 
 ### Planned v1 native blocks
 
@@ -268,8 +269,7 @@ Exit gate:
 
 Deliverables:
 
-- Remove core-block registration and core-based patterns from the standalone
-  editor.
+- Remove core-block registration and core-based patterns from the email editor.
 - Replace prototype CampaignBridge schemas directly with the documented native
   contracts.
 - Recreate starter templates from native blocks and keep normal WordPress

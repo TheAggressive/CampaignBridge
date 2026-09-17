@@ -104,7 +104,7 @@ includes/
   Services/Email/         Email compiler components
 src/
   blocks/                 Authored CampaignBridge blocks
-  scripts/editor/         Standalone template editor shell
+  scripts/editor/         Native editor extensions and compiled preview UI
   scripts/admin/          Admin form behavior
   styles/                 Authored CSS
 dist/                     Generated runtime assets

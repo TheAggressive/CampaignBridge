@@ -26,7 +26,7 @@ $campaignbridge_mailchimp_status    = $screen ? $screen->get( 'mailchimp_status'
 $campaignbridge_mailchimp_audiences = $screen ? $screen->get( 'mailchimp_audiences', array() ) : array();
 $campaignbridge_audience_error      = $screen ? $screen->get( 'mailchimp_audience_error', '' ) : '';
 $campaignbridge_is_mailchimp        = 'mailchimp' === $campaignbridge_provider;
-$campaignbridge_editor_url          = admin_url( 'admin.php?page=campaignbridge-editor' );
+$campaignbridge_templates_url       = admin_url( 'edit.php?post_type=cb_templates' );
 $campaignbridge_audience_options    = is_array( $campaignbridge_mailchimp_audiences ) ? $campaignbridge_mailchimp_audiences : array();
 if ( '' !== $campaignbridge_mailchimp_audience && ! isset( $campaignbridge_audience_options[ $campaignbridge_mailchimp_audience ] ) ) {
 	$campaignbridge_audience_options[ $campaignbridge_mailchimp_audience ] = __( 'Current audience (temporarily unavailable)', 'campaignbridge' );
@@ -113,7 +113,7 @@ $form = Form::make( 'providers' )
 			<div class="campaignbridge-providers__html-mark" aria-hidden="true">&lt;/&gt;</div>
 			<div><h2 id="campaignbridge-html-provider-title"><?php esc_html_e( 'HTML Email', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Compile and export provider-ready HTML without connecting an external account.', 'campaignbridge' ); ?></p></div>
 			<span class="cb-admin-badge cb-admin-badge--success"><?php esc_html_e( 'Always available', 'campaignbridge' ); ?></span>
-			<a class="button" href="<?php echo esc_url( $campaignbridge_editor_url ); ?>"><?php esc_html_e( 'Open editor', 'campaignbridge' ); ?></a>
+			<a class="button" href="<?php echo esc_url( $campaignbridge_templates_url ); ?>"><?php esc_html_e( 'Manage templates', 'campaignbridge' ); ?></a>
 		</section>
 
 		<section class="campaignbridge-providers__available" aria-labelledby="campaignbridge-available-title">
