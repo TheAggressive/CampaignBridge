@@ -110,6 +110,7 @@ test.describe('CampaignBridge accessibility (WCAG 2.1 AA)', () => {
     const results = await new AxeBuilder({ page })
       .include('.cb-editor__preview-modal-frame')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .setLegacyMode()
       .analyze();
     const blocking = blockingViolations(results);
 
