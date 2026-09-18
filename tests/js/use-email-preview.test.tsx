@@ -8,6 +8,7 @@ import {
 } from '../../src/scripts/editor/hooks/useEmailPreview';
 
 let mockContent = 'first';
+let mockTitle = 'First title';
 jest.mock('@wordpress/api-fetch', () => ({
   __esModule: true,
   default: jest.fn(),
@@ -18,7 +19,7 @@ jest.mock('@wordpress/data', () => ({ useSelect: () => mockContent }));
 
 let current: UseEmailPreview;
 function Harness() {
-  current = useEmailPreview(42);
+  current = useEmailPreview(42, mockTitle);
   return null;
 }
 
@@ -30,6 +31,7 @@ describe('useEmailPreview', () => {
       globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
     mockContent = 'first';
+    mockTitle = 'First title';
     jest.mocked(apiFetch).mockReset();
     container = document.createElement('div');
     root = createRoot(container);
@@ -51,9 +53,36 @@ describe('useEmailPreview', () => {
     expect(current.isStale).toBe(false);
     expect(apiFetch).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        data: { template_id: 42, content: 'edited', metadata: {} },
+        data: {
+          template_id: 42,
+          content: 'edited',
+          metadata: { title: 'First title' },
+        },
       })
     );
+  });
+
+  it('includes the unsaved title and treats title changes as stale', async () => {
+    jest.mocked(apiFetch).mockResolvedValue({
+      html: '<title>First title</title>',
+      diagnostics: [],
+    });
+    await act(async () => current.requestPreview());
+    expect(current.isStale).toBe(false);
+
+    mockTitle = 'Unsaved title';
+    act(() => root.render(<Harness />));
+    expect(current.isStale).toBe(true);
+
+    await act(async () => current.requestPreview());
+    expect(apiFetch).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: { title: 'Unsaved title' },
+        }),
+      })
+    );
+    expect(current.isStale).toBe(false);
   });
 
   it('ignores an in-flight response after reset', async () => {

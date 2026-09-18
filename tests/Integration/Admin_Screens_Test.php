@@ -13,6 +13,8 @@ declare( strict_types = 1 );
 namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Admin\Admin;
+use CampaignBridge\Admin\Core\Screen_Asset_Loader;
+use CampaignBridge\Admin\Core\Screen_Context;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
 /**
@@ -145,190 +147,6 @@ class Admin_Screens_Test extends Test_Case {
 		$this->assertTrue( true );
 	}
 
-	/**
-	 * Test that editor screen initializes correctly.
-	 */
-	public function test_editor_screen_initializes_correctly(): void {
-		// Create and set admin user
-		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $user_id );
-
-		$this->simulate_admin_screen_load( 'editor' );
-
-		ob_start();
-		$this->render_editor_screen();
-		$output = ob_get_clean();
-
-		// Verify editor screen structure
-		$this->assertStringContainsString( 'cb-block-editor-root', $output, 'Should contain editor root div' );
-		$this->assertStringContainsString( 'editor-screen', $output, 'Should contain editor CSS classes' );
-
-		// The editor receives the canonical duplication allowlist from the template model.
-		$document = new \DOMDocument();
-		$document->loadHTML( (string) $output, LIBXML_NOERROR );
-		$root = $document->getElementById( 'cb-block-editor-root' );
-		$this->assertInstanceOf( \DOMElement::class, $root );
-		$this->assertSame(
-			\CampaignBridge\Post_Types\Post_Type_Email_Template::get_duplicable_meta_keys(),
-			json_decode( $root->getAttribute( 'data-duplicable-meta-keys' ), true )
-		);
-	}
-
-	/**
-	 * Test that editor assets are available during the admin enqueue phase.
-	 */
-	public function test_editor_assets_are_enqueued_before_render(): void {
-		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $user_id );
-
-		$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
-			\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
-			'campaignbridge'
-		);
-		$enqueue  = $this->get_reflection_method( $registry, 'enqueue_screen_assets' );
-		$config   = require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/editor_config.php';
-		$enqueue->invoke( $registry, 'editor', 'single', $config );
-
-		$styles = wp_styles();
-		$script = wp_scripts();
-		$handle = 'cb-campaignbridge-block-editor-styles';
-
-		$this->assertArrayHasKey( $handle, $styles->registered );
-		$this->assertSame( 'dist/styles/editor/editor.asset.php', $config['assets']['asset_styles']['campaignbridge-block-editor-styles']['src'] );
-		$this->assertContains( 'wp-edit-post', $styles->registered[ $handle ]->deps );
-		$this->assertArrayHasKey( 'cb-campaignbridge-block-editor-script', $script->registered );
-	}
-
-	/**
-	 * Test that the standalone editor does not load unrelated form assets.
-	 */
-	public function test_editor_skips_shared_form_assets(): void {
-		$style_handles  = array(
-			'campaignbridge-admin-global-styles',
-			'campaignbridge-admin-form-styles',
-		);
-		$script_handles = array(
-			'campaignbridge-encrypted-fields',
-			'campaignbridge-form-validation',
-			'campaignbridge-form-loading',
-		);
-
-		foreach ( $style_handles as $handle ) {
-			wp_dequeue_style( $handle );
-		}
-		foreach ( $script_handles as $handle ) {
-			wp_dequeue_script( $handle );
-		}
-
-		Admin::get_instance()->enqueue_global_assets( 'campaignbridge_page_campaignbridge-editor' );
-
-		$this->assertTrue( wp_style_is( 'campaignbridge-admin-global-styles', 'enqueued' ) );
-		$this->assertFalse( wp_style_is( 'campaignbridge-admin-form-styles', 'enqueued' ) );
-		foreach ( $script_handles as $handle ) {
-			$this->assertFalse( wp_script_is( $handle, 'enqueued' ) );
-		}
-	}
-
-	/**
-	 * Test that the editor primes core api-fetch data for the current template.
-	 */
-	public function test_editor_preloads_template_data(): void {
-		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $user_id );
-		$template_id = $this->create_test_post(
-			array(
-				'post_type'   => 'cb_templates',
-				'post_status' => 'draft',
-			)
-		);
-
-		$_GET['post_id'] = (string) $template_id;
-		Admin::get_instance()->enqueue_global_assets( 'campaignbridge_page_campaignbridge-editor' );
-		$inline_scripts = wp_scripts()->get_data( 'wp-api-fetch', 'after' );
-		unset( $_GET['post_id'] );
-
-		$this->assertIsArray( $inline_scripts );
-		$preload_script = str_replace( '\\/', '/', implode( "\n", $inline_scripts ) );
-		$this->assertStringContainsString( 'createPreloadingMiddleware', $preload_script );
-		$this->assertStringContainsString( '/wp/v2/cb_templates/' . $template_id . '?context=edit', $preload_script );
-		$this->assertStringContainsString( '/campaignbridge/v1/editor-settings?post_type=cb_templates', $preload_script );
-		$this->assertStringContainsString( 'post_id=' . $template_id, $preload_script );
-	}
-
-	/**
-	 * Test that application screens suppress every classic admin notice channel.
-	 */
-	public function test_editor_request_suppresses_classic_admin_notice_hooks(): void {
-		global $wp_filter;
-
-		$notice_hooks = array( 'admin_notices', 'all_admin_notices', 'network_admin_notices', 'user_admin_notices' );
-		$originals    = array();
-		$callback     = static function (): void {};
-
-		foreach ( $notice_hooks as $notice_hook ) {
-			$originals[ $notice_hook ] = isset( $wp_filter[ $notice_hook ] ) ? clone $wp_filter[ $notice_hook ] : null;
-			add_action( $notice_hook, $callback );
-		}
-
-		try {
-			$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
-				\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
-				'campaignbridge'
-			);
-			$prepare  = $this->get_reflection_method( $registry, 'prepare_screen_request' );
-			$config   = require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/editor_config.php';
-
-			$prepare->invoke( $registry, null, $config['application_screen'] );
-
-			foreach ( $notice_hooks as $notice_hook ) {
-				$this->assertFalse( has_action( $notice_hook ) );
-			}
-		} finally {
-			foreach ( $originals as $notice_hook => $original ) {
-				if ( null === $original ) {
-					unset( $wp_filter[ $notice_hook ] );
-				} else {
-					$wp_filter[ $notice_hook ] = $original;
-				}
-			}
-		}
-	}
-
-	/**
-	 * Test that the editor screen owns its application notice boundary.
-	 */
-	public function test_editor_screen_owns_notice_boundary(): void {
-		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $user_id );
-
-		$registry = new \CampaignBridge\Admin\Core\Screen_Registry(
-			\CampaignBridge_Plugin::path() . 'includes/Admin/Screens/',
-			'campaignbridge'
-		);
-		$render   = $this->get_reflection_method( $registry, 'render_screen' );
-		$notice   = static function ( string $screen_name ): void {
-			if ( 'editor' === $screen_name ) {
-				echo '<div id="campaignbridge-editor-test-notice"></div>';
-			}
-		};
-
-		add_action( 'campaignbridge_form_notices', $notice );
-		ob_start();
-		$render->invoke(
-			$registry,
-			'editor',
-			'single',
-			null,
-			array( 'page_title' => 'Editor' )
-		);
-		$output = (string) ob_get_clean();
-		remove_action( 'campaignbridge_form_notices', $notice );
-
-		$this->assertStringContainsString( 'campaignbridge-screen--editor', $output );
-		$this->assertStringContainsString( '<h1 class="screen-reader-text">Editor</h1>', $output );
-		$this->assertStringContainsString( 'cb-block-editor-root', $output );
-		$this->assertStringNotContainsString( 'campaignbridge-editor-test-notice', $output );
-	}
 
 	/**
 	 * Test that repeater test screen works with repeater fields.
@@ -390,6 +208,43 @@ class Admin_Screens_Test extends Test_Case {
 	}
 
 	/**
+	 * Test that screen assets are delegated to a dedicated loader.
+	 */
+	public function test_screen_asset_loader_enqueues_configured_assets(): void {
+		global $screen;
+
+		Screen_Asset_Loader::enqueue(
+			'settings',
+			'tabbed',
+			array(
+				'assets' => array(
+					'styles'  => array(
+						'screen-style' => 'dist/styles/screen.css',
+					),
+					'scripts' => array(
+						'screen-script' => array(
+							'src'  => 'dist/scripts/screen.js',
+							'deps' => array( 'wp-data' ),
+						),
+					),
+				),
+			)
+		);
+
+		$this->assertInstanceOf( Screen_Context::class, $screen );
+		$this->assertSame(
+			array(
+				'name'        => 'settings',
+				'type'        => 'tabbed',
+				'current_tab' => null,
+			),
+			$screen->get_screen_info()
+		);
+		$this->assertTrue( wp_style_is( 'cb-screen-style', 'enqueued' ) );
+		$this->assertTrue( wp_script_is( 'cb-screen-script', 'enqueued' ) );
+	}
+
+	/**
 	 * Test that controllers provide real data to screens.
 	 */
 	public function test_controllers_provide_real_data_to_screens(): void {
@@ -444,10 +299,6 @@ class Admin_Screens_Test extends Test_Case {
 				$screen->set( $key, $value );
 			}
 		}
-
-		// Set additional variables that screens might expect
-		global $templateId;
-		$templateId = 1; // Default template ID for editor screen
 	}
 
 	/**
@@ -489,15 +340,6 @@ class Admin_Screens_Test extends Test_Case {
 		global $screen;
 		require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/settings/_config.php';
 		require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/settings/general.php';
-	}
-
-	/**
-	 * Render editor screen.
-	 */
-	private function render_editor_screen(): void {
-		global $screen, $templateId;
-		$templateId = 1; // Set template ID for editor screen
-		require \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/editor.php';
 	}
 
 	/**

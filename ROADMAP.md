@@ -46,7 +46,7 @@ but it is not yet a complete campaign-management and delivery product.
 
 | Area | Shipped today | Remaining product boundary |
 | --- | --- | --- |
-| Template authoring | Standalone `core-data` editor; draft/save/publish; autosave; native revisions with paginated history and safe restore; allowlisted duplication; constrained CampaignBridge block grammar | Dynamic content selection/snapshot and campaign-level review workflow |
+| Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained CampaignBridge block grammar | Dynamic content selection/snapshot and campaign-level review workflow |
 | Email generation | Deterministic HTML/plain compiler; renderer registry; compiled preview; shared resolved email design; Brand Kit; theme `campaignbridge/email.json`; structured diagnostics; artifact fingerprinting | M1 closeout: content snapshots, portable personalization, remaining preflight/compliance gaps, representative client fixtures |
 | Providers | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery foundations; HTML export boundary | Remote draft/content handoff, test send, guarded schedule/send/cancel, reconciliation/reporting |
 | Campaigns | Provider-neutral campaign state/state-machine foundations | Durable campaign/snapshot/attempt/audit storage and canonical workflows |

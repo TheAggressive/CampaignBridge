@@ -57,9 +57,6 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^8.68.0
         version: 8.68.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
-      '@wordpress/annotations':
-        specifier: ^3.54.0
-        version: 3.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@wordpress/api-fetch':
         specifier: ^7.54.0
         version: 7.54.0
@@ -72,18 +69,12 @@ importers:
       '@wordpress/components':
         specifier: ^40.0.0
         version: 40.0.0(@date-fns/tz@1.5.0)(@emotion/is-prop-valid@1.4.0)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(stylelint@16.26.1(typescript@5.9.3))
-      '@wordpress/compose':
-        specifier: ^8.7.0
-        version: 8.7.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@wordpress/core-data':
         specifier: ^7.54.0
         version: 7.54.0(@date-fns/tz@1.5.0)(@emotion/is-prop-valid@1.4.0)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(stylelint@16.26.1(typescript@5.9.3))
       '@wordpress/data':
         specifier: ^10.54.0
         version: 10.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@wordpress/data-controls':
-        specifier: ^4.54.0
-        version: 4.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@wordpress/dataviews':
         specifier: ^18.1.0
         version: 18.1.0(@emotion/is-prop-valid@1.4.0)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(stylelint@16.26.1(typescript@5.9.3))
@@ -114,24 +105,15 @@ importers:
       '@wordpress/icons':
         specifier: ^15.5.0
         version: 15.5.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@wordpress/interface':
-        specifier: ^10.0.0
-        version: 10.0.0(@date-fns/tz@1.5.0)(@emotion/is-prop-valid@1.4.0)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(stylelint@16.26.1(typescript@5.9.3))
-      '@wordpress/keyboard-shortcuts':
-        specifier: ^5.54.0
-        version: 5.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@wordpress/keycodes':
-        specifier: ^4.54.0
-        version: 4.54.0(@types/react@18.3.31)
       '@wordpress/notices':
         specifier: ^5.54.0
         version: 5.54.0(@date-fns/tz@1.5.0)(@emotion/is-prop-valid@1.4.0)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(stylelint@16.26.1(typescript@5.9.3))
+      '@wordpress/plugins':
+        specifier: ^7.54.0
+        version: 7.54.0(@date-fns/tz@1.5.0)(@emotion/is-prop-valid@1.4.0)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(stylelint@16.26.1(typescript@5.9.3))
       '@wordpress/scripts':
         specifier: ^34.2.0
         version: 34.2.0(@playwright/test@1.54.2)(@types/node@20.19.43)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(@typescript-eslint/eslint-plugin@8.68.0(@typescript-eslint/parser@8.68.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(@typescript-eslint/parser@8.68.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(babel-plugin-macros@3.1.0)(jiti@2.7.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(stylelint-scss@6.14.0(stylelint@16.26.1(typescript@5.9.3)))(type-fest@4.41.0)(typescript@5.9.3)
-      '@wordpress/url':
-        specifier: ^4.54.0
-        version: 4.54.0
       axe-core:
         specifier: ^4.13.0
         version: 4.13.0
@@ -2977,12 +2959,6 @@ packages:
       '@types/react':
         optional: true
 
-  '@wordpress/annotations@3.54.0':
-    resolution: {integrity: sha512-9o0KLhhPU5Io2fQk3BlW+VaJbuhDV8cA/Ulj5nNAqK5c/7z/tPHWz6dZSG/PLt8F7wSVsWT23tZUb/FIp76yzQ==}
-    engines: {node: '>=18.12.0', npm: '>=8.19.2'}
-    peerDependencies:
-      react: ^18 || ^19
-
   '@wordpress/api-fetch@7.54.0':
     resolution: {integrity: sha512-L3aijA4rSYdxcM0IDysZcAMhUN3xMibNZWDmSi3B+72Yc1OWClD2aRNbbx2OL7LfHmHOi/844J+KHqlaRJnB4A==}
     engines: {node: '>=18.12.0', npm: '>=8.19.2'}
@@ -3087,12 +3063,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  '@wordpress/data-controls@4.54.0':
-    resolution: {integrity: sha512-fy2xTtS5TmxVks7+ZbOMidUvcOEyfg/01WkeSNfYZwPgyhl1Qj8dV8D8MCJIGVUmxBZeLV1IH5TY4zpcd2NQ4Q==}
-    engines: {node: '>=18.12.0', npm: '>=8.19.2'}
-    peerDependencies:
-      react: ^18 || ^19
 
   '@wordpress/data@10.54.0':
     resolution: {integrity: sha512-JPgGSNjAD7+8SXTvXpORSo74Pf8pz4JPGyBiGsoEbfYs0VL2FeIb/QLIMQxtpKOxc6xjODLh0LBXhFbWUqTHkA==}
@@ -12557,19 +12527,6 @@ snapshots:
       - supports-color
       - vite
 
-  '@wordpress/annotations@3.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@wordpress/data': 10.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@wordpress/hooks': 4.54.0
-      '@wordpress/i18n': 6.27.0
-      '@wordpress/rich-text': 7.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react: 18.3.1
-      uuid: 14.0.2
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@types/react-dom'
-      - react-dom
-
   '@wordpress/api-fetch@7.54.0':
     dependencies:
       '@wordpress/i18n': 6.27.0
@@ -12940,17 +12897,6 @@ snapshots:
       - stylelint
       - supports-color
       - vite
-
-  '@wordpress/data-controls@4.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@wordpress/api-fetch': 7.54.0
-      '@wordpress/data': 10.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@wordpress/deprecated': 4.54.0
-      react: 18.3.1
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@types/react-dom'
-      - react-dom
 
   '@wordpress/data@10.54.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:

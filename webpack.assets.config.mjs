@@ -13,8 +13,17 @@ function buildEntries() {
   const cwd = process.cwd();
   const entries = {};
 
-  // Scripts: src/scripts/**/*.js -> dist/scripts/**/*.js (preserve structure)
-  const jsFiles = fg.sync('src/scripts/**/*.{js,ts,tsx}', { cwd });
+  // Build only public entry points: scripts directly inside a product area and
+  // nested index files. Imported helpers belong to their entry-point bundle and
+  // must not become independently shipped assets.
+  const jsFiles = fg.sync(
+    [
+      'src/scripts/*.{js,ts,tsx}',
+      'src/scripts/*/*.{js,ts,tsx}',
+      'src/scripts/**/index.{js,ts,tsx}',
+    ],
+    { cwd, unique: true }
+  );
   jsFiles.forEach(file => {
     // Keep the full relative path from src/scripts
     const rel = toPosix(

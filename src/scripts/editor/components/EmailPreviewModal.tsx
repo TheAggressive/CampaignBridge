@@ -1,17 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Modal, Spinner } from '@wordpress/components';
-import {
-  check,
-  code,
-  desktop,
-  mobile,
-  download,
-  error,
-  update,
-} from '@wordpress/icons';
+import { check, code, desktop, mobile, error, update } from '@wordpress/icons';
 import { __, _n, sprintf } from '@wordpress/i18n';
-import { formatPreviewSource } from '../utils/formatPreviewSource';
 import type { EmailPreview } from '../hooks/useEmailPreview';
+import EmailPreviewFrame from './EmailPreviewFrame';
+import EmailPreviewSourcePane from './EmailPreviewSourcePane';
 
 const DESKTOP_WIDTH = 600;
 const MOBILE_WIDTH = 390;
@@ -29,225 +22,6 @@ interface EmailPreviewModalProps {
   subject?: string;
   /** Whether the editor has unsaved edits newer than the current preview. */
   hasEdits?: boolean;
-}
-
-function formatByteSize(bytes: number): string {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} kB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function toFilenameSafe(slug: string): string {
-  return (
-    slug
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || 'email'
-  );
-}
-
-function SourcePane({
-  html,
-  title,
-}: {
-  html: string;
-  title: string;
-}): JSX.Element {
-  const [copied, setCopied] = useState(false);
-  const [copyError, setCopyError] = useState(false);
-  const copyTimer = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => () => clearTimeout(copyTimer.current), []);
-  const sourceLines = useMemo(
-    () => formatPreviewSource(html).split('\n'),
-    [html]
-  );
-  const byteSize = useMemo(() => new Blob([html]).size, [html]);
-
-  const handleCopy = useCallback(() => {
-    setCopyError(false);
-    void (async () => {
-      try {
-        await navigator.clipboard.writeText(html);
-        setCopied(true);
-        clearTimeout(copyTimer.current);
-        copyTimer.current = setTimeout(() => setCopied(false), 2000);
-      } catch {
-        setCopyError(true);
-      }
-    })();
-  }, [html]);
-
-  const handleDownload = useCallback(() => {
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${toFilenameSafe(title)}.html`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  }, [html, title]);
-
-  return (
-    <aside
-      className='cb-editor__preview-source-pane'
-      role='region'
-      aria-label={__('Compiled HTML source', 'campaignbridge')}
-    >
-      <div className='cb-editor__preview-source-header'>
-        <div className='cb-editor__preview-source-meta'>
-          <span className='cb-editor__preview-source-title'>
-            {__('Compiled HTML', 'campaignbridge')}
-          </span>
-          <span className='cb-editor__preview-source-badge'>
-            {formatByteSize(byteSize)}
-          </span>
-        </div>
-        <div className='cb-editor__preview-source-actions'>
-          {copied ? (
-            <span
-              className='cb-editor__preview-source-copied'
-              role='status'
-              aria-live='polite'
-            >
-              <span className='cb-editor__preview-source-copied-icon'>
-                {check}
-              </span>
-              {__('Copied!', 'campaignbridge')}
-            </span>
-          ) : (
-            <Button
-              variant='tertiary'
-              icon={code}
-              label={__('Copy HTML', 'campaignbridge')}
-              onClick={handleCopy}
-              className='cb-editor__preview-source-action'
-            />
-          )}
-          <Button
-            variant='tertiary'
-            icon={download}
-            label={__('Download .html', 'campaignbridge')}
-            onClick={handleDownload}
-            className='cb-editor__preview-source-action'
-          />
-        </div>
-      </div>
-      {copyError && (
-        <p role='alert'>
-          {__(
-            'Could not copy. Select the source below or download the HTML.',
-            'campaignbridge'
-          )}
-        </p>
-      )}
-      <div className='cb-editor__preview-source-body'>
-        <pre className='cb-editor__preview-source-code'>
-          <code>
-            {sourceLines.map((line, index) => (
-              <span className='cb-editor__preview-source-line' key={index}>
-                <span
-                  className='cb-editor__preview-source-line-number'
-                  aria-hidden='true'
-                >
-                  {index + 1}
-                </span>
-                <span className='cb-editor__preview-source-line-text'>
-                  {line || ' '}
-                </span>
-              </span>
-            ))}
-          </code>
-        </pre>
-      </div>
-    </aside>
-  );
-}
-
-/**
- * Renders the compiled email inside a sandboxed iframe whose height tracks
- * the full rendered document height. The preview workspace (not the iframe)
- * is the single vertical scroll surface — the iframe itself never scrolls.
- *
- * The frame is same-origin (via `sandbox="allow-same-origin"`), so the
- * `ResizeObserver` can read the inner
- * `body.scrollHeight` and resize the host iframe to match.
- */
-function IframeResizeObserver({
-  html,
-  width,
-  title,
-}: {
-  html: string;
-  width: number;
-  title: string;
-}): JSX.Element {
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const srcDoc = html;
-  const [height, setHeight] = useState(600);
-  const cleanup = useRef<(() => void) | undefined>();
-  const observeDocument = useCallback(() => {
-    cleanup.current?.();
-    const frame = iframeRef.current;
-    const body = frame?.contentDocument?.body;
-    if (!frame || !body) return;
-    const measure = () => {
-      // Body bounds can shrink, unlike documentElement.scrollHeight which
-      // includes the current iframe viewport height.
-      const next = Math.ceil(
-        Math.max(body.getBoundingClientRect().height, body.scrollHeight)
-      );
-      if (next > 0) setHeight(next);
-    };
-    measure();
-    const observer =
-      typeof ResizeObserver === 'undefined'
-        ? undefined
-        : new ResizeObserver(measure);
-    observer?.observe(body);
-    body.addEventListener('load', measure, true);
-    cleanup.current = () => {
-      observer?.disconnect();
-      body.removeEventListener('load', measure, true);
-    };
-  }, []);
-  useEffect(() => {
-    observeDocument();
-    return () => cleanup.current?.();
-  }, [srcDoc, width, observeDocument]);
-
-  return (
-    <div
-      className='cb-editor__preview-iframe'
-      style={{
-        width,
-        maxWidth: '100%',
-        margin: '0 auto',
-        height: height > 0 ? height : 600,
-      }}
-    >
-      <iframe
-        ref={iframeRef}
-        title={title}
-        srcDoc={srcDoc}
-        onLoad={observeDocument}
-        sandbox='allow-same-origin'
-        scrolling='no'
-        style={{
-          width: '100%',
-          height: '100%',
-          border: 0,
-          display: 'block',
-        }}
-      />
-    </div>
-  );
 }
 
 export default function EmailPreviewModal({
@@ -475,11 +249,9 @@ export default function EmailPreviewModal({
             <span className='cb-editor__preview-status-icon' aria-hidden='true'>
               {statusTone === 'ok'
                 ? check
-                : statusTone === 'stale'
-                  ? update
-                  : statusTone === 'warning'
-                    ? update
-                    : error}
+                : statusTone === 'error'
+                  ? error
+                  : update}
             </span>
             <span className='cb-editor__preview-status-label'>
               {statusText}
@@ -496,7 +268,13 @@ export default function EmailPreviewModal({
         </div>
 
         <div className='cb-editor__preview-body'>
-          <div ref={canvasRef} className='cb-editor__preview-canvas'>
+          <div
+            ref={canvasRef}
+            className='cb-editor__preview-canvas'
+            role='region'
+            aria-label={__('Email preview canvas', 'campaignbridge')}
+            tabIndex={0}
+          >
             {preview.status === 'idle' && (
               <div className='cb-editor__preview-state'>
                 <p>
@@ -592,7 +370,7 @@ export default function EmailPreviewModal({
                   </div>
                 )}
                 <div className='cb-editor__preview-email'>
-                  <IframeResizeObserver
+                  <EmailPreviewFrame
                     html={preview.html}
                     width={
                       viewport === 'mobile'
@@ -607,7 +385,10 @@ export default function EmailPreviewModal({
           </div>
 
           {sourceOpen && preview.status === 'success' && (
-            <SourcePane html={preview.html} title={title || 'email'} />
+            <EmailPreviewSourcePane
+              html={preview.html}
+              title={title || 'email'}
+            />
           )}
         </div>
         <footer

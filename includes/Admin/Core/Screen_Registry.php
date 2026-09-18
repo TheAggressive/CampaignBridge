@@ -179,8 +179,8 @@ class Screen_Registry {
 		// Hook: on page load (for form handling).
 		\add_action(
 			"load-{$hook}",
-			function () use ( $controller, $config ) {
-				$this->prepare_screen_request( $controller, ! empty( $config['application_screen'] ) );
+			function () use ( $controller ) {
+				$this->prepare_screen_request( $controller );
 			}
 		);
 
@@ -189,7 +189,7 @@ class Screen_Registry {
 			'admin_enqueue_scripts',
 			function ( $hook_suffix ) use ( $hook, $screen_name, $type, $config ) {
 				if ( $hook_suffix === $hook ) {
-					$this->enqueue_screen_assets( $screen_name, $type, $config );
+					Screen_Asset_Loader::enqueue( $screen_name, $type, $config );
 				}
 			}
 		);
@@ -198,23 +198,12 @@ class Screen_Registry {
 	/**
 	 * Prepare a registered screen request before WordPress renders the admin header.
 	 *
-	 * @param mixed $controller         The screen controller instance.
-	 * @param bool  $application_screen Whether the screen owns its complete notice UI.
+	 * @param mixed $controller The screen controller instance.
 	 * @return void
 	 */
-	private function prepare_screen_request( $controller, bool $application_screen ): void {
+	private function prepare_screen_request( $controller ): void {
 		if ( is_object( $controller ) && method_exists( $controller, 'handle_request' ) ) {
 			$controller->handle_request();
-		}
-
-		if ( ! $application_screen ) {
-			return;
-		}
-
-		// Application screens use the editor notice store. Classic callbacks render
-		// outside the InterfaceSkeleton and can obscure its fixed toolbar.
-		foreach ( array( 'admin_notices', 'all_admin_notices', 'network_admin_notices', 'user_admin_notices' ) as $notice_hook ) {
-			remove_all_actions( $notice_hook );
 		}
 	}
 
@@ -229,7 +218,6 @@ class Screen_Registry {
 	 */
 	private function render_screen( string $screen_name, string $type, $controller, array $config ): void {
 		$screen_class = sanitize_html_class( $screen_name );
-		$title_class  = 'editor' === $screen_name ? 'screen-reader-text' : '';
 
 		// Buffer the complete screen so notices can stay above the product header.
 		ob_start();
@@ -242,8 +230,7 @@ class Screen_Registry {
 			$this->render_product_header( $config );
 		} else {
 			printf(
-				'<h1 class="%s">%s</h1>',
-				esc_attr( $title_class ),
+				'<h1>%s</h1>',
 				esc_html( $config['page_title'] )
 			);
 		}
@@ -263,19 +250,15 @@ class Screen_Registry {
 		// Get the buffered screen content.
 		$screen_content = ob_get_clean();
 
-		// Application screens own their notice lifecycle. Rendering classic admin
-		// notices over a fixed InterfaceSkeleton obscures its editor toolbar.
-		if ( 'editor' !== $screen_name ) {
-			settings_errors( 'campaignbridge_form' );
+		settings_errors( 'campaignbridge_form' );
 
-			// Screen processing is complete, so render its notices in WordPress's
-			// standard position before the form content.
-			\CampaignBridge\Notices::render();
+		// Screen processing is complete, so render its notices in WordPress's
+		// standard position before the form content.
+		\CampaignBridge\Notices::render();
 
-			// Fire custom hooks only for registered screens.
-			if ( $this->is_valid_screen_name( $screen_name ) ) {
-				do_action( 'campaignbridge_form_notices', $screen_name );
-			}
+		// Fire custom hooks only for registered screens.
+		if ( $this->is_valid_screen_name( $screen_name ) ) {
+			do_action( 'campaignbridge_form_notices', $screen_name );
 		}
 
 		// Output the screen content. Since we control all HTML generation server-side and
@@ -290,7 +273,7 @@ class Screen_Registry {
 	 * @param array<string, mixed> $config Screen configuration.
 	 */
 	private function render_product_header( array $config ): void {
-		$editor_url = \admin_url( 'admin.php?page=campaignbridge-editor' );
+		$editor_url = \admin_url( 'edit.php?post_type=cb_templates' );
 		?>
 		<header class="cb-admin-product-header campaignbridge-product-header">
 			<div class="campaignbridge-product-header__identity">
@@ -302,7 +285,7 @@ class Screen_Registry {
 			</div>
 			<div class="campaignbridge-product-header__actions">
 				<span class="campaignbridge-version">v<?php echo esc_html( \CampaignBridge_Plugin::VERSION ); ?></span>
-				<a class="button button-primary" href="<?php echo esc_url( $editor_url ); ?>"><?php esc_html_e( 'Open Template Editor', 'campaignbridge' ); ?><span class="dashicons dashicons-external"></span></a>
+				<a class="button button-primary" href="<?php echo esc_url( $editor_url ); ?>"><?php esc_html_e( 'Manage Templates', 'campaignbridge' ); ?><span class="dashicons dashicons-external"></span></a>
 			</div>
 		</header>
 		<?php
@@ -751,72 +734,5 @@ class Screen_Registry {
 
 		// Add Controller suffix and namespace.
 		return "CampaignBridge\\Admin\\Controllers\\{$class_name}_Controller";
-	}
-
-	/**
-	 * Enqueue screen-specific assets.
-	 *
-	 * @param string               $screen_name The name of the screen.
-	 * @param string               $type The type of screen.
-	 * @param array<string, mixed> $config The configuration array.
-	 * @return void
-	 */
-	private function enqueue_screen_assets( string $screen_name, string $type, array $config ): void {
-		global $screen;
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- GET parameter for tab navigation, not form processing.
-		$screen = new Screen_Context( $screen_name, $type, isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : null, null );
-
-		// Traditional assets.
-		if ( isset( $config['assets']['styles'] ) ) {
-			foreach ( $config['assets']['styles'] as $handle => $src ) {
-				$screen->enqueue_style( $handle, $src );
-			}
-		}
-
-		if ( isset( $config['assets']['scripts'] ) ) {
-			foreach ( $config['assets']['scripts'] as $handle => $script ) {
-				$src  = is_array( $script ) ? $script['src'] : $script;
-				$deps = is_array( $script ) && isset( $script['deps'] ) ? $script['deps'] : array( 'jquery' );
-				$screen->enqueue_script( $handle, $src, $deps );
-			}
-		}
-
-		// Built assets.
-		if ( isset( $config['assets']['asset_styles'] ) ) {
-			foreach ( $config['assets']['asset_styles'] as $handle => $asset_data ) {
-				if ( is_string( $asset_data ) ) {
-					$screen->asset_enqueue_style( $handle, $asset_data );
-				} elseif ( is_array( $asset_data ) ) {
-					$asset_file = $asset_data['src'] ?? $asset_data['path'] ?? '';
-					if ( $asset_file ) {
-						$screen->asset_enqueue_style( $handle, $asset_file, $asset_data['deps'] ?? array() );
-					}
-				}
-			}
-		}
-
-		if ( isset( $config['assets']['asset_scripts'] ) ) {
-			foreach ( $config['assets']['asset_scripts'] as $handle => $asset_data ) {
-				if ( is_string( $asset_data ) ) {
-					$screen->asset_enqueue_script( $handle, $asset_data );
-				} elseif ( is_array( $asset_data ) ) {
-					$asset_file = $asset_data['src'] ?? $asset_data['path'] ?? '';
-					if ( $asset_file ) {
-						$screen->asset_enqueue_script(
-							$handle,
-							$asset_file,
-							$asset_data['deps'] ?? array(),
-							$asset_data['in_footer'] ?? true
-						);
-					}
-				}
-			}
-		}
-
-		if ( isset( $config['assets']['asset_both'] ) ) {
-			foreach ( $config['assets']['asset_both'] as $handle => $asset_file ) {
-				$screen->asset_enqueue( $handle, $asset_file );
-			}
-		}
 	}
 }

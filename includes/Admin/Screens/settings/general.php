@@ -23,7 +23,8 @@ $post_counts         = wp_count_posts( Post_Type_Email_Template::POST_TYPE );
 $template_count      = isset( $post_counts->publish ) ? (int) $post_counts->publish : 0;
 $brand_configured    = (bool) Storage::get_option( 'campaignbridge_brand_kit', false );
 $completed_steps     = (int) $brand_configured + (int) $mailchimp_connected + (int) ( $template_count > 0 );
-$editor_url          = admin_url( 'admin.php?page=campaignbridge-editor' );
+$templates_url       = admin_url( 'edit.php?post_type=cb_templates' );
+$new_template_url    = admin_url( 'post-new.php?post_type=cb_templates' );
 $providers_url       = add_query_arg( 'tab', 'providers' );
 $brand_url           = add_query_arg( 'tab', 'brand' );
 $integrations        = $screen ? (array) $screen->get( 'integrations', array() ) : array();
@@ -79,12 +80,12 @@ $form = Form::make( 'general_settings' )
 			<p><?php esc_html_e( 'Turn WordPress content into on-brand email templates and deliver them through your favorite providers.', 'campaignbridge' ); ?></p>
 			<div class="campaignbridge-general__actions">
 				<?php if ( 0 === $template_count ) : ?>
-					<a class="button button-primary" href="<?php echo esc_url( $editor_url ); ?>"><?php esc_html_e( 'Open Template Editor', 'campaignbridge' ); ?></a>
+					<a class="button button-primary" href="<?php echo esc_url( $new_template_url ); ?>"><?php esc_html_e( 'Create a Template', 'campaignbridge' ); ?></a>
 				<?php elseif ( ! $mailchimp_connected ) : ?>
 					<a class="button button-primary" href="<?php echo esc_url( $providers_url ); ?>"><?php esc_html_e( 'Connect a provider', 'campaignbridge' ); ?></a>
-					<a class="button" href="<?php echo esc_url( $editor_url ); ?>"><?php esc_html_e( 'Open your templates', 'campaignbridge' ); ?></a>
+					<a class="button" href="<?php echo esc_url( $templates_url ); ?>"><?php esc_html_e( 'Open your templates', 'campaignbridge' ); ?></a>
 				<?php else : ?>
-					<a class="button button-primary" href="<?php echo esc_url( $editor_url ); ?>"><?php esc_html_e( 'Open Template Editor', 'campaignbridge' ); ?></a>
+					<a class="button button-primary" href="<?php echo esc_url( $templates_url ); ?>"><?php esc_html_e( 'Manage Templates', 'campaignbridge' ); ?></a>
 				<?php endif; ?>
 			</div>
 		</div>
@@ -97,7 +98,7 @@ $form = Form::make( 'general_settings' )
 			<ul>
 				<li class="<?php echo $brand_configured ? 'is-complete' : ''; ?>"><span class="dashicons <?php echo $brand_configured ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>"></span><a href="<?php echo esc_url( $brand_url ); ?>"><?php esc_html_e( 'Brand configured', 'campaignbridge' ); ?></a><small><?php esc_html_e( 'Your colors and typography are set.', 'campaignbridge' ); ?></small></li>
 				<li class="<?php echo $mailchimp_connected ? 'is-complete' : ''; ?>"><span class="dashicons <?php echo $mailchimp_connected ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>"></span><a href="<?php echo esc_url( $providers_url ); ?>"><?php esc_html_e( 'Provider connected', 'campaignbridge' ); ?></a><small><?php echo $mailchimp_connected ? esc_html__( 'Mailchimp is connected.', 'campaignbridge' ) : esc_html__( 'Connect an email provider.', 'campaignbridge' ); ?></small></li>
-				<li class="<?php echo $template_count > 0 ? 'is-complete' : ''; ?>"><span class="dashicons <?php echo $template_count > 0 ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>"></span><a href="<?php echo esc_url( $editor_url ); ?>"><?php echo $template_count > 0 ? esc_html__( 'First template created', 'campaignbridge' ) : esc_html__( 'Create your first template', 'campaignbridge' ); ?></a><small><?php echo $template_count > 0 ? esc_html( sprintf( _n( '%d template is ready.', '%d templates are ready.', $template_count, 'campaignbridge' ), $template_count ) ) : esc_html__( 'Turn content into an email.', 'campaignbridge' ); ?></small></li>
+				<li class="<?php echo $template_count > 0 ? 'is-complete' : ''; ?>"><span class="dashicons <?php echo $template_count > 0 ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>"></span><a href="<?php echo esc_url( $template_count > 0 ? $templates_url : $new_template_url ); ?>"><?php echo $template_count > 0 ? esc_html__( 'First template created', 'campaignbridge' ) : esc_html__( 'Create your first template', 'campaignbridge' ); ?></a><small><?php echo $template_count > 0 ? esc_html( sprintf( _n( '%d template is ready.', '%d templates are ready.', $template_count, 'campaignbridge' ), $template_count ) ) : esc_html__( 'Turn content into an email.', 'campaignbridge' ); ?></small></li>
 			</ul>
 		</div>
 	</aside>

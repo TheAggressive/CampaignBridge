@@ -85,6 +85,7 @@ class Blocks {
 		}
 
 		$block_directories = self::get_block_directories( $build_dir );
+		self::register_editor_scripts( $block_directories );
 		self::register_blocks_from_directories( $block_directories );
 	}
 
@@ -94,7 +95,13 @@ class Blocks {
 	 * @return string The full path to the blocks build directory.
 	 */
 	private static function get_build_directory(): string {
-		return trailingslashit( \CampaignBridge_Plugin::path() ) . self::BUILD_DIR;
+		$plugin_basename = \CampaignBridge_Plugin::basename();
+		$plugin_dirname  = dirname( $plugin_basename );
+		$installed_path  = '.' === $plugin_dirname
+			? WP_PLUGIN_DIR
+			: WP_PLUGIN_DIR . '/' . $plugin_dirname;
+
+		return trailingslashit( $installed_path ) . self::BUILD_DIR;
 	}
 
 	/**
@@ -118,6 +125,81 @@ class Blocks {
 		}
 
 		return $directories;
+	}
+
+	/**
+	 * Register local editor scripts before WordPress processes block metadata.
+	 *
+	 * WordPress resolves block metadata paths with realpath(). In symlinked plugin
+	 * installs that discards the installed plugin path, so its asset URL fallback
+	 * can point at the active theme. Pre-registering the generated handles lets
+	 * core reuse the canonical CampaignBridge plugin URLs instead.
+	 *
+	 * @param array<string> $block_directories Array of block directory paths.
+	 * @return void
+	 */
+	private static function register_editor_scripts( array $block_directories ): void {
+		foreach ( $block_directories as $block_directory ) {
+			$metadata_file = trailingslashit( $block_directory ) . 'block.json';
+			$metadata      = wp_json_file_decode( $metadata_file, array( 'associative' => true ) );
+
+			if ( ! is_array( $metadata ) || empty( $metadata['name'] ) || ! is_string( $metadata['name'] ) ) {
+				continue;
+			}
+
+			$block_name     = $metadata['name'];
+			$editor_scripts = $metadata['editorScript'] ?? array();
+			$editor_scripts = is_array( $editor_scripts ) ? $editor_scripts : array( $editor_scripts );
+
+			foreach ( array_values( $editor_scripts ) as $index => $editor_script ) {
+				if ( ! is_string( $editor_script ) ) {
+					continue;
+				}
+
+				$script_path = remove_block_asset_path_prefix( $editor_script );
+				if ( $script_path === $editor_script ) {
+					continue;
+				}
+
+				$asset_path = trailingslashit( $block_directory )
+					. substr_replace( $script_path, '.asset.php', -strlen( '.js' ) );
+				/**
+				 * Generated script dependency metadata.
+				 *
+				 * @var array{handle?: string, dependencies?: array<string>, version?: string|false|null} $asset
+				 */
+				$asset        = file_exists( $asset_path ) ? require $asset_path : array();
+				$handle       = $asset['handle'] ?? generate_block_asset_handle( $block_name, 'editorScript', $index );
+				$dependencies = array_values(
+					array_filter(
+						$asset['dependencies'] ?? array(),
+						static fn( $dependency ): bool => is_string( $dependency ) && '' !== $dependency
+					)
+				);
+
+				if ( '' === $handle || wp_script_is( $handle, 'registered' ) ) {
+					continue;
+				}
+
+				$script_url = \CampaignBridge_Plugin::url()
+					. self::BUILD_DIR
+					. basename( $block_directory )
+					. '/'
+					. $script_path;
+
+				wp_register_script(
+					$handle,
+					$script_url,
+					$dependencies,
+					$asset['version'] ?? ( $metadata['version'] ?? false ),
+					false
+				);
+
+				if ( ! empty( $metadata['textdomain'] ) && in_array( 'wp-i18n', $dependencies, true ) ) {
+					wp_set_script_translations( $handle, (string) $metadata['textdomain'] );
+				}
+			}
+		}
 	}
 
 	/**

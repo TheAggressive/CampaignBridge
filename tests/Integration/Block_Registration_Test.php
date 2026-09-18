@@ -286,25 +286,25 @@ class Block_Registration_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'Blocks are not built. Run npm run build to generate blocks.' );
 		}
 
-		global $wp_scripts, $wp_styles;
+		$registry = \WP_Block_Type_Registry::get_instance();
 
-		// Simulate loading the block editor
-		do_action( 'enqueue_block_editor_assets' );
+		foreach ( $this->expected_blocks() as $block_name ) {
+			$block = $registry->get_registered( $block_name );
 
-		// Check that block scripts are enqueued
-		$enqueued_scripts    = wp_scripts()->queue;
-		$block_scripts_found = false;
+			$this->assertNotNull( $block );
+			$this->assertNotEmpty( $block->editor_script_handles );
 
-		foreach ( $enqueued_scripts as $handle ) {
-			if ( strpos( $handle, 'campaignbridge-' ) === 0 ) {
-				$block_scripts_found = true;
-				break;
-			}
+			$handle = $block->editor_script_handles[0];
+			$script = wp_scripts()->registered[ $handle ] ?? null;
+			$slug   = substr( $block_name, strlen( 'campaignbridge/' ) );
+
+			$this->assertInstanceOf( \_WP_Dependency::class, $script );
+			$this->assertStringStartsWith(
+				\CampaignBridge_Plugin::url() . "dist/blocks/{$slug}/",
+				$script->src,
+				"Block asset URL for '{$block_name}' must resolve through the installed plugin directory."
+			);
 		}
-
-		// Note: This test might fail if block assets aren't properly enqueued
-		// It's more of a structural test than a functional one
-		$this->assertTrue( true, 'Block asset enqueuing structure is in place' );
 	}
 
 	/**

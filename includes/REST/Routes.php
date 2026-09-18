@@ -46,13 +46,6 @@ class Routes extends Abstract_Rest_Controller {
 	private static Form_Rest_Controller $form_controller;
 
 	/**
-	 * Editor settings routes instance.
-	 *
-	 * @var Editor_Settings_Routes
-	 */
-	private static Editor_Settings_Routes $editor_settings_routes;
-
-	/**
 	 * Compiled preview routes instance.
 	 *
 	 * @var Preview_Routes
@@ -65,9 +58,8 @@ class Routes extends Abstract_Rest_Controller {
 	 * @return void
 	 */
 	public static function init(): void {
-		self::$editor_settings_routes = new Editor_Settings_Routes();
-		self::$preview_routes         = new Preview_Routes();
-		self::$form_controller        = new Form_Rest_Controller();
+		self::$preview_routes  = new Preview_Routes();
+		self::$form_controller = new Form_Rest_Controller();
 
 		// Register AJAX handlers.
 		\add_action( 'wp_ajax_campaignbridge_evaluate_conditions', array( self::$form_controller, 'handle_ajax_evaluate_conditions' ) );
@@ -92,9 +84,6 @@ class Routes extends Abstract_Rest_Controller {
 
 		// Register encrypted field routes.
 		self::register_encrypted_field_routes();
-
-		// Register editor settings routes.
-		self::$editor_settings_routes->register();
 
 		( new Brand_Kit_Routes() )->register();
 

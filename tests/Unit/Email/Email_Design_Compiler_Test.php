@@ -11,7 +11,7 @@ namespace CampaignBridge\Tests\Unit\Email;
 
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
-use CampaignBridge\REST\Helpers\Editor_Design_Settings;
+use CampaignBridge\Admin\Editor_Design_Settings;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 use CampaignBridge\Workflow\Email\Email_Compiler;
