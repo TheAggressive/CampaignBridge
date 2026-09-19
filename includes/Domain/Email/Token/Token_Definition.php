@@ -165,6 +165,11 @@ final class Token_Definition {
 			throw new \InvalidArgumentException( sprintf( 'Invalid token category: %s', $category ) );
 		}
 
+		// The ID namespace (`cb:{category}.`) is the one category representation.
+		if ( ! str_starts_with( $id, 'cb:' . $category . '.' ) ) {
+			throw new \InvalidArgumentException( sprintf( 'Token ID namespace does not match category: %s', $category ) );
+		}
+
 		if ( ! in_array( $value_type, array( self::VALUE_TYPE_STRING, self::VALUE_TYPE_DATE, self::VALUE_TYPE_URL ), true ) ) {
 			throw new \InvalidArgumentException( sprintf( 'Invalid token value type: %s', $value_type ) );
 		}

@@ -26,6 +26,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - Valid-format IDs not in the registry produce an "unknown token" error.
  * - Invalid-format IDs produce a "malformed token" error.
  * - Nested braces within a token expression produce a "nested token" error.
+ * - More than MAX_TOKEN_COUNT `{{cb:` expressions produce one "token limit"
+ *   error and stop the scan.
  * - Parse is fail-closed: any error-level diagnostic makes the result a failure.
  *
  * This class performs no WordPress function calls, no provider API calls,
@@ -49,9 +51,11 @@ final class Token_Parser {
 	const MAX_TOKEN_LENGTH = 256;
 
 	/**
-	 * Maximum number of tokens allowed in a single parse operation.
+	 * Maximum number of `{{cb:` token expressions, valid or not, in one parse.
 	 *
-	 * Bounded to prevent resource exhaustion.
+	 * Bounds the work and the diagnostics a hostile input can cause. The first
+	 * expression over the limit produces one `cb_token_limit_exceeded` error and
+	 * scanning stops, so the parse fails closed.
 	 */
 	const MAX_TOKEN_COUNT = 100;
 
@@ -68,6 +72,7 @@ final class Token_Parser {
 		$diagnostics = array();
 		$length      = strlen( $content );
 		$position    = 0;
+		$attempts    = 0;
 
 		while ( $position < $length ) {
 			$open = strpos( $content, '{{', $position );
@@ -78,6 +83,11 @@ final class Token_Parser {
 
 			// Check if this is a token attempt: must be immediately followed by `cb:`.
 			if ( strlen( $content ) - ( $open + 2 ) >= 3 && substr( $content, $open + 2, 3 ) === 'cb:' ) {
+				if ( ++$attempts > self::MAX_TOKEN_COUNT ) {
+					$diagnostics[] = Token_Diagnostic::token_limit_exceeded( $open );
+					break;
+				}
+
 				$position = $this->parse_token_at( $content, $open, $registry, $tokens, $diagnostics );
 				continue;
 			}
@@ -149,18 +159,12 @@ final class Token_Parser {
 			return $close + 2;
 		}
 
-		// Token count bound.
-		if ( count( $tokens ) >= self::MAX_TOKEN_COUNT ) {
-			$diagnostics[] = Token_Diagnostic::malformed_token( $open );
-			return $close + 2;
-		}
-
 		// Look up in registry.
 		$definition = $registry->get( $token_id );
 
 		if ( null === $definition ) {
 			// Valid format but not registered: unknown token.
-			$diagnostics[] = Token_Diagnostic::unknown_token( $token_id, $open );
+			$diagnostics[] = Token_Diagnostic::unknown_token( $open );
 			return $close + 2;
 		}
 

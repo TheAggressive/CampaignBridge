@@ -28,6 +28,7 @@ final class Token_Diagnostic {
 	const CODE_UNKNOWN_TOKEN   = 'cb_token_unknown';
 	const CODE_MALFORMED_TOKEN = 'cb_token_malformed';
 	const CODE_NESTED_TOKEN    = 'cb_token_nested';
+	const CODE_TOKEN_LIMIT     = 'cb_token_limit_exceeded';
 
 	/**
 	 * Diagnostic code.
@@ -109,15 +110,33 @@ final class Token_Diagnostic {
 	/**
 	 * Create a diagnostic for an unknown token.
 	 *
-	 * @param string $token_id The unknown token ID found in content.
-	 * @param int    $position Zero-based offset.
+	 * The ID is author-controlled input, so it is never echoed; the position
+	 * identifies the token.
+	 *
+	 * @param int $position Zero-based offset.
 	 *
 	 * @return static
 	 */
-	public static function unknown_token( string $token_id, int $position ): self {
+	public static function unknown_token( int $position ): self {
 		return new self(
 			self::CODE_UNKNOWN_TOKEN,
-			sprintf( 'Unknown token: %s', $token_id ),
+			'Unknown token',
+			$position,
+			self::SEVERITY_ERROR
+		);
+	}
+
+	/**
+	 * Create a diagnostic for content with too many token expressions.
+	 *
+	 * @param int $position Zero-based offset of the first expression over the limit.
+	 *
+	 * @return static
+	 */
+	public static function token_limit_exceeded( int $position ): self {
+		return new self(
+			self::CODE_TOKEN_LIMIT,
+			'Too many token expressions',
 			$position,
 			self::SEVERITY_ERROR
 		);

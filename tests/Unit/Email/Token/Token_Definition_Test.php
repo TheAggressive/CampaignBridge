@@ -212,4 +212,62 @@ final class Token_Definition_Test extends Test_Case {
 
 		$this->assertSame( 'organization', $def->get_category() );
 	}
+
+	/**
+	 * The ID namespace must equal the category.
+	 *
+	 * @dataProvider mismatched_categories
+	 *
+	 * @param string $id       Token ID.
+	 * @param string $category Supplied category.
+	 */
+	public function test_create_rejects_id_category_mismatch( string $id, string $category ): void {
+		$this->expectException( \InvalidArgumentException::class );
+		$this->expectExceptionMessage( 'Token ID namespace does not match category' );
+
+		Token_Definition::create( $id, 'Label', $category, Token_Definition::VALUE_TYPE_STRING, true, Token_Definition::PREVIEW_SAMPLE, false, false );
+	}
+
+	/**
+	 * ID and category pairs that disagree.
+	 *
+	 * @return array<string, array{string, string}>
+	 */
+	public static function mismatched_categories(): array {
+		return array(
+			'subscriber id, campaign category'     => array( 'cb:subscriber.first_name', Token_Definition::CATEGORY_CAMPAIGN ),
+			'campaign id, subscriber category'     => array( 'cb:campaign.unsubscribe_url', Token_Definition::CATEGORY_SUBSCRIBER ),
+			'organization id, system category'     => array( 'cb:organization.address', Token_Definition::CATEGORY_SYSTEM ),
+			'system id, organization category'     => array( 'cb:system.foo', Token_Definition::CATEGORY_ORGANIZATION ),
+			'category prefix is not the namespace' => array( 'cb:subscribers.first_name', Token_Definition::CATEGORY_SUBSCRIBER ),
+		);
+	}
+
+	/**
+	 * Every category accepts IDs in its own namespace.
+	 *
+	 * @dataProvider matching_categories
+	 *
+	 * @param string $id       Token ID.
+	 * @param string $category Supplied category.
+	 */
+	public function test_create_accepts_matching_namespace( string $id, string $category ): void {
+		$def = Token_Definition::create( $id, 'Label', $category, Token_Definition::VALUE_TYPE_STRING, true, Token_Definition::PREVIEW_SAMPLE, false, false );
+
+		$this->assertSame( $category, $def->get_category() );
+	}
+
+	/**
+	 * ID and category pairs that agree.
+	 *
+	 * @return array<string, array{string, string}>
+	 */
+	public static function matching_categories(): array {
+		return array(
+			'subscriber'   => array( 'cb:subscriber.first_name', Token_Definition::CATEGORY_SUBSCRIBER ),
+			'campaign'     => array( 'cb:campaign.unsubscribe_url', Token_Definition::CATEGORY_CAMPAIGN ),
+			'organization' => array( 'cb:organization.address', Token_Definition::CATEGORY_ORGANIZATION ),
+			'system'       => array( 'cb:system.foo', Token_Definition::CATEGORY_SYSTEM ),
+		);
+	}
 }

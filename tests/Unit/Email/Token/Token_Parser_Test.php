@@ -229,4 +229,78 @@ final class Token_Parser_Test extends Test_Case {
 
 		$this->assertEquals( $this->parse( $input ), $this->parse( $input ) );
 	}
+
+	/**
+	 * Unknown token IDs are author input and are never echoed.
+	 */
+	public function test_unknown_token_diagnostic_does_not_echo_the_id(): void {
+		$result = $this->parse( 'Hi {{cb:subscriber.ssn_123456789_alice_password}}' );
+
+		$this->assertFalse( $result->is_successful() );
+		$diagnostic = $result->get_diagnostics()[0];
+		$this->assertSame( Token_Diagnostic::CODE_UNKNOWN_TOKEN, $diagnostic->get_code() );
+		$this->assertSame( 'Unknown token', $diagnostic->get_message() );
+		$this->assertSame( 3, $diagnostic->get_position() );
+		foreach ( array( 'ssn', '123456789', 'alice', 'password', 'subscriber' ) as $fragment ) {
+			$this->assertStringNotContainsString( $fragment, $diagnostic->get_message() );
+		}
+	}
+
+	/**
+	 * Thousands of unknown or malformed attempts produce a bounded result.
+	 *
+	 * @dataProvider hostile_inputs
+	 *
+	 * @param string $attempt One hostile token attempt.
+	 */
+	public function test_hostile_token_attempts_are_bounded( string $attempt ): void {
+		$result = $this->parse( str_repeat( $attempt, 5000 ) );
+
+		$this->assertFalse( $result->is_successful() );
+		$diagnostics = $result->get_diagnostics();
+		$this->assertCount( Token_Parser::MAX_TOKEN_COUNT + 1, $diagnostics );
+
+		$limit = end( $diagnostics );
+		$this->assertSame( Token_Diagnostic::CODE_TOKEN_LIMIT, $limit->get_code() );
+		$this->assertSame( 'Too many token expressions', $limit->get_message() );
+		$this->assertSame( strlen( $attempt ) * Token_Parser::MAX_TOKEN_COUNT, $limit->get_position() );
+		$this->assertTrue( $limit->is_error() );
+	}
+
+	/**
+	 * Hostile token attempts.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function hostile_inputs(): array {
+		return array(
+			'unknown'   => array( '{{cb:subscriber.nope}}' ),
+			'malformed' => array( '{{cb:BAD}}' ),
+			'unclosed'  => array( '{{cb:' ),
+			'nested'    => array( '{{cb:a{{b}}' ),
+		);
+	}
+
+	/**
+	 * Valid tokens beyond the limit fail closed instead of being dropped.
+	 */
+	public function test_valid_tokens_beyond_the_limit_fail_closed(): void {
+		$at_limit = $this->parse( str_repeat( '{{cb:organization.name}}', Token_Parser::MAX_TOKEN_COUNT ) );
+		$over     = $this->parse( str_repeat( '{{cb:organization.name}}', Token_Parser::MAX_TOKEN_COUNT + 1 ) );
+
+		$this->assertTrue( $at_limit->is_successful() );
+		$this->assertCount( Token_Parser::MAX_TOKEN_COUNT, $at_limit->get_tokens() );
+		$this->assertFalse( $over->is_successful() );
+		$this->assertSame( array( Token_Diagnostic::CODE_TOKEN_LIMIT ), array_map( static fn ( $d ): string => $d->get_code(), $over->get_diagnostics() ) );
+	}
+
+	/**
+	 * Foreign double braces do not count toward the CampaignBridge limit.
+	 */
+	public function test_foreign_braces_do_not_count_toward_the_limit(): void {
+		$result = $this->parse( str_repeat( '{{FNAME}}', 5000 ) . '{{cb:organization.name}}' );
+
+		$this->assertTrue( $result->is_successful() );
+		$this->assertCount( 1, $result->get_tokens() );
+	}
 }
