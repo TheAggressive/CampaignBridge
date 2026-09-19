@@ -14,8 +14,12 @@ compiler.
 
 1. Inventory the affected `src/blocks/` metadata and compiler path under
    `includes/Services/Email/`.
-2. Decide whether the change is a new email-native block, an explicit core-block
-   adapter, or a migration of an existing CampaignBridge block.
+2. Apply WordPress Native First: if a WordPress Core block already provides the
+   content or layout primitive, add it to `includes/Email_Blocks/email-blocks.json`
+   with explicit email semantics and a block-specific reader in
+   `Core_Block_Normalizer` instead of creating a CampaignBridge duplicate. Create
+   a CampaignBridge block only for email structure, compliance, or
+   snapshot-bound content that Core does not model.
 3. Define the stable semantic attributes, nesting constraints, validation, and
    target-profile behavior before writing output markup.
 4. Keep the authoring component separate from the canonical renderer. The
@@ -32,6 +36,9 @@ compiler.
 
 - Persist semantic source blocks, not compiled transport HTML.
 - Never use generic `render_block()` output as the email source.
+- Core blocks are normalized from their known serialization contract only;
+  arbitrary `innerHTML` is never canonical, and unsupported Core blocks,
+  attributes, styles, and classes fail closed.
 - Never silently omit, flatten, or approximate an unsupported block.
 - Keep provider merge syntax and response shapes outside block renderers.
 - Treat block names, attribute shapes, compiler profiles, and output fixtures as

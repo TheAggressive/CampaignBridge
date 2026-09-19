@@ -50,7 +50,7 @@ final class Template_Duplication_Test extends Test_Case {
 
 	private const CONTENT = '<!-- wp:campaignbridge/container -->' .
 		'<!-- wp:campaignbridge/section -->' .
-		'<!-- wp:campaignbridge/text {"content":"Launch content"} /-->' .
+		'<!-- wp:core/paragraph {"content":"Launch content"} /-->' .
 		'<!-- /wp:campaignbridge/section -->' .
 		'<!-- /wp:campaignbridge/container -->';
 

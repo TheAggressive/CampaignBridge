@@ -105,10 +105,7 @@ final class Email_Design_Block_Defaults {
 		if ( isset( $style['spacing']['blockGap'] ) && 'campaignbridge/columns' === $block_name ) {
 			$attributes = $this->default_attribute( $attributes, 'gap', $style['spacing']['blockGap'] );
 		}
-		if ( isset( $style['dimensions']['minHeight'] ) && 'campaignbridge/spacer' === $block_name ) {
-			$attributes = $this->default_attribute( $attributes, 'height', $style['dimensions']['minHeight'] );
-		}
-		if ( isset( $style['border'] ) && 'campaignbridge/divider' === $block_name ) {
+		if ( isset( $style['border'] ) && 'core/separator' === $block_name ) {
 			$border     = $style['border'];
 			$attributes = $this->default_attribute( $attributes, 'color', $border['color'] ?? null );
 			$attributes = $this->default_attribute( $attributes, 'thickness', $border['width'] ?? null );

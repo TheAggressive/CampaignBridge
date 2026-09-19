@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Workflow\Email;
 
+use CampaignBridge\Domain\Email\Authoring_Block_Normalizer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Compile_Result;
@@ -26,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Compiles a bounded native block tree into one deterministic artifact. */
 final class Email_Compiler {
-	public const COMPILER_VERSION = '5';
+	public const COMPILER_VERSION = '6';
 	public const PROFILE_VERSION  = 'universal@1';
 
 	private const MAX_BLOCKS = 500;
@@ -47,13 +48,15 @@ final class Email_Compiler {
 	 * @param Artifact_Fingerprinter      $fingerprinter     Deterministic fingerprinter.
 	 * @param Resolved_Email_Design       $design            Canonical runtime design.
 	 * @param Email_Design_Block_Defaults $design_defaults   Design-to-block adapter.
+	 * @param Authoring_Block_Normalizer  $normalizer        Authoring-to-email semantics adapter.
 	 */
 	public function __construct(
 		private readonly Renderer_Registry $registry,
 		private readonly Document_Renderer_Interface $document_renderer,
 		private readonly Artifact_Fingerprinter $fingerprinter,
 		private readonly Resolved_Email_Design $design,
-		private readonly Email_Design_Block_Defaults $design_defaults
+		private readonly Email_Design_Block_Defaults $design_defaults,
+		private readonly Authoring_Block_Normalizer $normalizer
 	) {}
 
 	/**
@@ -183,8 +186,9 @@ final class Email_Compiler {
 
 			$attributes = $block['attrs'] ?? array();
 			$children   = $block['innerBlocks'] ?? array();
+			$inner_html = $block['innerHTML'] ?? '';
 
-			if ( ! is_string( $name ) || '' === $name || ! is_array( $attributes ) || ! is_array( $children ) ) {
+			if ( ! is_string( $name ) || '' === $name || ! is_array( $attributes ) || ! is_array( $children ) || ! is_string( $inner_html ) ) {
 				$diagnostics[] = Compile_Diagnostic::error(
 					'block.malformed',
 					$path,
@@ -199,7 +203,7 @@ final class Email_Compiler {
 			 *
 			 * @var array<string, mixed> $attributes
 			 */
-			$nodes[] = new Block_Node( $name, $attributes, $child_nodes, $path );
+			$nodes[] = new Block_Node( $name, $attributes, $child_nodes, $path, $inner_html );
 		}
 
 		return $nodes;
@@ -214,6 +218,22 @@ final class Email_Compiler {
 	 * @return array{html: string, text: string, assets: array<int, array<string, mixed>>}
 	 */
 	private function render_node( Block_Node $block, Render_Context $context, array &$diagnostics ): array {
+		try {
+			$block = $this->normalizer->normalize( $block );
+		} catch ( Invalid_Block_Attribute $exception ) {
+			$diagnostics[] = Compile_Diagnostic::error(
+				'block.attribute.invalid',
+				$block->path() . '.attrs.' . $exception->attribute(),
+				$exception->getMessage()
+			);
+
+			return array(
+				'html'   => '',
+				'text'   => '',
+				'assets' => array(),
+			);
+		}
+
 		$renderer = $this->registry->get( $block->name() );
 		if ( null === $renderer ) {
 			$diagnostics[] = Compile_Diagnostic::error(
@@ -274,9 +294,7 @@ final class Email_Compiler {
 		}
 
 		try {
-			$block = $renderer->normalize( $block );
-
-
+			$block       = $renderer->normalize( $block );
 			$diagnostics = array_merge( $diagnostics, $renderer->validate( $block, $context ) );
 			if ( $this->has_errors( $diagnostics ) ) {
 				return array(

@@ -75,7 +75,7 @@
       "lineHeight": 1.6
     },
     "blocks": {
-      "campaignbridge/heading": {
+      "core/heading": {
         "color": { "text": "var:preset|color|text" },
         "typography": {
           "fontFamily": "var:preset|font-family|arial",
@@ -84,7 +84,7 @@
         },
         "spacing": { "marginBottom": "var:preset|spacing|40" }
       },
-      "campaignbridge/text": {
+      "core/paragraph": {
         "color": { "text": "var:preset|color|text" },
         "typography": {
           "fontFamily": "var:preset|font-family|arial",
@@ -93,7 +93,7 @@
         },
         "spacing": { "marginBottom": "var:preset|spacing|40" }
       },
-      "campaignbridge/button": {
+      "core/button": {
         "color": {
           "background": "var:preset|color|brand",
           "text": "var:preset|color|on-brand"
@@ -103,15 +103,12 @@
       "campaignbridge/columns": {
         "spacing": { "blockGap": "var:preset|spacing|50" }
       },
-      "campaignbridge/divider": {
+      "core/separator": {
         "border": {
           "color": "var:preset|color|border",
           "style": "solid",
           "width": "1px"
         }
-      },
-      "campaignbridge/spacer": {
-        "dimensions": { "minHeight": "var:preset|spacing|50" }
       },
       "campaignbridge/post-title": {
         "color": { "text": "var:preset|color|text" },

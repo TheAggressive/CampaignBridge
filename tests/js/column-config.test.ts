@@ -10,12 +10,13 @@ import { COLUMN_ALLOWED_BLOCKS } from '../../src/blocks/column/config';
 describe('column block configuration', () => {
   it('accepts the foundation blocks used for generic email content', () => {
     for (const name of [
-      'campaignbridge/text',
-      'campaignbridge/heading',
-      'campaignbridge/image',
-      'campaignbridge/button',
-      'campaignbridge/divider',
-      'campaignbridge/spacer',
+      'core/paragraph',
+      'core/heading',
+      'core/image',
+      'core/buttons',
+      'core/list',
+      'core/separator',
+      'core/spacer',
     ]) {
       expect(COLUMN_ALLOWED_BLOCKS).toContain(name);
     }

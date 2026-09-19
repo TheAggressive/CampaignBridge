@@ -301,7 +301,7 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 									$this->column(
 										array(
 											array(
-												'blockName' => 'campaignbridge/heading',
+												'blockName' => 'core/heading',
 												'attrs' => array(
 													'content' => 'Left',
 													'level'   => 2,
@@ -313,7 +313,7 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 									$this->column(
 										array(
 											array(
-												'blockName' => 'campaignbridge/text',
+												'blockName' => 'core/paragraph',
 												'attrs' => array( 'content' => 'Right side copy.' ),
 												'innerBlocks' => array(),
 											),

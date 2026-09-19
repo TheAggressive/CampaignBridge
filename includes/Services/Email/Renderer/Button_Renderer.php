@@ -20,16 +20,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Renders a validated bulletproof call to action. */
+/** Renders one Core button as a validated bulletproof call to action aligned by its `core/buttons` group. */
 final class Button_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function block_name(): string {
-		return 'campaignbridge/button';
+		return 'core/button';
 	}
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'url', 'align', 'style', 'backgroundColor', 'textColor', 'fontFamily', 'variant' );
+		return array( 'label', 'url', 'style', 'backgroundColor', 'textColor', 'fontFamily', 'variant' );
 	}
 
 	/** {@inheritDoc} */
@@ -50,7 +50,6 @@ final class Button_Renderer extends Abstract_Renderer {
 			array(
 				'label'           => trim( Renderer_Support::string_attribute( $attributes, 'label', 'Learn more' ) ),
 				'url'             => trim( Renderer_Support::string_attribute( $attributes, 'url', '' ) ),
-				'align'           => Renderer_Support::alignment_attribute( $attributes, 'align' ),
 				'style'           => Renderer_Support::choice_attribute( $attributes, 'variant', 'primary', $styles ),
 				'backgroundColor' => (string) Renderer_Support::string_attribute( $attributes, 'backgroundColor', '' ),
 				'textColor'       => (string) Renderer_Support::string_attribute( $attributes, 'textColor', '' ),
@@ -94,6 +93,7 @@ final class Button_Renderer extends Abstract_Renderer {
 		$background = $this->resolve_background( $block, $context );
 		$text       = $this->resolve_text( $block, $context );
 		$variant    = $attributes['style'];
+		$align      = $context->binding( 'button_align' )['align'] ?? 'left';
 
 		// Outline and ghost variants are monochromatic: the chosen background
 		// drives the border, the visible text, and the Outlook VML paint, so a
@@ -109,7 +109,7 @@ final class Button_Renderer extends Abstract_Renderer {
 			$attributes['label'],
 			$background,
 			$text,
-			$attributes['align'],
+			$align,
 			200,
 			$variant,
 			$font_family

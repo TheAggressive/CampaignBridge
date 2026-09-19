@@ -30,7 +30,7 @@ final class Email_Design_Runtime_Test extends TestCase {
 		self::assertSame( '#111111', $design->global_style()['color']['text'] );
 		self::assertSame( 16, $design->global_style()['typography']['fontSize'] );
 		self::assertSame( 24, $design->block_style( 'campaignbridge/columns' )['spacing']['blockGap'] );
-		self::assertSame( 1, $design->block_style( 'campaignbridge/divider' )['border']['width'] );
+		self::assertSame( 1, $design->block_style( 'core/separator' )['border']['width'] );
 		self::assertMatchesRegularExpression( '/^sha256:[0-9a-f]{64}$/', $design->fingerprint() );
 		self::assertStringNotContainsString( 'var:preset|', (string) wp_json_encode( $design->to_array() ) );
 	}
@@ -41,7 +41,7 @@ final class Email_Design_Runtime_Test extends TestCase {
 		$design = $this->resolve( $kit );
 
 		self::assertSame( '#ff5500', $this->color( $design->colors(), Brand_Kit::SLOT_BRAND ) );
-		self::assertSame( '#ff5500', $design->block_style( 'campaignbridge/button' )['color']['background'] );
+		self::assertSame( '#ff5500', $design->block_style( 'core/button' )['color']['background'] );
 	}
 
 	/** Parent and child theme manifests follow Core's low-to-high cascade. */
@@ -52,8 +52,8 @@ final class Email_Design_Runtime_Test extends TestCase {
 			->resolve_layers( $loader->layers() );
 
 		self::assertSame( 680, $design->content_width() );
-		self::assertSame( '#0055cc', $design->block_style( 'campaignbridge/heading' )['color']['text'] );
-		self::assertSame( 600, $design->block_style( 'campaignbridge/heading' )['typography']['fontWeight'] );
+		self::assertSame( '#0055cc', $design->block_style( 'core/heading' )['color']['text'] );
+		self::assertSame( 600, $design->block_style( 'core/heading' )['typography']['fontWeight'] );
 		self::assertSame( '#111111', $design->global_style()['color']['text'] );
 	}
 
@@ -139,7 +139,7 @@ final class Email_Design_Runtime_Test extends TestCase {
 			array( 'settings.spacing.spacingSizes.0.size', '25%', 'design.invalid_spacing' ),
 			array( 'styles.blocks.campaignbridge/unknown', array( 'color' => array( 'text' => '#111111' ) ), 'design.invalid_block' ),
 			array(
-				'styles.blocks.campaignbridge/button.border',
+				'styles.blocks.core/button.border',
 				array(
 					'color' => '#111111',
 					'style' => 'solid',

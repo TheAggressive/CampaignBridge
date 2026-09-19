@@ -21,12 +21,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Spacer_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function block_name(): string {
-		return 'campaignbridge/spacer';
+		return 'core/spacer';
 	}
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'height', 'style' );
+		return array( 'height' );
 	}
 
 	/**

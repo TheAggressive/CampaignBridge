@@ -14,16 +14,22 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Blocks\Blocks;
-use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Email_Block_Contract;
 use WP_UnitTestCase;
 
 /**
  * Test block registration functionality.
  */
 class Block_Registration_Test extends WP_UnitTestCase {
-	/** Get the canonical compiler-supported block catalog. */
-	private function expected_blocks(): array {
-		return Compiler_Factory::registry()->block_names();
+	/**
+	 * CampaignBridge-owned blocks from the supported authoring contract.
+	 *
+	 * Supported Core blocks are registered by WordPress itself.
+	 *
+	 * @return array<int, string>
+	 */
+	private function campaignbridge_blocks(): array {
+		return array_values( array_diff( Email_Block_Contract::names(), Email_Block_Contract::core_names() ) );
 	}
 
 	/**
@@ -97,7 +103,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 		}
 
 		// Verify all expected blocks are now registered
-		foreach ( $this->expected_blocks() as $block_name ) {
+		foreach ( $this->campaignbridge_blocks() as $block_name ) {
 			$this->assertTrue(
 				Blocks::is_block_registered( $block_name ),
 				"Block '{$block_name}' should be registered"
@@ -106,7 +112,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 
 		// Verify we have the expected number of registered blocks
 		$registered_blocks = Blocks::get_registered_blocks();
-		$this->assertCount( count( $this->expected_blocks() ), $registered_blocks, 'Should have all expected blocks registered' );
+		$this->assertCount( count( $this->campaignbridge_blocks() ), $registered_blocks, 'Should have all CampaignBridge-owned blocks registered' );
 	}
 
 	/**
@@ -152,7 +158,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 
 		$registry = \WP_Block_Type_Registry::get_instance();
 
-		foreach ( $this->expected_blocks() as $block_name ) {
+		foreach ( $this->campaignbridge_blocks() as $block_name ) {
 			$block_type = $registry->get_registered( $block_name );
 
 			$this->assertNotNull( $block_type, "Block type for '{$block_name}' should exist" );
@@ -253,7 +259,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 
 		$registry = \WP_Block_Type_Registry::get_instance();
 
-		foreach ( $this->expected_blocks() as $block_name ) {
+		foreach ( $this->campaignbridge_blocks() as $block_name ) {
 			$block_type = $registry->get_registered( $block_name );
 
 			$this->assertNull(
@@ -288,7 +294,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 
 		$registry = \WP_Block_Type_Registry::get_instance();
 
-		foreach ( $this->expected_blocks() as $block_name ) {
+		foreach ( $this->campaignbridge_blocks() as $block_name ) {
 			$block = $registry->get_registered( $block_name );
 
 			$this->assertNotNull( $block );
@@ -323,7 +329,7 @@ class Block_Registration_Test extends WP_UnitTestCase {
 
 		$registry = \WP_Block_Type_Registry::get_instance();
 
-		foreach ( $this->expected_blocks() as $block_name ) {
+		foreach ( $this->campaignbridge_blocks() as $block_name ) {
 			$block_type = $registry->get_registered( $block_name );
 
 			$this->assertNotNull(

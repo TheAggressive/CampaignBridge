@@ -134,7 +134,7 @@ test('native editor owns the template lifecycle and previews unsaved blocks', as
       const wp = (globalThis as typeof globalThis & { wp: any }).wp;
       const root = wp.data.select('core/block-editor').getBlocks()[0];
       const section = wp.blocks.createBlock('campaignbridge/section', {}, [
-        wp.blocks.createBlock('campaignbridge/text', { content: text }),
+        wp.blocks.createBlock('core/paragraph', { content: text }),
       ]);
       const currentMeta =
         wp.data.select('core/editor').getEditedPostAttribute('meta') ?? {};
@@ -254,13 +254,13 @@ test('native editor owns the template lifecycle and previews unsaved blocks', as
   const interactions = await page.evaluate(text => {
     const wp = (globalThis as typeof globalThis & { wp: any }).wp;
     const root = wp.data.select('core/block-editor').getBlocks()[0];
-    const emailButton = wp.blocks.createBlock('campaignbridge/button', {
-      label: 'Native action',
+    const emailButton = wp.blocks.createBlock('core/button', {
+      text: 'Native action',
       url: 'https://example.com/',
     });
     const section = wp.blocks.createBlock('campaignbridge/section', {}, [
-      wp.blocks.createBlock('campaignbridge/text', { content: text }),
-      emailButton,
+      wp.blocks.createBlock('core/paragraph', { content: text }),
+      wp.blocks.createBlock('core/buttons', {}, [emailButton]),
     ]);
     const postButton = wp.blocks.createBlock('campaignbridge/post-button', {
       label: 'Native action',
@@ -305,28 +305,29 @@ test('native editor owns the template lifecycle and previews unsaved blocks', as
       .locator(`[data-block="${interactions.selectedClientId}"]`)
   ).toHaveClass(/is-selected/);
   await expect(page.locator('.block-editor-block-toolbar')).toBeVisible();
-  await expect(page.getByText('Email button', { exact: true })).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Label' })).toHaveValue(
-    'Native action'
-  );
+  const buttonLabel = page
+    .frameLocator('iframe[name="editor-canvas"]')
+    .locator(
+      `[data-block="${interactions.selectedClientId}"] .wp-block-button__link`
+    );
+  await expect(buttonLabel).toHaveText('Native action');
 
   await page.evaluate(clientId => {
     const wp = (globalThis as typeof globalThis & { wp: any }).wp;
     wp.data
       .dispatch('core/block-editor')
-      .updateBlockAttributes(clientId, { label: 'Undo marker' });
+      .updateBlockAttributes(clientId, { text: 'Undo marker' });
   }, interactions.selectedClientId);
-  const labelControl = page.getByRole('textbox', { name: 'Label' });
-  await expect(labelControl).toHaveValue('Undo marker');
+  await expect(buttonLabel).toHaveText('Undo marker');
 
   const undo = page.getByRole('button', { name: 'Undo' });
   await expect(undo).toBeEnabled();
   await undo.click();
-  await expect(labelControl).toHaveValue('Native action');
+  await expect(buttonLabel).toHaveText('Native action');
   const redo = page.getByRole('button', { name: 'Redo' });
   await expect(redo).toBeEnabled();
   await redo.click();
-  await expect(labelControl).toHaveValue('Undo marker');
+  await expect(buttonLabel).toHaveText('Undo marker');
 
   await page.evaluate(nextTitle => {
     const wp = (globalThis as typeof globalThis & { wp: any }).wp;
@@ -384,7 +385,7 @@ test('native editor owns the template lifecycle and previews unsaved blocks', as
     const wp = (globalThis as typeof globalThis & { wp: any }).wp;
     const root = wp.data.select('core/block-editor').getBlocks()[0];
     const section = wp.blocks.createBlock('campaignbridge/section', {}, [
-      wp.blocks.createBlock('campaignbridge/text', {
+      wp.blocks.createBlock('core/paragraph', {
         content: 'Native autosave content',
       }),
     ]);

@@ -172,7 +172,7 @@ final class Template_Preview_Test extends TestCase {
 	public function test_compiles_serialized_content_into_the_canonical_artifact(): void {
 		$result = $this->preview()->compile(
 			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
-			. '<!-- wp:campaignbridge/heading {"content":"Hello","level":2} /-->'
+			. '<!-- wp:core/heading {"content":"Hello","level":2} /-->'
 			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->',
 			array( 'title' => 'Preview' )
 		);
@@ -188,7 +188,7 @@ final class Template_Preview_Test extends TestCase {
 		$result = $this->preview()->compile(
 			"<!-- wp:campaignbridge/container -->\n\n"
 			. "<!-- wp:campaignbridge/section -->\n"
-			. "<!-- wp:campaignbridge/spacer {\"height\":8} /-->\n"
+			. "<!-- wp:core/spacer {\"height\":8} /-->\n"
 			. "<!-- /wp:campaignbridge/section -->\n\n"
 			. '<!-- /wp:campaignbridge/container -->'
 		);
@@ -236,7 +236,7 @@ final class Template_Preview_Test extends TestCase {
 
 	public function test_the_same_source_and_snapshot_produce_the_same_fingerprint(): void {
 		$content = '<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
-			. '<!-- wp:campaignbridge/text {"content":"Stable"} /-->'
+			. '<!-- wp:core/paragraph {"content":"Stable"} /-->'
 			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->';
 
 		self::assertSame(
@@ -272,7 +272,7 @@ final class Template_Preview_Test extends TestCase {
 		$result = $preview->compile(
 			'<!-- wp:campaignbridge/container -->'
 			. '<!-- wp:campaignbridge/section -->'
-			. '<!-- wp:campaignbridge/heading {"content":"Hello","level":2,"style":{"color":{"text":"var:preset|color|brand"}}} /-->'
+			. '<!-- wp:core/heading {"content":"Hello","level":2,"style":{"color":{"text":"var:preset|color|brand"}}} /-->'
 			. '<!-- /wp:campaignbridge/section -->'
 			. '<!-- /wp:campaignbridge/container -->'
 		);

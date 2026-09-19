@@ -1,3 +1,4 @@
+import './core-email-blocks';
 import { useSelect } from '@wordpress/data';
 import {
   PluginDocumentSettingPanel,

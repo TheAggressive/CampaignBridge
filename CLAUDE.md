@@ -122,15 +122,28 @@ CampaignBridge uses an email-native block grammar, not arbitrary web blocks as
 its long-term source format. Read `docs/email-block-architecture.md` before
 creating or changing email blocks.
 
+**WordPress Native First:** CampaignBridge uses WordPress Core blocks for
+authoring when Core already provides the appropriate content or layout
+primitive. Supported Core blocks are normalized into CampaignBridge's bounded
+email semantics and compiled into deterministic email-safe output. Core frontend
+rendering is not used as email output.
+
 Key rules:
 
 - Store semantic block attributes and content, not final compiled email HTML.
 - Compile each supported block through a dedicated email renderer.
 - Do not call general `render_block()` and attempt to repair arbitrary frontend
   HTML afterward.
-- The email editor registers CampaignBridge email blocks only. Core and
-  third-party frontend blocks are unsupported compiler input and fail validation
-  visibly; they never disappear silently.
+- `includes/Email_Blocks/email-blocks.json` is the one supported-block contract.
+  The editor allowlist, nesting, Core normalization, and compiler registry
+  derive from it or are parity-tested against it.
+- Supported Core blocks (`core/paragraph`, `core/heading`, `core/image`,
+  `core/buttons`, `core/button`, `core/list`, `core/list-item`,
+  `core/separator`, `core/spacer`) pass through `Core_Block_Normalizer`, which
+  reads only each block's known serialization contract. Do not fork Core edit
+  components; narrow them with public block filters.
+- All other Core and third-party blocks are unsupported compiler input and fail
+  validation visibly; they never disappear silently.
 - Final output uses conservative email markup: presentation tables, inline CSS,
   HTML width/alignment attributes where needed, and targeted Outlook VML.
 - The editor canvas is an authoring surface. The compiled iframe preview is the

@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Style_Resolver;
+use CampaignBridge\Services\Email\Email_Block_Contract;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -43,16 +44,7 @@ final class Section_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function allowed_children(): array {
-		return array(
-			'campaignbridge/columns',
-			'campaignbridge/text',
-			'campaignbridge/heading',
-			'campaignbridge/image',
-			'campaignbridge/button',
-			'campaignbridge/divider',
-			'campaignbridge/spacer',
-			'campaignbridge/post-card',
-		);
+		return Email_Block_Contract::children( $this->block_name() );
 	}
 
 	/**

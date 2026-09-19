@@ -10,7 +10,7 @@
   },
   "styles": {
     "blocks": {
-      "campaignbridge/heading": {
+      "core/heading": {
         "typography": { "fontWeight": 600 }
       }
     }

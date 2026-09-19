@@ -12,10 +12,11 @@ namespace CampaignBridge\Tests\Unit\Email;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Email_Block_Contract;
 use PHPUnit\Framework\TestCase;
 
 final class Native_Email_Blocks_Test extends TestCase {
-	public function test_editor_metadata_and_compiler_registry_have_identical_names(): void {
+	public function test_contract_metadata_and_compiler_registry_have_identical_names(): void {
 		$metadata_files = glob( dirname( __DIR__, 3 ) . '/src/blocks/*/block.json' );
 		self::assertIsArray( $metadata_files );
 		$metadata_names = array_map(
@@ -27,11 +28,16 @@ final class Native_Email_Blocks_Test extends TestCase {
 			},
 			$metadata_files
 		);
+		$contract_names = Email_Block_Contract::names();
 		$renderer_names = Compiler_Factory::registry()->block_names();
+		$custom_names   = array_values( array_diff( $contract_names, Email_Block_Contract::core_names() ) );
 		sort( $metadata_names, SORT_STRING );
+		sort( $contract_names, SORT_STRING );
 		sort( $renderer_names, SORT_STRING );
+		sort( $custom_names, SORT_STRING );
 
-		self::assertSame( $metadata_names, $renderer_names );
+		self::assertSame( $contract_names, $renderer_names );
+		self::assertSame( $custom_names, $metadata_names );
 	}
 
 	public function test_compiles_native_blocks_to_golden_html_and_text(): void {
@@ -85,8 +91,8 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 	public function test_marks_decorative_images_explicitly(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['decorative'] = true;
-		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['alt']        = '';
+		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['isDecorative'] = true;
+		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['alt']          = '';
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
@@ -95,7 +101,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 	public function test_rejects_an_unsafe_button_url(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['url'] = 'javascript:alert(1)';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['innerBlocks'][0]['attrs']['url'] = 'javascript:alert(1)';
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
@@ -105,7 +111,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 	public function test_rejects_out_of_range_width_instead_of_clamping_it(): void {
 		$document = $this->document();
 
-		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['width'] = 5000;
+		$document[0]['innerBlocks'][0]['innerBlocks'][2]['attrs']['width'] = '5000';
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
@@ -132,7 +138,8 @@ final class Native_Email_Blocks_Test extends TestCase {
 		$kit      = Brand_Kit::defaults();
 		$document = $this->document();
 
-		$document[0]['innerBlocks'][0]['innerBlocks'][5]['attrs']['color'] = 'red';
+		unset( $document[0]['innerBlocks'][0]['innerBlocks'][5]['attrs']['style'] );
+		$document[0]['innerBlocks'][0]['innerBlocks'][5]['attrs']['backgroundColor'] = 'red';
 
 		$context = $this->context()->with_metadata( 'brandKit', $kit );
 
@@ -162,7 +169,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 				'attrs'       => array(),
 				'innerBlocks' => array(
 					array(
-						'blockName'   => 'campaignbridge/text',
+						'blockName'   => 'core/paragraph',
 						'attrs'       => array( 'content' => 'Wrong parent' ),
 						'innerBlocks' => array(),
 					),
@@ -178,8 +185,8 @@ final class Native_Email_Blocks_Test extends TestCase {
 	public function test_compiles_serialized_native_block_comments(): void {
 		$serialized = '<!-- wp:campaignbridge/container -->'
 			. '<!-- wp:campaignbridge/section -->'
-			. '<!-- wp:campaignbridge/heading {"content":"Serialized heading"} /-->'
-			. '<!-- wp:campaignbridge/text {"content":"Serialized text"} /-->'
+			. '<!-- wp:core/heading {"content":"Serialized heading"} /-->'
+			. '<!-- wp:core/paragraph {"content":"Serialized text"} /-->'
 			. '<!-- /wp:campaignbridge/section -->'
 			. '<!-- /wp:campaignbridge/container -->';
 		$result     = Compiler_Factory::create()->compile( parse_blocks( $serialized ), $this->context() );
@@ -209,60 +216,74 @@ final class Native_Email_Blocks_Test extends TestCase {
 						),
 						'innerBlocks' => array(
 							array(
-								'blockName'   => 'campaignbridge/heading',
+								'blockName'   => 'core/heading',
 								'attrs'       => array(
-									'content'   => 'Build &amp; send confidently',
-									'level'     => 1,
-									'align'     => 'center',
-									'textColor' => '#111111',
+									'content' => 'Build &amp; send confidently',
+									'level'   => 1,
+									'style'   => array(
+										'color'      => array( 'text' => '#111111' ),
+										'typography' => array( 'textAlign' => 'center' ),
+									),
 								),
 								'innerBlocks' => array(),
 							),
 							array(
-								'blockName'   => 'campaignbridge/text',
+								'blockName'   => 'core/paragraph',
 								'attrs'       => array(
-									'content'   => 'A <strong>deterministic</strong> message with an <a href="https://example.com/docs" target="_blank" rel="noreferrer noopener">auditable link</a>.',
-									'align'     => 'left',
-									'textColor' => '#333333',
-									'fontSize'  => 16,
+									'content' => 'A <strong>deterministic</strong> message with an <a href="https://example.com/docs" target="_blank" rel="noreferrer noopener">auditable link</a>.',
+									'style'   => array(
+										'color'      => array( 'text' => '#333333' ),
+										'typography' => array(
+											'fontSize'  => '16px',
+											'textAlign' => 'left',
+										),
+									),
 								),
 								'innerBlocks' => array(),
 							),
 							array(
-								'blockName'   => 'campaignbridge/image',
+								'blockName'   => 'core/image',
 								'attrs'       => array(
-									'url'        => 'https://example.com/hero.jpg',
-									'alt'        => 'Campaign hero',
-									'decorative' => false,
-									'width'      => 600,
-									'height'     => 320,
-									'linkUrl'    => 'https://example.com/story',
+									'url'             => 'https://example.com/hero.jpg',
+									'alt'             => 'Campaign hero',
+									'isDecorative'    => false,
+									'width'           => '600px',
+									'height'          => '320px',
+									'linkDestination' => 'custom',
 								),
 								'innerBlocks' => array(),
+								'innerHTML'   => '<figure class="wp-block-image is-resized"><a href="https://example.com/story"><img src="https://example.com/hero.jpg" alt="Campaign hero" style="width:600px;height:320px"/></a></figure>',
 							),
 							array(
-								'blockName'   => 'campaignbridge/button',
-								'attrs'       => array(
-									'label'           => 'Read the story',
-									'url'             => 'https://example.com/story',
-									'align'           => 'center',
-									'backgroundColor' => '#0057b8',
-									'textColor'       => '#ffffff',
+								'blockName'   => 'core/buttons',
+								'attrs'       => array( 'layout' => array( 'justifyContent' => 'center' ) ),
+								'innerBlocks' => array(
+									array(
+										'blockName'   => 'core/button',
+										'attrs'       => array(
+											'text'  => 'Read the story',
+											'url'   => 'https://example.com/story',
+											'style' => array(
+												'color' => array(
+													'background' => '#0057b8',
+													'text'       => '#ffffff',
+												),
+											),
+										),
+										'innerBlocks' => array(),
+									),
 								),
+							),
+							array(
+								'blockName'   => 'core/spacer',
+								'attrs'       => array( 'height' => '24px' ),
 								'innerBlocks' => array(),
 							),
 							array(
-								'blockName'   => 'campaignbridge/spacer',
-								'attrs'       => array( 'height' => 24 ),
-								'innerBlocks' => array(),
-							),
-							array(
-								'blockName'   => 'campaignbridge/divider',
+								'blockName'   => 'core/separator',
 								'attrs'       => array(
-									'color'     => '#dddddd',
-									'thickness' => 2,
-									'width'     => 80,
-									'style'     => 'solid',
+									'style'     => array( 'color' => array( 'background' => '#dddddd' ) ),
+									'className' => 'is-style-wide',
 								),
 								'innerBlocks' => array(),
 							),
@@ -275,7 +296,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 	public function test_button_style_variants_render_expected_inline_css(): void {
 		$variants = array(
-			'primary' => array(
+			'fill'    => array(
 				'background-color:#0057b8',
 				';color:#ffffff',
 			),
@@ -293,7 +314,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 		foreach ( $variants as $variant => $fragments ) {
 			$document = $this->document();
-			$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['className'] = 'is-style-' . $variant;
+			$document[0]['innerBlocks'][0]['innerBlocks'][3]['innerBlocks'][0]['attrs']['className'] = 'is-style-' . $variant;
 
 			$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
@@ -305,12 +326,13 @@ final class Native_Email_Blocks_Test extends TestCase {
 		}
 
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['className'] = 'is-style-neon';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3]['innerBlocks'][0]['attrs']['className'] = 'is-style-neon';
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'block.attributes.unsupported', $result->diagnostics()[0]->code() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertSame( 'blocks[0].innerBlocks[0].innerBlocks[3].innerBlocks[0].attrs.className', $result->diagnostics()[0]->path() );
 	}
 
 	public function test_button_resolves_brand_kit_preset_slugs(): void {
@@ -322,7 +344,8 @@ final class Native_Email_Blocks_Test extends TestCase {
 		);
 
 		$document                           = $this->document();
-		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3]['innerBlocks'][0];
+		unset( $button['attrs']['style'] );
 		$button['attrs']['backgroundColor'] = 'brand';
 		$button['attrs']['textColor']       = 'on-brand';
 
@@ -339,7 +362,8 @@ final class Native_Email_Blocks_Test extends TestCase {
 		$kit = Brand_Kit::defaults();
 
 		$document                           = $this->document();
-		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3]['innerBlocks'][0];
+		unset( $button['attrs']['style'] );
 		$button['attrs']['backgroundColor'] = 'unknown-slug';
 
 		$context = $this->context()->with_metadata( 'brandKit', $kit );
@@ -354,9 +378,14 @@ final class Native_Email_Blocks_Test extends TestCase {
 		$kit = Brand_Kit::defaults();
 
 		$document                           = $this->document();
-		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
-		$button['attrs']['backgroundColor'] = '#123456';
-		$button['attrs']['textColor']       = '#abcdef';
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3]['innerBlocks'][0];
+		unset( $button['attrs']['style'] );
+		$button['attrs']['style']           = array(
+			'color' => array(
+				'background' => '#123456',
+				'text'       => '#abcdef',
+			),
+		);
 
 		$context = $this->context()->with_metadata( 'brandKit', $kit );
 
@@ -376,9 +405,14 @@ final class Native_Email_Blocks_Test extends TestCase {
 		);
 
 		$document                           = $this->document();
-		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
-		$button['attrs']['backgroundColor'] = 'var:preset|color|brand';
-		$button['attrs']['textColor']       = 'var:preset|color|on-brand';
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3]['innerBlocks'][0];
+		unset( $button['attrs']['style'] );
+		$button['attrs']['style']           = array(
+			'color' => array(
+				'background' => 'var:preset|color|brand',
+				'text'       => 'var:preset|color|on-brand',
+			),
+		);
 
 		$context = $this->context()->with_metadata( 'brandKit', $kit );
 
@@ -408,7 +442,8 @@ final class Native_Email_Blocks_Test extends TestCase {
 		$kit = Brand_Kit::from_colors( array( 'brand' => '#123456' ) );
 
 		$document                           = $this->document();
-		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3];
+		$button                             = &$document[0]['innerBlocks'][0]['innerBlocks'][3]['innerBlocks'][0];
+		unset( $button['attrs']['style'] );
 		$button['attrs']['backgroundColor'] = 'brand';
 
 		$context = $this->context()->with_metadata( 'brandKit', $kit );
@@ -424,14 +459,14 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 		$document                  = $this->document();
 		$divider                   = &$document[0]['innerBlocks'][0]['innerBlocks'][5];
-		$divider['attrs']['color'] = 'var:preset|color|brand';
+		$divider['attrs']['style'] = array( 'color' => array( 'background' => 'var:preset|color|brand' ) );
 
 		$context = $this->context()->with_metadata( 'brandKit', $kit );
 
 		$result = Compiler_Factory::create()->compile( $document, $context );
 
 		self::assertTrue( $result->is_success(), 'Expected a divider with a preset reference to compile.' );
-		self::assertStringContainsString( 'border-top:2px solid #ff0000', $result->html() );
+		self::assertStringContainsString( 'border-top:1px solid #ff0000', $result->html() );
 	}
 
 	public function test_heading_resolves_brand_kit_text_color_slug(): void {
@@ -496,9 +531,9 @@ final class Native_Email_Blocks_Test extends TestCase {
 		$reflection = new \ReflectionClass( \CampaignBridge\Services\Email\Renderer\Native_Style_Support::class );
 		$constant   = $reflection->getConstant( 'SUPPORTED' );
 
-		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/text'], 'Text block should allow typography.fontFamily.' );
-		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/button'], 'Button block should allow typography.fontFamily.' );
-		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/heading'], 'Heading block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['core/paragraph'], 'Text block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['core/button'], 'Button block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['core/heading'], 'Heading block should allow typography.fontFamily.' );
 		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-title'], 'Post title block should allow typography.fontFamily.' );
 		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-excerpt'], 'Post excerpt block should allow typography.fontFamily.' );
 		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-button'], 'Post button block should allow typography.fontFamily.' );

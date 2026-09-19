@@ -1,0 +1,9 @@
+Core authoring
+Hello bold, italic, struck and docs (https://example.com/docs).
+Next line
+https://example.com/story
+Take action: https://example.com/action
+- First
+- Second item
+1. One
+2. Two

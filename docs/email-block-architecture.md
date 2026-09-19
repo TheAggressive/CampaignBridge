@@ -2,9 +2,27 @@
 
 ## Decision
 
-CampaignBridge will provide a constrained email-native block library and
+CampaignBridge will provide a constrained email-native block grammar and
 compiler. It will not treat arbitrary Gutenberg frontend markup as the source
 for an email and then try to repair that markup after rendering.
+
+**WordPress Native First:** CampaignBridge uses WordPress Core blocks for
+authoring when Core already provides the appropriate content or layout
+primitive. Supported Core blocks are normalized into CampaignBridge's bounded
+email semantics and compiled into deterministic email-safe output. Core
+frontend rendering is not used as email output.
+
+```text
+WordPress native block editor
+  → selected supported Core blocks + CampaignBridge email blocks
+  → bounded CampaignBridge normalization (Core_Block_Normalizer)
+  → canonical email semantics
+  → CampaignBridge deterministic compiler
+  → email-safe HTML + plain text
+```
+
+This does not make every Core block supported. Only the Core blocks named in the
+authoring contract below are email input; everything else fails closed.
 
 The phrase "block store" can be confused with a WordPress data store. In this
 repository, use **email block library** for the inserter/catalog and **email
@@ -79,8 +97,8 @@ The first production set should stay deliberately small:
 | Group     | Blocks                                                    |
 | --------- | --------------------------------------------------------- |
 | Document  | email root, preheader, section, compliance footer         |
-| Layout    | one- to six-column row, column, spacer, divider           |
-| Content   | text, heading, image, bullet list, button                 |
+| Layout    | one- to six-column row, column, Core spacer and separator |
+| Content   | Core paragraph, heading, image, list, buttons             |
 | WordPress | post card, post image, post title, post excerpt, post CTA |
 
 Add social links and more layout variants only after the compiler and fixtures
@@ -91,17 +109,103 @@ The post-v1 candidates, classifications, dependencies, patterns, and promotion
 gates are mapped in [`email-block-catalog.md`](email-block-catalog.md). Inclusion
 there does not add an item to the supported grammar or editor allowlist.
 
-Core and third-party frontend blocks are not compiler input. The native
-WordPress editor exposes only the CampaignBridge email grammar for templates.
-Unsupported blocks
-produce blocking diagnostics; there is no adapter or generic fallback that
-silently strips or approximates markup.
+## Supported authoring contract
+
+`includes/Email_Blocks/email-blocks.json` is the single authoritative contract.
+It names every supported authoring block, its origin (`core` or
+`campaignbridge`), the CampaignBridge email semantics it compiles through, and
+its permitted children. Consumers derive from it or are parity-tested against
+it:
+
+- the template editor allowlist (`Native_Editor::allowed_block_types()`);
+- editor nesting (`src/blocks/shared/nesting.ts`);
+- server nesting (each renderer's `allowed_children()` reads the contract);
+- Core normalization (`Core_Block_Normalizer::SEMANTICS`);
+- the compiler renderer registry (`Compiler_Factory::registry()`).
+
+### Supported WordPress Core blocks
+
+| Core block       | Email semantics | Normalized from                                                            |
+| ---------------- | --------------- | -------------------------------------------------------------------------- |
+| `core/paragraph` | text            | `<p>` rich text, `style.typography.textAlign`, colour/typography/spacing   |
+| `core/heading`   | heading         | `<h1>`–`<h4>` rich text, `level`, text alignment, colour/typography        |
+| `core/image`     | image           | `<img src/alt>`, `figure > a[href]`, pixel `width`/`height`, `align`       |
+| `core/buttons`   | button group    | `layout.justifyContent` (left, center, right)                              |
+| `core/button`    | button          | `<a href>` and label, `fill`/`outline`/`ghost` style, colours, font family |
+| `core/list`      | list            | `ordered`                                                                  |
+| `core/list-item` | list item       | `<li>` rich text                                                           |
+| `core/separator` | divider         | background colour; thickness and line style come from the email design     |
+| `core/spacer`    | spacer          | `height` (Core default 100px), 0–600 px                                    |
+
+Users insert and edit the real Core blocks with native Gutenberg behaviour
+(inserter, toolbar, inspector, RichText, List View, transforms, undo/redo). The
+editor extension narrows their native design supports through the public
+`blocks.registerBlockType` filter (`src/scripts/editor/core-email-blocks.ts`),
+removes block styles the compiler cannot express (image `rounded`, separator
+`dots`), adds the email-only `ghost` ("Text link") button style, and limits
+heading levels to 1–4. It never forks a Core edit component.
+
+### Remaining CampaignBridge blocks
+
+`campaignbridge/container`, `campaignbridge/preheader`, `campaignbridge/section`,
+`campaignbridge/columns`, `campaignbridge/column`, `campaignbridge/post-card`,
+`campaignbridge/post-image`, `campaignbridge/post-title`,
+`campaignbridge/post-excerpt`, `campaignbridge/post-button`,
+`campaignbridge/post-link`, and `campaignbridge/compliance-footer` stay custom:
+they own the email document structure, compliance, or snapshot-bound post
+content that Core blocks do not model.
+
+`core/columns`/`core/column` were evaluated and not adopted. Email columns are
+presentation-table cells whose widths are integer percentages of the row with
+a deterministic automatic share, and the email grammar requires flat columns
+whose cells may hold post-binding blocks. Core `column.width` is a free-form CSS
+length (px, em, vw, `calc()`), Core columns may nest inside Core columns, a Core
+column's inner allowlist is open unless every block carries an `allowedBlocks`
+attribute, and Core layout exposes a two-axis `blockGap` and per-column
+vertical alignment that a single-row email table cannot honour. The
+CampaignBridge pair keeps those guarantees without registration overrides.
+
+### Normalization and compiler boundary
+
+`Core_Block_Normalizer` runs once per Core node before renderer lookup. It reads
+only each block's known serialization contract: comment attributes plus, where
+Core sources a value from saved markup, the exact wrapper Core's `save()`
+emits. It drops editor-only values (`lock`, `placeholder`, List View
+`metadata.name`) and frontend-only link/media metadata (`id`, `sizeSlug`,
+`linkTarget`, `rel`, button `title`, `lightbox`, separator `opacity` and
+`tagName`), canonicalizes
+Core link-format anchors (`data-type`, `data-id`), and converts Core values into
+renderer semantics. Any other attribute, custom class, block style, markup
+shape, or unsupported style produces a stable `block.attribute.invalid`
+diagnostic. Renderers then validate and render as for any other block. Arbitrary
+`innerHTML` is never canonical, and `render_block()` or theme CSS is never used.
+
+### Unsupported blocks
+
+Every Core block not listed above (for example `core/group`, `core/cover`,
+`core/gallery`, `core/embed`, `core/video`, `core/html`, `core/shortcode`,
+`core/query`, `core/navigation`, `core/columns`, `core/quote`, `core/table`) and
+every third-party block is outside the grammar. The editor does not offer them,
+and the compiler returns `block.child.unsupported` or `block.unsupported` with
+the exact block path. There is no adapter or generic fallback that silently
+strips or approximates markup.
+
+Known v1 limits: nested lists, list `start`/`reversed`/`type`, image captions,
+cropping (`aspectRatio`/`scale`), `space-between` button groups, and button
+widths, border radius, or font size are rejected. Several buttons in one
+`core/buttons` group render as stacked rows. The editor removes list insertion
+inside list items, but Core's keyboard indent in a list still creates a nested
+list; the compiler reports it as `block.child.unsupported`. Core controls the
+editor cannot hide (list start/reversed, image caption and crop, button-group
+`space-between`) are likewise reported by the compiler rather than ignored.
 
 The inline rich-text parser is intentionally a small, fail-closed grammar for
 balanced emphasis, underline, strikethrough, line breaks, and HTTPS links. Do
-not evolve it into a general HTML parser as new content features arrive. Add
-semantic blocks for structures such as lists, and move to a purpose-built,
-allowlisted parser before accepting spans, arbitrary attributes, or styles.
+not evolve it into a general HTML parser as new content features arrive. Use
+semantic blocks (such as `core/list`) for structures, and move to a
+purpose-built, allowlisted parser before accepting spans, arbitrary attributes,
+or styles. Core rich-text formats outside that subset (highlight, inline code,
+inline images, sub/superscript) are rejected.
 
 ## Output rules
 
@@ -214,6 +318,9 @@ prototype renderers. The completed foundation:
    controls remain gated.
 6. Add the compiled-preview endpoint and iframe, then gate approval on compiler
    validation and artifact hashing.
+7. Replaced the text, heading, image, button, divider, and spacer duplicates
+   with the supported WordPress Core blocks and added Core lists (WordPress
+   Native First), without aliases or migrations.
 
 Existing prototype templates are unsupported input after cutover. If durable
 production data is declared later, handle it with a finite, observable data
@@ -239,10 +346,13 @@ precedence, and ownership boundaries are recorded in
 resolve that manifest and Brand Kit into one immutable design consumed by both
 the editor adapter and compiler; neither consumer interprets raw manifest data.
 
-Supported controls are declared per block: text blocks expose color and
-font size/line height; containers, sections, cards and footers expose their
-supported spacing; columns use native block gap; spacers use minimum height;
-dividers use native borders. Container content width uses constrained layout.
+Supported controls are declared per block: Core paragraphs expose text and
+background color, font size, font family, line height, text alignment, and
+spacing; Core headings expose text color, typography, and alignment; Core
+buttons expose colors and font family; Core images expose margin and alignment;
+Core separators expose a color while their thickness and line style come from
+the email design; Core spacers use their height. Containers, sections, cards and
+footers expose their supported spacing; columns use native block gap. Container content width uses constrained layout.
 Gap applies only between columns, without adding outside gutters. The preview
 uses the compiled artifact for both desktop and mobile.
 

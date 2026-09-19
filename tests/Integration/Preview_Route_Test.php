@@ -41,7 +41,7 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 	public function test_compiles_content_into_the_documented_response_shape(): void {
 		$response = $this->preview(
 			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
-			. '<!-- wp:campaignbridge/heading {"content":"Hello","level":2} /-->'
+			. '<!-- wp:core/heading {"content":"Hello","level":2} /-->'
 			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->'
 		);
 
@@ -94,7 +94,7 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 	public function test_unknown_metadata_keys_are_dropped(): void {
 		$request = new WP_REST_Request( 'POST', self::ROUTE );
 		$request->set_param( 'template_id', $this->template_id );
-		$request->set_param( 'content', '<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section --><!-- wp:campaignbridge/spacer /--><!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->' );
+		$request->set_param( 'content', '<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section --><!-- wp:core/spacer /--><!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->' );
 		$request->set_param(
 			'metadata',
 			array(

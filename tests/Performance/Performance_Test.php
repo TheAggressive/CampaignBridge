@@ -444,30 +444,36 @@ class Performance_Test extends Test_Case {
 			'attrs'       => array(),
 			'innerBlocks' => array(
 				array(
-					'blockName'   => 'campaignbridge/heading',
+					'blockName'   => 'core/heading',
 					'attrs'       => array( 'content' => 'Native performance section' ),
 					'innerBlocks' => array(),
 				),
 				array(
-					'blockName'   => 'campaignbridge/text',
+					'blockName'   => 'core/paragraph',
 					'attrs'       => array( 'content' => 'A <strong>bounded</strong> native content fixture.' ),
 					'innerBlocks' => array(),
 				),
 				array(
-					'blockName'   => 'campaignbridge/button',
-					'attrs'       => array(
-						'label' => 'Continue',
-						'url'   => 'https://example.com/continue',
+					'blockName'   => 'core/buttons',
+					'attrs'       => array(),
+					'innerBlocks' => array(
+						array(
+							'blockName'   => 'core/button',
+							'attrs'       => array(
+								'text' => 'Continue',
+								'url'  => 'https://example.com/continue',
+							),
+							'innerBlocks' => array(),
+						),
 					),
-					'innerBlocks' => array(),
 				),
 				array(
-					'blockName'   => 'campaignbridge/spacer',
+					'blockName'   => 'core/spacer',
 					'attrs'       => array(),
 					'innerBlocks' => array(),
 				),
 				array(
-					'blockName'   => 'campaignbridge/divider',
+					'blockName'   => 'core/separator',
 					'attrs'       => array(),
 					'innerBlocks' => array(),
 				),

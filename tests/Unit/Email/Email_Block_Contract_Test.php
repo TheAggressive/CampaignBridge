@@ -1,0 +1,154 @@
+<?php
+/**
+ * Authoritative email authoring block contract tests.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
+namespace CampaignBridge\Tests\Unit\Email;
+
+use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Core_Block_Normalizer;
+use CampaignBridge\Services\Email\Email_Block_Contract;
+use PHPUnit\Framework\TestCase;
+
+/** Prove every consumer of the supported-block grammar agrees with the contract. */
+final class Email_Block_Contract_Test extends TestCase {
+	private const SUPPORTED_CORE = array(
+		'core/paragraph',
+		'core/heading',
+		'core/image',
+		'core/buttons',
+		'core/button',
+		'core/list',
+		'core/list-item',
+		'core/separator',
+		'core/spacer',
+	);
+
+	private const CAMPAIGNBRIDGE = array(
+		'campaignbridge/container',
+		'campaignbridge/preheader',
+		'campaignbridge/section',
+		'campaignbridge/columns',
+		'campaignbridge/column',
+		'campaignbridge/post-card',
+		'campaignbridge/post-image',
+		'campaignbridge/post-title',
+		'campaignbridge/post-excerpt',
+		'campaignbridge/post-button',
+		'campaignbridge/post-link',
+		'campaignbridge/compliance-footer',
+	);
+
+	private const OBSOLETE = array(
+		'campaignbridge/text',
+		'campaignbridge/heading',
+		'campaignbridge/image',
+		'campaignbridge/button',
+		'campaignbridge/divider',
+		'campaignbridge/spacer',
+		'campaignbridge/list',
+		'campaignbridge/list-item',
+	);
+
+	public function test_contract_names_exactly_the_supported_core_and_campaignbridge_blocks(): void {
+		$core = Email_Block_Contract::core_names();
+		sort( $core, SORT_STRING );
+		$expected_core = self::SUPPORTED_CORE;
+		sort( $expected_core, SORT_STRING );
+		self::assertSame( $expected_core, $core );
+
+		$custom = array_values( array_diff( Email_Block_Contract::names(), Email_Block_Contract::core_names() ) );
+		sort( $custom, SORT_STRING );
+		$expected_custom = self::CAMPAIGNBRIDGE;
+		sort( $expected_custom, SORT_STRING );
+		self::assertSame( $expected_custom, $custom );
+	}
+
+	public function test_compiler_registry_matches_the_contract(): void {
+		$registry = Compiler_Factory::registry()->block_names();
+		$contract = Email_Block_Contract::names();
+		sort( $registry, SORT_STRING );
+		sort( $contract, SORT_STRING );
+
+		self::assertSame( $contract, $registry );
+	}
+
+	public function test_renderer_nesting_is_the_contract_nesting(): void {
+		$registry = Compiler_Factory::registry();
+		foreach ( Email_Block_Contract::names() as $name ) {
+			$renderer = $registry->get( $name );
+			self::assertNotNull( $renderer, $name );
+			self::assertSame( Email_Block_Contract::children( $name ), $renderer->allowed_children(), $name );
+		}
+	}
+
+	public function test_core_normalization_supports_exactly_the_contract_core_semantics(): void {
+		$semantics = array_map( static fn ( string $name ): string => (string) Email_Block_Contract::semantics( $name ), Email_Block_Contract::core_names() );
+		sort( $semantics, SORT_STRING );
+		$normalizer = Core_Block_Normalizer::SEMANTICS;
+		sort( $normalizer, SORT_STRING );
+
+		self::assertSame( $normalizer, $semantics );
+	}
+
+	public function test_core_blocks_map_to_explicit_email_semantics(): void {
+		self::assertSame(
+			array(
+				'core/paragraph' => 'text',
+				'core/heading'   => 'heading',
+				'core/image'     => 'image',
+				'core/buttons'   => 'button-group',
+				'core/button'    => 'button',
+				'core/list'      => 'list',
+				'core/list-item' => 'list-item',
+				'core/separator' => 'divider',
+				'core/spacer'    => 'spacer',
+			),
+			array_combine( self::SUPPORTED_CORE, array_map( array( Email_Block_Contract::class, 'semantics' ), self::SUPPORTED_CORE ) )
+		);
+	}
+
+	public function test_v1_nesting_is_intentionally_constrained(): void {
+		self::assertSame( array( 'core/button' ), Email_Block_Contract::children( 'core/buttons' ) );
+		self::assertSame( array( 'core/list-item' ), Email_Block_Contract::children( 'core/list' ) );
+		self::assertSame( array(), Email_Block_Contract::children( 'core/list-item' ), 'Nested lists are outside the v1 grammar.' );
+		self::assertSame( array( 'campaignbridge/column' ), Email_Block_Contract::children( 'campaignbridge/columns' ) );
+		self::assertNotContains( 'campaignbridge/columns', Email_Block_Contract::children( 'campaignbridge/column' ) );
+		self::assertNotContains( 'core/button', Email_Block_Contract::children( 'campaignbridge/section' ), 'Core buttons are always grouped.' );
+		self::assertNotContains( 'core/list-item', Email_Block_Contract::children( 'campaignbridge/section' ) );
+		foreach ( array( 'core/group', 'core/cover', 'core/gallery', 'core/embed', 'core/video', 'core/html', 'core/shortcode', 'core/query', 'core/navigation', 'core/columns', 'core/column' ) as $unsupported ) {
+			self::assertFalse( Email_Block_Contract::has( $unsupported ), $unsupported );
+		}
+	}
+
+	public function test_replaced_campaignbridge_duplicates_are_gone(): void {
+		$blocks_directory = dirname( __DIR__, 3 ) . '/src/blocks/';
+		$registry         = Compiler_Factory::registry();
+		foreach ( self::OBSOLETE as $name ) {
+			self::assertFalse( Email_Block_Contract::has( $name ), $name );
+			self::assertNull( $registry->get( $name ), $name );
+			self::assertDirectoryDoesNotExist( $blocks_directory . substr( $name, strlen( 'campaignbridge/' ) ), $name );
+		}
+	}
+
+	public function test_email_compilation_never_uses_frontend_block_rendering(): void {
+		$root  = dirname( __DIR__, 3 ) . '/includes/';
+		$files = array_merge(
+			glob( $root . 'Workflow/Email/*.php' ) ?: array(),
+			glob( $root . 'Services/Email/*.php' ) ?: array(),
+			glob( $root . 'Services/Email/Renderer/*.php' ) ?: array(),
+			glob( $root . 'Domain/Email/*.php' ) ?: array()
+		);
+		self::assertNotEmpty( $files );
+		foreach ( $files as $file ) {
+			$source = (string) file_get_contents( $file );
+			foreach ( array( 'render_block(', 'do_blocks(', "'the_content'", 'wp_get_global_styles(', 'wp_get_global_stylesheet(' ) as $forbidden ) {
+				self::assertStringNotContainsString( $forbidden, $source, basename( $file ) . ' must not use ' . $forbidden );
+			}
+		}
+	}
+}
