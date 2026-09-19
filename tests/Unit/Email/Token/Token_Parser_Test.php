@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit\Email\Token;
 
 use CampaignBridge\Domain\Email\Token\Token_Definition;
+use CampaignBridge\Domain\Email\Token\Token_Diagnostic;
 use CampaignBridge\Domain\Email\Token\Token_Parser;
 use CampaignBridge\Domain\Email\Token\Token_Parse_Result;
 use CampaignBridge\Domain\Email\Token\Token_Registry;
@@ -104,6 +105,9 @@ final class Token_Parser_Test extends Test_Case {
 		$diagnostics = $result->get_diagnostics();
 		$this->assertNotEmpty( $diagnostics );
 		$this->assertTrue( $diagnostics[0]->is_error() );
+		$this->assertSame( Token_Diagnostic::CODE_UNKNOWN_TOKEN, $diagnostics[0]->get_code() );
+		$this->assertSame( 6, $diagnostics[0]->get_position() );
+		$this->assertSame( array(), $result->get_tokens() );
 	}
 
 	/**
@@ -117,6 +121,8 @@ final class Token_Parser_Test extends Test_Case {
 		$diagnostics = $result->get_diagnostics();
 		$this->assertNotEmpty( $diagnostics );
 		$this->assertTrue( $diagnostics[0]->is_error() );
+		$this->assertSame( Token_Diagnostic::CODE_MALFORMED_TOKEN, $diagnostics[0]->get_code() );
+		$this->assertSame( 'Malformed token expression', $diagnostics[0]->get_message() );
 	}
 
 	/**
@@ -186,5 +192,41 @@ final class Token_Parser_Test extends Test_Case {
 		$result = $this->parse( '{{cb:subscriber.{{nested}}}}' );
 
 		$this->assertFalse( $result->is_successful() );
+	}
+
+	/**
+	 * Malformed input that contains subscriber-like data is never echoed.
+	 */
+	public function test_malformed_diagnostics_do_not_echo_input(): void {
+		$result = $this->parse( 'Hi {{cb:alice.smith@example.com 123-45-6789}} and {{cb:subscriber.first_name' );
+
+		$this->assertFalse( $result->is_successful() );
+		$this->assertCount( 2, $result->get_diagnostics() );
+		foreach ( $result->get_diagnostics() as $diagnostic ) {
+			$this->assertSame( Token_Diagnostic::CODE_MALFORMED_TOKEN, $diagnostic->get_code() );
+			foreach ( array( 'alice', '@', 'example.com', '123-45-6789', 'Hi ' ) as $fragment ) {
+				$this->assertStringNotContainsString( $fragment, $diagnostic->get_message() );
+			}
+		}
+	}
+
+	/**
+	 * Non-CampaignBridge double-brace syntax is literal text, not a token.
+	 */
+	public function test_foreign_double_brace_syntax_is_literal(): void {
+		$result = $this->parse( 'Hi {{ first_name }} {{FNAME}} *|FNAME|* {{#if x}}' );
+
+		$this->assertTrue( $result->is_successful() );
+		$this->assertSame( array(), $result->get_tokens() );
+		$this->assertSame( array(), $result->get_diagnostics() );
+	}
+
+	/**
+	 * Identical input produces identical tokens and diagnostics.
+	 */
+	public function test_parse_is_deterministic(): void {
+		$input = '{{cb:organization.name}} {{cb:campaign.unsubscribe_url}} {{cb:nope.x}}';
+
+		$this->assertEquals( $this->parse( $input ), $this->parse( $input ) );
 	}
 }

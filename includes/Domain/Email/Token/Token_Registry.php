@@ -6,7 +6,13 @@
  * @since   1.0.0
  */
 
+declare(strict_types=1);
+
 namespace CampaignBridge\Domain\Email\Token;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /**
  * Immutable, ordered registry of token definitions.
@@ -149,6 +155,13 @@ final class Token_Registry {
 	 * This factory is deterministic: two calls always produce registries
 	 * with identical token sets and ordering.
 	 *
+	 * Subscriber values are provider-owned and resolve at send time. The
+	 * view-online and unsubscribe links stay canonical semantic tokens until a
+	 * provider context emits its own representation, so they also require
+	 * provider resolution. Organization values are CampaignBridge-owned and
+	 * resolve locally. The unsubscribe link and the physical postal address are
+	 * the two values approval-blocking compliance validation requires.
+	 *
 	 * @return static
 	 */
 	public static function default(): self {
@@ -183,7 +196,7 @@ final class Token_Registry {
 					true,
 					Token_Definition::PREVIEW_OMIT,
 					true,
-					true
+					false
 				),
 				Token_Definition::create(
 					'cb:campaign.view_online_url',
@@ -192,7 +205,7 @@ final class Token_Registry {
 					Token_Definition::VALUE_TYPE_URL,
 					true,
 					Token_Definition::PREVIEW_SAMPLE,
-					false,
+					true,
 					false
 				),
 				Token_Definition::create(
@@ -202,8 +215,8 @@ final class Token_Registry {
 					Token_Definition::VALUE_TYPE_URL,
 					true,
 					Token_Definition::PREVIEW_SAMPLE,
-					false,
-					false
+					true,
+					true
 				),
 				Token_Definition::create(
 					'cb:organization.name',
@@ -223,7 +236,7 @@ final class Token_Registry {
 					true,
 					Token_Definition::PREVIEW_SAMPLE,
 					false,
-					false
+					true
 				),
 			)
 		);

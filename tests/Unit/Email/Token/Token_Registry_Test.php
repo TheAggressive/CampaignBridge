@@ -117,32 +117,86 @@ final class Token_Registry_Test extends Test_Case {
 	}
 
 	/**
-	 * Test that campaign and organization tokens do not require provider resolution.
+	 * Canonical IDs are exact and ordered deterministically.
 	 */
-	public function test_campaign_and_organization_tokens_do_not_require_provider_resolution(): void {
-		$registry = Token_Registry::default();
+	public function test_default_ids_are_exact_and_ordered(): void {
+		$this->assertSame(
+			array(
+				'cb:subscriber.first_name',
+				'cb:subscriber.last_name',
+				'cb:subscriber.email',
+				'cb:campaign.view_online_url',
+				'cb:campaign.unsubscribe_url',
+				'cb:organization.name',
+				'cb:organization.address',
+			),
+			Token_Registry::default()->get_ids()
+		);
+	}
 
-		foreach ( array( 'cb:campaign.view_online_url', 'cb:campaign.unsubscribe_url', 'cb:organization.name', 'cb:organization.address' ) as $id ) {
-			$def = $registry->get( $id );
-			$this->assertNotNull( $def, "Expected {$id} to exist" );
-			$this->assertFalse( $def->requires_provider_resolution(), "{$id} should not require provider resolution" );
+	/**
+	 * Provider resolution follows Issue #70: subscriber values and the
+	 * view-online/unsubscribe links resolve in a provider context; organization
+	 * values resolve locally in CampaignBridge.
+	 */
+	public function test_provider_resolution_contract(): void {
+		$this->assertSame(
+			array(
+				'cb:subscriber.first_name'    => true,
+				'cb:subscriber.last_name'     => true,
+				'cb:subscriber.email'         => true,
+				'cb:campaign.view_online_url' => true,
+				'cb:campaign.unsubscribe_url' => true,
+				'cb:organization.name'        => false,
+				'cb:organization.address'     => false,
+			),
+			$this->flags( static fn ( Token_Definition $def ): bool => $def->requires_provider_resolution() )
+		);
+	}
+
+	/**
+	 * Compliance relevance matches the approval-blocking compliance
+	 * requirements: the unsubscribe link and the physical postal address.
+	 */
+	public function test_compliance_relevance_contract(): void {
+		$this->assertSame(
+			array(
+				'cb:subscriber.first_name'    => false,
+				'cb:subscriber.last_name'     => false,
+				'cb:subscriber.email'         => false,
+				'cb:campaign.view_online_url' => false,
+				'cb:campaign.unsubscribe_url' => true,
+				'cb:organization.name'        => false,
+				'cb:organization.address'     => true,
+			),
+			$this->flags( static fn ( Token_Definition $def ): bool => $def->is_compliance_relevant() )
+		);
+	}
+
+	/**
+	 * Every default token is portable and never uses provider syntax.
+	 */
+	public function test_default_tokens_are_portable_and_provider_neutral(): void {
+		foreach ( Token_Registry::default()->all() as $def ) {
+			$this->assertTrue( $def->is_portable(), $def->get_id() );
+			$this->assertMatchesRegularExpression( '/^cb:[a-z]+\.[a-z][a-z0-9_]*$/', $def->get_id() );
+			$this->assertStringNotContainsString( '*|', $def->get_id() );
 		}
 	}
 
 	/**
-	 * Test that subscriber.email is the only compliance-relevant token.
+	 * Collect one boolean flag per default token ID.
+	 *
+	 * @param callable(Token_Definition): bool $flag Flag reader.
+	 * @return array<string, bool>
 	 */
-	public function test_subscriber_email_is_only_compliance_relevant(): void {
-		$registry = Token_Registry::default();
-
-		$compliance_tokens = array();
-		foreach ( $registry->all() as $def ) {
-			if ( $def->is_compliance_relevant() ) {
-				$compliance_tokens[] = $def->get_id();
-			}
+	private function flags( callable $flag ): array {
+		$flags = array();
+		foreach ( Token_Registry::default()->all() as $def ) {
+			$flags[ $def->get_id() ] = $flag( $def );
 		}
 
-		$this->assertSame( array( 'cb:subscriber.email' ), $compliance_tokens );
+		return $flags;
 	}
 
 	/**

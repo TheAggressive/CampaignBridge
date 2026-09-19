@@ -6,7 +6,13 @@
  * @since   1.0.0
  */
 
+declare(strict_types=1);
+
 namespace CampaignBridge\Domain\Email\Token;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /**
  * Describes a single email token by its canonical ID and metadata.
@@ -43,7 +49,9 @@ final class Token_Definition {
 	private string $label;
 
 	/**
-	 * Token category: subscriber, campaign, or system.
+	 * Token category: subscriber, campaign, organization, or system.
+	 *
+	 * The category is the resolution context that owns the value.
 	 *
 	 * @var string
 	 */
@@ -71,14 +79,22 @@ final class Token_Definition {
 	private string $preview_behavior;
 
 	/**
-	 * Whether resolving this token requires provider-side data.
+	 * Whether the value can only be produced in a provider delivery context.
+	 *
+	 * True for provider-owned subscriber data and for per-recipient links that
+	 * remain canonical tokens until a provider emits its own representation.
+	 * False for values CampaignBridge resolves itself.
 	 *
 	 * @var bool
 	 */
 	private bool $requires_provider_resolution;
 
 	/**
-	 * Whether this token is relevant to email compliance requirements.
+	 * Whether approval-blocking compliance validation requires this value.
+	 *
+	 * This marks legally required message content (such as the unsubscribe
+	 * link or the physical postal address), not privacy sensitivity; privacy
+	 * is expressed by the preview behavior.
 	 *
 	 * @var bool
 	 */

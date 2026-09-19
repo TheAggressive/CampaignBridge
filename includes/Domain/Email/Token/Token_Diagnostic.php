@@ -6,7 +6,13 @@
  * @since   1.0.0
  */
 
+declare(strict_types=1);
+
 namespace CampaignBridge\Domain\Email\Token;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /**
  * Describes a single token parse diagnostic.
