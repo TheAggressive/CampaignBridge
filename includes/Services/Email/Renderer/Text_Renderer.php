@@ -15,6 +15,7 @@ use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Style_Resolver;
+use CampaignBridge\Domain\Email\Token\Token_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -30,6 +31,11 @@ final class Text_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
 		return array( 'content', 'align', 'textColor', 'fontSize', 'fontFamily', 'style', 'backgroundColor' );
+	}
+
+	/** {@inheritDoc} */
+	public function token_attributes(): array {
+		return array( 'content' => Token_Resolver::CONTEXT_RICH_TEXT );
 	}
 
 	/**

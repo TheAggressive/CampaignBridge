@@ -30,6 +30,12 @@ final class Token_Diagnostic {
 	const CODE_NESTED_TOKEN    = 'cb_token_nested';
 	const CODE_TOKEN_LIMIT     = 'cb_token_limit_exceeded';
 
+	const CODE_UNRESOLVED_TOKEN      = 'cb_token_unresolved';
+	const CODE_URL_CONTEXT           = 'cb_token_url_context';
+	const CODE_URL_VALUE_TYPE        = 'cb_token_url_value_type';
+	const CODE_UNSUPPORTED_CONTEXT   = 'cb_token_context_unsupported';
+	const CODE_INVALID_CONTEXT_VALUE = 'cb_token_values_invalid';
+
 	/**
 	 * Diagnostic code.
 	 *
@@ -170,6 +176,88 @@ final class Token_Diagnostic {
 			self::CODE_NESTED_TOKEN,
 			'Nested tokens are not supported',
 			$position,
+			self::SEVERITY_ERROR
+		);
+	}
+
+	/**
+	 * Create a diagnostic for a CampaignBridge-owned token without a value.
+	 *
+	 * @param int $position Zero-based offset.
+	 *
+	 * @return static
+	 */
+	public static function unresolved_token( int $position ): self {
+		return new self(
+			self::CODE_UNRESOLVED_TOKEN,
+			'A CampaignBridge token has no value in the compile context',
+			$position,
+			self::SEVERITY_ERROR
+		);
+	}
+
+	/**
+	 * Create a diagnostic for token syntax embedded in a URL.
+	 *
+	 * A URL field holds either a literal HTTP(S) URL or exactly one URL token.
+	 *
+	 * @param int $position Zero-based offset.
+	 *
+	 * @return static
+	 */
+	public static function url_context( int $position ): self {
+		return new self(
+			self::CODE_URL_CONTEXT,
+			'A URL must be a literal HTTP or HTTPS URL or exactly one URL token',
+			$position,
+			self::SEVERITY_ERROR
+		);
+	}
+
+	/**
+	 * Create a diagnostic for a non-URL token used as a URL.
+	 *
+	 * @param int $position Zero-based offset.
+	 *
+	 * @return static
+	 */
+	public static function url_value_type( int $position ): self {
+		return new self(
+			self::CODE_URL_VALUE_TYPE,
+			'Only URL tokens can be used as a link destination',
+			$position,
+			self::SEVERITY_ERROR
+		);
+	}
+
+	/**
+	 * Create a diagnostic for token syntax in a location that does not accept tokens.
+	 *
+	 * @param int $position Zero-based offset.
+	 *
+	 * @return static
+	 */
+	public static function unsupported_context( int $position ): self {
+		return new self(
+			self::CODE_UNSUPPORTED_CONTEXT,
+			'Tokens are not supported in this field',
+			$position,
+			self::SEVERITY_ERROR
+		);
+	}
+
+	/**
+	 * Create a diagnostic for an invalid compile-context token value map.
+	 *
+	 * The offending key or value is never echoed.
+	 *
+	 * @return static
+	 */
+	public static function invalid_context_value(): self {
+		return new self(
+			self::CODE_INVALID_CONTEXT_VALUE,
+			'Token values must map CampaignBridge-owned token IDs to bounded plain-text values',
+			0,
 			self::SEVERITY_ERROR
 		);
 	}

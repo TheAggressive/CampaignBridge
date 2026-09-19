@@ -92,8 +92,9 @@ final class Token_Parser {
 				continue;
 			}
 
-			// Not a token expression; skip past the `{{`.
-			$position = $open + 2;
+			// Not a token expression. Advance one byte so a run of braces such
+			// as `{{{cb:` still reaches the token expression that starts inside it.
+			$position = $open + 1;
 		}
 
 		// Fail-closed: if any error-level diagnostics exist, the parse failed.

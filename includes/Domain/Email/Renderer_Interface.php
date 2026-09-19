@@ -36,6 +36,17 @@ interface Renderer_Interface {
 	public function block_style_names(): array;
 
 	/**
+	 * Get normalized attributes that accept canonical email tokens.
+	 *
+	 * Only author-visible text and link destinations belong here. The compiler
+	 * resolves these attributes after `normalize()` and before `validate()`,
+	 * and rejects token syntax in every other string attribute.
+	 *
+	 * @return array<string, string> Attribute name => Token_Resolver::CONTEXT_* value.
+	 */
+	public function token_attributes(): array;
+
+	/**
 	 * Get accepted child block names.
 	 *
 	 * @return array<int, string>|null Null permits any registered child.

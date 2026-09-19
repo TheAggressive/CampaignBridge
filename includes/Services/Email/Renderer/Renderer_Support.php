@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Style_Resolver;
+use CampaignBridge\Domain\Email\Token\Token_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -388,6 +389,29 @@ final class Renderer_Support {
 	}
 
 	/**
+	 * Return a link destination or null.
+	 *
+	 * A destination is either a literal HTTP(S) URL or exactly one
+	 * provider-resolved URL token such as `{{cb:campaign.unsubscribe_url}}`,
+	 * which stays canonical until provider handoff. Any other double-brace
+	 * content, including a token embedded in an otherwise literal URL, is
+	 * rejected. `https_url()` remains the contract for non-link URLs.
+	 *
+	 * @param mixed $value Candidate link destination.
+	 */
+	public static function link_url( mixed $value ): ?string {
+		if ( ! is_string( $value ) ) {
+			return null;
+		}
+
+		if ( str_contains( $value, '{{' ) || str_contains( $value, '}}' ) ) {
+			return Token_Resolver::default()->is_url_token( $value ) ? $value : null;
+		}
+
+		return self::https_url( $value );
+	}
+
+	/**
 	 * Normalize the supported rich-text subset or return null when unsafe.
 	 *
 	 * @param mixed $value Candidate rich text.
@@ -442,7 +466,7 @@ final class Renderer_Support {
 				&& ! in_array( 'a', $stack, true )
 			) {
 				$url = html_entity_decode( $matches[2], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-				if ( null === self::https_url( $url ) ) {
+				if ( null === self::link_url( $url ) ) {
 					return null;
 				}
 

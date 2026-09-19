@@ -45,6 +45,43 @@ final class Renderer_Support_Test extends TestCase {
 		self::assertNull( Renderer_Support::https_url( true ) );
 	}
 
+	public function test_link_url_accepts_literal_urls_and_exact_provider_url_tokens(): void {
+		self::assertSame( 'https://example.com/a', Renderer_Support::link_url( 'https://example.com/a' ) );
+		self::assertSame( '{{cb:campaign.unsubscribe_url}}', Renderer_Support::link_url( '{{cb:campaign.unsubscribe_url}}' ) );
+		self::assertSame( '{{cb:campaign.view_online_url}}', Renderer_Support::link_url( '{{cb:campaign.view_online_url}}' ) );
+	}
+
+	/**
+	 * @dataProvider rejectedLinkUrls
+	 */
+	public function test_link_url_rejects_unsafe_or_interpolated_destinations( mixed $value ): void {
+		self::assertNull( Renderer_Support::link_url( $value ) );
+	}
+
+	/**
+	 * @return array<string, array{0: mixed}>
+	 */
+	public static function rejectedLinkUrls(): array {
+		return array(
+			'javascript'          => array( 'javascript:alert(1)' ),
+			'data'                => array( 'data:text/html,x' ),
+			'relative'            => array( '/unsubscribe' ),
+			'non-string'          => array( null ),
+			'string token'        => array( '{{cb:subscriber.first_name}}' ),
+			'local string token'  => array( '{{cb:organization.name}}' ),
+			'unknown token'       => array( '{{cb:campaign.archive_url}}' ),
+			'query interpolation' => array( 'https://example.com/?email={{cb:subscriber.email}}' ),
+			'path interpolation'  => array( 'https://example.com/{{cb:campaign.unsubscribe_url}}' ),
+			'javascript token'    => array( 'javascript:{{cb:campaign.unsubscribe_url}}' ),
+			'prefixed token'      => array( 'prefix-{{cb:campaign.unsubscribe_url}}' ),
+			'foreign braces'      => array( 'https://example.com/{{FNAME}}' ),
+		);
+	}
+
+	public function test_https_url_contract_is_unchanged_for_non_link_urls(): void {
+		self::assertNull( Renderer_Support::https_url( '{{cb:campaign.unsubscribe_url}}' ) );
+	}
+
 	/**
 	 * @return array<string, array{0: string}>
 	 */

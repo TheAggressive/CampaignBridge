@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Token\Token_Resolver;
 use CampaignBridge\Services\Email\Email_Block_Contract;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,6 +30,11 @@ final class List_Item_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
 		return array( 'content' );
+	}
+
+	/** {@inheritDoc} */
+	public function token_attributes(): array {
+		return array( 'content' => Token_Resolver::CONTEXT_RICH_TEXT );
 	}
 
 	/** {@inheritDoc} */
