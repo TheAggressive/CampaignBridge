@@ -12,6 +12,7 @@ namespace CampaignBridge\Services\Email;
 use CampaignBridge\Domain\Email\Email_Design_Block_Defaults;
 use CampaignBridge\Domain\Email\Renderer_Registry;
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
+use CampaignBridge\Domain\Email\Token\Token_Resolver;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 use CampaignBridge\Services\Email\Renderer\Button_Renderer;
 use CampaignBridge\Services\Email\Renderer\Buttons_Renderer;
@@ -55,7 +56,8 @@ final class Compiler_Factory {
 			new Artifact_Fingerprinter(),
 			$design ?? Email_Design_Factory::resolve(),
 			new Email_Design_Block_Defaults(),
-			new Core_Block_Normalizer()
+			new Core_Block_Normalizer(),
+			Token_Resolver::default()
 		);
 	}
 

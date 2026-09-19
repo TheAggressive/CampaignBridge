@@ -15,6 +15,7 @@ use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Style_Resolver;
+use CampaignBridge\Domain\Email\Token\Token_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -30,6 +31,14 @@ final class Button_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
 		return array( 'label', 'url', 'style', 'backgroundColor', 'textColor', 'fontFamily', 'variant' );
+	}
+
+	/** {@inheritDoc} */
+	public function token_attributes(): array {
+		return array(
+			'label' => Token_Resolver::CONTEXT_TEXT,
+			'url'   => Token_Resolver::CONTEXT_URL,
+		);
 	}
 
 	/** {@inheritDoc} */
@@ -74,7 +83,7 @@ final class Button_Renderer extends Abstract_Renderer {
 			return array( Compile_Diagnostic::error( 'button.label.too_long', $block->path(), 'Email button labels cannot exceed 80 bytes.' ) );
 		}
 
-		if ( null === Renderer_Support::https_url( $attributes['url'] ) ) {
+		if ( null === Renderer_Support::link_url( $attributes['url'] ) ) {
 			return array( Compile_Diagnostic::error( 'button.url.invalid', $block->path(), 'Email buttons require an absolute URL.' ) );
 		}
 

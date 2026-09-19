@@ -222,6 +222,20 @@ final class Token_Parser_Test extends Test_Case {
 	}
 
 	/**
+	 * A run of opening braces still reaches the token expression inside it.
+	 */
+	public function test_brace_run_before_a_token_is_still_parsed(): void {
+		$unknown = $this->parse( '{{{cb:subscriber.nickname}}' );
+		$valid   = $this->parse( '{{{{cb:organization.name}}' );
+
+		$this->assertFalse( $unknown->is_successful() );
+		$this->assertSame( Token_Diagnostic::CODE_UNKNOWN_TOKEN, $unknown->get_diagnostics()[0]->get_code() );
+		$this->assertSame( 1, $unknown->get_diagnostics()[0]->get_position() );
+		$this->assertTrue( $valid->is_successful() );
+		$this->assertSame( array( 'cb:organization.name' ), array_map( static fn ( Token_Definition $d ): string => $d->get_id(), $valid->get_tokens() ) );
+	}
+
+	/**
 	 * Identical input produces identical tokens and diagnostics.
 	 */
 	public function test_parse_is_deterministic(): void {

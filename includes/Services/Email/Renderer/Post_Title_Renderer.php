@@ -34,6 +34,15 @@ final class Post_Title_Renderer extends Abstract_Renderer {
 	/**
 	 * {@inheritDoc}
 	 *
+	 * @param Block_Node $block Normalized block.
+	 */
+	public function snapshot_fields( Block_Node $block ): array {
+		return $block->attributes()['linkToPost'] ? array( 'title', 'url' ) : array( 'title' );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {

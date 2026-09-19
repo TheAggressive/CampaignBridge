@@ -26,6 +26,20 @@ abstract class Abstract_Renderer implements Renderer_Interface {
 	}
 
 	/** {@inheritDoc} */
+	public function token_attributes(): array {
+		return array();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node $block Normalized block.
+	 */
+	public function snapshot_fields( Block_Node $block ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+		return array();
+	}
+
+	/** {@inheritDoc} */
 	public function allowed_children(): ?array {
 		return array();
 	}

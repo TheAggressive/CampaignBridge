@@ -284,6 +284,84 @@ Renderers emit inline critical CSS directly. If authored style sheets are added
 later, select a maintained public CSS inliner under `docs/dependency-policy.md`.
 Inlining remains a compiler stage, not a mechanism for repairing browser markup.
 
+## Canonical tokens
+
+Personalization and system values use one provider-neutral syntax,
+`{{cb:category.name}}`. `Token_Registry` (`includes/Domain/Email/Token/`) is the
+only vocabulary, and `Token_Parser` is the only parser.
+
+CampaignBridge never generates provider-specific syntax: its canonical model,
+templates, and artifacts express personalization only as `{{cb:...}}`. The
+parser does not interpret foreign provider syntax such as Mailchimp's
+`*|FNAME|*` as a CampaignBridge token; such text is ordinary literal content and
+may appear in templates, snapshots, and compiled artifacts. Provider handoff
+(not yet implemented) must ensure provider-specific literal syntax cannot be
+accidentally activated by the provider.
+
+The compiler resolves tokens after Core authoring normalization and renderer
+`normalize()`, and before renderer `validate()`. Tokens are therefore handled in
+canonical email semantics, and resolved values still pass the rich-text, URL,
+and length rules. `Token_Resolver` treats a parsed token in one of two ways:
+
+- **CampaignBridge-resolved** (`organization.name`, `organization.address`):
+  replaced during the deterministic compile with the value from the explicit
+  `token_values` metadata map on `Render_Context`, keyed by canonical ID (for
+  example `'cb:organization.name' => 'Example Company'`). A missing value fails
+  closed with `token.unresolved`. The compiler never reads options, the
+  database, or providers for a value. The map is part of the fingerprinted
+  context, so a changed value changes the artifact fingerprint.
+- **Provider-resolved** (`subscriber.*`, `campaign.view_online_url`,
+  `campaign.unsubscribe_url`): validated, then kept verbatim in the HTML and
+  plain-text artifact. A provider adapter translates them at handoff.
+  Compilation needs no subscriber or provider data.
+
+`token_values` may hold only registered CampaignBridge-resolved IDs, with
+bounded plain text that has no control characters or double braces. Any other
+map, including a subscriber or provider-owned value, fails with
+`token.values.invalid` at `context.token_values`.
+
+Renderers declare which normalized attributes accept tokens through
+`token_attributes()`:
+
+| Block | Attribute | Context |
+| --- | --- | --- |
+| `core/paragraph`, `core/heading`, `core/list-item` | `content` | rich text |
+| `core/button` | `label` | text |
+| `core/button` | `url` | URL |
+| `campaignbridge/preheader` | `content` | text |
+
+In rich text, tokens may appear in text runs (including inside `strong`, `em`,
+`u`, `s`) and as the complete `href` of an anchor. Entity-encoded braces are
+decoded before validation. A token split by markup fails closed. Local values
+are HTML-encoded into rich text and escaped by the renderer in plain text.
+
+A URL context accepts either a literal HTTP(S) URL or exactly one token whose
+value type is `url`. Partial interpolation (`https://example.com/?e={{cb:…}}`),
+prefixes (`javascript:{{cb:…}}`), and non-URL tokens are rejected. Link output
+goes through `Renderer_Support::link_url()`. `https_url()` is unchanged and
+still accepts only literal HTTP(S) URLs.
+
+Every other string attribute rejects `{{cb:` syntax with
+`token.context.unsupported`. This covers image URL/alt/link, post blocks, and
+the compliance footer. Token failures produce one diagnostic per code per
+attribute at `<block path>.attrs.<attribute>`, and messages never echo token
+IDs or values: `token.unknown`, `token.malformed`, `token.nested`,
+`token.limit_exceeded`, `token.unresolved`, `token.url.invalid`,
+`token.url.value_type`, `token.context.unsupported`, `token.values.invalid`.
+
+Post snapshot content is never a token context. Renderers declare the snapshot
+fields they emit through `snapshot_fields()` (title, excerpt, image URL,
+non-decorative image alt, and any post, parent, or archive URL a block links
+to), and the compiler rejects
+`{{cb:` in any emitted field with `token.snapshot.unsupported` at
+`<block path>.snapshot.posts[<post ID>].<field>`. Snapshot content is neither
+resolved, preserved, nor rewritten; the compile fails closed. Every canonical
+token in a successful artifact therefore originates from a
+`token_attributes()` attribute.
+
+Not yet implemented: editor token insertion, synthetic preview values,
+compliance-token validation, and provider mapping.
+
 ## Validation and tests
 
 A block is production-ready only when the following pass:

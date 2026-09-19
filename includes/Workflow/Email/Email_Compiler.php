@@ -20,6 +20,9 @@ use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Renderer_Interface;
 use CampaignBridge\Domain\Email\Renderer_Registry;
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
+use CampaignBridge\Domain\Email\Token\Token_Diagnostic;
+use CampaignBridge\Domain\Email\Token\Token_Resolution;
+use CampaignBridge\Domain\Email\Token\Token_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -27,11 +30,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Compiles a bounded native block tree into one deterministic artifact. */
 final class Email_Compiler {
-	public const COMPILER_VERSION = '6';
+	public const COMPILER_VERSION = '7';
 	public const PROFILE_VERSION  = 'universal@1';
 
 	private const MAX_BLOCKS = 500;
 	private const MAX_DEPTH  = 20;
+
+	/**
+	 * Stable compiler codes for token diagnostics.
+	 *
+	 * @var array<string, string>
+	 */
+	private const TOKEN_CODES = array(
+		Token_Diagnostic::CODE_UNKNOWN_TOKEN         => 'token.unknown',
+		Token_Diagnostic::CODE_MALFORMED_TOKEN       => 'token.malformed',
+		Token_Diagnostic::CODE_NESTED_TOKEN          => 'token.nested',
+		Token_Diagnostic::CODE_TOKEN_LIMIT           => 'token.limit_exceeded',
+		Token_Diagnostic::CODE_UNRESOLVED_TOKEN      => 'token.unresolved',
+		Token_Diagnostic::CODE_URL_CONTEXT           => 'token.url.invalid',
+		Token_Diagnostic::CODE_URL_VALUE_TYPE        => 'token.url.value_type',
+		Token_Diagnostic::CODE_UNSUPPORTED_CONTEXT   => 'token.context.unsupported',
+		Token_Diagnostic::CODE_INVALID_CONTEXT_VALUE => 'token.values.invalid',
+	);
 
 	/**
 	 * Blocks visited during the current compilation.
@@ -49,6 +69,7 @@ final class Email_Compiler {
 	 * @param Resolved_Email_Design       $design            Canonical runtime design.
 	 * @param Email_Design_Block_Defaults $design_defaults   Design-to-block adapter.
 	 * @param Authoring_Block_Normalizer  $normalizer        Authoring-to-email semantics adapter.
+	 * @param Token_Resolver              $tokens            Provider-neutral token resolver.
 	 */
 	public function __construct(
 		private readonly Renderer_Registry $registry,
@@ -56,7 +77,8 @@ final class Email_Compiler {
 		private readonly Artifact_Fingerprinter $fingerprinter,
 		private readonly Resolved_Email_Design $design,
 		private readonly Email_Design_Block_Defaults $design_defaults,
-		private readonly Authoring_Block_Normalizer $normalizer
+		private readonly Authoring_Block_Normalizer $normalizer,
+		private readonly Token_Resolver $tokens
 	) {}
 
 	/**
@@ -75,6 +97,11 @@ final class Email_Compiler {
 				'document',
 				'Only the universal@1 email profile is supported.'
 			);
+		}
+
+		$invalid_values = $this->tokens->validate_context_values( $context->metadata( Token_Resolver::CONTEXT_KEY ) );
+		if ( null !== $invalid_values ) {
+			$diagnostics[] = $this->token_diagnostic( $invalid_values, 'context.' . Token_Resolver::CONTEXT_KEY );
 		}
 
 		$nodes = $this->parse_nodes( $blocks, 'blocks', 0, $diagnostics );
@@ -294,7 +321,16 @@ final class Email_Compiler {
 		}
 
 		try {
-			$block       = $renderer->normalize( $block );
+			$block = $this->resolve_tokens( $renderer->normalize( $block ), $renderer, $context, $diagnostics );
+			$this->reject_snapshot_tokens( $block, $renderer, $context, $diagnostics );
+			if ( $this->has_errors( $diagnostics ) ) {
+				return array(
+					'html'   => '',
+					'text'   => '',
+					'assets' => array(),
+				);
+			}
+
 			$diagnostics = array_merge( $diagnostics, $renderer->validate( $block, $context ) );
 			if ( $this->has_errors( $diagnostics ) ) {
 				return array(
@@ -342,6 +378,118 @@ final class Email_Compiler {
 				'assets' => array(),
 			);
 		}
+	}
+
+	/**
+	 * Resolve canonical tokens in normalized semantic attributes.
+	 *
+	 * Runs after Core authoring normalization and renderer normalization, so
+	 * tokens are handled in canonical email semantics, and before renderer
+	 * validation, so resolved values still pass the rich-text, URL, and length
+	 * rules. Attributes the renderer does not declare reject token syntax.
+	 *
+	 * @param Block_Node                     $block       Normalized block.
+	 * @param Renderer_Interface             $renderer    Resolved renderer.
+	 * @param Render_Context                 $context     Immutable scoped context.
+	 * @param array<int, Compile_Diagnostic> $diagnostics Compiler diagnostics.
+	 * @return Block_Node Block with CampaignBridge-owned tokens resolved.
+	 */
+	private function resolve_tokens( Block_Node $block, Renderer_Interface $renderer, Render_Context $context, array &$diagnostics ): Block_Node {
+		$values     = $context->metadata( Token_Resolver::CONTEXT_KEY, array() );
+		$values     = is_array( $values ) ? $values : array();
+		$contexts   = $renderer->token_attributes();
+		$attributes = $block->attributes();
+		$resolved   = $attributes;
+
+		foreach ( $attributes as $name => $value ) {
+			if ( ! is_string( $value ) ) {
+				continue;
+			}
+
+			$resolution = isset( $contexts[ $name ] )
+				? $this->tokens->resolve( $contexts[ $name ], $value, $values )
+				: $this->tokens->reject( $value );
+
+			if ( $resolution->is_successful() ) {
+				$resolved[ $name ] = (string) $resolution->value();
+				continue;
+			}
+
+			array_push( $diagnostics, ...$this->token_diagnostics( $resolution, $block->path() . '.attrs.' . $name ) );
+		}
+
+		return $resolved === $attributes ? $block : $block->with_attributes( $resolved );
+	}
+
+	/**
+	 * Reject canonical token syntax in bound post snapshot content.
+	 *
+	 * Snapshot content is captured from WordPress, not authored in a token
+	 * context, so a literal `{{cb:...}}` in it must never reach the artifact
+	 * where it would be indistinguishable from an authored provider token.
+	 * The source is never rewritten; the compile fails closed instead, and the
+	 * diagnostic names the block, snapshot, and field without echoing content.
+	 *
+	 * @param Block_Node                     $block       Normalized block.
+	 * @param Renderer_Interface             $renderer    Resolved renderer.
+	 * @param Render_Context                 $context     Immutable scoped context.
+	 * @param array<int, Compile_Diagnostic> $diagnostics Compiler diagnostics.
+	 */
+	private function reject_snapshot_tokens( Block_Node $block, Renderer_Interface $renderer, Render_Context $context, array &$diagnostics ): void {
+		$post = $context->post_binding();
+		if ( null === $post ) {
+			return;
+		}
+
+		foreach ( $renderer->snapshot_fields( $block ) as $field ) {
+			$parts = explode( '.', $field, 2 );
+			$value = $post->get( $parts[0] );
+			if ( isset( $parts[1] ) ) {
+				$value = is_array( $value ) ? ( $value[ $parts[1] ] ?? null ) : null;
+			}
+
+			if ( ! is_string( $value ) || $this->tokens->reject( $value )->is_successful() ) {
+				continue;
+			}
+
+			$diagnostics[] = Compile_Diagnostic::error(
+				'token.snapshot.unsupported',
+				sprintf( '%s.snapshot.posts[%d].%s', $block->path(), $post->source_id(), $field ),
+				'Post snapshot content cannot contain CampaignBridge token syntax.'
+			);
+		}
+	}
+
+	/**
+	 * Translate a failed token resolution into one diagnostic per code.
+	 *
+	 * @param Token_Resolution $resolution Failed resolution.
+	 * @param string           $path       Exact attribute path.
+	 * @return array<int, Compile_Diagnostic>
+	 */
+	private function token_diagnostics( Token_Resolution $resolution, string $path ): array {
+		$by_code = array();
+		foreach ( $resolution->diagnostics() as $diagnostic ) {
+			$by_code[ $diagnostic->get_code() ] ??= $this->token_diagnostic( $diagnostic, $path );
+		}
+
+		return array_values( $by_code );
+	}
+
+	/**
+	 * Translate one token diagnostic into a stable compiler diagnostic.
+	 *
+	 * Token diagnostic messages never echo author input or context values.
+	 *
+	 * @param Token_Diagnostic $diagnostic Token diagnostic.
+	 * @param string           $path       Exact diagnostic path.
+	 */
+	private function token_diagnostic( Token_Diagnostic $diagnostic, string $path ): Compile_Diagnostic {
+		return Compile_Diagnostic::error(
+			self::TOKEN_CODES[ $diagnostic->get_code() ] ?? 'token.invalid',
+			$path,
+			$diagnostic->get_message() . '.'
+		);
 	}
 
 	/**
