@@ -342,13 +342,21 @@ final class Renderer_Support {
 			return null;
 		}
 
-		$field = match ( $destination ) {
+		return self::https_url( $post->get( (string) self::post_destination_field( $attributes ) ) );
+	}
+
+	/**
+	 * Name the snapshot field a post destination reads, or null for custom.
+	 *
+	 * @param array<string, mixed> $attributes Normalized block attributes.
+	 */
+	public static function post_destination_field( array $attributes ): ?string {
+		return match ( $attributes['destination'] ) {
+			'custom'          => null,
 			'postParent'      => 'postParentUrl',
 			'postTypeArchive' => 'postTypeArchiveUrl',
 			default           => 'url',
 		};
-
-		return self::https_url( $post->get( $field ) );
 	}
 
 	/**

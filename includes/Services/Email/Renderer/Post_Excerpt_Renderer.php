@@ -34,6 +34,15 @@ final class Post_Excerpt_Renderer extends Abstract_Renderer {
 	/**
 	 * {@inheritDoc}
 	 *
+	 * @param Block_Node $block Normalized block.
+	 */
+	public function snapshot_fields( Block_Node $block ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found
+		return array( 'excerpt' );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {

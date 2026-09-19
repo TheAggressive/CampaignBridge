@@ -322,6 +322,7 @@ final class Email_Compiler {
 
 		try {
 			$block = $this->resolve_tokens( $renderer->normalize( $block ), $renderer, $context, $diagnostics );
+			$this->reject_snapshot_tokens( $block, $renderer, $context, $diagnostics );
 			if ( $this->has_errors( $diagnostics ) ) {
 				return array(
 					'html'   => '',
@@ -418,6 +419,45 @@ final class Email_Compiler {
 		}
 
 		return $resolved === $attributes ? $block : $block->with_attributes( $resolved );
+	}
+
+	/**
+	 * Reject canonical token syntax in bound post snapshot content.
+	 *
+	 * Snapshot content is captured from WordPress, not authored in a token
+	 * context, so a literal `{{cb:...}}` in it must never reach the artifact
+	 * where it would be indistinguishable from an authored provider token.
+	 * The source is never rewritten; the compile fails closed instead, and the
+	 * diagnostic names the block, snapshot, and field without echoing content.
+	 *
+	 * @param Block_Node                     $block       Normalized block.
+	 * @param Renderer_Interface             $renderer    Resolved renderer.
+	 * @param Render_Context                 $context     Immutable scoped context.
+	 * @param array<int, Compile_Diagnostic> $diagnostics Compiler diagnostics.
+	 */
+	private function reject_snapshot_tokens( Block_Node $block, Renderer_Interface $renderer, Render_Context $context, array &$diagnostics ): void {
+		$post = $context->post_binding();
+		if ( null === $post ) {
+			return;
+		}
+
+		foreach ( $renderer->snapshot_fields( $block ) as $field ) {
+			$parts = explode( '.', $field, 2 );
+			$value = $post->get( $parts[0] );
+			if ( isset( $parts[1] ) ) {
+				$value = is_array( $value ) ? ( $value[ $parts[1] ] ?? null ) : null;
+			}
+
+			if ( ! is_string( $value ) || $this->tokens->reject( $value )->is_successful() ) {
+				continue;
+			}
+
+			$diagnostics[] = Compile_Diagnostic::error(
+				'token.snapshot.unsupported',
+				sprintf( '%s.snapshot.posts[%d].%s', $block->path(), $post->source_id(), $field ),
+				'Post snapshot content cannot contain CampaignBridge token syntax.'
+			);
+		}
 	}
 
 	/**

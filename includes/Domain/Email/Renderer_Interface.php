@@ -47,6 +47,18 @@ interface Renderer_Interface {
 	public function token_attributes(): array;
 
 	/**
+	 * Get the bound post snapshot fields this block emits into the artifact.
+	 *
+	 * Snapshot content is never a token context. The compiler rejects
+	 * canonical token syntax in every declared field so each `{{cb:...}}` in
+	 * a successful artifact originates from a `token_attributes()` attribute.
+	 *
+	 * @param Block_Node $block Normalized block.
+	 * @return array<int, string> Snapshot field names; `image.alt` addresses a sub-field.
+	 */
+	public function snapshot_fields( Block_Node $block ): array;
+
+	/**
 	 * Get accepted child block names.
 	 *
 	 * @return array<int, string>|null Null permits any registered child.

@@ -288,8 +288,15 @@ Inlining remains a compiler stage, not a mechanism for repairing browser markup.
 
 Personalization and system values use one provider-neutral syntax,
 `{{cb:category.name}}`. `Token_Registry` (`includes/Domain/Email/Token/`) is the
-only vocabulary, and `Token_Parser` is the only parser. Provider syntax such as
-Mailchimp merge tags never appears in templates or compiled artifacts.
+only vocabulary, and `Token_Parser` is the only parser.
+
+CampaignBridge never generates provider-specific syntax: its canonical model,
+templates, and artifacts express personalization only as `{{cb:...}}`. The
+parser does not interpret foreign provider syntax such as Mailchimp's
+`*|FNAME|*` as a CampaignBridge token; such text is ordinary literal content and
+may appear in templates, snapshots, and compiled artifacts. Provider handoff
+(not yet implemented) must ensure provider-specific literal syntax cannot be
+accidentally activated by the provider.
 
 The compiler resolves tokens after Core authoring normalization and renderer
 `normalize()`, and before renderer `validate()`. Tokens are therefore handled in
@@ -342,9 +349,18 @@ IDs or values: `token.unknown`, `token.malformed`, `token.nested`,
 `token.limit_exceeded`, `token.unresolved`, `token.url.invalid`,
 `token.url.value_type`, `token.context.unsupported`, `token.values.invalid`.
 
+Post snapshot content is never a token context. Renderers declare the snapshot
+fields they emit through `snapshot_fields()` (title, excerpt, image URL,
+non-decorative image alt, and any post, parent, or archive URL a block links
+to), and the compiler rejects
+`{{cb:` in any emitted field with `token.snapshot.unsupported` at
+`<block path>.snapshot.posts[<post ID>].<field>`. Snapshot content is neither
+resolved, preserved, nor rewritten; the compile fails closed. Every canonical
+token in a successful artifact therefore originates from a
+`token_attributes()` attribute.
+
 Not yet implemented: editor token insertion, synthetic preview values,
-compliance-token validation, provider mapping, and neutralizing token syntax in
-post snapshot content.
+compliance-token validation, and provider mapping.
 
 ## Validation and tests
 

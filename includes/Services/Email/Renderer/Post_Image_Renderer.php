@@ -33,6 +33,20 @@ final class Post_Image_Renderer extends Abstract_Renderer {
 	/**
 	 * {@inheritDoc}
 	 *
+	 * A decorative image renders an empty alt, so its snapshot alt is unused.
+	 *
+	 * @param Block_Node $block Normalized block.
+	 */
+	public function snapshot_fields( Block_Node $block ): array {
+		$attributes = $block->attributes();
+		$fields     = $attributes['decorative'] ? array( 'image.url' ) : array( 'image.url', 'image.alt' );
+
+		return $attributes['linkToPost'] ? array_merge( $fields, array( 'url' ) ) : $fields;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
 	 * Every default reproduces the previous output, so existing templates
 	 * compile to the same bytes after this block gained a control surface.
 	 *
