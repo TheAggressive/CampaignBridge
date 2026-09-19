@@ -52,6 +52,7 @@ final class Section_Renderer extends Abstract_Renderer {
 			'campaignbridge/divider',
 			'campaignbridge/spacer',
 			'campaignbridge/post-card',
+			'campaignbridge/list',
 		);
 	}
 

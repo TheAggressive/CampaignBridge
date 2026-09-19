@@ -53,6 +53,7 @@ final class Column_Renderer extends Abstract_Renderer {
 			'campaignbridge/post-excerpt',
 			'campaignbridge/post-button',
 			'campaignbridge/post-link',
+			'campaignbridge/list',
 		);
 	}
 

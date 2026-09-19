@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/list",
+  "title": "Email List",
+  "category": "campaignbridge-email",
+  "icon": "list-view",
+  "description": "Portable unordered or ordered list of email-native items.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/column", "campaignbridge/section"],
+  "supports": {
+    "html": false,
+    "innerBlocks": true,
+    "reusable": false,
+    "customClassName": false
+  },
+  "attributes": {
+    "ordered": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "editorScript": "file:./index.js"
+}

@@ -36,12 +36,14 @@ or reporting.
 ## Current workflow
 
 1. Open **CampaignBridge > Email Templates** in WordPress admin.
-2. Create a template with the CampaignBridge email blocks.
+2. Create a template with the CampaignBridge email blocks in the native WordPress editor.
 3. Configure the Brand Kit and template metadata.
 4. Compile the template and resolve preview diagnostics before publishing it.
 
-The compiled preview is the source of truth for output. General-purpose core
-and third-party frontend blocks are not valid compiler input.
+The compiled preview is the source of truth for output. CampaignBridge uses the
+native WordPress editor while retaining an email-native semantic grammar.
+General-purpose `core/*` and third-party frontend blocks remain unsupported
+compiler input.
 
 ## Requirements
 

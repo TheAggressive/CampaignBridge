@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/list-item",
+  "title": "List Item",
+  "category": "campaignbridge-email",
+  "icon": "menu",
+  "description": "A single item inside a CampaignBridge list.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/list"],
+  "attributes": {
+    "content": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "customClassName": false
+  },
+  "editorScript": "file:./index.js"
+}

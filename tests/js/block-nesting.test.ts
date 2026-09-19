@@ -15,6 +15,7 @@ const PARENT_CHILDREN: Record<string, readonly string[]> = {
   'campaignbridge/section': EMAIL_BLOCK_NESTING.section,
   'campaignbridge/post-card': EMAIL_BLOCK_NESTING['post-card'],
   'campaignbridge/columns': EMAIL_BLOCK_NESTING.columns,
+  'campaignbridge/list': EMAIL_BLOCK_NESTING.list,
   'campaignbridge/column': EMAIL_BLOCK_NESTING.column,
 };
 
@@ -92,13 +93,14 @@ describe('email block nesting grammar', () => {
     ]);
   });
 
-  it('pins the section children (columns, foundation blocks, post-card)', () => {
+  it('pins the section children (columns, foundation blocks, post-card, list)', () => {
     expect([...EMAIL_BLOCK_NESTING.section].sort()).toEqual([
       'campaignbridge/button',
       'campaignbridge/columns',
       'campaignbridge/divider',
       'campaignbridge/heading',
       'campaignbridge/image',
+      'campaignbridge/list',
       'campaignbridge/post-card',
       'campaignbridge/spacer',
       'campaignbridge/text',

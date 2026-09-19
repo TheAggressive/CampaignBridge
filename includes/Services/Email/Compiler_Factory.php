@@ -21,6 +21,8 @@ use CampaignBridge\Services\Email\Renderer\Container_Renderer;
 use CampaignBridge\Services\Email\Renderer\Divider_Renderer;
 use CampaignBridge\Services\Email\Renderer\Heading_Renderer;
 use CampaignBridge\Services\Email\Renderer\Image_Renderer;
+use CampaignBridge\Services\Email\Renderer\List_Item_Renderer;
+use CampaignBridge\Services\Email\Renderer\List_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Card_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Button_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Excerpt_Renderer;
@@ -70,6 +72,8 @@ final class Compiler_Factory {
 				new Button_Renderer(),
 				new Divider_Renderer(),
 				new Spacer_Renderer(),
+				new List_Renderer(),
+				new List_Item_Renderer(),
 				new Post_Card_Renderer(),
 				new Post_Title_Renderer(),
 				new Post_Excerpt_Renderer(),

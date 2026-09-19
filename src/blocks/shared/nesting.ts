@@ -25,6 +25,7 @@ export const EMAIL_BLOCK_NESTING = {
     'campaignbridge/divider',
     'campaignbridge/spacer',
     'campaignbridge/post-card',
+    'campaignbridge/list',
   ],
   'post-card': [
     'campaignbridge/columns',
@@ -35,6 +36,8 @@ export const EMAIL_BLOCK_NESTING = {
     'campaignbridge/post-link',
   ],
   columns: ['campaignbridge/column'],
+  list: ['campaignbridge/list-item'],
+  'list-item': [],
   column: [
     'campaignbridge/text',
     'campaignbridge/heading',
@@ -48,5 +51,6 @@ export const EMAIL_BLOCK_NESTING = {
     'campaignbridge/post-excerpt',
     'campaignbridge/post-button',
     'campaignbridge/post-link',
+    'campaignbridge/list',
   ],
 } as const;

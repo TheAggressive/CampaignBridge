@@ -26,7 +26,7 @@ they do not introduce another rendering path.
 
 The compiler foundation now replaces the prototype rendering paths:
 
-- one explicit renderer registry owns the seventeen currently supported blocks;
+- one explicit renderer registry owns the twenty currently supported blocks;
 - compilation fails closed for unknown attributes, blocks, nesting, missing
   snapshots, depth, and block-count violations;
 - HTML, plain text, diagnostics, versions, and a deterministic fingerprint are
@@ -147,6 +147,8 @@ This is the exact compiler/editor allowlist after the clean cutover:
 | `campaignbridge/container`         | One document root               | Exactly one root; 320–900 px; locked                                  |
 | `campaignbridge/section`           | Full-width content row          | Child of container; spacing/background                                |
 | `campaignbridge/text`              | Rich email text                 | Safe inline marks and HTTPS links only                                |
+| `campaignbridge/list`              | Ordered or unordered list      | Contains `campaignbridge/list-item` blocks only                      |
+| `campaignbridge/list-item`         | Rich email list item            | Safe inline marks and HTTPS links only; child of `campaignbridge/list` |
 | `campaignbridge/heading`           | Heading                         | Levels 1–4; portable typography                                       |
 | `campaignbridge/image`             | Email image                     | HTTPS URL, dimensions, explicit alt choice                            |
 | `campaignbridge/button`            | Bulletproof CTA                 | HTTPS URL, alignment, Outlook VML fallback                            |
