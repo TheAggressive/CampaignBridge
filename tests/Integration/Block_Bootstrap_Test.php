@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Blocks\Blocks;
+use CampaignBridge\Services\Email\Email_Block_Contract;
 use CampaignBridge\Tests\Helpers\Test_Case;
 use WP_Block_Type_Registry;
 
@@ -25,25 +26,8 @@ class Block_Bootstrap_Test extends Test_Case {
 			$this->markTestSkipped( 'Blocks are not built. Run pnpm build:blocks to generate blocks.' );
 		}
 
-		$expected_blocks = array(
-			'campaignbridge/button',
-			'campaignbridge/column',
-			'campaignbridge/columns',
-			'campaignbridge/compliance-footer',
-			'campaignbridge/container',
-			'campaignbridge/divider',
-			'campaignbridge/heading',
-			'campaignbridge/image',
-			'campaignbridge/post-card',
-			'campaignbridge/post-button',
-			'campaignbridge/post-excerpt',
-			'campaignbridge/post-image',
-			'campaignbridge/post-title',
-			'campaignbridge/preheader',
-			'campaignbridge/section',
-			'campaignbridge/spacer',
-			'campaignbridge/text',
-		);
+		// Supported Core blocks are registered by WordPress, not by this bootstrap.
+		$expected_blocks = array_values( array_diff( Email_Block_Contract::names(), Email_Block_Contract::core_names() ) );
 		$registry        = WP_Block_Type_Registry::get_instance();
 
 		// Clear every plugin block, not just the asserted inventory: init()

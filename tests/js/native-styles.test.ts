@@ -28,19 +28,7 @@ describe('native WordPress style migration', () => {
   });
 
   it.each([
-    [
-      'divider',
-      { thickness: 3, color: '#123456', style: 'dashed' },
-      {
-        style: { border: { width: '3px', color: '#123456', style: 'dashed' } },
-      },
-    ],
     ['columns', { gap: 24 }, { style: { spacing: { blockGap: '24px' } } }],
-    [
-      'spacer',
-      { height: 48 },
-      { style: { dimensions: { minHeight: '48px' } } },
-    ],
     [
       'post-title',
       { fontSize: 24, textColor: 'brand' },

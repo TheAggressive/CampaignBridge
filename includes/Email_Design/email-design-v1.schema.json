@@ -131,11 +131,6 @@
       "required": ["color", "style", "width"],
       "properties": { "color": { "$ref": "#/$defs/colorValue" }, "style": { "enum": ["solid", "dashed", "dotted"] }, "width": { "type": "string", "pattern": "^[1-8]px$" } }
     },
-    "dimensionsStyles": {
-      "type": "object", "additionalProperties": false,
-      "required": ["minHeight"],
-      "properties": { "minHeight": { "$ref": "#/$defs/spacingValue" } }
-    },
     "contentBlockStyle": {
       "type": "object", "additionalProperties": false, "minProperties": 1,
       "properties": { "color": { "$ref": "#/$defs/colorStyles" }, "typography": { "$ref": "#/$defs/typographyStyles" }, "spacing": { "$ref": "#/$defs/spacingStyles" } }
@@ -153,11 +148,10 @@
         "blocks": {
           "type": "object", "additionalProperties": false,
           "properties": {
-            "campaignbridge/heading": { "$ref": "#/$defs/contentBlockStyle" }, "campaignbridge/text": { "$ref": "#/$defs/contentBlockStyle" },
-            "campaignbridge/button": { "$ref": "#/$defs/buttonBlockStyle" },
+            "core/heading": { "$ref": "#/$defs/contentBlockStyle" }, "core/paragraph": { "$ref": "#/$defs/contentBlockStyle" },
+            "core/button": { "$ref": "#/$defs/buttonBlockStyle" },
             "campaignbridge/columns": { "type": "object", "additionalProperties": false, "required": ["spacing"], "properties": { "spacing": { "$ref": "#/$defs/spacingStyles" } } },
-            "campaignbridge/divider": { "type": "object", "additionalProperties": false, "required": ["border"], "properties": { "border": { "$ref": "#/$defs/borderStyles" } } },
-            "campaignbridge/spacer": { "type": "object", "additionalProperties": false, "required": ["dimensions"], "properties": { "dimensions": { "$ref": "#/$defs/dimensionsStyles" } } },
+            "core/separator": { "type": "object", "additionalProperties": false, "required": ["border"], "properties": { "border": { "$ref": "#/$defs/borderStyles" } } },
             "campaignbridge/post-title": { "$ref": "#/$defs/contentBlockStyle" }, "campaignbridge/post-excerpt": { "$ref": "#/$defs/contentBlockStyle" },
             "campaignbridge/post-link": { "type": "object", "additionalProperties": false, "required": ["color"], "properties": { "color": { "$ref": "#/$defs/colorStyles" } } },
             "campaignbridge/post-button": { "$ref": "#/$defs/buttonBlockStyle" }

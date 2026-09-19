@@ -58,8 +58,10 @@ Existing prototype templates are not a compatibility boundary for the compiler.
    approval, and provider workflows.
 5. **Use explicit renderers.** One registered renderer owns each supported block
    name. Duplicate registration fails during composition.
-6. **Expose only native email blocks.** Core and third-party frontend blocks are
-   rejected compiler input and are not registered for email templates.
+6. **WordPress Native First.** Supported WordPress Core authoring blocks are
+   used directly and normalized into bounded email semantics; every other Core
+   or third-party block is rejected compiler input and is not offered for
+   email templates. Core frontend rendering is never email output.
 7. **Fail closed.** Unsupported blocks, invalid nesting, unresolved required
    content, or compliance failures prevent approval and delivery.
 8. **Snapshot before approval.** Post bindings resolve to immutable content before
@@ -140,27 +142,35 @@ There is no compatibility facade or parallel transport renderer.
 
 ### Currently supported blocks
 
-This is the exact compiler/editor allowlist after the clean cutover:
+This is the exact compiler/editor allowlist, defined once in
+`includes/Email_Blocks/email-blocks.json`:
 
 | Block name                         | Role                            | Key constraints                                                       |
 | ---------------------------------- | ------------------------------- | --------------------------------------------------------------------- |
 | `campaignbridge/container`         | One document root               | Exactly one root; 320–900 px; locked                                  |
 | `campaignbridge/section`           | Full-width content row          | Child of container; spacing/background                                |
-| `campaignbridge/text`              | Rich email text                 | Safe inline marks and HTTPS links only                                |
-| `campaignbridge/heading`           | Heading                         | Levels 1–4; portable typography                                       |
-| `campaignbridge/image`             | Email image                     | HTTPS URL, dimensions, explicit alt choice                            |
-| `campaignbridge/button`            | Bulletproof CTA                 | HTTPS URL, alignment, Outlook VML fallback                            |
-| `campaignbridge/divider`           | Horizontal divider              | Bounded width/thickness and style allowlist                           |
-| `campaignbridge/spacer`            | Vertical spacing                | Bounded 4–120 px height                                               |
+| `core/paragraph`                   | Rich email text                 | Safe inline marks and HTTPS links only; left/center/right             |
+| `core/heading`                     | Heading                         | Levels 1–4; portable typography; no background                        |
+| `core/image`                       | Email image                     | HTTPS URL, pixel dimensions, explicit alt choice; no caption or crop  |
+| `core/buttons`                     | Button group                    | Children are `core/button` only; left/center/right                    |
+| `core/button`                      | Bulletproof CTA                 | HTTPS URL; fill/outline/ghost; Outlook VML fallback                   |
+| `core/list`                        | Ordered or unordered list       | Children are `core/list-item` only; no nested lists in v1             |
+| `core/list-item`                   | List item                       | Safe inline rich text                                                 |
+| `core/separator`                   | Horizontal divider              | Full width; colour only; thickness/style from the email design        |
+| `core/spacer`                      | Vertical spacing                | 0–600 px; Core default 100 px                                         |
 | `campaignbridge/post-card`         | Immutable post binding          | Child of container/section; snapshot needed; padding, background      |
 | `campaignbridge/post-image`        | Featured image binding          | Child of post card or column; width, align, link-to-post, decorative  |
 | `campaignbridge/post-title`        | Post title binding              | Child of post card or column; levels 1–4, align, colour, link-to-post |
 | `campaignbridge/post-excerpt`      | Post excerpt binding            | Child of post card or column; 10–150 words, align, colour, 12–24px    |
 | `campaignbridge/post-button`       | Post button binding             | Article, parent, archive, custom; HTTPS; button or text link          |
+| `campaignbridge/post-link`         | Post text link binding          | Child of post card or column; HTTPS destination                       |
 | `campaignbridge/preheader`         | Hidden inbox preview            | First child of container; at most one; 1-150 characters               |
-| `campaignbridge/columns`           | One or two columns              | Child of section; 1-2 columns; gap 0-48 px                            |
-| `campaignbridge/column`            | Column content                  | Child of columns; width 20-80% totalling 100                          |
+| `campaignbridge/columns`           | One to six columns              | Child of section or post card; 1-6 columns; gap 0-48 px               |
+| `campaignbridge/column`            | Column content                  | Child of columns; integer percentage width; flat (no nested columns)  |
 | `campaignbridge/compliance-footer` | Sender and unsubscribe controls | Last child of container; at most one; address required                |
+
+`core/columns` and `core/column` are intentionally not adopted; the reasons are
+recorded in [`email-block-architecture.md`](email-block-architecture.md#remaining-campaignbridge-blocks).
 
 ### Planned v1 native blocks
 
@@ -181,7 +191,8 @@ ship that composition as a single insert. The post binding reaches the post
 blocks through the columns wrapper because context flows down unchanged.
 
 Every post binding block mirrors the control surface of its static twin:
-post-title matches heading, post-excerpt matches text, post-button matches button.
+post-title matches the heading semantics, post-excerpt matches text, and
+post-button matches button.
 Their defaults reproduce the previous output exactly, so templates authored
 before the controls existed compile to the same bytes.
 
@@ -191,10 +202,14 @@ outside the block grammar and outside the renderer.
 
 ### Unsupported blocks
 
-`core/*` and third-party blocks are not part of the grammar. The editor does not
-offer them and the compiler returns a blocking diagnostic containing the exact
-block path if they are received. Prototype templates that contain them must be
-recreated with native blocks.
+Only the Core blocks listed above are part of the grammar. Every other `core/*`
+block and every third-party block is unsupported: the editor does not offer it
+and the compiler returns a blocking diagnostic containing the exact block path
+if it is received. Supported Core blocks with unsupported attributes, styles,
+classes, or markup fail with `block.attribute.invalid`. There are no aliases or
+migrations for the replaced `campaignbridge/text`, `heading`, `image`, `button`,
+`divider`, and `spacer` blocks; pre-release templates that contain them must be
+recreated with the Core blocks.
 
 ### Attribute policy
 

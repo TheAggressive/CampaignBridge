@@ -13,6 +13,7 @@ use CampaignBridge\Admin\Native_Editor;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\REST\Routes;
 use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Email_Block_Contract;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
 /** Verify the native editor remains a scoped extension of Core. */
@@ -24,8 +25,8 @@ final class Native_Editor_Test extends Test_Case {
 		self::assertNotFalse( has_action( 'enqueue_block_editor_assets', array( Native_Editor::class, 'enqueue_assets' ) ) );
 	}
 
-	/** The compiler registry is the only native-editor block allowlist. */
-	public function test_template_allowed_blocks_come_from_the_compiler_registry(): void {
+	/** The email block contract is the only native-editor block allowlist. */
+	public function test_template_allowed_blocks_come_from_the_email_block_contract(): void {
 		$template = $this->factory->post->create_and_get(
 			array(
 				'post_type'   => Post_Type_Email_Template::POST_TYPE,
@@ -34,10 +35,27 @@ final class Native_Editor_Test extends Test_Case {
 		);
 		$context  = new \WP_Block_Editor_Context( array( 'post' => $template ) );
 
-		self::assertSame(
-			Compiler_Factory::registry()->block_names(),
-			Native_Editor::allowed_block_types( true, $context )
-		);
+		$allowed = Native_Editor::allowed_block_types( true, $context );
+		self::assertSame( Email_Block_Contract::names(), $allowed );
+		self::assertIsArray( $allowed );
+
+		$compiler = Compiler_Factory::registry()->block_names();
+		sort( $compiler, SORT_STRING );
+		$editor = $allowed;
+		sort( $editor, SORT_STRING );
+		self::assertSame( $compiler, $editor, 'Every insertable block must have an email renderer.' );
+
+		foreach ( array( 'core/paragraph', 'core/heading', 'core/image', 'core/buttons', 'core/button', 'core/list', 'core/list-item', 'core/separator', 'core/spacer' ) as $core ) {
+			self::assertContains( $core, $allowed );
+			self::assertTrue( \WP_Block_Type_Registry::get_instance()->is_registered( $core ), $core . ' must be the real WordPress Core block.' );
+		}
+		foreach ( array( 'core/group', 'core/cover', 'core/gallery', 'core/embed', 'core/video', 'core/html', 'core/shortcode', 'core/query', 'core/navigation', 'core/columns', 'core/column', 'core/quote', 'core/table' ) as $unsupported ) {
+			self::assertNotContains( $unsupported, $allowed );
+		}
+		foreach ( array( 'campaignbridge/text', 'campaignbridge/heading', 'campaignbridge/image', 'campaignbridge/button', 'campaignbridge/divider', 'campaignbridge/spacer', 'campaignbridge/list', 'campaignbridge/list-item' ) as $obsolete ) {
+			self::assertNotContains( $obsolete, $allowed );
+			self::assertFalse( \WP_Block_Type_Registry::get_instance()->is_registered( $obsolete ), $obsolete . ' must not be registered.' );
+		}
 	}
 
 	/** Other post types retain their existing block policy and design. */

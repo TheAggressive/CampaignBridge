@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Text_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function block_name(): string {
-		return 'campaignbridge/text';
+		return 'core/paragraph';
 	}
 
 	/** {@inheritDoc} */

@@ -1,12 +1,16 @@
-import { EMAIL_BLOCK_NESTING } from '../../src/blocks/shared/nesting';
+import {
+  EMAIL_BLOCK_CONTRACT,
+  EMAIL_BLOCK_NESTING,
+} from '../../src/blocks/shared/nesting';
 import fs from 'node:fs';
 import path from 'node:path';
 
 /**
  * Parent/child nesting grammar for every container email block.
  *
- * The canonical allowlists live in `src/blocks/shared/nesting.ts` and mirror
- * the PHP `*_Renderer::allowed_children()`. These tests pin each parent to its
+ * The canonical allowlists live in `includes/Email_Blocks/email-blocks.json`,
+ * which the editor (`src/blocks/shared/nesting.ts`) and the PHP renderers
+ * (`Email_Block_Contract`) both read. These tests pin each parent to its
  * children so that block cannot be silently dropped or added to either list
  * without a deliberate edit to the shared grammar.
  */
@@ -15,13 +19,27 @@ const PARENT_CHILDREN: Record<string, readonly string[]> = {
   'campaignbridge/section': EMAIL_BLOCK_NESTING.section,
   'campaignbridge/post-card': EMAIL_BLOCK_NESTING['post-card'],
   'campaignbridge/columns': EMAIL_BLOCK_NESTING.columns,
+  'core/buttons': EMAIL_BLOCK_NESTING.buttons,
+  'core/list': EMAIL_BLOCK_NESTING.list,
   'campaignbridge/column': EMAIL_BLOCK_NESTING.column,
+};
+
+const CORE_PARENTS: Record<string, string[]> = {
+  'core/button': ['core/buttons'],
+  'core/list-item': ['core/list'],
 };
 
 describe('email block nesting grammar', () => {
   it('matches every child block parent declaration in block.json', () => {
     for (const [parent, children] of Object.entries(PARENT_CHILDREN)) {
       for (const child of children) {
+        if (child.startsWith('core/')) {
+          if (CORE_PARENTS[child]) {
+            expect(CORE_PARENTS[child]).toContain(parent);
+          }
+          continue;
+        }
+
         const blockName = child.replace('campaignbridge/', '');
         const metadataPath = path.resolve(
           __dirname,
@@ -33,6 +51,12 @@ describe('email block nesting grammar', () => {
 
         expect(metadata.parent).toContain(parent);
       }
+    }
+  });
+
+  it('derives every editor allowlist from the shared contract', () => {
+    for (const [parent, children] of Object.entries(PARENT_CHILDREN)) {
+      expect(children).toEqual(EMAIL_BLOCK_CONTRACT[parent]?.children);
     }
   });
 
@@ -92,16 +116,23 @@ describe('email block nesting grammar', () => {
     ]);
   });
 
-  it('pins the section children (columns, foundation blocks, post-card)', () => {
+  it('pins the section children (columns, Core blocks, post-card)', () => {
     expect([...EMAIL_BLOCK_NESTING.section].sort()).toEqual([
-      'campaignbridge/button',
       'campaignbridge/columns',
-      'campaignbridge/divider',
-      'campaignbridge/heading',
-      'campaignbridge/image',
       'campaignbridge/post-card',
-      'campaignbridge/spacer',
-      'campaignbridge/text',
+      'core/buttons',
+      'core/heading',
+      'core/image',
+      'core/list',
+      'core/paragraph',
+      'core/separator',
+      'core/spacer',
     ]);
+  });
+
+  it('constrains Core button and list children', () => {
+    expect(EMAIL_BLOCK_NESTING.buttons).toEqual(['core/button']);
+    expect(EMAIL_BLOCK_NESTING.list).toEqual(['core/list-item']);
+    expect(EMAIL_BLOCK_CONTRACT['core/list-item']?.children).toEqual([]);
   });
 });

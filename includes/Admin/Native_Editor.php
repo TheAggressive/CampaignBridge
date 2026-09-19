@@ -11,8 +11,8 @@ namespace CampaignBridge\Admin;
 
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\Repository\Brand_Kit_Repository;
-use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
+use CampaignBridge\Services\Email\Email_Block_Contract;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -28,7 +28,11 @@ final class Native_Editor {
 	}
 
 	/**
-	 * Limit template authoring to the canonical compiler registry.
+	 * Limit template authoring to the supported email block contract.
+	 *
+	 * The contract lists the WordPress Core blocks CampaignBridge normalizes
+	 * and its own email blocks; every other Core or third-party block stays
+	 * out of the template inserter.
 	 *
 	 * @param array<int, string>|bool  $allowed_blocks Existing allowlist.
 	 * @param \WP_Block_Editor_Context $context        Current editor context.
@@ -39,7 +43,7 @@ final class Native_Editor {
 			return $allowed_blocks;
 		}
 
-		return Compiler_Factory::registry()->block_names();
+		return Email_Block_Contract::names();
 	}
 
 	/**

@@ -14,6 +14,7 @@ use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Style_Resolver;
+use CampaignBridge\Services\Email\Email_Block_Contract;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -47,12 +48,7 @@ final class Container_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function allowed_children(): array {
-		return array(
-			'campaignbridge/preheader',
-			'campaignbridge/section',
-			'campaignbridge/post-card',
-			'campaignbridge/compliance-footer',
-		);
+		return Email_Block_Contract::children( $this->block_name() );
 	}
 
 	/**

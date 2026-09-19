@@ -1,0 +1,147 @@
+{
+  "$comment": "Authoritative CampaignBridge email authoring grammar. The editor allowlist, nesting, Core normalization, and the compiler registry derive from or are parity-tested against this file.",
+  "version": 1,
+  "blocks": {
+    "campaignbridge/container": {
+      "source": "campaignbridge",
+      "semantics": "container",
+      "children": [
+        "campaignbridge/preheader",
+        "campaignbridge/section",
+        "campaignbridge/post-card",
+        "campaignbridge/compliance-footer"
+      ]
+    },
+    "campaignbridge/preheader": {
+      "source": "campaignbridge",
+      "semantics": "preheader",
+      "children": []
+    },
+    "campaignbridge/section": {
+      "source": "campaignbridge",
+      "semantics": "section",
+      "children": [
+        "campaignbridge/columns",
+        "core/paragraph",
+        "core/heading",
+        "core/image",
+        "core/buttons",
+        "core/list",
+        "core/separator",
+        "core/spacer",
+        "campaignbridge/post-card"
+      ]
+    },
+    "campaignbridge/columns": {
+      "source": "campaignbridge",
+      "semantics": "columns",
+      "children": ["campaignbridge/column"]
+    },
+    "campaignbridge/column": {
+      "source": "campaignbridge",
+      "semantics": "column",
+      "children": [
+        "core/paragraph",
+        "core/heading",
+        "core/image",
+        "core/buttons",
+        "core/list",
+        "core/separator",
+        "core/spacer",
+        "campaignbridge/post-card",
+        "campaignbridge/post-image",
+        "campaignbridge/post-title",
+        "campaignbridge/post-excerpt",
+        "campaignbridge/post-button",
+        "campaignbridge/post-link"
+      ]
+    },
+    "core/paragraph": {
+      "source": "core",
+      "semantics": "text",
+      "children": []
+    },
+    "core/heading": {
+      "source": "core",
+      "semantics": "heading",
+      "children": []
+    },
+    "core/image": {
+      "source": "core",
+      "semantics": "image",
+      "children": []
+    },
+    "core/buttons": {
+      "source": "core",
+      "semantics": "button-group",
+      "children": ["core/button"]
+    },
+    "core/button": {
+      "source": "core",
+      "semantics": "button",
+      "children": []
+    },
+    "core/list": {
+      "source": "core",
+      "semantics": "list",
+      "children": ["core/list-item"]
+    },
+    "core/list-item": {
+      "source": "core",
+      "semantics": "list-item",
+      "children": []
+    },
+    "core/separator": {
+      "source": "core",
+      "semantics": "divider",
+      "children": []
+    },
+    "core/spacer": {
+      "source": "core",
+      "semantics": "spacer",
+      "children": []
+    },
+    "campaignbridge/post-card": {
+      "source": "campaignbridge",
+      "semantics": "post-card",
+      "children": [
+        "campaignbridge/columns",
+        "campaignbridge/post-image",
+        "campaignbridge/post-title",
+        "campaignbridge/post-excerpt",
+        "campaignbridge/post-button",
+        "campaignbridge/post-link"
+      ]
+    },
+    "campaignbridge/post-image": {
+      "source": "campaignbridge",
+      "semantics": "post-image",
+      "children": []
+    },
+    "campaignbridge/post-title": {
+      "source": "campaignbridge",
+      "semantics": "post-title",
+      "children": []
+    },
+    "campaignbridge/post-excerpt": {
+      "source": "campaignbridge",
+      "semantics": "post-excerpt",
+      "children": []
+    },
+    "campaignbridge/post-button": {
+      "source": "campaignbridge",
+      "semantics": "post-button",
+      "children": []
+    },
+    "campaignbridge/post-link": {
+      "source": "campaignbridge",
+      "semantics": "post-link",
+      "children": []
+    },
+    "campaignbridge/compliance-footer": {
+      "source": "campaignbridge",
+      "semantics": "compliance-footer",
+      "children": []
+    }
+  }
+}

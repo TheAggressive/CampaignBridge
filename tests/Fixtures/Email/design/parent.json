@@ -11,7 +11,7 @@
   },
   "styles": {
     "blocks": {
-      "campaignbridge/heading": {
+      "core/heading": {
         "color": { "text": "var:preset|color|accent" }
       }
     }

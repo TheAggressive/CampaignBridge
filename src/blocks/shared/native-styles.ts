@@ -8,8 +8,6 @@ export interface NativeStyle {
     margin?: Record<string, string> | string;
     blockGap?: string;
   };
-  border?: { color?: string; width?: string; style?: string };
-  dimensions?: { minHeight?: string };
   elements?: { link?: { color?: { text?: string } } };
 }
 
@@ -87,30 +85,15 @@ export function migrateNativeStyles(
     };
     delete attrs.maxWidth;
   }
-  if (name === 'campaignbridge/divider') {
-    style.border = {
-      ...(attrs.color ? { color: attrs.color } : {}),
-      ...(attrs.thickness !== undefined
-        ? { width: pixels(attrs.thickness) }
-        : {}),
-      ...(typeof attrs.style === 'string' ? { style: attrs.style } : {}),
-      ...style.border,
-    };
-    delete attrs.color;
-    delete attrs.thickness;
-  } else if (
+  if (
     typeof attrs.style === 'string' &&
-    ['campaignbridge/button', 'campaignbridge/post-button'].includes(name)
+    name === 'campaignbridge/post-button'
   ) {
     attrs.className = attrs.className || `is-style-${attrs.style}`;
   }
   if (name === 'campaignbridge/columns' && attrs.gap !== undefined) {
     style.spacing = { blockGap: pixels(attrs.gap), ...style.spacing };
     delete attrs.gap;
-  }
-  if (name === 'campaignbridge/spacer' && attrs.height !== undefined) {
-    style.dimensions = { minHeight: pixels(attrs.height), ...style.dimensions };
-    delete attrs.height;
   }
   delete attrs.style;
   if (Object.keys(style).length) attrs.style = style;
@@ -131,12 +114,7 @@ addFilter(
     const result = { ...parsed, ...migrated };
     for (const key of ['padding', 'outerPadding', 'linkColor'])
       delete result[key];
-    if (block.name === 'campaignbridge/divider') {
-      delete result.color;
-      delete result.thickness;
-    }
     if (block.name === 'campaignbridge/columns') delete result.gap;
-    if (block.name === 'campaignbridge/spacer') delete result.height;
     return result;
   }
 );

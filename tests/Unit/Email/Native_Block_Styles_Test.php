@@ -77,36 +77,13 @@ final class Native_Block_Styles_Test extends TestCase {
 			'width="720"',
 		);
 		$cases['native gap']                         = array( 'columns', array( 'style' => array( 'spacing' => array( 'blockGap' => '16px' ) ) ), 'padding-right:8px' );
-		$cases['native spacer']                      = array( 'spacer', array( 'style' => array( 'dimensions' => array( 'minHeight' => '48px' ) ) ), 'height="48"' );
-		$cases['native divider']                     = array(
-			'divider',
-			array(
-				'style' => array(
-					'border' => array(
-						'width' => '3px',
-						'style' => 'dashed',
-						'color' => '#123456',
-					),
-				),
-			),
-			'border-top:3px dashed #123456',
-		);
+		$cases['core spacer height']                 = array( 'spacer', array( 'height' => '48px' ), 'height="48"' );
+		$cases['core separator custom color']        = array( 'divider', array( 'style' => array( 'color' => array( 'background' => '#123456' ) ) ), 'border-top:1px solid #123456' );
+		$cases['core separator preset color']        = array( 'divider', array( 'backgroundColor' => 'brand' ), 'border-top:1px solid #1a6dcc' );
 		$cases['filled button native link color']    = array( 'post-button', array( 'style' => array( 'elements' => array( 'link' => array( 'color' => array( 'text' => '#123456' ) ) ) ) ), 'color:#123456' );
-		$cases['zero native border']                 = array( 'divider', array( 'style' => array( 'border' => array( 'width' => '0px' ) ) ), 'border:0px solid' );
-		$cases['native border side']                 = array(
-			'divider',
-			array(
-				'style' => array(
-					'border' => array(
-						'left' => array(
-							'width' => '2px',
-							'color' => '#123456',
-						),
-					),
-				),
-			),
-			'border-left:2px solid #123456',
-		);
+		foreach ( array( 'text', 'heading' ) as $name ) {
+			$cases[ $name . ' core text alignment' ] = array( $name, array( 'style' => array( 'typography' => array( 'textAlign' => 'center' ) ) ), 'text-align:center' );
+		}
 		return $cases;
 	}
 
@@ -118,10 +95,22 @@ final class Native_Block_Styles_Test extends TestCase {
 	}
 
 	private function node( string $name, array $attributes = array(), array $children = array() ): array {
+		$block_names = array(
+			'text'    => 'core/paragraph',
+			'heading' => 'core/heading',
+			'image'   => 'core/image',
+			'button'  => 'core/button',
+			'buttons' => 'core/buttons',
+			'divider' => 'core/separator',
+			'spacer'  => 'core/spacer',
+		);
+		$block_name = $block_names[ $name ] ?? 'campaignbridge/' . $name;
+
 		return array(
-			'blockName'   => 'campaignbridge/' . $name,
+			'blockName'   => $block_name,
 			'attrs'       => array_filter( $attributes, static fn( $value ) => null !== $value ),
 			'innerBlocks' => $children,
+			'innerHTML'   => 'button' === $name ? '<div class="wp-block-button"><a class="wp-block-button__link">Button</a></div>' : '',
 		);
 	}
 
@@ -139,8 +128,13 @@ final class Native_Block_Styles_Test extends TestCase {
 			'post-card'         => array( 'postId' => 42 ),
 			'compliance-footer' => array( 'address' => '123 Example St' ),
 		);
-		$block    = $this->node( $name, array_merge( $defaults[ $name ] ?? array(), $attributes ) );
-		$text     = $this->node( 'text', array( 'content' => 'Text' ) );
+		if ( 'button' === $name ) {
+			$button = $this->node( 'button', array_merge( array( 'url' => 'https://example.com', 'text' => 'Button' ), $attributes ) );
+			$block  = $this->node( 'buttons', array(), array( $button ) );
+		} else {
+			$block = $this->node( $name, array_merge( $defaults[ $name ] ?? array(), $attributes ) );
+		}
+		$text = $this->node( 'text', array( 'content' => 'Text' ) );
 		if ( 'container' === $name ) {
 			$block['innerBlocks'] = array( $this->node( 'section', array(), array( $text ) ) );
 			return array( $block ); }

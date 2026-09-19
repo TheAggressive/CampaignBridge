@@ -73,6 +73,7 @@ final class Editor_Design_Settings {
 		);
 		$typography['customFontSize']   = $design->allows_custom_font_sizes();
 		$typography['customFontFamily'] = false;
+		$typography['dropCap']          = false;
 		$features['typography']         = $typography;
 
 		$spacing_features                        = isset( $features['spacing'] ) && is_array( $features['spacing'] ) ? $features['spacing'] : array();
@@ -107,7 +108,7 @@ final class Editor_Design_Settings {
 		);
 		$styles[]           = array(
 			'css' => self::design_css( $design )
-							. ':where(h1.wp-block-campaignbridge-heading){font-size:32px}:where(h2.wp-block-campaignbridge-heading){font-size:28px}:where(h3.wp-block-campaignbridge-heading){font-size:24px}:where(h4.wp-block-campaignbridge-heading){font-size:20px}'
+							. ':where(h1[data-type="core/heading"]){font-size:32px}:where(h2[data-type="core/heading"]){font-size:28px}:where(h3[data-type="core/heading"]){font-size:24px}:where(h4[data-type="core/heading"]){font-size:20px}'
 							. '.wp-block-campaignbridge-columns{flex-wrap:nowrap!important}'
 							. '.wp-block-campaignbridge-columns>.wp-block-campaignbridge-column{min-width:0;margin:0;overflow-wrap:break-word}'
 							. '@media(max-width:480px){.wp-block-campaignbridge-columns:not(.is-not-stacked-on-mobile){flex-wrap:wrap!important}.wp-block-campaignbridge-columns:not(.is-not-stacked-on-mobile)>.wp-block-campaignbridge-column{flex-basis:100%!important}}',
@@ -140,11 +141,11 @@ final class Editor_Design_Settings {
 	private static function design_css( Resolved_Email_Design $design ): string {
 		$css = ':where(.editor-styles-wrapper){' . self::declarations( $design->global_style() ) . '}';
 		foreach ( array(
-			'campaignbridge/text'         => '.wp-block-campaignbridge-text',
-			'campaignbridge/heading'      => '.wp-block-campaignbridge-heading',
+			'core/paragraph'              => '[data-type="core/paragraph"]',
+			'core/heading'                => '[data-type="core/heading"]',
 			'campaignbridge/post-title'   => '.wp-block-campaignbridge-post-title',
 			'campaignbridge/post-excerpt' => '.wp-block-campaignbridge-post-excerpt',
-			'campaignbridge/button'       => '.wp-block-campaignbridge-button a',
+			'core/button'                 => '[data-type="core/button"] .wp-block-button__link',
 			'campaignbridge/post-button'  => '.wp-block-campaignbridge-post-button a',
 			'campaignbridge/post-link'    => '.wp-block-campaignbridge-post-link a',
 		) as $block_name => $selector ) {
@@ -152,20 +153,20 @@ final class Editor_Design_Settings {
 		}
 
 		$columns = $design->block_style( 'campaignbridge/columns' );
-		$divider = $design->block_style( 'campaignbridge/divider' );
-		$spacer  = $design->block_style( 'campaignbridge/spacer' );
+		$divider = $design->block_style( 'core/separator' );
 		$global  = $design->global_style();
 		$border  = is_array( $divider['border'] ?? null ) ? $divider['border'] : array();
 		$colors  = is_array( $global['color'] ?? null ) ? $global['color'] : array();
 
 		$css .= sprintf( ':where(.wp-block-campaignbridge-columns){gap:%dpx}', (int) ( $columns['spacing']['blockGap'] ?? 0 ) );
+		// The compiler renders every Core separator as a full-width design rule.
 		$css .= sprintf(
-			':where(.wp-block-campaignbridge-divider){border:0;border-top:%dpx %s %s;width:100%%}',
+			':where([data-type="core/separator"]){color:%3$s;border-top-width:%1$dpx;border-top-style:%2$s}',
 			(int) ( $border['width'] ?? 0 ),
 			(string) ( $border['style'] ?? 'solid' ),
 			(string) ( $border['color'] ?? 'transparent' )
 		);
-		$css .= sprintf( ':where(.wp-block-campaignbridge-spacer){min-height:%dpx}', (int) ( $spacer['dimensions']['minHeight'] ?? 0 ) );
+		$css .= '.editor-styles-wrapper .block-editor-block-list__block.wp-block-separator{width:100%;max-width:none}';
 		$css .= ':where(.wp-block-campaignbridge-post-button.is-style-link a){background:transparent;color:' . ( $colors['text'] ?? 'inherit' ) . '}';
 
 		return $css;

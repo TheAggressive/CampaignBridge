@@ -36,23 +36,25 @@ The v1 grammar and its delivery order remain defined in
 [`email-block-implementation-plan.md`](email-block-implementation-plan.md). The
 following are the foundation for every later wave.
 
-| Proposed block                     | Classification | Purpose                                            | Status             |
-| ---------------------------------- | -------------- | -------------------------------------------------- | ------------------ |
-| `campaignbridge/container`         | Native block   | Locked email document root and width contract      | Compiler-supported |
-| `campaignbridge/preheader`         | Native block   | Hidden inbox preview text                          | Compiler-supported         |
-| `campaignbridge/section`           | Native block   | Full-width content row                             | Compiler-supported |
-| `campaignbridge/columns`           | Native block   | One to six columns with optional mobile stacking                 | Compiler-supported         |
-| `campaignbridge/column`            | Native block   | Constrained child of columns                       | Compiler-supported         |
-| `campaignbridge/text`              | Native block   | Safe rich text and HTTPS links                     | Compiler-supported |
-| `campaignbridge/heading`           | Native block   | Portable heading levels and typography             | Compiler-supported |
-| `campaignbridge/image`             | Native block   | Sized, accessible, linked email image              | Compiler-supported |
-| `campaignbridge/button`            | Native block   | Bulletproof call to action                         | Compiler-supported |
-| `campaignbridge/divider`           | Native block   | Portable horizontal rule                           | Compiler-supported |
-| `campaignbridge/spacer`            | Native block   | Bounded vertical spacing                           | Compiler-supported |
-| `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls        | Compiler-supported         |
+Supported WordPress Core blocks are authored natively and normalized into
+CampaignBridge email semantics (WordPress Native First); see
+[`email-block-architecture.md`](email-block-architecture.md#supported-authoring-contract).
 
-Ordered and unordered lists remain planned as a constrained capability of
-`campaignbridge/text` unless testing proves a separate semantic block is needed.
+| Block                              | Classification | Purpose                                         | Status             |
+| ---------------------------------- | -------------- | ----------------------------------------------- | ------------------ |
+| `campaignbridge/container`         | Native block   | Locked email document root and width contract   | Compiler-supported |
+| `campaignbridge/preheader`         | Native block   | Hidden inbox preview text                       | Compiler-supported |
+| `campaignbridge/section`           | Native block   | Full-width content row                          | Compiler-supported |
+| `campaignbridge/columns`           | Native block   | One to six columns with optional mobile stacking | Compiler-supported |
+| `campaignbridge/column`            | Native block   | Constrained child of columns                    | Compiler-supported |
+| `core/paragraph`                   | Core block     | Safe rich text and HTTPS links                  | Compiler-supported |
+| `core/heading`                     | Core block     | Portable heading levels 1–4 and typography      | Compiler-supported |
+| `core/image`                       | Core block     | Sized, accessible, optionally linked image      | Compiler-supported |
+| `core/buttons` + `core/button`     | Core block     | Aligned bulletproof calls to action             | Compiler-supported |
+| `core/list` + `core/list-item`     | Core block     | Flat ordered or unordered list                  | Compiler-supported |
+| `core/separator`                   | Core block     | Full-width design divider                       | Compiler-supported |
+| `core/spacer`                      | Core block     | Bounded vertical spacing                        | Compiler-supported |
+| `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls     | Compiler-supported |
 
 The view-online link once grouped with the preheader is not implemented. It is a
 separate document-level concern with its own hosted-URL dependency, and the
@@ -113,7 +115,7 @@ Provider adapters translate that vocabulary at the final transport boundary.
 | `campaignbridge/fallback`          | Binding block  | Explicit alternate branch for conditional content    | Must compile and validate independently               |
 
 If the text renderer can safely own typed merge tokens, personalized text should
-remain a capability of `campaignbridge/text` instead of becoming a separate
+remain a capability of `core/paragraph` text semantics instead of becoming a separate
 block. The schema investigation decides this before implementation.
 
 ## Wave D — commerce catalog

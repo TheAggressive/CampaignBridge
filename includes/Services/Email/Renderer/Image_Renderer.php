@@ -23,12 +23,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Image_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function block_name(): string {
-		return 'campaignbridge/image';
+		return 'core/image';
 	}
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'url', 'alt', 'decorative', 'width', 'height', 'linkUrl', 'style' );
+		return array( 'url', 'alt', 'decorative', 'width', 'height', 'linkUrl', 'align', 'style' );
 	}
 
 	/**
@@ -45,8 +45,9 @@ final class Image_Renderer extends Abstract_Renderer {
 				'alt'        => trim( Renderer_Support::string_attribute( $attributes, 'alt', '' ) ),
 				'decorative' => Renderer_Support::boolean_attribute( $attributes, 'decorative', false ),
 				'width'      => Renderer_Support::integer_attribute( $attributes, 'width', 600, 1, 1200 ),
-				'height'     => Renderer_Support::integer_attribute( $attributes, 'height', 400, 1, 1200 ),
+				'height'     => null === ( $attributes['height'] ?? null ) ? null : Renderer_Support::integer_attribute( $attributes, 'height', 400, 1, 1200 ),
 				'linkUrl'    => trim( Renderer_Support::string_attribute( $attributes, 'linkUrl', '' ) ),
+				'align'      => '' === ( $attributes['align'] ?? '' ) ? '' : Renderer_Support::alignment_attribute( $attributes, 'align' ),
 				'style'      => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 			)
 		);
@@ -110,19 +111,30 @@ final class Image_Renderer extends Abstract_Renderer {
 			);
 		}
 
+		if ( 'center' === $attributes['align'] && ! isset( $style_tree['spacing']['margin'] ) ) {
+			$image_style .= ';margin:0 auto';
+		} elseif ( 'right' === $attributes['align'] && ! isset( $style_tree['spacing']['margin'] ) ) {
+			$image_style .= ';margin:0 0 0 auto';
+		}
+
+		// Without an authored height, email clients scale proportionally from the width.
 		$image = sprintf(
-			'<img src="%1$s" width="%2$d" height="%3$d" alt="%4$s"%5$s border="0" style="%6$s">',
+			'<img src="%1$s" width="%2$d"%3$s alt="%4$s"%5$s border="0" style="%6$s">',
 			Renderer_Support::html( $attributes['url'] ),
 			$attributes['width'],
-			$attributes['height'],
+			null === $attributes['height'] ? '' : sprintf( ' height="%d"', $attributes['height'] ),
 			Renderer_Support::html( $attributes['decorative'] ? '' : $attributes['alt'] ),
 			$attributes['decorative'] ? ' role="presentation"' : '',
 			$image_style
 		);
 
-		return '' === $attributes['linkUrl']
+		$html = '' === $attributes['linkUrl']
 			? $image
 			: '<a href="' . Renderer_Support::html( $attributes['linkUrl'] ) . '" style="text-decoration:none">' . $image . '</a>';
+
+		return '' === $attributes['align']
+			? $html
+			: sprintf( '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0"><tr><td align="%1$s">%2$s</td></tr></table>', $attributes['align'], $html );
 	}
 
 	/**

@@ -14,6 +14,7 @@ use CampaignBridge\Domain\Email\Renderer_Registry;
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 use CampaignBridge\Services\Email\Renderer\Button_Renderer;
+use CampaignBridge\Services\Email\Renderer\Buttons_Renderer;
 use CampaignBridge\Services\Email\Renderer\Column_Renderer;
 use CampaignBridge\Services\Email\Renderer\Columns_Renderer;
 use CampaignBridge\Services\Email\Renderer\Compliance_Footer_Renderer;
@@ -21,6 +22,8 @@ use CampaignBridge\Services\Email\Renderer\Container_Renderer;
 use CampaignBridge\Services\Email\Renderer\Divider_Renderer;
 use CampaignBridge\Services\Email\Renderer\Heading_Renderer;
 use CampaignBridge\Services\Email\Renderer\Image_Renderer;
+use CampaignBridge\Services\Email\Renderer\List_Item_Renderer;
+use CampaignBridge\Services\Email\Renderer\List_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Card_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Button_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Excerpt_Renderer;
@@ -51,7 +54,8 @@ final class Compiler_Factory {
 			new Document_Renderer(),
 			new Artifact_Fingerprinter(),
 			$design ?? Email_Design_Factory::resolve(),
-			new Email_Design_Block_Defaults()
+			new Email_Design_Block_Defaults(),
+			new Core_Block_Normalizer()
 		);
 	}
 
@@ -64,12 +68,15 @@ final class Compiler_Factory {
 				new Section_Renderer(),
 				new Columns_Renderer(),
 				new Column_Renderer(),
+				new Buttons_Renderer(),
 				new Text_Renderer(),
 				new Heading_Renderer(),
 				new Image_Renderer(),
 				new Button_Renderer(),
 				new Divider_Renderer(),
 				new Spacer_Renderer(),
+				new List_Renderer(),
+				new List_Item_Renderer(),
 				new Post_Card_Renderer(),
 				new Post_Title_Renderer(),
 				new Post_Excerpt_Renderer(),

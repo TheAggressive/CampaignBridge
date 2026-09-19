@@ -1,52 +1,43 @@
+import contract from '../../../includes/Email_Blocks/email-blocks.json';
+
 /**
- * Single source of truth for the email block nesting grammar.
+ * The email block nesting grammar, derived from the authoritative contract.
  *
- * These allowlists mirror `allowed_children()` on each `*_Renderer` under
- * `includes/Services/Email/Renderer/`. They are the same tree the server-side
- * compiler enforces, so the editor must present the same options.
- *
- * Keep in sync with the PHP renderers (and each block's `block.json` `parent`
- * list): `tests/js/block-nesting.test.ts` fails when a parent here no longer
- * matches the declared parent relationship.
+ * `includes/Email_Blocks/email-blocks.json` is the single source for the
+ * supported authoring blocks (WordPress Core and CampaignBridge), their email
+ * semantics, and their permitted children. The PHP renderers read the same
+ * file through `Email_Block_Contract`, so the editor presents exactly the tree
+ * the server-side compiler enforces.
  */
+export interface EmailBlockContractEntry {
+  source: 'core' | 'campaignbridge';
+  semantics: string;
+  children: string[];
+}
+
+export const EMAIL_BLOCK_CONTRACT = contract.blocks as Record<
+  string,
+  EmailBlockContractEntry
+>;
+
+/** Every supported authoring block name. */
+export const EMAIL_BLOCK_NAMES = Object.keys(EMAIL_BLOCK_CONTRACT);
+
+/** Supported WordPress Core authoring block names. */
+export const CORE_EMAIL_BLOCK_NAMES = EMAIL_BLOCK_NAMES.filter(
+  name => EMAIL_BLOCK_CONTRACT[name]?.source === 'core'
+);
+
+function children(name: string): readonly string[] {
+  return EMAIL_BLOCK_CONTRACT[name]?.children ?? [];
+}
+
 export const EMAIL_BLOCK_NESTING = {
-  container: [
-    'campaignbridge/preheader',
-    'campaignbridge/section',
-    'campaignbridge/post-card',
-    'campaignbridge/compliance-footer',
-  ],
-  section: [
-    'campaignbridge/columns',
-    'campaignbridge/text',
-    'campaignbridge/heading',
-    'campaignbridge/image',
-    'campaignbridge/button',
-    'campaignbridge/divider',
-    'campaignbridge/spacer',
-    'campaignbridge/post-card',
-  ],
-  'post-card': [
-    'campaignbridge/columns',
-    'campaignbridge/post-image',
-    'campaignbridge/post-title',
-    'campaignbridge/post-excerpt',
-    'campaignbridge/post-button',
-    'campaignbridge/post-link',
-  ],
-  columns: ['campaignbridge/column'],
-  column: [
-    'campaignbridge/text',
-    'campaignbridge/heading',
-    'campaignbridge/image',
-    'campaignbridge/button',
-    'campaignbridge/divider',
-    'campaignbridge/spacer',
-    'campaignbridge/post-card',
-    'campaignbridge/post-image',
-    'campaignbridge/post-title',
-    'campaignbridge/post-excerpt',
-    'campaignbridge/post-button',
-    'campaignbridge/post-link',
-  ],
+  container: children('campaignbridge/container'),
+  section: children('campaignbridge/section'),
+  'post-card': children('campaignbridge/post-card'),
+  columns: children('campaignbridge/columns'),
+  column: children('campaignbridge/column'),
+  buttons: children('core/buttons'),
+  list: children('core/list'),
 } as const;

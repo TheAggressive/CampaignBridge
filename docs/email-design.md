@@ -64,7 +64,7 @@ only the email width and heading treatment:
   },
   "styles": {
     "blocks": {
-      "campaignbridge/heading": {
+      "core/heading": {
         "typography": { "fontWeight": 600 }
       }
     }

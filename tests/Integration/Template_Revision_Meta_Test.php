@@ -241,7 +241,7 @@ final class Template_Revision_Meta_Test extends Test_Case {
 		$text = 0 === $state ? 'Spring issue' : 'Summer issue';
 
 		return '<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
-			. '<!-- wp:campaignbridge/text {"content":"' . $text . '"} /-->'
+			. '<!-- wp:core/paragraph {"content":"' . $text . '"} /-->'
 			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->';
 	}
 }

@@ -12,6 +12,7 @@ namespace CampaignBridge\Services\Email\Renderer;
 use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Services\Email\Email_Block_Contract;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -40,20 +41,7 @@ final class Column_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function allowed_children(): array {
-		return array(
-			'campaignbridge/text',
-			'campaignbridge/heading',
-			'campaignbridge/image',
-			'campaignbridge/button',
-			'campaignbridge/divider',
-			'campaignbridge/spacer',
-			'campaignbridge/post-card',
-			'campaignbridge/post-image',
-			'campaignbridge/post-title',
-			'campaignbridge/post-excerpt',
-			'campaignbridge/post-button',
-			'campaignbridge/post-link',
-		);
+		return Email_Block_Contract::children( $this->block_name() );
 	}
 
 	/**

@@ -26,19 +26,19 @@ final class Native_Style_Support {
 		'campaignbridge/compliance-footer' => array( 'color.text', 'spacing.padding' ),
 		'campaignbridge/post-image'        => array(),
 		'campaignbridge/post-card'         => array( 'color.background', 'spacing.padding' ),
-		'campaignbridge/text'              => array( 'color.text', 'color.background', 'typography.fontSize', 'typography.fontFamily', 'typography.lineHeight', 'spacing.padding', 'spacing.margin' ),
-		'campaignbridge/button'            => array( 'color.text', 'color.background', 'typography.fontFamily' ),
+		'core/paragraph'                   => array( 'color.text', 'color.background', 'typography.fontSize', 'typography.fontFamily', 'typography.lineHeight', 'spacing.padding', 'spacing.margin' ),
+		'core/button'                      => array( 'color.text', 'color.background', 'typography.fontFamily' ),
 		'campaignbridge/preheader'         => array(),
-		'campaignbridge/spacer'            => array( 'dimensions.minHeight' ),
+		'core/spacer'                      => array(),
 		'campaignbridge/post-title'        => array( 'color.text', 'typography.fontSize', 'typography.fontFamily', 'typography.fontWeight', 'typography.lineHeight', 'spacing.margin' ),
 		'campaignbridge/post-excerpt'      => array( 'color.text', 'typography.fontSize', 'typography.fontFamily', 'typography.lineHeight', 'spacing.margin' ),
-		'campaignbridge/image'             => array( 'spacing.margin' ),
+		'core/image'                       => array( 'spacing.margin' ),
 		'campaignbridge/columns'           => array( 'spacing.blockGap' ),
 		'campaignbridge/section'           => array( 'color.background', 'spacing.padding', 'spacing.margin' ),
 		'campaignbridge/post-button'       => array( 'color.text', 'color.background', 'typography.fontFamily', 'elements.link.color.text', 'elements.link.:hover.color.text' ),
-		'campaignbridge/heading'           => array( 'color.text', 'typography.fontSize', 'typography.fontFamily', 'typography.fontWeight', 'typography.lineHeight', 'spacing.margin' ),
+		'core/heading'                     => array( 'color.text', 'typography.fontSize', 'typography.fontFamily', 'typography.fontWeight', 'typography.lineHeight', 'spacing.margin' ),
 		'campaignbridge/container'         => array( 'color.text', 'color.background', 'spacing.padding', 'spacing.margin' ),
-		'campaignbridge/divider'           => array( 'border.color', 'border.width', 'border.style', 'border.top.color', 'border.top.width', 'border.top.style', 'border.right.color', 'border.right.width', 'border.right.style', 'border.bottom.color', 'border.bottom.width', 'border.bottom.style', 'border.left.color', 'border.left.width', 'border.left.style' ),
+		'core/separator'                   => array(),
 		'campaignbridge/column'            => array( 'color.background' ),
 		'campaignbridge/post-link'         => array( 'elements.link.color.text', 'elements.link.:hover.color.text' ),
 	);
@@ -53,7 +53,7 @@ final class Native_Style_Support {
 	public static function attributes( Block_Node $block ): array {
 		$attributes = $block->attributes();
 		$style      = $attributes['style'] ?? array();
-		if ( is_string( $style ) && in_array( $block->name(), array( 'campaignbridge/button', 'campaignbridge/post-button', 'campaignbridge/post-link', 'campaignbridge/divider' ), true ) ) {
+		if ( is_string( $style ) && in_array( $block->name(), array( 'campaignbridge/post-button', 'campaignbridge/post-link' ), true ) ) {
 			$attributes['variant'] = $style;
 			$style                 = array();
 		}
@@ -97,21 +97,6 @@ final class Native_Style_Support {
 		}
 		if ( isset( $style['spacing']['blockGap'] ) ) {
 			$attributes['gap'] = Style_Resolver::length( $style['spacing']['blockGap'], 'style.spacing.blockGap', 0, 48 );
-		}
-		if ( isset( $style['dimensions']['minHeight'] ) ) {
-			$attributes['height'] = Style_Resolver::length( $style['dimensions']['minHeight'], 'style.dimensions.minHeight', 0, 600 );
-		}
-		if ( 'campaignbridge/divider' === $block->name() && isset( $attributes['borderColor'] ) ) {
-			$attributes['color'] = $attributes['borderColor'];
-		}
-		if ( 'campaignbridge/divider' === $block->name() && isset( $style['border'] ) ) {
-			$border = $style['border'];
-			if ( isset( $border['color'] ) ) {
-				$attributes['color'] = $border['color']; }
-			if ( isset( $border['width'] ) ) {
-				$attributes['thickness'] = Style_Resolver::length( $border['width'], 'style.border.width', 0, 8 ); }
-			if ( isset( $border['style'] ) ) {
-				$attributes['variant'] = $border['style']; }
 		}
 		if ( isset( $attributes['layout']['contentSize'] ) || isset( $attributes['layout']['wideSize'] ) ) {
 			$attributes['maxWidth'] = Style_Resolver::length( $attributes['layout']['contentSize'] ?? $attributes['layout']['wideSize'], 'layout.contentSize', 320, 900 );

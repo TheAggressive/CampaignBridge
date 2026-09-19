@@ -92,7 +92,7 @@ final class Email_Design_Compiler_Test extends TestCase {
 						'attrs'       => array(),
 						'innerBlocks' => array(
 							array(
-								'blockName'   => 'campaignbridge/text',
+								'blockName'   => 'core/paragraph',
 								'attrs'       => array( 'content' => 'Shared defaults' ),
 								'innerBlocks' => array(),
 							),

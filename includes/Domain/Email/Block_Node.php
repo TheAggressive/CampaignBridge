@@ -24,13 +24,15 @@ final class Block_Node {
 	 * @param array<string, mixed>   $attributes Semantic block attributes.
 	 * @param array<int, Block_Node> $children   Normalized child nodes.
 	 * @param string                 $path       Stable diagnostic path.
+	 * @param string                 $inner_html Known serialized HTML fragment, when supplied by WordPress.
 	 * @throws \InvalidArgumentException When the block name is empty.
 	 */
 	public function __construct(
 		private readonly string $name,
 		private readonly array $attributes,
 		private readonly array $children,
-		private readonly string $path
+		private readonly string $path,
+		private readonly string $inner_html = ''
 	) {
 		if ( '' === $name ) {
 			throw new \InvalidArgumentException( 'Block name cannot be empty.' );
@@ -65,8 +67,16 @@ final class Block_Node {
 		return $this->path;
 	}
 
+	/** Get the known serialized HTML fragment for block-specific normalization. */
+	public function inner_html(): string {
+		return $this->inner_html;
+	}
+
 	/**
 	 * Return a copy with normalized attributes.
+	 *
+	 * The copy does not retain serialized markup: once a block is normalized,
+	 * only its semantic attributes are canonical.
 	 *
 	 * @param array<string, mixed> $attributes Normalized attributes.
 	 */
