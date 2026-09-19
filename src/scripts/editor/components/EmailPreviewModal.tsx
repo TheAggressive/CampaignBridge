@@ -10,6 +10,7 @@ const DESKTOP_WIDTH = 600;
 const MOBILE_WIDTH = 390;
 
 type Viewport = 'desktop' | 'mobile';
+type Personalization = 'sample' | 'tokens';
 
 interface EmailPreviewModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ export default function EmailPreviewModal({
     setViewport(device);
   };
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [personalization, setPersonalization] =
+    useState<Personalization>('sample');
   const [sourceOpen, setSourceOpen] = useState(false);
 
   const isLoading = preview.status === 'loading';
@@ -52,6 +55,8 @@ export default function EmailPreviewModal({
   const hasWarnings = preview.diagnostics.warnings.length > 0;
   const hasDiagnostics = hasErrors || hasWarnings;
   const isStale = hasEdits && preview.status === 'success' && !isLoading;
+  const hasSample = preview.status === 'success' && !!preview.sampleHtml;
+  const showSample = hasSample && personalization === 'sample';
   const statusTone = isLoading
     ? 'loading'
     : hasErrors
@@ -220,6 +225,41 @@ export default function EmailPreviewModal({
             ))}
           </div>
 
+          {hasSample && (
+            <div className='cb-editor__preview-personalization'>
+              <div
+                className='cb-editor__preview-toggle'
+                role='group'
+                aria-label={__('Personalization', 'campaignbridge')}
+              >
+                {(['sample', 'tokens'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    type='button'
+                    className='cb-editor__preview-toggle-option'
+                    aria-pressed={personalization === mode}
+                    onClick={() => setPersonalization(mode)}
+                  >
+                    {mode === 'sample'
+                      ? __('Sample values', 'campaignbridge')
+                      : __('Tokens', 'campaignbridge')}
+                  </button>
+                ))}
+              </div>
+              <small className='cb-editor__preview-personalization-note'>
+                {showSample
+                  ? __(
+                      'Sample values stand in for each subscriber’s data. Source and download keep the tokens.',
+                      'campaignbridge'
+                    )
+                  : __(
+                      'Tokens are replaced with each subscriber’s data when the email is sent.',
+                      'campaignbridge'
+                    )}
+              </small>
+            </div>
+          )}
+
           {hasWarnings && (
             <Button
               variant='tertiary'
@@ -371,13 +411,24 @@ export default function EmailPreviewModal({
                 )}
                 <div className='cb-editor__preview-email'>
                   <EmailPreviewFrame
-                    html={preview.html}
+                    html={
+                      showSample
+                        ? (preview.sampleHtml ?? preview.html)
+                        : preview.html
+                    }
                     width={
                       viewport === 'mobile'
                         ? MOBILE_WIDTH
                         : (preview.width ?? DESKTOP_WIDTH)
                     }
-                    title={__('Email preview', 'campaignbridge')}
+                    title={
+                      showSample
+                        ? __(
+                            'Email preview with sample personalization',
+                            'campaignbridge'
+                          )
+                        : __('Email preview', 'campaignbridge')
+                    }
                   />
                 </div>
               </>

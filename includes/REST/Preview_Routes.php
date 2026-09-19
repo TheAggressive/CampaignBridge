@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace CampaignBridge\REST;
 
 use CampaignBridge\Core\Storage;
+use CampaignBridge\Domain\Email\Compile_Result;
+use CampaignBridge\Domain\Email\Token\Token_Preview;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Post_Snapshot_Repository;
 use CampaignBridge\Workflow\Email\Template_Preview;
@@ -126,7 +128,29 @@ class Preview_Routes extends Abstract_Rest_Controller {
 				'compiler_version' => $result->compiler_version(),
 				'profile_version'  => $result->profile_version(),
 				'fingerprint'      => $result->fingerprint(),
+				'sample'           => $this->sample( $result ),
 			)
+		);
+	}
+
+	/**
+	 * Derive the labeled sample-personalization view of a successful artifact.
+	 *
+	 * The canonical `html` and `text` stay unchanged for source, download, and
+	 * review. Null when the compile failed or no token needs a sample value.
+	 *
+	 * @param Compile_Result $result Compile result.
+	 * @return array{html: string, text: string}|null
+	 */
+	private function sample( Compile_Result $result ): ?array {
+		$preview = Token_Preview::default();
+		if ( ! $result->is_success() || ! $preview->applies_to( $result->html() . $result->text() ) ) {
+			return null;
+		}
+
+		return array(
+			'html' => $preview->html( $result->html() ),
+			'text' => $preview->text( $result->text() ),
 		);
 	}
 

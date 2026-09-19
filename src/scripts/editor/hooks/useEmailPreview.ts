@@ -15,6 +15,8 @@ const PREVIEW_PATH = '/campaignbridge/v1/preview';
 
 interface EmailPreviewResponse {
   html: string;
+  /** Display-only view with synthetic personalization; null when unused. */
+  sample?: { html: string; text: string } | null;
   diagnostics: Array<{
     severity: string;
     code: string;
@@ -26,7 +28,10 @@ export type PreviewStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export interface EmailPreview {
   status: PreviewStatus;
+  /** Canonical compiled artifact, with personalization tokens intact. */
   html: string;
+  /** Same artifact with synthetic sample values, for display only. */
+  sampleHtml?: string | null;
   diagnostics: {
     errors: Array<{ code: string; message: string }>;
     warnings: Array<{ code: string; message: string }>;
@@ -124,6 +129,7 @@ export function useEmailPreview(
         content: serializedContent,
         title,
         html: response.html,
+        sampleHtml: response.sample?.html ?? null,
         diagnostics: {
           errors: (response.diagnostics ?? []).filter(
             d => d.severity === 'error'

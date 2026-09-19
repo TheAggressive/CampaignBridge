@@ -105,6 +105,25 @@ describe('useEmailPreview', () => {
     expect(current.preview.status).toBe('idle');
   });
 
+  it('keeps the canonical artifact separate from the sample view', async () => {
+    jest.mocked(apiFetch).mockResolvedValue({
+      html: '<p>Hi {{cb:subscriber.first_name}}</p>',
+      sample: { html: '<p>Hi Alex</p>', text: 'Hi Alex' },
+      diagnostics: [],
+    });
+    await act(async () => current.requestPreview());
+    expect(current.preview.html).toBe('<p>Hi {{cb:subscriber.first_name}}</p>');
+    expect(current.preview.sampleHtml).toBe('<p>Hi Alex</p>');
+
+    jest.mocked(apiFetch).mockResolvedValue({
+      html: '<p>Hi</p>',
+      sample: null,
+      diagnostics: [],
+    });
+    await act(async () => current.requestPreview());
+    expect(current.preview.sampleHtml).toBeNull();
+  });
+
   it('treats compiler diagnostics and REST errors as failures', async () => {
     jest.mocked(apiFetch).mockResolvedValue({
       html: '',

@@ -57,6 +57,36 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 		self::assertSame( 'universal@1', $data['profile_version'] );
 	}
 
+	public function test_sample_view_is_null_without_provider_tokens(): void {
+		$data = $this->preview(
+			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
+			. '<!-- wp:core/heading {"content":"Hello","level":2} /-->'
+			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->'
+		)->get_data();
+
+		self::assertArrayHasKey( 'sample', $data );
+		self::assertNull( $data['sample'] );
+	}
+
+	public function test_sample_view_personalizes_without_changing_the_canonical_artifact(): void {
+		$data = $this->preview(
+			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
+			. '<!-- wp:paragraph --><p>Hi {{cb:subscriber.first_name}} <a href="{{cb:campaign.unsubscribe_url}}">leave</a></p><!-- /wp:paragraph -->'
+			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->'
+		)->get_data();
+
+		self::assertSame( array(), $data['diagnostics'] );
+		self::assertStringContainsString( 'Hi {{cb:subscriber.first_name}}', $data['html'] );
+		self::assertStringContainsString( 'href="{{cb:campaign.unsubscribe_url}}"', $data['html'] );
+		self::assertStringContainsString( 'Hi {{cb:subscriber.first_name}}', $data['text'] );
+
+		self::assertSame( array( 'html', 'text' ), array_keys( $data['sample'] ) );
+		self::assertStringContainsString( 'Hi Alex', $data['sample']['html'] );
+		self::assertStringContainsString( 'href="https://example.com/campaignbridge-preview/unsubscribe"', $data['sample']['html'] );
+		self::assertStringContainsString( 'Hi Alex', $data['sample']['text'] );
+		self::assertStringNotContainsString( '{{cb:', $data['sample']['html'] . $data['sample']['text'] );
+	}
+
 	public function test_a_rejected_document_returns_diagnostics_not_a_server_error(): void {
 		$response = $this->preview(
 			'<!-- wp:campaignbridge/container --><!-- wp:core/paragraph -->'
@@ -68,6 +98,7 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 		$data = $response->get_data();
 
 		self::assertSame( '', $data['html'] );
+		self::assertNull( $data['sample'] );
 		self::assertNotEmpty( $data['diagnostics'] );
 		self::assertSame( 'block.child.unsupported', $data['diagnostics'][0]['code'] );
 	}

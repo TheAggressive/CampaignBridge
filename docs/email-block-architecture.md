@@ -359,8 +359,21 @@ resolved, preserved, nor rewritten; the compile fails closed. Every canonical
 token in a successful artifact therefore originates from a
 `token_attributes()` attribute.
 
-Not yet implemented: editor token insertion, synthetic preview values,
-compliance-token validation, and provider mapping.
+The compiled preview can also show synthetic personalization. `Token_Preview`
+derives a separate sample view from a successful artifact using each
+provider-resolved token's preview behavior: `sample` tokens show a fixed
+synthetic value (`Alex`, `Sample`, and reserved `https://example.com/...`
+links), `omit` tokens (such as `subscriber.email`) are removed, and `literal`
+tokens stay canonical. Sample values are constants; nothing reads subscriber
+data, options, or providers. The preview endpoint returns this view as
+`sample` next to the unchanged canonical `html`, `text`, and `fingerprint`,
+and the preview modal labels it and offers a toggle back to the tokens. Source
+view, download, and review always use the canonical artifact.
+
+Not yet implemented: editor token insertion, compliance-token validation, and
+provider mapping. CampaignBridge-resolved organization values have no
+configured source yet, so a template using them compiles only when a caller
+supplies `token_values`.
 
 ## Validation and tests
 
