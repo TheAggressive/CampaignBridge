@@ -105,13 +105,22 @@ test('native editor owns the template lifecycle and previews unsaved blocks', as
     page.getByRole('button', { name: 'Document Overview' })
   ).toBeVisible();
 
+  // Start closed so the toggle below always opens the sidebar.
+  await page.evaluate(() => {
+    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+    wp.data.dispatch('core/editor').setIsListViewOpened(false);
+  });
+  await expect(page.locator('.editor-list-view-sidebar')).toHaveCount(0);
+
   await page.getByRole('button', { name: 'Document Overview' }).click();
   const listViewTab = page.getByRole('tab', { name: 'List View' });
   await expect(listViewTab).toBeVisible();
+  // The sidebar slides in; an unforced click waits for Close to settle
+  // instead of landing where the button was mid-animation.
   await page
     .locator('.editor-list-view-sidebar')
     .getByRole('button', { name: 'Close' })
-    .click({ force: true });
+    .click();
   await expect(listViewTab).toBeHidden();
 
   const initial = await page.evaluate(() => {
