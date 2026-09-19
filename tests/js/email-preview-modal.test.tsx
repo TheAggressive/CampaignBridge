@@ -400,6 +400,60 @@ describe('EmailPreviewModal', () => {
     expect(writeText).toHaveBeenCalledWith(html);
   });
 
+  describe('sample personalization', () => {
+    const canonical = '<p>Hi {{cb:subscriber.first_name}}</p>';
+    const sample = '<p>Hi Alex</p>';
+    const frame = () =>
+      container.querySelector(
+        '.cb-editor__preview-iframe iframe'
+      ) as HTMLIFrameElement;
+    const personalization = () =>
+      container.querySelector('[aria-label="Personalization"]');
+    const option = (label: string) =>
+      Array.from(
+        container.querySelectorAll('.cb-editor__preview-personalization button')
+      ).find(el => el.textContent === label) as HTMLButtonElement;
+
+    it('hides the toggle when the artifact needs no sample view', () => {
+      render({ preview: makePreview({ html: '<p>Hi</p>', sampleHtml: null }) });
+      expect(personalization()).toBeNull();
+      expect(frame().getAttribute('srcdoc')).toBe('<p>Hi</p>');
+    });
+
+    it('shows labeled sample values by default and can show the tokens', () => {
+      render({ preview: makePreview({ html: canonical, sampleHtml: sample }) });
+
+      expect(personalization()).not.toBeNull();
+      expect(option('Sample values').getAttribute('aria-pressed')).toBe('true');
+      expect(frame().getAttribute('srcdoc')).toBe(sample);
+      expect(frame().getAttribute('title')).toBe(
+        'Email preview with sample personalization'
+      );
+      expect(container.textContent).toContain(
+        'Sample values stand in for each subscriber’s data.'
+      );
+
+      act(() => option('Tokens').click());
+
+      expect(option('Tokens').getAttribute('aria-pressed')).toBe('true');
+      expect(frame().getAttribute('srcdoc')).toBe(canonical);
+      expect(frame().getAttribute('title')).toBe('Email preview');
+    });
+
+    it('keeps the source pane on the canonical artifact', () => {
+      render({ preview: makePreview({ html: canonical, sampleHtml: sample }) });
+      const sourceButton = Array.from(
+        container.querySelectorAll('button.cb-editor__preview-header-action')
+      ).find(el => el.textContent?.includes('Source')) as HTMLButtonElement;
+
+      act(() => sourceButton.click());
+
+      const pane = container.querySelector('.cb-editor__preview-source-pane');
+      expect(pane?.textContent).toContain('{{cb:subscriber.first_name}}');
+      expect(pane?.textContent).not.toContain('Hi Alex');
+    });
+  });
+
   describe('iframe', () => {
     it('renders a sandboxed iframe with allow-same-origin', () => {
       render();

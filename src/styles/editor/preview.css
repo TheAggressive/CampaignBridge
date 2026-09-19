@@ -500,6 +500,22 @@
   fill: currentColor;
 }
 
+.cb-editor__preview-personalization {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.cb-editor__preview-personalization .cb-editor__preview-toggle-option {
+  padding: 0 12px;
+}
+
+.cb-editor__preview-personalization-note {
+  color: #536175;
+  max-width: 44ch;
+}
+
 .cb-editor__preview-toggle {
   display: inline-flex;
   border: 1px solid #d0d9e5;
