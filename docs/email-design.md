@@ -18,7 +18,9 @@ V1 defines:
 - font choices by slug from CampaignBridge's curated font catalog;
 - global color and typography defaults;
 - block defaults for the currently declared heading, text, button, columns,
-  divider, spacer, post-title, post-excerpt, post-link, and post-button surfaces.
+  divider, and spacer surfaces. Post titles, excerpts, post bodies, and
+  call-to-action buttons are bound Core blocks, so they inherit the
+  `core/heading`, `core/paragraph`, and `core/button` defaults.
 
 Custom color, font-size, and spacing creation is disabled in the v1 editor.
 Existing explicit raw values remain a compiler compatibility concern and do not

@@ -534,9 +534,9 @@ final class Native_Email_Blocks_Test extends TestCase {
 		self::assertContains( 'typography.fontFamily', $constant['core/paragraph'], 'Text block should allow typography.fontFamily.' );
 		self::assertContains( 'typography.fontFamily', $constant['core/button'], 'Button block should allow typography.fontFamily.' );
 		self::assertContains( 'typography.fontFamily', $constant['core/heading'], 'Heading block should allow typography.fontFamily.' );
-		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-title'], 'Post title block should allow typography.fontFamily.' );
-		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-excerpt'], 'Post excerpt block should allow typography.fontFamily.' );
-		self::assertContains( 'typography.fontFamily', $constant['campaignbridge/post-button'], 'Post button block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['core/heading'], 'Post title block should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['core/paragraph'], 'Core paragraph should allow typography.fontFamily.' );
+		self::assertContains( 'typography.fontFamily', $constant['core/button'], 'Core button should allow typography.fontFamily.' );
 	}
 
 	private function context(): Render_Context {

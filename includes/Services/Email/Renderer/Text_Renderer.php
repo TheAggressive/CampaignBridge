@@ -30,12 +30,31 @@ final class Text_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'content', 'align', 'textColor', 'fontSize', 'fontFamily', 'style', 'backgroundColor' );
+		return array( 'content', 'align', 'textColor', 'fontSize', 'fontFamily', 'style', 'backgroundColor', Post_Binding_Support::ATTRIBUTE );
 	}
 
 	/** {@inheritDoc} */
 	public function token_attributes(): array {
 		return array( 'content' => Token_Resolver::CONTEXT_RICH_TEXT );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node $block Normalized block.
+	 */
+	public function snapshot_fields( Block_Node $block ): array {
+		return Post_Binding_Support::fields( $block );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function resolve_post_bindings( Block_Node $block, Render_Context $context ): Block_Node {
+		return Post_Binding_Support::resolve( $block, $context );
 	}
 
 	/**
@@ -54,7 +73,7 @@ final class Text_Renderer extends Abstract_Renderer {
 				'fontSize'   => Renderer_Support::integer_attribute( $attributes, 'fontSize', 16, 10, 72 ),
 				'fontFamily' => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
 				'style'      => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
-			)
+			) + Post_Binding_Support::carry( $block )
 		);
 	}
 
@@ -64,7 +83,12 @@ final class Text_Renderer extends Abstract_Renderer {
 	 * @param Block_Node     $block   Normalized block.
 	 * @param Render_Context $context Immutable scoped context.
 	 */
-	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function validate( Block_Node $block, Render_Context $context ): array {
+		$bound = Post_Binding_Support::validate( $block, $context );
+		if ( array() !== $bound ) {
+			return $bound;
+		}
+
 		$content = $block->attributes()['content'];
 		if ( '' === trim( wp_strip_all_tags( $content ) ) ) {
 			return array( Compile_Diagnostic::error( 'text.content.empty', $block->path(), 'Email text requires visible content.' ) );
@@ -166,12 +190,22 @@ final class Text_Renderer extends Abstract_Renderer {
 			$color = Style_Resolver::color( $wrapper, 'text', null, $kit );
 		}
 		if ( null === $color ) {
-			$color = Renderer_Support::resolve_color( (string) $attributes['textColor'], $kit );
+			$color = Renderer_Support::resolve_color( (string) $attributes['textColor'], $kit, 'textColor' );
 		}
 		$style .= sprintf( ';color:%s', $color );
 
 		// Text align (always emitted).
 		$style .= sprintf( ';text-align:%s', $attributes['align'] );
+
+		// Core's Appearance control writes `normal` alongside every weight, so
+		// only a real italic earns a declaration.
+		if ( 'italic' === Style_Resolver::font_style( $wrapper ) ) {
+			$style .= ';font-style:italic';
+		}
+		$weight = Style_Resolver::font_weight( $wrapper, 0 );
+		if ( 0 !== $weight ) {
+			$style .= sprintf( ';font-weight:%d', $weight );
+		}
 
 		// Padding: emit only when at least one edge is non-zero.
 		$padding = Style_Resolver::spacing(

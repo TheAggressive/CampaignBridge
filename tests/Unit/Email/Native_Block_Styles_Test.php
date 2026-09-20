@@ -19,14 +19,14 @@ final class Native_Block_Styles_Test extends TestCase {
 
 	public static function native_styles(): array {
 		$cases = array();
-		foreach ( array( 'text', 'heading', 'post-title', 'post-excerpt', 'compliance-footer', 'button', 'post-button', 'container' ) as $name ) {
+		foreach ( array( 'text', 'heading', 'compliance-footer', 'button', 'container' ) as $name ) {
 			$cases[ $name . ' custom text' ] = array( $name, array( 'style' => array( 'color' => array( 'text' => '#123456' ) ) ), 'color:#123456' );
 			$cases[ $name . ' text preset' ] = array( $name, array( 'textColor' => 'brand' ), 'color:#1a6dcc' );
 		}
-		foreach ( array( 'text', 'container', 'section', 'column', 'post-card', 'button', 'post-button' ) as $name ) {
+		foreach ( array( 'text', 'container', 'section', 'column', 'post-card', 'button' ) as $name ) {
 			$cases[ $name . ' background' ] = array( $name, array( 'style' => array( 'color' => array( 'background' => '#abcdef' ) ) ), 'background-color:#abcdef' );
 		}
-		foreach ( array( 'text', 'heading', 'post-title', 'post-excerpt' ) as $name ) {
+		foreach ( array( 'text', 'heading' ) as $name ) {
 			$cases[ $name . ' font preset' ] = array( $name, array( 'fontSize' => 'large' ), 'font-size:20px' );
 			$cases[ $name . ' typography' ]  = array(
 				$name,
@@ -43,17 +43,6 @@ final class Native_Block_Styles_Test extends TestCase {
 		}
 		foreach ( array( 'text', 'container', 'section', 'post-card', 'compliance-footer' ) as $name ) {
 			$cases[ $name . ' padding' ] = array( $name, array( 'style' => array( 'spacing' => array( 'padding' => 'var:preset|spacing|20' ) ) ), 'padding:8px 8px 8px 8px' );
-		}
-		foreach ( array( 'post-link', 'post-button' ) as $name ) {
-			$cases[ $name . ' link color' ]  = array(
-				$name,
-				array(
-					'className' => 'post-button' === $name ? 'is-style-link' : null,
-					'style'     => array( 'elements' => array( 'link' => array( 'color' => array( 'text' => '#123456' ) ) ) ),
-				),
-				'color:#123456',
-			);
-			$cases[ $name . ' hover color' ] = array( $name, array( 'style' => array( 'elements' => array( 'link' => array( ':hover' => array( 'color' => array( 'text' => '#123456' ) ) ) ) ) ), ':hover{color:#123456!important}' );
 		}
 		$cases['native variant and colors together'] = array(
 			'button',
@@ -80,11 +69,94 @@ final class Native_Block_Styles_Test extends TestCase {
 		$cases['core spacer height']                 = array( 'spacer', array( 'height' => '48px' ), 'height="48"' );
 		$cases['core separator custom color']        = array( 'divider', array( 'style' => array( 'color' => array( 'background' => '#123456' ) ) ), 'border-top:1px solid #123456' );
 		$cases['core separator preset color']        = array( 'divider', array( 'backgroundColor' => 'brand' ), 'border-top:1px solid #1a6dcc' );
-		$cases['filled button native link color']    = array( 'post-button', array( 'style' => array( 'elements' => array( 'link' => array( 'color' => array( 'text' => '#123456' ) ) ) ) ), 'color:#123456' );
+		$cases['ghost button paints from its background'] = array(
+			'button',
+			array(
+				'className' => 'is-style-ghost',
+				'style'     => array( 'color' => array( 'background' => '#123456' ) ),
+			),
+			'color:#123456;text-decoration:underline',
+		);
 		foreach ( array( 'text', 'heading' ) as $name ) {
 			$cases[ $name . ' core text alignment' ] = array( $name, array( 'style' => array( 'typography' => array( 'textAlign' => 'center' ) ) ), 'text-align:center' );
 		}
 		return $cases;
+	}
+
+	/** @dataProvider appearance_styles */
+	public function test_core_appearance_control_output_compiles( string $name, array $typography, string $expected, bool $present ): void {
+		// Core's Appearance control writes fontStyle and fontWeight together.
+		// Both blocks that offer it must accept the pair the control produces.
+		$result = Compiler_Factory::create()->compile(
+			$this->document( $name, array( 'style' => array( 'typography' => $typography ) ) ),
+			$this->context()
+		);
+
+		self::assertTrue( $result->is_success(), implode( ', ', array_map( static fn( $d ) => $d->to_array()['message'], $result->diagnostics() ) ) );
+		if ( $present ) {
+			self::assertStringContainsString( $expected, $result->html() );
+		} else {
+			self::assertStringNotContainsString( $expected, $result->html() );
+		}
+	}
+
+	/** @return array<string, array{0: string, 1: array<string, mixed>, 2: string, 3: bool}> */
+	public static function appearance_styles(): array {
+		$cases = array();
+		foreach ( array( 'heading', 'text' ) as $name ) {
+			$cases[ $name . ' regular appearance' ] = array(
+				$name,
+				array(
+					'fontWeight' => '400',
+					'fontStyle'  => 'normal',
+				),
+				'font-style',
+				false,
+			);
+			$cases[ $name . ' italic appearance' ]  = array(
+				$name,
+				array(
+					'fontWeight' => '700',
+					'fontStyle'  => 'italic',
+				),
+				'font-style:italic',
+				true,
+			);
+			$cases[ $name . ' weight reaches email' ] = array(
+				$name,
+				array( 'fontWeight' => '600' ),
+				'font-weight:600',
+				true,
+			);
+		}
+
+		return $cases;
+	}
+
+	public function test_an_unportable_font_style_still_fails_closed(): void {
+		$result = Compiler_Factory::create()->compile(
+			$this->document( 'heading', array( 'style' => array( 'typography' => array( 'fontStyle' => 'oblique' ) ) ) ),
+			$this->context()
+		);
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertStringEndsWith( '.attrs.style.typography.fontStyle', $result->diagnostics()[0]->path() );
+	}
+
+	public function test_a_theme_palette_slug_names_the_attribute_that_set_it(): void {
+		// A colour slug from the site theme has no email equivalent. The
+		// diagnostic has to name the attribute the author set, not a generic
+		// "color", or the template cannot be repaired.
+		$result = Compiler_Factory::create()->compile(
+			$this->document( 'section', array( 'backgroundColor' => 'laao-white' ) ),
+			$this->context()
+		);
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertStringEndsWith( '.attrs.backgroundColor', $result->diagnostics()[0]->path() );
+		self::assertStringContainsString( 'backgroundColor', $result->diagnostics()[0]->to_array()['message'] );
 	}
 
 	public function test_unsupported_native_properties_fail_visibly(): void {
@@ -148,7 +220,7 @@ final class Native_Block_Styles_Test extends TestCase {
 			$block['innerBlocks'] = array( $text );
 			$block                = $this->node( 'columns', array(), array( $block, $this->node( 'column', array(), array( $text ) ) ) ); }
 		if ( 'post-card' === $name ) {
-			$block['innerBlocks'] = array( $this->node( 'post-title' ) ); } elseif ( str_starts_with( $name, 'post-' ) ) {
+			$block['innerBlocks'] = array( $this->node( 'heading', array( 'content' => 'Title' ) ) ); } elseif ( str_starts_with( $name, 'post-' ) ) {
 			$block = $this->node( 'post-card', array( 'postId' => 42 ), array( $block ) ); }
 			if ( 'section' !== $name ) {
 				$block = $this->node( 'section', array(), array( $block ) ); }

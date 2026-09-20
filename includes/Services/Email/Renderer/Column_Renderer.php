@@ -94,7 +94,7 @@ final class Column_Renderer extends Abstract_Renderer {
 		if ( null !== $attributes['backgroundColor'] ) {
 			$children = sprintf(
 				'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse;background-color:%1$s"><tr><td>%2$s</td></tr></table>',
-				Renderer_Support::resolve_color( $attributes['backgroundColor'], Renderer_Support::brand_kit( $context ) ),
+				Renderer_Support::resolve_color( $attributes['backgroundColor'], Renderer_Support::brand_kit( $context ), 'backgroundColor' ),
 				$children
 			);
 		}

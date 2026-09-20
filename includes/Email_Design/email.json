@@ -109,35 +109,6 @@
           "style": "solid",
           "width": "1px"
         }
-      },
-      "campaignbridge/post-title": {
-        "color": { "text": "var:preset|color|text" },
-        "typography": {
-          "fontFamily": "var:preset|font-family|arial",
-          "fontSize": "24px",
-          "fontWeight": 700,
-          "lineHeight": 1.25
-        },
-        "spacing": { "marginBottom": "var:preset|spacing|30" }
-      },
-      "campaignbridge/post-excerpt": {
-        "color": { "text": "var:preset|color|text" },
-        "typography": {
-          "fontFamily": "var:preset|font-family|arial",
-          "fontSize": "var:preset|font-size|medium",
-          "lineHeight": 1.6
-        },
-        "spacing": { "marginBottom": "var:preset|spacing|40" }
-      },
-      "campaignbridge/post-link": {
-        "color": { "text": "var:preset|color|text" }
-      },
-      "campaignbridge/post-button": {
-        "color": {
-          "background": "var:preset|color|brand",
-          "text": "var:preset|color|on-brand"
-        },
-        "typography": { "fontFamily": "var:preset|font-family|arial" }
       }
     }
   }

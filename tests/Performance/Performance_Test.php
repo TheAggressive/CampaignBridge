@@ -429,8 +429,19 @@ class Performance_Test extends Test_Case {
 			),
 			'innerBlocks' => array(
 				array(
-					'blockName'   => 'campaignbridge/post-title',
-					'attrs'       => array(),
+					'blockName'   => 'core/heading',
+					'attrs'       => array(
+						'level'    => 2,
+						'metadata' => array(
+							'bindings' => array(
+								'content' => array(
+									'source' => 'campaignbridge/post-data',
+									'args'   => array( 'field' => 'title' ),
+								),
+							),
+						),
+					),
+					'innerHTML'   => '<h2></h2>',
 					'innerBlocks' => array(),
 				),
 			),

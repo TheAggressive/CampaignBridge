@@ -58,9 +58,32 @@ final class Native_Editor {
 			return $settings;
 		}
 
-		$design = Email_Design_Factory::resolve( ( new Brand_Kit_Repository() )->get() );
+		$design                                     = Email_Design_Factory::resolve( ( new Brand_Kit_Repository() )->get() );
+		$settings                                   = Editor_Design_Settings::apply( $settings, $design );
+		$settings['campaignbridgePostTypeArchives'] = self::post_type_archives();
 
-		return Editor_Design_Settings::apply( $settings, $design );
+		return $settings;
+	}
+
+	/**
+	 * Publish the post-type archive permalinks the post binding source previews.
+	 *
+	 * A post type archive link has no REST representation, so the editor reads
+	 * it from settings rather than inventing a store. The compiler never uses
+	 * this value: it resolves `postTypeArchiveUrl` from the immutable snapshot.
+	 *
+	 * @return array<string, string> Archive permalinks keyed by post type slug.
+	 */
+	private static function post_type_archives(): array {
+		$archives = array();
+		foreach ( \get_post_types( array( 'public' => true ), 'names' ) as $post_type ) {
+			$url = \get_post_type_archive_link( (string) $post_type );
+			if ( is_string( $url ) ) {
+				$archives[ (string) $post_type ] = \esc_url_raw( $url );
+			}
+		}
+
+		return $archives;
 	}
 
 	/** Load the small native extension and CampaignBridge-owned preview styles. */

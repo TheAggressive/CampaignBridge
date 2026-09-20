@@ -32,7 +32,6 @@ import {
 import React from 'react';
 
 import metadata from './block.json';
-import { POST_CARD_TEMPLATE } from './config';
 import Edit from './edit';
 import { POST_CARD_VARIATIONS } from './variations';
 
@@ -54,12 +53,10 @@ export const { name }: { name: string } = metadata;
 export interface PostCardBlockSettings {
   edit: React.ComponentType<any>;
   save: () => JSX.Element;
-  template: Array<[string]>;
 }
 
 export const settings: PostCardBlockSettings = {
   edit: Edit,
-  template: POST_CARD_TEMPLATE,
   /**
    * Save component for post card block
    *

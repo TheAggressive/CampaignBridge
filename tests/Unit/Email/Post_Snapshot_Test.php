@@ -78,7 +78,7 @@ final class Post_Snapshot_Test extends TestCase {
 	 */
 	public function test_supported_fields_returns_canonical_vocabulary(): void {
 		self::assertSame(
-			array( 'title', 'excerpt', 'url', 'image', 'postParentUrl', 'postTypeArchiveUrl' ),
+			array( 'title', 'excerpt', 'content', 'url', 'image', 'postParentUrl', 'postTypeArchiveUrl' ),
 			Post_Snapshot::supported_fields()
 		);
 	}

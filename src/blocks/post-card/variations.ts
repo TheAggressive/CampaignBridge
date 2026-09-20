@@ -2,6 +2,8 @@ import type { Block, BlockVariation } from '@wordpress/blocks';
 import { __ } from '@wordpress/i18n';
 import { media, mediaAndText, stack } from '@wordpress/icons';
 
+import { boundButton, boundText, boundTitle } from './config';
+
 /**
  * Post Card layout variations.
  *
@@ -10,6 +12,11 @@ import { media, mediaAndText, stack } from '@wordpress/icons';
  * inserted with a single click. The inner block templates mirror the
  * post-card examples and fixture content; keep those definitions aligned when
  * changing the variation.
+ *
+ * The excerpt and call to action are real WordPress Core blocks bound
+ * read-only to the selected post through the CampaignBridge post binding
+ * source. The image stays a CampaignBridge block because Core cannot model its
+ * link-to-post behaviour (see docs/email-block-architecture.md).
  *
  * Variations are scoped to the inserter so they are never auto-applied to an
  * existing card. The Post Card editor (see edit.tsx) additionally exposes an
@@ -34,9 +41,13 @@ export const POST_CARD_VARIATIONS: BlockVariation[] = [
     },
     innerBlocks: [
       ['campaignbridge/post-image'],
-      ['campaignbridge/post-title'],
-      ['campaignbridge/post-excerpt'],
-      ['campaignbridge/post-button'],
+      ['core/heading', boundTitle()],
+      ['core/paragraph', boundText()],
+      [
+        'core/buttons',
+        {},
+        [['core/button', boundButton(__('Read more', 'campaignbridge'))]],
+      ],
     ],
   },
   {
@@ -67,9 +78,21 @@ export const POST_CARD_VARIATIONS: BlockVariation[] = [
             'campaignbridge/column',
             { width: 65 },
             [
-              ['campaignbridge/post-title', { linkToPost: true }],
-              ['campaignbridge/post-excerpt'],
-              ['campaignbridge/post-button', { style: 'link' }],
+              ['core/heading', boundTitle(2, true)],
+              ['core/paragraph', boundText()],
+              [
+                'core/buttons',
+                {},
+                [
+                  [
+                    'core/button',
+                    boundButton(
+                      __('Read more', 'campaignbridge'),
+                      'is-style-ghost'
+                    ),
+                  ],
+                ],
+              ],
             ],
           ],
         ],
@@ -99,9 +122,21 @@ export const POST_CARD_VARIATIONS: BlockVariation[] = [
             'campaignbridge/column',
             { width: 65 },
             [
-              ['campaignbridge/post-title', { linkToPost: true }],
-              ['campaignbridge/post-excerpt'],
-              ['campaignbridge/post-button', { style: 'link' }],
+              ['core/heading', boundTitle(2, true)],
+              ['core/paragraph', boundText()],
+              [
+                'core/buttons',
+                {},
+                [
+                  [
+                    'core/button',
+                    boundButton(
+                      __('Read more', 'campaignbridge'),
+                      'is-style-ghost'
+                    ),
+                  ],
+                ],
+              ],
             ],
           ],
           [

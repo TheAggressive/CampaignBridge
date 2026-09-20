@@ -26,11 +26,7 @@ use CampaignBridge\Services\Email\Renderer\Image_Renderer;
 use CampaignBridge\Services\Email\Renderer\List_Item_Renderer;
 use CampaignBridge\Services\Email\Renderer\List_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Card_Renderer;
-use CampaignBridge\Services\Email\Renderer\Post_Button_Renderer;
-use CampaignBridge\Services\Email\Renderer\Post_Excerpt_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Image_Renderer;
-use CampaignBridge\Services\Email\Renderer\Post_Link_Renderer;
-use CampaignBridge\Services\Email\Renderer\Post_Title_Renderer;
 use CampaignBridge\Services\Email\Renderer\Preheader_Renderer;
 use CampaignBridge\Services\Email\Renderer\Section_Renderer;
 use CampaignBridge\Services\Email\Renderer\Spacer_Renderer;
@@ -80,11 +76,7 @@ final class Compiler_Factory {
 				new List_Renderer(),
 				new List_Item_Renderer(),
 				new Post_Card_Renderer(),
-				new Post_Title_Renderer(),
-				new Post_Excerpt_Renderer(),
 				new Post_Image_Renderer(),
-				new Post_Button_Renderer(),
-				new Post_Link_Renderer(),
 				new Compliance_Footer_Renderer(),
 			)
 		);

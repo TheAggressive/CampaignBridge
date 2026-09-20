@@ -141,13 +141,9 @@ final class Editor_Design_Settings {
 	private static function design_css( Resolved_Email_Design $design ): string {
 		$css = ':where(.editor-styles-wrapper){' . self::declarations( $design->global_style() ) . '}';
 		foreach ( array(
-			'core/paragraph'              => '[data-type="core/paragraph"]',
-			'core/heading'                => '[data-type="core/heading"]',
-			'campaignbridge/post-title'   => '.wp-block-campaignbridge-post-title',
-			'campaignbridge/post-excerpt' => '.wp-block-campaignbridge-post-excerpt',
-			'core/button'                 => '[data-type="core/button"] .wp-block-button__link',
-			'campaignbridge/post-button'  => '.wp-block-campaignbridge-post-button a',
-			'campaignbridge/post-link'    => '.wp-block-campaignbridge-post-link a',
+			'core/paragraph' => '[data-type="core/paragraph"]',
+			'core/heading'   => '[data-type="core/heading"]',
+			'core/button'    => '[data-type="core/button"] .wp-block-button__link',
 		) as $block_name => $selector ) {
 			$css .= ':where(' . $selector . '){' . self::declarations( $design->block_style( $block_name ) ) . '}';
 		}
@@ -167,7 +163,7 @@ final class Editor_Design_Settings {
 			(string) ( $border['color'] ?? 'transparent' )
 		);
 		$css .= '.editor-styles-wrapper .block-editor-block-list__block.wp-block-separator{width:100%;max-width:none}';
-		$css .= ':where(.wp-block-campaignbridge-post-button.is-style-link a){background:transparent;color:' . ( $colors['text'] ?? 'inherit' ) . '}';
+		$css .= ':where([data-type="core/button"].is-style-ghost .wp-block-button__link){background:transparent;color:' . ( $colors['text'] ?? 'inherit' ) . '}';
 
 		return $css;
 	}

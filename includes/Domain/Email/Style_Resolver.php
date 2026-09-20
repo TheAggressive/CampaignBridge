@@ -169,6 +169,29 @@ final class Style_Resolver {
 	}
 
 	/**
+	 * Resolve the portable font style.
+	 *
+	 * Core's Appearance control writes `fontStyle` alongside `fontWeight`, so
+	 * email has to understand both. Only `normal` and `italic` are portable;
+	 * `oblique` and angle syntax are not, and fail closed.
+	 *
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param string               $fallback   Value when the author chose nothing.
+	 * @throws Invalid_Block_Attribute When an explicit value is not portable.
+	 */
+	public static function font_style( array $attributes, string $fallback = 'normal' ): string {
+		$value = self::style_value( $attributes, array( 'typography', 'fontStyle' ) );
+		if ( null === $value ) {
+			return $fallback;
+		}
+		if ( ! in_array( $value, array( 'normal', 'italic' ), true ) ) {
+			throw new Invalid_Block_Attribute( 'style.typography.fontStyle', 'must be normal or italic in email.' );
+		}
+
+		return $value;
+	}
+
+	/**
 	 * Resolve one spacing group into whole pixels per side.
 	 *
 	 * @param array<string, mixed> $attributes Block attributes.

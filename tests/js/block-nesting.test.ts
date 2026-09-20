@@ -75,13 +75,14 @@ describe('email block nesting grammar', () => {
   });
 
   it('lets every post block be placed inside a column', () => {
-    for (const name of [
-      'campaignbridge/post-image',
-      'campaignbridge/post-title',
-      'campaignbridge/post-excerpt',
-      'campaignbridge/post-button',
-      'campaignbridge/post-link',
-    ]) {
+    for (const name of ['campaignbridge/post-image']) {
+      expect(EMAIL_BLOCK_NESTING.column).toContain(name);
+    }
+  });
+
+  it('lets a post card hold the bindable Core content blocks', () => {
+    for (const name of ['core/heading', 'core/paragraph', 'core/buttons']) {
+      expect(EMAIL_BLOCK_NESTING['post-card']).toContain(name);
       expect(EMAIL_BLOCK_NESTING.column).toContain(name);
     }
   });

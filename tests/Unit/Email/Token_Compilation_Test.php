@@ -248,13 +248,17 @@ final class Token_Compilation_Test extends TestCase {
 	}
 
 	public function test_post_blocks_do_not_accept_tokens_and_still_compile(): void {
-		$card     = '<!-- wp:campaignbridge/post-card {"postId":42} --><!-- wp:campaignbridge/post-title /-->%s<!-- /wp:campaignbridge/post-card -->';
-		$plain    = $this->compile( sprintf( $card, '<!-- wp:campaignbridge/post-button {"label":"Read more"} /-->' ) );
-		$tokenized = $this->compile( sprintf( $card, '<!-- wp:campaignbridge/post-button {"label":"Read {{cb:subscriber.first_name}}"} /-->' ) );
+		$card      = '<!-- wp:campaignbridge/post-card {"postId":42} -->'
+			. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->'
+			. '%s<!-- /wp:campaignbridge/post-card -->';
+		$excerpt   = '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"excerpt"}}}}} --><p>%s</p><!-- /wp:paragraph -->';
+		$plain     = $this->compile( sprintf( $card, sprintf( $excerpt, '' ) ) );
+		$tokenized = $this->compile( sprintf( $card, sprintf( $excerpt, 'Read {{cb:subscriber.first_name}}' ) ) );
 
 		self::assertTrue( $plain->is_success(), $this->diagnostics( $plain ) );
 		self::assertStringContainsString( 'Snapshot title', $plain->html() );
-		$this->assertSingleDiagnostic( $tokenized, 'token.context.unsupported', self::SECTION_CHILD . '.innerBlocks[1].attrs.label' );
+		// A bound attribute cannot also carry authored text, token or not.
+		$this->assertSingleDiagnostic( $tokenized, 'block.attribute.invalid', self::SECTION_CHILD . '.innerBlocks[1].attrs.content' );
 	}
 
 	/**

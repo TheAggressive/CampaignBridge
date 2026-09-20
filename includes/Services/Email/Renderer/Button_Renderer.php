@@ -30,7 +30,7 @@ final class Button_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'url', 'style', 'backgroundColor', 'textColor', 'fontFamily', 'variant' );
+		return array( 'label', 'url', 'style', 'backgroundColor', 'textColor', 'fontFamily', 'variant', Post_Binding_Support::ATTRIBUTE );
 	}
 
 	/** {@inheritDoc} */
@@ -44,6 +44,25 @@ final class Button_Renderer extends Abstract_Renderer {
 	/** {@inheritDoc} */
 	public function block_style_names(): array {
 		return array( 'primary', 'outline', 'ghost' );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node $block Normalized block.
+	 */
+	public function snapshot_fields( Block_Node $block ): array {
+		return Post_Binding_Support::fields( $block );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function resolve_post_bindings( Block_Node $block, Render_Context $context ): Block_Node {
+		return Post_Binding_Support::resolve( $block, $context );
 	}
 
 	/**
@@ -63,7 +82,7 @@ final class Button_Renderer extends Abstract_Renderer {
 				'backgroundColor' => (string) Renderer_Support::string_attribute( $attributes, 'backgroundColor', '' ),
 				'textColor'       => (string) Renderer_Support::string_attribute( $attributes, 'textColor', '' ),
 				'fontFamily'      => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
-			)
+			) + Post_Binding_Support::carry( $block )
 		);
 	}
 
@@ -73,7 +92,12 @@ final class Button_Renderer extends Abstract_Renderer {
 	 * @param Block_Node     $block   Normalized block.
 	 * @param Render_Context $context Immutable scoped context.
 	 */
-	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function validate( Block_Node $block, Render_Context $context ): array {
+		$bound = Post_Binding_Support::validate( $block, $context );
+		if ( array() !== $bound ) {
+			return $bound;
+		}
+
 		$attributes = $block->attributes();
 		if ( '' === $attributes['label'] ) {
 			return array( Compile_Diagnostic::error( 'button.label.empty', $block->path(), 'Email buttons require a label.' ) );
@@ -172,7 +196,7 @@ final class Button_Renderer extends Abstract_Renderer {
 		$value = $block->attributes()['backgroundColor'];
 
 		if ( '' !== $value ) {
-			return Renderer_Support::resolve_color( $value, $kit );
+			return Renderer_Support::resolve_color( $value, $kit, 'backgroundColor' );
 		}
 
 		return $kit->color( Brand_Kit::SLOT_BRAND ) ?? '#1a6dcc';
@@ -190,7 +214,7 @@ final class Button_Renderer extends Abstract_Renderer {
 		$value = $block->attributes()['textColor'];
 
 		if ( '' !== $value ) {
-			return Renderer_Support::resolve_color( $value, $kit );
+			return Renderer_Support::resolve_color( $value, $kit, 'textColor' );
 		}
 
 		return $kit->color( Brand_Kit::SLOT_ON_BRAND ) ?? '#ffffff';

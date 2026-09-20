@@ -78,7 +78,7 @@ final class Section_Renderer extends Abstract_Renderer {
 		$kit        = Renderer_Support::brand_kit( $context );
 		$background = '' === $raw
 			? '#ffffff'
-			: Renderer_Support::resolve_color( $raw, $kit );
+			: Renderer_Support::resolve_color( $raw, $kit, 'backgroundColor' );
 
 		$html = sprintf(
 			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse;background-color:%1$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',

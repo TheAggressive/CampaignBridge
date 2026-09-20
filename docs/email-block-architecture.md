@@ -127,11 +127,11 @@ it:
 
 | Core block       | Email semantics | Normalized from                                                            |
 | ---------------- | --------------- | -------------------------------------------------------------------------- |
-| `core/paragraph` | text            | `<p>` rich text, `style.typography.textAlign`, colour/typography/spacing   |
-| `core/heading`   | heading         | `<h1>`–`<h4>` rich text, `level`, text alignment, colour/typography        |
+| `core/paragraph` | text            | `<p>` rich text or bound post content/excerpt, `style.typography.textAlign`, colour/typography/spacing |
+| `core/heading`   | heading         | `<h1>`–`<h4>` rich text or a bound post title, `level`, text alignment, colour/typography |
 | `core/image`     | image           | `<img src/alt>`, `figure > a[href]`, pixel `width`/`height`, `align`       |
 | `core/buttons`   | button group    | `layout.justifyContent` (left, center, right)                              |
-| `core/button`    | button          | `<a href>` and label, `fill`/`outline`/`ghost` style, colours, font family |
+| `core/button`    | button          | `<a href>` or a bound post URL, label, `fill`/`outline`/`ghost` style, colours, font family |
 | `core/list`      | list            | `ordered`                                                                  |
 | `core/list-item` | list item       | `<li>` rich text                                                           |
 | `core/separator` | divider         | background colour; thickness and line style come from the email design     |
@@ -145,15 +145,111 @@ removes block styles the compiler cannot express (image `rounded`, separator
 `dots`), adds the email-only `ghost` ("Text link") button style, and limits
 heading levels to 1–4. It never forks a Core edit component.
 
+### Post content: one read-only Block Bindings source
+
+A Post Card owns the selected `postId`/`postType` and publishes them as block
+context. Its Core children carry a `metadata.bindings` entry naming the one
+CampaignBridge binding source, `campaignbridge/post-data`:
+
+```text
+campaignbridge/post-card  (owns postId/postType, providesContext)
+  campaignbridge/post-image
+  core/heading        metadata.bindings.content -> campaignbridge/post-data { field: "title" | "titleLink" }
+  core/paragraph      metadata.bindings.content -> campaignbridge/post-data { field: "excerpt" | "content", maxWords }
+  core/buttons
+    core/button       metadata.bindings.url     -> campaignbridge/post-data { field: "url" | "postParentUrl" | "postTypeArchiveUrl" }
+```
+
+`includes/Email_Blocks/email-blocks.json` declares the source name and the only
+supported block + attribute + field + argument combinations under
+`postBindings`. Both `Core_Block_Normalizer` and the editor read that one file,
+so the editor cannot author a binding the compiler will not accept.
+
+A binding field is declarative: `reads` names the immutable snapshot field that
+supplies the value, and an optional `link` names the snapshot field the value is
+linked to. The binding therefore resolves **data** only; the renderer owns
+**presentation**. `titleLink` reads `title` and links it to `url`, and
+`Heading_Renderer` composes the anchor with the heading's own resolved colour,
+because email clients recolour bare links. Both fields a linked binding reads
+are reported by `snapshot_fields()`, so token provenance covers the destination
+as well as the text.
+
+**Authoring.** WordPress' own bindings panel reads one source-wide field list
+and cannot be scoped per attribute, so it cannot express which fields
+CampaignBridge accepts on which block. `src/scripts/editor/post-binding-controls.tsx`
+adds a narrow "Post content" inspector panel — through the public
+`editor.BlockEdit` filter, for bound blocks inside a Post Card only — offering
+exactly the field and argument combinations the contract documents and writing
+them with the public `useBlockBindingsUtils()` API. No Core edit component is
+forked and no block attribute is invented: the choice lives in
+`metadata.bindings`, where WordPress already keeps it. A `core/paragraph` in a
+card can therefore show the post's `excerpt`, which is what a new card seeds,
+or its `content` — the body reduced to plain text — as an explicit author
+choice. Both are capped by the bounded `maxWords` argument.
+
+**Editor resolution.** `src/scripts/editor/post-bindings.ts` registers the
+source with `registerBlockBindingsSource()` and declares
+`usesContext: ['campaignbridge:postId', 'campaignbridge:postType']`, so it reads
+the Post Card's selection without any custom store or duplicated state. It
+defines neither `setValues` nor `canUserEditValue`. WordPress therefore disables
+editing of every bound attribute — a bound `RichText` is read-only, and
+`core/button` locks its link controls — and silently discards any write to a
+bound attribute. **Editing an email template can never modify the article, page,
+or custom post it displays.** The source is deliberately not registered in PHP,
+so `render_block()` cannot substitute live post data either.
+
+**Compiler resolution.** Block Bindings are an authoring concern only.
+`Core_Block_Normalizer` converts validated `metadata.bindings` into a canonical
+`postBindings` attribute; it never executes the source. During compilation,
+`Renderer_Interface::resolve_post_bindings()` substitutes values from the Post
+Card's immutable `Post_Snapshot` — after token resolution, so a literal
+`{{cb:...}}` captured from WordPress can never be read as an authored provider
+token, and before validation, so a bound value passes exactly the rules an
+authored one does. No WordPress post is read during a compile, and a later edit
+to the source post cannot change a compiled artifact.
+
+Unsupported binding sources, attributes, fields, arguments, and any bound
+attribute that also carries a literal value fail closed with a stable
+`block.attribute.invalid` diagnostic. Colour diagnostics name the attribute the
+author set, so a theme palette slug with no email equivalent — a common result
+of pasting a block in from the site editor — points at the control that
+produced it. A bound block outside a Post Card reports
+`post.binding.unbound`; a snapshot missing the bound field reports
+`post.binding.missing`.
+
 ### Remaining CampaignBridge blocks
 
 `campaignbridge/container`, `campaignbridge/preheader`, `campaignbridge/section`,
 `campaignbridge/columns`, `campaignbridge/column`, `campaignbridge/post-card`,
-`campaignbridge/post-image`, `campaignbridge/post-title`,
-`campaignbridge/post-excerpt`, `campaignbridge/post-button`,
-`campaignbridge/post-link`, and `campaignbridge/compliance-footer` stay custom:
+`campaignbridge/post-image`, and `campaignbridge/compliance-footer` stay custom:
 they own the email document structure, compliance, or snapshot-bound post
 content that Core blocks do not model.
+
+`campaignbridge/post-title`, `campaignbridge/post-excerpt`,
+`campaignbridge/post-button`, and `campaignbridge/post-link` were removed in
+favour of bound Core blocks:
+
+- the title became `core/heading`, with `linkToPost` preserved as the
+  `titleLink` field rather than a block attribute;
+- the excerpt became `core/paragraph`, its word cap a bounded `maxWords` binding
+  argument, and the same attribute also binds the post body through the
+  `content` field;
+- the post button and post link collapsed into one `core/button` whose
+  `fill`/`outline`/`ghost` style replaces the old `button`/`link` variant, and
+  the old `destination` enum became the binding `field`, with the `custom`
+  destination expressed as an ordinary unbound Core button URL.
+
+`campaignbridge/post-image` was evaluated against `core/image` and deliberately
+kept. WordPress' `get_block_bindings_supported_attributes()` makes only `id`,
+`url`, `title`, `alt`, and `caption` bindable on `core/image`; `href` is not
+bindable and `linkDestination` has no post option, so link-to-post is
+unrepresentable. The snapshot's intrinsic pixel width and height, which the
+email renderer uses to emit an aspect-correct `height`, likewise have no
+bindable path.
+
+`core/post-title` and `core/post-excerpt` are not used: Core's post title is
+editable when the viewer can edit the source post, which would let email
+authoring rewrite the article. CampaignBridge post content is display-only.
 
 `core/columns`/`core/column` were evaluated and not adopted. Email columns are
 presentation-table cells whose widths are integer percentages of the row with
@@ -171,7 +267,8 @@ CampaignBridge pair keeps those guarantees without registration overrides.
 only each block's known serialization contract: comment attributes plus, where
 Core sources a value from saved markup, the exact wrapper Core's `save()`
 emits. It drops editor-only values (`lock`, `placeholder`, List View
-`metadata.name`) and frontend-only link/media metadata (`id`, `sizeSlug`,
+`metadata.name`), validates `metadata.bindings` against the `postBindings`
+contract and frontend-only link/media metadata (`id`, `sizeSlug`,
 `linkTarget`, `rel`, button `title`, `lightbox`, separator `opacity` and
 `tagName`), canonicalizes
 Core link-format anchors (`data-type`, `data-id`), and converts Core values into

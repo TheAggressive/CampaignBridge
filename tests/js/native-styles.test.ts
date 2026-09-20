@@ -38,7 +38,6 @@ describe('native WordPress style migration', () => {
         style: { typography: { fontSize: '24px' } },
       },
     ],
-    ['post-button', { style: 'link' }, { className: 'is-style-link' }],
   ])(
     'migrates %s through the WordPress attribute parsing filter',
     (name, raw, expected) => {
@@ -52,25 +51,6 @@ describe('native WordPress style migration', () => {
       expect(result).toEqual(expected);
     }
   );
-
-  it('preserves native link hover colors and drops unused legacy button fields', () => {
-    const style = {
-      elements: {
-        link: {
-          color: { text: '#123456' },
-          ':hover': { color: { text: '#654321' } },
-        },
-      },
-    };
-    expect(
-      migrateNativeStyles('campaignbridge/post-link', {
-        style,
-        textColor: '#111111',
-        backgroundColor: '#ffffff',
-        linkColor: 'brand',
-      })
-    ).toEqual({ style });
-  });
 
   it('does not change core block attributes', () => {
     const parsed = { content: 'Hello' };

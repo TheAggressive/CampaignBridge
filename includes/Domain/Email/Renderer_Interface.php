@@ -59,6 +59,19 @@ interface Renderer_Interface {
 	public function snapshot_fields( Block_Node $block ): array;
 
 	/**
+	 * Substitute immutable post snapshot values into bound attributes.
+	 *
+	 * Called after token resolution and snapshot token rejection, and before
+	 * validation, so a bound value is validated exactly like an authored one
+	 * and can never be mistaken for author-owned token syntax. Renderers never
+	 * execute an editor binding source and never read a live WordPress post.
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function resolve_post_bindings( Block_Node $block, Render_Context $context ): Block_Node;
+
+	/**
 	 * Get accepted child block names.
 	 *
 	 * @return array<int, string>|null Null permits any registered child.

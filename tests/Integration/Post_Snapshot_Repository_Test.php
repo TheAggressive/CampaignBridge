@@ -301,14 +301,14 @@ final class Post_Snapshot_Repository_Test extends Test_Case {
 		$this->assertArrayNotHasKey( 'another_meta', $values, 'Arbitrary meta key "another_meta" must not appear in the snapshot.' );
 
 		// The snapshot must contain only the canonical allowlisted fields.
-		$allowed_fields = array( 'title', 'excerpt', 'url', 'image', 'postParentUrl', 'postTypeArchiveUrl' );
+		$allowed_fields = array( 'title', 'excerpt', 'content', 'url', 'image', 'postParentUrl', 'postTypeArchiveUrl' );
 
 		foreach ( array_keys( $values ) as $key ) {
 			$this->assertContains( $key, $allowed_fields, sprintf( 'Snapshot contains non-canonical field "%s".', $key ) );
 		}
 
 		// For this fixture (no thumbnail, no parent), only these fields should be present.
-		$expected_keys = array( 'title', 'excerpt', 'url', 'postTypeArchiveUrl' );
+		$expected_keys = array( 'title', 'excerpt', 'content', 'url', 'postTypeArchiveUrl' );
 		$this->assertSame( $expected_keys, array_keys( $values ) );
 	}
 
@@ -364,8 +364,8 @@ final class Post_Snapshot_Repository_Test extends Test_Case {
 		$result = $preview->compile(
 			'<!-- wp:campaignbridge/container -->'
 			. '<!-- wp:campaignbridge/post-card {"postId":' . $post_id . ',"postType":"post"} -->'
-			. '<!-- wp:campaignbridge/post-title /-->'
-			. '<!-- wp:campaignbridge/post-excerpt /-->'
+			. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->'
+			. '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"excerpt"}}}}} --><p></p><!-- /wp:paragraph -->'
 			. '<!-- /wp:campaignbridge/post-card -->'
 			. '<!-- /wp:campaignbridge/container -->'
 		);

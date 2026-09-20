@@ -271,18 +271,11 @@ test('native editor owns the template lifecycle and previews unsaved blocks', as
       wp.blocks.createBlock('core/paragraph', { content: text }),
       wp.blocks.createBlock('core/buttons', {}, [emailButton]),
     ]);
-    const postButton = wp.blocks.createBlock('campaignbridge/post-button', {
-      label: 'Native action',
-    });
     const secondSection = wp.blocks.createBlock('campaignbridge/section');
     wp.data
       .dispatch('core/block-editor')
       .insertBlocks([section, secondSection], undefined, root.clientId);
 
-    const transformed = wp.blocks.switchToBlockType(
-      postButton,
-      'campaignbridge/post-link'
-    )[0];
     wp.data
       .dispatch('core/block-editor')
       .moveBlocksToPosition(
@@ -295,7 +288,11 @@ test('native editor owns the template lifecycle and previews unsaved blocks', as
 
     return {
       selectedClientId: emailButton.clientId,
-      transformedName: transformed.name,
+      // The post text-link CTA is now a native Core button style rather than
+      // a separate CampaignBridge block with a block-to-block transform.
+      buttonStyles: (wp.blocks.getBlockType('core/button').styles ?? []).map(
+        (style: { name: string }) => style.name
+      ),
       firstChild: wp.data
         .select('core/block-editor')
         .getBlockOrder(root.clientId)[0],
@@ -304,7 +301,7 @@ test('native editor owns the template lifecycle and previews unsaved blocks', as
   }, unsavedText);
   expect(interactions).toEqual(
     expect.objectContaining({
-      transformedName: 'campaignbridge/post-link',
+      buttonStyles: expect.arrayContaining(['ghost']),
       firstChild: interactions.movedClientId,
     })
   );

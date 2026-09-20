@@ -450,9 +450,14 @@ final class Core_Block_Normalization_Test extends TestCase {
 				. '<!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Column heading</h3><!-- /wp:heading -->'
 				. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>Column item</li><!-- /wp:list-item --></ul><!-- /wp:list -->'
 				. '<!-- /wp:campaignbridge/column --><!-- wp:campaignbridge/column -->'
-				. '<!-- wp:campaignbridge/post-card {"postId":42} --><!-- wp:campaignbridge/post-title /--><!-- /wp:campaignbridge/post-card -->'
+				. '<!-- wp:campaignbridge/post-card {"postId":42} -->'
+				. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->'
+				. '<!-- /wp:campaignbridge/post-card -->'
 				. '<!-- /wp:campaignbridge/column --><!-- /wp:campaignbridge/columns -->'
-				. '<!-- wp:campaignbridge/post-card {"postId":42} --><!-- wp:campaignbridge/post-title /--><!-- wp:campaignbridge/post-excerpt /--><!-- /wp:campaignbridge/post-card -->'
+				. '<!-- wp:campaignbridge/post-card {"postId":42} -->'
+				. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->'
+				. '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"excerpt"}}}}} --><p></p><!-- /wp:paragraph -->'
+				. '<!-- /wp:campaignbridge/post-card -->'
 				. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->'
 			),
 			$this->context()

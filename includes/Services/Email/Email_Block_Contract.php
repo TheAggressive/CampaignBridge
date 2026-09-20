@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Services\Email;
 
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use JsonException;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -36,6 +37,20 @@ final class Email_Block_Contract {
 	 * @var array<string, array{source: string, semantics: string, children: array<int, string>}>|null
 	 */
 	private static ?array $blocks = null;
+
+	/**
+	 * Decoded read-only post binding contract.
+	 *
+	 * @var array{source: string, attributes: array<string, array<string, array{projection: string, fields: array<string, array{reads: string, link: string|null}>, args: array<string, array{type: string, min: int, max: int, default: int}>}>>}|null
+	 */
+	private static ?array $post_bindings = null;
+
+	/**
+	 * Decoded contract document.
+	 *
+	 * @var array<string, mixed>|null
+	 */
+	private static ?array $document = null;
 
 	/**
 	 * Every supported authoring block name in contract order.
@@ -92,6 +107,171 @@ final class Email_Block_Contract {
 		return self::blocks()[ $name ]['children'] ?? array();
 	}
 
+	/** The one supported read-only post binding source name. */
+	public static function binding_source(): string {
+		return self::post_bindings()['source'];
+	}
+
+	/**
+	 * Whether a block accepts a post binding on one attribute.
+	 *
+	 * @param string $name      Block name.
+	 * @param string $attribute Bindable attribute name.
+	 */
+	public static function has_binding( string $name, string $attribute ): bool {
+		return isset( self::post_bindings()['attributes'][ $name ][ $attribute ] );
+	}
+
+	/**
+	 * The documented binding rule for one block attribute.
+	 *
+	 * @param string $name      Block name.
+	 * @param string $attribute Bindable attribute name.
+	 * @return array{projection: string, fields: array<string, array{reads: string, link: string|null}>, args: array<string, array{type: string, min: int, max: int, default: int}>}|null
+	 */
+	public static function binding( string $name, string $attribute ): ?array {
+		return self::post_bindings()['attributes'][ $name ][ $attribute ] ?? null;
+	}
+
+	/**
+	 * The documented rule for one bound field.
+	 *
+	 * `reads` names the immutable snapshot field supplying the value. `link`,
+	 * when present, names the snapshot field the renderer links that value to.
+	 *
+	 * @param string $name      Block name.
+	 * @param string $attribute Bindable attribute name.
+	 * @param string $field     Binding field name.
+	 * @return array{reads: string, link: string|null}|null
+	 */
+	public static function binding_field( string $name, string $attribute, string $field ): ?array {
+		return self::post_bindings()['attributes'][ $name ][ $attribute ]['fields'][ $field ] ?? null;
+	}
+
+	/**
+	 * Every block name that accepts a post binding, in contract order.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function binding_block_names(): array {
+		return array_keys( self::post_bindings()['attributes'] );
+	}
+
+	/**
+	 * The bindable attribute names of one block, in contract order.
+	 *
+	 * @param string $name Block name.
+	 * @return array<int, string>
+	 */
+	public static function binding_attribute_names( string $name ): array {
+		return array_keys( self::post_bindings()['attributes'][ $name ] ?? array() );
+	}
+
+	/**
+	 * Decode and validate the read-only post binding contract once per request.
+	 *
+	 * @return array{source: string, attributes: array<string, array<string, array{projection: string, fields: array<string, array{reads: string, link: string|null}>, args: array<string, array{type: string, min: int, max: int, default: int}>}>>}
+	 * @throws \DomainException When the packaged binding contract is malformed.
+	 */
+	private static function post_bindings(): array {
+		if ( null !== self::$post_bindings ) {
+			return self::$post_bindings;
+		}
+
+		$document = self::document();
+		$section  = is_array( $document['postBindings'] ?? null ) ? $document['postBindings'] : array();
+		$source   = $section['source'] ?? null;
+		$entries  = is_array( $section['attributes'] ?? null ) ? $section['attributes'] : null;
+		if ( ! is_string( $source ) || '' === $source || null === $entries ) {
+			throw new \DomainException( 'Email block contract declares no post binding source.' );
+		}
+
+		$attributes = array();
+		foreach ( $entries as $block => $rules ) {
+			if ( ! is_string( $block ) || ! self::has( $block ) || ! self::is_core( $block ) || ! is_array( $rules ) || array() === $rules ) {
+				throw new \DomainException( 'Email block contract binds an unsupported block.' );
+			}
+
+			$attributes[ $block ] = array();
+			foreach ( $rules as $attribute => $rule ) {
+				$attributes[ $block ][ (string) $attribute ] = self::binding_rule( $rule );
+			}
+		}
+
+		self::$post_bindings = array(
+			'source'     => $source,
+			'attributes' => $attributes,
+		);
+
+		return self::$post_bindings;
+	}
+
+	/**
+	 * Validate one block attribute's binding rule.
+	 *
+	 * @param mixed $rule Decoded rule.
+	 * @return array{projection: string, fields: array<string, array{reads: string, link: string|null}>, args: array<string, array{type: string, min: int, max: int, default: int}>}
+	 * @throws \DomainException When the rule is malformed.
+	 */
+	private static function binding_rule( mixed $rule ): array {
+		$projection = is_array( $rule ) ? ( $rule['projection'] ?? null ) : null;
+		$fields     = is_array( $rule ) ? ( $rule['fields'] ?? null ) : null;
+		$args       = is_array( $rule ) ? ( $rule['args'] ?? null ) : null;
+		if (
+			! in_array( $projection, array( 'rich-text', 'url' ), true )
+			|| ! is_array( $fields )
+			|| array() === $fields
+			|| array_is_list( $fields )
+			|| ! is_array( $args )
+		) {
+			throw new \DomainException( 'Email block contract contains a malformed post binding rule.' );
+		}
+
+		$resolved = array();
+		foreach ( $fields as $name => $field ) {
+			$reads = is_array( $field ) ? ( $field['reads'] ?? null ) : null;
+			$link  = is_array( $field ) ? ( $field['link'] ?? null ) : null;
+			if (
+				! is_string( $name )
+				|| '' === $name
+				|| ! is_string( $reads )
+				|| ! in_array( $reads, Post_Snapshot::supported_fields(), true )
+				|| ( null !== $link && ! in_array( $link, Post_Snapshot::supported_fields(), true ) )
+				|| array() !== array_diff( array_keys( $field ), array( 'reads', 'link' ) )
+			) {
+				throw new \DomainException( 'Email block contract contains a malformed post binding field.' );
+			}
+
+			$resolved[ $name ] = array(
+				'reads' => $reads,
+				'link'  => is_string( $link ) ? $link : null,
+			);
+		}
+
+		$bounded = array();
+		foreach ( $args as $name => $schema ) {
+			$min     = is_array( $schema ) ? ( $schema['min'] ?? null ) : null;
+			$max     = is_array( $schema ) ? ( $schema['max'] ?? null ) : null;
+			$default = is_array( $schema ) ? ( $schema['default'] ?? null ) : null;
+			if ( ! is_string( $name ) || 'integer' !== ( $schema['type'] ?? null ) || ! is_int( $min ) || ! is_int( $max ) || ! is_int( $default ) || $min > $max || $default < $min || $default > $max ) {
+				throw new \DomainException( 'Email block contract contains a malformed post binding argument.' );
+			}
+
+			$bounded[ $name ] = array(
+				'type'    => 'integer',
+				'min'     => $min,
+				'max'     => $max,
+				'default' => $default,
+			);
+		}
+
+		return array(
+			'projection' => $projection,
+			'fields'     => $resolved,
+			'args'       => $bounded,
+		);
+	}
+
 	/**
 	 * Decode and validate the contract once per request.
 	 *
@@ -103,20 +283,7 @@ final class Email_Block_Contract {
 			return self::$blocks;
 		}
 
-		$path = dirname( __DIR__, 2 ) . '/Email_Blocks/email-blocks.json';
-		$size = is_file( $path ) ? filesize( $path ) : false;
-		if ( false === $size || 0 === $size || self::MAX_BYTES < $size ) {
-			throw new \DomainException( 'Email block contract is missing or exceeds its size limit.' );
-		}
-
-		$content = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown, CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction -- Fixed repository-owned local file.
-		try {
-			$document = json_decode( (string) $content, true, 16, JSON_THROW_ON_ERROR );
-		} catch ( JsonException ) {
-			throw new \DomainException( 'Email block contract contains invalid JSON.' );
-		}
-
-		$entries = is_array( $document ) && is_array( $document['blocks'] ?? null ) ? $document['blocks'] : array();
+		$entries = is_array( self::document()['blocks'] ?? null ) ? self::document()['blocks'] : array();
 		$blocks  = array();
 		foreach ( $entries as $name => $entry ) {
 			$source    = is_array( $entry ) ? ( $entry['source'] ?? null ) : null;
@@ -156,5 +323,34 @@ final class Email_Block_Contract {
 		self::$blocks = $blocks;
 
 		return $blocks;
+	}
+
+	/**
+	 * Read and decode the packaged contract document once per request.
+	 *
+	 * @return array<string, mixed>
+	 * @throws \DomainException When the packaged contract is missing or malformed.
+	 */
+	private static function document(): array {
+		if ( null !== self::$document ) {
+			return self::$document;
+		}
+
+		$path = dirname( __DIR__, 2 ) . '/Email_Blocks/email-blocks.json';
+		$size = is_file( $path ) ? filesize( $path ) : false;
+		if ( false === $size || 0 === $size || self::MAX_BYTES < $size ) {
+			throw new \DomainException( 'Email block contract is missing or exceeds its size limit.' );
+		}
+
+		$content = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown, CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction -- Fixed repository-owned local file.
+		try {
+			$document = json_decode( (string) $content, true, 16, JSON_THROW_ON_ERROR );
+		} catch ( JsonException ) {
+			throw new \DomainException( 'Email block contract contains invalid JSON.' );
+		}
+
+		self::$document = is_array( $document ) ? $document : array();
+
+		return self::$document;
 	}
 }

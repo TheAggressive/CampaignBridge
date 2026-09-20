@@ -160,8 +160,8 @@ final class Container_Renderer extends Abstract_Renderer {
 		$inner      = $attributes['padding'];
 		$width      = $attributes['maxWidth'];
 		$kit        = Renderer_Support::brand_kit( $context );
-		$background = Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit );
-		$text       = Renderer_Support::resolve_color( $attributes['textColor'], $kit );
+		$background = Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit, 'backgroundColor' );
+		$text       = Renderer_Support::resolve_color( $attributes['textColor'], $kit, 'textColor' );
 
 		return sprintf(
 			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse;background-color:%1$s;color:%2$s"><tr><td align="center" style="padding:%3$dpx %4$dpx %5$dpx %6$dpx"><table role="presentation" class="cb-email-container" width="%7$d" cellpadding="0" cellspacing="0" border="0" style="width:%7$dpx;max-width:100%%;border-collapse:collapse;background-color:%1$s;color:%2$s"><tr><td class="cb-email-cell" style="padding:%8$dpx %9$dpx %10$dpx %11$dpx">%12$s</td></tr></table></td></tr></table>',

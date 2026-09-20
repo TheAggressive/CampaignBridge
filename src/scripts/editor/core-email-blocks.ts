@@ -81,6 +81,10 @@ const SUPPORTS: Record<string, Record<string, readonly string[]>> = {
       'lineHeight',
       'textAlign',
       '__experimentalFontFamily',
+      // Core's Appearance control writes fontStyle and fontWeight together, so
+      // both are offered or neither is; the compiler accepts the same pair.
+      '__experimentalFontStyle',
+      '__experimentalFontWeight',
     ],
     spacing: ['margin', 'padding'],
     align: [],
@@ -92,6 +96,7 @@ const SUPPORTS: Record<string, Record<string, readonly string[]>> = {
       'lineHeight',
       'textAlign',
       '__experimentalFontFamily',
+      '__experimentalFontStyle',
       '__experimentalFontWeight',
     ],
     spacing: ['margin'],

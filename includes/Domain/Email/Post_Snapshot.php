@@ -34,6 +34,7 @@ final class Post_Snapshot {
 	private const FIELDS = array(
 		'title',
 		'excerpt',
+		'content',
 		'url',
 		'image',
 		'postParentUrl',
@@ -122,6 +123,10 @@ final class Post_Snapshot {
 		self::validate_title( $values['title'] );
 		self::validate_excerpt( $values['excerpt'] );
 		self::validate_url( $values['url'] );
+
+		if ( array_key_exists( 'content', $values ) ) {
+			self::validate_content( $values['content'] );
+		}
 
 		if ( array_key_exists( 'image', $values ) ) {
 			self::validate_image( $values['image'] );
@@ -301,6 +306,22 @@ final class Post_Snapshot {
 	private static function validate_excerpt( mixed $value ): void {
 		if ( ! is_string( $value ) ) {
 			throw new Invalid_Post_Snapshot( 'Binding "excerpt" must be a string.' );
+		}
+	}
+
+	/**
+	 * Validate the post content binding value.
+	 *
+	 * Content is frozen as plain text: the repository reduces the stored post
+	 * body once, so compilation never parses or renders WordPress markup.
+	 *
+	 * @param mixed $value Candidate content.
+	 *
+	 * @throws Invalid_Post_Snapshot When the value is not a string.
+	 */
+	private static function validate_content( mixed $value ): void {
+		if ( ! is_string( $value ) ) {
+			throw new Invalid_Post_Snapshot( 'Binding "content" must be a string.' );
 		}
 	}
 
