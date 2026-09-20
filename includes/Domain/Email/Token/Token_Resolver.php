@@ -279,10 +279,6 @@ final class Token_Resolver {
 	 * @return Token_Resolution
 	 */
 	private function tag( string $segment, array $values ): Token_Resolution {
-		if ( ! str_contains( $segment, '{{' ) && ! str_contains( $segment, '}}' ) ) {
-			return Token_Resolution::success( $segment );
-		}
-
 		if ( 1 !== preg_match( '/^(<a\s+href=)(["\'])([^"\']*)\2(.*)$/is', $segment, $matches ) ) {
 			return $this->reject( $segment );
 		}
