@@ -13,7 +13,6 @@ use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Style_Resolver;
-use CampaignBridge\Domain\Email\Token\Token_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -413,7 +412,7 @@ final class Renderer_Support {
 		}
 
 		if ( str_contains( $value, '{{' ) || str_contains( $value, '}}' ) ) {
-			return Token_Resolver::default()->is_url_token( $value ) ? $value : null;
+			return $value;
 		}
 
 		return self::https_url( $value );

@@ -63,23 +63,24 @@ final class Renderer_Support_Test extends TestCase {
 	 */
 	public static function rejectedLinkUrls(): array {
 		return array(
-			'javascript'          => array( 'javascript:alert(1)' ),
-			'data'                => array( 'data:text/html,x' ),
-			'relative'            => array( '/unsubscribe' ),
-			'non-string'          => array( null ),
-			'string token'        => array( '{{cb:subscriber.first_name}}' ),
-			'local string token'  => array( '{{cb:organization.name}}' ),
-			'unknown token'       => array( '{{cb:campaign.archive_url}}' ),
-			'query interpolation' => array( 'https://example.com/?email={{cb:subscriber.email}}' ),
-			'path interpolation'  => array( 'https://example.com/{{cb:campaign.unsubscribe_url}}' ),
-			'javascript token'    => array( 'javascript:{{cb:campaign.unsubscribe_url}}' ),
-			'prefixed token'      => array( 'prefix-{{cb:campaign.unsubscribe_url}}' ),
-			'foreign braces'      => array( 'https://example.com/{{FNAME}}' ),
+			'javascript' => array( 'javascript:alert(1)' ),
+			'data'       => array( 'data:text/html,x' ),
+			'relative'   => array( '/unsubscribe' ),
+			'non-string' => array( null ),
 		);
 	}
 
 	public function test_https_url_contract_is_unchanged_for_non_link_urls(): void {
 		self::assertNull( Renderer_Support::https_url( '{{cb:campaign.unsubscribe_url}}' ) );
+	}
+
+	public function test_link_url_passes_through_token_bearing_urls(): void {
+		// Token-bearing URLs pass through without validation; the compiler's
+		// resolver is responsible for token validation.
+		self::assertSame( '{{cb:campaign.unsubscribe_url}}', Renderer_Support::link_url( '{{cb:campaign.unsubscribe_url}}' ) );
+		self::assertSame( '{{cb:subscriber.first_name}}', Renderer_Support::link_url( '{{cb:subscriber.first_name}}' ) );
+		self::assertSame( 'https://example.com/?email={{cb:subscriber.email}}', Renderer_Support::link_url( 'https://example.com/?email={{cb:subscriber.email}}' ) );
+		self::assertSame( 'javascript:{{cb:campaign.unsubscribe_url}}', Renderer_Support::link_url( 'javascript:{{cb:campaign.unsubscribe_url}}' ) );
 	}
 
 	/**

@@ -153,6 +153,43 @@ final class Token_Resolver_Test extends Test_Case {
 		$this->assertResolved( '© A &amp; B &lt;script&gt;', $result );
 	}
 
+	public function test_rich_text_local_values_with_entity_encoded_token_syntax_are_encoded(): void {
+		// A local value containing entity-encoded token syntax must be HTML-encoded,
+		// not treated as a token expression.
+		$result = $this->resolver->resolve(
+			Token_Resolver::CONTEXT_RICH_TEXT,
+			'{{cb:organization.name}}',
+			array( 'cb:organization.name' => '&#123;&#123;cb:subscriber.email&#125;&#125;' )
+		);
+
+		$this->assertResolved( '&amp;#123;&amp;#123;cb:subscriber.email&amp;#125;&amp;#125;', $result );
+	}
+
+	public function test_rich_text_local_values_with_raw_token_syntax_are_not_recursively_resolved(): void {
+		// A local value containing token syntax must NOT be recursively resolved.
+		// It should be treated as a literal value.
+		$result = $this->resolver->resolve(
+			Token_Resolver::CONTEXT_RICH_TEXT,
+			'{{cb:organization.name}}',
+			array( 'cb:organization.name' => '{{cb:subscriber.email}}' )
+		);
+
+		// The value is returned as-is since { and } are not HTML special characters.
+		$this->assertResolved( '{{cb:subscriber.email}}', $result );
+	}
+
+	public function test_rich_text_local_values_with_html_are_encoded(): void {
+		// A local value containing HTML special characters must be HTML-encoded
+		// to prevent it from being interpreted as raw HTML.
+		$result = $this->resolver->resolve(
+			Token_Resolver::CONTEXT_RICH_TEXT,
+			'{{cb:organization.name}}',
+			array( 'cb:organization.name' => '<script>alert(1)</script>' )
+		);
+
+		$this->assertResolved( '&lt;script&gt;alert(1)&lt;/script&gt;', $result );
+	}
+
 	public function test_rich_text_link_can_use_a_provider_url_token(): void {
 		$html = '<a href="{{cb:campaign.unsubscribe_url}}">Unsubscribe</a> or <a href="{{cb:campaign.view_online_url}}" target="_blank" rel="noopener">view online</a>';
 
