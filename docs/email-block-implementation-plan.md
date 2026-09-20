@@ -150,7 +150,7 @@ This is the exact compiler/editor allowlist, defined once in
 | `campaignbridge/container`         | One document root               | Exactly one root; 320–900 px; locked                                  |
 | `campaignbridge/section`           | Full-width content row          | Child of container; spacing/background                                |
 | `core/paragraph`                   | Rich email text                 | Safe inline marks and HTTPS links only; left/center/right             |
-| `core/heading`                     | Heading                         | Levels 1–4; portable typography; no background                        |
+| `core/heading`                     | Heading or bound post title                         | Levels 1–4; portable typography; no background                        |
 | `core/image`                       | Email image                     | HTTPS URL, pixel dimensions, explicit alt choice; no caption or crop  |
 | `core/buttons`                     | Button group                    | Children are `core/button` only; left/center/right                    |
 | `core/button`                      | Bulletproof CTA                 | HTTPS URL; fill/outline/ghost; Outlook VML fallback                   |
@@ -160,10 +160,6 @@ This is the exact compiler/editor allowlist, defined once in
 | `core/spacer`                      | Vertical spacing                | 0–600 px; Core default 100 px                                         |
 | `campaignbridge/post-card`         | Immutable post binding          | Child of container/section; snapshot needed; padding, background      |
 | `campaignbridge/post-image`        | Featured image binding          | Child of post card or column; width, align, link-to-post, decorative  |
-| `campaignbridge/post-title`        | Post title binding              | Child of post card or column; levels 1–4, align, colour, link-to-post |
-| `campaignbridge/post-excerpt`      | Post excerpt binding            | Child of post card or column; 10–150 words, align, colour, 12–24px    |
-| `campaignbridge/post-button`       | Post button binding             | Article, parent, archive, custom; HTTPS; button or text link          |
-| `campaignbridge/post-link`         | Post text link binding          | Child of post card or column; HTTPS destination                       |
 | `campaignbridge/preheader`         | Hidden inbox preview            | First child of container; at most one; 1-150 characters               |
 | `campaignbridge/columns`           | One to six columns              | Child of section or post card; 1-6 columns; gap 0-48 px               |
 | `campaignbridge/column`            | Column content                  | Child of columns; integer percentage width; flat (no nested columns)  |
@@ -190,11 +186,12 @@ layout logic. The `Post card, media left` and `Post card, media right` patterns
 ship that composition as a single insert. The post binding reaches the post
 blocks through the columns wrapper because context flows down unchanged.
 
-Every post binding block mirrors the control surface of its static twin:
-post-title matches the heading semantics, post-excerpt matches text, and
-post-button matches button.
-Their defaults reproduce the previous output exactly, so templates authored
-before the controls existed compile to the same bytes.
+Post titles, excerpts, post bodies, and call-to-action buttons are the real Core
+blocks, bound read-only to the snapshot through the one
+`campaignbridge/post-data` Block Bindings source; see
+[`email-block-architecture.md`](email-block-architecture.md#post-content-one-read-only-block-bindings-source).
+Only `campaignbridge/post-image` stays custom, because Core cannot bind an
+image's link destination or its intrinsic dimensions.
 
 The unsubscribe destination is never a block attribute. The compliance footer
 reads it from immutable render context metadata, so provider merge syntax stays

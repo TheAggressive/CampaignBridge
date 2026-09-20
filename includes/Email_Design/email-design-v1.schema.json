@@ -151,10 +151,7 @@
             "core/heading": { "$ref": "#/$defs/contentBlockStyle" }, "core/paragraph": { "$ref": "#/$defs/contentBlockStyle" },
             "core/button": { "$ref": "#/$defs/buttonBlockStyle" },
             "campaignbridge/columns": { "type": "object", "additionalProperties": false, "required": ["spacing"], "properties": { "spacing": { "$ref": "#/$defs/spacingStyles" } } },
-            "core/separator": { "type": "object", "additionalProperties": false, "required": ["border"], "properties": { "border": { "$ref": "#/$defs/borderStyles" } } },
-            "campaignbridge/post-title": { "$ref": "#/$defs/contentBlockStyle" }, "campaignbridge/post-excerpt": { "$ref": "#/$defs/contentBlockStyle" },
-            "campaignbridge/post-link": { "type": "object", "additionalProperties": false, "required": ["color"], "properties": { "color": { "$ref": "#/$defs/colorStyles" } } },
-            "campaignbridge/post-button": { "$ref": "#/$defs/buttonBlockStyle" }
+            "core/separator": { "type": "object", "additionalProperties": false, "required": ["border"], "properties": { "border": { "$ref": "#/$defs/borderStyles" } } }
           }
         }
       }

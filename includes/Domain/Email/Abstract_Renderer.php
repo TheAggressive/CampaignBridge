@@ -39,6 +39,16 @@ abstract class Abstract_Renderer implements Renderer_Interface {
 		return array();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function resolve_post_bindings( Block_Node $block, Render_Context $context ): Block_Node { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed
+		return $block;
+	}
+
 	/** {@inheritDoc} */
 	public function allowed_children(): ?array {
 		return array();

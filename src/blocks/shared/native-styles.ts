@@ -8,7 +8,6 @@ export interface NativeStyle {
     margin?: Record<string, string> | string;
     blockGap?: string;
   };
-  elements?: { link?: { color?: { text?: string } } };
 }
 
 type Attributes = Record<string, any>;
@@ -40,11 +39,6 @@ export function migrateNativeStyles(
       delete attrs[legacy];
     }
   }
-  // These fields belonged to the old button-shaped link schema and were never rendered.
-  if (name === 'campaignbridge/post-link') {
-    delete attrs.textColor;
-    delete attrs.backgroundColor;
-  }
   for (const [legacy, slot] of [
     ['textColor', 'text'],
     ['backgroundColor', 'background'],
@@ -64,19 +58,6 @@ export function migrateNativeStyles(
     };
     delete attrs.fontSize;
   }
-  if (attrs.linkColor) {
-    const value = /^(#|var:)/.test(attrs.linkColor)
-      ? attrs.linkColor
-      : `var:preset|color|${attrs.linkColor}`;
-    style.elements = {
-      ...style.elements,
-      link: {
-        ...style.elements?.link,
-        color: { text: value, ...style.elements?.link?.color },
-      },
-    };
-    delete attrs.linkColor;
-  }
   if (name === 'campaignbridge/container' && attrs.maxWidth !== undefined) {
     attrs.layout = {
       type: 'constrained',
@@ -84,12 +65,6 @@ export function migrateNativeStyles(
       ...attrs.layout,
     };
     delete attrs.maxWidth;
-  }
-  if (
-    typeof attrs.style === 'string' &&
-    name === 'campaignbridge/post-button'
-  ) {
-    attrs.className = attrs.className || `is-style-${attrs.style}`;
   }
   if (name === 'campaignbridge/columns' && attrs.gap !== undefined) {
     style.spacing = { blockGap: pixels(attrs.gap), ...style.spacing };
@@ -112,8 +87,7 @@ addFilter(
     if (!block.name.startsWith('campaignbridge/')) return parsed;
     const migrated = migrateNativeStyles(block.name, raw);
     const result = { ...parsed, ...migrated };
-    for (const key of ['padding', 'outerPadding', 'linkColor'])
-      delete result[key];
+    for (const key of ['padding', 'outerPadding']) delete result[key];
     if (block.name === 'campaignbridge/columns') delete result.gap;
     return result;
   }

@@ -49,11 +49,7 @@
         "core/separator",
         "core/spacer",
         "campaignbridge/post-card",
-        "campaignbridge/post-image",
-        "campaignbridge/post-title",
-        "campaignbridge/post-excerpt",
-        "campaignbridge/post-button",
-        "campaignbridge/post-link"
+        "campaignbridge/post-image"
       ]
     },
     "core/paragraph": {
@@ -107,10 +103,9 @@
       "children": [
         "campaignbridge/columns",
         "campaignbridge/post-image",
-        "campaignbridge/post-title",
-        "campaignbridge/post-excerpt",
-        "campaignbridge/post-button",
-        "campaignbridge/post-link"
+        "core/heading",
+        "core/paragraph",
+        "core/buttons"
       ]
     },
     "campaignbridge/post-image": {
@@ -118,30 +113,49 @@
       "semantics": "post-image",
       "children": []
     },
-    "campaignbridge/post-title": {
-      "source": "campaignbridge",
-      "semantics": "post-title",
-      "children": []
-    },
-    "campaignbridge/post-excerpt": {
-      "source": "campaignbridge",
-      "semantics": "post-excerpt",
-      "children": []
-    },
-    "campaignbridge/post-button": {
-      "source": "campaignbridge",
-      "semantics": "post-button",
-      "children": []
-    },
-    "campaignbridge/post-link": {
-      "source": "campaignbridge",
-      "semantics": "post-link",
-      "children": []
-    },
     "campaignbridge/compliance-footer": {
       "source": "campaignbridge",
       "semantics": "compliance-footer",
       "children": []
+    }
+  },
+  "postBindings": {
+    "$comment": "The one read-only CampaignBridge post binding source. Only these block, attribute, field, and argument combinations are accepted; every other binding fails closed in Core_Block_Normalizer. A field's `reads` names the immutable snapshot field supplying its value; an optional `link` names the snapshot field the renderer links that value to.",
+    "source": "campaignbridge/post-data",
+    "attributes": {
+      "core/heading": {
+        "content": {
+          "projection": "rich-text",
+          "fields": {
+            "title": { "reads": "title" },
+            "titleLink": { "reads": "title", "link": "url" }
+          },
+          "args": {}
+        }
+      },
+      "core/paragraph": {
+        "content": {
+          "projection": "rich-text",
+          "fields": {
+            "excerpt": { "reads": "excerpt" },
+            "content": { "reads": "content" }
+          },
+          "args": {
+            "maxWords": { "type": "integer", "min": 10, "max": 500, "default": 50 }
+          }
+        }
+      },
+      "core/button": {
+        "url": {
+          "projection": "url",
+          "fields": {
+            "url": { "reads": "url" },
+            "postParentUrl": { "reads": "postParentUrl" },
+            "postTypeArchiveUrl": { "reads": "postTypeArchiveUrl" }
+          },
+          "args": {}
+        }
+      }
     }
   }
 }

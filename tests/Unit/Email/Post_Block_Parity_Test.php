@@ -52,13 +52,21 @@ final class Post_Block_Parity_Test extends TestCase {
 	public function test_links_the_image_and_title_to_the_snapshot_post(): void {
 		$document = $this->document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][0]['attrs']['linkToPost'] = true;
-		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['linkToPost'] = true;
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]                        = Email_Compiler_Test::bound_title( true );
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
 		self::assertStringContainsString( '<a href="https://example.com/posts/7" style="text-decoration:none"><img', $result->html() );
 		self::assertStringContainsString( '<a href="https://example.com/posts/7" style="color:#111111;text-decoration:none">Snapshot title</a>', $result->html() );
+	}
+
+	public function test_an_unlinked_bound_title_emits_no_anchor(): void {
+		$result = Compiler_Factory::create()->compile( $this->document(), $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( '>Snapshot title</h2>', $result->html() );
+		self::assertStringNotContainsString( 'Snapshot title</a>', $result->html() );
 	}
 
 	public function test_drops_alt_text_for_a_decorative_image(): void {
@@ -74,7 +82,7 @@ final class Post_Block_Parity_Test extends TestCase {
 
 	public function test_renders_a_custom_font_size_for_the_post_title(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['fontSize'] = 32;
+		$document[0]['innerBlocks'][0]['innerBlocks'][1]['attrs']['style'] = array( 'typography' => array( 'fontSize' => '32px' ) );
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
@@ -82,32 +90,34 @@ final class Post_Block_Parity_Test extends TestCase {
 		self::assertStringContainsString( 'font-size:32px', $result->html() );
 	}
 
-	public function test_renders_the_call_to_action_as_a_text_link_without_button_markup(): void {
+	public function test_renders_the_call_to_action_as_a_native_ghost_text_link(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['style'] = 'link';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = Email_Compiler_Test::bound_button(
+			array( 'field' => 'url' ),
+			array( 'className' => 'is-style-ghost' )
+		);
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
-		self::assertStringContainsString(
-			'<a href="https://example.com/posts/7" style="color:#111111;text-decoration:underline">Read more</a>',
-			$result->html()
-		);
-		self::assertStringNotContainsString( 'v:roundrect', $result->html() );
+		self::assertStringContainsString( 'background-color:transparent;border:none', $result->html() );
+		self::assertStringContainsString( 'text-decoration:underline', $result->html() );
 	}
 
-	public function test_link_style_uses_its_own_colour_rather_than_the_button_fill(): void {
-		$document               = $this->document();
-		$cta                    = &$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs'];
-		$cta['style']           = 'link';
-		$cta['linkColor']       = '#0000ee';
-		$cta['backgroundColor'] = '#ff0000';
+	public function test_ghost_style_paints_from_its_own_colour_rather_than_the_button_fill(): void {
+		$document = $this->document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = Email_Compiler_Test::bound_button(
+			array( 'field' => 'url' ),
+			array(
+				'className'       => 'is-style-ghost',
+				'backgroundColor' => '#0000ee',
+			)
+		);
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
 		self::assertStringContainsString( 'color:#0000ee;text-decoration:underline', $result->html() );
-		self::assertStringNotContainsString( '#ff0000', $result->html() );
 	}
 
 	public function test_keeps_the_bulletproof_button_as_the_default_style(): void {
@@ -119,12 +129,37 @@ final class Post_Block_Parity_Test extends TestCase {
 
 	public function test_rejects_an_unknown_call_to_action_style(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['style'] = 'ghost';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = Email_Compiler_Test::bound_button(
+			array( 'field' => 'url' ),
+			array( 'className' => 'is-style-pill' )
+		);
 
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
 		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+	}
+
+	public function test_a_bound_core_block_outside_a_post_card_fails_closed(): void {
+		$document = array(
+			array(
+				'blockName'   => 'campaignbridge/container',
+				'attrs'       => array(),
+				'innerBlocks' => array(
+					array(
+						'blockName'   => 'campaignbridge/section',
+						'attrs'       => array(),
+						'innerBlocks' => array( Email_Compiler_Test::bound_excerpt() ),
+					),
+				),
+			),
+		);
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'post.binding.unbound', $result->diagnostics()[0]->code() );
+		self::assertSame( '', $result->html() );
 	}
 
 	public function test_applies_post_card_padding_and_background(): void {
@@ -193,11 +228,7 @@ final class Post_Block_Parity_Test extends TestCase {
 										'blockName'   => 'campaignbridge/column',
 										'attrs'       => array(),
 										'innerBlocks' => array(
-											array(
-												'blockName' => 'campaignbridge/post-title',
-												'attrs' => array(),
-												'innerBlocks' => array(),
-											),
+											Email_Compiler_Test::bound_title(),
 										),
 									),
 								),
@@ -211,7 +242,7 @@ final class Post_Block_Parity_Test extends TestCase {
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.title.missing', $result->diagnostics()[0]->code() );
+		self::assertSame( 'post.binding.unbound', $result->diagnostics()[0]->code() );
 	}
 
 	/**
@@ -233,9 +264,9 @@ final class Post_Block_Parity_Test extends TestCase {
 						),
 						'innerBlocks' => array(
 							$this->block( 'post-image' ),
-							$this->block( 'post-title' ),
-							$this->block( 'post-excerpt' ),
-							$this->block( 'post-button' ),
+							Email_Compiler_Test::bound_title(),
+							Email_Compiler_Test::bound_excerpt(),
+							Email_Compiler_Test::bound_button( array( 'field' => 'url' ) ),
 						),
 					),
 				),
@@ -274,9 +305,9 @@ final class Post_Block_Parity_Test extends TestCase {
 										'blockName'   => 'campaignbridge/column',
 										'attrs'       => array( 'width' => 65 ),
 										'innerBlocks' => array(
-											$this->block( 'post-title' ),
-											$this->block( 'post-excerpt' ),
-											$this->block( 'post-button', array( 'style' => 'link' ) ),
+											Email_Compiler_Test::bound_title(),
+											Email_Compiler_Test::bound_excerpt(),
+											Email_Compiler_Test::bound_button( array( 'field' => 'url' ), array( 'className' => 'is-style-ghost' ) ),
 										),
 									),
 								),

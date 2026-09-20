@@ -10,24 +10,3 @@ export interface EmailBlockEditProps<Attributes> {
   clientId: string;
   context?: EmailBlockContext;
 }
-
-export interface PostButtonAttributes {
-  label?: string;
-  destination?: string;
-  customUrl?: string;
-  backgroundColor?: string;
-  textColor?: string;
-  align?: 'left' | 'center' | 'right';
-  style?: NativeStyle;
-  className?: string;
-  linkColor?: string;
-}
-
-export interface PostLinkAttributes {
-  style?: NativeStyle;
-  label?: string;
-  destination?: string;
-  customUrl?: string;
-  linkColor?: string;
-  align?: 'left' | 'center' | 'right';
-}

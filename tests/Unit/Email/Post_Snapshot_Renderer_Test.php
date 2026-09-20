@@ -51,13 +51,30 @@ final class Post_Snapshot_Renderer_Test extends TestCase {
 		self::assertFalse( $result->is_success() );
 		self::assertSame( 'post.snapshot.mismatch', $result->diagnostics()[0]->code() );
 
+		// An ad hoc binding attribute is now refused by the Core normalizer,
+		// before a renderer ever sees it.
 		$blocks = parse_blocks( $this->document( array( 7 ) ) );
 		$blocks[0]['innerBlocks'][0]['innerBlocks'][0]['attrs']['binding'] = 'secret_meta';
 		$context = new Render_Context( array(), array( 'posts' => array( 7 => $this->post( 7, 'Title' ) ) ) );
 		$result = Compiler_Factory::create()->compile( $blocks, $context );
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'block.attributes.unsupported', $result->diagnostics()[0]->code() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
 		self::assertSame( '', $result->html() );
+	}
+
+	/** Serialize a `core/heading` whose text is bound to the snapshot title. */
+	private static function bound_title(): string {
+		return '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":'
+			. '{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} -->'
+			. '<h2></h2><!-- /wp:heading -->';
+	}
+
+	/** Serialize a `core/button` whose URL is bound to the snapshot post. */
+	private static function bound_button(): string {
+		return '<!-- wp:buttons --><div class="wp-block-buttons">'
+			. '<!-- wp:button {"metadata":{"bindings":{"url":{"source":"campaignbridge/post-data","args":{"field":"url"}}}}} -->'
+			. '<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Read more</a></div>'
+			. '<!-- /wp:button --></div><!-- /wp:buttons -->';
 	}
 
 	private function post( int $id, string $title ): Post_Snapshot {
@@ -68,7 +85,7 @@ final class Post_Snapshot_Renderer_Test extends TestCase {
 		$content = '<!-- wp:campaignbridge/container -->';
 		foreach ( $ids as $id ) {
 			$content .= '<!-- wp:campaignbridge/post-card {"postId":' . $id . '} -->'
-				. '<!-- wp:campaignbridge/post-title /--><!-- wp:campaignbridge/post-link /-->'
+				. self::bound_title() . self::bound_button()
 				. '<!-- /wp:campaignbridge/post-card -->';
 		}
 		return $content . '<!-- /wp:campaignbridge/container -->';

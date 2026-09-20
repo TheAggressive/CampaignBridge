@@ -61,7 +61,8 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 			return $block;
 		}
 
-		return match ( Email_Block_Contract::semantics( $block->name() ) ) {
+		$bindings  = $this->post_bindings( $block );
+		$canonical = match ( Email_Block_Contract::semantics( $block->name() ) ) {
 			'text'         => $this->paragraph( $block ),
 			'heading'      => $this->heading( $block ),
 			'image'        => $this->image( $block ),
@@ -73,6 +74,115 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 			'spacer'       => $this->spacer( $block ),
 			default        => throw new \DomainException( 'The email block contract names a Core block without a normalizer.' ),
 		};
+
+		return array() === $bindings ? $canonical : $this->with_post_bindings( $canonical, $bindings );
+	}
+
+	/**
+	 * Read the bounded CampaignBridge post bindings off one Core block.
+	 *
+	 * Only the source, block, attribute, field, and argument combinations the
+	 * contract documents are accepted. Every other binding source, attribute,
+	 * field, or argument fails closed with a stable diagnostic; this is a
+	 * bounded email grammar, not a general Block Bindings interpreter.
+	 *
+	 * @param Block_Node $block Source block.
+	 * @return array<string, array<string, int|string>> Canonical bindings keyed by attribute.
+	 * @throws Invalid_Block_Attribute When the binding metadata is unsupported.
+	 */
+	private function post_bindings( Block_Node $block ): array {
+		$metadata = $block->attributes()['metadata'] ?? null;
+		$raw      = is_array( $metadata ) ? ( $metadata['bindings'] ?? null ) : null;
+		if ( null === $raw ) {
+			return array();
+		}
+		if ( ! is_array( $raw ) || array() === $raw || array_is_list( $raw ) ) {
+			throw new Invalid_Block_Attribute( 'metadata.bindings', 'must map bound attribute names to one binding each.' );
+		}
+
+		$bindings = array();
+		foreach ( $raw as $attribute => $binding ) {
+			$attribute              = (string) $attribute;
+			$bindings[ $attribute ] = $this->post_binding( $block->name(), $attribute, $binding );
+		}
+		ksort( $bindings, SORT_STRING );
+
+		return $bindings;
+	}
+
+	/**
+	 * Validate one binding against the contract.
+	 *
+	 * @param string $block_name Core block name.
+	 * @param string $attribute  Bound attribute name.
+	 * @param mixed  $binding    Raw binding metadata.
+	 * @return array<string, int|string> Canonical binding.
+	 * @throws Invalid_Block_Attribute When the binding is unsupported.
+	 */
+	private function post_binding( string $block_name, string $attribute, mixed $binding ): array {
+		$path = 'metadata.bindings.' . $attribute;
+		if ( ! is_array( $binding ) || array() !== array_diff( array_keys( $binding ), array( 'source', 'args' ) ) ) {
+			throw new Invalid_Block_Attribute( $path, 'must declare only a binding source and its arguments.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
+		}
+		if ( Email_Block_Contract::binding_source() !== ( $binding['source'] ?? null ) ) {
+			throw new Invalid_Block_Attribute( $path . '.source', 'must be the CampaignBridge read-only post binding source.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
+		}
+
+		$rule = Email_Block_Contract::binding( $block_name, $attribute );
+		if ( null === $rule ) {
+			throw new Invalid_Block_Attribute( $path, 'is not a bindable email attribute for this block.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
+		}
+
+		$args = $binding['args'] ?? null;
+		if ( ! is_array( $args ) || ( array() !== $args && array_is_list( $args ) ) ) {
+			throw new Invalid_Block_Attribute( $path . '.args', 'must be a binding argument object.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
+		}
+
+		$field = $args['field'] ?? null;
+		if ( ! is_string( $field ) || ! isset( $rule['fields'][ $field ] ) ) {
+			throw new Invalid_Block_Attribute( $path . '.args.field', 'must name a supported post snapshot field.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
+		}
+
+		$unknown = array_diff( array_keys( $args ), array_merge( array( 'field' ), array_keys( $rule['args'] ) ) );
+		if ( array() !== $unknown ) {
+			throw new Invalid_Block_Attribute( $path . '.args.' . (string) reset( $unknown ), 'is not a supported binding argument.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
+		}
+
+		$canonical = array( 'field' => $field );
+		foreach ( $rule['args'] as $name => $schema ) {
+			$value = $args[ $name ] ?? $schema['default'];
+			if ( ! is_int( $value ) || $schema['min'] > $value || $schema['max'] < $value ) {
+				throw new Invalid_Block_Attribute( $path . '.args.' . $name, 'must be an integer within its documented range.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
+			}
+			$canonical[ $name ] = $value;
+		}
+
+		return $canonical;
+	}
+
+	/**
+	 * Replace bound attributes with the canonical `postBindings` semantics.
+	 *
+	 * A bound attribute carries no literal value: the compiler substitutes the
+	 * immutable snapshot value. An attribute that holds both fails closed.
+	 *
+	 * @param Block_Node                               $block    Canonical Core block.
+	 * @param array<string, array<string, int|string>> $bindings Canonical bindings.
+	 * @return Block_Node Block carrying its post bindings.
+	 * @throws Invalid_Block_Attribute When a bound attribute also holds a literal value.
+	 */
+	private function with_post_bindings( Block_Node $block, array $bindings ): Block_Node {
+		$attributes = $block->attributes();
+		foreach ( array_keys( $bindings ) as $attribute ) {
+			$literal = $attributes[ $attribute ] ?? '';
+			if ( ! is_string( $literal ) || '' !== trim( $literal ) ) {
+				throw new Invalid_Block_Attribute( $attribute, 'cannot hold a literal value and a post binding at the same time.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
+			}
+			$attributes[ $attribute ] = '';
+		}
+		$attributes['postBindings'] = $bindings;
+
+		return $block->with_attributes( $attributes );
 	}
 
 	/**
@@ -341,8 +451,8 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 			unset( $attributes[ $key ] );
 		}
 		if ( isset( $attributes['metadata'] ) ) {
-			if ( ! is_array( $attributes['metadata'] ) || array() !== array_diff( array_keys( $attributes['metadata'] ), array( 'name' ) ) ) {
-				throw new Invalid_Block_Attribute( 'metadata', 'supports only a List View name in email.' );
+			if ( ! is_array( $attributes['metadata'] ) || array() !== array_diff( array_keys( $attributes['metadata'] ), array( 'name', 'bindings' ) ) ) {
+				throw new Invalid_Block_Attribute( 'metadata', 'supports only a List View name and CampaignBridge post bindings in email.' );
 			}
 			unset( $attributes['metadata'] );
 		}

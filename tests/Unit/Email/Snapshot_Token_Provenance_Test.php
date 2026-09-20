@@ -24,6 +24,15 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 
 	private const TOKEN = '{{cb:subscriber.first_name}}';
 
+	/** A `core/heading` bound read-only to the snapshot title. */
+	private const BOUND_TITLE = '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->';
+
+	/** A `core/heading` bound read-only to the snapshot title and its URL. */
+	private const BOUND_TITLE_LINK = '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"titleLink"}}}}} --><h2></h2><!-- /wp:heading -->';
+
+	/** A `core/paragraph` bound read-only to the snapshot excerpt. */
+	private const BOUND_EXCERPT = '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"excerpt"}}}}} --><p></p><!-- /wp:paragraph -->';
+
 	private const SNAPSHOT = array(
 		'title'   => 'Snapshot title',
 		'excerpt' => 'Snapshot excerpt',
@@ -67,12 +76,12 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 		return array(
 			'title'             => array(
 				array( 'title' => 'Hello ' . self::TOKEN ) + self::SNAPSHOT,
-				'<!-- wp:campaignbridge/post-title /-->',
+				self::BOUND_TITLE,
 				self::CARD . '.innerBlocks[0].snapshot.posts[42].title',
 			),
 			'excerpt'           => array(
 				array( 'excerpt' => 'Read this, ' . self::TOKEN ) + self::SNAPSHOT,
-				'<!-- wp:campaignbridge/post-excerpt /-->',
+				self::BOUND_EXCERPT,
 				self::CARD . '.innerBlocks[0].snapshot.posts[42].excerpt',
 			),
 			'image alt'         => array(
@@ -82,18 +91,18 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 			),
 			'linked title url'  => array(
 				array( 'url' => $tokenized_url ) + self::SNAPSHOT,
-				'<!-- wp:campaignbridge/post-title {"linkToPost":true} /-->',
+				self::BOUND_TITLE_LINK,
 				self::CARD . '.innerBlocks[0].snapshot.posts[42].url',
 			),
 			'post button url'   => array(
 				array( 'url' => $tokenized_url ) + self::SNAPSHOT,
-				'<!-- wp:campaignbridge/post-button {"label":"Read more"} /-->',
-				self::CARD . '.innerBlocks[0].snapshot.posts[42].url',
+				self::bound_button( 'url' ),
+				self::CARD . '.innerBlocks[0].innerBlocks[0].snapshot.posts[42].url',
 			),
-			'post link parent'  => array(
+			'post button parent' => array(
 				$tokenized_link,
-				'<!-- wp:campaignbridge/post-link {"label":"More","destination":"postParent"} /-->',
-				self::CARD . '.innerBlocks[0].snapshot.posts[42].postParentUrl',
+				self::bound_button( 'postParentUrl' ),
+				self::CARD . '.innerBlocks[0].innerBlocks[0].snapshot.posts[42].postParentUrl',
 			),
 		);
 	}
@@ -108,7 +117,7 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 		) + self::SNAPSHOT;
 
 		$result = $this->compile(
-			self::card( '<!-- wp:campaignbridge/post-title /--><!-- wp:campaignbridge/post-image {"decorative":true} /-->' ),
+			self::card( self::BOUND_TITLE . '<!-- wp:campaignbridge/post-image {"decorative":true} /-->' ),
 			$values
 		);
 
@@ -119,7 +128,7 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 	public function test_non_campaignbridge_braces_in_snapshot_content_remain_valid(): void {
 		$literal = 'Use {{ braces }}, {cb:x}, {{ cb:x }}, {{CB:x}} and *|FNAME|*';
 		$result  = $this->compile(
-			self::card( '<!-- wp:campaignbridge/post-title /--><!-- wp:campaignbridge/post-excerpt /-->' ),
+			self::card( self::BOUND_TITLE . self::BOUND_EXCERPT ),
 			array(
 				'title'   => $literal,
 				'excerpt' => $literal,
@@ -135,10 +144,9 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 		$result = $this->compile(
 			self::card(
 				'<!-- wp:campaignbridge/post-image {"linkToPost":true} /-->'
-				. '<!-- wp:campaignbridge/post-title {"linkToPost":true} /-->'
-				. '<!-- wp:campaignbridge/post-excerpt /-->'
-				. '<!-- wp:campaignbridge/post-link {"label":"Read the post"} /-->'
-				. '<!-- wp:campaignbridge/post-button {"label":"Read more"} /-->'
+				. self::BOUND_TITLE_LINK
+				. self::BOUND_EXCERPT
+				. self::bound_button( 'url' )
 			)
 		);
 
@@ -147,14 +155,14 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 		self::assertStringContainsString( 'alt="Snapshot alt"', $result->html() );
 		self::assertStringContainsString( 'Snapshot title</a></h2>', $result->html() );
 		self::assertStringContainsString( 'Snapshot excerpt</p>', $result->html() );
-		self::assertStringContainsString( "Snapshot title\nSnapshot excerpt\nRead the post: https://example.com/post\nRead more: https://example.com/post", $result->text() );
+		self::assertStringContainsString( "Snapshot title\nSnapshot excerpt\nRead more: https://example.com/post", $result->text() );
 	}
 
 	public function test_every_canonical_token_in_the_artifact_was_authored_in_a_token_attribute(): void {
 		$authored = '<!-- wp:paragraph --><p>Hi ' . self::TOKEN . ' <a href="{{cb:campaign.unsubscribe_url}}">leave</a></p><!-- /wp:paragraph -->'
 			. '<!-- wp:heading --><h2 class="wp-block-heading">For {{cb:subscriber.email}}</h2><!-- /wp:heading -->';
 		$result   = $this->compile(
-			$authored . self::card( '<!-- wp:campaignbridge/post-title /--><!-- wp:campaignbridge/post-excerpt /--><!-- wp:campaignbridge/post-button {"label":"Read more"} /-->' )
+			$authored . self::card( self::BOUND_TITLE . self::BOUND_EXCERPT . self::bound_button( 'url' ) )
 		);
 
 		self::assertTrue( $result->is_success(), $this->diagnostics( $result ) );
@@ -170,7 +178,7 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 
 	public function test_snapshot_diagnostic_never_echoes_the_token_or_content(): void {
 		$result = $this->compile(
-			self::card( '<!-- wp:campaignbridge/post-title /-->' ),
+			self::card( self::BOUND_TITLE ),
 			array( 'title' => 'Secret Alice ' . self::TOKEN ) + self::SNAPSHOT
 		);
 
@@ -179,6 +187,18 @@ final class Snapshot_Token_Provenance_Test extends TestCase {
 		foreach ( array( 'Secret', 'Alice', 'subscriber', 'first_name', '{{' ) as $fragment ) {
 			self::assertStringNotContainsString( $fragment, $json );
 		}
+	}
+
+	/**
+	 * Serialize a `core/buttons` group whose button URL is post-bound.
+	 *
+	 * @param string $field Snapshot field the button URL binds to.
+	 */
+	private static function bound_button( string $field ): string {
+		return '<!-- wp:buttons --><div class="wp-block-buttons">'
+			. '<!-- wp:button {"metadata":{"bindings":{"url":{"source":"campaignbridge/post-data","args":{"field":"' . $field . '"}}}}} -->'
+			. '<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Read more</a></div>'
+			. '<!-- /wp:button --></div><!-- /wp:buttons -->';
 	}
 
 	/**

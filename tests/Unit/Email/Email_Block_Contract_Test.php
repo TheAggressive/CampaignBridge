@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Email;
 
+use CampaignBridge\Domain\Email\Post_Snapshot;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Services\Email\Core_Block_Normalizer;
 use CampaignBridge\Services\Email\Email_Block_Contract;
@@ -36,10 +37,6 @@ final class Email_Block_Contract_Test extends TestCase {
 		'campaignbridge/column',
 		'campaignbridge/post-card',
 		'campaignbridge/post-image',
-		'campaignbridge/post-title',
-		'campaignbridge/post-excerpt',
-		'campaignbridge/post-button',
-		'campaignbridge/post-link',
 		'campaignbridge/compliance-footer',
 	);
 
@@ -52,6 +49,10 @@ final class Email_Block_Contract_Test extends TestCase {
 		'campaignbridge/spacer',
 		'campaignbridge/list',
 		'campaignbridge/list-item',
+		'campaignbridge/post-excerpt',
+		'campaignbridge/post-button',
+		'campaignbridge/post-link',
+		'campaignbridge/post-title',
 	);
 
 	public function test_contract_names_exactly_the_supported_core_and_campaignbridge_blocks(): void {
@@ -132,6 +133,84 @@ final class Email_Block_Contract_Test extends TestCase {
 			self::assertFalse( Email_Block_Contract::has( $name ), $name );
 			self::assertNull( $registry->get( $name ), $name );
 			self::assertDirectoryDoesNotExist( $blocks_directory . substr( $name, strlen( 'campaignbridge/' ) ), $name );
+		}
+	}
+
+	public function test_post_card_children_are_the_mixed_core_and_campaignbridge_composition(): void {
+		self::assertSame(
+			array(
+				'campaignbridge/columns',
+				'campaignbridge/post-image',
+				'core/heading',
+				'core/paragraph',
+				'core/buttons',
+			),
+			Email_Block_Contract::children( 'campaignbridge/post-card' )
+		);
+		self::assertSame(
+			array(
+				'core/paragraph',
+				'core/heading',
+				'core/image',
+				'core/buttons',
+				'core/list',
+				'core/separator',
+				'core/spacer',
+				'campaignbridge/post-card',
+				'campaignbridge/post-image',
+			),
+			Email_Block_Contract::children( 'campaignbridge/column' )
+		);
+	}
+
+	public function test_exactly_one_read_only_post_binding_source_is_supported(): void {
+		self::assertSame( 'campaignbridge/post-data', Email_Block_Contract::binding_source() );
+		self::assertSame( array( 'core/heading', 'core/paragraph', 'core/button' ), Email_Block_Contract::binding_block_names() );
+		self::assertSame( array( 'content' ), Email_Block_Contract::binding_attribute_names( 'core/heading' ) );
+		self::assertSame( array( 'content' ), Email_Block_Contract::binding_attribute_names( 'core/paragraph' ) );
+		self::assertSame( array( 'url' ), Email_Block_Contract::binding_attribute_names( 'core/button' ) );
+	}
+
+	public function test_every_binding_field_belongs_to_the_snapshot_contract(): void {
+		$supported = Post_Snapshot::supported_fields();
+		foreach ( Email_Block_Contract::binding_block_names() as $block ) {
+			self::assertTrue( Email_Block_Contract::is_core( $block ), $block );
+			foreach ( Email_Block_Contract::binding_attribute_names( $block ) as $attribute ) {
+				$rule = Email_Block_Contract::binding( $block, $attribute );
+				self::assertIsArray( $rule );
+				self::assertContains( $rule['projection'], array( 'rich-text', 'url' ) );
+				foreach ( $rule['fields'] as $name => $field ) {
+					self::assertSame( $field, Email_Block_Contract::binding_field( $block, $attribute, (string) $name ) );
+					self::assertContains( $field['reads'], $supported, $block . '.' . $attribute . '.' . $name );
+					if ( null !== $field['link'] ) {
+						self::assertContains( $field['link'], $supported, $block . '.' . $attribute . '.' . $name );
+					}
+				}
+			}
+		}
+	}
+
+	public function test_every_bound_attribute_is_bindable_in_wordpress_core(): void {
+		// The saved binding is only honoured for attributes WordPress itself
+		// declares bindable; binding anything else would be a private contract.
+		foreach ( Email_Block_Contract::binding_block_names() as $block ) {
+			$bindable = get_block_bindings_supported_attributes( $block );
+			foreach ( Email_Block_Contract::binding_attribute_names( $block ) as $attribute ) {
+				self::assertContains( $attribute, $bindable, $block . '.' . $attribute );
+			}
+		}
+	}
+
+	public function test_renderers_that_accept_bindings_declare_the_binding_attribute(): void {
+		$registry = Compiler_Factory::registry();
+		foreach ( Email_Block_Contract::names() as $name ) {
+			$renderer = $registry->get( $name );
+			self::assertNotNull( $renderer, $name );
+			self::assertSame(
+				in_array( $name, Email_Block_Contract::binding_block_names(), true ),
+				in_array( 'postBindings', $renderer->attribute_names(), true ),
+				$name
+			);
 		}
 	}
 

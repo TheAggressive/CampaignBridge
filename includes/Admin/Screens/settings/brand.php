@@ -51,7 +51,7 @@ if ( $screen ) {
 				'preview'          => __( 'Preview', 'campaignbridge' ),
 				'primaryButton'    => __( 'Primary button', 'campaignbridge' ),
 				'typographyHelp'   => __( 'Choose the fonts used in email templates. Web-safe fonts provide the most consistent email-client support.', 'campaignbridge' ),
-				'headingUse'       => __( 'Default for heading and post-title blocks.', 'campaignbridge' ),
+				'headingUse'       => __( 'Default for heading blocks, including bound post titles.', 'campaignbridge' ),
 				'bodyUse'          => __( 'Default for body text and post excerpts.', 'campaignbridge' ),
 				'buttonUse'        => __( 'Default for button and post-call-to-action blocks.', 'campaignbridge' ),
 				'fontChange'       => __( 'Change font', 'campaignbridge' ),

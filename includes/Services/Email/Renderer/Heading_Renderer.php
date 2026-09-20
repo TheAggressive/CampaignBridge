@@ -42,12 +42,31 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'content', 'level', 'align', 'textColor', 'style', 'fontSize', 'fontFamily' );
+		return array( 'content', 'level', 'align', 'textColor', 'style', 'fontSize', 'fontFamily', Post_Binding_Support::ATTRIBUTE );
 	}
 
 	/** {@inheritDoc} */
 	public function token_attributes(): array {
 		return array( 'content' => Token_Resolver::CONTEXT_RICH_TEXT );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node $block Normalized block.
+	 */
+	public function snapshot_fields( Block_Node $block ): array {
+		return Post_Binding_Support::fields( $block );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function resolve_post_bindings( Block_Node $block, Render_Context $context ): Block_Node {
+		return Post_Binding_Support::resolve( $block, $context );
 	}
 
 	/**
@@ -66,7 +85,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 				'textColor'  => Renderer_Support::string_attribute( $attributes, 'textColor', '#111111' ),
 				'fontFamily' => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
 				'style'      => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
-			)
+			) + Post_Binding_Support::carry( $block )
 		);
 	}
 
@@ -76,7 +95,12 @@ final class Heading_Renderer extends Abstract_Renderer {
 	 * @param Block_Node     $block   Normalized block.
 	 * @param Render_Context $context Immutable scoped context.
 	 */
-	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+	public function validate( Block_Node $block, Render_Context $context ): array {
+		$bound = Post_Binding_Support::validate( $block, $context );
+		if ( array() !== $bound ) {
+			return $bound;
+		}
+
 		if ( '' === trim( wp_strip_all_tags( $block->attributes()['content'] ) ) ) {
 			return array(
 				Compile_Diagnostic::error(
@@ -104,13 +128,26 @@ final class Heading_Renderer extends Abstract_Renderer {
 		$attributes = $block->attributes();
 		$style      = $this->build_style( $attributes, $context );
 		$heading    = 'h' . $attributes['level'];
+		$content    = (string) Renderer_Support::rich_text( $attributes['content'] );
+		$url        = Post_Binding_Support::link_url( $block, 'content', $context );
+
+		// Email clients recolour bare links, so a linked heading repeats the
+		// heading's own resolved colour on the anchor rather than inheriting.
+		if ( null !== $url ) {
+			$content = sprintf(
+				'<a href="%1$s" style="color:%2$s;text-decoration:none">%3$s</a>',
+				Renderer_Support::html( $url ),
+				$this->text_color( $attributes, $context ),
+				$content
+			);
+		}
 
 		return sprintf(
 			'<%1$s align="%2$s" style="%3$s">%4$s</%1$s>',
 			$heading,
 			$attributes['align'],
 			$style,
-			(string) Renderer_Support::rich_text( $attributes['content'] )
+			$content
 		);
 	}
 
@@ -147,6 +184,24 @@ final class Heading_Renderer extends Abstract_Renderer {
 	}
 
 	/**
+	 * Resolve the heading's portable text colour.
+	 *
+	 * @param array<string, mixed> $attributes Normalized attributes.
+	 * @param Render_Context       $context    Immutable scoped context.
+	 */
+	private function text_color( array $attributes, Render_Context $context ): string {
+		$style_tree = is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array();
+		$kit        = Renderer_Support::brand_kit( $context );
+
+		$color = null;
+		if ( isset( $style_tree['color']['text'] ) ) {
+			$color = Style_Resolver::color( array( 'style' => $style_tree ), 'text', null, $kit );
+		}
+
+		return $color ?? Renderer_Support::resolve_color( (string) $attributes['textColor'], $kit, 'textColor' );
+	}
+
+	/**
 	 * Build the portable inline style string for the heading block.
 	 *
 	 * Resolves the design-system style tree (color, typography) through the
@@ -179,13 +234,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 			$line_height = 1.25;
 		}
 
-		$color = null;
-		if ( isset( $style_tree['color']['text'] ) ) {
-			$color = Style_Resolver::color( $wrapper, 'text', null, $kit );
-		}
-		if ( null === $color ) {
-			$color = Renderer_Support::resolve_color( (string) $attributes['textColor'], $kit );
-		}
+		$color = $this->text_color( $attributes, $context );
 
 		$font_family = Renderer_Support::resolve_font( $attributes, $kit, 'heading' )['family'];
 		$font_weight = Style_Resolver::font_weight( $wrapper, 700 );

@@ -129,7 +129,7 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 		$kit        = Renderer_Support::brand_kit( $context );
 		$color      = null === $attributes['backgroundColor']
 			? Style_Resolver::color( array( 'style' => $attributes['style'] ), 'background', null, $kit )
-			: Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit );
+			: Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit, 'backgroundColor' );
 		$background = null === $color ? '' : sprintf( ';background-color:%s', $color );
 
 		return sprintf(

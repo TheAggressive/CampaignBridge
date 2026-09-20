@@ -3,6 +3,7 @@ import {
   detectActiveLayout,
   POST_CARD_VARIATIONS,
 } from '../../src/blocks/post-card/variations';
+import { POST_BINDING_SOURCE } from '../../src/blocks/shared/post-bindings';
 
 type RawTemplate = [
   name: string,
@@ -17,6 +18,12 @@ const template = (name: string): RawTemplate[] =>
 const names = (blocks: RawTemplate[]) => blocks.map(b => b[0]);
 
 const attrsOf = (block: RawTemplate): Record<string, unknown> => block[1] ?? {};
+
+const bindingOf = (block: RawTemplate, attribute: string): unknown =>
+  (
+    attrsOf(block).metadata as
+      { bindings?: Record<string, unknown> } | undefined
+  )?.bindings?.[attribute];
 
 describe('post-card layout variations', () => {
   it('offers the three card layouts with the stacked card as default', () => {
@@ -45,12 +52,24 @@ describe('post-card layout variations', () => {
 
   describe('block templates', () => {
     it('stacks the post blocks in reading order', () => {
-      expect(template('stacked')).toEqual([
-        ['campaignbridge/post-image'],
-        ['campaignbridge/post-title'],
-        ['campaignbridge/post-excerpt'],
-        ['campaignbridge/post-button'],
+      expect(names(template('stacked'))).toEqual([
+        'campaignbridge/post-image',
+        'core/heading',
+        'core/paragraph',
+        'core/buttons',
       ]);
+    });
+
+    it('binds the stacked Core blocks read-only to the selected post', () => {
+      const [, , , buttons] = template('stacked');
+      expect(bindingOf(template('stacked')[2], 'content')).toEqual({
+        source: POST_BINDING_SOURCE,
+        args: { field: 'excerpt', maxWords: 50 },
+      });
+      expect(bindingOf((buttons[2] ?? [])[0] as RawTemplate, 'url')).toEqual({
+        source: POST_BINDING_SOURCE,
+        args: { field: 'url' },
+      });
     });
 
     it('lays out a media-left card as a 35/65 split', () => {
@@ -72,10 +91,22 @@ describe('post-card layout variations', () => {
       expect(second[0]).toBe('campaignbridge/column');
       expect(attrsOf(second)).toMatchObject({ width: 65 });
       expect(names(second[2] ?? [])).toEqual([
-        'campaignbridge/post-title',
-        'campaignbridge/post-excerpt',
-        'campaignbridge/post-button',
+        'core/heading',
+        'core/paragraph',
+        'core/buttons',
       ]);
+      // Side-by-side layouts keep the headline linked to the post.
+      expect(bindingOf((second[2] ?? [])[0] as RawTemplate, 'content')).toEqual(
+        {
+          source: POST_BINDING_SOURCE,
+          args: { field: 'titleLink' },
+        }
+      );
+      // The side-by-side layouts use the native ghost style for a text link.
+      const buttons = (second[2] ?? [])[2] as RawTemplate;
+      expect(attrsOf((buttons[2] ?? [])[0] as RawTemplate)).toMatchObject({
+        className: 'is-style-ghost',
+      });
     });
 
     it('lays out a media-right card with the copy column first', () => {
@@ -86,9 +117,9 @@ describe('post-card layout variations', () => {
       expect(first[0]).toBe('campaignbridge/column');
       expect(attrsOf(first)).toMatchObject({ width: 65 });
       expect(names(first[2] ?? [])).toEqual([
-        'campaignbridge/post-title',
-        'campaignbridge/post-excerpt',
-        'campaignbridge/post-button',
+        'core/heading',
+        'core/paragraph',
+        'core/buttons',
       ]);
 
       expect(second[0]).toBe('campaignbridge/column');
@@ -119,9 +150,9 @@ describe('post-card layout variations', () => {
       expect(
         detectActiveLayout([
           block('campaignbridge/post-image'),
-          block('campaignbridge/post-title'),
-          block('campaignbridge/post-excerpt'),
-          block('campaignbridge/post-button'),
+          block('core/heading'),
+          block('core/paragraph'),
+          block('core/buttons'),
         ])
       ).toBe('stacked');
     });
@@ -155,7 +186,7 @@ describe('post-card layout variations', () => {
           block('campaignbridge/columns', {}, [
             block('campaignbridge/column', { width: 35 }),
           ]),
-          block('campaignbridge/post-button'),
+          block('core/buttons'),
         ])
       ).toBe('stacked');
     });

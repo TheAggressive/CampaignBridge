@@ -30,12 +30,7 @@ final class Email_Design_Block_Defaults {
 			$global     = $design->global_style();
 			$style      = $this->merge_styles( array( 'color' => $global['color'] ?? array() ), $style );
 		}
-		if ( 'campaignbridge/post-button' === $block->name() && 'link' === ( $attributes['variant'] ?? null ) ) {
-			$global     = $design->global_style();
-			$attributes = $this->default_attribute( $attributes, 'linkColor', $global['color']['text'] ?? null );
-		}
-
-		$attributes = $this->apply_color_defaults( $block->name(), $attributes, $style );
+		$attributes = $this->apply_color_defaults( $attributes, $style );
 		$attributes = $this->apply_typography_defaults( $attributes, $style );
 		$attributes = $this->apply_structural_defaults( $block->name(), $attributes, $style );
 
@@ -45,19 +40,17 @@ final class Email_Design_Block_Defaults {
 	/**
 	 * Supply color defaults through the renderer's semantic attributes.
 	 *
-	 * @param string               $block_name Block name.
 	 * @param array<string, mixed> $attributes Source attributes.
 	 * @param array<string, mixed> $style      Resolved block style.
 	 * @return array<string, mixed>
 	 */
-	private function apply_color_defaults( string $block_name, array $attributes, array $style ): array {
+	private function apply_color_defaults( array $attributes, array $style ): array {
 		$colors = is_array( $style['color'] ?? null ) ? $style['color'] : array();
 		if ( isset( $colors['background'] ) && ! $this->has_style( $attributes, array( 'color', 'background' ) ) ) {
 			$attributes = $this->default_attribute( $attributes, 'backgroundColor', $colors['background'] );
 		}
 		if ( isset( $colors['text'] ) && ! $this->has_style( $attributes, array( 'color', 'text' ) ) ) {
-			$key        = 'campaignbridge/post-link' === $block_name ? 'linkColor' : 'textColor';
-			$attributes = $this->default_attribute( $attributes, $key, $colors['text'] );
+			$attributes = $this->default_attribute( $attributes, 'textColor', $colors['text'] );
 		}
 		return $attributes;
 	}

@@ -114,6 +114,7 @@ final class Email_Compiler_Test extends TestCase {
 								'postTypeArchiveUrl' => 'https://example.com/news',
 								'url'                => 'https://example.com/posts/42',
 								'excerpt'            => '<strong>This</strong> excerpt has safe text.',
+								'content'            => 'The full post body, frozen as plain text.',
 								'title'              => 'Enterprise & safe',
 								'image'              => array(
 									'height' => 400,
@@ -210,7 +211,7 @@ final class Email_Compiler_Test extends TestCase {
 
 	public function test_post_button_can_target_immutable_post_parent(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postParent';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = self::bound_button( array( 'field' => 'postParentUrl' ) );
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
@@ -220,16 +221,16 @@ final class Email_Compiler_Test extends TestCase {
 
 	public function test_post_button_rejects_post_parent_target_without_snapshot_url(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postParent';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = self::bound_button( array( 'field' => 'postParentUrl' ) );
 		$result = Compiler_Factory::create()->compile( $document, $this->context( false ) );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.button.post_parent_url_missing', $result->diagnostics()[0]->code() );
+		self::assertSame( 'post.binding.missing', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_post_button_can_target_immutable_post_type_archive(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postTypeArchive';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = self::bound_button( array( 'field' => 'postTypeArchiveUrl' ) );
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
@@ -239,17 +240,16 @@ final class Email_Compiler_Test extends TestCase {
 
 	public function test_post_button_rejects_archive_target_without_snapshot_url(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'postTypeArchive';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = self::bound_button( array( 'field' => 'postTypeArchiveUrl' ) );
 		$result = Compiler_Factory::create()->compile( $document, $this->context( true, false ) );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.button.post_type_archive_url_missing', $result->diagnostics()[0]->code() );
+		self::assertSame( 'post.binding.missing', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_post_button_can_target_custom_https_url(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'custom';
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['customUrl']   = 'https://example.com/landing?source=email&campaign=weekly';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = self::bound_button( null, array( 'url' => 'https://example.com/landing?source=email&campaign=weekly' ) );
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertTrue( $result->is_success() );
@@ -259,12 +259,11 @@ final class Email_Compiler_Test extends TestCase {
 
 	public function test_post_button_rejects_unsafe_custom_url(): void {
 		$document = $this->document();
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['destination'] = 'custom';
-		$document[0]['innerBlocks'][0]['innerBlocks'][3]['attrs']['customUrl']   = 'javascript:alert(1)';
+		$document[0]['innerBlocks'][0]['innerBlocks'][3] = self::bound_button( null, array( 'url' => 'javascript:alert(1)' ) );
 		$result = Compiler_Factory::create()->compile( $document, $this->context() );
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'post.button.custom_url_invalid', $result->diagnostics()[0]->code() );
+		self::assertSame( 'button.url.invalid', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_rejects_documents_over_block_budget(): void {
@@ -281,11 +280,7 @@ final class Email_Compiler_Test extends TestCase {
 	}
 
 	public function test_rejects_documents_over_depth_budget(): void {
-		$nested = array(
-			'blockName'   => 'campaignbridge/post-title',
-			'attrs'       => array(),
-			'innerBlocks' => array(),
-		);
+		$nested = self::bound_title();
 
 		for ( $depth = 0; $depth < 21; ++$depth ) {
 			$nested = array(
@@ -315,7 +310,7 @@ final class Email_Compiler_Test extends TestCase {
 	public function test_accepts_whitespace_emitted_by_wordpress_parser(): void {
 		$serialized = "\n<!-- wp:campaignbridge/container -->\n"
 			. '<!-- wp:campaignbridge/post-card {"postId":42,"postType":"post"} -->' . "\n"
-			. '<!-- wp:campaignbridge/post-title {"level":2} /-->' . "\n"
+			. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->' . "\n"
 			. '<!-- /wp:campaignbridge/post-card -->' . "\n"
 			. '<!-- /wp:campaignbridge/container -->' . "\n";
 		$result     = Compiler_Factory::create()->compile( parse_blocks( $serialized ), $this->context() );
@@ -352,6 +347,97 @@ final class Email_Compiler_Test extends TestCase {
 		new Renderer_Registry( array( new Container_Renderer(), new Container_Renderer() ) );
 	}
 
+	/**
+	 * A `core/heading` bound read-only to the snapshot title.
+	 *
+	 * @param bool $linked Whether the title links to the snapshot post.
+	 * @param int  $level  Heading level.
+	 * @return array<string, mixed>
+	 */
+	public static function bound_title( bool $linked = false, int $level = 2 ): array {
+		return array(
+			'blockName'   => 'core/heading',
+			'attrs'       => array(
+				'level'    => $level,
+				'metadata' => array(
+					'bindings' => array(
+						'content' => array(
+							'source' => 'campaignbridge/post-data',
+							'args'   => array( 'field' => $linked ? 'titleLink' : 'title' ),
+						),
+					),
+				),
+			),
+			'innerHTML'   => '<h' . $level . '></h' . $level . '>',
+			'innerBlocks' => array(),
+		);
+	}
+
+	/**
+	 * A `core/paragraph` bound read-only to snapshot post text.
+	 *
+	 * @param int    $max_words Bounded word cap carried by the binding.
+	 * @param string $field     Bound field: excerpt or content.
+	 * @return array<string, mixed>
+	 */
+	public static function bound_excerpt( int $max_words = 50, string $field = 'excerpt' ): array {
+		return array(
+			'blockName'   => 'core/paragraph',
+			'attrs'       => array(
+				'metadata' => array(
+					'bindings' => array(
+						'content' => array(
+							'source' => 'campaignbridge/post-data',
+							'args'   => array(
+								'field'    => $field,
+								'maxWords' => $max_words,
+							),
+						),
+					),
+				),
+			),
+			'innerHTML'   => '<p></p>',
+			'innerBlocks' => array(),
+		);
+	}
+
+	/**
+	 * A `core/buttons` group holding one post-bound `core/button`.
+	 *
+	 * @param array<string, mixed>|null $binding Binding args, or null for a literal URL.
+	 * @param array<string, mixed>      $extra   Additional button attributes.
+	 * @return array<string, mixed>
+	 */
+	public static function bound_button( ?array $binding, array $extra = array() ): array {
+		$attributes = $extra + array(
+			'text'            => 'Read more',
+			'backgroundColor' => '#111111',
+			'textColor'       => '#ffffff',
+		);
+		if ( null !== $binding ) {
+			$attributes['metadata'] = array(
+				'bindings' => array(
+					'url' => array(
+						'source' => 'campaignbridge/post-data',
+						'args'   => $binding,
+					),
+				),
+			);
+		}
+
+		return array(
+			'blockName'   => 'core/buttons',
+			'attrs'       => array(),
+			'innerBlocks' => array(
+				array(
+					'blockName'   => 'core/button',
+					'attrs'       => $attributes,
+					'innerBlocks' => array(),
+				),
+			),
+		);
+	}
+
 	/** @return array<int, array<string, mixed>> */
 	private function document(): array {
 		return array(
@@ -379,25 +465,9 @@ final class Email_Compiler_Test extends TestCase {
 								'attrs'       => array(),
 								'innerBlocks' => array(),
 							),
-							array(
-								'blockName'   => 'campaignbridge/post-title',
-								'attrs'       => array( 'level' => 2 ),
-								'innerBlocks' => array(),
-							),
-							array(
-								'blockName'   => 'campaignbridge/post-excerpt',
-								'attrs'       => array( 'maxWords' => 10 ),
-								'innerBlocks' => array(),
-							),
-							array(
-								'blockName'   => 'campaignbridge/post-button',
-								'attrs'       => array(
-									'label'           => 'Read more',
-									'backgroundColor' => '#111111',
-									'textColor'       => '#ffffff',
-								),
-								'innerBlocks' => array(),
-							),
+							self::bound_title(),
+							self::bound_excerpt( 10 ),
+							self::bound_button( array( 'field' => 'url' ) ),
 						),
 					),
 				),
@@ -409,6 +479,7 @@ final class Email_Compiler_Test extends TestCase {
 		$post = array(
 			'title'   => 'Enterprise & safe',
 			'excerpt' => '<strong>This</strong> excerpt has safe text.',
+			'content' => 'The full post body, frozen as plain text.',
 			'url'     => 'https://example.com/posts/42',
 			'image'   => array(
 				'url'    => 'https://example.com/image.jpg',

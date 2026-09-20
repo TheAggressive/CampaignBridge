@@ -29,6 +29,11 @@ jest.mock('@wordpress/editor', () => ({
   }) => <button onClick={onClick}>{children}</button>,
 }));
 jest.mock('@wordpress/plugins', () => ({ registerPlugin: jest.fn() }));
+jest.mock('@wordpress/blocks', () => ({
+  registerBlockBindingsSource: jest.fn(),
+}));
+// Editor-only side-effect modules; each is covered by its own suite.
+jest.mock('../../src/scripts/editor/post-binding-controls', () => ({}));
 jest.mock(
   '../../src/scripts/editor/components/Sidebars/TemplateSettings',
   () => ({

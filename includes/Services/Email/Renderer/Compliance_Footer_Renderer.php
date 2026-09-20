@@ -123,7 +123,7 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
 		$attributes = $block->attributes();
 		$padding    = $attributes['padding'];
-		$text_color = Renderer_Support::resolve_color( $attributes['textColor'], Renderer_Support::brand_kit( $context ) );
+		$text_color = Renderer_Support::resolve_color( $attributes['textColor'], Renderer_Support::brand_kit( $context ), 'textColor' );
 		$lines      = array();
 
 		if ( '' !== $attributes['businessName'] ) {

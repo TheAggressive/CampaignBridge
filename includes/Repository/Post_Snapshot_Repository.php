@@ -72,6 +72,7 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 		$values = array(
 			'title'   => (string) get_the_title( $post ),
 			'excerpt' => $this->excerpt( $post ),
+			'content' => $this->content( $post ),
 			'url'     => $permalink,
 		);
 
@@ -95,6 +96,26 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 		} catch ( Invalid_Post_Snapshot ) {
 			return null;
 		}
+	}
+
+	/**
+	 * Reduce the stored post body to deterministic plain text.
+	 *
+	 * Frontend rendering is never invoked: `the_content` filters, shortcodes,
+	 * and dynamic blocks would make a compile depend on plugin state rather
+	 * than on the frozen post. Block delimiters, comments, and script or style
+	 * bodies are replaced with whitespace so words either side of a block
+	 * boundary stay separate words.
+	 *
+	 * @param \WP_Post $post Source post.
+	 */
+	private function content( \WP_Post $post ): string {
+		$raw  = (string) $post->post_content;
+		$text = preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', ' ', $raw );
+		$text = preg_replace( '/<!--.*?-->/s', ' ', (string) $text );
+		$text = preg_replace( '/<[^>]*>/', ' ', (string) $text );
+
+		return trim( (string) preg_replace( '/\s+/u', ' ', (string) $text ) );
 	}
 
 	/**

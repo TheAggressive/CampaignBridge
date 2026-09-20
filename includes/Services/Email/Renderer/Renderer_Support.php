@@ -170,12 +170,13 @@ final class Renderer_Support {
 	/**
 	 * Resolve a single raw colour value against the active brand kit.
 	 *
-	 * @param string    $value Raw colour (hex, preset reference, or slot slug).
-	 * @param Brand_Kit $kit   Active brand kit.
+	 * @param string    $value     Raw colour (hex, preset reference, or slot slug).
+	 * @param Brand_Kit $kit       Active brand kit.
+	 * @param string    $attribute Attribute name, so a failure names the value the author set.
 	 * @return string Portable six-digit hex colour.
 	 * @throws Invalid_Block_Attribute When the colour cannot be resolved.
 	 */
-	public static function resolve_color( string $value, Brand_Kit $kit ): string {
+	public static function resolve_color( string $value, Brand_Kit $kit, string $attribute = 'color' ): string {
 		$normalized = trim( $value );
 
 		// 1. Portable hex passes straight through.
@@ -198,7 +199,10 @@ final class Renderer_Support {
 			return $kit->color( $normalized );
 		}
 
-		throw new Invalid_Block_Attribute( 'color', 'must be a hexadecimal colour or a known colour preset.' );
+		// Name the attribute the author actually set: a theme palette slug that
+		// has no email equivalent is the common cause, and the diagnostic has
+		// to point at the control that produced it.
+		throw new Invalid_Block_Attribute( $attribute, 'must be a hexadecimal colour or a colour preset from the email palette.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic attribute names are internal.
 	}
 
 	/**
@@ -319,61 +323,6 @@ final class Renderer_Support {
 			'bottom' => self::integer_attribute( $value, 'bottom', $fallback['bottom'], 0, 96, $name . '.bottom' ),
 			'left'   => self::integer_attribute( $value, 'left', $fallback['left'], 0, 96, $name . '.left' ),
 		);
-	}
-
-	/**
-	 * Resolve the post destination URL from the immutable context binding.
-	 *
-	 * Shared by the post button and post link renderers: both accept the same
-	 * destination enum and read the same post snapshot fields.
-	 *
-	 * @param array<string, mixed> $attributes Normalized block attributes.
-	 * @param Render_Context       $context    Immutable scoped context.
-	 */
-	public static function post_destination_url( array $attributes, Render_Context $context ): ?string {
-		$destination = $attributes['destination'];
-		if ( 'custom' === $destination ) {
-			return self::https_url( $attributes['customUrl'] );
-		}
-
-		$post = $context->post_binding();
-		if ( null === $post ) {
-			return null;
-		}
-
-		return self::https_url( $post->get( (string) self::post_destination_field( $attributes ) ) );
-	}
-
-	/**
-	 * Name the snapshot field a post destination reads, or null for custom.
-	 *
-	 * @param array<string, mixed> $attributes Normalized block attributes.
-	 */
-	public static function post_destination_field( array $attributes ): ?string {
-		return match ( $attributes['destination'] ) {
-			'custom'          => null,
-			'postParent'      => 'postParentUrl',
-			'postTypeArchive' => 'postTypeArchiveUrl',
-			default           => 'url',
-		};
-	}
-
-	/**
-	 * Build the destination-specific missing-URL diagnostics.
-	 *
-	 * @param string $code_prefix Diagnostic prefix, e.g. 'post.button' or 'post.link'.
-	 * @param string $destination Destination slug from the normalized block.
-	 * @return array{0: string, 1: string} Code and message pair.
-	 */
-	public static function missing_destination_diagnostics( string $code_prefix, string $destination ): array {
-		$diagnostics = array(
-			'article'         => array( $code_prefix . '.url_missing', 'A snapshot HTTP or HTTPS article URL is required.' ),
-			'postParent'      => array( $code_prefix . '.post_parent_url_missing', 'The post parent HTTP or HTTPS URL is required in the snapshot.' ),
-			'postTypeArchive' => array( $code_prefix . '.post_type_archive_url_missing', 'The post type archive HTTP or HTTPS URL is required in the snapshot.' ),
-			'custom'          => array( $code_prefix . '.custom_url_invalid', 'The custom destination must be an absolute HTTP or HTTPS URL.' ),
-		);
-
-		return $diagnostics[ $destination ] ?? $diagnostics['article'];
 	}
 
 	/**

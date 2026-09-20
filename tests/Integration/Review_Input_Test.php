@@ -131,8 +131,13 @@ final class Review_Input_Test extends Test_Case {
 	private function content( int $id ): string {
 		return '<!-- wp:campaignbridge/container -->'
 			. '<!-- wp:campaignbridge/post-card {"postId":' . $id . '} -->'
-			. '<!-- wp:campaignbridge/post-title /--><!-- wp:campaignbridge/post-excerpt /-->'
-			. '<!-- wp:campaignbridge/post-button /--><!-- /wp:campaignbridge/post-card -->'
+			. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->'
+			. '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"excerpt"}}}}} --><p></p><!-- /wp:paragraph -->'
+			. '<!-- wp:buttons --><div class="wp-block-buttons">'
+			. '<!-- wp:button {"metadata":{"bindings":{"url":{"source":"campaignbridge/post-data","args":{"field":"url"}}}}} -->'
+			. '<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Read more</a></div>'
+			. '<!-- /wp:button --></div><!-- /wp:buttons -->'
+			. '<!-- /wp:campaignbridge/post-card -->'
 			. '<!-- /wp:campaignbridge/container -->';
 	}
 

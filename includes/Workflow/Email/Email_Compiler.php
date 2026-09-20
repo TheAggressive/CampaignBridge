@@ -331,6 +331,12 @@ final class Email_Compiler {
 				);
 			}
 
+			// Immutable snapshot values land after token resolution, so a
+			// literal brace pair captured from WordPress can never be read as
+			// an authored provider token, and before validation, so a bound
+			// value passes exactly the rules an authored one does.
+			$block = $renderer->resolve_post_bindings( $block, $context );
+
 			$diagnostics = array_merge( $diagnostics, $renderer->validate( $block, $context ) );
 			if ( $this->has_errors( $diagnostics ) ) {
 				return array(

@@ -105,7 +105,7 @@ final class Template_Preview_Test extends TestCase {
 	public function test_preview_preserves_canonical_snapshot_data_through_the_compiler(): void {
 		$content = '<!-- wp:campaignbridge/container -->'
 			. '<!-- wp:campaignbridge/post-card {"postId":7,"postType":"post"} -->'
-			. '<!-- wp:campaignbridge/post-title /-->'
+			. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->'
 			. '<!-- /wp:campaignbridge/post-card -->'
 			. '<!-- /wp:campaignbridge/container -->';
 		$values = array(
@@ -200,7 +200,7 @@ final class Template_Preview_Test extends TestCase {
 		$result = $this->preview()->compile(
 			'<!-- wp:campaignbridge/container -->'
 			. '<!-- wp:campaignbridge/post-card {"postId":7,"postType":"post"} -->'
-			. '<!-- wp:campaignbridge/post-title /-->'
+			. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->'
 			. '<!-- /wp:campaignbridge/post-card -->'
 			. '<!-- /wp:campaignbridge/container -->'
 		);
@@ -213,7 +213,7 @@ final class Template_Preview_Test extends TestCase {
 		$result = $this->preview()->compile(
 			'<!-- wp:campaignbridge/container -->'
 			. '<!-- wp:campaignbridge/post-card {"postId":999,"postType":"post"} -->'
-			. '<!-- wp:campaignbridge/post-title /-->'
+			. '<!-- wp:heading {"level":2,"metadata":{"bindings":{"content":{"source":"campaignbridge/post-data","args":{"field":"title"}}}}} --><h2></h2><!-- /wp:heading -->'
 			. '<!-- /wp:campaignbridge/post-card -->'
 			. '<!-- /wp:campaignbridge/container -->'
 		);

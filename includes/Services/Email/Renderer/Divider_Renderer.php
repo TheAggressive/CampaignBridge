@@ -59,7 +59,7 @@ final class Divider_Renderer extends Abstract_Renderer {
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed
 		$attributes = $block->attributes();
-		$color      = Renderer_Support::resolve_color( $attributes['color'], Renderer_Support::brand_kit( $context ) );
+		$color      = Renderer_Support::resolve_color( $attributes['color'], Renderer_Support::brand_kit( $context ), 'color' );
 
 		return sprintf(
 			'<table role="presentation" width="100%%" align="center" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse"><tr><td style="border-top:%1$dpx %2$s %3$s;font-size:0;line-height:0">&nbsp;</td></tr></table>',
