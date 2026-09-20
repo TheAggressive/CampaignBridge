@@ -64,7 +64,7 @@ describe('post-card layout variations', () => {
       const [, , , buttons] = template('stacked');
       expect(bindingOf(template('stacked')[2], 'content')).toEqual({
         source: POST_BINDING_SOURCE,
-        args: { field: 'excerpt', maxWords: 50 },
+        args: { field: 'content', maxWords: 50 },
       });
       expect(bindingOf((buttons[2] ?? [])[0] as RawTemplate, 'url')).toEqual({
         source: POST_BINDING_SOURCE,

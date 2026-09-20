@@ -127,7 +127,7 @@ it:
 
 | Core block       | Email semantics | Normalized from                                                            |
 | ---------------- | --------------- | -------------------------------------------------------------------------- |
-| `core/paragraph` | text            | `<p>` rich text or a bound post excerpt, `style.typography.textAlign`, colour/typography/spacing |
+| `core/paragraph` | text            | `<p>` rich text or bound post content/excerpt, `style.typography.textAlign`, colour/typography/spacing |
 | `core/heading`   | heading         | `<h1>`–`<h4>` rich text or a bound post title, `level`, text alignment, colour/typography |
 | `core/image`     | image           | `<img src/alt>`, `figure > a[href]`, pixel `width`/`height`, `align`       |
 | `core/buttons`   | button group    | `layout.justifyContent` (left, center, right)                              |
@@ -183,8 +183,9 @@ exactly the field and argument combinations the contract documents and writing
 them with the public `useBlockBindingsUtils()` API. No Core edit component is
 forked and no block attribute is invented: the choice lives in
 `metadata.bindings`, where WordPress already keeps it. A `core/paragraph` in a
-card can therefore show the post's `excerpt` or its `content`, capped by the
-bounded `maxWords` argument.
+card can therefore show the post's `content` — the body reduced to plain text,
+which is what a new card seeds — or its `excerpt`, capped by the bounded
+`maxWords` argument.
 
 **Editor resolution.** `src/scripts/editor/post-bindings.ts` registers the
 source with `registerBlockBindingsSource()` and declares
