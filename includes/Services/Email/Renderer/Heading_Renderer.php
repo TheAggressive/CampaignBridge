@@ -253,7 +253,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 			? sprintf( '0 0 %dpx', $margin['bottom'] )
 			: sprintf( '%dpx %dpx %dpx %dpx', $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] );
 
-		return sprintf(
+		$style = sprintf(
 			'margin:%1$s;font-family:%2$s;font-size:%3$dpx;font-weight:%4$d;line-height:%5$s;text-align:%6$s;color:%7$s',
 			$margin_css,
 			$font_family,
@@ -263,5 +263,11 @@ final class Heading_Renderer extends Abstract_Renderer {
 			$attributes['align'],
 			$color
 		);
+
+		// Core's Appearance control writes `normal` alongside every weight, so
+		// only a real italic earns a declaration.
+		return 'italic' === Style_Resolver::font_style( $wrapper )
+			? $style . ';font-style:italic'
+			: $style;
 	}
 }

@@ -103,21 +103,12 @@ describe('campaignbridge/post-data binding source', () => {
     expect(values(7, { field: 'post_password' })).toEqual({ field: undefined });
   });
 
-  it('only advertises fields once a post is selected', () => {
-    expect(POST_DATA_SOURCE.getFieldsList({ context: context(0) })).toEqual([]);
-    expect(
-      POST_DATA_SOURCE.getFieldsList({ context: context(7) }).map(
-        item => item.args.field
-      )
-    ).toEqual([
-      'title',
-      'titleLink',
-      'excerpt',
-      'content',
-      'url',
-      'postParentUrl',
-      'postTypeArchiveUrl',
-    ]);
+  it('publishes no source-wide field list', () => {
+    // WordPress reads one field list per source and cannot scope it to a block
+    // attribute, so publishing one would offer `url` on a paragraph in Core's
+    // generic bindings panel. The contract-aware CampaignBridge panel offers
+    // only the combinations email-blocks.json documents.
+    expect(POST_DATA_SOURCE).not.toHaveProperty('getFieldsList');
   });
 });
 
@@ -152,26 +143,45 @@ describe('post binding contract helpers', () => {
     ).toEqual(['url', 'postParentUrl', 'postTypeArchiveUrl']);
   });
 
-  it('caps excerpt words the same way the compiler does', () => {
+  it('caps words the same way the compiler does', () => {
     expect(truncateWords('<p>a b c d</p>', 2)).toBe('a b…');
     expect(truncateWords('a b', 5)).toBe('a b');
-    expect(truncateWords('Tom &amp; Jerry&hellip;', 10)).toBe('Tom & Jerry');
   });
 
-  // Each expectation below is the exact output of the PHP counterpart,
-  // Renderer_Support::truncate_words(), so the editor preview and the compiled
-  // email cannot drift apart on entity handling.
+  // Every expectation below is the exact output of the PHP counterpart,
+  // Renderer_Support::truncate_words(), for the same input, so the editor
+  // preview and the compiled email agree on well-formed entities.
   it.each([
-    // Decoding twice would turn this into '<', inventing markup.
-    ['a &amp;lt; b', 'a &lt; b'],
-    ['&amp;amp;', '&amp;'],
-    ['5 &gt; 3 &amp;&amp; 2 &lt; 4', '5 > 3 && 2 < 4'],
-    // Entities are decoded after tags are stripped, so escaped markup stays
-    // inert text rather than becoming a real element.
-    ['&lt;script&gt;alert(1)&lt;/script&gt;', '<script>alert(1)</script>'],
+    ['<p>Hello <strong>there</strong> friend.</p>', 'Hello there friend.'],
+    ['Tom &amp; Jerry', 'Tom & Jerry'],
+    ['5 &lt; 7', '5 < 7'],
+    // Decoding twice would turn this into real <strong> markup.
+    ['&amp;lt;strong&amp;gt;', '&lt;strong&gt;'],
+    ['a &amp;amp; b', 'a &amp; b'],
+    ['Ends here&hellip;', 'Ends here'],
+    ['Café — naïve 日本語 🎉', 'Café — naïve 日本語 🎉'],
+    ['<script>alert(1)</script>visible', 'visible'],
     ['caf&#233; &#x2014; done', 'café — done'],
-    ['&notreal; stays', '&notreal; stays'],
   ])('decodes %p exactly once, like the compiler', (raw, expected) => {
     expect(truncateWords(raw, 50)).toBe(expected);
+  });
+
+  it('never turns encoded markup into an element', () => {
+    const decoded = truncateWords(
+      '&amp;lt;strong&amp;gt;bold&amp;lt;/strong&amp;gt;',
+      50
+    );
+
+    expect(decoded).toBe('&lt;strong&gt;bold&lt;/strong&gt;');
+    expect(decoded).not.toContain('<strong>');
+  });
+
+  it('follows HTML5 legacy entity parsing for malformed input', () => {
+    // WordPress decodes through a textarea, so the browser applies HTML5's
+    // legacy no-semicolon rule and reads `&not` inside `&notreal;`. PHP's
+    // ENT_HTML5 does not, leaving `&notreal;` intact. The divergence is
+    // confined to malformed entities and to the editor canvas; the compiled
+    // preview, which is the source of truth for a send, always uses PHP.
+    expect(truncateWords('&notreal; stays', 50)).toBe('¬real; stays');
   });
 });

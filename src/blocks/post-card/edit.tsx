@@ -21,7 +21,7 @@ import type { ComponentType } from 'react';
 import { fetchPosts, type PostItem } from '../shared/posts';
 import { fetchPostTypes, type PostTypeItem } from '../shared/post-types';
 import { useAnnouncement } from '../shared/use-announcement';
-import { POST_CARD_ALLOWED_BLOCKS } from './config';
+import { POST_CARD_ALLOWED_BLOCKS, POST_CARD_TEMPLATE } from './config';
 import { detectActiveLayout, POST_CARD_VARIATIONS } from './variations';
 import type { NormalizedSpacing } from '../shared/spacing';
 import type { EmailBlockEditProps } from '../types';
@@ -133,6 +133,11 @@ export default function Edit({
     }),
     {
       allowedBlocks: POST_CARD_ALLOWED_BLOCKS,
+      // Core seeds this only while the card is empty, inside its own layout
+      // effect, and marks the change non-persistent. A card inserted from a
+      // variation, or recomposed by the Layout control, already has children,
+      // so the template is a no-op for it.
+      template: POST_CARD_TEMPLATE,
       templateLock: false,
     }
   );

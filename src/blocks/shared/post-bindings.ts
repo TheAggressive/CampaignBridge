@@ -1,3 +1,5 @@
+import { decodeEntities } from '@wordpress/html-entities';
+
 import contract from '../../../includes/Email_Blocks/email-blocks.json';
 
 /**
@@ -8,19 +10,49 @@ import contract from '../../../includes/Email_Blocks/email-blocks.json';
  * argument. `Core_Block_Normalizer` reads the same file, so the editor can
  * only author bindings the compiler accepts.
  */
-export interface PostBindingRule {
-  context: 'rich-text' | 'url';
-  fields: string[];
-  args: Record<
-    string,
-    { type: string; min: number; max: number; default: number }
-  >;
+/** How a bound value is projected into its attribute. */
+export type PostBindingProjection = 'rich-text' | 'url';
+
+/**
+ * One bindable field.
+ *
+ * `reads` names the immutable snapshot field supplying the value; `link`, when
+ * present, names the snapshot field the renderer links that value to.
+ */
+export interface PostBindingFieldRule {
+  reads: string;
+  link?: string;
 }
 
-const POST_BINDINGS = contract.postBindings as unknown as {
+/** A bounded integer binding argument, such as a word cap. */
+export interface PostBindingArgSchema {
+  type: 'integer';
+  min: number;
+  max: number;
+  default: number;
+}
+
+/** Everything one block attribute may be bound to. */
+export interface PostBindingRule {
+  projection: PostBindingProjection;
+  fields: Record<string, PostBindingFieldRule>;
+  args: Record<string, PostBindingArgSchema>;
+}
+
+/** The `postBindings` section of the email block contract. */
+export interface PostBindingContract {
   source: string;
   attributes: Record<string, Record<string, PostBindingRule>>;
-};
+}
+
+/*
+ * The JSON is the source of truth, so TypeScript infers `projection` as a bare
+ * `string` and each argument's `type` likewise. This single assertion narrows
+ * those to the documented vocabulary; it never changes the shape, and
+ * `Email_Block_Contract` validates the same file on the PHP side. The runtime
+ * shape is asserted in tests/js/post-bindings.test.ts.
+ */
+const POST_BINDINGS = contract.postBindings as PostBindingContract;
 
 /** The one supported binding source name. */
 export const POST_BINDING_SOURCE = POST_BINDINGS.source;
@@ -60,58 +92,20 @@ export function postBindings(bindings: Record<string, PostBindingArgs>): {
   };
 }
 
-/** Named HTML entities the editor preview decodes, mirroring `ENT_QUOTES`. */
-const NAMED_ENTITIES: Record<string, string> = {
-  nbsp: ' ',
-  amp: '&',
-  lt: '<',
-  gt: '>',
-  quot: '"',
-  apos: "'",
-  hellip: '\u2026',
-};
-
-/** Highest code point a numeric entity may decode to. */
-const MAX_CODE_POINT = 0x10ffff;
-
-/**
- * Decode HTML entities in exactly one pass.
- *
- * Replacing entities one kind at a time would decode twice: `&amp;lt;` would
- * become `&lt;` and then `<`, inventing markup the source never contained.
- * Matching every entity in a single scan means a replacement's own output is
- * never re-examined, so the text is decoded exactly one level, the way PHP's
- * `html_entity_decode()` does on the compiler side.
- */
-function decodeEntitiesOnce(text: string): string {
-  return text.replace(
-    /&(?:#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6})|([a-zA-Z][a-zA-Z0-9]{1,31}));/g,
-    (match, decimal?: string, hexadecimal?: string, name?: string) => {
-      if (decimal !== undefined || hexadecimal !== undefined) {
-        const code =
-          decimal !== undefined
-            ? Number.parseInt(decimal, 10)
-            : Number.parseInt(hexadecimal as string, 16);
-
-        return Number.isInteger(code) && code > 0 && code <= MAX_CODE_POINT
-          ? String.fromCodePoint(code)
-          : match;
-      }
-
-      return NAMED_ENTITIES[(name as string).toLowerCase()] ?? match;
-    }
-  );
-}
-
 /**
  * Reduce rich post text to the bounded plain-text excerpt the compiler emits.
  *
  * Mirrors `Renderer_Support::truncate_words()` so the editor preview and the
- * compiled email agree on the same cap. Tags are stripped before entities are
- * decoded, so an escaped `&lt;script&gt;` can never become real markup.
+ * compiled email agree: script and style bodies go first, then tags, then
+ * entities are decoded exactly once by WordPress' own utility, which decodes
+ * through a detached `textarea`. Decoding after stripping means encoded markup
+ * such as `&amp;lt;strong&amp;gt;` stays text and can never become an element.
  */
 export function truncateWords(raw: string, maxWords: number): string {
-  const text = decodeEntitiesOnce(raw.replace(/<[^>]*>/g, ' '))
+  const stripped = raw
+    .replace(/<(script|style)[^>]*?>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ');
+  const text = decodeEntities(stripped)
     .trim()
     .replace(/\u2026+$/, '');
   const words = text.split(/\s+/).filter(Boolean);

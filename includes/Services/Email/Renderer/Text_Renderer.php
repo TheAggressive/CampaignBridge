@@ -197,6 +197,16 @@ final class Text_Renderer extends Abstract_Renderer {
 		// Text align (always emitted).
 		$style .= sprintf( ';text-align:%s', $attributes['align'] );
 
+		// Core's Appearance control writes `normal` alongside every weight, so
+		// only a real italic earns a declaration.
+		if ( 'italic' === Style_Resolver::font_style( $wrapper ) ) {
+			$style .= ';font-style:italic';
+		}
+		$weight = Style_Resolver::font_weight( $wrapper, 0 );
+		if ( 0 !== $weight ) {
+			$style .= sprintf( ';font-weight:%d', $weight );
+		}
+
 		// Padding: emit only when at least one edge is non-zero.
 		$padding = Style_Resolver::spacing(
 			$wrapper,

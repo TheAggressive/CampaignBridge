@@ -83,6 +83,67 @@ final class Native_Block_Styles_Test extends TestCase {
 		return $cases;
 	}
 
+	/** @dataProvider appearance_styles */
+	public function test_core_appearance_control_output_compiles( string $name, array $typography, string $expected, bool $present ): void {
+		// Core's Appearance control writes fontStyle and fontWeight together.
+		// Both blocks that offer it must accept the pair the control produces.
+		$result = Compiler_Factory::create()->compile(
+			$this->document( $name, array( 'style' => array( 'typography' => $typography ) ) ),
+			$this->context()
+		);
+
+		self::assertTrue( $result->is_success(), implode( ', ', array_map( static fn( $d ) => $d->to_array()['message'], $result->diagnostics() ) ) );
+		if ( $present ) {
+			self::assertStringContainsString( $expected, $result->html() );
+		} else {
+			self::assertStringNotContainsString( $expected, $result->html() );
+		}
+	}
+
+	/** @return array<string, array{0: string, 1: array<string, mixed>, 2: string, 3: bool}> */
+	public static function appearance_styles(): array {
+		$cases = array();
+		foreach ( array( 'heading', 'text' ) as $name ) {
+			$cases[ $name . ' regular appearance' ] = array(
+				$name,
+				array(
+					'fontWeight' => '400',
+					'fontStyle'  => 'normal',
+				),
+				'font-style',
+				false,
+			);
+			$cases[ $name . ' italic appearance' ]  = array(
+				$name,
+				array(
+					'fontWeight' => '700',
+					'fontStyle'  => 'italic',
+				),
+				'font-style:italic',
+				true,
+			);
+			$cases[ $name . ' weight reaches email' ] = array(
+				$name,
+				array( 'fontWeight' => '600' ),
+				'font-weight:600',
+				true,
+			);
+		}
+
+		return $cases;
+	}
+
+	public function test_an_unportable_font_style_still_fails_closed(): void {
+		$result = Compiler_Factory::create()->compile(
+			$this->document( 'heading', array( 'style' => array( 'typography' => array( 'fontStyle' => 'oblique' ) ) ) ),
+			$this->context()
+		);
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertStringEndsWith( '.attrs.style.typography.fontStyle', $result->diagnostics()[0]->path() );
+	}
+
 	public function test_a_theme_palette_slug_names_the_attribute_that_set_it(): void {
 		// A colour slug from the site theme has no email equivalent. The
 		// diagnostic has to name the attribute the author set, not a generic

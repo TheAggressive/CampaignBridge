@@ -1,7 +1,31 @@
-import { expect, test } from './support/fixtures';
+import { expect, test, type Page } from './support/fixtures';
 import { dismissEditorWelcomeGuide } from './support/editor';
 
 const NEW_TEMPLATE_PATH = '/wp-admin/post-new.php?post_type=cb_templates';
+
+/**
+ * Wait until the container will actually accept a Post Card.
+ *
+ * A container publishes its inner-block allowlist when it renders, and an
+ * insert before that is silently refused. This waits on that real editor
+ * state rather than on a duration, so the tests do not depend on how fast the
+ * machine happens to be.
+ */
+async function cardIsInsertable(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+        const be = wp.data.select('core/block-editor');
+        const root = be.getBlocks()[0];
+
+        return root
+          ? be.canInsertBlockType('campaignbridge/post-card', root.clientId)
+          : false;
+      })
+    )
+    .toBe(true);
+}
 
 interface SourcePost {
   id: number;
@@ -71,6 +95,7 @@ test('post content binds read-only to the selected post', async ({ page }) => {
   });
 
   try {
+    await cardIsInsertable(page);
     const cardId = await page.evaluate(id => {
       const wp = (globalThis as typeof globalThis & { wp: any }).wp;
       const root = wp.data.select('core/block-editor').getBlocks()[0];
@@ -246,4 +271,228 @@ test('post content binds read-only to the selected post', async ({ page }) => {
       posts.map(post => post.id)
     );
   }
+});
+
+/**
+ * Connecting an attribute must leave the document compilable.
+ *
+ * The compiler refuses a bound attribute that also holds an authored literal.
+ * Rather than weakening that rule, the CampaignBridge panel maintains the
+ * invariant: connecting clears exactly the bound attribute, in one action.
+ */
+test('connecting a binding clears only the literal it replaces', async ({
+  page,
+}) => {
+  await page.goto(NEW_TEMPLATE_PATH);
+  await page.waitForFunction(() => {
+    const wp = (globalThis as typeof globalThis & { wp?: any }).wp;
+    return (
+      wp?.data?.select('core/editor')?.getCurrentPostType?.() ===
+        'cb_templates' && wp?.blocks?.getBlockType?.('campaignbridge/post-card')
+    );
+  });
+  await dismissEditorWelcomeGuide(page);
+
+  const postId = await page.evaluate(async () => {
+    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+    const post = await wp.apiFetch({
+      path: '/wp/v2/posts',
+      method: 'POST',
+      data: {
+        title: 'Authoring workflow source',
+        excerpt: 'Summary for the authoring workflow.',
+        content: '<!-- wp:paragraph --><p>Body copy.</p><!-- /wp:paragraph -->',
+        status: 'publish',
+      },
+    });
+
+    return post.id as number;
+  });
+
+  try {
+    await cardIsInsertable(page);
+    // A card whose children carry authored literals and unrelated styling.
+    const ids = await page.evaluate(id => {
+      const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+      const root = wp.data.select('core/block-editor').getBlocks()[0];
+      const paragraph = wp.blocks.createBlock('core/paragraph', {
+        content: 'Authored paragraph copy',
+        style: { typography: { fontSize: '18px' } },
+      });
+      const heading = wp.blocks.createBlock('core/heading', {
+        level: 3,
+        content: 'Authored heading copy',
+      });
+      const button = wp.blocks.createBlock('core/button', {
+        text: 'Authored label',
+        url: 'https://example.com/authored',
+      });
+      const buttons = wp.blocks.createBlock('core/buttons', {}, [button]);
+      const card = wp.blocks.createBlock(
+        'campaignbridge/post-card',
+        { postId: id, postType: 'post' },
+        [paragraph, heading, buttons]
+      );
+      wp.data
+        .dispatch('core/block-editor')
+        .insertBlocks(card, undefined, root.clientId);
+
+      return {
+        paragraph: paragraph.clientId as string,
+        heading: heading.clientId as string,
+        button: button.clientId as string,
+      };
+    }, postId);
+
+    const attributesOf = (clientId: string) =>
+      page.evaluate(
+        cid =>
+          (globalThis as typeof globalThis & { wp: any }).wp.data
+            .select('core/block-editor')
+            .getBlockAttributes(cid),
+        clientId
+      );
+
+    const connect = async (clientId: string, option: string) => {
+      await page.evaluate(
+        cid =>
+          (globalThis as typeof globalThis & { wp: any }).wp.data
+            .dispatch('core/block-editor')
+            .selectBlock(cid),
+        clientId
+      );
+      const control = page.getByRole('combobox', {
+        name: option === 'url' ? 'Link to' : 'Show',
+      });
+      await expect(control).toBeVisible();
+      await control.selectOption(option);
+    };
+
+    await connect(ids.paragraph, 'excerpt');
+    const paragraph = await attributesOf(ids.paragraph);
+    expect(paragraph.content).toBe('');
+    expect(paragraph.metadata.bindings.content.args.field).toBe('excerpt');
+    // Unrelated styling survives the connection.
+    expect(paragraph.style).toEqual({ typography: { fontSize: '18px' } });
+
+    await connect(ids.heading, 'title');
+    const heading = await attributesOf(ids.heading);
+    expect(heading.content).toBe('');
+    expect(heading.metadata.bindings.content.args.field).toBe('title');
+    expect(heading.level).toBe(3);
+
+    await connect(ids.button, 'url');
+    const button = await attributesOf(ids.button);
+    expect(button.url).toBe('');
+    // Only the destination is bound, so the authored label stays.
+    expect(button.text).toBe('Authored label');
+    expect(button.metadata.bindings.url.args.field).toBe('url');
+
+    // A card built this way compiles, which is the whole point of clearing.
+    const canvas = page.frameLocator('iframe[name="editor-canvas"]');
+    await expect(
+      canvas.locator('[data-type="core/paragraph"]').first()
+    ).toHaveText('Summary for the authoring workflow.');
+
+    // Disconnecting returns the block to a valid native state without
+    // inventing or restoring content.
+    await connect(ids.paragraph, '');
+    const disconnected = await attributesOf(ids.paragraph);
+    expect(disconnected.content).toBe('');
+    expect(disconnected.metadata?.bindings?.content).toBeUndefined();
+    expect(disconnected.style).toEqual({ typography: { fontSize: '18px' } });
+  } finally {
+    await page.evaluate(
+      id =>
+        (globalThis as typeof globalThis & { wp: any }).wp.apiFetch({
+          path: `/wp/v2/posts/${id}?force=true`,
+          method: 'DELETE',
+        }),
+      postId
+    );
+  }
+});
+
+/**
+ * A plain Post Card seeds its composition through Core's InnerBlocks template.
+ *
+ * The block passes `template` to `useInnerBlocksProps()`, so Core applies it in
+ * its own layout effect while the card is empty and marks the change
+ * non-persistent. No effect, store, or post-render insertion of our own.
+ */
+test('a newly inserted post card seeds its children', async ({ page }) => {
+  await page.goto(NEW_TEMPLATE_PATH);
+  await page.waitForFunction(() => {
+    const wp = (globalThis as typeof globalThis & { wp?: any }).wp;
+    return (
+      wp?.data?.select('core/editor')?.getCurrentPostType?.() ===
+        'cb_templates' && wp?.blocks?.getBlockType?.('campaignbridge/post-card')
+    );
+  });
+  await dismissEditorWelcomeGuide(page);
+
+  await cardIsInsertable(page);
+
+  const cardId = await page.evaluate(() => {
+    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+    const root = wp.data.select('core/block-editor').getBlocks()[0];
+    // A plain card, with no variation and no attributes: exactly what the
+    // inserter produces for the bare block.
+    const card = wp.blocks.createBlock('campaignbridge/post-card');
+    wp.data
+      .dispatch('core/block-editor')
+      .insertBlocks(card, undefined, root.clientId);
+
+    return card.clientId as string;
+  });
+
+  // createBlock() alone never applies a template, so this can only pass once
+  // the block renders and Core synchronises it.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        cid =>
+          (globalThis as typeof globalThis & { wp: any }).wp.data
+            .select('core/block-editor')
+            .getBlock(cid)
+            ?.innerBlocks.map((block: any) => block.name),
+        cardId
+      )
+    )
+    .toEqual([
+      'campaignbridge/post-image',
+      'core/heading',
+      'core/paragraph',
+      'core/buttons',
+    ]);
+
+  const seeded = await page.evaluate(cid => {
+    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+    const card = wp.data.select('core/block-editor').getBlock(cid);
+    const child = (name: string) =>
+      card.innerBlocks.find((block: any) => block.name === name);
+
+    return {
+      heading: child('core/heading').attributes.metadata?.bindings?.content,
+      paragraph: child('core/paragraph').attributes.metadata?.bindings?.content,
+      button:
+        child('core/buttons').innerBlocks[0]?.attributes.metadata?.bindings
+          ?.url,
+      buttonName: child('core/buttons').innerBlocks[0]?.name,
+    };
+  }, cardId);
+
+  expect(seeded.buttonName).toBe('core/button');
+  expect(seeded.heading).toEqual({
+    source: 'campaignbridge/post-data',
+    args: { field: 'title' },
+  });
+  expect(seeded.paragraph).toEqual({
+    source: 'campaignbridge/post-data',
+    args: { field: 'content', maxWords: 50 },
+  });
+  expect(seeded.button).toEqual({
+    source: 'campaignbridge/post-data',
+    args: { field: 'url' },
+  });
 });

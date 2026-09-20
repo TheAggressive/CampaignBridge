@@ -48,10 +48,12 @@ export const boundButton = (
  * Deliberately not derived from the allowed list: columns is a layout choice
  * an author opts into, so a new card starts as the stacked post composition.
  */
+/**
+ * An InnerBlocks template, matching Core's `[ name, attributes, innerBlocks ]`
+ * shape so it can be handed straight to `useInnerBlocksProps()`.
+ */
 export type PostCardTemplate = Array<
-  | [string]
-  | [string, Record<string, unknown>]
-  | [string, Record<string, unknown>, unknown[]]
+  readonly [string, Readonly<Record<string, unknown>>?, PostCardTemplate?]
 >;
 
 export const POST_CARD_TEMPLATE: PostCardTemplate = [

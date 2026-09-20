@@ -4,7 +4,7 @@ import {
   useBlockBindingsUtils,
 } from '@wordpress/block-editor';
 import { PanelBody, RangeControl, SelectControl } from '@wordpress/components';
-import { useSelect } from '@wordpress/data';
+import { useRegistry, useSelect } from '@wordpress/data';
 import { addFilter } from '@wordpress/hooks';
 import { __ } from '@wordpress/i18n';
 import type { ComponentType } from 'react';
@@ -14,7 +14,6 @@ import {
   POST_BINDING_SOURCE,
   type PostBindingRule,
 } from '../../blocks/shared/post-bindings';
-import { FIELD_LABELS } from './post-bindings';
 
 /**
  * Contract-aware controls for the CampaignBridge post binding source.
@@ -42,10 +41,25 @@ interface Binding {
 interface BlockEditProps {
   name: string;
   clientId: string;
-  attributes?: { metadata?: { bindings?: Record<string, Binding> } };
+  attributes?: {
+    metadata?: { bindings?: Record<string, Binding> };
+    [attribute: string]: unknown;
+  };
+  setAttributes: (attributes: Record<string, unknown>) => void;
 }
 
 const NOT_CONNECTED = '';
+
+/** Human labels for the snapshot fields the contract exposes. */
+const FIELD_LABELS: Record<string, string> = {
+  title: __('Title', 'campaignbridge'),
+  titleLink: __('Title, linked to the post', 'campaignbridge'),
+  excerpt: __('Excerpt', 'campaignbridge'),
+  content: __('Content', 'campaignbridge'),
+  url: __('Post URL', 'campaignbridge'),
+  postParentUrl: __('Parent post URL', 'campaignbridge'),
+  postTypeArchiveUrl: __('Post type archive URL', 'campaignbridge'),
+};
 
 /** Read the binding CampaignBridge owns for one attribute. */
 function boundArgs(
@@ -139,6 +153,7 @@ function AttributeControl({
 
 function PostBindingPanel(props: BlockEditProps): JSX.Element | null {
   const { updateBlockBindings } = useBlockBindingsUtils(props.clientId);
+  const registry = useRegistry();
   const inPostCard = useSelect(
     select =>
       (
@@ -173,11 +188,23 @@ function PostBindingPanel(props: BlockEditProps): JSX.Element | null {
             rule={rule}
             args={boundArgs(props, attribute)}
             onChange={args =>
-              updateBlockBindings({
-                [attribute]:
-                  args === undefined
-                    ? undefined
-                    : { source: POST_BINDING_SOURCE, args },
+              registry.batch(() => {
+                updateBlockBindings({
+                  [attribute]:
+                    args === undefined
+                      ? undefined
+                      : { source: POST_BINDING_SOURCE, args },
+                });
+
+                // The compiler refuses a bound attribute that also holds an
+                // authored literal, so connecting clears that one attribute in
+                // the same action. Only the bound attribute is touched: a
+                // button keeps its authored label when its URL is bound.
+                // Disconnecting leaves the block as Core left it rather than
+                // restoring stale content.
+                if (args !== undefined) {
+                  props.setAttributes({ [attribute]: '' });
+                }
               })
             }
           />

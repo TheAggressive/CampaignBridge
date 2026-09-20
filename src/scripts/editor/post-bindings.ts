@@ -49,17 +49,6 @@ interface GetValuesArgs {
   bindings: Record<string, { args?: BindingArgs }>;
 }
 
-/** Post snapshot fields this source can resolve, in contract order. */
-export const FIELD_LABELS: Record<string, string> = {
-  title: __('Title', 'campaignbridge'),
-  titleLink: __('Title, linked to the post', 'campaignbridge'),
-  excerpt: __('Excerpt', 'campaignbridge'),
-  content: __('Content', 'campaignbridge'),
-  url: __('Post URL', 'campaignbridge'),
-  postParentUrl: __('Parent post URL', 'campaignbridge'),
-  postTypeArchiveUrl: __('Post type archive URL', 'campaignbridge'),
-};
-
 function selection(context: Record<string, unknown>): {
   postId: number;
   postType: string;
@@ -142,6 +131,12 @@ export function resolveField(
  *
  * Neither `setValues` nor `canUserEditValue` is defined: that is what makes
  * WordPress disable editing of every bound attribute.
+ *
+ * `getFieldsList` is deliberately omitted. WordPress reads one field list per
+ * source and cannot scope it to a block attribute, so publishing one would
+ * offer `url` on a paragraph in Core's generic bindings panel — a binding the
+ * compiler rejects. The contract-aware panel in post-binding-controls.tsx
+ * offers only the combinations email-blocks.json documents.
  */
 export const POST_DATA_SOURCE = {
   name: POST_BINDING_SOURCE,
@@ -154,16 +149,6 @@ export const POST_DATA_SOURCE = {
     }
 
     return values;
-  },
-  getFieldsList({ context }: { context: Record<string, unknown> }) {
-    const { postId } = selection(context);
-
-    return postId
-      ? Object.entries(FIELD_LABELS).map(([field, label]) => ({
-          label,
-          args: { field },
-        }))
-      : [];
   },
 };
 

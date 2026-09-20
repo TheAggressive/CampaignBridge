@@ -199,7 +199,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 		}
 		unset( $attributes['dropCap'] );
 
-		$attributes            = $this->text_alignment( $attributes );
+		$attributes            = $this->font_weight( $this->text_alignment( $attributes ) );
 		$attributes['content'] = $this->rich_text( $attributes, 'content', $block->inner_html(), 'p' );
 
 		return $block->with_attributes( $attributes );
