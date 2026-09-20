@@ -25,10 +25,11 @@ describe('post-card block configuration', () => {
       string,
       Record<string, any>,
     ];
-    // A new card leads with the post body, capped, rather than the summary.
+    // A new card leads with the post summary; the body is an explicit choice
+    // in the Post content inspector.
     expect(paragraph.metadata.bindings.content).toEqual({
       source: POST_BINDING_SOURCE,
-      args: { field: 'content', maxWords: 50 },
+      args: { field: 'excerpt', maxWords: 50 },
     });
 
     const [, , buttons] = POST_CARD_TEMPLATE[3] as [string, unknown, any[]];

@@ -116,8 +116,9 @@ test('post content binds read-only to the selected post', async ({ page }) => {
       .first();
 
     // The Post Card seeds the bound Core blocks, and the binding source
-    // resolves the selected post for the canvas.
-    await expect(boundParagraph).toHaveText(BODY_WORDS);
+    // resolves the selected post for the canvas. A new card leads with the
+    // post summary.
+    await expect(boundParagraph).toHaveText(posts[0].excerpt);
     await expect(
       canvas.locator('[data-type="core/heading"]').first()
     ).toHaveText(posts[0].title);
@@ -134,7 +135,7 @@ test('post content binds read-only to the selected post', async ({ page }) => {
     // article it displays.
     await boundParagraph.click();
     await page.keyboard.type('Rewriting the source article');
-    await expect(boundParagraph).toHaveText(BODY_WORDS);
+    await expect(boundParagraph).toHaveText(posts[0].excerpt);
 
     const sourceExcerpt = await page.evaluate(async id => {
       const wp = (globalThis as typeof globalThis & { wp: any }).wp;
@@ -177,7 +178,7 @@ test('post content binds read-only to the selected post', async ({ page }) => {
     expect(saved.paragraph.content).toBe('');
     expect(saved.paragraph.metadata.bindings.content).toEqual({
       source: 'campaignbridge/post-data',
-      args: { field: 'content', maxWords: 50 },
+      args: { field: 'excerpt', maxWords: 50 },
     });
     expect(saved.button.url).toBeUndefined();
     expect(saved.button.metadata.bindings.url).toEqual({
@@ -200,7 +201,7 @@ test('post content binds read-only to the selected post', async ({ page }) => {
       },
       { cid: cardId, id: posts[1].id }
     );
-    await expect(boundParagraph).toHaveText(BODY_WORDS);
+    await expect(boundParagraph).toHaveText(posts[1].excerpt);
     await expect(
       canvas.locator('[data-type="core/heading"]').first()
     ).toHaveText(posts[1].title);
@@ -231,16 +232,13 @@ test('post content binds read-only to the selected post', async ({ page }) => {
       'Content',
     ]);
 
-    // Switching away from the seeded post body and back proves the panel
-    // drives the binding in both directions.
-    await field.selectOption('excerpt');
-    await expect(boundParagraph).toHaveText(posts[1].excerpt);
-
+    // The post body is an explicit choice away from the seeded summary.
     await field.selectOption('content');
     await expect(boundParagraph).toHaveText(BODY_WORDS);
 
     // The word cap is bounded by the contract, so the control clamps rather
-    // than letting an author write a value the compiler would reject.
+    // than letting an author write a value the compiler would reject. It is
+    // exercised against the body, where truncation is visible.
     const wordCap = page.getByRole('spinbutton', { name: 'Maximum words' });
     await wordCap.fill('1');
     await wordCap.press('Enter');
@@ -257,6 +255,10 @@ test('post content binds read-only to the selected post', async ({ page }) => {
       return paragraph.attributes.metadata.bindings.content.args;
     }, cardId);
     expect(capped).toEqual({ field: 'content', maxWords: 10 });
+
+    // Switching back proves the panel drives the binding in both directions.
+    await field.selectOption('excerpt');
+    await expect(boundParagraph).toHaveText(posts[1].excerpt);
   } finally {
     await page.evaluate(
       async ids => {
@@ -489,7 +491,7 @@ test('a newly inserted post card seeds its children', async ({ page }) => {
   });
   expect(seeded.paragraph).toEqual({
     source: 'campaignbridge/post-data',
-    args: { field: 'content', maxWords: 50 },
+    args: { field: 'excerpt', maxWords: 50 },
   });
   expect(seeded.button).toEqual({
     source: 'campaignbridge/post-data',

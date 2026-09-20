@@ -20,13 +20,14 @@ export const boundTitle = (
 /**
  * A `core/paragraph` bound read-only to the selected post's text.
  *
- * `content` takes the post body reduced to plain text and is the default a new
- * card seeds; `excerpt` takes the post's summary instead. Both are capped by
- * the same bounded `maxWords` argument, and either can be chosen per block in
- * the Post content inspector panel.
+ * `excerpt` takes the post's summary and is what a new card seeds, so a card
+ * starts as the familiar post-summary composition. `content` takes the post
+ * body reduced to plain text and is an explicit author choice in the Post
+ * content inspector panel. Both are capped by the same bounded `maxWords`
+ * argument.
  */
 export const boundText = (
-  field: 'excerpt' | 'content' = 'content',
+  field: 'excerpt' | 'content' = 'excerpt',
   maxWords: number = EXCERPT_MAX_WORDS
 ): Record<string, unknown> => ({
   metadata: postBindings({ content: { field, maxWords } }),
