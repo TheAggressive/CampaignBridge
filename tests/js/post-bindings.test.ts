@@ -157,4 +157,21 @@ describe('post binding contract helpers', () => {
     expect(truncateWords('a b', 5)).toBe('a b');
     expect(truncateWords('Tom &amp; Jerry&hellip;', 10)).toBe('Tom & Jerry');
   });
+
+  // Each expectation below is the exact output of the PHP counterpart,
+  // Renderer_Support::truncate_words(), so the editor preview and the compiled
+  // email cannot drift apart on entity handling.
+  it.each([
+    // Decoding twice would turn this into '<', inventing markup.
+    ['a &amp;lt; b', 'a &lt; b'],
+    ['&amp;amp;', '&amp;'],
+    ['5 &gt; 3 &amp;&amp; 2 &lt; 4', '5 > 3 && 2 < 4'],
+    // Entities are decoded after tags are stripped, so escaped markup stays
+    // inert text rather than becoming a real element.
+    ['&lt;script&gt;alert(1)&lt;/script&gt;', '<script>alert(1)</script>'],
+    ['caf&#233; &#x2014; done', 'café — done'],
+    ['&notreal; stays', '&notreal; stays'],
+  ])('decodes %p exactly once, like the compiler', (raw, expected) => {
+    expect(truncateWords(raw, 50)).toBe(expected);
+  });
 });
