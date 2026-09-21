@@ -148,7 +148,12 @@
             "content": { "reads": "content" }
           },
           "args": {
-            "maxWords": { "type": "integer", "min": 10, "max": 500, "default": 50 }
+            "maxWords": {
+              "type": "integer",
+              "min": 10,
+              "max": 500,
+              "default": 50
+            }
           }
         }
       },
@@ -162,6 +167,17 @@
           },
           "args": {}
         }
+      }
+    }
+  },
+  "brandBindings": {
+    "$comment": "The read-only frozen Brand Kit binding source. A Core Image variation uses these mappings to project the imported logo without storing a second asset record.",
+    "source": "campaignbridge/brand-data",
+    "attributes": {
+      "core/image": {
+        "url": { "field": "logoUrl", "target": "url" },
+        "alt": { "field": "logoAlt", "target": "alt" },
+        "href": { "field": "logoLink", "target": "linkUrl" }
       }
     }
   }

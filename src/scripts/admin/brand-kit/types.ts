@@ -21,6 +21,15 @@ export interface BrandKitPayload {
   fonts: Record<string, string>;
   fontOptions: FontOption[];
   fontSlots: Record<string, string>;
+  logo: BrandLogo | null;
+}
+
+export interface BrandLogo {
+  url: string;
+  alt: string;
+  width: number;
+  height: number;
+  link_url: string;
 }
 
 export interface GoogleFontResult {

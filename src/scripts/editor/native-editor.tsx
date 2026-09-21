@@ -1,5 +1,6 @@
 import './core-email-blocks';
 import './post-bindings';
+import './brand-logo';
 import './post-binding-controls';
 import { useSelect } from '@wordpress/data';
 import {

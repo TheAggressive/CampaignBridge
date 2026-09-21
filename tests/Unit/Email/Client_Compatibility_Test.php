@@ -294,6 +294,13 @@ final class Client_Compatibility_Test extends TestCase {
 				'href="https://example.com/home"',
 				'href="http://example.com/home"',
 			),
+			'Brand logo loses its bounded width'        => array(
+				'universal-profile',
+				'universal-newsletter',
+				'brand-logo-links-home',
+				'src="https://example.com/brand-logo.png" width="240"',
+				'src="https://example.com/brand-logo.png" width="900"',
+			),
 		);
 	}
 }

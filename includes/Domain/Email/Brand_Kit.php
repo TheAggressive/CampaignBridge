@@ -22,7 +22,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * without a colour.
  */
 final class Brand_Kit {
-	public const VERSION = 2;
+	public const VERSION            = 3;
+	public const MAX_LOGO_DIMENSION = 10000;
 
 	public const SOURCE_DEFAULTS = 'defaults';
 	public const SOURCE_CUSTOM   = 'custom';
@@ -79,18 +80,20 @@ final class Brand_Kit {
 	/**
 	 * Create a kit from already-validated slot colours.
 	 *
-	 * @param array<string, string>     $colors            Slot slug to six-digit hex.
-	 * @param string                    $source            How the kit was last written.
-	 * @param string|null               $theme_fingerprint Hash of the imported theme slice.
-	 * @param array<string, string>     $fonts             Slot slug to known font slug.
-	 * @param array<string, mixed>|null $custom_font   Resolved custom Google Font snapshot.
+	 * @param array<string, string>                                                           $colors            Slot slug to six-digit hex.
+	 * @param string                                                                          $source            How the kit was last written.
+	 * @param string|null                                                                     $theme_fingerprint Hash of the imported theme slice.
+	 * @param array<string, string>                                                           $fonts             Slot slug to known font slug.
+	 * @param array<string, mixed>|null                                                       $custom_font      Resolved custom Google Font snapshot.
+	 * @param array{url: string, alt: string, width: int, height: int, link_url: string}|null $logo Resolved brand logo asset.
 	 */
 	private function __construct(
 		private readonly array $colors,
 		private readonly string $source,
 		private readonly ?string $theme_fingerprint,
 		private readonly array $fonts,
-		private readonly ?array $custom_font
+		private readonly ?array $custom_font,
+		private readonly ?array $logo
 	) {}
 
 	/**
@@ -103,7 +106,7 @@ final class Brand_Kit {
 			$colors[ $preset['slug'] ] = $preset['color'];
 		}
 
-		return new self( $colors, self::SOURCE_DEFAULTS, null, self::FONT_DEFAULTS, null );
+		return new self( $colors, self::SOURCE_DEFAULTS, null, self::FONT_DEFAULTS, null, null );
 	}
 
 	/**
@@ -134,8 +137,12 @@ final class Brand_Kit {
 		$fonts  = isset( $data['fonts'] ) && is_array( $data['fonts'] ) ? $data['fonts'] : null;
 
 		$custom_font = isset( $data['custom_font'] ) ? $data['custom_font'] : null;
+		$logo        = 3 <= $version && isset( $data['logo'] ) ? $data['logo'] : null;
+		if ( null !== $logo && ! is_array( $logo ) ) {
+			throw new \InvalidArgumentException( 'Brand logo must be an asset record.' );
+		}
 
-		return self::from_colors( $posted, $source, $fingerprint, $fonts, $custom_font );
+		return self::from_colors( $posted, $source, $fingerprint, $fonts, $custom_font, $logo );
 	}
 
 	/**
@@ -146,9 +153,10 @@ final class Brand_Kit {
 	 * @param string|null               $fingerprint Imported theme hash.
 	 * @param array<string, mixed>|null $fonts       Slot slug to font slug.
 	 * @param array<string, mixed>|null $custom_font Resolved custom Google Font snapshot.
+	 * @param array<string, mixed>|null $logo        Resolved logo asset snapshot.
 	 * @throws \InvalidArgumentException When an explicit colour is not portable.
 	 */
-	public static function from_colors( array $colors, string $source = self::SOURCE_CUSTOM, ?string $fingerprint = null, ?array $fonts = null, ?array $custom_font = null ): self {
+	public static function from_colors( array $colors, string $source = self::SOURCE_CUSTOM, ?string $fingerprint = null, ?array $fonts = null, ?array $custom_font = null, ?array $logo = null ): self {
 		$merged = self::defaults()->colors;
 
 		foreach ( $colors as $slug => $value ) {
@@ -166,7 +174,7 @@ final class Brand_Kit {
 
 		$custom = self::normalize_custom_font( $custom_font );
 
-		return new self( $merged, $source, $fingerprint, self::resolve_fonts( $fonts, null !== $custom ), $custom );
+		return new self( $merged, $source, $fingerprint, self::resolve_fonts( $fonts, null !== $custom ), $custom, self::normalize_logo( $logo ) );
 	}
 
 	/**
@@ -301,9 +309,18 @@ final class Brand_Kit {
 	}
 
 	/**
+	 * The frozen brand logo asset, or null until one has been imported.
+	 *
+	 * @return array{url: string, alt: string, width: int, height: int, link_url: string}|null
+	 */
+	public function logo(): ?array {
+		return $this->logo;
+	}
+
+	/**
 	 * Persistable array.
 	 *
-	 * @return array{version: int, source: string, theme_fingerprint: string|null, colors: array<string, string>, fonts: array<string, string>, custom_font?: array<string, mixed>}
+	 * @return array{version: int, source: string, theme_fingerprint: string|null, colors: array<string, string>, fonts: array<string, string>, custom_font?: array<string, mixed>, logo?: array<string, mixed>}
 	 */
 	public function to_array(): array {
 		$stored = array(
@@ -317,8 +334,65 @@ final class Brand_Kit {
 		if ( null !== $this->custom_font ) {
 			$stored['custom_font'] = $this->custom_font;
 		}
+		if ( null !== $this->logo ) {
+			$stored['logo'] = $this->logo;
+		}
 
 		return $stored;
+	}
+
+	/**
+	 * Validate one portable raster logo snapshot.
+	 *
+	 * @param array<string, mixed>|null $logo Candidate asset.
+	 * @return array{url: string, alt: string, width: int, height: int, link_url: string}|null
+	 * @throws \InvalidArgumentException When an explicit logo is malformed.
+	 */
+	private static function normalize_logo( ?array $logo ): ?array {
+		if ( null === $logo ) {
+			return null;
+		}
+		if ( array() !== array_diff( array_keys( $logo ), array( 'url', 'alt', 'width', 'height', 'link_url' ) ) ) {
+			throw new \InvalidArgumentException( 'Brand logo contains unsupported fields.' );
+		}
+
+		$url      = $logo['url'] ?? null;
+		$alt      = $logo['alt'] ?? null;
+		$width    = $logo['width'] ?? null;
+		$height   = $logo['height'] ?? null;
+		$link_url = $logo['link_url'] ?? '';
+		if ( ! self::is_https_url( $url ) || ! is_string( $alt ) || '' === trim( $alt ) || 160 < mb_strlen( trim( $alt ) ) || 1 !== preg_match( '/^[^\x00-\x1F\x7F<>]+$/u', trim( $alt ) ) ) {
+			throw new \InvalidArgumentException( 'Brand logo requires an HTTPS URL and one through 160 plain-text alternative characters.' );
+		}
+		if ( ! is_int( $width ) || ! is_int( $height ) || 1 > $width || self::MAX_LOGO_DIMENSION < $width || 1 > $height || self::MAX_LOGO_DIMENSION < $height ) {
+			throw new \InvalidArgumentException( 'Brand logo dimensions exceed the supported range.' );
+		}
+		if ( ! is_string( $link_url ) || ( '' !== $link_url && ! self::is_https_url( $link_url ) ) ) {
+			throw new \InvalidArgumentException( 'Brand logo link must be empty or an absolute HTTPS URL.' );
+		}
+
+		return array(
+			'url'      => $url,
+			'alt'      => trim( $alt ),
+			'width'    => $width,
+			'height'   => $height,
+			'link_url' => $link_url,
+		);
+	}
+
+	/**
+	 * Whether a value is an HTTPS URL without credentials.
+	 *
+	 * @param mixed $value Candidate URL.
+	 */
+	private static function is_https_url( mixed $value ): bool {
+		if ( ! is_string( $value ) || false === filter_var( $value, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		return 'https' === strtolower( (string) parse_url( $value, PHP_URL_SCHEME ) ) // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Pure domain validation intentionally has no WordPress dependency.
+			&& null === parse_url( $value, PHP_URL_USER ) // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Pure domain validation intentionally has no WordPress dependency.
+			&& null === parse_url( $value, PHP_URL_PASS ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Pure domain validation intentionally has no WordPress dependency.
 	}
 
 	/**

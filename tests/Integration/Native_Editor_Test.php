@@ -22,7 +22,13 @@ final class Native_Editor_Test extends Test_Case {
 	public function test_native_editor_hooks_are_registered(): void {
 		self::assertNotFalse( has_filter( 'allowed_block_types_all', array( Native_Editor::class, 'allowed_block_types' ) ) );
 		self::assertNotFalse( has_filter( 'block_editor_settings_all', array( Native_Editor::class, 'editor_settings' ) ) );
+		self::assertNotFalse( has_filter( 'block_bindings_supported_attributes_core/image', array( Native_Editor::class, 'image_binding_attributes' ) ) );
 		self::assertNotFalse( has_action( 'enqueue_block_editor_assets', array( Native_Editor::class, 'enqueue_assets' ) ) );
+	}
+
+	/** The Brand Logo variation may bind Core Image's saved anchor href. */
+	public function test_core_image_href_is_bindable_once(): void {
+		self::assertSame( array( 'url', 'alt', 'href' ), Native_Editor::image_binding_attributes( array( 'url', 'alt', 'href' ) ) );
 	}
 
 	/** The email block contract is the only native-editor block allowlist. */
@@ -82,6 +88,7 @@ final class Native_Editor_Test extends Test_Case {
 		self::assertSame( array(), $settings['gradients'] );
 		self::assertTrue( $settings['disableCustomGradients'] );
 		self::assertNotEmpty( $settings['styles'] );
+		self::assertArrayHasKey( 'campaignbridgeBrandLogo', $settings );
 	}
 
 	/** The CPT provides a root container only for genuinely new documents. */

@@ -192,6 +192,15 @@ final class Email_Block_Contract_Test extends TestCase {
 		}
 	}
 
+	public function test_brand_logo_bindings_are_bounded_to_core_image(): void {
+		self::assertSame( 'campaignbridge/brand-data', Email_Block_Contract::brand_binding_source() );
+		self::assertSame( array( 'core/image' ), Email_Block_Contract::brand_binding_block_names() );
+		self::assertSame( array( 'url', 'alt', 'href' ), Email_Block_Contract::brand_binding_attribute_names( 'core/image' ) );
+		self::assertSame( array( 'field' => 'logoUrl', 'target' => 'url' ), Email_Block_Contract::brand_binding( 'core/image', 'url' ) );
+		self::assertSame( array( 'field' => 'logoAlt', 'target' => 'alt' ), Email_Block_Contract::brand_binding( 'core/image', 'alt' ) );
+		self::assertSame( array( 'field' => 'logoLink', 'target' => 'linkUrl' ), Email_Block_Contract::brand_binding( 'core/image', 'href' ) );
+	}
+
 	public function test_every_bound_attribute_is_bindable_in_wordpress_core(): void {
 		// The saved binding is only honoured for attributes WordPress itself
 		// declares bindable; binding anything else would be a private contract.
@@ -214,6 +223,13 @@ final class Email_Block_Contract_Test extends TestCase {
 				$name
 			);
 		}
+	}
+
+	public function test_brand_bound_renderer_declares_its_canonical_binding_attribute(): void {
+		$renderer = Compiler_Factory::registry()->get( 'core/image' );
+
+		self::assertNotNull( $renderer );
+		self::assertContains( 'brandBindings', $renderer->attribute_names() );
 	}
 
 	public function test_email_compilation_never_uses_frontend_block_rendering(): void {
