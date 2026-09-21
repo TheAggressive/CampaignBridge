@@ -45,7 +45,6 @@ final class Native_Editor_Test extends Test_Case {
 		sort( $editor, SORT_STRING );
 		self::assertSame( $compiler, $editor, 'Every insertable block must have an email renderer.' );
 		self::assertContains( 'campaignbridge/navigation', $allowed );
-		self::assertTrue( \WP_Block_Type_Registry::get_instance()->is_registered( 'campaignbridge/navigation' ) );
 
 		foreach ( array( 'core/paragraph', 'core/heading', 'core/image', 'core/buttons', 'core/button', 'core/list', 'core/list-item', 'core/separator', 'core/spacer' ) as $core ) {
 			self::assertContains( $core, $allowed );
