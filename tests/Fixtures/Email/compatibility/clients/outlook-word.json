@@ -165,6 +165,16 @@
       "rule": "markup_count_equals",
       "contains": "<link rel=\"stylesheet\"",
       "matches": "<!--[if !mso]><!-->\n<link rel=\"stylesheet\""
+    },
+    {
+      "id": "navigation-cells-carry-html-widths",
+      "because": "Word needs each navigation cell's width as an HTML attribute to keep links side by side.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "attribute_required",
+      "select": "td.cb-nav-item",
+      "attribute": "width",
+      "matches": "#^[0-9]+%$#",
+      "min": 3
     }
   ],
   "limitations": [

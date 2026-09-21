@@ -38,7 +38,7 @@ fixture pins exact output so any change is reviewed. A client expectation pins a
 
 | Scenario               | Covers                                                                                                   |
 | ---------------------- | -------------------------------------------------------------------------------------------------------- |
-| `universal-newsletter` | Document shell, preheader, section, image, rich text and links, list, button, divider, spacer, compliance footer |
+| `universal-newsletter` | Document shell, preheader, section, navigation, image, rich text and links, list, button, divider, spacer, compliance footer |
 | `stacked-columns`      | Three columns, mobile stacking, column gap, per-column image and button                                  |
 | `branded-typography`   | Brand kit web font and resolved design colours across heading levels and all three button variants       |
 
@@ -101,10 +101,13 @@ than client behavior:
 - `gmail / body-style-gap-unverified` — the column-gap media query is emitted as
   a `<style>` element inside a table cell. Whether Gmail applies it in each
   viewing path needs client rendering evidence; the vertical gap may be absent.
+- `gmail / navigation-stacking-unverified` — the navigation stacking query is
+  emitted as a `<style>` element in the message body. Whether Gmail applies it
+  in each viewing path needs client rendering evidence; links may stay in a row.
 
-Both are recorded rather than silently accepted. The list typography gap needs
-a compiler change and golden-fixture review. The Gmail gap needs direct client
-rendering evidence or a change that moves the rule into the head.
+These are recorded rather than silently accepted. The list typography gap needs
+a compiler change and golden-fixture review. The Gmail gaps need direct client
+rendering evidence or a change that moves the rules into the head.
 
 ## What this matrix does not prove
 

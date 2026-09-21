@@ -83,6 +83,15 @@
       "select": "a[style*='underline']",
       "attribute": "href",
       "matches": "#^https?://#"
+    },
+    {
+      "id": "navigation-links-carry-inline-typography",
+      "because": "Navigation labels keep their resolved font if a style block is ignored.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "style_property_required",
+      "select": "div[role='navigation'] a",
+      "property": "font-family",
+      "min": 3
     }
   ],
   "limitations": [
@@ -101,6 +110,16 @@
       "id": "web-font-loading-unverified",
       "detail": "The matrix does not load remote font stylesheets in Gmail.",
       "degrades_to": "If a font is unavailable, text uses the inline fallback stack."
+    },
+    {
+      "id": "navigation-stacking-unverified",
+      "detail": "Navigation_Renderer emits its mobile stacking media query as a style element in the message body. This suite cannot establish whether Gmail applies that body-level style in each viewing path.",
+      "degrades_to": "If the rule is ignored, navigation links remain in their table row at narrow widths. Actual behavior needs client rendering evidence.",
+      "detect": {
+        "scenarios": ["universal-newsletter"],
+        "rule": "markup_required",
+        "contains": ".cb-nav>tbody>tr>.cb-nav-item"
+      }
     },
     {
       "id": "sanitizer-behaviour-is-not-executed",

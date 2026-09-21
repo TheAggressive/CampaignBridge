@@ -67,6 +67,15 @@
       "because": "Apple Mail falls back to a legacy encoding when the message declares none, corrupting non-ASCII preview text.",
       "rule": "element_required",
       "select": "meta[charset]"
+    },
+    {
+      "id": "navigation-region-has-an-accessible-label",
+      "because": "VoiceOver needs a name for the navigation landmark to distinguish it from message content.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "attribute_required",
+      "select": "div[role='navigation']",
+      "attribute": "aria-label",
+      "min": 1
     }
   ],
   "limitations": [
