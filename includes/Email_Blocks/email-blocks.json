@@ -29,7 +29,8 @@
         "core/list",
         "core/separator",
         "core/spacer",
-        "campaignbridge/post-card"
+        "campaignbridge/post-card",
+        "campaignbridge/navigation"
       ]
     },
     "campaignbridge/columns": {
@@ -49,7 +50,8 @@
         "core/separator",
         "core/spacer",
         "campaignbridge/post-card",
-        "campaignbridge/post-image"
+        "campaignbridge/post-image",
+        "campaignbridge/navigation"
       ]
     },
     "core/paragraph": {
@@ -111,6 +113,11 @@
     "campaignbridge/post-image": {
       "source": "campaignbridge",
       "semantics": "post-image",
+      "children": []
+    },
+    "campaignbridge/navigation": {
+      "source": "campaignbridge",
+      "semantics": "navigation",
       "children": []
     },
     "campaignbridge/compliance-footer": {

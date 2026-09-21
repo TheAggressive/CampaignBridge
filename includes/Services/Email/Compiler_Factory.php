@@ -25,6 +25,7 @@ use CampaignBridge\Services\Email\Renderer\Heading_Renderer;
 use CampaignBridge\Services\Email\Renderer\Image_Renderer;
 use CampaignBridge\Services\Email\Renderer\List_Item_Renderer;
 use CampaignBridge\Services\Email\Renderer\List_Renderer;
+use CampaignBridge\Services\Email\Renderer\Navigation_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Card_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Image_Renderer;
 use CampaignBridge\Services\Email\Renderer\Preheader_Renderer;
@@ -75,6 +76,7 @@ final class Compiler_Factory {
 				new Spacer_Renderer(),
 				new List_Renderer(),
 				new List_Item_Renderer(),
+				new Navigation_Renderer(),
 				new Post_Card_Renderer(),
 				new Post_Image_Renderer(),
 				new Compliance_Footer_Renderer(),

@@ -37,6 +37,7 @@ final class Email_Block_Contract_Test extends TestCase {
 		'campaignbridge/column',
 		'campaignbridge/post-card',
 		'campaignbridge/post-image',
+		'campaignbridge/navigation',
 		'campaignbridge/compliance-footer',
 	);
 
@@ -157,8 +158,9 @@ final class Email_Block_Contract_Test extends TestCase {
 				'core/separator',
 				'core/spacer',
 				'campaignbridge/post-card',
-				'campaignbridge/post-image',
-			),
+			'campaignbridge/post-image',
+			'campaignbridge/navigation',
+		),
 			Email_Block_Contract::children( 'campaignbridge/column' )
 		);
 	}
