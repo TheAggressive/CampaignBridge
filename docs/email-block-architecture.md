@@ -224,6 +224,28 @@ produced it. A bound block outside a Post Card reports
 `post.binding.unbound`; a snapshot missing the bound field reports
 `post.binding.missing`.
 
+### Brand Logo: a bound Core Image variation
+
+Logo authoring reuses `core/image`. The “Brand Logo” variation writes read-only
+`url`, `alt`, and `href` bindings from `campaignbridge/brand-data`. Core already
+supports bindings for `url` and `alt`; CampaignBridge extends the public Core
+Image binding attribute list with `href`, which the contract maps to the image
+renderer's canonical `linkUrl`.
+
+The Brand Kit remains the single asset store. “Import from theme” copies the
+current WordPress Site Logo into a versioned snapshot with its HTTPS URL,
+plain-text alt, intrinsic dimensions, and optional HTTPS homepage link. The
+editor source reads that snapshot for the canvas and exposes no write method.
+At compile time, `Brand_Binding_Support` reads the same frozen Brand Kit from
+the render context, caps display width at 600 pixels without upscaling, and
+derives a proportional integer height. A missing asset reports
+`brand.logo.missing`; the ordinary image renderer owns HTML, plain text,
+validation, and the asset manifest.
+
+This avoids a custom Logo block because Core Image already provides the media
+authoring UI and saved attribute model. Core Site Logo remains live global data
+and does not provide the frozen email asset contract.
+
 ### Remaining CampaignBridge blocks
 
 `campaignbridge/container`, `campaignbridge/preheader`, `campaignbridge/section`,
@@ -274,8 +296,8 @@ CampaignBridge pair keeps those guarantees without registration overrides.
 only each block's known serialization contract: comment attributes plus, where
 Core sources a value from saved markup, the exact wrapper Core's `save()`
 emits. It drops editor-only values (`lock`, `placeholder`, List View
-`metadata.name`), validates `metadata.bindings` against the `postBindings`
-contract and frontend-only link/media metadata (`id`, `sizeSlug`,
+`metadata.name`), validates `metadata.bindings` against the `postBindings` and
+`brandBindings` contracts and frontend-only link/media metadata (`id`, `sizeSlug`,
 `linkTarget`, `rel`, button `title`, `lightbox`, separator `opacity` and
 `tagName`), canonicalizes
 Core link-format anchors (`data-type`, `data-id`), and converts Core values into

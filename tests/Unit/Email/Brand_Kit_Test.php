@@ -19,6 +19,7 @@ final class Brand_Kit_Test extends TestCase {
 
 		self::assertSame( Brand_Kit::SOURCE_DEFAULTS, $kit->source() );
 		self::assertNull( $kit->theme_fingerprint() );
+		self::assertNull( $kit->logo() );
 
 		foreach ( Design_Presets::colors() as $preset ) {
 			self::assertSame( $preset['color'], $kit->color( $preset['slug'] ) );
@@ -72,7 +73,7 @@ final class Brand_Kit_Test extends TestCase {
 		self::assertSame( Brand_Kit::SLOTS, $slugs );
 	}
 
-	public function test_normalizes_a_version_one_color_kit_to_version_two(): void {
+	public function test_normalizes_a_version_one_color_kit_to_the_current_version(): void {
 		$kit = Brand_Kit::from_array(
 			array(
 				'version' => 1,
@@ -81,13 +82,60 @@ final class Brand_Kit_Test extends TestCase {
 			)
 		);
 
-		self::assertSame( 2, $kit->to_array()['version'] );
+		self::assertSame( Brand_Kit::VERSION, $kit->to_array()['version'] );
 		self::assertSame( Brand_Kit::FONT_DEFAULTS, $kit->fonts() );
+		self::assertNull( $kit->logo() );
+	}
+
+	public function test_logo_round_trips_as_a_frozen_asset(): void {
+		$logo = array(
+			'url'      => 'https://cdn.example.com/logo.png',
+			'alt'      => 'Example & Co.',
+			'width'    => 800,
+			'height'   => 240,
+			'link_url' => 'https://example.com/',
+		);
+		$kit  = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_THEME, 'theme', null, null, $logo );
+
+		self::assertSame( $logo, $kit->logo() );
+		self::assertSame( $kit->to_array(), Brand_Kit::from_array( $kit->to_array() )->to_array() );
+	}
+
+	/** @dataProvider invalid_logos */
+	public function test_rejects_an_invalid_logo( array $logo ): void {
+		$this->expectException( \InvalidArgumentException::class );
+		Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, null, null, $logo );
+	}
+
+	/** @return array<string, array{array<string, mixed>}> */
+	public static function invalid_logos(): array {
+		$valid = array(
+			'url'      => 'https://cdn.example.com/logo.png',
+			'alt'      => 'Example',
+			'width'    => 800,
+			'height'   => 240,
+			'link_url' => 'https://example.com/',
+		);
+
+		return array(
+			'http asset'       => array( array_replace( $valid, array( 'url' => 'http://cdn.example.com/logo.png' ) ) ),
+			'credentialed URL' => array( array_replace( $valid, array( 'url' => 'https://user:pass@cdn.example.com/logo.png' ) ) ),
+			'empty alt'        => array( array_replace( $valid, array( 'alt' => '' ) ) ),
+			'markup alt'       => array( array_replace( $valid, array( 'alt' => '<b>Example</b>' ) ) ),
+			'control alt'      => array( array_replace( $valid, array( 'alt' => "Example\nLogo" ) ) ),
+			'oversize width'   => array( array_replace( $valid, array( 'width' => Brand_Kit::MAX_LOGO_DIMENSION + 1 ) ) ),
+			'unknown field'    => array( $valid + array( 'attachment_id' => 7 ) ),
+		);
 	}
 
 	public function test_rejects_a_future_brand_kit_version(): void {
 		$this->expectException( \InvalidArgumentException::class );
 		Brand_Kit::from_array( array( 'version' => Brand_Kit::VERSION + 1 ) );
+	}
+
+	public function test_rejects_a_malformed_version_three_logo_record(): void {
+		$this->expectException( \InvalidArgumentException::class );
+		Brand_Kit::from_array( array( 'version' => 3, 'logo' => 'https://example.com/logo.png' ) );
 	}
 
 	public function test_custom_google_font_round_trips_with_a_valid_css2_url(): void {

@@ -89,6 +89,14 @@
       "values": ["0"]
     },
     {
+      "id": "brand-logo-links-home",
+      "because": "A bound brand logo must remain a useful, absolute homepage link when images are blocked or scaled by a client.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "element_required",
+      "select": "a[href='https://example.com/'] img[src='https://example.com/brand-logo.png'][alt='Example Co'][width='240'][height='72']",
+      "min": 1
+    },
+    {
       "id": "preheader-is-visually-hidden",
       "because": "Preview text must reach the inbox list without appearing in the rendered message body.",
       "scenarios": ["universal-newsletter"],

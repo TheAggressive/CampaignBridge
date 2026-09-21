@@ -18,6 +18,7 @@ use CampaignBridge\Core\Encryption;
 use CampaignBridge\Core\Storage;
 use CampaignBridge\Providers\Mailchimp_Provider;
 use CampaignBridge\Repository\Brand_Kit_Repository;
+use CampaignBridge\Repository\Theme_Brand_Asset_Reader;
 use CampaignBridge\Repository\Theme_Style_Reader;
 
 /**
@@ -471,7 +472,7 @@ class Settings_Controller {
 	}
 
 	/**
-	 * Copy portable theme colours into the stored brand kit.
+	 * Copy portable theme colours and Site Logo into the stored brand kit.
 	 *
 	 * @return void
 	 */
@@ -488,12 +489,14 @@ class Settings_Controller {
 		$repository = new Brand_Kit_Repository();
 		$current    = $repository->get();
 		$imported   = Theme_Brand_Mapper::from_theme( ( new Theme_Style_Reader() )->extract() );
+		$logo       = ( new Theme_Brand_Asset_Reader() )->logo() ?? $current->logo();
 		$kit        = Brand_Kit::from_colors(
 			$imported->to_array()['colors'],
 			Brand_Kit::SOURCE_THEME,
 			$imported->theme_fingerprint(),
 			$current->fonts(),
-			$current->custom_font()
+			$current->custom_font(),
+			$logo
 		);
 		$saved      = $repository->save( $kit );
 		$result     = $saved ? array( 'imported' => 'theme' ) : array( 'brand_error' => 'import' );

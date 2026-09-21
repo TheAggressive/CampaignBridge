@@ -24,7 +24,23 @@ final class Native_Editor {
 	public static function init(): void {
 		\add_filter( 'allowed_block_types_all', array( __CLASS__, 'allowed_block_types' ), 10, 2 );
 		\add_filter( 'block_editor_settings_all', array( __CLASS__, 'editor_settings' ), 10, 2 );
+		\add_filter( 'block_bindings_supported_attributes_core/image', array( __CLASS__, 'image_binding_attributes' ) );
 		\add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'enqueue_assets' ) );
+	}
+
+	/**
+	 * Permit the Brand Logo variation to bind Core Image's saved link target.
+	 *
+	 * Core already permits url and alt. CampaignBridge validates href against
+	 * its own bounded contract before compiling it to canonical linkUrl.
+	 *
+	 * @param array<int, string> $attributes Core supported attributes.
+	 * @return array<int, string>
+	 */
+	public static function image_binding_attributes( array $attributes ): array {
+		$attributes[] = 'href';
+
+		return array_values( array_unique( $attributes ) );
 	}
 
 	/**
@@ -58,9 +74,11 @@ final class Native_Editor {
 			return $settings;
 		}
 
-		$design                                     = Email_Design_Factory::resolve( ( new Brand_Kit_Repository() )->get() );
+		$kit                                        = ( new Brand_Kit_Repository() )->get();
+		$design                                     = Email_Design_Factory::resolve( $kit );
 		$settings                                   = Editor_Design_Settings::apply( $settings, $design );
 		$settings['campaignbridgePostTypeArchives'] = self::post_type_archives();
+		$settings['campaignbridgeBrandLogo']        = $kit->logo();
 
 		return $settings;
 	}
