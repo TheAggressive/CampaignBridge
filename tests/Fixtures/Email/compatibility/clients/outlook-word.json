@@ -1,0 +1,187 @@
+{
+  "client": "outlook-word",
+  "label": "Outlook 2016-2021 and Microsoft 365 desktop (Windows)",
+  "renderer": "Microsoft Word HTML rendering engine",
+  "proves": "Layout survives an engine with no media-query support, no CSS float or positioning, default table chrome, and its own DPI scaling: every layout table resets its chrome, widths are HTML attributes, and every call to action carries a VML fallback.",
+  "expectations": [
+    {
+      "id": "layout-tables-reset-cell-padding",
+      "because": "Word applies default cell padding, which opens unintended gaps in every nested layout table.",
+      "rule": "attribute_required",
+      "select": "table",
+      "attribute": "cellpadding",
+      "values": [
+        "0"
+      ]
+    },
+    {
+      "id": "layout-tables-reset-cell-spacing",
+      "because": "Word applies default cell spacing, which separates adjacent cells that should butt together.",
+      "rule": "attribute_required",
+      "select": "table",
+      "attribute": "cellspacing",
+      "values": [
+        "0"
+      ]
+    },
+    {
+      "id": "layout-tables-reset-borders",
+      "because": "Word draws table borders unless the HTML border attribute is explicitly zero.",
+      "rule": "attribute_required",
+      "select": "table",
+      "attribute": "border",
+      "values": [
+        "0"
+      ]
+    },
+    {
+      "id": "layout-tables-are-presentational",
+      "because": "Layout tables must not be announced as data tables by the Windows screen readers Outlook integrates with.",
+      "rule": "attribute_required",
+      "select": "table",
+      "attribute": "role",
+      "values": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "container-width-is-an-html-attribute",
+      "because": "Word ignores CSS width and max-width on tables, so the document width has to be an HTML attribute.",
+      "rule": "attribute_required",
+      "select": "table.cb-email-container",
+      "attribute": "width",
+      "matches": "#^[0-9]+$#"
+    },
+    {
+      "id": "dpi-scaling-is-pinned",
+      "because": "Without an explicit PixelsPerInch setting, Word scales pixel dimensions on high-DPI displays and breaks fixed widths.",
+      "rule": "markup_required",
+      "contains": "<o:PixelsPerInch>96</o:PixelsPerInch>"
+    },
+    {
+      "id": "columns-declare-fixed-table-layout",
+      "because": "Word distributes column widths by content unless the table layout is fixed.",
+      "scenarios": [
+        "stacked-columns"
+      ],
+      "rule": "style_property_required",
+      "select": "table.cb-columns-stack",
+      "property": "table-layout"
+    },
+    {
+      "id": "column-widths-are-html-attributes",
+      "because": "Word ignores the CSS width on a cell, so each column has to carry an HTML width attribute to stay side by side.",
+      "scenarios": [
+        "stacked-columns"
+      ],
+      "rule": "attribute_required",
+      "select": "td.cb-col",
+      "attribute": "width",
+      "matches": "#^[0-9.]+%?$#"
+    },
+    {
+      "id": "column-alignment-is-an-html-attribute",
+      "because": "Word honours the valign attribute but not CSS vertical-align on a table cell.",
+      "scenarios": [
+        "stacked-columns"
+      ],
+      "rule": "attribute_required",
+      "select": "td.cb-col",
+      "attribute": "valign"
+    },
+    {
+      "id": "buttons-have-a-vml-fallback",
+      "because": "Word does not render padding or border-radius on an inline-block anchor, so a VML roundrect is the only reliable button shape.",
+      "rule": "markup_required",
+      "contains": "<v:roundrect"
+    },
+    {
+      "id": "every-vml-button-is-anchor-locked",
+      "because": "Without w:anchorlock the VML shape is draggable and the whole shape stops acting as one link target.",
+      "rule": "markup_count_equals",
+      "contains": "<v:roundrect",
+      "matches": "<w:anchorlock/>"
+    },
+    {
+      "id": "mso-conditionals-are-balanced",
+      "because": "An unbalanced downlevel-revealed conditional leaks raw comment markup into non-Outlook clients or hides content in Outlook.",
+      "rule": "markup_count_equals",
+      "contains": "<!--[if !mso]><!-->",
+      "matches": "<!--<![endif]-->"
+    },
+    {
+      "id": "no-css-float",
+      "because": "Word ignores float, so any layout that depends on it collapses to stacked blocks.",
+      "rule": "style_property_forbidden",
+      "select": "*",
+      "property": "float"
+    },
+    {
+      "id": "no-css-positioning",
+      "because": "Word ignores position, so positioned content lands in document order instead.",
+      "rule": "style_property_forbidden",
+      "select": "*",
+      "property": "position"
+    },
+    {
+      "id": "no-modern-layout-modes",
+      "because": "Word supports neither flexbox nor grid; either one degrades to an unstyled block stack.",
+      "rule": "markup_forbidden",
+      "contains": "display:flex"
+    },
+    {
+      "id": "no-grid-layout",
+      "because": "Word supports neither flexbox nor grid; either one degrades to an unstyled block stack.",
+      "rule": "markup_forbidden",
+      "contains": "display:grid"
+    },
+    {
+      "id": "spacer-height-is-an-html-attribute",
+      "because": "Word collapses an empty cell that sizes itself only through CSS height.",
+      "scenarios": [
+        "universal-newsletter"
+      ],
+      "rule": "attribute_required",
+      "select": "td[height]",
+      "attribute": "height",
+      "matches": "#^[0-9]+$#"
+    },
+    {
+      "id": "web-font-stylesheet-is-emitted",
+      "because": "The conditional-wrapping check below compares two counts, so the stylesheet must be proven present or both counts could be zero.",
+      "scenarios": [
+        "branded-typography"
+      ],
+      "rule": "markup_required",
+      "contains": "<link rel=\"stylesheet\"",
+      "min": 1
+    },
+    {
+      "id": "web-font-links-stay-behind-a-non-mso-conditional",
+      "because": "Word cannot load a web font and would render an unpredictable substitute; the stylesheet must stay hidden from it.",
+      "scenarios": [
+        "branded-typography"
+      ],
+      "rule": "markup_count_equals",
+      "contains": "<link rel=\"stylesheet\"",
+      "matches": "<!--[if !mso]><!-->\n<link rel=\"stylesheet\""
+    }
+  ],
+  "limitations": [
+    {
+      "id": "media-queries-ignored",
+      "detail": "Word evaluates no media queries, so the mobile stacking and full-width container rules never apply in desktop Outlook.",
+      "degrades_to": "Desktop Outlook always renders the fixed container width and side-by-side columns, which is the intended desktop result."
+    },
+    {
+      "id": "border-radius-limited-to-vml",
+      "detail": "Rounded button corners exist only inside the VML fallback; the CSS border-radius on the non-MSO table is ignored by Word.",
+      "degrades_to": "Buttons are rounded through VML arcsize rather than CSS."
+    },
+    {
+      "id": "outlook-com-and-mac-not-covered",
+      "detail": "Outlook.com webmail and Outlook for Mac use different engines from the Word-based Windows clients and are not represented by this profile.",
+      "degrades_to": "Those clients are unproven by this matrix."
+    }
+  ]
+}

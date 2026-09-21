@@ -482,7 +482,9 @@ A block is production-ready only when the following pass:
 - serialization round-trip fixtures for each production schema version;
 - forbidden-element, URL, CSS, accessibility, and compliance validators;
 - deterministic compilation test from identical snapshot input;
-- representative Outlook, Gmail, and Apple Mail fixtures;
+- representative Outlook, Gmail, and Apple Mail structural fixtures, and a
+  declared limitation for every accepted degradation, as described in
+  [`email-compatibility.md`](email-compatibility.md);
 - visual regression of compiled iframe previews.
 
 A hosted email-client service such as Litmus or Email on Acid can later validate

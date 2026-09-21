@@ -10,6 +10,7 @@ Tests must prove both behavior and wiring. A security guard is covered only when
 - Accessibility: rendered admin behavior and future browser-level Axe checks.
 - Performance: bounded query/request budgets based on measured fixtures rather than wall-clock assertions.
 - End-to-end: critical settings, template, preview, and send-confirmation flows in a real browser.
+- Email-client compatibility: structural expectations for the universal profile across Outlook's Word engine, Gmail's sanitizer, and Apple Mail's WebKit build. See [`email-compatibility.md`](email-compatibility.md).
 
 The current PHPUnit configuration still boots WordPress for every PHP suite. Splitting a millisecond pure-unit bootstrap from the WordPress integration bootstrap is the next test-infrastructure migration.
 
@@ -20,6 +21,12 @@ The browser-facing development site is managed with WordPress Studio. The reposi
 PHPUnit runs natively with `pnpm test`. The runner starts a disposable MySQL instance under `.cache/tests/mysql`, downloads the pinned WordPress core under `.cache/tests/wordpress`, verifies core checksums through the pinned WP-CLI binary, and uses the Composer-pinned WordPress PHPUnit library. Use `pnpm test:setup` to prepare the environment without running tests and `pnpm db:local stop` to stop the database.
 
 CI runs the primary suites against the pinned current WordPress version and also runs every PHP suite against the declared minimum WordPress 7.1/PHP 8.4 platform with its matching PHPUnit library. Jobs use isolated MySQL 8.4 services and do not depend on a long-lived development environment. Browser E2E tests install a disposable WordPress site natively, serve it with PHP, and retain Playwright traces, screenshots, video, and the server log on failure. Packaging waits for the primary suites, minimum-platform suite, build, and browser E2E job, so a release cannot bypass a failed runtime gate.
+
+## Email-client compatibility
+
+Compiled email output is covered twice, deliberately. Golden fixtures in `tests/Fixtures/Email/golden/` pin exact bytes so any change to the artifact is reviewed. The client expectations in `tests/Fixtures/Email/compatibility/` pin the structural properties named email clients depend on, so output can evolve as long as those properties survive.
+
+These fixtures are regression evidence, not a rendering claim. What they deliberately do not prove is declared as limitations inside the client fixtures, and a limitation with a detection probe fails the suite once it stops applying. [`email-compatibility.md`](email-compatibility.md) documents the matrix and the fixture-update procedure.
 
 ## Failure policy
 
