@@ -46,6 +46,13 @@ final class Email_Block_Contract {
 	private static ?array $post_bindings = null;
 
 	/**
+	 * Decoded read-only Brand Kit binding contract.
+	 *
+	 * @var array{source: string, attributes: array<string, array<string, array{field: string, target: string}>>}|null
+	 */
+	private static ?array $brand_bindings = null;
+
+	/**
 	 * Decoded contract document.
 	 *
 	 * @var array<string, mixed>|null
@@ -165,6 +172,85 @@ final class Email_Block_Contract {
 	 */
 	public static function binding_attribute_names( string $name ): array {
 		return array_keys( self::post_bindings()['attributes'][ $name ] ?? array() );
+	}
+
+	/** The supported read-only Brand Kit binding source name. */
+	public static function brand_binding_source(): string {
+		return self::brand_bindings()['source'];
+	}
+
+	/**
+	 * The Brand Kit binding rule for one authored Core attribute.
+	 *
+	 * @param string $name      Core block name.
+	 * @param string $attribute Authored attribute name.
+	 * @return array{field: string, target: string}|null
+	 */
+	public static function brand_binding( string $name, string $attribute ): ?array {
+		return self::brand_bindings()['attributes'][ $name ][ $attribute ] ?? null;
+	}
+
+	/**
+	 * Core blocks with Brand Kit bindings.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function brand_binding_block_names(): array {
+		return array_keys( self::brand_bindings()['attributes'] );
+	}
+
+	/**
+	 * Authored Core attributes with Brand Kit bindings.
+	 *
+	 * @param string $name Core block name.
+	 * @return array<int, string>
+	 */
+	public static function brand_binding_attribute_names( string $name ): array {
+		return array_keys( self::brand_bindings()['attributes'][ $name ] ?? array() );
+	}
+
+	/**
+	 * Decode and validate the Brand Kit binding contract once per request.
+	 *
+	 * @return array{source: string, attributes: array<string, array<string, array{field: string, target: string}>>}
+	 * @throws \DomainException When the packaged Brand Kit binding contract is malformed.
+	 */
+	private static function brand_bindings(): array {
+		if ( null !== self::$brand_bindings ) {
+			return self::$brand_bindings;
+		}
+
+		$section = self::document()['brandBindings'] ?? null;
+		$source  = is_array( $section ) ? ( $section['source'] ?? null ) : null;
+		$entries = is_array( $section ) ? ( $section['attributes'] ?? null ) : null;
+		if ( ! is_string( $source ) || '' === $source || ! is_array( $entries ) || array() === $entries ) {
+			throw new \DomainException( 'Email block contract declares no Brand Kit binding source.' );
+		}
+
+		$attributes = array();
+		foreach ( $entries as $block => $rules ) {
+			if ( ! is_string( $block ) || ! self::is_core( $block ) || ! is_array( $rules ) || array() === $rules ) {
+				throw new \DomainException( 'Email block contract binds an unsupported Brand Kit block.' );
+			}
+			foreach ( $rules as $attribute => $rule ) {
+				$field  = is_array( $rule ) ? ( $rule['field'] ?? null ) : null;
+				$target = is_array( $rule ) ? ( $rule['target'] ?? null ) : null;
+				if ( ! is_string( $attribute ) || ! is_string( $field ) || '' === $field || ! is_string( $target ) || '' === $target || array( 'field', 'target' ) !== array_keys( $rule ) ) {
+					throw new \DomainException( 'Email block contract contains a malformed Brand Kit binding.' );
+				}
+				$attributes[ $block ][ $attribute ] = array(
+					'field'  => $field,
+					'target' => $target,
+				);
+			}
+		}
+
+		self::$brand_bindings = array(
+			'source'     => $source,
+			'attributes' => $attributes,
+		);
+
+		return self::$brand_bindings;
 	}
 
 	/**

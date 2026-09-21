@@ -28,7 +28,7 @@ final class Image_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'url', 'alt', 'decorative', 'width', 'height', 'linkUrl', 'align', 'style' );
+		return array( 'url', 'alt', 'decorative', 'width', 'height', 'linkUrl', 'align', 'style', Brand_Binding_Support::ATTRIBUTE );
 	}
 
 	/**
@@ -39,18 +39,31 @@ final class Image_Renderer extends Abstract_Renderer {
 	public function normalize( Block_Node $block ): Block_Node {
 		$attributes = Native_Style_Support::attributes( $block );
 
-		return $block->with_attributes(
-			array(
-				'url'        => trim( Renderer_Support::string_attribute( $attributes, 'url', '' ) ),
-				'alt'        => trim( Renderer_Support::string_attribute( $attributes, 'alt', '' ) ),
-				'decorative' => Renderer_Support::boolean_attribute( $attributes, 'decorative', false ),
-				'width'      => Renderer_Support::integer_attribute( $attributes, 'width', 600, 1, 1200 ),
-				'height'     => null === ( $attributes['height'] ?? null ) ? null : Renderer_Support::integer_attribute( $attributes, 'height', 400, 1, 1200 ),
-				'linkUrl'    => trim( Renderer_Support::string_attribute( $attributes, 'linkUrl', '' ) ),
-				'align'      => '' === ( $attributes['align'] ?? '' ) ? '' : Renderer_Support::alignment_attribute( $attributes, 'align' ),
-				'style'      => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
-			)
+		$normalized = array(
+			'url'        => trim( Renderer_Support::string_attribute( $attributes, 'url', '' ) ),
+			'alt'        => trim( Renderer_Support::string_attribute( $attributes, 'alt', '' ) ),
+			'decorative' => Renderer_Support::boolean_attribute( $attributes, 'decorative', false ),
+			'width'      => Renderer_Support::integer_attribute( $attributes, 'width', 600, 1, 1200 ),
+			'height'     => null === ( $attributes['height'] ?? null ) ? null : Renderer_Support::integer_attribute( $attributes, 'height', 400, 1, 1200 ),
+			'linkUrl'    => trim( Renderer_Support::string_attribute( $attributes, 'linkUrl', '' ) ),
+			'align'      => '' === ( $attributes['align'] ?? '' ) ? '' : Renderer_Support::alignment_attribute( $attributes, 'align' ),
+			'style'      => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 		);
+		if ( isset( $attributes[ Brand_Binding_Support::ATTRIBUTE ] ) && is_array( $attributes[ Brand_Binding_Support::ATTRIBUTE ] ) ) {
+			$normalized[ Brand_Binding_Support::ATTRIBUTE ] = $attributes[ Brand_Binding_Support::ATTRIBUTE ];
+		}
+
+		return $block->with_attributes( $normalized );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param Block_Node     $block   Normalized block.
+	 * @param Render_Context $context Immutable scoped context.
+	 */
+	public function resolve_post_bindings( Block_Node $block, Render_Context $context ): Block_Node {
+		return Brand_Binding_Support::resolve( $block, $context );
 	}
 
 	/**
@@ -60,6 +73,11 @@ final class Image_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function validate( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		$binding_diagnostics = Brand_Binding_Support::validate( $block, $context );
+		if ( array() !== $binding_diagnostics ) {
+			return $binding_diagnostics;
+		}
+
 		$attributes = $block->attributes();
 		if ( null === Renderer_Support::https_url( $attributes['url'] ) ) {
 			return array( Compile_Diagnostic::error( 'image.url.invalid', $block->path(), 'Email images require an absolute URL.' ) );

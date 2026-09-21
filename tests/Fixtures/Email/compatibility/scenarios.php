@@ -142,8 +142,17 @@ $column = static function ( array $children, array $attrs = array() ): array {
 
 return array(
 	'universal-newsletter' => array(
-		'label'    => 'Full supported grammar: preheader, sections, navigation, image, rich text, list, button, divider, spacer, compliance footer.',
-		'covers'   => array( 'document-shell', 'preheader', 'section', 'navigation', 'image', 'rich-text', 'links', 'list', 'button', 'divider', 'spacer', 'compliance-footer' ),
+		'label'     => 'Full supported grammar: preheader, sections, brand logo, navigation, image, rich text, list, button, divider, spacer, compliance footer.',
+		'covers'    => array( 'document-shell', 'preheader', 'section', 'brand-logo', 'navigation', 'image', 'rich-text', 'links', 'list', 'button', 'divider', 'spacer', 'compliance-footer' ),
+		'brand_kit' => array(
+			'logo' => array(
+				'url'      => 'https://example.com/brand-logo.png',
+				'alt'      => 'Example Co',
+				'width'    => 800,
+				'height'   => 240,
+				'link_url' => 'https://example.com/',
+			),
+		),
 		'metadata' => array(
 			'title'            => 'Universal newsletter compatibility fixture',
 			'language'         => 'en',
@@ -172,6 +181,23 @@ return array(
 							'backgroundColor' => '#ffffff',
 						),
 						'innerBlocks' => array(
+							array(
+								'blockName'   => 'core/image',
+								'attrs'       => array(
+									'width'           => 240,
+									'align'           => 'center',
+									'linkDestination' => 'custom',
+									'metadata'        => array(
+										'bindings' => array(
+											'url'  => array( 'source' => 'campaignbridge/brand-data', 'args' => array( 'field' => 'logoUrl' ) ),
+											'alt'  => array( 'source' => 'campaignbridge/brand-data', 'args' => array( 'field' => 'logoAlt' ) ),
+											'href' => array( 'source' => 'campaignbridge/brand-data', 'args' => array( 'field' => 'logoLink' ) ),
+										),
+									),
+								),
+								'innerBlocks' => array(),
+								'innerHTML'   => '',
+							),
 							array(
 								'blockName'   => 'campaignbridge/navigation',
 								'attrs'       => array(

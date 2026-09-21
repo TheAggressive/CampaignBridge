@@ -49,7 +49,7 @@ CampaignBridge email semantics (WordPress Native First); see
 | `campaignbridge/column`            | Native block   | Constrained child of columns                    | Compiler-supported |
 | `core/paragraph`                   | Core block     | Safe rich text and HTTPS links                  | Compiler-supported |
 | `core/heading`                     | Core block     | Portable heading levels 1–4 and typography      | Compiler-supported |
-| `core/image`                       | Core block     | Sized, accessible, optionally linked image      | Compiler-supported |
+| `core/image`                       | Core block     | Sized, linked image; Brand Logo binds frozen Brand Kit asset | Compiler-supported |
 | `core/buttons` + `core/button`     | Core block     | Aligned bulletproof calls to action             | Compiler-supported |
 | `core/list` + `core/list-item`     | Core block     | Flat ordered or unordered list                  | Compiler-supported |
 | `core/separator`                   | Core block     | Full-width design divider                       | Compiler-supported |
@@ -64,13 +64,12 @@ template already stores `campaignbridge_view_online_url` for it.
 
 Start this wave only after the compiler registry, compiled preview, compliance
 validation, and universal-profile fixtures are operational.
-Issue #72 remains the merge and release gate for new Wave A output. The
-Navigation slice has deterministic fixtures but does not claim client-wide
-rendering evidence until that representative compatibility matrix is complete.
+Issue #72 remains the merge and release gate for new Wave A output. Navigation
+and Brand Logo both participate in the representative compatibility matrix.
 
 | Proposed block                | Classification | Output and constraints                                     | Reuse/dependency                                           |
 | ----------------------------- | -------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
-| `campaignbridge/logo`         | Binding block  | Brand logo with explicit size, alt text, and homepage link | Reuses the image renderer; requires versioned brand assets |
+| `core/image` Brand Logo       | Core binding   | Shipped: bounded logo, alt text, optional homepage link    | `campaignbridge/brand-data`; reuses image renderer         |
 | `campaignbridge/navigation`   | Native block   | Shipped: one to five explicit HTTPS links; mobile stack      | No live menu lookup; plain-text links                       |
 | `campaignbridge/social-links` | Native block   | Accessible linked icons with approved assets               | Requires packaged icon assets and plain-text URLs          |
 | `campaignbridge/video`        | Binding block  | Linked poster/thumbnail with play treatment                | Never emits an iframe or playable embed                    |

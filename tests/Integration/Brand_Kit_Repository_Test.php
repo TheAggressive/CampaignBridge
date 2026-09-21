@@ -11,12 +11,14 @@ namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Repository\Brand_Kit_Repository;
+use CampaignBridge\Repository\Theme_Brand_Asset_Reader;
 use CampaignBridge\Repository\Theme_Style_Reader;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
 final class Brand_Kit_Repository_Test extends Test_Case {
 	public function tearDown(): void {
 		( new Brand_Kit_Repository() )->clear();
+		remove_theme_mod( 'custom_logo' );
 		parent::tearDown();
 	}
 
@@ -78,6 +80,40 @@ final class Brand_Kit_Repository_Test extends Test_Case {
 		foreach ( $extracted['palette'] as $item ) {
 			$this->assertMatchesRegularExpression( '/^#[0-9a-f]{6}$/', $item['color'] );
 		}
+	}
+
+	public function test_theme_brand_asset_reader_freezes_the_site_logo(): void {
+		$attachment_id = $this->factory->attachment->create_object(
+			'logo.png',
+			0,
+			array( 'post_mime_type' => 'image/png' )
+		);
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', 'CampaignBridge mark' );
+		set_theme_mod( 'custom_logo', $attachment_id );
+		$old_home = get_option( 'home' );
+		update_option( 'home', 'https://example.org' );
+
+		$filter = static fn ( mixed $image, int $id ): array|false => $attachment_id === $id
+			? array( 'https://cdn.example.org/logo.png', 800, 240, false )
+			: ( is_array( $image ) ? $image : false );
+		add_filter( 'wp_get_attachment_image_src', $filter, 10, 2 );
+		try {
+			$logo = ( new Theme_Brand_Asset_Reader() )->logo();
+		} finally {
+			remove_filter( 'wp_get_attachment_image_src', $filter, 10 );
+			update_option( 'home', $old_home );
+		}
+
+		self::assertSame(
+			array(
+				'url'      => 'https://cdn.example.org/logo.png',
+				'alt'      => 'CampaignBridge mark',
+				'width'    => 800,
+				'height'   => 240,
+				'link_url' => 'https://example.org/',
+			),
+			$logo
+		);
 	}
 
 	public function test_saving_an_unchanged_kit_reports_success(): void {

@@ -107,6 +107,25 @@ final class Brand_Kit_Routes_Test extends Test_Case {
 		$this->assertSame( '#ff5500', ( new Brand_Kit_Repository() )->get()->color( Brand_Kit::SLOT_BRAND ) );
 	}
 
+	public function test_color_and_font_updates_preserve_the_frozen_logo(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+		$logo       = array(
+			'url'      => 'https://cdn.example.com/logo.png',
+			'alt'      => 'Example',
+			'width'    => 800,
+			'height'   => 240,
+			'link_url' => 'https://example.com/',
+		);
+		$repository = new Brand_Kit_Repository();
+		$repository->save( Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_THEME, null, null, null, $logo ) );
+
+		self::assertSame( 200, $this->put_color( Brand_Kit::SLOT_BRAND, '#123456' )->get_status() );
+		$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$request->set_param( 'fonts', array( 'heading' => 'inter' ) );
+		self::assertSame( 200, rest_get_server()->dispatch( $request )->get_status() );
+		self::assertSame( $logo, $repository->get()->logo() );
+	}
+
 	public function test_put_rejects_a_colour_that_is_not_portable(): void {
 		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
 

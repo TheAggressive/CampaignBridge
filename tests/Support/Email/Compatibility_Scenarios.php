@@ -80,7 +80,9 @@ final class Compatibility_Scenarios {
 				is_array( $scenario['brand_kit']['colors'] ?? null ) ? $scenario['brand_kit']['colors'] : array(),
 				Brand_Kit::SOURCE_CUSTOM,
 				null,
-				is_array( $scenario['brand_kit']['fonts'] ?? null ) ? $scenario['brand_kit']['fonts'] : array()
+				is_array( $scenario['brand_kit']['fonts'] ?? null ) ? $scenario['brand_kit']['fonts'] : array(),
+				null,
+				is_array( $scenario['brand_kit']['logo'] ?? null ) ? $scenario['brand_kit']['logo'] : null
 			);
 		}
 

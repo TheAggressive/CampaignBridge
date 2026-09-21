@@ -107,7 +107,7 @@ final class Brand_Kit_Copy {
 	 * REST and localized payload for the Brand tab.
 	 *
 	 * @param Brand_Kit $kit Active kit.
-	 * @return array{source: string, slots: array<int, array{id: string, name: string, description: string, color: string}>, fonts: array<string, string>, fontOptions: array<int, array{slug: string, name: string, type: string, family: string, url: string|null}>, fontSlots: array<string, string>}
+	 * @return array{source: string, slots: array<int, array{id: string, name: string, description: string, color: string}>, fonts: array<string, string>, fontOptions: array<int, array{slug: string, name: string, type: string, family: string, url: string|null}>, fontSlots: array<string, string>, logo: array{url: string, alt: string, width: int, height: int, link_url: string}|null}
 	 */
 	public static function payload( Brand_Kit $kit ): array {
 		return array(
@@ -116,6 +116,7 @@ final class Brand_Kit_Copy {
 			'fonts'       => $kit->fonts(),
 			'fontOptions' => self::font_options( $kit ),
 			'fontSlots'   => self::font_slot_labels(),
+			'logo'        => $kit->logo(),
 		);
 	}
 }

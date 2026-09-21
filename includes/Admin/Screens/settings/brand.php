@@ -80,7 +80,7 @@ $campaignbridge_restored = isset( $_GET['restored'] ) ? sanitize_text_field( wp_
 
 	<?php if ( 'theme' === $campaignbridge_imported ) : ?>
 		<div class="notice notice-success is-dismissible">
-			<p><?php esc_html_e( 'Brand colors were imported from the active theme. Slots the theme could not fill kept their CampaignBridge defaults.', 'campaignbridge' ); ?></p>
+			<p><?php esc_html_e( 'Brand colors and the Site Logo were imported from the active theme. Slots or assets the theme could not fill kept their existing values.', 'campaignbridge' ); ?></p>
 		</div>
 	<?php endif; ?>
 
@@ -97,7 +97,7 @@ $campaignbridge_restored = isset( $_GET['restored'] ) ? sanitize_text_field( wp_
 			</div>
 			<div class="campaignbridge-brand-kit__hero-copy">
 				<h2><?php esc_html_e( 'Your email brand, everywhere you send', 'campaignbridge' ); ?></h2>
-				<p><?php esc_html_e( 'These settings control the colors and typography used in your email templates. Changes are available when creating new templates, and theme colors can be imported at any time.', 'campaignbridge' ); ?></p>
+				<p><?php esc_html_e( 'These settings control the colors, typography, and logo used in your email templates. Changes are available when creating new templates, and theme brand settings can be imported at any time.', 'campaignbridge' ); ?></p>
 				<div class="campaignbridge-brand-kit__actions">
 					<form method="post" class="campaignbridge-brand-kit__action">
 						<?php wp_nonce_field( 'campaignbridge_import_brand' ); ?>
@@ -131,7 +131,7 @@ $campaignbridge_restored = isset( $_GET['restored'] ) ? sanitize_text_field( wp_
 			<div class="cb-admin-icon-disc" aria-hidden="true"><span class="dashicons dashicons-lightbulb"></span></div>
 			<div>
 				<h3><?php esc_html_e( 'Pro tip', 'campaignbridge' ); ?></h3>
-				<p><?php esc_html_e( 'Start with colors from your WordPress theme, then fine-tune them here for a custom email look.', 'campaignbridge' ); ?></p>
+				<p><?php esc_html_e( 'Start with colors and the Site Logo from your WordPress theme, then fine-tune your email look here.', 'campaignbridge' ); ?></p>
 				<a href="https://developer.wordpress.org/block-editor/how-to-guides/themes/global-settings-and-styles/" target="_blank" rel="noopener noreferrer">
 					<?php esc_html_e( 'Learn about theme styles', 'campaignbridge' ); ?> <span aria-hidden="true">→</span>
 				</a>

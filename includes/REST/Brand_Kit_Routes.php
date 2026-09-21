@@ -177,7 +177,7 @@ final class Brand_Kit_Routes extends Abstract_Rest_Controller {
 		$merged[ $slug ] = $hex;
 
 		try {
-			$saved = Brand_Kit::from_colors( $merged, Brand_Kit::SOURCE_CUSTOM, $kit->theme_fingerprint(), $kit->fonts(), $kit->custom_font() );
+			$saved = Brand_Kit::from_colors( $merged, Brand_Kit::SOURCE_CUSTOM, $kit->theme_fingerprint(), $kit->fonts(), $kit->custom_font(), $kit->logo() );
 		} catch ( \InvalidArgumentException $e ) {
 				return self::create_error(
 					'invalid_brand_color',
@@ -246,7 +246,7 @@ final class Brand_Kit_Routes extends Abstract_Rest_Controller {
 			$merged_fonts[ $font_slot ] = $font_slug;
 		}
 
-		$saved = Brand_Kit::from_colors( $kit->to_array()['colors'], Brand_Kit::SOURCE_CUSTOM, $kit->theme_fingerprint(), $merged_fonts, $custom_font );
+		$saved = Brand_Kit::from_colors( $kit->to_array()['colors'], Brand_Kit::SOURCE_CUSTOM, $kit->theme_fingerprint(), $merged_fonts, $custom_font, $kit->logo() );
 		if ( ! $repository->save( $saved ) ) {
 			return self::create_error( 'brand_kit_not_saved', __( 'The brand kit could not be saved.', 'campaignbridge' ), Rest_Constants::HTTP_INTERNAL_SERVER_ERROR );
 		}
