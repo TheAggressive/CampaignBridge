@@ -1,0 +1,125 @@
+{
+  "client": "universal-profile",
+  "label": "Universal profile baseline (every supported client)",
+  "renderer": "All target clients",
+  "proves": "The universal@1 artifact carries no active or unsupported content, every link is an absolute HTTP(S) destination, and every image carries the dimensions and alternative text the profile promises.",
+  "expectations": [
+    {
+      "id": "no-script",
+      "because": "No supported email client executes JavaScript, and a script element is a delivery and security risk.",
+      "rule": "element_forbidden",
+      "select": "script"
+    },
+    {
+      "id": "no-embedded-frames-or-media",
+      "because": "Frames, plugin objects, and native media players are stripped or blocked across the target clients; video ships as a linked poster instead.",
+      "rule": "element_forbidden",
+      "select": "iframe, frame, object, embed, video, audio, canvas"
+    },
+    {
+      "id": "no-forms",
+      "because": "Gmail and Outlook remove or disable form controls, so a form in the universal profile would silently disappear.",
+      "rule": "element_forbidden",
+      "select": "form, input, textarea, select, button"
+    },
+    {
+      "id": "no-author-svg",
+      "because": "Outlook's Word engine does not render inline SVG, and author-supplied SVG is an unsanitized markup surface.",
+      "rule": "element_forbidden",
+      "select": "svg"
+    },
+    {
+      "id": "no-document-redirects",
+      "because": "A meta refresh or base element rewrites destinations after delivery and is stripped by most clients.",
+      "rule": "element_forbidden",
+      "select": "base, meta[http-equiv]"
+    },
+    {
+      "id": "no-inline-event-handlers",
+      "because": "Inline event handlers never execute in email and mark the message as suspicious to filters.",
+      "rule": "attribute_name_forbidden",
+      "select": "*",
+      "prefix": "on"
+    },
+    {
+      "id": "no-javascript-urls",
+      "because": "A javascript: destination is unusable in email and is a phishing signal.",
+      "rule": "markup_forbidden",
+      "contains": "javascript:"
+    },
+    {
+      "id": "links-are-absolute",
+      "because": "Email has no document base, so every destination must be an absolute HTTP(S) URL.",
+      "rule": "attribute_required",
+      "select": "a",
+      "attribute": "href",
+      "matches": "#^https?://#"
+    },
+    {
+      "id": "document-language-declared",
+      "because": "Screen readers in Apple Mail and Outlook announce content using the document language.",
+      "rule": "attribute_required",
+      "select": "html",
+      "attribute": "lang"
+    },
+    {
+      "id": "images-have-alternative-text",
+      "because": "Outlook and Gmail block images by default, so alternative text is the only content many recipients see first.",
+      "scenarios": ["universal-newsletter", "stacked-columns"],
+      "rule": "attribute_required",
+      "select": "img",
+      "attribute": "alt"
+    },
+    {
+      "id": "images-declare-width",
+      "because": "Clients that block images reserve space from the HTML width attribute, and Outlook does not scale from CSS.",
+      "scenarios": ["universal-newsletter", "stacked-columns"],
+      "rule": "attribute_required",
+      "select": "img",
+      "attribute": "width",
+      "matches": "#^[0-9]+$#"
+    },
+    {
+      "id": "images-suppress-link-borders",
+      "because": "Linked images gain a blue border in Outlook and older webmail without an explicit border attribute.",
+      "scenarios": ["universal-newsletter", "stacked-columns"],
+      "rule": "attribute_required",
+      "select": "img",
+      "attribute": "border",
+      "values": ["0"]
+    },
+    {
+      "id": "preheader-is-visually-hidden",
+      "because": "Preview text must reach the inbox list without appearing in the rendered message body.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "attribute_required",
+      "select": "div",
+      "attribute": "style",
+      "matches": "#display:none#"
+    }
+  ],
+  "limitations": [
+    {
+      "id": "list-text-inherits-client-defaults",
+      "detail": "core/list and core/list-item emit no inline font-family, font-size, line-height, or colour, so list text falls back to each client's default face instead of the resolved email design.",
+      "degrades_to": "Lists render in the client default font (commonly a serif face in Outlook) while headings and paragraphs render in the brand face.",
+      "detect": {
+        "scenarios": ["universal-newsletter"],
+        "rule": "style_property_forbidden",
+        "select": "li",
+        "property": "font-family"
+      }
+    },
+    {
+      "id": "image-blocking-is-not-simulated",
+      "detail": "These fixtures assert the markup that image-blocking clients rely on. They do not render the blocked state.",
+      "degrades_to": "Appearance with images disabled is unproven here."
+    },
+    {
+      "id": "dark-mode-is-not-covered",
+      "because": "No scenario exercises a dark-mode colour scheme.",
+      "detail": "Colour inversion behaviour in Apple Mail, Outlook, and Gmail dark modes is outside this matrix.",
+      "degrades_to": "Dark-mode appearance is unproven."
+    }
+  ]
+}

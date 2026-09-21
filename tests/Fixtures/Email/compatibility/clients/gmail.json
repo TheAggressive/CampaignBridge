@@ -1,0 +1,111 @@
+{
+  "client": "gmail",
+  "label": "Gmail web and Gmail mobile apps",
+  "renderer": "Gmail HTML and CSS handling",
+  "proves": "The artifact includes inline typography and fluid dimensions that remain available if a client ignores a stylesheet or media query. The suite does not execute Gmail's sanitizer.",
+  "expectations": [
+    {
+      "id": "headings-carry-inline-typography",
+      "because": "Inline heading typography remains available if a Gmail viewing path ignores a style block.",
+      "rule": "style_property_required",
+      "select": "h1, h2, h3, h4",
+      "property": "font-family"
+    },
+    {
+      "id": "headings-carry-inline-size",
+      "because": "Without an inline font-size, a stripped stylesheet leaves headings at the client default scale.",
+      "rule": "style_property_required",
+      "select": "h1, h2, h3, h4",
+      "property": "font-size"
+    },
+    {
+      "id": "paragraphs-carry-inline-typography",
+      "because": "Body copy has to survive stylesheet removal with its face, size, and colour intact.",
+      "rule": "style_property_required",
+      "select": "p",
+      "property": "font-family"
+    },
+    {
+      "id": "paragraphs-carry-inline-colour",
+      "because": "An inline text colour keeps the resolved design available if a style block is ignored.",
+      "rule": "style_property_required",
+      "select": "p",
+      "property": "color"
+    },
+    {
+      "id": "container-fits-without-a-media-query",
+      "because": "An inline max-width lets the container shrink when a media query is unavailable.",
+      "rule": "style_property_required",
+      "select": "table.cb-email-container",
+      "property": "max-width"
+    },
+    {
+      "id": "images-scale-within-their-column",
+      "because": "Gmail renders at the device width, so an image has to be fluid up to its intrinsic size rather than fixed.",
+      "scenarios": ["universal-newsletter", "stacked-columns"],
+      "rule": "style_property_required",
+      "select": "img",
+      "property": "max-width"
+    },
+    {
+      "id": "images-are-block-level",
+      "because": "Gmail leaves descender whitespace under an inline image inside a table cell.",
+      "scenarios": ["universal-newsletter", "stacked-columns"],
+      "rule": "style_property_required",
+      "select": "img",
+      "property": "display"
+    },
+    {
+      "id": "column-width-is-inline",
+      "because": "An inline column width preserves the layout if a class selector is ignored.",
+      "rule": "style_property_required",
+      "select": "td.cb-col",
+      "property": "width",
+      "scenarios": ["stacked-columns"]
+    },
+    {
+      "id": "button-labels-are-real-anchors",
+      "because": "The non-MSO button anchor needs its own typography; the VML branch is reserved for Word-based Outlook.",
+      "rule": "style_property_required",
+      "select": "a[style*='inline-block']",
+      "property": "font-family"
+    },
+    {
+      "id": "no-unconditional-external-stylesheet",
+      "because": "A remote stylesheet is an avoidable dependency for core layout and may be unavailable in an email client.",
+      "rule": "element_forbidden",
+      "select": "link[rel='stylesheet'][media='all']"
+    },
+    {
+      "id": "unsubscribe-link-is-present-and-absolute",
+      "because": "Gmail surfaces list management from the message body when the footer link is a real absolute destination.",
+      "rule": "attribute_required",
+      "select": "a[style*='underline']",
+      "attribute": "href",
+      "matches": "#^https?://#"
+    }
+  ],
+  "limitations": [
+    {
+      "id": "body-style-gap-unverified",
+      "detail": "Columns_Renderer emits the column-gap media query as a style element inside a table cell. This suite cannot establish whether Gmail applies that body-level style in each viewing path.",
+      "degrades_to": "If that style is ignored, stacked columns lose their vertical gap on mobile. Actual behavior needs client rendering evidence.",
+      "detect": {
+        "scenarios": ["stacked-columns"],
+        "rule": "element_required",
+        "select": "body style",
+        "min": 1
+      }
+    },
+    {
+      "id": "web-font-loading-unverified",
+      "detail": "The matrix does not load remote font stylesheets in Gmail.",
+      "degrades_to": "If a font is unavailable, text uses the inline fallback stack."
+    },
+    {
+      "id": "sanitizer-behaviour-is-not-executed",
+      "detail": "These expectations inspect compiler output; Gmail's sanitizer is not run here.",
+      "degrades_to": "Actual Gmail rendering is unproven by this matrix."
+    }
+  ]
+}

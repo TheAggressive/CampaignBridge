@@ -1,0 +1,84 @@
+{
+  "client": "apple-mail",
+  "label": "Apple Mail on macOS and iOS",
+  "renderer": "WebKit",
+  "proves": "The document opts out of the reformatting and text inflation WebKit mail clients apply by default, declares a responsive viewport, and exposes accessible structure to VoiceOver.",
+  "expectations": [
+    {
+      "id": "viewport-is-declared",
+      "because": "Without a viewport meta tag, iOS Mail renders at a desktop width and zooms out.",
+      "rule": "attribute_required",
+      "select": "meta[name='viewport']",
+      "attribute": "content",
+      "matches": "#width=device-width#"
+    },
+    {
+      "id": "message-reformatting-is-disabled",
+      "because": "Apple Mail reflows and rescales messages unless the message opts out explicitly.",
+      "rule": "element_required",
+      "select": "meta[name='x-apple-disable-message-reformatting']"
+    },
+    {
+      "id": "text-inflation-is-pinned",
+      "because": "WebKit inflates text in narrow columns unless text-size-adjust is fixed on the body.",
+      "rule": "style_property_required",
+      "select": "body",
+      "property": "-webkit-text-size-adjust"
+    },
+    {
+      "id": "body-background-is-explicit",
+      "because": "Apple Mail composes the message over its own background, and an unset body colour shows through in dark mode.",
+      "rule": "style_property_required",
+      "select": "body",
+      "property": "background-color"
+    },
+    {
+      "id": "document-has-a-title",
+      "because": "VoiceOver announces the document title when a message is opened in its own window.",
+      "rule": "element_required",
+      "select": "head title"
+    },
+    {
+      "id": "headings-use-real-heading-elements",
+      "because": "VoiceOver rotor navigation depends on heading elements rather than styled paragraphs.",
+      "rule": "element_required",
+      "select": "h1, h2, h3, h4"
+    },
+    {
+      "id": "images-declare-intrinsic-height",
+      "because": "WebKit reflows the layout while images load unless the intrinsic box is known.",
+      "scenarios": ["universal-newsletter", "stacked-columns"],
+      "rule": "attribute_required",
+      "select": "img",
+      "attribute": "height",
+      "matches": "#^[0-9]+$#"
+    },
+    {
+      "id": "links-open-safely",
+      "because": "A link that opens a new window must not expose the opener to the destination.",
+      "rule": "attribute_required",
+      "select": "a[target='_blank']",
+      "attribute": "rel",
+      "matches": "#noopener#",
+      "min": 0
+    },
+    {
+      "id": "character-encoding-is-declared",
+      "because": "Apple Mail falls back to a legacy encoding when the message declares none, corrupting non-ASCII preview text.",
+      "rule": "element_required",
+      "select": "meta[charset]"
+    }
+  ],
+  "limitations": [
+    {
+      "id": "dark-mode-inversion-not-covered",
+      "detail": "Apple Mail inverts light colour schemes in dark mode unless the message declares a supported colour scheme. No scenario declares one.",
+      "degrades_to": "Dark-mode appearance in Apple Mail is unproven and may invert brand colours."
+    },
+    {
+      "id": "data-detectors-not-covered",
+      "detail": "Apple Mail auto-links dates, addresses, and phone numbers, restyling that text. The compliance address is a likely target.",
+      "degrades_to": "The postal address may render as a blue link in Apple Mail."
+    }
+  ]
+}

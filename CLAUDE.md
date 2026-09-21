@@ -270,6 +270,7 @@ not proof that the distributable is valid.
 - `docs/email-block-implementation-plan.md` — phased compiler and block rollout
 - `docs/dependency-policy.md` — public/private dependency rules and locks
 - `docs/testing-strategy.md` — test responsibilities and environments
+- `docs/email-compatibility.md` — client compatibility fixtures and their limits
 - `docs/build-and-release.md` — package and publishing behavior
 - `docs/pull-request-automation.md` — labels, native auto-merge, and rulesets
 - `docs/threat-model.md` — security boundaries
