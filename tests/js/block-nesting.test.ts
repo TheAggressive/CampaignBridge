@@ -117,9 +117,10 @@ describe('email block nesting grammar', () => {
     ]);
   });
 
-  it('pins the section children (columns, Core blocks, post-card)', () => {
+  it('pins the section children (columns, Core blocks, post-card, navigation)', () => {
     expect([...EMAIL_BLOCK_NESTING.section].sort()).toEqual([
       'campaignbridge/columns',
+      'campaignbridge/navigation',
       'campaignbridge/post-card',
       'core/buttons',
       'core/heading',

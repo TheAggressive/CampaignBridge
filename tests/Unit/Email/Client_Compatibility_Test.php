@@ -35,6 +35,15 @@ final class Client_Compatibility_Test extends TestCase {
 		}
 	}
 
+	/** The navigation scenario retains each explicit destination in plain text. */
+	public function test_navigation_links_survive_in_plain_text(): void {
+		$text = Compatibility_Scenarios::compile( 'universal-newsletter' )['text'];
+
+		foreach ( array( 'Home: https://example.com/home', 'Shop: https://example.com/shop', 'Support: https://example.com/support' ) as $link ) {
+			self::assertStringContainsString( $link, $text );
+		}
+	}
+
 	/** The matrix keeps its named scenarios and client profiles. */
 	public function test_the_matrix_covers_every_declared_client(): void {
 		self::assertSame(
@@ -256,6 +265,34 @@ final class Client_Compatibility_Test extends TestCase {
 				'links-are-absolute',
 				'href="https://example.com/docs"',
 				'href="/docs"',
+			),
+			'Outlook loses navigation cell width'       => array(
+				'outlook-word',
+				'universal-newsletter',
+				'navigation-cells-carry-html-widths',
+				'<td class="cb-nav-item" width="33%"',
+				'<td class="cb-nav-item"',
+			),
+			'Gmail loses navigation font fallback'      => array(
+				'gmail',
+				'universal-newsletter',
+				'navigation-links-carry-inline-typography',
+				'<a href="https://example.com/home" style="color:#111111;font-family:Arial,Helvetica,sans-serif;',
+				'<a href="https://example.com/home" style="color:#111111;',
+			),
+			'Apple Mail loses navigation label'         => array(
+				'apple-mail',
+				'universal-newsletter',
+				'navigation-region-has-an-accessible-label',
+				'role="navigation" aria-label="Email navigation"',
+				'role="navigation"',
+			),
+			'Navigation emits an insecure link'         => array(
+				'universal-profile',
+				'universal-newsletter',
+				'navigation-has-three-https-links',
+				'href="https://example.com/home"',
+				'href="http://example.com/home"',
 			),
 		);
 	}

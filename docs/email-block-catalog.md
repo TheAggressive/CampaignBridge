@@ -64,11 +64,14 @@ template already stores `campaignbridge_view_online_url` for it.
 
 Start this wave only after the compiler registry, compiled preview, compliance
 validation, and universal-profile fixtures are operational.
+Issue #72 remains the merge and release gate for new Wave A output. The
+Navigation slice has deterministic fixtures but does not claim client-wide
+rendering evidence until that representative compatibility matrix is complete.
 
 | Proposed block                | Classification | Output and constraints                                     | Reuse/dependency                                           |
 | ----------------------------- | -------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
 | `campaignbridge/logo`         | Binding block  | Brand logo with explicit size, alt text, and homepage link | Reuses the image renderer; requires versioned brand assets |
-| `campaignbridge/navigation`   | Native block   | Small horizontal or predictably stacked link list          | Strict item-count and label-length limits                  |
+| `campaignbridge/navigation`   | Native block   | Shipped: one to five explicit HTTPS links; mobile stack      | No live menu lookup; plain-text links                       |
 | `campaignbridge/social-links` | Native block   | Accessible linked icons with approved assets               | Requires packaged icon assets and plain-text URLs          |
 | `campaignbridge/video`        | Binding block  | Linked poster/thumbnail with play treatment                | Never emits an iframe or playable embed                    |
 

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/navigation",
+  "title": "Email Navigation",
+  "category": "campaignbridge-email",
+  "icon": "menu",
+  "description": "Adds a short list of explicit HTTPS links to an email.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section", "campaignbridge/column"],
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "customClassName": false
+  },
+  "attributes": {
+    "items": {
+      "type": "array",
+      "default": [{ "label": "", "url": "" }]
+    }
+  },
+  "editorScript": "file:./index.js"
+}

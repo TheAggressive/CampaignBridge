@@ -92,10 +92,18 @@
       "id": "preheader-is-visually-hidden",
       "because": "Preview text must reach the inbox list without appearing in the rendered message body.",
       "scenarios": ["universal-newsletter"],
+      "rule": "element_required",
+      "select": "div[style*='display:none']"
+    },
+    {
+      "id": "navigation-has-three-https-links",
+      "because": "The navigation block needs each of its three explicit destinations to survive as an absolute secure link.",
+      "scenarios": ["universal-newsletter"],
       "rule": "attribute_required",
-      "select": "div",
-      "attribute": "style",
-      "matches": "#display:none#"
+      "select": "div[role='navigation'] a",
+      "attribute": "href",
+      "matches": "#^https://#",
+      "min": 3
     }
   ],
   "limitations": [

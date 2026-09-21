@@ -99,11 +99,18 @@ The first production set should stay deliberately small:
 | Document  | email root, preheader, section, compliance footer         |
 | Layout    | one- to six-column row, column, Core spacer and separator |
 | Content   | Core paragraph, heading, image, list, buttons             |
-| WordPress | post card, post image, post title, post excerpt, post CTA |
+| WordPress | post card, post image, bound Core heading, paragraph, button |
+
+Navigation is now an explicit CampaignBridge email block with one to five
+author-entered HTTPS links. It uses a horizontal presentation table, with a
+media-query stacked layout at widths of 480px or less. Clients that discard
+media queries retain the bounded horizontal row and readable link text. The
+plain-text artifact lists each label and URL on its own line. It never reads a
+WordPress menu during compilation.
 
 Add social links and more layout variants only after the compiler and fixtures
-prove the base contract. Forms, scripts, video embeds, arbitrary HTML, navigation,
-and unrestricted nested core blocks are out of scope initially.
+prove the base contract. Forms, scripts, video embeds, arbitrary HTML, and
+unrestricted nested core blocks remain outside the supported grammar.
 
 The post-v1 candidates, classifications, dependencies, patterns, and promotion
 gates are mapped in [`email-block-catalog.md`](email-block-catalog.md). Inclusion

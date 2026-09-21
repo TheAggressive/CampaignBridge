@@ -5,7 +5,7 @@
  * Each scenario is one parsed block document plus the render context it
  * compiles under. Together they exercise the supported authoring grammar the
  * client expectation fixtures make claims about: document shell, preheader,
- * sections, columns and mobile stacking, typography fallbacks, buttons,
+ * sections, columns and mobile stacking, navigation, typography fallbacks, buttons,
  * images, lists, spacing, links, resolved design styles, and the compliance
  * footer.
  *
@@ -142,8 +142,8 @@ $column = static function ( array $children, array $attrs = array() ): array {
 
 return array(
 	'universal-newsletter' => array(
-		'label'    => 'Full supported grammar: preheader, sections, image, rich text, list, button, divider, spacer, compliance footer.',
-		'covers'   => array( 'document-shell', 'preheader', 'section', 'image', 'rich-text', 'links', 'list', 'button', 'divider', 'spacer', 'compliance-footer' ),
+		'label'    => 'Full supported grammar: preheader, sections, navigation, image, rich text, list, button, divider, spacer, compliance footer.',
+		'covers'   => array( 'document-shell', 'preheader', 'section', 'navigation', 'image', 'rich-text', 'links', 'list', 'button', 'divider', 'spacer', 'compliance-footer' ),
 		'metadata' => array(
 			'title'            => 'Universal newsletter compatibility fixture',
 			'language'         => 'en',
@@ -172,6 +172,26 @@ return array(
 							'backgroundColor' => '#ffffff',
 						),
 						'innerBlocks' => array(
+							array(
+								'blockName'   => 'campaignbridge/navigation',
+								'attrs'       => array(
+									'items' => array(
+										array(
+											'label' => 'Home',
+											'url'   => 'https://example.com/home',
+										),
+										array(
+											'label' => 'Shop',
+											'url'   => 'https://example.com/shop',
+										),
+										array(
+											'label' => 'Support',
+											'url'   => 'https://example.com/support',
+										),
+									),
+								),
+								'innerBlocks' => array(),
+							),
 							$image( 'https://example.com/hero.jpg', 'Campaign hero', 600, 320, 'https://example.com/story' ),
 							$heading( 'Build &amp; send confidently', 1, array( 'color' => array( 'text' => '#111111' ) ) ),
 							$paragraph(

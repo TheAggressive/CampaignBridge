@@ -1,0 +1,2 @@
+Shop & save: https://example.com/shop?a=1&b=2
+About: https://example.com/about
