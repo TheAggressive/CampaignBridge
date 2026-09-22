@@ -133,18 +133,6 @@ class Form_Rest_Controller {
 		// Security: Add security headers for AJAX responses.
 		$this->add_security_headers();
 
-		// Security: Validate request origin for AJAX calls.
-		if ( ! $this->validate_request_origin() ) {
-			\CampaignBridge\Core\Error_Handler::error(
-				'Invalid request origin',
-				array(
-					'user_id' => get_current_user_id(),
-					'referer' => wp_get_referer(),
-				)
-			);
-			wp_send_json_error( 'Invalid request origin.', 403 );
-		}
-
 		// WordPress built-in: Verify user authentication.
 		if ( ! is_user_logged_in() ) {
 			wp_send_json_error( 'Authentication required.', 401 );
@@ -417,46 +405,6 @@ class Form_Rest_Controller {
 	 */
 	private function get_client_ip(): string {
 		return \CampaignBridge\Core\Client_Address::get();
-	}
-
-	/**
-	 * Validate request origin to prevent cross-origin attacks.
-	 *
-	 * @return bool True if request origin is valid.
-	 */
-	private function validate_request_origin(): bool {
-		// Allow requests from admin area.
-		if ( is_admin() ) {
-			return true;
-		}
-
-		// Allow requests in debug/test environments (WP_DEBUG enabled).
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			return true;
-		}
-
-		// For AJAX requests, validate referer.
-		$referer = wp_get_referer();
-		if ( ! $referer ) {
-			return false;
-		}
-
-		// Get site URL for comparison.
-		$site_url         = get_site_url();
-		$site_host_raw    = wp_parse_url( $site_url, PHP_URL_HOST );
-		$referer_host_raw = wp_parse_url( $referer, PHP_URL_HOST );
-		if ( ! is_string( $site_host_raw ) || ! is_string( $referer_host_raw ) ) {
-			return false;
-		}
-		$site_host    = sanitize_text_field( $site_host_raw );
-		$referer_host = sanitize_text_field( $referer_host_raw );
-
-		// Allow same domain and subdomains.
-		if ( $referer_host === $site_host || strpos( $referer_host, '.' . $site_host ) !== false ) {
-			return true;
-		}
-
-		return false;
 	}
 
 	/**

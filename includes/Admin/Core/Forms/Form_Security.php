@@ -579,36 +579,54 @@ class Form_Security {
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
 	private function validate_mime_type( array $file, array $field_config, string $filename ) {
-		$allowed_types = $field_config['allowed_types'] ?? array();
-		if ( ! empty( $allowed_types ) ) {
-			// Check both the provided MIME type and the detected MIME type from filename.
-			$provided_mime = $file['type'] ?? '';
-			$filetype      = \wp_check_filetype( $filename );
-			$detected_mime = $filetype['type'];
-
-			// Use the more restrictive check - both must be allowed if both are present.
-			$valid_provided = empty( $provided_mime ) || in_array( $provided_mime, $allowed_types, true );
-			$valid_detected = empty( $detected_mime ) || in_array( $detected_mime, $allowed_types, true );
-
-			if ( ! $valid_provided || ! $valid_detected ) {
-				$this->log_security_event(
-					'disallowed_file_type',
-					array(
-						'filename'      => $filename,
-						'provided_mime' => $provided_mime,
-						'detected_mime' => $detected_mime,
-						'allowed_types' => $allowed_types,
-					)
-				);
-
-				return new \WP_Error(
-					'invalid_file_type',
-					\__( 'File type not allowed.', 'campaignbridge' )
-				);
-			}
+		$allowed_types = $field_config['allowed_types'] ?? null;
+		if ( ! is_array( $allowed_types ) || array() === $allowed_types ) {
+			return new \WP_Error(
+				'missing_allowed_file_types',
+				\__( 'An explicit list of allowed file types is required.', 'campaignbridge' )
+			);
 		}
 
-		return true;
+		$allowed_types = array_values(
+			array_filter(
+				$allowed_types,
+				static fn( $type ): bool => is_string( $type ) && '' !== trim( $type )
+			)
+		);
+		if ( array() === $allowed_types || in_array( 'image/svg+xml', $allowed_types, true ) ) {
+			return new \WP_Error(
+				'invalid_file_type',
+				\__( 'File type not allowed.', 'campaignbridge' )
+			);
+		}
+
+		$tmp_name      = is_string( $file['tmp_name'] ?? null ) ? $file['tmp_name'] : '';
+		$filetype      = \wp_check_filetype_and_ext( $tmp_name, $filename );
+		$detected_mime = is_string( $filetype['type'] ?? null ) ? $filetype['type'] : '';
+		$provided_mime = is_string( $file['type'] ?? null ) ? $file['type'] : '';
+		$valid_type    = '' !== $detected_mime
+			&& in_array( $detected_mime, $allowed_types, true )
+			&& 'image/svg+xml' !== $detected_mime
+			&& ( '' === $provided_mime || $provided_mime === $detected_mime );
+
+		if ( $valid_type ) {
+			return true;
+		}
+
+		$this->log_security_event(
+			'disallowed_file_type',
+			array(
+				'filename'      => $filename,
+				'provided_mime' => $provided_mime,
+				'detected_mime' => $detected_mime,
+				'allowed_types' => $allowed_types,
+			)
+		);
+
+		return new \WP_Error(
+			'invalid_file_type',
+			\__( 'File type not allowed.', 'campaignbridge' )
+		);
 	}
 
 	/**
