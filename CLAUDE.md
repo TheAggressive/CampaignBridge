@@ -139,7 +139,8 @@ Key rules:
   derive from it or are parity-tested against it.
 - Supported Core blocks (`core/paragraph`, `core/heading`, `core/image`,
   `core/buttons`, `core/button`, `core/list`, `core/list-item`,
-  `core/separator`, `core/spacer`) pass through `Core_Block_Normalizer`, which
+  `core/separator`, `core/spacer`, `core/social-links`, `core/social-link`) pass
+  through `Core_Block_Normalizer`, which
   reads only each block's known serialization contract. Do not fork Core edit
   components; narrow them with public block filters.
 - All other Core and third-party blocks are unsupported compiler input and fail

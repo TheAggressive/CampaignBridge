@@ -29,6 +29,10 @@ define( 'WP_DEBUG', true );
 
 $campaignbridge_plugin_dir = getenv( 'CB_TESTS_PLUGIN_DIR' );
 if ( is_string( $campaignbridge_plugin_dir ) && '' !== $campaignbridge_plugin_dir ) {
+	$resolved_plugin_dir = realpath( $campaignbridge_plugin_dir );
+	if ( false !== $resolved_plugin_dir ) {
+		$campaignbridge_plugin_dir = $resolved_plugin_dir;
+	}
 	define( 'WP_PLUGIN_DIR', rtrim( $campaignbridge_plugin_dir, '/' ) );
 	define( 'WP_PLUGIN_URL', 'http://example.test/wp-content/plugins' );
 }

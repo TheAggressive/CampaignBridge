@@ -32,6 +32,7 @@ required=(
 	includes/Plugin.php
 	dist/styles/styles.css
 	assets/brand/CB_Horizontal_Color_Light.svg
+	assets/email/social/facebook.png
 )
 
 rm -rf "${build_dir}"

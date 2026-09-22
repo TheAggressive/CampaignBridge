@@ -7,6 +7,7 @@ import {
   CORE_EMAIL_BLOCK_NAMES,
   EMAIL_BLOCK_CONTRACT,
   EMAIL_BLOCK_NAMES,
+  SOCIAL_EMAIL_SERVICE_NAMES,
 } from '../../src/blocks/shared/nesting';
 
 /** A trimmed copy of WordPress 7.1 Core supports used as filter input. */
@@ -46,6 +47,8 @@ describe('WordPress Core email authoring blocks', () => {
       'core/list-item',
       'core/paragraph',
       'core/separator',
+      'core/social-link',
+      'core/social-links',
       'core/spacer',
     ]);
   });
@@ -205,6 +208,68 @@ describe('WordPress Core email authoring blocks', () => {
         'core/list-item'
       ).allowedBlocks
     ).toEqual([]);
+  });
+
+  it('keeps only packaged Social Icon services and email-safe parent controls', () => {
+    const parent = constrainCoreEmailBlock(
+      {
+        supports: {
+          align: ['left', 'center', 'right', 'wide'],
+          color: { background: true, gradients: true },
+          spacing: { blockGap: true, margin: true, padding: true },
+          layout: {
+            allowSwitching: false,
+            allowOrientation: true,
+            allowVerticalAlignment: true,
+          },
+        },
+        styles: [
+          { name: 'default', label: 'Default', isDefault: true },
+          { name: 'logos-only', label: 'Logos Only' },
+          { name: 'pill-shape', label: 'Pill Shape' },
+        ],
+      },
+      'core/social-links'
+    );
+    const child = constrainCoreEmailBlock(
+      {
+        variations: [
+          { name: 'facebook' },
+          { name: 'wordpress' },
+          { name: 'youtube' },
+        ],
+      },
+      'core/social-link'
+    );
+
+    expect(SOCIAL_EMAIL_SERVICE_NAMES).toEqual([
+      'bluesky',
+      'facebook',
+      'instagram',
+      'linkedin',
+      'mastodon',
+      'tiktok',
+      'x',
+      'youtube',
+    ]);
+    expect((parent.supports as Record<string, any>).align).toEqual([
+      'left',
+      'center',
+      'right',
+    ]);
+    expect((parent.supports as Record<string, any>).color).toBe(false);
+    expect((parent.supports as Record<string, any>).spacing).toEqual({
+      blockGap: true,
+      margin: false,
+      padding: false,
+    });
+    expect(parent.styles).toEqual([
+      { name: 'logos-only', label: 'Logos Only', isDefault: true },
+    ]);
+    expect(child.variations?.map(variation => variation.name)).toEqual([
+      'facebook',
+      'youtube',
+    ]);
   });
 
   it('leaves blocks outside the contract untouched', () => {

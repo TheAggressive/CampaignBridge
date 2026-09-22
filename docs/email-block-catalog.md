@@ -54,6 +54,7 @@ CampaignBridge email semantics (WordPress Native First); see
 | `core/list` + `core/list-item`     | Core block     | Flat ordered or unordered list                  | Compiler-supported |
 | `core/separator`                   | Core block     | Full-width design divider                       | Compiler-supported |
 | `core/spacer`                      | Core block     | Bounded vertical spacing                        | Compiler-supported |
+| `core/social-links` + `core/social-link` | Core blocks | One to six accessible HTTPS social links with packaged PNG icons | Compiler-supported |
 | `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls     | Compiler-supported |
 
 The view-online link once grouped with the preheader is not implemented. It is a
@@ -71,7 +72,7 @@ and Brand Logo both participate in the representative compatibility matrix.
 | ----------------------------- | -------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
 | `core/image` Brand Logo       | Core binding   | Shipped: bounded logo, alt text, optional homepage link    | `campaignbridge/brand-data`; reuses image renderer         |
 | `campaignbridge/navigation`   | Native block   | Shipped: one to five explicit HTTPS links; mobile stack      | No live menu lookup; plain-text links                       |
-| `campaignbridge/social-links` | Native block   | Accessible linked icons with approved assets               | Requires packaged icon assets and plain-text URLs          |
+| `core/social-links` + `core/social-link` | Core blocks | Shipped: one to six accessible HTTPS links across eight approved services | Packaged PNG assets and plain-text URLs |
 | `campaignbridge/video`        | Binding block  | Linked poster/thumbnail with play treatment                | Never emits an iframe or playable embed                    |
 
 The following parity items are not part of Wave A:

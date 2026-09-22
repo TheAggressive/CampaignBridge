@@ -69,6 +69,10 @@ final class Editor_Design_Settings_Test extends TestCase {
 			self::assertStringContainsString( '--wp--preset--spacing--' . $preset['slug'] . ':' . Design_Presets::spacing( $preset['slug'] ), $css );
 		}
 		self::assertStringContainsString( '--wp--preset--spacing--20:8px', $css );
+		self::assertStringContainsString(
+			'.editor-styles-wrapper [data-type="core/social-links"]{display:flex!important}',
+			implode( '', array_column( $settings['styles'], 'css' ) )
+		);
 	}
 
 	/** A configured brand font is exposed as a bounded editor preset. */
