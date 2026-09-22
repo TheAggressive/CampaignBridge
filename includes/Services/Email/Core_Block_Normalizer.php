@@ -34,7 +34,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 	 *
 	 * @var array<int, string>
 	 */
-	public const SEMANTICS = array( 'text', 'heading', 'image', 'button-group', 'button', 'list', 'list-item', 'divider', 'spacer' );
+	public const SEMANTICS = array( 'text', 'heading', 'image', 'button-group', 'button', 'list', 'list-item', 'divider', 'spacer', 'social-links', 'social-link' );
 
 	/**
 	 * Editor-only attributes that carry no email meaning and are dropped.
@@ -72,6 +72,8 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 			'list-item'    => $this->list_item( $block ),
 			'divider'      => $this->separator( $block ),
 			'spacer'       => $this->spacer( $block ),
+			'social-links' => $this->social_links( $block ),
+			'social-link'  => $this->social_link( $block ),
 			default        => throw new \DomainException( 'The email block contract names a Core block without a normalizer.' ),
 		};
 
@@ -490,6 +492,43 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 		$height     = $attributes['height'] ?? self::CORE_SPACER_HEIGHT;
 
 		return $block->with_attributes( array( 'height' => Style_Resolver::length( $height, 'height', 0, 600 ) ) );
+	}
+
+	/**
+	 * Normalize Core Social Icons into a bounded email row.
+	 *
+	 * @param Block_Node $block Source block.
+	 * @return Block_Node Normalized block.
+	 * @throws Invalid_Block_Attribute When Core serialization is unsupported.
+	 */
+	private function social_links( Block_Node $block ): Block_Node {
+		return Core_Social_Block_Normalizer::links(
+			$block,
+			$this->attributes(
+				$block,
+				array( 'openInNewTab', 'showLabels', 'size', 'align', 'layout', 'style', 'className' )
+			)
+		);
+	}
+
+	/**
+	 * Normalize one dynamic Core Social Icon child.
+	 *
+	 * @param Block_Node $block Source block.
+	 * @return Block_Node Normalized block.
+	 * @throws Invalid_Block_Attribute When Core serialization is unsupported.
+	 */
+	private function social_link( Block_Node $block ): Block_Node {
+		$attributes = $this->attributes( $block, array( 'url', 'service', 'label', 'rel' ) );
+
+		return Core_Social_Block_Normalizer::link(
+			$block,
+			array(
+				'url'     => $this->string_value( $attributes['url'] ?? '', 'url' ),
+				'service' => $this->string_value( $attributes['service'] ?? '', 'service' ),
+				'label'   => $this->string_value( $attributes['label'] ?? '', 'label' ),
+			)
+		);
 	}
 
 	/**

@@ -88,7 +88,7 @@ final class Token_Compilation_Test extends TestCase {
 		self::assertSame( $first->html(), $second->html() );
 		self::assertSame( $first->text(), $second->text() );
 		self::assertSame( $first->fingerprint(), $second->fingerprint() );
-		self::assertSame( '7', $first->compiler_version() );
+		self::assertSame( '8', $first->compiler_version() );
 		self::assertSame( Email_Compiler::COMPILER_VERSION, $first->compiler_version() );
 	}
 

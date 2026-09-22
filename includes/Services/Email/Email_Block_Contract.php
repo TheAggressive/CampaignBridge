@@ -114,6 +114,27 @@ final class Email_Block_Contract {
 		return self::blocks()[ $name ]['children'] ?? array();
 	}
 
+	/**
+	 * Core Social Icon service slugs accepted by the email compiler.
+	 *
+	 * @return array<string, string> Accessible service names keyed by Core slug.
+	 * @throws \DomainException When the packaged service catalogue is malformed.
+	 */
+	public static function social_services(): array {
+		$services = self::document()['socialServices'] ?? null;
+		if ( ! is_array( $services ) || array() === $services || array_is_list( $services ) ) {
+			throw new \DomainException( 'Email block contract declares no social services.' );
+		}
+
+		foreach ( $services as $slug => $label ) {
+			if ( ! is_string( $slug ) || 1 !== preg_match( '/^[a-z0-9-]+$/', $slug ) || ! is_string( $label ) || '' === trim( $label ) ) {
+				throw new \DomainException( 'Email block contract contains a malformed social service.' );
+			}
+		}
+
+		return $services;
+	}
+
 	/** The one supported read-only post binding source name. */
 	public static function binding_source(): string {
 		return self::post_bindings()['source'];

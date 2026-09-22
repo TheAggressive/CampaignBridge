@@ -26,7 +26,7 @@ they do not introduce another rendering path.
 
 The compiler foundation now replaces the prototype rendering paths:
 
-- one explicit renderer registry owns the seventeen currently supported blocks;
+- one explicit renderer registry owns the currently supported blocks;
 - compilation fails closed for unknown attributes, blocks, nesting, missing
   snapshots, depth, and block-count violations;
 - HTML, plain text, diagnostics, versions, and a deterministic fingerprint are
@@ -158,6 +158,8 @@ This is the exact compiler/editor allowlist, defined once in
 | `core/list-item`                   | List item                       | Safe inline rich text                                                 |
 | `core/separator`                   | Horizontal divider              | Full width; colour only; thickness/style from the email design        |
 | `core/spacer`                      | Vertical spacing                | 0–600 px; Core default 100 px                                         |
+| `core/social-links`                | Social link row                 | 1–6 children; horizontal; packaged icons; bounded gap and icon size   |
+| `core/social-link`                 | One social destination          | Approved service; absolute HTTPS URL; accessible plain-text label     |
 | `campaignbridge/post-card`         | Immutable post binding          | Child of container/section; snapshot needed; padding, background      |
 | `campaignbridge/post-image`        | Featured image binding          | Child of post card or column; width, align, link-to-post, decorative  |
 | `campaignbridge/preheader`         | Hidden inbox preview            | First child of container; at most one; 1-150 characters               |

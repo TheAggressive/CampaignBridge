@@ -30,6 +30,8 @@ use CampaignBridge\Services\Email\Renderer\Post_Card_Renderer;
 use CampaignBridge\Services\Email\Renderer\Post_Image_Renderer;
 use CampaignBridge\Services\Email\Renderer\Preheader_Renderer;
 use CampaignBridge\Services\Email\Renderer\Section_Renderer;
+use CampaignBridge\Services\Email\Renderer\Social_Link_Renderer;
+use CampaignBridge\Services\Email\Renderer\Social_Links_Renderer;
 use CampaignBridge\Services\Email\Renderer\Spacer_Renderer;
 use CampaignBridge\Services\Email\Renderer\Text_Renderer;
 use CampaignBridge\Workflow\Email\Artifact_Fingerprinter;
@@ -74,6 +76,8 @@ final class Compiler_Factory {
 				new Button_Renderer(),
 				new Divider_Renderer(),
 				new Spacer_Renderer(),
+				new Social_Links_Renderer(),
+				new Social_Link_Renderer(),
 				new List_Renderer(),
 				new List_Item_Renderer(),
 				new Navigation_Renderer(),

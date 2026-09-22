@@ -72,6 +72,7 @@ test('templates author with constrained WordPress Core blocks', async ({
         'core/list',
         'core/separator',
         'core/spacer',
+        'core/social-links',
       ].map(insertable),
       unsupported: [
         'core/group',
@@ -103,7 +104,7 @@ test('templates author with constrained WordPress Core blocks', async ({
     };
   }, sectionId);
 
-  expect(editor.core).toEqual(Array(7).fill(true));
+  expect(editor.core).toEqual(Array(8).fill(true));
   expect(editor.unsupported).toEqual(Array(6).fill(false));
   expect(editor.obsolete).toEqual(Array(6).fill(false));
   expect(editor.paragraphAnchor).toBe(false);
