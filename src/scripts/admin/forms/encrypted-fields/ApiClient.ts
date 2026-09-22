@@ -33,13 +33,9 @@ export class ApiClient {
   /**
    * Make secure request to decrypt field
    */
-  async decryptField(
-    fieldId: string,
-    encryptedValue: string
-  ): Promise<ApiDecryptResponse> {
+  async decryptField(fieldId: string): Promise<ApiDecryptResponse> {
     return this.makeSecureRequest('campaignbridge_decrypt-field', {
       field_id: fieldId,
-      encrypted_value: encryptedValue,
     }) as Promise<ApiDecryptResponse>;
   }
 
