@@ -47,7 +47,12 @@ final class Social_Links_Block_Test extends TestCase {
 		self::assertStringNotContainsString( '<svg', $result->html() );
 		self::assertStringContainsString( 'Follow on Facebook: https://example.com/facebook', $result->text() );
 		self::assertStringContainsString( 'YouTube: https://example.com/youtube', $result->text() );
-		self::assertStringContainsString( rtrim( $this->fixture( 'social-links.html' ), "\n" ), $result->html() );
+		$portable_html = str_replace(
+			\CampaignBridge_Plugin::url(),
+			'https://example.test/wp-content/plugins/campaignbridge/',
+			$result->html()
+		);
+		self::assertStringContainsString( rtrim( $this->fixture( 'social-links.html' ), "\n" ), $portable_html );
 		self::assertStringContainsString( $this->fixture( 'social-links.txt' ), $result->text() );
 		self::assertCount( 2, $result->assets() );
 		self::assertSame( 'image', $result->assets()[0]['type'] );
