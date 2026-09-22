@@ -47,14 +47,13 @@ class REST_API_Test extends Test_Case {
 	 * Store one encrypted Mailchimp credential for reveal tests.
 	 *
 	 * @param string $api_key Plaintext test credential.
-	 * @return string Stored ciphertext.
+	 * @return void
 	 */
-	private function store_mailchimp_api_key( string $api_key ): string {
+	private function store_mailchimp_api_key( string $api_key ): void {
 		$encrypted  = Encryption::encrypt( $api_key );
 		$connection = Provider_Connection::create( 'mailchimp', $encrypted );
 		$this->assertTrue( ( new Provider_Connection_Repository() )->save( $connection ) );
 
-		return $encrypted;
 	}
 
 	/**
@@ -482,7 +481,7 @@ class REST_API_Test extends Test_Case {
 	}
 
 	/**
-	 * CRITICAL SECURITY TEST: Ensure invalid encrypted values don't crash system.
+	 * CRITICAL SECURITY TEST: Reveal must ignore caller-supplied ciphertext.
 	 */
 	public function test_decrypt_field_ignores_caller_supplied_ciphertext(): void {
 		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
@@ -660,7 +659,7 @@ class REST_API_Test extends Test_Case {
 	}
 
 	/**
-	 * CRITICAL SECURITY TEST: Ensure timing attacks are mitigated.
+	 * CRITICAL SECURITY TEST: Only registered server-owned field IDs are accepted.
 	 */
 	public function test_encrypted_field_endpoints_reject_unknown_field_ids(): void {
 		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
