@@ -34,6 +34,7 @@ use CampaignBridge\Services\Email\Renderer\Social_Link_Renderer;
 use CampaignBridge\Services\Email\Renderer\Social_Links_Renderer;
 use CampaignBridge\Services\Email\Renderer\Spacer_Renderer;
 use CampaignBridge\Services\Email\Renderer\Text_Renderer;
+use CampaignBridge\Services\Email\Renderer\Video_Renderer;
 use CampaignBridge\Workflow\Email\Artifact_Fingerprinter;
 use CampaignBridge\Workflow\Email\Email_Compiler;
 
@@ -81,6 +82,7 @@ final class Compiler_Factory {
 				new List_Renderer(),
 				new List_Item_Renderer(),
 				new Navigation_Renderer(),
+				new Video_Renderer(),
 				new Post_Card_Renderer(),
 				new Post_Image_Renderer(),
 				new Compliance_Footer_Renderer(),

@@ -65,15 +65,15 @@ template already stores `campaignbridge_view_online_url` for it.
 
 Start this wave only after the compiler registry, compiled preview, compliance
 validation, and universal-profile fixtures are operational.
-Issue #72 remains the merge and release gate for new Wave A output. Navigation
-and Brand Logo both participate in the representative compatibility matrix.
+Issue #72 remains the merge and release gate for new Wave A output. Navigation,
+Brand Logo, and Video participate in the representative compatibility matrix.
 
 | Proposed block                | Classification | Output and constraints                                     | Reuse/dependency                                           |
 | ----------------------------- | -------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
 | `core/image` Brand Logo       | Core binding   | Shipped: bounded logo, alt text, optional homepage link    | `campaignbridge/brand-data`; reuses image renderer         |
 | `campaignbridge/navigation`   | Native block   | Shipped: one to five explicit HTTPS links; mobile stack      | No live menu lookup; plain-text links                       |
 | `core/social-links` + `core/social-link` | Core blocks | Shipped: one to six accessible HTTPS links across eight approved services | Packaged PNG assets and plain-text URLs |
-| `campaignbridge/video`        | Binding block  | Linked poster/thumbnail with play treatment                | Never emits an iframe or playable embed                    |
+| `campaignbridge/video`        | Native block   | Shipped: bounded linked poster and explicit play action    | HTTPS destination; never emits playable media or scripts   |
 
 The following parity items are not part of Wave A:
 

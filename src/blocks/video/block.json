@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "version": "1.0.0",
+  "name": "campaignbridge/video",
+  "title": "Email Video",
+  "category": "campaignbridge-email",
+  "icon": "controls-play",
+  "description": "Links a poster image to an HTTPS video destination without embedding playback.",
+  "textdomain": "campaignbridge",
+  "parent": ["campaignbridge/section", "campaignbridge/column"],
+  "supports": {
+    "html": false,
+    "reusable": false,
+    "customClassName": false
+  },
+  "attributes": {
+    "posterUrl": { "type": "string", "default": "" },
+    "posterAlt": { "type": "string", "default": "" },
+    "videoUrl": { "type": "string", "default": "" },
+    "label": { "type": "string", "default": "Watch video" },
+    "width": { "type": "number", "default": 600 },
+    "height": { "type": "number", "default": 338 }
+  },
+  "editorScript": "file:./index.js"
+}
