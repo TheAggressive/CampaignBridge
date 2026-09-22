@@ -108,6 +108,12 @@ media queries retain the bounded horizontal row and readable link text. The
 plain-text artifact lists each label and URL on its own line. It never reads a
 WordPress menu during compilation.
 
+Video is an explicit CampaignBridge email block because Core Video persists
+playback markup and Core Image cannot carry a separate play action. Authors
+provide a bounded poster, alternative text, HTTPS destination, and link label.
+The compiler emits a linked image and table-safe play callout, plus the labeled
+URL in plain text; it never emits `video`, `iframe`, script, or author HTML.
+
 Add social links and more layout variants only after the compiler and fixtures
 prove the base contract. Forms, scripts, video embeds, arbitrary HTML, and
 unrestricted nested core blocks remain outside the supported grammar.

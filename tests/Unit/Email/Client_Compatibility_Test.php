@@ -44,6 +44,13 @@ final class Client_Compatibility_Test extends TestCase {
 		}
 	}
 
+	/** The video scenario retains its explicit action and destination in plain text. */
+	public function test_video_link_survives_in_plain_text(): void {
+		$text = Compatibility_Scenarios::compile( 'universal-newsletter' )['text'];
+
+		self::assertStringContainsString( 'Watch the product demo: https://example.com/videos/demo', $text );
+	}
+
 	/** The matrix keeps its named scenarios and client profiles. */
 	public function test_the_matrix_covers_every_declared_client(): void {
 		self::assertSame(
@@ -300,6 +307,13 @@ final class Client_Compatibility_Test extends TestCase {
 				'brand-logo-links-home',
 				'src="https://example.com/brand-logo.png" width="240"',
 				'src="https://example.com/brand-logo.png" width="900"',
+			),
+			'Video loses its linked poster'              => array(
+				'universal-profile',
+				'universal-newsletter',
+				'video-poster-links-to-https-destination',
+				'src="https://example.com/video-poster.jpg"',
+				'src="https://example.com/missing-video-poster.jpg"',
 			),
 		);
 	}

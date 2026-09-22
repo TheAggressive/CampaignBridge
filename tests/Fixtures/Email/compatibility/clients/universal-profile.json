@@ -112,6 +112,14 @@
       "attribute": "href",
       "matches": "#^https://#",
       "min": 3
+    },
+    {
+      "id": "video-poster-links-to-https-destination",
+      "because": "Video must remain an accessible linked poster and explicit play action without embedded playback.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "element_required",
+      "select": "a[href='https://example.com/videos/demo'] img[src='https://example.com/video-poster.jpg'][alt='A preview of the product demonstration'][width='600'][height='338']",
+      "min": 1
     }
   ],
   "limitations": [
