@@ -108,16 +108,15 @@ export class EncryptedFieldsHandler {
     if (!field) return;
 
     const elements = this.fieldElements.getFieldElements(field);
-    if (!elements.displayInput || !elements.hiddenInput) {
+    if (!elements.displayInput) {
       this.apiClient.showError('Invalid field configuration');
       return;
     }
 
-    const encryptedValue = elements.hiddenInput.value;
     const fieldId = field.dataset.fieldId || '';
 
     // Security validation
-    if (!encryptedValue || !fieldId) {
+    if (!fieldId) {
       this.apiClient.showError('Invalid field configuration');
       return;
     }
@@ -129,10 +128,7 @@ export class EncryptedFieldsHandler {
     this.uiManager.setButtonLoading(button, true);
 
     try {
-      const response = await this.apiClient.decryptField(
-        fieldId,
-        encryptedValue
-      );
+      const response = await this.apiClient.decryptField(fieldId);
 
       if (response.success && response.data?.decrypted) {
         this.handleSuccessfulDecryption(
