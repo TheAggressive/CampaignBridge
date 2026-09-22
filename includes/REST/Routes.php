@@ -19,6 +19,7 @@ use WP_Error;
 use CampaignBridge\REST\Helpers\Response_Formatter;
 use CampaignBridge\REST\Helpers\Input_Validator;
 use CampaignBridge\Admin\REST\Form_Rest_Controller;
+use CampaignBridge\Repository\Provider_Connection_Repository;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; }
@@ -36,7 +37,21 @@ class Routes extends Abstract_Rest_Controller {
 	private const ENDPOINT_DECRYPT_FIELD = '/decrypt-field';
 	private const ENDPOINT_ENCRYPT_FIELD = '/encrypt-field';
 
-
+	/**
+	 * Server-owned encrypted credential fields that may be edited/revealed.
+	 *
+	 * The browser supplies only the field identifier. Reveal resolves the stored
+	 * ciphertext from the provider repository so caller-supplied ciphertext can
+	 * never cross credential/context boundaries.
+	 *
+	 * @var array<string, array{provider: string, context: string}>
+	 */
+	private const ENCRYPTED_FIELD_CONTRACTS = array(
+		'mailchimp_api_key' => array(
+			'provider' => 'mailchimp',
+			'context'  => 'api_key',
+		),
+	);
 
 	/**
 	 * Form REST controller instance.
@@ -155,11 +170,11 @@ class Routes extends Abstract_Rest_Controller {
 				'callback'            => array( __CLASS__, 'r_decrypt_field' ),
 				'permission_callback' => array( __CLASS__, 'can_manage_connections' ),
 				'args'                => array(
-					'encrypted_value' => array(
+					'field_id' => array(
 						'type'              => 'string',
 						'required'          => true,
-						'sanitize_callback' => 'sanitize_text_field',
-						'validate_callback' => array( __CLASS__, 'validate_encrypted_value' ),
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => array( __CLASS__, 'validate_encrypted_field_id' ),
 					),
 				),
 			)
@@ -177,7 +192,8 @@ class Routes extends Abstract_Rest_Controller {
 					'field_id'  => array(
 						'type'              => 'string',
 						'required'          => true,
-						'sanitize_callback' => 'sanitize_text_field',
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => array( __CLASS__, 'validate_encrypted_field_id' ),
 					),
 					'new_value' => array(
 						'type'              => 'string',
@@ -356,12 +372,19 @@ class Routes extends Abstract_Rest_Controller {
 
 		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute window
 
-		$encrypted_value = $request->get_param( 'encrypted_value' );
+		$field_id = (string) $request->get_param( 'field_id' );
+		if ( ! self::validate_encrypted_field_id( $field_id ) ) {
+			return new WP_Error( 'invalid_encrypted_field', 'Encrypted field is not available.', array( 'status' => 400 ) );
+		}
+
+		$encrypted_value = self::resolve_encrypted_field_value( $field_id );
+		if ( is_wp_error( $encrypted_value ) ) {
+			return $encrypted_value;
+		}
+
 		try {
-			// The REST permission callback already enforces MANAGE_CONNECTIONS.
-			// Use decrypt() directly to avoid the redundant MANAGE check in
-			// decrypt_for_context('sensitive').
-			$decrypted = \CampaignBridge\Core\Encryption::decrypt( $encrypted_value );
+			$context   = self::ENCRYPTED_FIELD_CONTRACTS[ $field_id ]['context'];
+			$decrypted = \CampaignBridge\Core\Encryption::decrypt_for_context( $encrypted_value, $context );
 
 			// Ensure the decrypted value is safe for JSON transmission.
 			// Remove any potential binary data or problematic characters.
@@ -386,6 +409,31 @@ class Routes extends Abstract_Rest_Controller {
 			$error_message = WP_DEBUG ? $e->getMessage() : 'Unable to process the encrypted data';
 			return new WP_Error( 'decryption_failed', $error_message, array( 'status' => 400 ) );
 		}
+	}
+
+	/**
+	 * Resolve the stored ciphertext for a server-owned encrypted field.
+	 *
+	 * @param string $field_id Registered encrypted field identifier.
+	 * @return string|WP_Error Stored ciphertext or an error when unavailable.
+	 */
+	private static function resolve_encrypted_field_value( string $field_id ): string|WP_Error {
+		$contract = self::ENCRYPTED_FIELD_CONTRACTS[ $field_id ] ?? null;
+		if ( ! is_array( $contract ) ) {
+			return new WP_Error( 'invalid_encrypted_field', 'Encrypted field is not available.', array( 'status' => 400 ) );
+		}
+
+		$connection = ( new Provider_Connection_Repository() )->get( $contract['provider'] );
+		if ( null === $connection ) {
+			return new WP_Error( 'encrypted_field_unavailable', 'Encrypted field is not configured.', array( 'status' => 404 ) );
+		}
+
+		$encrypted_value = $connection->api_key();
+		if ( ! \CampaignBridge\Core\Encryption::is_encrypted_value( $encrypted_value ) ) {
+			return new WP_Error( 'encrypted_field_unavailable', 'Stored encrypted field is unavailable.', array( 'status' => 409 ) );
+		}
+
+		return $encrypted_value;
 	}
 
 	/**
@@ -437,8 +485,12 @@ class Routes extends Abstract_Rest_Controller {
 
 		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute window
 
-		$field_id  = $request->get_param( 'field_id' );
+		$field_id  = (string) $request->get_param( 'field_id' );
 		$new_value = $request->get_param( 'new_value' );
+
+		if ( ! self::validate_encrypted_field_id( $field_id ) ) {
+			return new WP_Error( 'invalid_encrypted_field', 'Encrypted field is not available.', array( 'status' => 400 ) );
+		}
 
 		try {
 			// Validate the new value.
@@ -507,13 +559,16 @@ class Routes extends Abstract_Rest_Controller {
 	}
 
 	/**
-	 * Validate encrypted value parameter.
+	 * Validate a browser-supplied encrypted field identifier.
 	 *
-	 * @param string $value The value to validate.
-	 * @return bool True if valid.
+	 * Only fields with a server-owned storage/context contract may use the
+	 * encrypted-field REST endpoints.
+	 *
+	 * @param string $field_id Field identifier.
+	 * @return bool True when the field is explicitly registered.
 	 */
-	public static function validate_encrypted_value( string $value ): bool {
-		return ! empty( $value ) && \CampaignBridge\Core\Encryption::is_encrypted_value( $value );
+	public static function validate_encrypted_field_id( string $field_id ): bool {
+		return isset( self::ENCRYPTED_FIELD_CONTRACTS[ $field_id ] );
 	}
 
 	/**
