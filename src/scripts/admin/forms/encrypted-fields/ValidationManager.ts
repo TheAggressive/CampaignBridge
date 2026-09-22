@@ -55,9 +55,12 @@ export class ValidationManager {
     }
 
     // Validate field-specific requirements
-    if (data.action?.includes('decrypt') && !data.encrypted_value) {
+    if (
+      (data.action?.includes('decrypt') || data.action?.includes('encrypt')) &&
+      !data.field_id
+    ) {
       return this.createErrorResult(
-        'Encrypted value is required',
+        'Field identifier is required',
         'missing_data'
       );
     }

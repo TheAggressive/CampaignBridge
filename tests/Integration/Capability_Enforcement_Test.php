@@ -171,14 +171,17 @@ class Capability_Enforcement_Test extends Test_Case {
 
 		$test_api_key = 'sk-test-12345678901234567890123456789012';
 		$encrypted    = \CampaignBridge\Core\Encryption::encrypt( $test_api_key );
-		$nonce        = wp_create_nonce( 'campaignbridge_encrypted_fields' );
+		$connection   = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $encrypted );
+		$this->assertTrue( ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->save( $connection ) );
+		$nonce = wp_create_nonce( 'campaignbridge_encrypted_fields' );
 
 		$request  = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( '_wpnonce', $nonce );
 		$response = rest_do_request( $request );
 
 		$this->assertEquals( 200, $response->get_status(), 'Administrator should be able to decrypt' );
+		$this->assertSame( $test_api_key, $response->get_data()['data']['decrypted'] );
 	}
 
 	/**
@@ -188,12 +191,10 @@ class Capability_Enforcement_Test extends Test_Case {
 		$subscriber_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $subscriber_id );
 
-		$test_api_key = 'sk-test-12345678901234567890123456789012';
-		$encrypted    = \CampaignBridge\Core\Encryption::encrypt( $test_api_key );
 		$nonce        = wp_create_nonce( 'campaignbridge_encrypted_fields' );
 
 		$request  = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( '_wpnonce', $nonce );
 		$response = rest_do_request( $request );
 
@@ -225,12 +226,10 @@ class Capability_Enforcement_Test extends Test_Case {
 			'Test user should NOT have campaignbridge_manage_connections capability'
 		);
 
-		$test_api_key = 'sk-test-12345678901234567890123456789012';
-		$encrypted    = \CampaignBridge\Core\Encryption::encrypt( $test_api_key );
 		$nonce        = wp_create_nonce( 'campaignbridge_encrypted_fields' );
 
 		$request  = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( '_wpnonce', $nonce );
 		$response = rest_do_request( $request );
 
@@ -261,14 +260,17 @@ class Capability_Enforcement_Test extends Test_Case {
 
 		$test_api_key = 'sk-test-12345678901234567890123456789012';
 		$encrypted    = \CampaignBridge\Core\Encryption::encrypt( $test_api_key );
-		$nonce        = wp_create_nonce( 'campaignbridge_encrypted_fields' );
+		$connection   = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $encrypted );
+		$this->assertTrue( ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->save( $connection ) );
+		$nonce = wp_create_nonce( 'campaignbridge_encrypted_fields' );
 
 		$request  = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( '_wpnonce', $nonce );
 		$response = rest_do_request( $request );
 
 		$this->assertEquals( 200, $response->get_status(), 'User with MANAGE_CONNECTIONS should be able to decrypt' );
+		$this->assertSame( $test_api_key, $response->get_data()['data']['decrypted'] );
 	}
 
 	public function test_api_key_context_denies_manage_without_connections(): void {
