@@ -74,11 +74,6 @@ class Form_Security {
 			return false;
 		}
 
-		// Additional origin validation.
-		if ( ! $this->validate_request_origin() ) {
-			return false;
-		}
-
 		// Validate request method.
 		if ( ! $this->validate_request_method() ) {
 			return false;
@@ -87,49 +82,6 @@ class Form_Security {
 		// Check for suspicious patterns in form data.
 		if ( ! $this->validate_form_data_integrity() ) {
 			return false;
-		}
-
-		return true;
-	}
-
-	/**
-	 * Validate request origin for additional security.
-	 *
-	 * @return bool True if origin is valid.
-	 */
-	private function validate_request_origin(): bool {
-		// Check HTTP_ORIGIN header for additional validation.
-		if ( isset( $_SERVER['HTTP_ORIGIN'] ) ) {
-			$origin     = sanitize_text_field( wp_unslash( $_SERVER['HTTP_ORIGIN'] ) );
-			$admin_url  = admin_url();
-			$parsed_url = wp_parse_url( $admin_url );
-			if ( ! is_array( $parsed_url ) || empty( $parsed_url['host'] ) ) {
-				return false;
-			}
-
-			// Allow same-origin requests.
-			if ( strpos( $origin, $parsed_url['host'] ) === false ) {
-				return false;
-			}
-		}
-
-		// Check if request came from expected admin page.
-		$expected_pages = array(
-			'admin.php',
-			'options-general.php',
-			'edit.php',
-			'post.php',
-			'post-new.php',
-		);
-
-		$request_path = isset( $_SERVER['REQUEST_URI'] ) ? wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH ) : '';
-		$current_page = is_string( $request_path ) ? basename( $request_path ) : '';
-
-		if ( ! in_array( $current_page, $expected_pages, true ) && strpos( $current_page, 'admin.php' ) !== 0 ) {
-			// Additional check: ensure we're in an admin context.
-			if ( ! is_admin() ) {
-				return false;
-			}
 		}
 
 		return true;
