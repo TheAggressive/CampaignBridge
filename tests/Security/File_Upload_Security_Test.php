@@ -29,6 +29,13 @@ class File_Upload_Security_Test extends Test_Case {
 	private array $test_data = array();
 
 	/**
+	 * Temporary files created by upload validation tests.
+	 *
+	 * @var array<int, string>
+	 */
+	private array $test_files = array();
+
+	/**
 	 * Set up test environment
 	 */
 	public function setUp(): void {
@@ -172,43 +179,63 @@ class File_Upload_Security_Test extends Test_Case {
 	/**
 	 * Test content MIME validation
 	 */
-	public function test_content_mime_validation(): void {
+	public function test_file_upload_mime_contract_fails_closed_and_accepts_allowed_png(): void {
 		$form_security = new Form_Security( 'test' );
-
-		// Create a temporary file that actually exists for the test
-		$temp_file = tempnam( sys_get_temp_dir(), 'upload_test' );
-		file_put_contents( $temp_file, 'test content' );
-
-		// Mock is_uploaded_file specifically for this test
-		Monkey\Functions\when( 'is_uploaded_file' )->justReturn( true );
-
-		// Test MIME type validation through validate_file_upload method
-		$valid_file = array(
-			'name'     => 'test.jpg',
-			'type'     => 'image/jpeg',
-			'tmp_name' => $temp_file,
+		$png_file      = $this->create_temp_file_with_content(
+			base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true )
+		);
+		$file = array(
+			'name'     => 'pixel.png',
+			'type'     => 'image/png',
+			'tmp_name' => $png_file,
 			'error'    => UPLOAD_ERR_OK,
-			'size'     => 1000,
+			'size'     => filesize( $png_file ),
 		);
 
-		$config = array(
-			'allowed_types' => array( 'image/jpeg', 'image/png', 'application/pdf' ),
-			'max_size'      => 1000000,
+		$missing_allowlist = $form_security->validate_file_upload( $file, array(), true );
+		$this->assertWPError( $missing_allowlist );
+		$this->assertSame( 'missing_allowed_file_types', $missing_allowlist->get_error_code() );
+
+		$this->assertTrue(
+			$form_security->validate_file_upload(
+				$file,
+				array(
+					'allowed_types' => array( 'image/png' ),
+					'max_size'      => 1000000,
+				),
+				true
+			)
 		);
 
-		// Test that allowed MIME types pass validation
-		$result = $form_security->validate_file_upload( $valid_file, $config, true );
-		$this->assertTrue( $result, 'File with allowed MIME type should pass validation' );
+		$mismatch         = array_merge( $file, array( 'name' => 'pixel.txt', 'type' => 'text/plain' ) );
+		$mismatch_result  = $form_security->validate_file_upload(
+			$mismatch,
+			array( 'allowed_types' => array( 'text/plain' ) ),
+			true
+		);
+		$this->assertWPError( $mismatch_result );
+		$this->assertSame( 'invalid_file_type', $mismatch_result->get_error_code() );
+	}
 
-		// Test that disallowed MIME types are rejected
-		$invalid_file = array_merge( $valid_file, array( 'type' => 'application/octet-stream' ) );
-		$result       = $form_security->validate_file_upload( $invalid_file, $config, true );
-		$this->assertWPError( $result, 'File with disallowed MIME type should be rejected' );
-		// Accept any error code as long as the file is rejected for security reasons
-		$this->assertContains( $result->get_error_code(), array( 'upload_error', 'invalid_file_type', 'invalid_filename' ) );
+	public function test_svg_is_rejected_even_when_configured(): void {
+		$form_security = new Form_Security( 'test' );
+		$svg_file      = $this->create_temp_file_with_content( '<svg xmlns="http://www.w3.org/2000/svg"></svg>' );
+		$file          = array(
+			'name'     => 'image.svg',
+			'type'     => 'image/svg+xml',
+			'tmp_name' => $svg_file,
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => filesize( $svg_file ),
+		);
 
-		// Clean up
-		unlink( $temp_file );
+		$result = $form_security->validate_file_upload(
+			$file,
+			array( 'allowed_types' => array( 'image/svg+xml' ) ),
+			true
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_file_type', $result->get_error_code() );
 	}
 
 	/**
@@ -247,15 +274,13 @@ class File_Upload_Security_Test extends Test_Case {
 	 */
 	public function test_form_multipart_detection(): void {
 		$form_security = new Form_Security( 'test' );
-
-		// Mock is_uploaded_file to return true for testing
-		Monkey\Functions\when( 'is_uploaded_file' )->justReturn( true );
+		$temp_file     = $this->create_temp_file_with_content( 'A normal text upload.' );
 
 		// Test that valid files pass basic validation
 		$valid_file = array(
 			'name'     => 'test.txt',
 			'type'     => 'text/plain',
-			'tmp_name' => '/tmp/test',
+			'tmp_name' => $temp_file,
 			'error'    => UPLOAD_ERR_OK,
 			'size'     => 100,
 		);
@@ -265,13 +290,8 @@ class File_Upload_Security_Test extends Test_Case {
 			'max_size'      => 1000,
 		);
 
-		$result = $form_security->validate_file_upload( $valid_file, $config );
-		// Accept either true (validation passed) or WP_Error with upload_error (mock issue but security still works)
-		if ( is_wp_error( $result ) ) {
-			$this->assertEquals( 'upload_error', $result->get_error_code(), 'File should only fail due to mock issues, not security validation' );
-		} else {
-			$this->assertTrue( $result, 'Valid file should pass validation' );
-		}
+		$result = $form_security->validate_file_upload( $valid_file, $config, true );
+		$this->assertTrue( $result, 'Valid file should pass validation' );
 	}
 
 	/**

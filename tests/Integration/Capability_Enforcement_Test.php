@@ -271,6 +271,86 @@ class Capability_Enforcement_Test extends Test_Case {
 		$this->assertEquals( 200, $response->get_status(), 'User with MANAGE_CONNECTIONS should be able to decrypt' );
 	}
 
+	public function test_api_key_context_denies_manage_without_connections(): void {
+		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+		$encrypted = \CampaignBridge\Core\Encryption::encrypt( 'credential-value' );
+
+		$user_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		$user    = new \WP_User( $user_id );
+		$user->add_cap( Capabilities::MANAGE );
+		wp_set_current_user( $user_id );
+
+		$this->expectException( \RuntimeException::class );
+		\CampaignBridge\Core\Encryption::decrypt_for_context( $encrypted, 'api_key' );
+	}
+
+	public function test_encrypt_field_route_denies_manage_without_connections(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		$user    = new \WP_User( $user_id );
+		$user->add_cap( Capabilities::MANAGE );
+		wp_set_current_user( $user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
+		$request->set_param( 'new_value', str_repeat( 'a', 32 ) . '-us1' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+
+		$this->assertSame( 403, rest_do_request( $request )->get_status() );
+	}
+
+	public function test_encrypt_field_route_allows_connections_without_manage(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		$user    = new \WP_User( $user_id );
+		$user->add_cap( Capabilities::MANAGE_CONNECTIONS );
+		wp_set_current_user( $user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
+		$request->set_param( 'new_value', str_repeat( 'a', 32 ) . '-us1' );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+
+		$this->assertSame( 200, rest_do_request( $request )->get_status() );
+	}
+
+	public function test_provider_ui_and_controller_do_not_expose_credentials_to_manage_only_user(): void {
+		$admin_id = $this->create_test_user( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+		$encrypted = \CampaignBridge\Core\Encryption::encrypt( 'credential-ending-1234' );
+		$connection = \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $encrypted, 'audience-id' );
+		$this->assertTrue( ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->save( $connection ) );
+
+		$user_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		$user    = new \WP_User( $user_id );
+		$user->add_cap( Capabilities::MANAGE );
+		wp_set_current_user( $user_id );
+
+		$config = require dirname( __DIR__, 2 ) . '/includes/Admin/Screens/settings/_config.php';
+		$this->assertSame( Capabilities::MANAGE_CONNECTIONS, $config['tabs']['providers']['capability'] );
+
+		$data = ( new \CampaignBridge\Admin\Controllers\Settings_Controller() )->get_data();
+		$this->assertSame( '', $data['mailchimp_api_key'] );
+		$this->assertSame( '', $data['mailchimp_audience'] );
+
+		$field = new \CampaignBridge\Admin\Core\Forms\Form_Field_Encrypted(
+			array(
+				'id'      => 'mailchimp_api_key',
+				'name'    => 'mailchimp_api_key',
+				'default' => '',
+				'value'   => $encrypted,
+				'context' => 'api_key',
+			),
+			new \CampaignBridge\Admin\Core\Forms\Form_Validator()
+		);
+		$html = $field->render();
+
+		$this->assertStringContainsString( 'Access Restricted', $html );
+		$this->assertStringNotContainsString( $encrypted, $html );
+		$this->assertStringNotContainsString( '1234', $html );
+		$this->assertStringNotContainsString( 'data-action="reveal"', $html );
+		$this->assertStringNotContainsString( 'data-action="edit"', $html );
+	}
+
 	/*
 	 * Template CPT capability boundary tests.
 	 *
