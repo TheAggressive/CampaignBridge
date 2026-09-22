@@ -154,7 +154,12 @@ final class Post_Snapshot_Repository implements Post_Snapshot_Source {
 	public function resolve_excerpt_preview( int $post_id, int $max_words ): string {
 		$post = get_post( $post_id );
 
-		if ( ! $post instanceof \WP_Post ) {
+		if (
+			! $post instanceof \WP_Post
+			|| 'publish' !== $post->post_status
+			|| '' !== $post->post_password
+			|| ! is_post_publicly_viewable( $post )
+		) {
 			return '';
 		}
 

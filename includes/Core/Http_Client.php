@@ -144,6 +144,8 @@ class Http_Client {
 				'headers' => array(),
 			)
 		);
+		// Provider requests must never follow a redirect to another origin.
+		$args['redirection'] = 0;
 
 		// Handle body encoding based on Content-Type or explicit JSON mode.
 		if ( isset( $args['body'] ) && is_array( $args['body'] ) ) {
@@ -218,7 +220,7 @@ class Http_Client {
 				'HTTP request failed after retries',
 				array(
 					'method'   => $method,
-					'url'      => $url,
+					'url'      => self::safe_url_for_log( $url ),
 					'attempts' => $attempts,
 					'error'    => $last_error ? $last_error->get_error_message() : 'Unknown error',
 				)
@@ -291,12 +293,46 @@ class Http_Client {
 				'HTTP request retry',
 				array(
 					'method'  => $method,
-					'url'     => $url,
+					'url'     => self::safe_url_for_log( $url ),
 					'attempt' => $attempt,
 					'reason'  => $reason_msg,
 				)
 			);
 		}
+	}
+
+	/**
+	 * Format a request URL for logs without credentials, query, or fragment data.
+	 *
+	 * @param string $url Request URL.
+	 * @return string Safe URL containing only scheme, host, port, and path.
+	 */
+	private static function safe_url_for_log( string $url ): string {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || ! is_string( $parts['scheme'] ?? null ) || ! is_string( $parts['host'] ?? null ) ) {
+			return '[invalid URL]';
+		}
+
+		$scheme = strtolower( $parts['scheme'] );
+		$host   = strtolower( $parts['host'] );
+		if ( ! in_array( $scheme, array( 'http', 'https' ), true ) || '' === $host ) {
+			return '[invalid URL]';
+		}
+
+		if ( str_contains( $host, ':' ) && ! str_starts_with( $host, '[' ) ) {
+			$host = '[' . $host . ']';
+		}
+
+		$safe_url = $scheme . '://' . $host;
+		if ( isset( $parts['port'] ) ) {
+			$safe_url .= ':' . (int) $parts['port'];
+		}
+
+		if ( is_string( $parts['path'] ?? null ) ) {
+			$safe_url .= sanitize_text_field( $parts['path'] );
+		}
+
+		return $safe_url;
 	}
 
 	/**

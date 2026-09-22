@@ -27,6 +27,8 @@ final class Email_Block_Contract_Test extends TestCase {
 		'core/list-item',
 		'core/separator',
 		'core/spacer',
+		'core/social-links',
+		'core/social-link',
 	);
 
 	private const CAMPAIGNBRIDGE = array(
@@ -110,6 +112,8 @@ final class Email_Block_Contract_Test extends TestCase {
 				'core/list-item' => 'list-item',
 				'core/separator' => 'divider',
 				'core/spacer'    => 'spacer',
+				'core/social-links' => 'social-links',
+				'core/social-link'  => 'social-link',
 			),
 			array_combine( self::SUPPORTED_CORE, array_map( array( Email_Block_Contract::class, 'semantics' ), self::SUPPORTED_CORE ) )
 		);
@@ -118,6 +122,7 @@ final class Email_Block_Contract_Test extends TestCase {
 	public function test_v1_nesting_is_intentionally_constrained(): void {
 		self::assertSame( array( 'core/button' ), Email_Block_Contract::children( 'core/buttons' ) );
 		self::assertSame( array( 'core/list-item' ), Email_Block_Contract::children( 'core/list' ) );
+		self::assertSame( array( 'core/social-link' ), Email_Block_Contract::children( 'core/social-links' ) );
 		self::assertSame( array(), Email_Block_Contract::children( 'core/list-item' ), 'Nested lists are outside the v1 grammar.' );
 		self::assertSame( array( 'campaignbridge/column' ), Email_Block_Contract::children( 'campaignbridge/columns' ) );
 		self::assertNotContains( 'campaignbridge/columns', Email_Block_Contract::children( 'campaignbridge/column' ) );
@@ -125,6 +130,16 @@ final class Email_Block_Contract_Test extends TestCase {
 		self::assertNotContains( 'core/list-item', Email_Block_Contract::children( 'campaignbridge/section' ) );
 		foreach ( array( 'core/group', 'core/cover', 'core/gallery', 'core/embed', 'core/video', 'core/html', 'core/shortcode', 'core/query', 'core/navigation', 'core/columns', 'core/column' ) as $unsupported ) {
 			self::assertFalse( Email_Block_Contract::has( $unsupported ), $unsupported );
+		}
+	}
+
+	public function test_social_service_catalogue_is_bounded_and_matches_packaged_assets(): void {
+		self::assertSame(
+			array( 'bluesky', 'facebook', 'instagram', 'linkedin', 'mastodon', 'tiktok', 'x', 'youtube' ),
+			array_keys( Email_Block_Contract::social_services() )
+		);
+		foreach ( array_keys( Email_Block_Contract::social_services() ) as $service ) {
+			self::assertFileExists( dirname( __DIR__, 3 ) . '/assets/email/social/' . $service . '.png' );
 		}
 	}
 
@@ -158,6 +173,7 @@ final class Email_Block_Contract_Test extends TestCase {
 				'core/list',
 				'core/separator',
 				'core/spacer',
+				'core/social-links',
 				'campaignbridge/post-card',
 				'campaignbridge/post-image',
 				'campaignbridge/navigation',

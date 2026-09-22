@@ -5,9 +5,9 @@
  * Each scenario is one parsed block document plus the render context it
  * compiles under. Together they exercise the supported authoring grammar the
  * client expectation fixtures make claims about: document shell, preheader,
- * sections, columns and mobile stacking, navigation, linked video posters,
- * typography fallbacks, buttons, images, lists, spacing, links, resolved design
- * styles, and the compliance footer.
+ * sections, columns and mobile stacking, brand logo, navigation, social links,
+ * linked video posters, typography fallbacks, buttons, images, lists, spacing,
+ * links, resolved design styles, and the compliance footer.
  *
  * These scenarios are inputs only. The deterministic golden artifacts in
  * `tests/Fixtures/Email/golden/` stay separate: they pin exact bytes, while
@@ -142,8 +142,8 @@ $column = static function ( array $children, array $attrs = array() ): array {
 
 return array(
 	'universal-newsletter' => array(
-		'label'     => 'Full supported grammar: preheader, sections, brand logo, navigation, image, linked video poster, rich text, list, button, divider, spacer, compliance footer.',
-		'covers'    => array( 'document-shell', 'preheader', 'section', 'brand-logo', 'navigation', 'image', 'video', 'rich-text', 'links', 'list', 'button', 'divider', 'spacer', 'compliance-footer' ),
+		'label'     => 'Full supported grammar: preheader, sections, brand logo, navigation, social links, image, linked video poster, rich text, list, button, divider, spacer, compliance footer.',
+		'covers'    => array( 'document-shell', 'preheader', 'section', 'brand-logo', 'navigation', 'social-links', 'image', 'video', 'rich-text', 'links', 'list', 'button', 'divider', 'spacer', 'compliance-footer' ),
 		'brand_kit' => array(
 			'logo' => array(
 				'url'      => 'https://example.com/brand-logo.png',
@@ -217,6 +217,34 @@ return array(
 									),
 								),
 								'innerBlocks' => array(),
+							),
+							array(
+								'blockName'   => 'core/social-links',
+								'attrs'       => array(
+									'align'      => 'center',
+									'showLabels' => false,
+									'size'       => 'has-normal-icon-size',
+								),
+								'innerBlocks' => array(
+									array(
+										'blockName'   => 'core/social-link',
+										'attrs'       => array(
+											'service' => 'instagram',
+											'url'     => 'https://example.com/instagram',
+											'label'   => 'Follow Example Co on Instagram',
+										),
+										'innerBlocks' => array(),
+									),
+									array(
+										'blockName'   => 'core/social-link',
+										'attrs'       => array(
+											'service' => 'youtube',
+											'url'     => 'https://example.com/youtube',
+										),
+										'innerBlocks' => array(),
+									),
+								),
+								'innerHTML'   => '<ul class="wp-block-social-links"></ul>',
 							),
 							$image( 'https://example.com/hero.jpg', 'Campaign hero', 600, 320, 'https://example.com/story' ),
 							array(

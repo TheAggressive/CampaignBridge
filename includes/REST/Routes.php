@@ -172,7 +172,7 @@ class Routes extends Abstract_Rest_Controller {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( __CLASS__, 'r_encrypt_field' ),
-				'permission_callback' => array( __CLASS__, 'can_manage' ),
+				'permission_callback' => array( __CLASS__, 'can_manage_connections' ),
 				'args'                => array(
 					'field_id'  => array(
 						'type'              => 'string',

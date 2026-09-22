@@ -149,13 +149,16 @@ it:
 | `core/list-item` | list item       | `<li>` rich text                                                           |
 | `core/separator` | divider         | background colour; thickness and line style come from the email design     |
 | `core/spacer`    | spacer          | `height` (Core default 100px), 0–600 px                                    |
+| `core/social-links` | social links | horizontal alignment, 0–32 px gap, 18/24/36/48 px icon size, labels, new-tab preference |
+| `core/social-link` | social link   | approved service, absolute HTTPS URL, optional plain-text accessible label |
 
 Users insert and edit the real Core blocks with native Gutenberg behaviour
 (inserter, toolbar, inspector, RichText, List View, transforms, undo/redo). The
 editor extension narrows their native design supports through the public
 `blocks.registerBlockType` filter (`src/scripts/editor/core-email-blocks.ts`),
 removes block styles the compiler cannot express (image `rounded`, separator
-`dots`), adds the email-only `ghost` ("Text link") button style, and limits
+`dots`, Social Icons shapes), limits Social Icon variations to packaged
+services, adds the email-only `ghost` ("Text link") button style, and limits
 heading levels to 1–4. It never forks a Core edit component.
 
 ### Post content: one read-only Block Bindings source
@@ -338,6 +341,21 @@ semantic blocks (such as `core/list`) for structures, and move to a
 purpose-built, allowlisted parser before accepting spans, arbitrary attributes,
 or styles. Core rich-text formats outside that subset (highlight, inline code,
 inline images, sub/superscript) are rejected.
+
+### Social Icons: bounded Core authoring with packaged raster output
+
+Social links use the native core/social-links parent and core/social-link
+children. The compiler accepts one through six links and only the eight service
+slugs listed in the email block contract. Each child requires an absolute HTTPS
+URL and an optional plain-text label of at most 40 characters; an omitted label
+uses the service name.
+
+Core's frontend renderer and inline SVG icons are never used for transport.
+CampaignBridge maps each approved service to a fixed 48-pixel PNG shipped under
+assets/email/social, emits explicit display dimensions, and marks the image
+decorative because the anchor owns the accessible label. Plain-text output
+contains each label and URL. Authored icon markup, custom services, icon colors,
+pill styles, vertical layouts, and more than six children fail closed.
 
 ## Output rules
 

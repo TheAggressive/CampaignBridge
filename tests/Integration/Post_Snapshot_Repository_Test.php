@@ -113,6 +113,42 @@ final class Post_Snapshot_Repository_Test extends Test_Case {
 		$this->assertSame( 'A manual excerpt.', $snapshot->get( 'excerpt' ) );
 	}
 
+	public function test_published_post_excerpt_preview_resolves(): void {
+		$post_id = $this->factory->post->create(
+			array(
+				'post_excerpt' => 'A public preview excerpt.',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->assertSame( 'A public preview excerpt.', $this->repository->resolve_excerpt_preview( $post_id, 20 ) );
+	}
+
+	public function test_unpublished_post_excerpt_preview_is_not_exposed(): void {
+		foreach ( array( 'draft', 'private' ) as $status ) {
+			$post_id = $this->factory->post->create(
+				array(
+					'post_excerpt' => 'Sensitive ' . $status . ' excerpt.',
+					'post_status'  => $status,
+				)
+			);
+
+			$this->assertSame( '', $this->repository->resolve_excerpt_preview( $post_id, 20 ) );
+		}
+	}
+
+	public function test_password_protected_post_excerpt_preview_is_not_exposed(): void {
+		$post_id = $this->factory->post->create(
+			array(
+				'post_excerpt'  => 'Protected excerpt.',
+				'post_password' => 'secret',
+				'post_status'   => 'publish',
+			)
+		);
+
+		$this->assertSame( '', $this->repository->resolve_excerpt_preview( $post_id, 20 ) );
+	}
+
 	public function test_empty_excerpt_is_allowed(): void {
 		$post_id = $this->factory->post->create(
 			array(

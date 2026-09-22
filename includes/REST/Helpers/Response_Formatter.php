@@ -20,8 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Response Formatter class.
  *
- * Provides methods for formatting REST API responses and filtering
- * sensitive data from responses.
+ * Provides methods for formatting REST API responses.
  */
 class Response_Formatter {
 	/**
@@ -47,53 +46,5 @@ class Response_Formatter {
 			);
 		}
 		return $items;
-	}
-
-	/**
-	 * Filter sensitive data from settings.
-	 *
-	 * @param array<string, mixed> $settings Raw settings array.
-	 * @return array<string, mixed> Filtered settings with sensitive data redacted.
-	 */
-	public static function filter_sensitive_settings( array $settings ): array {
-		// Redact sensitive fields for REST API responses.
-		$sensitive_fields = array( 'api_key', 'secret', 'password', 'token' );
-		foreach ( $sensitive_fields as $field ) {
-			if ( isset( $settings[ $field ] ) ) {
-				// Replace with placeholder to indicate field exists but is hidden.
-				$settings[ $field ] = '[REDACTED]';
-			}
-		}
-
-		return $settings;
-	}
-
-	/**
-	 * Filter sensitive keys from editor settings.
-	 *
-	 * @param array<string, mixed> $settings Raw editor settings.
-	 * @return array<string, mixed> Filtered settings.
-	 */
-	public static function filter_editor_settings( array $settings ): array {
-		$sensitive_keys = self::get_sensitive_editor_keys();
-
-		foreach ( $sensitive_keys as $key ) {
-			unset( $settings[ $key ] );
-		}
-
-		return $settings;
-	}
-
-	/**
-	 * Get sensitive keys that should be removed from editor settings.
-	 *
-	 * @return array<string> List of sensitive keys to filter out.
-	 */
-	private static function get_sensitive_editor_keys(): array {
-		return array(
-			'__experimentalDashboardLink',       // Admin URL.
-			'__experimentalDiscussionSettings',  // Contains avatar URLs and discussion settings.
-			'canUpdateBlockBindings',            // Not needed for editor functionality.
-		);
 	}
 }

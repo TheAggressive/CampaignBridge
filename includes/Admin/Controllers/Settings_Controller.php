@@ -14,6 +14,7 @@ namespace CampaignBridge\Admin\Controllers;
 
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Theme_Brand_Mapper;
+use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Core\Encryption;
 use CampaignBridge\Core\Storage;
 use CampaignBridge\Providers\Mailchimp_Provider;
@@ -100,12 +101,8 @@ class Settings_Controller {
 	 * @return void
 	 */
 	private function load_settings_data(): void {
-		$admin_email          = get_bloginfo( 'admin_email' );
-		$mailchimp_connection = $this->get_mailchimp_connection();
-		$mailchimp_audiences  = $this->get_mailchimp_audiences( $mailchimp_connection['connected'] );
-		$cb_repo              = new \CampaignBridge\Repository\Provider_Connection_Repository();
-		$cb_conn              = $cb_repo->get( 'mailchimp' );
-		$this->data           = array(
+		$admin_email = get_bloginfo( 'admin_email' );
+		$this->data  = array(
 			// General settings data.
 			'from_name'                => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_from_name', get_bloginfo( 'name' ) ),
 			'from_email'               => Storage::get_option( 'campaignbridge_from_email', $admin_email ),
@@ -117,13 +114,13 @@ class Settings_Controller {
 			'cta_label'                => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_cta_label', __( 'Read more', 'campaignbridge' ) ),
 
 			// Mailchimp integration data.
-			'mailchimp_api_key'        => $cb_conn ? $cb_conn->api_key() : '',
-			'mailchimp_audience'       => $cb_conn ? $cb_conn->audience_id() : '',
-			'mailchimp_connected'      => $mailchimp_connection['connected'],
-			'mailchimp_status'         => $mailchimp_connection['status'],
-			'mailchimp_last_test'      => $mailchimp_connection['checked_at'],
-			'mailchimp_audiences'      => $mailchimp_audiences['options'],
-			'mailchimp_audience_error' => $mailchimp_audiences['error'],
+			'mailchimp_api_key'        => '',
+			'mailchimp_audience'       => '',
+			'mailchimp_connected'      => false,
+			'mailchimp_status'         => __( 'Not configured', 'campaignbridge' ),
+			'mailchimp_last_test'      => null,
+			'mailchimp_audiences'      => array(),
+			'mailchimp_audience_error' => '',
 
 			// Advanced settings data.
 			'debug_mode'               => \CampaignBridge\Core\Storage::get_option( 'campaignbridge_debug_mode', false ),
@@ -137,6 +134,22 @@ class Settings_Controller {
 			'php_version'              => PHP_VERSION,
 
 		);
+
+		if ( ! current_user_can( Capabilities::MANAGE_CONNECTIONS ) ) {
+			return;
+		}
+
+		$mailchimp_connection = $this->get_mailchimp_connection();
+		$mailchimp_audiences  = $this->get_mailchimp_audiences( $mailchimp_connection['connected'] );
+		$cb_conn              = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' );
+
+		$this->data['mailchimp_api_key']        = $cb_conn ? $cb_conn->api_key() : '';
+		$this->data['mailchimp_audience']       = $cb_conn ? $cb_conn->audience_id() : '';
+		$this->data['mailchimp_connected']      = $mailchimp_connection['connected'];
+		$this->data['mailchimp_status']         = $mailchimp_connection['status'];
+		$this->data['mailchimp_last_test']      = $mailchimp_connection['checked_at'];
+		$this->data['mailchimp_audiences']      = $mailchimp_audiences['options'];
+		$this->data['mailchimp_audience_error'] = $mailchimp_audiences['error'];
 	}
 
 	/**
@@ -336,7 +349,7 @@ class Settings_Controller {
 		}
 
 		// Check user capabilities.
-		if ( ! \current_user_can( 'campaignbridge_manage' ) ) {
+		if ( ! \current_user_can( Capabilities::MANAGE ) ) {
 			wp_die( 'You do not have permission to export settings.' );
 		}
 
@@ -368,7 +381,7 @@ class Settings_Controller {
 		}
 
 		// Check user capabilities.
-		if ( ! \current_user_can( 'campaignbridge_manage' ) ) {
+		if ( ! \current_user_can( Capabilities::MANAGE ) ) {
 			wp_die( 'You do not have permission to import settings.' );
 		}
 
@@ -451,12 +464,8 @@ class Settings_Controller {
 			exit;
 		}
 
-		// Import valid settings.
-		$valid_options = array( 'from_name', 'from_email', 'debug_mode', 'cache_duration' );
-		foreach ( $valid_options as $option ) {
-			if ( isset( $settings[ $option ] ) ) {
-				\CampaignBridge\Core\Storage::update_option( 'campaignbridge_' . $option, $settings[ $option ] );
-			}
+		foreach ( self::sanitize_imported_settings( $settings ) as $option => $value ) {
+			Storage::update_option( 'campaignbridge_' . $option, $value );
 		}
 
 		wp_safe_redirect(
@@ -472,6 +481,48 @@ class Settings_Controller {
 	}
 
 	/**
+	 * Validate the four portable settings accepted by the JSON importer.
+	 *
+	 * Invalid values are ignored so an import cannot replace a valid setting
+	 * with an unrelated JSON type or an out-of-domain value.
+	 *
+	 * @param mixed $settings Decoded JSON value.
+	 * @return array<string, string|bool|int> Validated settings.
+	 */
+	private static function sanitize_imported_settings( $settings ): array {
+		if ( ! is_array( $settings ) ) {
+			return array();
+		}
+
+		$validated = array();
+
+		if ( is_string( $settings['from_name'] ?? null ) ) {
+			$from_name = sanitize_text_field( $settings['from_name'] );
+			if ( '' !== $from_name ) {
+				$validated['from_name'] = $from_name;
+			}
+		}
+
+		if ( is_string( $settings['from_email'] ?? null ) ) {
+			$from_email = sanitize_email( $settings['from_email'] );
+			if ( '' !== $from_email && is_email( $from_email ) ) {
+				$validated['from_email'] = $from_email;
+			}
+		}
+
+		if ( is_bool( $settings['debug_mode'] ?? null ) ) {
+			$validated['debug_mode'] = $settings['debug_mode'];
+		}
+
+		$cache_duration = $settings['cache_duration'] ?? null;
+		if ( is_int( $cache_duration ) && $cache_duration > 0 && $cache_duration <= 30 * DAY_IN_SECONDS ) {
+			$validated['cache_duration'] = $cache_duration;
+		}
+
+		return $validated;
+	}
+
+	/**
 	 * Copy portable theme colours and Site Logo into the stored brand kit.
 	 *
 	 * @return void
@@ -482,7 +533,7 @@ class Settings_Controller {
 			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
 		}
 
-		if ( ! current_user_can( 'campaignbridge_manage' ) ) {
+		if ( ! current_user_can( Capabilities::MANAGE ) ) {
 			wp_die( esc_html__( 'You do not have permission to update the brand kit.', 'campaignbridge' ) );
 		}
 
@@ -527,7 +578,7 @@ class Settings_Controller {
 			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ) );
 		}
 
-		if ( ! current_user_can( 'campaignbridge_manage' ) ) {
+		if ( ! current_user_can( Capabilities::MANAGE ) ) {
 			wp_die( esc_html__( 'You do not have permission to update the brand kit.', 'campaignbridge' ) );
 		}
 

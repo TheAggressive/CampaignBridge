@@ -114,6 +114,26 @@
       "min": 3
     },
     {
+      "id": "social-links-use-https-destinations",
+      "because": "Every social icon must remain a usable secure link when the message is detached from the WordPress site.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "attribute_required",
+      "select": "div[aria-label='Social links'] a",
+      "attribute": "href",
+      "matches": "#^https://#",
+      "min": 2
+    },
+    {
+      "id": "social-links-have-accessible-labels",
+      "because": "The raster icons are decorative, so each linked destination needs its own accessible name.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "attribute_required",
+      "select": "div[aria-label='Social links'] a",
+      "attribute": "aria-label",
+      "matches": "#.+#",
+      "min": 2
+    },
+    {
       "id": "video-poster-links-to-https-destination",
       "because": "Video must remain an accessible linked poster and explicit play action without embedded playback.",
       "scenarios": ["universal-newsletter"],

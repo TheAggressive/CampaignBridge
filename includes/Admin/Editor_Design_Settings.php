@@ -163,6 +163,9 @@ final class Editor_Design_Settings {
 			(string) ( $border['color'] ?? 'transparent' )
 		);
 		$css .= '.editor-styles-wrapper .block-editor-block-list__block.wp-block-separator{width:100%;max-width:none}';
+		// Site themes can hide Social Icons outside their own footer or navigation
+		// regions. Email templates support this Core block in any permitted section.
+		$css .= '.editor-styles-wrapper [data-type="core/social-links"]{display:flex!important}';
 		$css .= ':where([data-type="core/button"].is-style-ghost .wp-block-button__link){background:transparent;color:' . ( $colors['text'] ?? 'inherit' ) . '}';
 
 		return $css;

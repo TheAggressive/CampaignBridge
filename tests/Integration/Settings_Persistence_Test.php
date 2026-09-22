@@ -597,6 +597,50 @@ class Settings_Persistence_Test extends Test_Case {
 		$this->assertFalse( get_option( 'campaignbridge_provider_connection_mailchimp' ) );
 	}
 
+	public function test_settings_import_values_are_sanitized_by_domain(): void {
+		$method = new \ReflectionMethod( Settings_Controller::class, 'sanitize_imported_settings' );
+
+		$validated = $method->invoke(
+			null,
+			array(
+				'from_name'      => '<b>Campaign Sender</b>',
+				'from_email'     => 'sender@example.com',
+				'debug_mode'     => true,
+				'cache_duration' => 7200,
+				'unknown'        => 'ignored',
+			)
+		);
+
+		$this->assertSame(
+			array(
+				'from_name'      => 'Campaign Sender',
+				'from_email'     => 'sender@example.com',
+				'debug_mode'     => true,
+				'cache_duration' => 7200,
+			),
+			$validated
+		);
+	}
+
+	public function test_settings_import_ignores_invalid_types_and_values(): void {
+		$method = new \ReflectionMethod( Settings_Controller::class, 'sanitize_imported_settings' );
+
+		$this->assertSame(
+			array(),
+			$method->invoke(
+				null,
+				array(
+					'from_name'      => array( 'not', 'a', 'string' ),
+					'from_email'     => 'not-an-email',
+					'debug_mode'     => 'true',
+					'cache_duration' => '3600',
+				)
+			)
+		);
+		$this->assertSame( array(), $method->invoke( null, array( 'cache_duration' => -1 ) ) );
+		$this->assertSame( array(), $method->invoke( null, 'not-an-object' ) );
+	}
+
 	/**
 	 * Helper method to reset request state between tests.
 	 */

@@ -9,7 +9,7 @@ return array(
 	// Page configuration.
 	'menu_title'     => __( 'Settings', 'campaignbridge' ),
 	'page_title'     => __( 'CampaignBridge Settings', 'campaignbridge' ),
-	'capability'     => 'campaignbridge_manage',
+	'capability'     => \CampaignBridge\Core\Capabilities::MANAGE,
 	'position'       => 10,
 	'product_header' => true,
 	'show_journey'   => true,
@@ -28,8 +28,9 @@ return array(
 			'order' => 20,
 		),
 		'providers' => array(
-			'label' => __( 'Providers', 'campaignbridge' ),
-			'order' => 30,
+			'label'      => __( 'Providers', 'campaignbridge' ),
+			'order'      => 30,
+			'capability' => \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS,
 		),
 	),
 );

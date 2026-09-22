@@ -1,6 +1,9 @@
 import { addFilter } from '@wordpress/hooks';
 import { __ } from '@wordpress/i18n';
-import { CORE_EMAIL_BLOCK_NAMES } from '../../blocks/shared/nesting';
+import {
+  CORE_EMAIL_BLOCK_NAMES,
+  SOCIAL_EMAIL_SERVICE_NAMES,
+} from '../../blocks/shared/nesting';
 
 /**
  * Constrains the supported WordPress Core blocks to the email-safe subset.
@@ -20,11 +23,17 @@ interface BlockStyle {
   isDefault?: boolean;
 }
 
+interface BlockVariation {
+  name: string;
+  [key: string]: unknown;
+}
+
 interface BlockSettings {
   supports?: Supports;
   styles?: BlockStyle[];
   attributes?: Record<string, Record<string, unknown>>;
   allowedBlocks?: string[];
+  variations?: BlockVariation[];
   [key: string]: unknown;
 }
 
@@ -126,6 +135,11 @@ const SUPPORTS: Record<string, Record<string, readonly string[]>> = {
     align: [],
   },
   'core/spacer': { spacing: [] },
+  'core/social-links': {
+    color: [],
+    spacing: ['blockGap'],
+  },
+  'core/social-link': {},
 };
 
 /** Block styles the compiler cannot express are removed; email-only ones are added. */
@@ -142,6 +156,10 @@ function styles(name: string, current: BlockStyle[] = []): BlockStyle[] {
             ...current,
             { name: 'ghost', label: __('Text link', 'campaignbridge') },
           ];
+    case 'core/social-links':
+      return current
+        .filter(style => style.name === 'logos-only')
+        .map(style => ({ ...style, isDefault: true }));
     default:
       return current;
   }
@@ -163,6 +181,17 @@ export function constrainCoreEmailBlock(
   }
   if (name === 'core/image') {
     supports.align = ['left', 'center', 'right'];
+  }
+  if (name === 'core/social-links') {
+    supports.align = ['left', 'center', 'right'];
+    if (typeof original.layout === 'object') {
+      supports.layout = {
+        ...original.layout,
+        allowOrientation: false,
+        allowVerticalAlignment: false,
+        allowSizingOnChildren: false,
+      };
+    }
   }
   if (name === 'core/buttons' && typeof original.layout === 'object') {
     supports.layout = {
@@ -190,6 +219,11 @@ export function constrainCoreEmailBlock(
         default: [1, 2, 3, 4],
       },
     };
+  }
+  if (name === 'core/social-link' && settings.variations) {
+    next.variations = settings.variations.filter(variation =>
+      SOCIAL_EMAIL_SERVICE_NAMES.includes(variation.name)
+    );
   }
 
   return next;
