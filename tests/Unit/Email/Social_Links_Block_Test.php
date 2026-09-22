@@ -48,7 +48,7 @@ final class Social_Links_Block_Test extends TestCase {
 		self::assertStringContainsString( 'Follow on Facebook: https://example.com/facebook', $result->text() );
 		self::assertStringContainsString( 'YouTube: https://example.com/youtube', $result->text() );
 		$portable_html = str_replace(
-			\CampaignBridge_Plugin::url(),
+			\set_url_scheme( \CampaignBridge_Plugin::url(), 'https' ),
 			'https://example.test/wp-content/plugins/campaignbridge/',
 			$result->html()
 		);
