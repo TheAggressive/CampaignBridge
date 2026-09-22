@@ -13,6 +13,9 @@ declare( strict_types = 1 );
 namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Tests\Helpers\Test_Case;
+use CampaignBridge\Core\Encryption;
+use CampaignBridge\Domain\Campaign\Provider_Connection;
+use CampaignBridge\Repository\Provider_Connection_Repository;
 
 /**
  * Class REST_API_Test
@@ -37,6 +40,20 @@ class REST_API_Test extends Test_Case {
 
 		// Clean up any options set during tests.
 		delete_option( 'campaignbridge_included_post_types' );
+		( new Provider_Connection_Repository() )->delete( 'mailchimp' );
+	}
+
+	/**
+	 * Store one encrypted Mailchimp credential for reveal tests.
+	 *
+	 * @param string $api_key Plaintext test credential.
+	 * @return void
+	 */
+	private function store_mailchimp_api_key( string $api_key ): void {
+		$encrypted  = Encryption::encrypt( $api_key );
+		$connection = Provider_Connection::create( 'mailchimp', $encrypted );
+		$this->assertTrue( ( new Provider_Connection_Repository() )->save( $connection ) );
+
 	}
 
 	/**
@@ -409,11 +426,11 @@ class REST_API_Test extends Test_Case {
 		wp_set_current_user( $user_id );
 
 		$test_api_key = 'sk-test-12345678901234567890123456789012';
-		$encrypted    = \CampaignBridge\Core\Encryption::encrypt( $test_api_key );
+		$this->store_mailchimp_api_key( $test_api_key );
 
 		// Act: Make decrypt request with valid nonce.
 		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
 		$response = rest_do_request( $request );
 
@@ -444,11 +461,10 @@ class REST_API_Test extends Test_Case {
 		wp_set_current_user( $user_id );
 
 		$test_api_key = 'sk-test-12345678901234567890123456789012';
-		$encrypted    = \CampaignBridge\Core\Encryption::encrypt( $test_api_key );
 
 		// Act: Try to decrypt as non-admin user.
 		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
 		$response = rest_do_request( $request );
 
@@ -465,52 +481,34 @@ class REST_API_Test extends Test_Case {
 	}
 
 	/**
-	 * CRITICAL SECURITY TEST: Ensure invalid encrypted values don't crash system.
+	 * CRITICAL SECURITY TEST: Reveal must ignore caller-supplied ciphertext.
 	 */
-	public function test_decrypt_field_handles_invalid_encrypted_values_securely(): void {
-		// Arrange: Create admin user.
+	public function test_decrypt_field_ignores_caller_supplied_ciphertext(): void {
 		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
 
-		$invalid_values = array(
-			'', // Empty string
-			'invalid-encrypted-data', // Invalid format
-			'script><alert(1)</script>', // XSS attempt
-			str_repeat( 'A', 10000 ), // Very long string (potential DoS)
-		);
+		$stored_api_key = 'stored-mailchimp-key-us1';
+		$this->store_mailchimp_api_key( $stored_api_key );
+		$caller_ciphertext = Encryption::encrypt( 'different-secret-that-must-not-be-revealed' );
 
-		foreach ( $invalid_values as $invalid_value ) {
-			// Act: Try to decrypt invalid value.
-			$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-			$request->set_param( 'encrypted_value', $invalid_value );
-			$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
-			$response = rest_do_request( $request );
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
+		$request->set_param( 'encrypted_value', $caller_ciphertext );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		$response = rest_do_request( $request );
 
-			// Assert: Should fail gracefully without exposing system details.
-			$this->assertEquals( 400, $response->get_status(), "Should reject invalid value: {$invalid_value}" );
-
-			$data = $response->get_data();
-			$this->assertArrayHasKey( 'code', $data, 'Should have error code' );
-
-			// CRITICAL: Error message should not expose internal details.
-			$this->assertStringNotContainsString( 'Exception', $data['message'] ?? '', 'Should not expose exception details' );
-			$this->assertStringNotContainsString( 'decrypt', $data['message'] ?? '', 'Should not expose decryption details' );
-
-			// CRITICAL: No sensitive data should be leaked.
-			$this->assertArrayNotHasKey( 'decrypted', $data, 'Should not return decrypted data for invalid input' );
-		}
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( $stored_api_key, $response->get_data()['data']['decrypted'] );
+		$this->assertStringNotContainsString( 'different-secret-that-must-not-be-revealed', wp_json_encode( $response->get_data() ) );
 	}
 
-	/**
-	 * CRITICAL SECURITY TEST: Ensure encrypt-field endpoint properly validates input.
-	 */
 	public function test_encrypt_field_endpoint_validates_input_securely(): void {
 		// Arrange: Create admin user.
 		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
 
 		$test_data = array(
-			'field_id'  => 'test_field',
+			'field_id'  => 'mailchimp_api_key',
 			'new_value' => 'valid-test-value-123',
 		);
 
@@ -557,7 +555,7 @@ class REST_API_Test extends Test_Case {
 		foreach ( $malicious_inputs as $malicious_value => $test_name ) {
 			// Act: Try to encrypt malicious value.
 			$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
-			$request->set_param( 'field_id', 'test_field' );
+			$request->set_param( 'field_id', 'mailchimp_api_key' );
 			$request->set_param( 'new_value', $malicious_value );
 			$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
 			$response = rest_do_request( $request );
@@ -586,12 +584,12 @@ class REST_API_Test extends Test_Case {
 		wp_set_current_user( $user_id );
 
 		$test_value = 'rate-limit-test-value';
-		$encrypted  = \CampaignBridge\Core\Encryption::encrypt( $test_value );
+		$this->store_mailchimp_api_key( $test_value );
 
 		// Act: Make multiple decrypt requests to trigger rate limiting.
 		for ( $i = 0; $i < 15; $i++ ) { // More than the 10 request limit
 			$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-			$request->set_param( 'encrypted_value', $encrypted );
+			$request->set_param( 'field_id', 'mailchimp_api_key' );
 			$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
 			$response = rest_do_request( $request );
 
@@ -613,11 +611,10 @@ class REST_API_Test extends Test_Case {
 		wp_set_current_user( 0 );
 
 		$test_value = 'auth-test-value';
-		$encrypted  = \CampaignBridge\Core\Encryption::encrypt( $test_value );
 
 		// Test decrypt endpoint.
 		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
 		$response = rest_do_request( $request );
 
@@ -625,7 +622,7 @@ class REST_API_Test extends Test_Case {
 
 		// Test encrypt endpoint.
 		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
-		$request->set_param( 'field_id', 'test_field' );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( 'new_value', $test_value );
 		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
 		$response = rest_do_request( $request );
@@ -642,11 +639,10 @@ class REST_API_Test extends Test_Case {
 		wp_set_current_user( $user_id );
 
 		$test_value = 'csrf-test-value';
-		$encrypted  = \CampaignBridge\Core\Encryption::encrypt( $test_value );
 
 		// Test decrypt with invalid nonce.
 		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $encrypted );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( '_wpnonce', 'invalid_nonce' );
 		$response = rest_do_request( $request );
 
@@ -654,7 +650,7 @@ class REST_API_Test extends Test_Case {
 
 		// Test encrypt with invalid nonce.
 		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
-		$request->set_param( 'field_id', 'test_field' );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
 		$request->set_param( 'new_value', $test_value );
 		$request->set_param( '_wpnonce', 'invalid_nonce' );
 		$response = rest_do_request( $request );
@@ -663,34 +659,21 @@ class REST_API_Test extends Test_Case {
 	}
 
 	/**
-	 * CRITICAL SECURITY TEST: Ensure timing attacks are mitigated.
+	 * CRITICAL SECURITY TEST: Only registered server-owned field IDs are accepted.
 	 */
-	public function test_encrypted_field_endpoints_mitigate_timing_attacks(): void {
-		// Arrange: Create admin user.
+	public function test_encrypted_field_endpoints_reject_unknown_field_ids(): void {
 		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
 
-		$valid_encrypted   = \CampaignBridge\Core\Encryption::encrypt( 'valid-key' );
-		$invalid_encrypted = 'invalid-encrypted-data';
+		$decrypt = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
+		$decrypt->set_param( 'field_id', 'unknown_secret' );
+		$decrypt->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		$this->assertSame( 400, rest_do_request( $decrypt )->get_status() );
 
-		// Measure response times for valid vs invalid inputs.
-		$start_time = microtime( true );
-		$request    = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $valid_encrypted );
-		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
-		rest_do_request( $request );
-		$valid_time = microtime( true ) - $start_time;
-
-		$start_time = microtime( true );
-		$request    = new \WP_REST_Request( 'POST', '/campaignbridge/v1/decrypt-field' );
-		$request->set_param( 'encrypted_value', $invalid_encrypted );
-		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
-		rest_do_request( $request );
-		$invalid_time = microtime( true ) - $start_time;
-
-		// CRITICAL: Response times should be similar to prevent timing attacks.
-		// Allow for some variance but ensure they're within reasonable bounds.
-		$time_difference = abs( $valid_time - $invalid_time );
-		$this->assertLessThan( 0.1, $time_difference, 'Response times should be similar to prevent timing attacks' );
+		$encrypt = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
+		$encrypt->set_param( 'field_id', 'unknown_secret' );
+		$encrypt->set_param( 'new_value', 'value' );
+		$encrypt->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+		$this->assertSame( 400, rest_do_request( $encrypt )->get_status() );
 	}
 }
