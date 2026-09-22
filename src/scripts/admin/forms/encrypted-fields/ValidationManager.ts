@@ -59,7 +59,10 @@ export class ValidationManager {
       (data.action?.includes('decrypt') || data.action?.includes('encrypt')) &&
       !data.field_id
     ) {
-      return this.createErrorResult('Field identifier is required', 'missing_data');
+      return this.createErrorResult(
+        'Field identifier is required',
+        'missing_data'
+      );
     }
 
     if (data.action?.includes('encrypt') && !data.new_value) {
