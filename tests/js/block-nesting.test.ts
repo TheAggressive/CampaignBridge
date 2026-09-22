@@ -21,12 +21,14 @@ const PARENT_CHILDREN: Record<string, readonly string[]> = {
   'campaignbridge/columns': EMAIL_BLOCK_NESTING.columns,
   'core/buttons': EMAIL_BLOCK_NESTING.buttons,
   'core/list': EMAIL_BLOCK_NESTING.list,
+  'core/social-links': EMAIL_BLOCK_NESTING['social-links'],
   'campaignbridge/column': EMAIL_BLOCK_NESTING.column,
 };
 
 const CORE_PARENTS: Record<string, string[]> = {
   'core/button': ['core/buttons'],
   'core/list-item': ['core/list'],
+  'core/social-link': ['core/social-links'],
 };
 
 describe('email block nesting grammar', () => {
@@ -128,13 +130,15 @@ describe('email block nesting grammar', () => {
       'core/list',
       'core/paragraph',
       'core/separator',
+      'core/social-links',
       'core/spacer',
     ]);
   });
 
-  it('constrains Core button and list children', () => {
+  it('constrains Core button, list, and Social Icons children', () => {
     expect(EMAIL_BLOCK_NESTING.buttons).toEqual(['core/button']);
     expect(EMAIL_BLOCK_NESTING.list).toEqual(['core/list-item']);
+    expect(EMAIL_BLOCK_NESTING['social-links']).toEqual(['core/social-link']);
     expect(EMAIL_BLOCK_CONTRACT['core/list-item']?.children).toEqual([]);
   });
 });

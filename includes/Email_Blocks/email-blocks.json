@@ -29,6 +29,7 @@
         "core/list",
         "core/separator",
         "core/spacer",
+        "core/social-links",
         "campaignbridge/post-card",
         "campaignbridge/navigation"
       ]
@@ -49,6 +50,7 @@
         "core/list",
         "core/separator",
         "core/spacer",
+        "core/social-links",
         "campaignbridge/post-card",
         "campaignbridge/post-image",
         "campaignbridge/navigation"
@@ -99,6 +101,16 @@
       "semantics": "spacer",
       "children": []
     },
+    "core/social-links": {
+      "source": "core",
+      "semantics": "social-links",
+      "children": ["core/social-link"]
+    },
+    "core/social-link": {
+      "source": "core",
+      "semantics": "social-link",
+      "children": []
+    },
     "campaignbridge/post-card": {
       "source": "campaignbridge",
       "semantics": "post-card",
@@ -125,6 +137,16 @@
       "semantics": "compliance-footer",
       "children": []
     }
+  },
+  "socialServices": {
+    "bluesky": "Bluesky",
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "linkedin": "LinkedIn",
+    "mastodon": "Mastodon",
+    "tiktok": "TikTok",
+    "x": "X",
+    "youtube": "YouTube"
   },
   "postBindings": {
     "$comment": "The one read-only CampaignBridge post binding source. Only these block, attribute, field, and argument combinations are accepted; every other binding fails closed in Core_Block_Normalizer. A field's `reads` names the immutable snapshot field supplying its value; an optional `link` names the snapshot field the renderer links that value to.",

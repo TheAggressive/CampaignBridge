@@ -38,7 +38,7 @@ fixture pins exact output so any change is reviewed. A client expectation pins a
 
 | Scenario               | Covers                                                                                                   |
 | ---------------------- | -------------------------------------------------------------------------------------------------------- |
-| `universal-newsletter` | Document shell, preheader, section, bound brand logo, navigation, image, rich text and links, list, button, divider, spacer, compliance footer |
+| `universal-newsletter` | Document shell, preheader, section, bound brand logo, navigation, social links, image, rich text and links, list, button, divider, spacer, compliance footer |
 | `stacked-columns`      | Three columns, mobile stacking, column gap, per-column image and button                                  |
 | `branded-typography`   | Brand kit web font and resolved design colours across heading levels and all three button variants       |
 

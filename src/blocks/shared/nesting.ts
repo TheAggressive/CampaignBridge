@@ -28,6 +28,9 @@ export const CORE_EMAIL_BLOCK_NAMES = EMAIL_BLOCK_NAMES.filter(
   name => EMAIL_BLOCK_CONTRACT[name]?.source === 'core'
 );
 
+/** Core Social Icon variations backed by packaged CampaignBridge PNG assets. */
+export const SOCIAL_EMAIL_SERVICE_NAMES = Object.keys(contract.socialServices);
+
 function children(name: string): readonly string[] {
   return EMAIL_BLOCK_CONTRACT[name]?.children ?? [];
 }
@@ -40,4 +43,5 @@ export const EMAIL_BLOCK_NESTING = {
   column: children('campaignbridge/column'),
   buttons: children('core/buttons'),
   list: children('core/list'),
+  'social-links': children('core/social-links'),
 } as const;
