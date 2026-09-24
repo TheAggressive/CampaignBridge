@@ -84,7 +84,7 @@ final class Video_Renderer extends Abstract_Renderer {
 		$kit        = Renderer_Support::brand_kit( $context );
 		$background = $kit->color( Brand_Kit::SLOT_BRAND ) ?? '#1a6dcc';
 		$text       = $kit->color( Brand_Kit::SLOT_ON_BRAND ) ?? '#ffffff';
-		$font       = Renderer_Support::resolve_font( array(), $kit, 'button' )['family'];
+		$font       = Renderer_Support::resolve_font( array(), $context, 'button' )['family'];
 		$url        = Renderer_Support::html( $attributes['videoUrl'] );
 
 		$image   = sprintf(

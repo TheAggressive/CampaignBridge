@@ -83,6 +83,165 @@ test.afterEach(async ({ page }) => {
   cleanupPostId = 0;
 });
 
+test('native font presets update the editor canvas and reset to inheritance', async ({
+  page,
+}) => {
+  await page.goto(NEW_TEMPLATE_PATH);
+  await waitForNativeEditor(page);
+  cleanupPostId = (await editorSnapshot(page)).postId;
+
+  const font = await page.evaluate(() => {
+    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+    const design = (
+      globalThis as typeof globalThis & {
+        campaignbridgeEditorDesign?: {
+          fontAssets: Record<string, string>;
+          defaultFonts: string[];
+        };
+      }
+    ).campaignbridgeEditorDesign;
+    if (!design)
+      throw new Error('CampaignBridge editor design is unavailable.');
+
+    const root = wp.data.select('core/block-editor').getBlocks()[0];
+    const defaults = new Set(design.defaultFonts);
+    const presets = wp.hooks.applyFilters(
+      'blockEditor.useSetting.before',
+      undefined,
+      'typography.fontFamilies.theme',
+      undefined,
+      'core/heading'
+    );
+    const palette = wp.hooks.applyFilters(
+      'blockEditor.useSetting.before',
+      undefined,
+      'color.palette.theme',
+      undefined,
+      'core/heading'
+    );
+    const paletteSlugs = palette.map(
+      (candidate: { slug: string }) => candidate.slug
+    );
+    const expectedPalette = [
+      'text',
+      'secondary',
+      'background',
+      'card',
+      'border',
+      'brand',
+      'on-brand',
+    ];
+    if (JSON.stringify(paletteSlugs) !== JSON.stringify(expectedPalette)) {
+      throw new Error(
+        `Site palette leaked into email authoring: ${JSON.stringify(paletteSlugs)}`
+      );
+    }
+    if (
+      wp.hooks.applyFilters(
+        'blockEditor.useSetting.before',
+        undefined,
+        'color.custom',
+        undefined,
+        'core/heading'
+      ) !== false
+    ) {
+      throw new Error('Custom email colors must remain disabled.');
+    }
+    const preset = presets.find(
+      (candidate: { slug: string }) =>
+        design.fontAssets[candidate.slug] && !defaults.has(candidate.slug)
+    );
+    if (!preset) {
+      throw new Error(
+        `No non-default web font preset is available: ${JSON.stringify({
+          assets: design.fontAssets,
+          defaults: Array.from(defaults),
+          presetSlugs: presets.map(
+            (candidate: { slug: string }) => candidate.slug
+          ),
+        })}`
+      );
+    }
+
+    const heading = wp.blocks.createBlock('core/heading', {
+      content: 'Typography preview',
+    });
+    const section = wp.blocks.createBlock('campaignbridge/section', {}, [
+      heading,
+    ]);
+    wp.data
+      .dispatch('core/block-editor')
+      .insertBlocks(section, undefined, root.clientId);
+    return {
+      clientId: heading.clientId,
+      family: preset.fontFamily.split(',')[0].replaceAll('"', ''),
+      slug: preset.slug,
+      url: design.fontAssets[preset.slug],
+    };
+  });
+
+  const canvas = page.frameLocator('iframe[name="editor-canvas"]');
+  const heading = canvas.locator(`[data-block="${font.clientId}"]`);
+  const inheritedFamily = await heading.evaluate(
+    element =>
+      element.ownerDocument.defaultView?.getComputedStyle(element).fontFamily ??
+      ''
+  );
+
+  await page.evaluate(({ clientId, slug }) => {
+    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+    wp.data
+      .dispatch('core/block-editor')
+      .updateBlockAttributes(clientId, { fontFamily: slug });
+  }, font);
+
+  await expect(heading).toHaveCSS('font-family', new RegExp(font.family));
+  await expect
+    .poll(() =>
+      canvas
+        .locator('head link[data-campaignbridge-editor-font]')
+        .evaluateAll(
+          (links, url) =>
+            links.filter(
+              link =>
+                (link as HTMLLinkElement).dataset.campaignbridgeEditorFont ===
+                url
+            ).length,
+          font.url
+        )
+    )
+    .toBe(1);
+
+  const explicit = await editorSnapshot(page);
+  expect(explicit.content).toContain(`"fontFamily":"${font.slug}"`);
+
+  await page.evaluate(clientId => {
+    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+    wp.data
+      .dispatch('core/block-editor')
+      .updateBlockAttributes(clientId, { fontFamily: undefined });
+  }, font.clientId);
+
+  await expect(heading).toHaveCSS('font-family', inheritedFamily);
+  await expect
+    .poll(() =>
+      canvas
+        .locator('head link[data-campaignbridge-editor-font]')
+        .evaluateAll(
+          (links, url) =>
+            links.filter(
+              link =>
+                (link as HTMLLinkElement).dataset.campaignbridgeEditorFont ===
+                url
+            ).length,
+          font.url
+        )
+    )
+    .toBe(0);
+  const inherited = await editorSnapshot(page);
+  expect(inherited.content).not.toContain('"fontFamily"');
+});
+
 test('native editor owns the template lifecycle and previews unsaved blocks', async ({
   page,
 }) => {

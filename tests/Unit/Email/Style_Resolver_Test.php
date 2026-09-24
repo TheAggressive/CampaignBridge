@@ -12,6 +12,7 @@ namespace CampaignBridge\Tests\Unit\Email;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Design_Presets;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
+use CampaignBridge\Domain\Email\Resolved_Email_Design;
 use CampaignBridge\Domain\Email\Style_Resolver;
 use PHPUnit\Framework\TestCase;
 
@@ -260,5 +261,153 @@ final class Style_Resolver_Test extends TestCase {
 		self::assertSame( 'georgia', Style_Resolver::resolve_font( array(), $kit, 'heading' )['slug'] );
 		self::assertSame( 'arial', Style_Resolver::resolve_font( array(), $kit, 'body' )['slug'] );
 		self::assertSame( 'verdana', Style_Resolver::resolve_font( array(), $kit, 'button' )['slug'] );
+	}
+
+	public function test_rejects_an_unknown_explicit_font_preset(): void {
+		$this->expectException( Invalid_Block_Attribute::class );
+		Style_Resolver::resolve_font( array( 'fontFamily' => 'unknown-font' ) );
+	}
+
+	public function test_rejects_an_arbitrary_explicit_font_stack(): void {
+		$this->expectException( Invalid_Block_Attribute::class );
+		Style_Resolver::resolve_font( array( 'fontFamily' => 'Comic Sans MS, fantasy' ) );
+	}
+
+	/** An explicit slug resolves against the resolved design's manifest first. */
+	public function test_explicit_slug_resolves_against_the_resolved_design_manifest(): void {
+		$entry  = array(
+			'slug'    => 'georgia',
+			'name'    => 'Georgia Web',
+			'family'  => 'Georgia,Times New Roman,serif',
+			'type'    => 'web',
+			'weights' => array( 400 ),
+			'url'     => 'https://fonts.example.com/georgia.css',
+		);
+		$design = $this->resolved_design( array( $entry ), array() );
+
+		self::assertSame( $entry, Style_Resolver::resolve_font( array( 'fontFamily' => 'georgia' ), null, 'body', $design ) );
+
+		// A slug missing from the manifest still resolves through the built-in catalogue.
+		self::assertSame( Design_Presets::font( 'arial' ), Style_Resolver::resolve_font( array( 'fontFamily' => 'arial' ), null, 'body', $design ) );
+	}
+
+	/** A style-tree preset reference resolves against the resolved design's manifest. */
+	public function test_explicit_preset_reference_in_the_style_tree_resolves_against_the_design(): void {
+		$entry  = array(
+			'slug'    => 'georgia',
+			'name'    => 'Georgia Web',
+			'family'  => 'Georgia,Times New Roman,serif',
+			'type'    => 'web',
+			'weights' => array( 400 ),
+			'url'     => 'https://fonts.example.com/georgia.css',
+		);
+		$design = $this->resolved_design( array( $entry ), array() );
+
+		self::assertSame(
+			$entry,
+			Style_Resolver::resolve_font(
+				array( 'style' => array( 'typography' => array( 'fontFamily' => 'var:preset|font-family|georgia' ) ) ),
+				null,
+				'body',
+				$design
+			)
+		);
+	}
+
+	/** An omitted choice inherits the resolved design's semantic slot font. */
+	public function test_omitted_choice_inherits_the_resolved_design_slot(): void {
+		$playfair = array(
+			'slug'    => 'playfair',
+			'name'    => 'Playfair Display',
+			'family'  => 'Playfair Display,Georgia,serif',
+			'type'    => 'web',
+			'weights' => array( 400 ),
+			'url'     => 'https://fonts.example.com/playfair.css',
+		);
+		$inter    = array(
+			'slug'    => 'inter',
+			'name'    => 'Inter',
+			'family'  => 'Inter,Arial,Helvetica,sans-serif',
+			'type'    => 'web',
+			'weights' => array( 400 ),
+			'url'     => 'https://fonts.example.com/inter.css',
+		);
+		$design   = $this->resolved_design(
+			array( $playfair, $inter ),
+			array(
+				'heading' => 'playfair',
+				'body'    => 'inter',
+			)
+		);
+
+		self::assertSame( $playfair, Style_Resolver::resolve_font( array(), null, 'heading', $design ) );
+		self::assertSame( $inter, Style_Resolver::resolve_font( array(), null, 'body', $design ) );
+
+		// A slot with no brand assignment degrades to the catalogue default.
+		self::assertSame( Design_Presets::default_font(), Style_Resolver::resolve_font( array(), null, 'button', $design ) );
+	}
+
+	/** The resolved design's manifest wins over the kit snapshot for a custom webfont slug. */
+	public function test_custom_webfont_slug_prefers_the_resolved_design_manifest(): void {
+		$manifest_entry = array(
+			'slug'    => 'custom',
+			'name'    => 'Example Sans',
+			'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+			'type'    => 'web',
+			'weights' => array( 400, 700 ),
+			'url'     => 'https://fonts.example.com/example-sans.css',
+		);
+		$design         = $this->resolved_design( array( $manifest_entry ), array() );
+
+		self::assertSame( $manifest_entry, Style_Resolver::resolve_font( array( 'fontFamily' => 'custom' ), null, 'body', $design ) );
+	}
+
+	/** A custom webfont slug falls back to the kit snapshot when the design has no entry. */
+	public function test_custom_webfont_slug_falls_back_to_the_kit_snapshot(): void {
+		$kit    = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array( 'heading' => 'custom' ),
+			array(
+				'name'    => 'Example Sans',
+				'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+				'weights' => array( 400, 700 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+			)
+		);
+		$design = $this->resolved_design( array(), array() );
+
+		self::assertSame(
+			array_merge( $kit->custom_font(), array( 'type' => 'web' ) ),
+			Style_Resolver::resolve_font( array( 'fontFamily' => 'custom' ), $kit, 'body', $design )
+		);
+	}
+
+	public function test_rejects_an_unknown_explicit_font_preset_even_with_a_resolved_design(): void {
+		$design = $this->resolved_design( array(), array() );
+		$this->expectException( Invalid_Block_Attribute::class );
+		Style_Resolver::resolve_font( array( 'fontFamily' => 'unknown-font' ), null, 'body', $design );
+	}
+
+	public function test_rejects_a_non_string_style_tree_font_candidate_with_a_resolved_design(): void {
+		$design = $this->resolved_design( array(), array() );
+		$this->expectException( Invalid_Block_Attribute::class );
+		Style_Resolver::resolve_font(
+			array( 'style' => array( 'typography' => array( 'fontFamily' => array( 'georgia' ) ) ) ),
+			null,
+			'body',
+			$design
+		);
+	}
+
+	private function resolved_design( array $families, array $brand_fonts ): Resolved_Email_Design {
+		return new Resolved_Email_Design(
+			array(
+				'settings' => array( 'typography' => array( 'fontFamilies' => $families ) ),
+				'brand'    => array( 'fonts' => $brand_fonts ),
+			),
+			'test-fingerprint'
+		);
 	}
 }

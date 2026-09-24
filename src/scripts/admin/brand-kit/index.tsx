@@ -80,19 +80,27 @@ function fontFamilyStyle(family: string): string {
 function FontSpecimen({
   slug,
   options,
+  externalFontsEnabled,
+  fallbackLabel,
 }: {
   slug: string;
   options: FontOption[];
+  externalFontsEnabled: boolean;
+  fallbackLabel: string;
 }) {
   const font = options.find(option => option.slug === slug);
   const family = font?.family ?? 'Arial,Helvetica,sans-serif';
+  const isExternalFallback = font?.type === 'web' && !externalFontsEnabled;
 
   return (
-    <span
-      className='campaignbridge-brand-kit__font-preview'
-      style={{ fontFamily: fontFamilyStyle(family) }}
-    >
-      The quick brown fox jumps over the lazy dog.
+    <span className='campaignbridge-brand-kit__font-preview'>
+      <strong style={{ fontFamily: fontFamilyStyle(family) }}>
+        {font?.name ?? slug}
+      </strong>
+      <span style={{ fontFamily: fontFamilyStyle(family) }}>
+        The quick brown fox jumps over the lazy dog.
+      </span>
+      {isExternalFallback && <small>{fallbackLabel}</small>}
     </span>
   );
 }
@@ -237,7 +245,12 @@ function FontsSection({
         enableHiding: false,
         enableGlobalSearch: false,
         render: ({ item }) => (
-          <FontSpecimen slug={item.font} options={kit.fontOptions} />
+          <FontSpecimen
+            slug={item.font}
+            options={kit.fontOptions}
+            externalFontsEnabled={config.externalFontsEnabled}
+            fallbackLabel={config.i18n.fontFallback}
+          />
         ),
       },
       {
@@ -248,7 +261,15 @@ function FontsSection({
         getValue: ({ item }) => item.description,
       },
     ],
-    [config.i18n, config.restUrl, onSaved, kit.fonts, kit.fontOptions, saving]
+    [
+      config.externalFontsEnabled,
+      config.i18n,
+      config.restUrl,
+      onSaved,
+      kit.fonts,
+      kit.fontOptions,
+      saving,
+    ]
   );
 
   const { data, paginationInfo } = filterSortAndPaginate(records, view, fields);

@@ -11,6 +11,7 @@ namespace CampaignBridge\Tests\Unit\Email;
 
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Admin\Editor_Design_Settings;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
@@ -65,6 +66,54 @@ final class Email_Design_Compiler_Test extends TestCase {
 		self::assertStringNotContainsString( 'var:preset|', $result->html() );
 	}
 
+	/** Inherited and explicit Core font choices have editor/compiler parity. */
+	public function test_brand_heading_default_and_explicit_override_share_one_design(): void {
+		$kit      = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array(
+				'heading' => 'playfair',
+				'body'    => 'inter',
+				'button'  => 'inter',
+			)
+		);
+		$design   = Email_Design_Factory::resolve( $kit );
+		$settings = Editor_Design_Settings::apply( array(), $design );
+		$document = $this->heading_document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][] = array(
+			'blockName'   => 'core/heading',
+			'attrs'       => array(
+				'content'    => 'Explicit heading',
+				'fontFamily' => 'montserrat',
+			),
+			'innerBlocks' => array(),
+		);
+
+		$result = Compiler_Factory::create( $design )->compile( $document, $this->context() );
+		$css    = implode( '', array_column( $settings['styles'], 'css' ) );
+
+		self::assertTrue( $result->is_success() );
+		self::assertArrayNotHasKey( 'fontFamily', $document[0]['innerBlocks'][0]['innerBlocks'][0]['attrs'] );
+		self::assertStringContainsString( 'font-family:Playfair Display,Georgia,serif', $css );
+		self::assertStringContainsString( 'font-family:Playfair Display,Georgia,serif', $result->html() );
+		self::assertStringContainsString( 'font-family:Montserrat,Arial,Helvetica,sans-serif', $result->html() );
+		self::assertStringContainsString( 'family=Playfair+Display', $result->html() );
+		self::assertStringContainsString( 'family=Montserrat', $result->html() );
+	}
+
+	/** Unknown explicit preset references fail with the stable compiler model. */
+	public function test_unknown_explicit_font_preset_fails_closed(): void {
+		$document = $this->heading_document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][0]['attrs']['fontFamily'] = 'unknown-font';
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertFalse( $result->is_success() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code() );
+		self::assertStringEndsWith( '.attrs.fontFamily', $result->diagnostics()[0]->path() );
+	}
+
 	/**
 	 * Build the smallest valid compiler document.
 	 *
@@ -94,6 +143,29 @@ final class Email_Design_Compiler_Test extends TestCase {
 							array(
 								'blockName'   => 'core/paragraph',
 								'attrs'       => array( 'content' => 'Shared defaults' ),
+								'innerBlocks' => array(),
+							),
+						),
+					),
+				),
+			),
+		);
+	}
+
+	/** @return array<int, array<string, mixed>> */
+	private function heading_document(): array {
+		return array(
+			array(
+				'blockName'   => 'campaignbridge/container',
+				'attrs'       => array(),
+				'innerBlocks' => array(
+					array(
+						'blockName'   => 'campaignbridge/section',
+						'attrs'       => array(),
+						'innerBlocks' => array(
+							array(
+								'blockName'   => 'core/heading',
+								'attrs'       => array( 'content' => 'Inherited heading' ),
 								'innerBlocks' => array(),
 							),
 						),

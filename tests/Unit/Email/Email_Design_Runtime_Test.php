@@ -44,6 +44,41 @@ final class Email_Design_Runtime_Test extends TestCase {
 		self::assertSame( '#ff5500', $design->block_style( 'core/button' )['color']['background'] );
 	}
 
+	/** Semantic Brand Kit font slots become inherited resolved block styles. */
+	public function test_brand_kit_typography_flows_into_resolved_styles(): void {
+		$kit    = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array(
+				'heading' => 'playfair',
+				'body'    => 'inter',
+				'button'  => 'montserrat',
+			)
+		);
+		$design = $this->resolve( $kit );
+
+		self::assertSame( 'Playfair Display,Georgia,serif', $design->block_style( 'core/heading' )['typography']['fontFamily'] );
+		self::assertSame( 'Inter,Arial,Helvetica,sans-serif', $design->block_style( 'core/paragraph' )['typography']['fontFamily'] );
+		self::assertSame( 'Montserrat,Arial,Helvetica,sans-serif', $design->block_style( 'core/button' )['typography']['fontFamily'] );
+		self::assertSame( 'inter', $design->font_for_slot( 'body' )['slug'] );
+	}
+
+	/** A validated custom Google Font is part of the resolved preset catalog. */
+	public function test_custom_brand_font_is_resolved_for_its_semantic_slot(): void {
+		$custom = array(
+			'name'    => 'Example Sans',
+			'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+			'weights' => array( 400, 700 ),
+			'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+		);
+		$kit    = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, array( 'heading' => 'custom' ), $custom );
+		$design = $this->resolve( $kit );
+
+		self::assertSame( 'Example Sans,Arial,Helvetica,sans-serif', $design->block_style( 'core/heading' )['typography']['fontFamily'] );
+		self::assertSame( 'custom', $design->font_for_slot( 'heading' )['slug'] );
+	}
+
 	/** Parent and child theme manifests follow Core's low-to-high cascade. */
 	public function test_layers_parent_and_child_theme_email_designs(): void {
 		$fixture = dirname( __DIR__, 2 ) . '/Fixtures/Email/design/';

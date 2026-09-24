@@ -116,6 +116,36 @@ final class Resolved_Email_Design {
 		return $this->design['brand']['fonts'];
 	}
 
+	/**
+	 * Resolve a canonical font preset from this design.
+	 *
+	 * @param string $slug Stable font preset slug.
+	 * @return array<string, mixed>|null
+	 */
+	public function font( string $slug ): ?array {
+		foreach ( $this->font_families() as $font ) {
+			if ( $slug === $font['slug'] ) {
+				return $font;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Resolve one semantic Brand Kit font slot from this design.
+	 *
+	 * @param string $slot heading, body, or button.
+	 * @return array<string, mixed>
+	 */
+	public function font_for_slot( string $slot ): array {
+		$fonts = $this->brand_fonts();
+		$slug  = is_string( $fonts[ $slot ] ?? null ) ? $fonts[ $slot ] : '';
+		$font  = $this->font( $slug );
+
+		return $font ?? Design_Presets::default_font();
+	}
+
 	/** Deterministic identity for every output-affecting design input. */
 	public function fingerprint(): string {
 		return $this->fingerprint;

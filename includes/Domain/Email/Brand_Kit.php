@@ -482,7 +482,7 @@ final class Brand_Kit {
 		$weights = array_values( array_unique( $weights ) );
 
 		$url = is_string( $raw['url'] ?? null ) ? $raw['url'] : '';
-		if ( ! self::is_safe_custom_font_url( $url ) ) {
+		if ( ! self::is_safe_google_font_stylesheet_url( $url ) ) {
 			return null;
 		}
 
@@ -500,11 +500,25 @@ final class Brand_Kit {
 	 *
 	 * @param string $url Stylesheet URL.
 	 */
-	private static function is_safe_custom_font_url( string $url ): bool {
+	public static function is_safe_google_font_stylesheet_url( string $url ): bool {
+		if ( strlen( $url ) > 2048 ) {
+			return false;
+		}
+
 		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Domain code must remain independent of WordPress functions.
-		return 'https' === parse_url( $url, PHP_URL_SCHEME )
-			&& 'fonts.googleapis.com' === parse_url( $url, PHP_URL_HOST )
-			&& '/css2' === parse_url( $url, PHP_URL_PATH );
+		$parts = parse_url( $url );
 		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url
+		if ( ! is_array( $parts ) ) {
+			return false;
+		}
+
+		$query = $parts['query'] ?? '';
+
+		return 'https' === ( $parts['scheme'] ?? null )
+			&& 'fonts.googleapis.com' === ( $parts['host'] ?? null )
+			&& '/css2' === ( $parts['path'] ?? null )
+			&& array() === array_intersect( array( 'user', 'pass', 'port', 'fragment' ), array_keys( $parts ) )
+			&& is_string( $query )
+			&& 1 === preg_match( '/\Afamily=(?:[A-Za-z0-9+._~-]|%[0-9A-Fa-f]{2})+(?::wght@[1-9]00(?:;[1-9]00)*)?&display=swap\z/D', $query );
 	}
 }

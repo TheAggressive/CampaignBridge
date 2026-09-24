@@ -169,8 +169,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$kit  = Renderer_Support::brand_kit( $context );
-		$font = Renderer_Support::resolve_font( $block->attributes(), $kit, 'heading' );
+		$font = Renderer_Support::resolve_font( $block->attributes(), $context, 'heading' );
 
 		return 'web' === $font['type'] && null !== $font['url']
 			? array(
@@ -215,8 +214,6 @@ final class Heading_Renderer extends Abstract_Renderer {
 	private function build_style( array $attributes, Render_Context $context ): string {
 		$style_tree = is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array();
 		$wrapper    = array( 'style' => $style_tree );
-		$kit        = $context->metadata( 'brandKit' );
-		$kit        = $kit instanceof Brand_Kit ? $kit : Brand_Kit::defaults();
 
 		$font_size = null;
 		if ( isset( $style_tree['typography']['fontSize'] ) ) {
@@ -236,7 +233,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 		$color = $this->text_color( $attributes, $context );
 
-		$font_family = Renderer_Support::resolve_font( $attributes, $kit, 'heading' )['family'];
+		$font_family = Renderer_Support::resolve_font( $attributes, $context, 'heading' )['family'];
 		$font_weight = Style_Resolver::font_weight( $wrapper, 700 );
 		$margin      = Style_Resolver::spacing(
 			$wrapper,

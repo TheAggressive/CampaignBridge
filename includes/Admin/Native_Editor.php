@@ -115,6 +115,20 @@ final class Native_Editor {
 			'campaignbridge-native-editor',
 			'dist/scripts/editor/native-editor.asset.php'
 		);
+
+		$kit     = ( new Brand_Kit_Repository() )->get();
+		$design  = Email_Design_Factory::resolve( $kit );
+		$payload = wp_json_encode(
+			Editor_Design_Settings::client_config( $design ),
+			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+		);
+		if ( is_string( $payload ) ) {
+			\wp_add_inline_script(
+				'campaignbridge-native-editor',
+				'globalThis.campaignbridgeEditorDesign=' . $payload . ';',
+				'before'
+			);
+		}
 		Asset_Manager::enqueue_asset_style(
 			'campaignbridge-native-editor-styles',
 			'dist/styles/editor/preview.asset.php'

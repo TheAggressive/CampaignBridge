@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Core\Storage;
+use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Services\Email\Google_Fonts;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
@@ -82,6 +83,14 @@ final class Google_Fonts_Test extends Test_Case {
 		$result = ( new Google_Fonts() )->resolve( 'Roboto' );
 		self::assertTrue( is_wp_error( $result ) );
 		self::assertSame( 'external_google_fonts_disabled', $result->get_error_code() );
+	}
+
+	public function test_editor_stylesheet_validation_uses_the_brand_kit_boundary(): void {
+		$valid = 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap';
+
+		self::assertTrue( Google_Fonts::is_safe_stylesheet_url( $valid ) );
+		self::assertSame( Brand_Kit::is_safe_google_font_stylesheet_url( $valid ), Google_Fonts::is_safe_stylesheet_url( $valid ) );
+		self::assertFalse( Google_Fonts::is_safe_stylesheet_url( $valid . '&subset=latin' ) );
 	}
 
 	/**

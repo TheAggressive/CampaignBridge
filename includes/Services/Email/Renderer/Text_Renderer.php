@@ -165,7 +165,7 @@ final class Text_Renderer extends Abstract_Renderer {
 				'left'   => 0,
 			)
 		);
-		$font_family = Renderer_Support::resolve_font( $attributes, $kit )['family'];
+		$font_family = Renderer_Support::resolve_font( $attributes, $context )['family'];
 		$style       = 0 === $margin['top'] && 0 === $margin['right'] && 0 === $margin['left']
 			? sprintf( 'margin:0 0 %dpx;font-family:' . $font_family, $margin['bottom'] )
 			: sprintf( 'margin:%dpx %dpx %dpx %dpx;font-family:' . $font_family, $margin['top'], $margin['right'], $margin['bottom'], $margin['left'] );
@@ -246,8 +246,7 @@ final class Text_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$kit  = Renderer_Support::brand_kit( $context );
-		$font = Renderer_Support::resolve_font( $block->attributes(), $kit );
+		$font = Renderer_Support::resolve_font( $block->attributes(), $context );
 
 		return 'web' === $font['type'] && null !== $font['url']
 			? array(
