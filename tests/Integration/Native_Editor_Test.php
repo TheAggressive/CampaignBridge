@@ -123,6 +123,9 @@ final class Native_Editor_Test extends Test_Case {
 		Native_Editor::enqueue_assets();
 		self::assertTrue( wp_script_is( 'campaignbridge-native-editor', 'enqueued' ) );
 		self::assertTrue( wp_style_is( 'campaignbridge-native-editor-styles', 'enqueued' ) );
+		$before = wp_scripts()->get_data( 'campaignbridge-native-editor', 'before' );
+		self::assertIsArray( $before );
+		self::assertStringContainsString( 'globalThis.campaignbridgeEditorDesign=', implode( '', $before ) );
 		self::assertStringContainsString(
 			'dist/styles/editor/preview.css',
 			wp_styles()->registered['campaignbridge-native-editor-styles']->src

@@ -62,6 +62,7 @@ if ( $screen ) {
 				'fontSearchEmpty'  => __( 'No matching font families were found.', 'campaignbridge' ),
 				'fontAdd'          => __( 'Add to brand kit', 'campaignbridge' ),
 				'fontAdded'        => __( 'Google Font added. You can now assign it to a typography slot.', 'campaignbridge' ),
+				'fontFallback'     => __( 'External fonts are disabled; email-safe fallback fonts are shown.', 'campaignbridge' ),
 				'saving'           => __( 'Saving…', 'campaignbridge' ),
 				'savedStatus'      => __( 'Saved', 'campaignbridge' ),
 				'contrastPass'     => __( 'AA pass', 'campaignbridge' ),

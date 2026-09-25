@@ -90,7 +90,7 @@ final class Navigation_Renderer extends Abstract_Renderer {
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$kit   = Renderer_Support::brand_kit( $context );
 		$color = $kit->color( Brand_Kit::SLOT_TEXT ) ?? '#111111';
-		$font  = Renderer_Support::resolve_font( array(), $kit )['family'];
+		$font  = Renderer_Support::resolve_font( array(), $context )['family'];
 		$cells = array();
 		$width = (string) intdiv( 100, count( $block->attributes()['items'] ) ) . '%';
 		foreach ( $block->attributes()['items'] as $item ) {

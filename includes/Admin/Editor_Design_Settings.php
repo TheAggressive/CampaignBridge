@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Admin;
 
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
+use CampaignBridge\Services\Email\Google_Fonts;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -31,10 +32,11 @@ final class Editor_Design_Settings {
 	 * @return array<string, mixed>
 	 */
 	public static function apply( array $settings, Resolved_Email_Design $design ): array {
-		$palette    = $design->colors();
-		$font_sizes = self::pixel_presets( $design->font_sizes() );
-		$spacing    = self::pixel_presets( $design->spacing_sizes() );
-		$fonts      = $design->font_families();
+		$palette      = $design->colors();
+		$font_sizes   = self::pixel_presets( $design->font_sizes() );
+		$spacing      = self::pixel_presets( $design->spacing_sizes() );
+		$fonts        = $design->font_families();
+		$editor_fonts = self::editor_font_presets( $fonts );
 
 		$settings['colors']                    = $palette;
 		$settings['fontSizes']                 = $font_sizes;
@@ -57,7 +59,11 @@ final class Editor_Design_Settings {
 		);
 		$color['defaultPalette']   = false;
 		$color['custom']           = $design->allows_custom_colors();
-		$color['gradients']        = false;
+		$color['gradients']        = array(
+			'theme'   => array(),
+			'default' => array(),
+			'custom'  => array(),
+		);
 		$color['defaultGradients'] = false;
 		$color['customGradient']   = false;
 		$features['color']         = $color;
@@ -66,11 +72,14 @@ final class Editor_Design_Settings {
 		$typography['fontSizes']        = array(
 			'theme'   => $font_sizes,
 			'default' => array(),
+			'custom'  => array(),
 		);
 		$typography['fontFamilies']     = array(
-			'theme'   => $fonts,
+			'theme'   => $editor_fonts,
 			'default' => array(),
+			'custom'  => array(),
 		);
+		$typography['defaultFontSizes'] = false;
 		$typography['customFontSize']   = $design->allows_custom_font_sizes();
 		$typography['customFontFamily'] = false;
 		$typography['dropCap']          = false;
@@ -80,12 +89,15 @@ final class Editor_Design_Settings {
 		$spacing_features['spacingSizes']        = array(
 			'theme'   => $spacing,
 			'default' => array(),
+			'custom'  => array(),
 		);
 		$spacing_features['defaultSpacingSizes'] = false;
 		$spacing_features['customSpacingSize']   = $design->allows_custom_spacing();
 		$features['spacing']                     = $spacing_features;
 
-		$settings['__experimentalFeatures'] = $features;
+		$settings['__experimentalFeatures']     = $features;
+		$settings['campaignbridgeFontAssets']   = self::font_assets( $fonts );
+		$settings['campaignbridgeDefaultFonts'] = array_values( array_unique( $design->brand_fonts() ) );
 
 		// Core has already generated preset CSS from theme.json. Replacing the
 		// control settings alone leaves those old lengths active in the canvas.
@@ -102,9 +114,10 @@ final class Editor_Design_Settings {
 		foreach ( $fonts as $preset ) {
 			$declarations[] = sprintf( '--wp--preset--font-family--%s:%s', $preset['slug'], $preset['family'] );
 		}
+		$preset_rules       = self::preset_rules( $palette, $font_sizes, $fonts );
 		$styles             = isset( $settings['styles'] ) && is_array( $settings['styles'] ) ? $settings['styles'] : array();
 		$styles[]           = array(
-			'css' => '.editor-styles-wrapper{' . implode( ';', $declarations ) . '}',
+			'css' => '.editor-styles-wrapper{' . implode( ';', $declarations ) . '}' . $preset_rules,
 		);
 		$styles[]           = array(
 			'css' => self::design_css( $design )
@@ -116,6 +129,106 @@ final class Editor_Design_Settings {
 		$settings['styles'] = $styles;
 
 		return $settings;
+	}
+
+	/**
+	 * Export the bounded values needed after Gutenberg resolves global styles.
+	 *
+	 * Gutenberg's client-side global-styles resolver can replace the initial
+	 * PHP feature tree with the site theme. The native useSetting filter and
+	 * editor-canvas font loader consume this independent immutable payload.
+	 *
+	 * @param Resolved_Email_Design $design Canonical runtime design.
+	 * @return array<string, mixed>
+	 */
+	public static function client_config( Resolved_Email_Design $design ): array {
+		$settings = self::apply( array(), $design );
+
+		return array(
+			'features'     => $settings['__experimentalFeatures'],
+			'fontAssets'   => $settings['campaignbridgeFontAssets'],
+			'defaultFonts' => $settings['campaignbridgeDefaultFonts'],
+		);
+	}
+
+	/**
+	 * Recreate Core preset utility rules after replacing theme-owned catalogs.
+	 *
+	 * Core generated the original stylesheet before this adapter replaces the
+	 * settings. Variables alone are insufficient when the active theme did not
+	 * declare the CampaignBridge slug, because saved Core blocks use utility
+	 * classes such as `has-brand-color` and `has-inter-font-family`.
+	 *
+	 * @param array<int, array<string, mixed>> $palette    Color presets.
+	 * @param array<int, array<string, mixed>> $font_sizes Font-size presets.
+	 * @param array<int, array<string, mixed>> $fonts      Font-family presets.
+	 */
+	private static function preset_rules( array $palette, array $font_sizes, array $fonts ): string {
+		$rules = array();
+		foreach ( $palette as $preset ) {
+			$slug     = (string) $preset['slug'];
+			$variable = 'var(--wp--preset--color--' . $slug . ')';
+			$rules[]  = '.editor-styles-wrapper .has-' . $slug . '-color{color:' . $variable . '!important}';
+			$rules[]  = '.editor-styles-wrapper .has-' . $slug . '-background-color{background-color:' . $variable . '!important}';
+			$rules[]  = '.editor-styles-wrapper .has-' . $slug . '-border-color{border-color:' . $variable . '!important}';
+		}
+		foreach ( $font_sizes as $preset ) {
+			$slug    = (string) $preset['slug'];
+			$rules[] = '.editor-styles-wrapper .has-' . $slug . '-font-size{font-size:var(--wp--preset--font-size--' . $slug . ')!important}';
+		}
+		foreach ( $fonts as $preset ) {
+			$slug    = (string) $preset['slug'];
+			$rules[] = '.editor-styles-wrapper .has-' . $slug . '-font-family{font-family:var(--wp--preset--font-family--' . $slug . ')!important}';
+		}
+
+		return implode( '', $rules );
+	}
+
+	/**
+	 * Adapt canonical font records to Core's theme.json editor shape.
+	 *
+	 * @param array<int, array<string, mixed>> $fonts Canonical font records.
+	 * @return array<int, array{slug: string, name: string, fontFamily: string}>
+	 */
+	private static function editor_font_presets( array $fonts ): array {
+		$presets = array();
+		foreach ( $fonts as $font ) {
+			$presets[] = array(
+				'slug'       => (string) $font['slug'],
+				'name'       => (string) $font['name'],
+				'fontFamily' => (string) $font['family'],
+			);
+		}
+
+		return $presets;
+	}
+
+	/**
+	 * Publish a bounded slug-to-stylesheet map for the editor canvas loader.
+	 *
+	 * The browser receives the validated catalog but loads only the resolved
+	 * defaults and explicit presets used by blocks in this editor session.
+	 *
+	 * @param array<int, array<string, mixed>> $fonts Canonical font records.
+	 * @return array<string, string>
+	 */
+	private static function font_assets( array $fonts ): array {
+		if ( ! Google_Fonts::external_enabled() ) {
+			return array();
+		}
+
+		$assets = array();
+		foreach ( $fonts as $font ) {
+			$slug = $font['slug'] ?? null;
+			$url  = $font['url'] ?? null;
+			if ( 'web' !== ( $font['type'] ?? null ) || ! is_string( $slug ) || '' === $slug || ! is_string( $url ) || ! Google_Fonts::is_safe_stylesheet_url( $url ) ) {
+				continue;
+			}
+
+			$assets[ $slug ] = $url;
+		}
+
+		return $assets;
 	}
 
 	/**

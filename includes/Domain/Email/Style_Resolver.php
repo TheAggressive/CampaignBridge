@@ -233,38 +233,48 @@ final class Style_Resolver {
 	 *
 	 * This is the single resolution path for type: a native
 	 * `var:preset|font-family|<slug>` reference, or a bare known slug, is
-	 * expanded through the authoritative catalogue; anything else (an unknown
-	 * slug, a foreign preset, a literal/custom/theme stack) is ignored and the
-	 * safe default is returned. A block never forces compilation to fail over a
-	 * font it chose, and an arbitrary stack never reaches the email HTML.
+	 * expanded through the authoritative resolved design; anything else (an
+	 * unknown slug, a foreign preset, or a literal/custom/theme stack) fails
+	 * closed. An omitted choice inherits its semantic resolved-design slot.
 	 *
-	 * @param array<string, mixed> $attributes Block attributes.
-	 * @param Brand_Kit|null       $kit        Active brand kit, for the slot default.
-	 * @param string               $slot       Semantic typography slot.
+	 * @param array<string, mixed>       $attributes Block attributes.
+	 * @param Brand_Kit|null             $kit        Active brand kit, for the slot default.
+	 * @param string                     $slot       Semantic typography slot.
+	 * @param Resolved_Email_Design|null $design Canonical runtime design.
 	 * @return array<string, mixed>
+	 * @throws Invalid_Block_Attribute When an explicit font is unsupported.
 	 */
-	public static function resolve_font( array $attributes, ?Brand_Kit $kit = null, string $slot = 'body' ): array {
+	public static function resolve_font( array $attributes, ?Brand_Kit $kit = null, string $slot = 'body', ?Resolved_Email_Design $design = null ): array {
 		$kit  = $kit ?? Brand_Kit::defaults();
 		$slot = in_array( $slot, Brand_Kit::FONT_SLOTS, true ) ? $slot : 'body';
 
 		// Native preset attribute first, then the style-tree reference core writes.
 		$candidate = $attributes['fontFamily'] ?? null;
+		$path      = 'fontFamily';
 		if ( null === $candidate || ! is_string( $candidate ) || '' === $candidate ) {
 			$candidate = self::style_value( $attributes, array( 'typography', 'fontFamily' ) );
+			$path      = 'style.typography.fontFamily';
 		}
 
-		$slug = null;
-		if ( is_string( $candidate ) ) {
+		if ( null !== $candidate ) {
+			if ( ! is_string( $candidate ) || '' === $candidate ) {
+				throw new Invalid_Block_Attribute( $path, 'must be a font family preset slug.' );
+			}
+
 			$prefix = 'var:preset|font-family|';
 			if ( str_starts_with( $candidate, $prefix ) ) {
 				$slug = substr( $candidate, strlen( $prefix ) );
 			} else {
-				// A bare slug is tolerated; a literal/custom stack is not portable.
+				// Core serializes a bare preset slug at the top level.
 				$slug = $candidate;
 			}
-		}
 
-		if ( is_string( $slug ) ) {
+			if ( null !== $design ) {
+				$font = $design->font( $slug );
+				if ( null !== $font ) {
+					return $font;
+				}
+			}
 			if ( Brand_Kit::CUSTOM_FONT_SLUG === $slug && null !== $kit->custom_font() ) {
 				return array_merge( $kit->custom_font(), array( 'type' => 'web' ) );
 			}
@@ -272,9 +282,15 @@ final class Style_Resolver {
 			if ( null !== $font ) {
 				return $font;
 			}
+
+			throw new Invalid_Block_Attribute( $path, sprintf( 'is not a known font family preset: %s.', $slug ) );
 		}
 
-		// Brand kit semantic slot, then the safe default.
+		if ( null !== $design ) {
+			return $design->font_for_slot( $slot );
+		}
+
+		// Backward-compatible direct use outside compilation.
 		$slot_slug = $kit->font( $slot );
 		if ( Brand_Kit::CUSTOM_FONT_SLUG === $slot_slug && null !== $kit->custom_font() ) {
 			return array_merge( $kit->custom_font(), array( 'type' => 'web' ) );

@@ -48,6 +48,10 @@ jest.mock('../../src/scripts/editor/components/EmailPreviewModal', () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div role='dialog'>compiled preview</div> : null,
 }));
+jest.mock('../../src/scripts/editor/components/EditorFontStylesheets', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 jest.mock('../../src/scripts/editor/hooks/useEmailPreview', () => ({
   useEmailPreview: jest.fn(),
 }));

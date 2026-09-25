@@ -135,7 +135,7 @@ final class Button_Renderer extends Abstract_Renderer {
 			$text = $background;
 		}
 
-		$font_family = Renderer_Support::resolve_font( $attributes, $this->brand_kit( $context ), 'button' )['family'];
+		$font_family = Renderer_Support::resolve_font( $attributes, $context, 'button' )['family'];
 
 		return Button_Markup::html(
 			$attributes['url'],
@@ -156,7 +156,7 @@ final class Button_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context Immutable scoped context.
 	 */
 	public function referenced_assets( Block_Node $block, Render_Context $context ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		$font = Renderer_Support::resolve_font( $block->attributes(), $this->brand_kit( $context ), 'button' );
+		$font = Renderer_Support::resolve_font( $block->attributes(), $context, 'button' );
 
 		return 'web' === $font['type'] && null !== $font['url']
 			? array(

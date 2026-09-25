@@ -12,6 +12,7 @@ namespace CampaignBridge\Tests\Support\Email;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 
 /**
  * Loads and compiles the scenario documents the client fixtures assert against.
@@ -75,8 +76,9 @@ final class Compatibility_Scenarios {
 		 * @var array<string, mixed> $metadata
 		 */
 		$metadata = $scenario['metadata'];
+		$kit      = null;
 		if ( isset( $scenario['brand_kit'] ) && is_array( $scenario['brand_kit'] ) ) {
-			$metadata['brandKit'] = Brand_Kit::from_colors(
+			$kit                  = Brand_Kit::from_colors(
 				is_array( $scenario['brand_kit']['colors'] ?? null ) ? $scenario['brand_kit']['colors'] : array(),
 				Brand_Kit::SOURCE_CUSTOM,
 				null,
@@ -84,6 +86,7 @@ final class Compatibility_Scenarios {
 				null,
 				is_array( $scenario['brand_kit']['logo'] ?? null ) ? $scenario['brand_kit']['logo'] : null
 			);
+			$metadata['brandKit'] = $kit;
 		}
 
 		/**
@@ -92,7 +95,7 @@ final class Compatibility_Scenarios {
 		 * @var array<int, array<string, mixed>> $blocks
 		 */
 		$blocks = $scenario['blocks'];
-		$result = Compiler_Factory::create()->compile( $blocks, new Render_Context( $metadata ) );
+		$result = Compiler_Factory::create( Email_Design_Factory::resolve( $kit ) )->compile( $blocks, new Render_Context( $metadata ) );
 
 		return array(
 			'html'        => $result->html(),

@@ -90,6 +90,7 @@ final class Email_Compiler {
 	public function compile( array $blocks, Render_Context $context ): Compile_Result {
 		$diagnostics       = array();
 		$this->block_count = 0;
+		$context           = $context->with_email_design( $this->design );
 
 		if ( self::PROFILE_VERSION !== $context->profile() ) {
 			$diagnostics[] = Compile_Diagnostic::error(

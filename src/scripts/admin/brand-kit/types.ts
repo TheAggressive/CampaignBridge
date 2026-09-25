@@ -71,6 +71,7 @@ export interface BrandKitI18n {
   fontSearchEmpty: string;
   fontAdd: string;
   fontAdded: string;
+  fontFallback: string;
   saving: string;
   savedStatus: string;
   contrastPass: string;

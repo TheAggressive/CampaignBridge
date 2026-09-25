@@ -11,6 +11,7 @@ namespace CampaignBridge\Services\Email;
 
 use CampaignBridge\Core\Http_Client;
 use CampaignBridge\Core\Storage;
+use CampaignBridge\Domain\Email\Brand_Kit;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -31,6 +32,15 @@ final class Google_Fonts {
 	/** Whether site policy permits requests to Google font hosts. */
 	public static function external_enabled(): bool {
 		return (bool) apply_filters( 'campaignbridge_external_google_fonts_enabled', true );
+	}
+
+	/**
+	 * Whether a stylesheet URL is a bounded Google Fonts CSS2 request.
+	 *
+	 * @param string $url Candidate stylesheet URL.
+	 */
+	public static function is_safe_stylesheet_url( string $url ): bool {
+		return Brand_Kit::is_safe_google_font_stylesheet_url( $url );
 	}
 
 	/**

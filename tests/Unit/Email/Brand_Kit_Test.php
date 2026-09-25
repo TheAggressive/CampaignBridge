@@ -156,4 +156,22 @@ final class Brand_Kit_Test extends TestCase {
 		self::assertNull( $unsafe->custom_font() );
 		self::assertSame( 'arial', $unsafe->font( 'heading' ) );
 	}
+
+	/** Google stylesheet URLs accept only the resolver's bounded CSS2 shape. */
+	public function test_google_font_stylesheet_url_validation_fails_closed(): void {
+		self::assertTrue( Brand_Kit::is_safe_google_font_stylesheet_url( 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap' ) );
+		self::assertTrue( Brand_Kit::is_safe_google_font_stylesheet_url( 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400&display=swap' ) );
+
+		foreach ( array(
+			'http://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap',
+			'https://user@fonts.googleapis.com/css2?family=Inter:wght@400&display=swap',
+			'https://fonts.googleapis.com:443/css2?family=Inter:wght@400&display=swap',
+			'https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap#fragment',
+			'https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap&subset=latin',
+			'https://fonts.googleapis.com/css2?family=Inter:wght@450&display=swap',
+			'https://fonts.googleapis.com/css2?family=Inter%ZZ:wght@400&display=swap',
+		) as $url ) {
+			self::assertFalse( Brand_Kit::is_safe_google_font_stylesheet_url( $url ), $url );
+		}
+	}
 }

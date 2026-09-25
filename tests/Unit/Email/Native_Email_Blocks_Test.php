@@ -12,6 +12,7 @@ namespace CampaignBridge\Tests\Unit\Email;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Services\Email\Compiler_Factory;
+use CampaignBridge\Services\Email\Design\Email_Design_Factory;
 use CampaignBridge\Services\Email\Email_Block_Contract;
 use PHPUnit\Framework\TestCase;
 
@@ -506,7 +507,7 @@ final class Native_Email_Blocks_Test extends TestCase {
 
 		$context = $this->context()->with_metadata( 'brandKit', $kit );
 
-		$result = Compiler_Factory::create()->compile( $document, $context );
+		$result = Compiler_Factory::create( Email_Design_Factory::resolve( $kit ) )->compile( $document, $context );
 
 		self::assertTrue( $result->is_success(), 'Expected compilation with a web font kit.' );
 		self::assertStringContainsString( '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap">', $result->html() );

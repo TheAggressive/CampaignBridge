@@ -136,6 +136,31 @@ describe('WordPress Core email authoring blocks', () => {
     });
   });
 
+  it.each(['core/paragraph', 'core/heading', 'core/button'])(
+    'retains Core font-family controls for %s',
+    name => {
+      const next = constrainCoreEmailBlock(
+        {
+          supports: {
+            typography: {
+              __experimentalFontFamily: true,
+              __experimentalLetterSpacing: true,
+            },
+          },
+        },
+        name
+      );
+      expect(
+        (next.supports as Record<string, any>).typography
+          .__experimentalFontFamily
+      ).toBe(true);
+      expect(
+        (next.supports as Record<string, any>).typography
+          .__experimentalLetterSpacing
+      ).toBe(false);
+    }
+  );
+
   it('adjusts block styles to what the compiler can express', () => {
     expect(
       constrainCoreEmailBlock(

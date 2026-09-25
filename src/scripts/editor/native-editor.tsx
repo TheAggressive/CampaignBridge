@@ -1,4 +1,5 @@
 import './core-email-blocks';
+import './editor-design-settings';
 import './post-bindings';
 import './brand-logo';
 import './post-binding-controls';
@@ -13,6 +14,7 @@ import { __ } from '@wordpress/i18n';
 import { search } from '@wordpress/icons';
 import { registerPlugin } from '@wordpress/plugins';
 import EmailPreviewModal from './components/EmailPreviewModal';
+import EditorFontStylesheets from './components/EditorFontStylesheets';
 import {
   TemplateBasicSettings,
   TemplateComplianceSettings,
@@ -83,6 +85,7 @@ export function NativeEditorExtension(): JSX.Element | null {
 
   return (
     <>
+      <EditorFontStylesheets />
       <PluginDocumentSettingPanel
         name='template-settings'
         title={__('Template Settings', 'campaignbridge')}

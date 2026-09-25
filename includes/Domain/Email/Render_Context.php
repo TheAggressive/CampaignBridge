@@ -25,14 +25,30 @@ final class Render_Context {
 	 * @param array<string, array<string, mixed>>                                  $bindings  Active parent bindings.
 	 * @param string                                                               $profile   Versioned target profile.
 	 * @param Post_Snapshot|null                                                   $post_binding Active scoped post snapshot.
+	 * @param Resolved_Email_Design|null                                           $email_design Canonical runtime design.
 	 */
 	public function __construct(
 		private readonly array $metadata = array(),
 		private readonly array $snapshots = array(),
 		private readonly array $bindings = array(),
 		private readonly string $profile = 'universal@1',
-		private readonly ?Post_Snapshot $post_binding = null
+		private readonly ?Post_Snapshot $post_binding = null,
+		private readonly ?Resolved_Email_Design $email_design = null
 	) {}
+
+	/** Canonical runtime design attached by the compiler. */
+	public function email_design(): ?Resolved_Email_Design {
+		return $this->email_design;
+	}
+
+	/**
+	 * Return a context copy with the canonical runtime design.
+	 *
+	 * @param Resolved_Email_Design $design Canonical runtime design.
+	 */
+	public function with_email_design( Resolved_Email_Design $design ): self {
+		return new self( $this->metadata, $this->snapshots, $this->bindings, $this->profile, $this->post_binding, $design );
+	}
 
 	/** Get the versioned target profile. */
 	public function profile(): string {
@@ -110,7 +126,7 @@ final class Render_Context {
 			}
 		}
 
-		return new self( $this->metadata, $this->snapshots, $this->bindings, $this->profile, $snapshot );
+		return new self( $this->metadata, $this->snapshots, $this->bindings, $this->profile, $snapshot, $this->email_design );
 	}
 
 	/**
@@ -123,7 +139,7 @@ final class Render_Context {
 		$metadata         = $this->metadata;
 		$metadata[ $key ] = $value;
 
-		return new self( $metadata, $this->snapshots, $this->bindings, $this->profile, $this->post_binding );
+		return new self( $metadata, $this->snapshots, $this->bindings, $this->profile, $this->post_binding, $this->email_design );
 	}
 
 	/**
@@ -136,7 +152,7 @@ final class Render_Context {
 		$bindings          = $this->bindings;
 		$bindings[ $name ] = $value;
 
-		return new self( $this->metadata, $this->snapshots, $bindings, $this->profile, $this->post_binding );
+		return new self( $this->metadata, $this->snapshots, $bindings, $this->profile, $this->post_binding, $this->email_design );
 	}
 
 	/**

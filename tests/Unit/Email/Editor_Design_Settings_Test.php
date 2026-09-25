@@ -45,7 +45,7 @@ final class Editor_Design_Settings_Test extends TestCase {
 		self::assertSame( '#ff5500', $this->color_for( $palette, Brand_Kit::SLOT_BRAND ) );
 		self::assertSame( array(), $settings['__experimentalFeatures']['color']['palette']['default'] );
 		self::assertFalse( $settings['__experimentalFeatures']['color']['defaultPalette'] );
-		self::assertFalse( $settings['__experimentalFeatures']['color']['gradients'] );
+		self::assertSame( array(), $settings['__experimentalFeatures']['color']['gradients']['default'] );
 		self::assertTrue( $settings['disableCustomGradients'] );
 		self::assertTrue( $settings['disableCustomColors'] );
 		self::assertTrue( $settings['disableCustomFontSizes'] );
@@ -53,6 +53,9 @@ final class Editor_Design_Settings_Test extends TestCase {
 		self::assertFalse( $settings['__experimentalFeatures']['color']['custom'] );
 		self::assertFalse( $settings['__experimentalFeatures']['typography']['customFontSize'] );
 		self::assertFalse( $settings['__experimentalFeatures']['typography']['customFontFamily'] );
+		self::assertFalse( $settings['__experimentalFeatures']['typography']['defaultFontSizes'] );
+		self::assertSame( array(), $settings['__experimentalFeatures']['typography']['fontFamilies']['custom'] );
+		self::assertSame( array(), $settings['__experimentalFeatures']['color']['gradients']['theme'] );
 		self::assertFalse( $settings['__experimentalFeatures']['spacing']['customSpacingSize'] );
 		self::assertSame( Design_Presets::font_sizes(), $settings['__experimentalFeatures']['typography']['fontSizes']['theme'] );
 		self::assertSame( Design_Presets::spacing_sizes(), $settings['__experimentalFeatures']['spacing']['spacingSizes']['theme'] );
@@ -69,6 +72,9 @@ final class Editor_Design_Settings_Test extends TestCase {
 			self::assertStringContainsString( '--wp--preset--spacing--' . $preset['slug'] . ':' . Design_Presets::spacing( $preset['slug'] ), $css );
 		}
 		self::assertStringContainsString( '--wp--preset--spacing--20:8px', $css );
+		self::assertStringContainsString( '.editor-styles-wrapper .has-brand-color{color:var(--wp--preset--color--brand)!important}', $css );
+		self::assertStringContainsString( '.editor-styles-wrapper .has-brand-background-color{background-color:var(--wp--preset--color--brand)!important}', $css );
+		self::assertStringContainsString( '.editor-styles-wrapper .has-inter-font-family{font-family:var(--wp--preset--font-family--inter)!important}', $css );
 		self::assertStringContainsString(
 			'.editor-styles-wrapper [data-type="core/social-links"]{display:flex!important}',
 			implode( '', array_column( $settings['styles'], 'css' ) )
@@ -89,7 +95,46 @@ final class Editor_Design_Settings_Test extends TestCase {
 		$fonts    = $settings['__experimentalFeatures']['typography']['fontFamilies']['theme'];
 
 		self::assertContains( Brand_Kit::CUSTOM_FONT_SLUG, array_column( $fonts, 'slug' ) );
+		self::assertSame( 'Example Sans,Arial,Helvetica,sans-serif', array_column( $fonts, 'fontFamily', 'slug' )['custom'] );
 		self::assertStringContainsString( '--wp--preset--font-family--custom:Example Sans,Arial,Helvetica,sans-serif', $settings['styles'][0]['css'] );
+		self::assertSame( array( 'custom', 'arial' ), $settings['campaignbridgeDefaultFonts'] );
+		self::assertSame( $custom['url'], $settings['campaignbridgeFontAssets']['custom'] );
+
+		$config = Editor_Design_Settings::client_config( Email_Design_Factory::resolve( $kit ) );
+		self::assertSame( $fonts, $config['features']['typography']['fontFamilies']['theme'] );
+		self::assertSame( $custom['url'], $config['fontAssets']['custom'] );
+		self::assertSame( array( 'custom', 'arial' ), $config['defaultFonts'] );
+	}
+
+	/** External-font policy prevents every remote editor-canvas request. */
+	public function test_external_font_policy_removes_editor_font_assets(): void {
+		$disable = static fn(): bool => false;
+		add_filter( 'campaignbridge_external_google_fonts_enabled', $disable );
+
+		try {
+			$settings = Editor_Design_Settings::apply( array(), Email_Design_Factory::resolve() );
+			self::assertSame( array(), $settings['campaignbridgeFontAssets'] );
+		} finally {
+			remove_filter( 'campaignbridge_external_google_fonts_enabled', $disable );
+		}
+	}
+
+	/** Malformed remote URLs cannot enter the editor asset map. */
+	public function test_editor_font_assets_reject_unapproved_urls(): void {
+		$resolved = Email_Design_Factory::resolve();
+		$design   = $resolved->to_array();
+		$design['settings']['typography']['fontFamilies'][] = array(
+			'slug'    => 'unsafe',
+			'name'    => 'Unsafe',
+			'family'  => 'Unsafe,Arial,sans-serif',
+			'type'    => 'web',
+			'weights' => array( 400 ),
+			'url'     => 'https://example.com/font.css',
+		);
+
+		$settings = Editor_Design_Settings::apply( array(), new \CampaignBridge\Domain\Email\Resolved_Email_Design( $design, 'test' ) );
+
+		self::assertArrayNotHasKey( 'unsafe', $settings['campaignbridgeFontAssets'] );
 	}
 
 	/**

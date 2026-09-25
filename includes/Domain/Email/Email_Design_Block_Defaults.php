@@ -64,7 +64,10 @@ final class Email_Design_Block_Defaults {
 	 */
 	private function apply_typography_defaults( array $attributes, array $style ): array {
 		$typography = is_array( $style['typography'] ?? null ) ? $style['typography'] : array();
-		foreach ( array( 'fontFamily', 'fontSize' ) as $key ) {
+		// Font family defaults remain inherited. Renderers resolve their semantic
+		// slot from Resolved_Email_Design, while only an authored Core preset is
+		// carried by the block itself.
+		foreach ( array( 'fontSize' ) as $key ) {
 			if ( isset( $typography[ $key ] ) && ! $this->has_style( $attributes, array( 'typography', $key ) ) ) {
 				$attributes = $this->default_attribute( $attributes, $key, $typography[ $key ] );
 			}

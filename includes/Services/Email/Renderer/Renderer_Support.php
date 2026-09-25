@@ -221,18 +221,16 @@ final class Renderer_Support {
 	/**
 	 * Resolve the font a block should render with.
 	 *
-	 * Delegates to Style_Resolver so the compiler has a single resolution
-	 * path: native preset reference, a bare known slug, then the active brand
-	 * kit slot, then the safe default. Unknown slugs and custom stacks degrade
-	 * to a safe face rather than failing the block.
+	 * Delegates to Style_Resolver so the compiler has a single resolution path:
+	 * native preset reference, then the resolved semantic design slot.
 	 *
 	 * @param array<string, mixed> $attributes Block attributes.
-	 * @param Brand_Kit            $kit        Active brand kit, for the slot default.
+	 * @param Render_Context       $context    Immutable render context.
 	 * @param string               $slot       Semantic typography slot.
 	 * @return array<string, mixed>
 	 */
-	public static function resolve_font( array $attributes, Brand_Kit $kit, string $slot = 'body' ): array {
-		return Style_Resolver::resolve_font( $attributes, $kit, $slot );
+	public static function resolve_font( array $attributes, Render_Context $context, string $slot = 'body' ): array {
+		return Style_Resolver::resolve_font( $attributes, self::brand_kit( $context ), $slot, $context->email_design() );
 	}
 
 	/**

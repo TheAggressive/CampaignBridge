@@ -35,6 +35,26 @@ final class Email_Design_Normalizer {
 			'spacing'     => array_column( $spacing, 'size', 'slug' ),
 		);
 
+		$styles = array(
+			'global' => $this->resolve_references(
+				array(
+					'color'      => $manifest['styles']['color'],
+					'typography' => $manifest['styles']['typography'],
+				),
+				$catalogs,
+				'$.styles'
+			),
+			'blocks' => $this->resolve_references( $manifest['styles']['blocks'], $catalogs, '$.styles.blocks' ),
+		);
+
+		// Brand Kit typography is semantic identity, not an authored block
+		// override. Promote it into the resolved design so the editor and the
+		// compiler inherit the same heading/body/button defaults.
+		$styles['global']['typography']['fontFamily']                   = $this->font_family_for_slot( $fonts, $brand_kit, 'body' );
+		$styles['blocks']['core/paragraph']['typography']['fontFamily'] = $this->font_family_for_slot( $fonts, $brand_kit, 'body' );
+		$styles['blocks']['core/heading']['typography']['fontFamily']   = $this->font_family_for_slot( $fonts, $brand_kit, 'heading' );
+		$styles['blocks']['core/button']['typography']['fontFamily']    = $this->font_family_for_slot( $fonts, $brand_kit, 'button' );
+
 		return array(
 			'version'  => 1,
 			'settings' => array(
@@ -53,19 +73,27 @@ final class Email_Design_Normalizer {
 					'spacingSizes' => $spacing,
 				),
 			),
-			'styles'   => array(
-				'global' => $this->resolve_references(
-					array(
-						'color'      => $manifest['styles']['color'],
-						'typography' => $manifest['styles']['typography'],
-					),
-					$catalogs,
-					'$.styles'
-				),
-				'blocks' => $this->resolve_references( $manifest['styles']['blocks'], $catalogs, '$.styles.blocks' ),
-			),
+			'styles'   => $styles,
 			'brand'    => array( 'fonts' => $brand_kit->fonts() ),
 		);
+	}
+
+	/**
+	 * Resolve one semantic Brand Kit slot through the normalized font catalog.
+	 *
+	 * @param array<int, array<string, mixed>> $fonts     Resolved font presets.
+	 * @param Brand_Kit                        $brand_kit Active brand identity.
+	 * @param string                           $slot      Semantic font slot.
+	 */
+	private function font_family_for_slot( array $fonts, Brand_Kit $brand_kit, string $slot ): string {
+		$slug = $brand_kit->font( $slot );
+		foreach ( $fonts as $font ) {
+			if ( $slug === $font['slug'] ) {
+				return $font['family'];
+			}
+		}
+
+		return Design_Presets::default_font()['family'];
 	}
 
 	/**
