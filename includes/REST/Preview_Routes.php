@@ -13,6 +13,7 @@ namespace CampaignBridge\REST;
 
 use CampaignBridge\Core\Storage;
 use CampaignBridge\Domain\Email\Compile_Result;
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 use CampaignBridge\Domain\Email\Token\Token_Preview;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Post_Snapshot_Repository;
@@ -59,20 +60,25 @@ class Preview_Routes extends Abstract_Rest_Controller {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'handle_request' ),
-				'permission_callback' => array( __CLASS__, 'can_manage' ),
+				'permission_callback' => array( __CLASS__, 'can_edit_templates' ),
 				'args'                => array(
-					'template_id' => array(
+					'template_id'  => array(
 						'type'     => 'integer',
 						'required' => true,
 						'minimum'  => 1,
 					),
-					'content'     => array(
+					'content'      => array(
 						'type'     => 'string',
 						'required' => true,
 					),
-					'metadata'    => array(
+					'metadata'     => array(
 						'type'     => 'object',
 						'required' => false,
+					),
+					'design_fonts' => array(
+						'type'      => 'string',
+						'required'  => false,
+						'maxLength' => 32768,
 					),
 				),
 			)
@@ -109,7 +115,11 @@ class Preview_Routes extends Abstract_Rest_Controller {
 			return self::create_error( 'content_too_large', 'The submitted template content is too large to compile' );
 		}
 
-		$result = ( new Template_Preview( new Post_Snapshot_Repository(), ( new Brand_Kit_Repository() )->get() ) )->compile(
+		$submitted_fonts = $req->get_param( 'design_fonts' );
+		$stored_fonts    = Storage::get_post_meta( $template_id, Design_Font_Registry::META_KEY, true );
+		$design_fonts    = Design_Font_Registry::from_json( is_string( $submitted_fonts ) ? $submitted_fonts : $stored_fonts );
+
+		$result = ( new Template_Preview( new Post_Snapshot_Repository(), ( new Brand_Kit_Repository() )->get(), $design_fonts ) )->compile(
 			$content,
 			$this->metadata( $req, $template_id )
 		);

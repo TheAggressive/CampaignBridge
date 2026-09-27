@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Integration;
 
+use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\REST\Routes;
@@ -16,8 +17,9 @@ use CampaignBridge\Tests\Helpers\Test_Case;
 use WP_REST_Request;
 
 final class Brand_Kit_Routes_Test extends Test_Case {
-	private const ROUTE       = '/campaignbridge/v1/brand-kit';
-	private const FONTS_ROUTE = '/campaignbridge/v1/brand-kit/fonts';
+	private const ROUTE              = '/campaignbridge/v1/brand-kit';
+	private const FONTS_ROUTE        = '/campaignbridge/v1/brand-kit/fonts';
+	private const FONT_RESOLVE_ROUTE = '/campaignbridge/v1/design-fonts';
 
 	public function setUp(): void {
 		parent::setUp();
@@ -34,6 +36,33 @@ final class Brand_Kit_Routes_Test extends Test_Case {
 	public function test_the_route_is_registered(): void {
 		$this->assertArrayHasKey( self::ROUTE, rest_get_server()->get_routes() );
 		$this->assertArrayHasKey( self::FONTS_ROUTE, rest_get_server()->get_routes() );
+		$this->assertArrayHasKey( self::FONT_RESOLVE_ROUTE, rest_get_server()->get_routes() );
+	}
+
+	public function test_font_resolver_does_not_mutate_the_brand_kit(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+
+		$request = new WP_REST_Request( 'POST', self::FONT_RESOLVE_ROUTE );
+		$request->set_param( 'family', 'Agu Display' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( Brand_Kit::custom_font_slug( 'Agu Display' ), $data['font']['slug'] );
+		$this->assertSame( array(), ( new Brand_Kit_Repository() )->get()->custom_fonts() );
+	}
+
+	public function test_template_authors_can_resolve_design_fonts_without_brand_access(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		get_userdata( $user_id )->add_cap( Capabilities::EDIT_TEMPLATES );
+		wp_set_current_user( $user_id );
+
+		$resolve = new WP_REST_Request( 'POST', self::FONT_RESOLVE_ROUTE );
+		$resolve->set_param( 'family', 'Agu Display' );
+		$brand = new WP_REST_Request( 'GET', self::ROUTE );
+
+		$this->assertSame( 200, rest_get_server()->dispatch( $resolve )->get_status() );
+		$this->assertSame( 403, rest_get_server()->dispatch( $brand )->get_status() );
 	}
 
 	public function test_font_updates_use_the_focused_fonts_route(): void {
@@ -69,6 +98,75 @@ final class Brand_Kit_Routes_Test extends Test_Case {
 
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame( $before, ( new Brand_Kit_Repository() )->get()->to_array() );
+	}
+
+	public function test_adds_multiple_google_fonts_and_assigns_each_to_a_type_slot(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+
+		$repository = new Brand_Kit_Repository();
+		foreach ( array( 'Roboto', 'Lora' ) as $family ) {
+			$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+			$request->set_param( 'fonts', $repository->get()->fonts() );
+			$request->set_param( 'customFontFamily', $family );
+			$response = rest_get_server()->dispatch( $request );
+			self::assertSame( 200, $response->get_status(), $family );
+		}
+
+		$roboto = Brand_Kit::custom_font_slug( 'Roboto' );
+		$lora   = Brand_Kit::custom_font_slug( 'Lora' );
+		$kit    = $repository->get();
+		self::assertCount( 2, $kit->custom_fonts() );
+		self::assertSame( array( $roboto, $lora ), array_column( $kit->custom_fonts(), 'slug' ) );
+
+		$duplicate = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$duplicate->set_param( 'fonts', $kit->fonts() );
+		$duplicate->set_param( 'customFontFamily', 'Roboto' );
+		self::assertSame( 200, rest_get_server()->dispatch( $duplicate )->get_status() );
+		self::assertCount( 2, $repository->get()->custom_fonts() );
+
+		$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$request->set_param(
+			'fonts',
+			array(
+				'heading' => $lora,
+				'body'    => $roboto,
+			)
+		);
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		self::assertSame( 200, $response->get_status() );
+		self::assertSame( $lora, $repository->get()->font( 'heading' ) );
+		self::assertSame( $roboto, $repository->get()->font( 'body' ) );
+		self::assertContains( $lora, array_column( $data['fontOptions'], 'slug' ) );
+		self::assertContains( $roboto, array_column( $data['fontOptions'], 'slug' ) );
+	}
+
+	public function test_rejects_a_thirteenth_custom_font_without_changing_the_kit(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+
+		$custom = array();
+		for ( $index = 0; $index < Brand_Kit::MAX_CUSTOM_FONTS; ++$index ) {
+			$name     = 'Example Font ' . $index;
+			$custom[] = array(
+				'slug'    => Brand_Kit::custom_font_slug( $name ),
+				'name'    => $name,
+				'family'  => $name . ',Arial,Helvetica,sans-serif',
+				'weights' => array( 400 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Font+' . $index . ':wght@400&display=swap',
+			);
+		}
+		$repository = new Brand_Kit_Repository();
+		$repository->save( Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, null, $custom ) );
+
+		$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$request->set_param( 'fonts', $repository->get()->fonts() );
+		$request->set_param( 'customFontFamily', 'Roboto' );
+		$response = rest_get_server()->dispatch( $request );
+
+		self::assertSame( 400, $response->get_status() );
+		self::assertSame( 'custom_font_limit_reached', $response->get_data()['code'] ?? null );
+		self::assertCount( Brand_Kit::MAX_CUSTOM_FONTS, $repository->get()->custom_fonts() );
 	}
 
 	public function test_get_returns_the_seven_slots(): void {

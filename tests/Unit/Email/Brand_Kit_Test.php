@@ -157,6 +157,85 @@ final class Brand_Kit_Test extends TestCase {
 		self::assertSame( 'arial', $unsafe->font( 'heading' ) );
 	}
 
+	/** Multiple custom fonts retain stable slugs and semantic slot assignments. */
+	public function test_multiple_custom_google_fonts_round_trip_as_a_bounded_collection(): void {
+		$heading_slug = Brand_Kit::custom_font_slug( 'Example Sans' );
+		$body_slug    = Brand_Kit::custom_font_slug( 'Example Serif' );
+		$fonts        = array(
+			array(
+				'slug'    => $heading_slug,
+				'name'    => 'Example Sans',
+				'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+				'weights' => array( 400, 700 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+			),
+			array(
+				'slug'    => $body_slug,
+				'name'    => 'Example Serif',
+				'family'  => 'Example Serif,Georgia,serif',
+				'weights' => array( 400 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Serif:wght@400&display=swap',
+			),
+		);
+		$kit          = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array( 'heading' => $heading_slug, 'body' => $body_slug ),
+			$fonts
+		);
+
+		self::assertSame( $heading_slug, $kit->font( 'heading' ) );
+		self::assertSame( $body_slug, $kit->font( 'body' ) );
+		self::assertSame( 'Example Serif,Georgia,serif', $kit->custom_font( $body_slug )['family'] ?? null );
+		self::assertCount( 2, $kit->custom_fonts() );
+		self::assertArrayHasKey( 'custom_fonts', $kit->to_array() );
+		self::assertArrayNotHasKey( 'custom_font', $kit->to_array() );
+		self::assertSame( $kit->to_array(), Brand_Kit::from_array( $kit->to_array() )->to_array() );
+	}
+
+	/** Version-three single-font data migrates without invalidating `custom`. */
+	public function test_version_three_custom_font_migrates_to_the_collection(): void {
+		$kit = Brand_Kit::from_array(
+			array(
+				'version'     => 3,
+				'source'      => Brand_Kit::SOURCE_CUSTOM,
+				'fonts'       => array( 'heading' => Brand_Kit::CUSTOM_FONT_SLUG ),
+				'custom_font' => array(
+					'name'    => 'Legacy Sans',
+					'family'  => 'Legacy Sans,Arial,Helvetica,sans-serif',
+					'weights' => array( 400 ),
+					'url'     => 'https://fonts.googleapis.com/css2?family=Legacy+Sans:wght@400&display=swap',
+				),
+			)
+		);
+
+		self::assertSame( Brand_Kit::CUSTOM_FONT_SLUG, $kit->font( 'heading' ) );
+		self::assertSame( Brand_Kit::CUSTOM_FONT_SLUG, $kit->custom_fonts()[0]['slug'] ?? null );
+		self::assertArrayHasKey( 'custom_fonts', $kit->to_array() );
+		self::assertArrayNotHasKey( 'custom_font', $kit->to_array() );
+	}
+
+	/** Custom font storage is bounded even when persisted input is oversized. */
+	public function test_custom_font_collection_is_bounded(): void {
+		$fonts = array();
+		for ( $index = 0; $index <= Brand_Kit::MAX_CUSTOM_FONTS; ++$index ) {
+			$name    = 'Example Font ' . $index;
+			$fonts[] = array(
+				'slug'    => Brand_Kit::custom_font_slug( $name ),
+				'name'    => $name,
+				'family'  => $name . ',Arial,Helvetica,sans-serif',
+				'weights' => array( 400 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Font+' . $index . ':wght@400&display=swap',
+			);
+		}
+
+		$kit = Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, null, $fonts );
+
+		self::assertCount( Brand_Kit::MAX_CUSTOM_FONTS, $kit->custom_fonts() );
+		self::assertNull( $kit->custom_font( Brand_Kit::custom_font_slug( 'Example Font ' . Brand_Kit::MAX_CUSTOM_FONTS ) ) );
+	}
+
 	/** Google stylesheet URLs accept only the resolver's bounded CSS2 shape. */
 	public function test_google_font_stylesheet_url_validation_fails_closed(): void {
 		self::assertTrue( Brand_Kit::is_safe_google_font_stylesheet_url( 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap' ) );

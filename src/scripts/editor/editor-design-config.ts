@@ -2,6 +2,8 @@ export interface EditorDesignConfig {
   features: Record<string, unknown>;
   fontAssets: Record<string, string>;
   defaultFonts: string[];
+  designFontSlugs: string[];
+  baseFontSlots: Record<string, string>;
 }
 
 declare global {
@@ -13,6 +15,8 @@ const emptyConfig: EditorDesignConfig = {
   features: {},
   fontAssets: {},
   defaultFonts: [],
+  designFontSlugs: [],
+  baseFontSlots: {},
 };
 
 export const editorDesignConfig =

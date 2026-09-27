@@ -15,6 +15,7 @@ namespace CampaignBridge\Post_Types;
 
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Core\Storage;
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -125,6 +126,12 @@ class Post_Type_Email_Template {
 		'campaignbridge_footer_pattern'      => array(
 			'type'      => 'string',
 			'sanitize'  => 'sanitize_text_field',
+			'revisions' => true,
+			'duplicate' => true,
+		),
+		Design_Font_Registry::META_KEY       => array(
+			'type'      => 'string',
+			'sanitize'  => array( Design_Font_Registry::class, 'sanitize_json' ),
 			'revisions' => true,
 			'duplicate' => true,
 		),

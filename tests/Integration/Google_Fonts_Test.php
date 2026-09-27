@@ -40,7 +40,7 @@ final class Google_Fonts_Test extends Test_Case {
 
 		$font = $service->resolve( 'Roboto' );
 		self::assertFalse( is_wp_error( $font ) );
-		self::assertSame( 'custom', $font['slug'] ?? null );
+		self::assertSame( Brand_Kit::custom_font_slug( 'Roboto' ), $font['slug'] ?? null );
 		self::assertSame( array( 400, 600, 700 ), $font['weights'] ?? null );
 		self::assertSame( 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap', $font['url'] ?? null );
 	}

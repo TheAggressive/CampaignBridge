@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit\Email;
 
 use CampaignBridge\Domain\Email\Brand_Kit;
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 use CampaignBridge\Domain\Email\Email_Design_Error;
 use CampaignBridge\Domain\Email\Email_Design_Resolver;
 use CampaignBridge\Domain\Email\Email_Design_Validator;
@@ -77,6 +78,72 @@ final class Email_Design_Runtime_Test extends TestCase {
 
 		self::assertSame( 'Example Sans,Arial,Helvetica,sans-serif', $design->block_style( 'core/heading' )['typography']['fontFamily'] );
 		self::assertSame( 'custom', $design->font_for_slot( 'heading' )['slug'] );
+	}
+
+	/** Multiple custom families independently drive semantic type slots. */
+	public function test_multiple_custom_brand_fonts_flow_into_resolved_styles(): void {
+		$sans_slug  = Brand_Kit::custom_font_slug( 'Example Sans' );
+		$serif_slug = Brand_Kit::custom_font_slug( 'Example Serif' );
+		$custom     = array(
+			array(
+				'slug'    => $sans_slug,
+				'name'    => 'Example Sans',
+				'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+				'weights' => array( 400, 700 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+			),
+			array(
+				'slug'    => $serif_slug,
+				'name'    => 'Example Serif',
+				'family'  => 'Example Serif,Georgia,serif',
+				'weights' => array( 400 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Serif:wght@400&display=swap',
+			),
+		);
+		$kit        = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array(
+				'heading' => $serif_slug,
+				'body'    => $sans_slug,
+				'button'  => $sans_slug,
+			),
+			$custom
+		);
+		$design     = $this->resolve( $kit );
+
+		self::assertContains( $sans_slug, array_column( $design->font_families(), 'slug' ) );
+		self::assertContains( $serif_slug, array_column( $design->font_families(), 'slug' ) );
+		self::assertSame( 'Example Serif,Georgia,serif', $design->block_style( 'core/heading' )['typography']['fontFamily'] );
+		self::assertSame( 'Example Sans,Arial,Helvetica,sans-serif', $design->block_style( 'core/paragraph' )['typography']['fontFamily'] );
+		self::assertSame( $sans_slug, $design->font_for_slot( 'button' )['slug'] );
+	}
+
+	/** Per-template fonts override semantic slots without mutating Brand Kit. */
+	public function test_design_fonts_extend_the_catalog_and_override_type_slots(): void {
+		$slug     = Brand_Kit::custom_font_slug( 'Campaign Display' );
+		$registry = Design_Font_Registry::from_array(
+			array(
+				'fonts' => array(
+					array(
+						'slug'    => $slug,
+						'name'    => 'Campaign Display',
+						'family'  => 'Campaign Display,Georgia,serif',
+						'weights' => array( 400, 700 ),
+						'url'     => 'https://fonts.googleapis.com/css2?family=Campaign+Display:wght@400;700&display=swap',
+					),
+				),
+				'slots' => array( 'heading' => $slug ),
+			)
+		);
+		$kit      = Brand_Kit::defaults();
+		$design   = $this->resolve( $kit, $registry );
+
+		self::assertSame( 'arial', $kit->font( 'heading' ) );
+		self::assertSame( $slug, $design->font_for_slot( 'heading' )['slug'] );
+		self::assertSame( 'Campaign Display,Georgia,serif', $design->block_style( 'core/heading' )['typography']['fontFamily'] );
+		self::assertContains( $slug, array_column( $design->font_families(), 'slug' ) );
 	}
 
 	/** Parent and child theme manifests follow Core's low-to-high cascade. */
@@ -226,11 +293,12 @@ final class Email_Design_Runtime_Test extends TestCase {
 	/**
 	 * Resolve the packaged design with optional brand identity.
 	 *
-	 * @param Brand_Kit|null $brand_kit Active identity.
+	 * @param Brand_Kit|null            $brand_kit    Active identity.
+	 * @param Design_Font_Registry|null $design_fonts Per-template font registry.
 	 */
-	private function resolve( ?Brand_Kit $brand_kit = null ): \CampaignBridge\Domain\Email\Resolved_Email_Design {
+	private function resolve( ?Brand_Kit $brand_kit = null, ?Design_Font_Registry $design_fonts = null ): \CampaignBridge\Domain\Email\Resolved_Email_Design {
 		$loader = new Email_Design_Loader();
-		return ( new Email_Design_Resolver( new Email_Design_Validator( $loader->schema() ) ) )->resolve( $loader->manifest(), $brand_kit );
+		return ( new Email_Design_Resolver( new Email_Design_Validator( $loader->schema() ) ) )->resolve( $loader->manifest(), $brand_kit, $design_fonts );
 	}
 
 	/**

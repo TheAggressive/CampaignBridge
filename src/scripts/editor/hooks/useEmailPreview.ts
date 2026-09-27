@@ -42,6 +42,7 @@ export interface EmailPreview {
   durationMs?: number;
   content?: string;
   title?: string;
+  designFonts?: string;
 }
 
 const EMPTY_DIAGNOSTICS = {
@@ -72,7 +73,8 @@ export interface UseEmailPreview {
  */
 export function useEmailPreview(
   postId: number,
-  title: string
+  title: string,
+  designFonts = ''
 ): UseEmailPreview {
   const [preview, setPreview] = useState<EmailPreview>(INITIAL_STATE);
 
@@ -107,6 +109,7 @@ export function useEmailPreview(
           template_id: postId,
           content: serializedContent,
           metadata: { title },
+          design_fonts: designFonts,
         },
       });
 
@@ -128,6 +131,7 @@ export function useEmailPreview(
         durationMs: performance.now() - started,
         content: serializedContent,
         title,
+        designFonts,
         html: response.html,
         sampleHtml: response.sample?.html ?? null,
         diagnostics: {
@@ -153,7 +157,7 @@ export function useEmailPreview(
         ),
       });
     }
-  }, [blocks, postId, serializedContent, title]);
+  }, [blocks, designFonts, postId, serializedContent, title]);
 
   const resetPreview = useCallback(() => {
     requestId.current++;
@@ -166,7 +170,9 @@ export function useEmailPreview(
     resetPreview,
     isStale:
       preview.content !== undefined &&
-      (preview.content !== serializedContent || preview.title !== title),
+      (preview.content !== serializedContent ||
+        preview.title !== title ||
+        preview.designFonts !== designFonts),
   };
 }
 

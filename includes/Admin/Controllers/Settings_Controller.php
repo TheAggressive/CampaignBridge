@@ -546,7 +546,7 @@ class Settings_Controller {
 			Brand_Kit::SOURCE_THEME,
 			$imported->theme_fingerprint(),
 			$current->fonts(),
-			$current->custom_font(),
+			$current->custom_fonts(),
 			$logo
 		);
 		$saved      = $repository->save( $kit );

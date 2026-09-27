@@ -106,6 +106,44 @@ final class Editor_Design_Settings_Test extends TestCase {
 		self::assertSame( array( 'custom', 'arial' ), $config['defaultFonts'] );
 	}
 
+	/** Every custom Brand Kit family is exposed to native block typography. */
+	public function test_multiple_custom_fonts_are_available_as_editor_presets(): void {
+		$sans_slug  = Brand_Kit::custom_font_slug( 'Example Sans' );
+		$serif_slug = Brand_Kit::custom_font_slug( 'Example Serif' );
+		$custom     = array(
+			array(
+				'slug'    => $sans_slug,
+				'name'    => 'Example Sans',
+				'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+				'weights' => array( 400, 700 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+			),
+			array(
+				'slug'    => $serif_slug,
+				'name'    => 'Example Serif',
+				'family'  => 'Example Serif,Georgia,serif',
+				'weights' => array( 400 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Serif:wght@400&display=swap',
+			),
+		);
+		$kit        = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array( 'heading' => $serif_slug, 'body' => $sans_slug ),
+			$custom
+		);
+		$settings   = Editor_Design_Settings::apply( array(), Email_Design_Factory::resolve( $kit ) );
+		$fonts      = $settings['__experimentalFeatures']['typography']['fontFamilies']['theme'];
+		$assets     = $settings['campaignbridgeFontAssets'];
+
+		self::assertContains( $sans_slug, array_column( $fonts, 'slug' ) );
+		self::assertContains( $serif_slug, array_column( $fonts, 'slug' ) );
+		self::assertArrayHasKey( $sans_slug, $assets );
+		self::assertArrayHasKey( $serif_slug, $assets );
+		self::assertSame( array( $serif_slug, $sans_slug, 'arial' ), $settings['campaignbridgeDefaultFonts'] );
+	}
+
 	/** External-font policy prevents every remote editor-canvas request. */
 	public function test_external_font_policy_removes_editor_font_assets(): void {
 		$disable = static fn(): bool => false;

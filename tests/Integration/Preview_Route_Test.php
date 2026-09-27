@@ -9,6 +9,9 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Integration;
 
+use CampaignBridge\Core\Capabilities;
+use CampaignBridge\Domain\Email\Brand_Kit;
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 use CampaignBridge\REST\Routes;
 use WP_REST_Request;
 
@@ -31,7 +34,9 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 			)
 		);
 
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_userdata( $user_id )->add_cap( Capabilities::EDIT_TEMPLATES );
+		wp_set_current_user( $user_id );
 	}
 
 	public function test_the_route_is_registered(): void {
@@ -55,6 +60,36 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 		self::assertStringContainsString( 'Hello', $data['html'] );
 		self::assertSame( array(), $data['diagnostics'] );
 		self::assertSame( 'universal@1', $data['profile_version'] );
+	}
+
+	public function test_unsaved_design_fonts_compile_with_the_current_preview(): void {
+		$slug     = Brand_Kit::custom_font_slug( 'Campaign Display' );
+		$registry = Design_Font_Registry::from_array(
+			array(
+				'fonts' => array(
+					array(
+						'slug'    => $slug,
+						'name'    => 'Campaign Display',
+						'family'  => 'Campaign Display,Georgia,serif',
+						'weights' => array( 400, 700 ),
+						'url'     => 'https://fonts.googleapis.com/css2?family=Campaign+Display:wght@400;700&display=swap',
+					),
+				),
+				'slots' => array( 'heading' => $slug ),
+			)
+		);
+		$response = $this->preview(
+			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
+			. '<!-- wp:core/heading {"content":"Campaign heading","level":2} /-->'
+			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->',
+			$registry->to_json()
+		);
+		$data     = $response->get_data();
+
+		self::assertSame( 200, $response->get_status() );
+		self::assertSame( array(), $data['diagnostics'] );
+		self::assertStringContainsString( 'font-family:Campaign Display,Georgia,serif', $data['html'] );
+		self::assertStringContainsString( 'family=Campaign+Display', $data['html'] );
 	}
 
 	public function test_sample_view_is_null_without_provider_tokens(): void {
@@ -163,12 +198,16 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 	/**
 	 * Dispatch a preview request for the seeded template.
 	 *
-	 * @param string $content Serialized block markup.
+	 * @param string      $content      Serialized block markup.
+	 * @param string|null $design_fonts Optional unsaved design-font registry.
 	 */
-	private function preview( string $content ): \WP_REST_Response {
+	private function preview( string $content, ?string $design_fonts = null ): \WP_REST_Response {
 		$request = new WP_REST_Request( 'POST', self::ROUTE );
 		$request->set_param( 'template_id', $this->template_id );
 		$request->set_param( 'content', $content );
+		if ( null !== $design_fonts ) {
+			$request->set_param( 'design_fonts', $design_fonts );
+		}
 
 		return rest_get_server()->dispatch( $request );
 	}

@@ -127,7 +127,7 @@ final class Google_Fonts {
 		$fallback       = 'serif' === ( $match['category'] ?? '' ) ? 'Georgia,serif' : 'Arial,Helvetica,sans-serif';
 
 		return array(
-			'slug'    => 'custom',
+			'slug'    => Brand_Kit::custom_font_slug( $family ),
 			'name'    => $family,
 			'family'  => $family . ',' . $fallback,
 			'weights' => $weights,

@@ -4,27 +4,50 @@ import { useEffect, useMemo } from '@wordpress/element';
 import {
   requiredEditorFontUrls,
   syncEditorFontStylesheets,
+  syncEditorTypeFontStyles,
   type EditorFontBlock,
 } from '../editor-font-assets';
 import { editorDesignConfig } from '../editor-design-config';
+import { editorFontOptions, type DesignFontRegistry } from '../design-fonts';
 
 interface BlockEditorSelectors {
   getBlocks: () => EditorFontBlock[];
 }
 
 /** Load only effective CampaignBridge web fonts into Core's editor iframe. */
-export default function EditorFontStylesheets(): null {
+export default function EditorFontStylesheets({
+  registry,
+}: {
+  registry: DesignFontRegistry;
+}): null {
   const blocks = useSelect(select => {
     const editor = select(blockEditorStore) as unknown as BlockEditorSelectors;
     return editor.getBlocks();
   }, []);
+  const { families, slots } = useMemo(
+    () => ({
+      families: Object.fromEntries(
+        editorFontOptions().map(font => [font.slug, font.fontFamily])
+      ),
+      slots: {
+        ...editorDesignConfig.baseFontSlots,
+        ...registry.slots,
+      },
+    }),
+    [registry]
+  );
   const urls = useMemo(
     () =>
       requiredEditorFontUrls(blocks, {
-        campaignbridgeFontAssets: editorDesignConfig.fontAssets,
+        campaignbridgeFontAssets: {
+          ...editorDesignConfig.fontAssets,
+          ...Object.fromEntries(
+            registry.fonts.map(font => [font.slug, font.url])
+          ),
+        },
         campaignbridgeDefaultFonts: editorDesignConfig.defaultFonts,
       }),
-    [blocks]
+    [blocks, registry]
   );
 
   useEffect(() => {
@@ -44,6 +67,7 @@ export default function EditorFontStylesheets(): null {
       }
       canvasDocument = next.contentDocument;
       syncEditorFontStylesheets(canvasDocument, urls);
+      syncEditorTypeFontStyles(canvasDocument, families, slots);
     };
     const onLoad = () => apply();
     const observer = new MutationObserver(apply);
@@ -54,9 +78,12 @@ export default function EditorFontStylesheets(): null {
     return () => {
       observer.disconnect();
       iframe?.removeEventListener('load', onLoad);
-      if (canvasDocument) syncEditorFontStylesheets(canvasDocument, []);
+      if (canvasDocument) {
+        syncEditorFontStylesheets(canvasDocument, []);
+        syncEditorTypeFontStyles(canvasDocument, {}, {});
+      }
     };
-  }, [urls]);
+  }, [families, slots, urls]);
 
   return null;
 }

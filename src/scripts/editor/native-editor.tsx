@@ -3,16 +3,18 @@ import './editor-design-settings';
 import './post-bindings';
 import './brand-logo';
 import './post-binding-controls';
-import { useSelect } from '@wordpress/data';
+import { store as blockEditorStore } from '@wordpress/block-editor';
+import { dispatch, useSelect } from '@wordpress/data';
 import {
   PluginDocumentSettingPanel,
   PluginPreviewMenuItem,
   store as editorStore,
 } from '@wordpress/editor';
-import { useCallback, useState } from '@wordpress/element';
+import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { search } from '@wordpress/icons';
 import { registerPlugin } from '@wordpress/plugins';
+import DesignFontsPanel from './components/DesignFontsPanel';
 import EmailPreviewModal from './components/EmailPreviewModal';
 import EditorFontStylesheets from './components/EditorFontStylesheets';
 import {
@@ -20,6 +22,12 @@ import {
   TemplateComplianceSettings,
   TemplateEmailSettings,
 } from './components/Sidebars/TemplateSettings';
+import {
+  DESIGN_FONT_META_KEY,
+  parseDesignFontRegistry,
+  serializeDesignFontRegistry,
+  synchronizeEditorDesignFonts,
+} from './design-fonts';
 import { useEmailPreview } from './hooks/useEmailPreview';
 
 const TEMPLATE_POST_TYPE = 'cb_templates';
@@ -29,6 +37,11 @@ interface NativeEditorState {
   postType: string;
   title: string;
   subject: string;
+  designFonts: string;
+}
+
+interface BlockEditorDispatch {
+  updateSettings: (settings: Record<string, unknown>) => void;
 }
 
 function stringValue(value: unknown): string {
@@ -50,23 +63,46 @@ function stringValue(value: unknown): string {
 
 /** CampaignBridge-owned extensions rendered inside Core's post editor. */
 export function NativeEditorExtension(): JSX.Element | null {
-  const { postId, postType, title, subject } = useSelect(select => {
-    const editor = select(editorStore);
-    const rawId = editor.getCurrentPostId();
-    const meta = editor.getEditedPostAttribute('meta') as
-      Record<string, unknown> | undefined;
+  const { postId, postType, title, subject, designFonts } = useSelect(
+    select => {
+      const editor = select(editorStore);
+      const rawId = editor.getCurrentPostId();
+      const meta = editor.getEditedPostAttribute('meta') as
+        Record<string, unknown> | undefined;
 
-    return {
-      postId: typeof rawId === 'number' ? rawId : Number(rawId) || 0,
-      postType: editor.getCurrentPostType(),
-      title: stringValue(editor.getEditedPostAttribute('title')),
-      subject: stringValue(meta?.campaignbridge_subject),
-    } satisfies NativeEditorState;
-  }, []);
+      return {
+        postId: typeof rawId === 'number' ? rawId : Number(rawId) || 0,
+        postType: editor.getCurrentPostType(),
+        title: stringValue(editor.getEditedPostAttribute('title')),
+        subject: stringValue(meta?.campaignbridge_subject),
+        designFonts: stringValue(meta?.[DESIGN_FONT_META_KEY]),
+      } satisfies NativeEditorState;
+    },
+    []
+  );
+  const designFontRegistry = useMemo(() => {
+    const registry = parseDesignFontRegistry(designFonts);
+    synchronizeEditorDesignFonts(registry);
+    return registry;
+  }, [designFonts]);
+  const canonicalDesignFonts = useMemo(
+    () => serializeDesignFontRegistry(designFontRegistry),
+    [designFontRegistry]
+  );
+  useEffect(() => {
+    const editorDispatch = dispatch(
+      blockEditorStore
+    ) as unknown as BlockEditorDispatch;
+    editorDispatch.updateSettings({
+      campaignbridgeDesignFonts: canonicalDesignFonts,
+    });
+  }, [canonicalDesignFonts]);
+
   const [previewOpen, setPreviewOpen] = useState(false);
   const { preview, requestPreview, resetPreview, isStale } = useEmailPreview(
     postId,
-    title
+    title,
+    canonicalDesignFonts
   );
   const openPreview = useCallback(() => {
     setPreviewOpen(true);
@@ -85,12 +121,18 @@ export function NativeEditorExtension(): JSX.Element | null {
 
   return (
     <>
-      <EditorFontStylesheets />
+      <EditorFontStylesheets registry={designFontRegistry} />
       <PluginDocumentSettingPanel
         name='template-settings'
         title={__('Template Settings', 'campaignbridge')}
       >
         <TemplateBasicSettings {...settingsProps} />
+      </PluginDocumentSettingPanel>
+      <PluginDocumentSettingPanel
+        name='design-fonts'
+        title={__('Design Fonts', 'campaignbridge')}
+      >
+        <DesignFontsPanel {...settingsProps} />
       </PluginDocumentSettingPanel>
       <PluginDocumentSettingPanel
         name='email-settings'

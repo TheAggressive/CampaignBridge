@@ -29,22 +29,24 @@ final class Email_Design_Resolver {
 	/**
 	 * Resolve raw input and identity into the runtime design truth.
 	 *
-	 * @param array<string, mixed> $manifest  Raw decoded manifest.
-	 * @param Brand_Kit|null       $brand_kit Active identity or safe defaults.
+	 * @param array<string, mixed>      $manifest     Raw decoded manifest.
+	 * @param Brand_Kit|null            $brand_kit    Active identity or safe defaults.
+	 * @param Design_Font_Registry|null $design_fonts Per-template font registry.
 	 */
-	public function resolve( array $manifest, ?Brand_Kit $brand_kit = null ): Resolved_Email_Design {
+	public function resolve( array $manifest, ?Brand_Kit $brand_kit = null, ?Design_Font_Registry $design_fonts = null ): Resolved_Email_Design {
 		$validated = $this->validator->validate( $manifest );
-		return $this->resolved( $validated, $brand_kit );
+		return $this->resolved( $validated, $brand_kit, $design_fonts );
 	}
 
 	/**
 	 * Resolve ordered manifests, validating every cumulative source layer.
 	 *
-	 * @param array<int, array<string, mixed>> $layers    Raw manifests from low to high precedence.
-	 * @param Brand_Kit|null                   $brand_kit Active identity or safe defaults.
+	 * @param array<int, array<string, mixed>> $layers       Raw manifests from low to high precedence.
+	 * @param Brand_Kit|null                   $brand_kit    Active identity or safe defaults.
+	 * @param Design_Font_Registry|null        $design_fonts Per-template font registry.
 	 * @throws Email_Design_Error When a source layer violates the contract.
 	 */
-	public function resolve_layers( array $layers, ?Brand_Kit $brand_kit = null ): Resolved_Email_Design {
+	public function resolve_layers( array $layers, ?Brand_Kit $brand_kit = null, ?Design_Font_Registry $design_fonts = null ): Resolved_Email_Design {
 		$manifest = array_shift( $layers );
 		if ( ! is_array( $manifest ) ) {
 			throw new Email_Design_Error( 'design.invalid_property', '$', 'Email design requires a packaged base manifest.' );
@@ -53,17 +55,18 @@ final class Email_Design_Resolver {
 		foreach ( $layers as $overlay ) {
 			$manifest = $this->validator->validate( $this->merge( $manifest, $overlay ) );
 		}
-		return $this->resolved( $manifest, $brand_kit );
+		return $this->resolved( $manifest, $brand_kit, $design_fonts );
 	}
 
 	/**
 	 * Normalize one fully validated effective manifest.
 	 *
-	 * @param array<string, mixed> $validated Validated effective manifest.
-	 * @param Brand_Kit|null       $brand_kit Active identity or safe defaults.
+	 * @param array<string, mixed>      $validated Validated effective manifest.
+	 * @param Brand_Kit|null            $brand_kit    Active identity or safe defaults.
+	 * @param Design_Font_Registry|null $design_fonts Per-template font registry.
 	 */
-	private function resolved( array $validated, ?Brand_Kit $brand_kit ): Resolved_Email_Design {
-		$design  = $this->normalizer->normalize( $validated, $brand_kit ?? Brand_Kit::defaults() );
+	private function resolved( array $validated, ?Brand_Kit $brand_kit, ?Design_Font_Registry $design_fonts ): Resolved_Email_Design {
+		$design  = $this->normalizer->normalize( $validated, $brand_kit ?? Brand_Kit::defaults(), $design_fonts );
 		$payload = $this->canonicalize( $design );
 		$json    = json_encode( $payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure deterministic domain hashing.
 

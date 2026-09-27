@@ -28,7 +28,7 @@ V1 does not provide database persistence, uploads, user-created manifests,
 style switching, arbitrary CSS, selectors, HTML, URLs, or asset declarations.
 Theme manifests are code-owned layers and use the same closed contract.
 Font-family entries select from CampaignBridge's curated catalog by slug. Brand
-Kit remains the validated route for brand colors and a custom Google Font.
+Kit remains the validated route for brand colors and bounded custom Google Fonts.
 
 The runtime precedence, from lowest to highest, is:
 
@@ -37,12 +37,13 @@ The runtime precedence, from lowest to highest, is:
 3. Parent theme `campaignbridge/email.json`.
 4. Child theme `campaignbridge/email.json`.
 5. Brand Kit identity values.
-6. Future template design overrides.
+6. Template design-font assets and semantic type overrides.
 7. Future campaign snapshot overrides.
 8. Explicit native Gutenberg block styles.
 
-Later layers win. Layers 6 and 7 are reserved contract positions, not v1
-features. An explicit legacy raw value already accepted by the compiler remains
+Later layers win. Layer 6 is a bounded, revisioned registry of server-validated
+font records rather than arbitrary design JSON; layer 7 remains a reserved
+contract position. An explicit legacy raw value already accepted by the compiler remains
 readable for compatibility, but v1 editor settings do not offer arbitrary new
 colors, font sizes, or spacing values.
 

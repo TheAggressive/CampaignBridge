@@ -10,7 +10,11 @@ const requestPreview = jest.fn(async () => {});
 const resetPreview = jest.fn();
 let postType = 'cb_templates';
 
-jest.mock('@wordpress/data', () => ({ useSelect: jest.fn() }));
+jest.mock('@wordpress/data', () => ({
+  useSelect: jest.fn(),
+  dispatch: () => ({ updateSettings: jest.fn() }),
+}));
+jest.mock('@wordpress/block-editor', () => ({ store: 'core/block-editor' }));
 jest.mock('@wordpress/editor', () => ({
   store: 'core/editor',
   PluginDocumentSettingPanel: ({
@@ -43,6 +47,10 @@ jest.mock(
     TemplateComplianceSettings: () => <div>compliance settings</div>,
   })
 );
+jest.mock('../../src/scripts/editor/components/DesignFontsPanel', () => ({
+  __esModule: true,
+  default: () => <div>design fonts</div>,
+}));
 jest.mock('../../src/scripts/editor/components/EmailPreviewModal', () => ({
   __esModule: true,
   default: ({ isOpen }: { isOpen: boolean }) =>
@@ -107,7 +115,11 @@ describe('native editor extension', () => {
     expect(container.textContent).toContain('basic settings');
     expect(container.textContent).toContain('email settings');
     expect(container.textContent).toContain('compliance settings');
-    expect(useEmailPreview).toHaveBeenCalledWith(42, 'Template title');
+    expect(useEmailPreview).toHaveBeenCalledWith(
+      42,
+      'Template title',
+      '{"version":1,"fonts":[],"slots":{}}'
+    );
 
     const previewButton = Array.from(container.querySelectorAll('button')).find(
       button => button.textContent === 'Email Preview'

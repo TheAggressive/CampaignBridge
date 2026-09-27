@@ -22,8 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * without a colour.
  */
 final class Brand_Kit {
-	public const VERSION            = 3;
+	public const VERSION            = 4;
 	public const MAX_LOGO_DIMENSION = 10000;
+	public const MAX_CUSTOM_FONTS   = 12;
 
 	public const SOURCE_DEFAULTS = 'defaults';
 	public const SOURCE_CUSTOM   = 'custom';
@@ -60,9 +61,8 @@ final class Brand_Kit {
 	public const FONT_SLOTS = array( 'heading', 'body', 'button' );
 
 	/**
-	 * Reserved slug identifying the brand kit's custom Google Font. A font slot
-	 * (or a block's font choice) set to this slug resolves to the kit's
-	 * resolved custom font, when one is configured.
+	 * Legacy slug for the single custom Google Font stored by v2/v3 kits. It
+	 * remains valid so existing blocks and semantic slots do not break.
 	 */
 	public const CUSTOM_FONT_SLUG = 'custom';
 
@@ -84,7 +84,7 @@ final class Brand_Kit {
 	 * @param string                                                                          $source            How the kit was last written.
 	 * @param string|null                                                                     $theme_fingerprint Hash of the imported theme slice.
 	 * @param array<string, string>                                                           $fonts             Slot slug to known font slug.
-	 * @param array<string, mixed>|null                                                       $custom_font      Resolved custom Google Font snapshot.
+	 * @param array<int, array<string, mixed>>                                                $custom_fonts     Resolved custom Google Font snapshots.
 	 * @param array{url: string, alt: string, width: int, height: int, link_url: string}|null $logo Resolved brand logo asset.
 	 */
 	private function __construct(
@@ -92,7 +92,7 @@ final class Brand_Kit {
 		private readonly string $source,
 		private readonly ?string $theme_fingerprint,
 		private readonly array $fonts,
-		private readonly ?array $custom_font,
+		private readonly array $custom_fonts,
 		private readonly ?array $logo
 	) {}
 
@@ -106,7 +106,7 @@ final class Brand_Kit {
 			$colors[ $preset['slug'] ] = $preset['color'];
 		}
 
-		return new self( $colors, self::SOURCE_DEFAULTS, null, self::FONT_DEFAULTS, null, null );
+		return new self( $colors, self::SOURCE_DEFAULTS, null, self::FONT_DEFAULTS, array(), null );
 	}
 
 	/**
@@ -136,27 +136,29 @@ final class Brand_Kit {
 		$posted = isset( $data['colors'] ) && is_array( $data['colors'] ) ? $data['colors'] : $data;
 		$fonts  = isset( $data['fonts'] ) && is_array( $data['fonts'] ) ? $data['fonts'] : null;
 
-		$custom_font = isset( $data['custom_font'] ) ? $data['custom_font'] : null;
-		$logo        = 3 <= $version && isset( $data['logo'] ) ? $data['logo'] : null;
+		$custom_fonts = 4 <= $version && isset( $data['custom_fonts'] )
+			? $data['custom_fonts']
+			: ( isset( $data['custom_font'] ) ? $data['custom_font'] : null );
+		$logo         = 3 <= $version && isset( $data['logo'] ) ? $data['logo'] : null;
 		if ( null !== $logo && ! is_array( $logo ) ) {
 			throw new \InvalidArgumentException( 'Brand logo must be an asset record.' );
 		}
 
-		return self::from_colors( $posted, $source, $fingerprint, $fonts, $custom_font, $logo );
+		return self::from_colors( $posted, $source, $fingerprint, $fonts, is_array( $custom_fonts ) ? $custom_fonts : null, $logo );
 	}
 
 	/**
 	 * Overlay slot colours onto the defaults.
 	 *
-	 * @param array<string, mixed>      $colors      Slot slug to colour.
-	 * @param string                    $source      How the kit was last written.
-	 * @param string|null               $fingerprint Imported theme hash.
-	 * @param array<string, mixed>|null $fonts       Slot slug to font slug.
-	 * @param array<string, mixed>|null $custom_font Resolved custom Google Font snapshot.
-	 * @param array<string, mixed>|null $logo        Resolved logo asset snapshot.
+	 * @param array<string, mixed>                                       $colors      Slot slug to colour.
+	 * @param string                                                     $source      How the kit was last written.
+	 * @param string|null                                                $fingerprint Imported theme hash.
+	 * @param array<string, mixed>|null                                  $fonts       Slot slug to font slug.
+	 * @param array<string, mixed>|array<int, array<string, mixed>>|null $custom_fonts Resolved custom Google Font snapshot or list.
+	 * @param array<string, mixed>|null                                  $logo        Resolved logo asset snapshot.
 	 * @throws \InvalidArgumentException When an explicit colour is not portable.
 	 */
-	public static function from_colors( array $colors, string $source = self::SOURCE_CUSTOM, ?string $fingerprint = null, ?array $fonts = null, ?array $custom_font = null, ?array $logo = null ): self {
+	public static function from_colors( array $colors, string $source = self::SOURCE_CUSTOM, ?string $fingerprint = null, ?array $fonts = null, ?array $custom_fonts = null, ?array $logo = null ): self {
 		$merged = self::defaults()->colors;
 
 		foreach ( $colors as $slug => $value ) {
@@ -172,9 +174,9 @@ final class Brand_Kit {
 			$merged[ $slug ] = $hex;
 		}
 
-		$custom = self::normalize_custom_font( $custom_font );
+		$custom = self::normalize_custom_fonts( $custom_fonts );
 
-		return new self( $merged, $source, $fingerprint, self::resolve_fonts( $fonts, null !== $custom ), $custom, self::normalize_logo( $logo ) );
+		return new self( $merged, $source, $fingerprint, self::resolve_fonts( $fonts, $custom ), $custom, self::normalize_logo( $logo ) );
 	}
 
 	/**
@@ -228,8 +230,8 @@ final class Brand_Kit {
 	public function font( string $slot ): string {
 		$value = $this->fonts[ $slot ] ?? self::FONT_DEFAULTS['body'];
 
-		if ( self::CUSTOM_FONT_SLUG === $value ) {
-			return null !== $this->custom_font ? $value : ( self::FONT_DEFAULTS[ $slot ] ?? self::FONT_DEFAULTS['body'] );
+		if ( null !== $this->custom_font( $value ) ) {
+			return $value;
 		}
 
 		if ( null !== Design_Presets::font( $value ) ) {
@@ -286,26 +288,48 @@ final class Brand_Kit {
 	}
 
 	/**
-	 * The kit's resolved custom Google Font, or null when none is configured.
+	 * All resolved custom Google Fonts in stable insertion order.
 	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function custom_fonts(): array {
+		return $this->custom_fonts;
+	}
+
+	/**
+	 * Resolve one custom font by slug. Without a slug, return the legacy custom
+	 * record when present, otherwise the first configured family.
+	 *
+	 * @param string|null $slug Stable custom preset slug.
 	 * @return array<string, mixed>|null
 	 */
-	public function custom_font(): ?array {
-		return $this->custom_font;
+	public function custom_font( ?string $slug = null ): ?array {
+		if ( null === $slug ) {
+			$slug = self::CUSTOM_FONT_SLUG;
+		}
+
+		foreach ( $this->custom_fonts as $font ) {
+			if ( $slug === $font['slug'] ) {
+				return $font;
+			}
+		}
+
+		return self::CUSTOM_FONT_SLUG === $slug ? ( $this->custom_fonts[0] ?? null ) : null;
 	}
 
 	/**
 	 * Whether the kit carries a resolved custom Google Font.
 	 */
 	public function has_custom_font(): bool {
-		return null !== $this->custom_font;
+		return array() !== $this->custom_fonts;
 	}
 
 	/**
 	 * The custom font's CSS family name, or null when none is configured.
 	 */
 	public function custom_font_family(): ?string {
-		return null !== $this->custom_font ? $this->custom_font['family'] : null;
+		$font = $this->custom_font();
+		return null !== $font ? $font['family'] : null;
 	}
 
 	/**
@@ -320,7 +344,7 @@ final class Brand_Kit {
 	/**
 	 * Persistable array.
 	 *
-	 * @return array{version: int, source: string, theme_fingerprint: string|null, colors: array<string, string>, fonts: array<string, string>, custom_font?: array<string, mixed>, logo?: array<string, mixed>}
+	 * @return array{version: int, source: string, theme_fingerprint: string|null, colors: array<string, string>, fonts: array<string, string>, custom_fonts?: array<int, array<string, mixed>>, logo?: array<string, mixed>}
 	 */
 	public function to_array(): array {
 		$stored = array(
@@ -331,8 +355,8 @@ final class Brand_Kit {
 			'fonts'             => $this->fonts,
 		);
 
-		if ( null !== $this->custom_font ) {
-			$stored['custom_font'] = $this->custom_font;
+		if ( array() !== $this->custom_fonts ) {
+			$stored['custom_fonts'] = $this->custom_fonts;
 		}
 		if ( null !== $this->logo ) {
 			$stored['logo'] = $this->logo;
@@ -401,12 +425,13 @@ final class Brand_Kit {
 	 * Unknown slugs are tolerated and replaced with the slot default so a bad
 	 * write in one slot never invalidates the rest of the kit.
 	 *
-	 * @param array<string, mixed>|null $fonts Stored font slugs.
-	 * @param bool                      $has_custom_font Whether the custom slug can resolve.
+	 * @param array<string, mixed>|null        $fonts        Stored font slugs.
+	 * @param array<int, array<string, mixed>> $custom_fonts Resolved custom font records.
 	 * @return array<string, string>
 	 */
-	private static function resolve_fonts( ?array $fonts, bool $has_custom_font = false ): array {
+	private static function resolve_fonts( ?array $fonts, array $custom_fonts = array() ): array {
 		$resolved = self::FONT_DEFAULTS;
+		$custom   = array_column( $custom_fonts, null, 'slug' );
 
 		if ( null !== $fonts ) {
 			foreach ( self::FONT_SLOTS as $slot ) {
@@ -415,10 +440,8 @@ final class Brand_Kit {
 					continue;
 				}
 
-				if ( self::CUSTOM_FONT_SLUG === $value ) {
-					if ( $has_custom_font ) {
-						$resolved[ $slot ] = $value;
-					}
+				if ( isset( $custom[ $value ] ) ) {
+					$resolved[ $slot ] = $value;
 					continue;
 				}
 
@@ -432,19 +455,55 @@ final class Brand_Kit {
 	}
 
 	/**
-	 * Normalize stored custom-font data into its canonical shape, or return null
-	 * when it is missing or unusable.
+	 * Normalize stored custom-font data into a bounded canonical list.
 	 *
-	 * A custom font is the kit's resolved Google Font: a family name, a set of
-	 * weights, a stable CSS2 URL, and an email-safe fallback stack. Tolerant on
-	 * read — malformed input is dropped rather than raised, so a corrupted kit
-	 * degrades to the catalogue defaults instead of breaking render.
+	 * A single record is the legacy v2/v3 representation and keeps the `custom`
+	 * slug. Collection entries use deterministic family slugs. Malformed input
+	 * is dropped on read so one damaged record cannot break the kit.
 	 *
-	 * @param mixed $raw Raw custom-font data.
+	 * @param mixed $raw Raw custom-font record or list.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function normalize_custom_fonts( mixed $raw ): array {
+		if ( ! is_array( $raw ) ) {
+			return array();
+		}
+
+		$legacy = array_key_exists( 'family', $raw ) || array_key_exists( 'url', $raw );
+		$items  = $legacy ? array( $raw ) : array_values( $raw );
+		$fonts  = array();
+		$seen   = array();
+
+		foreach ( $items as $item ) {
+			$font = self::normalize_custom_font_record( $item, $legacy ? self::CUSTOM_FONT_SLUG : null );
+			if ( null === $font ) {
+				continue;
+			}
+
+			$family_key = strtolower( (string) $font['name'] );
+			if ( isset( $seen[ $font['slug'] ] ) || isset( $seen[ $family_key ] ) ) {
+				continue;
+			}
+
+			$seen[ $font['slug'] ] = true;
+			$seen[ $family_key ]   = true;
+			$fonts[]               = $font;
+			if ( self::MAX_CUSTOM_FONTS === count( $fonts ) ) {
+				break;
+			}
+		}
+
+		return $fonts;
+	}
+
+	/**
+	 * Normalize one stored custom-font record, or drop malformed input.
 	 *
+	 * @param mixed       $raw           Raw custom-font data.
+	 * @param string|null $fallback_slug Slug used by the legacy single record.
 	 * @return array{slug: string, name: string, family: string, weights: array<int, int>, url: string}|null
 	 */
-	private static function normalize_custom_font( $raw ): ?array {
+	public static function normalize_custom_font_record( mixed $raw, ?string $fallback_slug = null ): ?array {
 		if ( ! is_array( $raw ) ) {
 			return null;
 		}
@@ -463,6 +522,10 @@ final class Brand_Kit {
 
 		$name = $raw['name'] ?? null;
 		$name = ( is_string( $name ) && '' !== trim( $name ) ) ? trim( $name ) : $family;
+		$slug = is_string( $raw['slug'] ?? null ) ? trim( $raw['slug'] ) : ( $fallback_slug ?? self::custom_font_slug( $name ) );
+		if ( self::CUSTOM_FONT_SLUG !== $slug && 1 !== preg_match( '/^custom-[a-f0-9]{12}$/', $slug ) ) {
+			return null;
+		}
 
 		$weights     = array();
 		$raw_weights = $raw['weights'] ?? array();
@@ -487,12 +550,21 @@ final class Brand_Kit {
 		}
 
 		return array(
-			'slug'    => self::CUSTOM_FONT_SLUG,
+			'slug'    => $slug,
 			'name'    => $name,
 			'family'  => $family,
 			'weights' => $weights,
 			'url'     => $url,
 		);
+	}
+
+	/**
+	 * Create a stable preset slug for one validated Google Font family.
+	 *
+	 * @param string $family Validated Google Font family name.
+	 */
+	public static function custom_font_slug( string $family ): string {
+		return 'custom-' . substr( hash( 'sha256', strtolower( trim( $family ) ) ), 0, 12 );
 	}
 
 	/**

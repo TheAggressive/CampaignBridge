@@ -39,6 +39,15 @@ abstract class Abstract_Rest_Controller {
 	}
 
 	/**
+	 * Check if the current user can author email templates.
+	 *
+	 * @return bool True if the user can edit templates.
+	 */
+	public static function can_edit_templates(): bool {
+		return \current_user_can( Capabilities::EDIT_TEMPLATES );
+	}
+
+	/**
 	 * Check if current user can manage provider connections.
 	 *
 	 * @return bool True if user has required capability.

@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin;
 
+use CampaignBridge\Core\Storage;
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
@@ -75,7 +77,9 @@ final class Native_Editor {
 		}
 
 		$kit                                        = ( new Brand_Kit_Repository() )->get();
-		$design                                     = Email_Design_Factory::resolve( $kit );
+		$post_id                                    = $context->post instanceof \WP_Post ? $context->post->ID : 0;
+		$design_fonts                               = self::design_fonts( $post_id );
+		$design                                     = Email_Design_Factory::resolve( $kit, $design_fonts );
 		$settings                                   = Editor_Design_Settings::apply( $settings, $design );
 		$settings['campaignbridgePostTypeArchives'] = self::post_type_archives();
 		$settings['campaignbridgeBrandLogo']        = $kit->logo();
@@ -116,10 +120,12 @@ final class Native_Editor {
 			'dist/scripts/editor/native-editor.asset.php'
 		);
 
-		$kit     = ( new Brand_Kit_Repository() )->get();
-		$design  = Email_Design_Factory::resolve( $kit );
-		$payload = wp_json_encode(
-			Editor_Design_Settings::client_config( $design ),
+		$kit          = ( new Brand_Kit_Repository() )->get();
+		$post         = get_post();
+		$design_fonts = self::design_fonts( $post instanceof \WP_Post ? $post->ID : 0 );
+		$design       = Email_Design_Factory::resolve( $kit, $design_fonts );
+		$payload      = wp_json_encode(
+			Editor_Design_Settings::client_config( $design, $design_fonts, $kit->fonts() ),
 			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
 		);
 		if ( is_string( $payload ) ) {
@@ -134,6 +140,19 @@ final class Native_Editor {
 			'dist/styles/editor/preview.asset.php'
 		);
 		\wp_set_script_translations( 'campaignbridge-native-editor', 'campaignbridge' );
+	}
+
+	/**
+	 * Read a template's validated, revisioned font registry.
+	 *
+	 * @param int $post_id Template identifier.
+	 */
+	private static function design_fonts( int $post_id ): Design_Font_Registry {
+		if ( 1 > $post_id ) {
+			return Design_Font_Registry::empty();
+		}
+
+		return Design_Font_Registry::from_json( Storage::get_post_meta( $post_id, Design_Font_Registry::META_KEY, true ) );
 	}
 
 	/**

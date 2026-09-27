@@ -28,11 +28,18 @@ expand the manifest vocabulary.
 
 ## Brand Kit and design responsibilities
 
-Brand Kit answers what the brand is: semantic identity colors, font roles, and
-the validated custom Google Font. `email.json` answers how an email uses the
-available identity: layout, available presets, typography, spacing, and block
-defaults. Brand Kit semantic values are merged before manifest design rules are
-applied; explicit block values win last.
+Brand Kit answers what the brand is: semantic identity colors, reusable font
+roles, and reusable validated Google Fonts. A template's design-font registry
+adds fonts and optional Heading, Body, and Button choices for that email only.
+It is revisioned and duplicated with the template. `email.json` answers how an
+email uses the available identity: layout, available presets, typography,
+spacing, and block defaults.
+
+Resolution adds the template registry after Brand Kit fonts, then applies its
+valid semantic type overrides. Explicit native block font presets win last.
+Provider records are not accepted in block attributes or theme manifests; they
+must pass the bounded server-side font resolver and always carry an email-safe
+fallback stack.
 
 The standard color slugs (`text`, `secondary`, `background`, `card`, `border`,
 `brand`, and `on-brand`) are identity slots. The packaged values are safe
@@ -92,16 +99,16 @@ unknown kind or search other catalogs. Final HTML must contain neither
 
 ## Supported vocabulary
 
-| Location | V1 properties |
-| --- | --- |
-| Global settings | `layout.contentWidth`, color palette/custom switch, font families/sizes/custom switch, spacing sizes/custom switch |
-| Global styles | background/text color; font family, size, weight, and line height |
-| Heading/text/post title/post excerpt | color, typography, bottom spacing |
-| Button/post button | background/text color and font family |
-| Columns | block gap |
-| Divider | color, safe border style, and width |
-| Spacer | minimum height |
-| Post link | text color |
+| Location                             | V1 properties                                                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Global settings                      | `layout.contentWidth`, color palette/custom switch, font families/sizes/custom switch, spacing sizes/custom switch |
+| Global styles                        | background/text color; font family, size, weight, and line height                                                  |
+| Heading/text/post title/post excerpt | color, typography, bottom spacing                                                                                  |
+| Button/post button                   | background/text color and font family                                                                              |
+| Columns                              | block gap                                                                                                          |
+| Divider                              | color, safe border style, and width                                                                                |
+| Spacer                               | minimum height                                                                                                     |
+| Post link                            | text color                                                                                                         |
 
 The schema is closed at every object boundary. Arbitrary `css`, selectors,
 unknown properties, unknown block names, literal font stacks, font URLs, and

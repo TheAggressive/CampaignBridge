@@ -75,7 +75,7 @@ final class Brand_Kit_Copy {
 	/**
 	 * Font options in the REST and editor shape.
 	 *
-	 * @param Brand_Kit|null $kit Active kit, when a custom font may be present.
+	 * @param Brand_Kit|null $kit Active kit, when custom fonts may be present.
 	 * @return array<int, array{slug: string, name: string, type: string, family: string, url: string|null}>
 	 */
 	public static function font_options( ?Brand_Kit $kit = null ): array {
@@ -90,10 +90,9 @@ final class Brand_Kit_Copy {
 			);
 		}
 
-		$custom = $kit?->custom_font();
-		if ( null !== $custom ) {
+		foreach ( $kit?->custom_fonts() ?? array() as $custom ) {
 			$options[] = array(
-				'slug'   => Brand_Kit::CUSTOM_FONT_SLUG,
+				'slug'   => $custom['slug'],
 				'name'   => $custom['name'],
 				'type'   => 'web',
 				'family' => $custom['family'],
