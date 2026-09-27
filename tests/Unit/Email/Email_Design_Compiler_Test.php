@@ -114,6 +114,25 @@ final class Email_Design_Compiler_Test extends TestCase {
 		self::assertStringEndsWith( '.attrs.fontFamily', $result->diagnostics()[0]->path() );
 	}
 
+	/** Explicit native font overrides compile for every supported Core content block. */
+	public function test_explicit_font_overrides_resolve_for_every_supported_core_block(): void {
+		$heading = $this->heading_document();
+		$heading[0]['innerBlocks'][0]['innerBlocks'][0]['attrs']['fontFamily'] = 'montserrat';
+		$paragraph = $this->text_document();
+		$paragraph[0]['innerBlocks'][0]['innerBlocks'][0]['attrs']['fontFamily'] = 'montserrat';
+
+		foreach ( array(
+			'core/heading'   => $heading,
+			'core/paragraph' => $paragraph,
+			'core/button'    => $this->button_document( 'montserrat' ),
+		) as $block_name => $document ) {
+			$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+			self::assertTrue( $result->is_success(), 'Expected ' . $block_name . ' font override to compile.' );
+			self::assertStringContainsString( 'font-family:Montserrat,Arial,Helvetica,sans-serif', $result->html(), $block_name );
+		}
+	}
+
 	/**
 	 * Build the smallest valid compiler document.
 	 *
@@ -173,6 +192,39 @@ final class Email_Design_Compiler_Test extends TestCase {
 				),
 			),
 		);
+	}
+
+	/**
+	 * Build a valid Core Button document with one explicit font choice.
+	 *
+	 * @param string $font_family Font preset slug.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function button_document( string $font_family ): array {
+		$document                     = $this->document();
+		$document[0]['innerBlocks'][] = array(
+			'blockName'   => 'campaignbridge/section',
+			'attrs'       => array(),
+			'innerBlocks' => array(
+				array(
+					'blockName'   => 'core/buttons',
+					'attrs'       => array(),
+					'innerBlocks' => array(
+						array(
+							'blockName'   => 'core/button',
+							'attrs'       => array(
+								'text'       => 'Read more',
+								'url'        => 'https://example.com/read',
+								'fontFamily' => $font_family,
+							),
+							'innerBlocks' => array(),
+						),
+					),
+				),
+			),
+		);
+
+		return $document;
 	}
 
 	/** Build the universal render context. */
