@@ -475,7 +475,7 @@ final class Brand_Kit {
 		$seen   = array();
 
 		foreach ( $items as $item ) {
-			$font = self::normalize_custom_font( $item, $legacy ? self::CUSTOM_FONT_SLUG : null );
+			$font = self::normalize_custom_font_record( $item, $legacy ? self::CUSTOM_FONT_SLUG : null );
 			if ( null === $font ) {
 				continue;
 			}
@@ -503,7 +503,7 @@ final class Brand_Kit {
 	 * @param string|null $fallback_slug Slug used by the legacy single record.
 	 * @return array{slug: string, name: string, family: string, weights: array<int, int>, url: string}|null
 	 */
-	private static function normalize_custom_font( mixed $raw, ?string $fallback_slug = null ): ?array {
+	public static function normalize_custom_font_record( mixed $raw, ?string $fallback_slug = null ): ?array {
 		if ( ! is_array( $raw ) ) {
 			return null;
 		}

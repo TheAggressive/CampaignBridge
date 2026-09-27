@@ -12,6 +12,7 @@ namespace CampaignBridge\Tests\Unit\Email;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
 use CampaignBridge\Domain\Email\Brand_Kit;
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 use CampaignBridge\Admin\Editor_Design_Settings;
 use CampaignBridge\Services\Email\Compiler_Factory;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
@@ -110,7 +111,10 @@ final class Email_Design_Compiler_Test extends TestCase {
 			array(),
 			Brand_Kit::SOURCE_CUSTOM,
 			null,
-			array( 'heading' => $serif_slug, 'body' => $sans_slug ),
+			array(
+				'heading' => $serif_slug,
+				'body'    => $sans_slug,
+			),
 			array(
 				array(
 					'slug'    => $sans_slug,
@@ -132,7 +136,10 @@ final class Email_Design_Compiler_Test extends TestCase {
 		$document   = $this->heading_document();
 		$document[0]['innerBlocks'][0]['innerBlocks'][] = array(
 			'blockName'   => 'core/heading',
-			'attrs'       => array( 'content' => 'Explicit heading', 'fontFamily' => $sans_slug ),
+			'attrs'       => array(
+				'content'    => 'Explicit heading',
+				'fontFamily' => $sans_slug,
+			),
 			'innerBlocks' => array(),
 		);
 
@@ -143,6 +150,31 @@ final class Email_Design_Compiler_Test extends TestCase {
 		self::assertStringContainsString( 'font-family:Example Sans,Arial,Helvetica,sans-serif', $result->html() );
 		self::assertStringContainsString( 'family=Example+Serif', $result->html() );
 		self::assertStringContainsString( 'family=Example+Sans', $result->html() );
+	}
+
+	/** A per-template type override compiles with its validated font asset. */
+	public function test_template_design_font_compiles_as_the_heading_default(): void {
+		$slug     = Brand_Kit::custom_font_slug( 'Campaign Display' );
+		$registry = Design_Font_Registry::from_array(
+			array(
+				'fonts' => array(
+					array(
+						'slug'    => $slug,
+						'name'    => 'Campaign Display',
+						'family'  => 'Campaign Display,Georgia,serif',
+						'weights' => array( 400, 700 ),
+						'url'     => 'https://fonts.googleapis.com/css2?family=Campaign+Display:wght@400;700&display=swap',
+					),
+				),
+				'slots' => array( 'heading' => $slug ),
+			)
+		);
+		$design   = Email_Design_Factory::resolve( Brand_Kit::defaults(), $registry );
+		$result   = Compiler_Factory::create( $design )->compile( $this->heading_document(), $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'font-family:Campaign Display,Georgia,serif', $result->html() );
+		self::assertStringContainsString( 'family=Campaign+Display', $result->html() );
 	}
 
 	/** Unknown explicit preset references fail with the stable compiler model. */
@@ -191,7 +223,11 @@ final class Email_Design_Compiler_Test extends TestCase {
 		);
 	}
 
-	/** @return array<int, array<string, mixed>> */
+	/**
+	 * Build a paragraph document that inherits design defaults.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
 	private function text_document(): array {
 		return array(
 			array(
@@ -214,7 +250,11 @@ final class Email_Design_Compiler_Test extends TestCase {
 		);
 	}
 
-	/** @return array<int, array<string, mixed>> */
+	/**
+	 * Build a heading document that inherits design defaults.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
 	private function heading_document(): array {
 		return array(
 			array(

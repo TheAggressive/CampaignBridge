@@ -18,17 +18,20 @@ final class Email_Design_Normalizer {
 	/**
 	 * Normalize validated v1 input.
 	 *
-	 * @param array<string, mixed> $manifest Validated v1 manifest.
-	 * @param Brand_Kit            $brand_kit Active brand identity.
+	 * @param array<string, mixed> $manifest     Validated v1 manifest.
+	 * @param Brand_Kit            $brand_kit    Active brand identity.
+	 * @param Design_Font_Registry $design_fonts Per-template font assets and type overrides.
 	 * @return array<string, mixed>
 	 */
-	public function normalize( array $manifest, Brand_Kit $brand_kit ): array {
-		$settings = $manifest['settings'];
-		$colors   = $this->colors( $settings['color']['palette'], $brand_kit );
-		$fonts    = $this->fonts( $settings['typography']['fontFamilies'], $brand_kit );
-		$sizes    = $this->sizes( $settings['typography']['fontSizes'], 'design.invalid_font' );
-		$spacing  = $this->sizes( $settings['spacing']['spacingSizes'], 'design.invalid_spacing' );
-		$catalogs = array(
+	public function normalize( array $manifest, Brand_Kit $brand_kit, ?Design_Font_Registry $design_fonts = null ): array {
+		$settings     = $manifest['settings'];
+		$design_fonts = $design_fonts ?? Design_Font_Registry::empty();
+		$colors       = $this->colors( $settings['color']['palette'], $brand_kit );
+		$fonts        = $this->fonts( $settings['typography']['fontFamilies'], $brand_kit, $design_fonts );
+		$font_slots   = $this->font_slots( $fonts, $brand_kit, $design_fonts );
+		$sizes        = $this->sizes( $settings['typography']['fontSizes'], 'design.invalid_font' );
+		$spacing      = $this->sizes( $settings['spacing']['spacingSizes'], 'design.invalid_spacing' );
+		$catalogs     = array(
 			'color'       => array_column( $colors, 'color', 'slug' ),
 			'font-family' => array_column( $fonts, 'family', 'slug' ),
 			'font-size'   => array_column( $sizes, 'size', 'slug' ),
@@ -50,10 +53,10 @@ final class Email_Design_Normalizer {
 		// Brand Kit typography is semantic identity, not an authored block
 		// override. Promote it into the resolved design so the editor and the
 		// compiler inherit the same heading/body/button defaults.
-		$styles['global']['typography']['fontFamily']                   = $this->font_family_for_slot( $fonts, $brand_kit, 'body' );
-		$styles['blocks']['core/paragraph']['typography']['fontFamily'] = $this->font_family_for_slot( $fonts, $brand_kit, 'body' );
-		$styles['blocks']['core/heading']['typography']['fontFamily']   = $this->font_family_for_slot( $fonts, $brand_kit, 'heading' );
-		$styles['blocks']['core/button']['typography']['fontFamily']    = $this->font_family_for_slot( $fonts, $brand_kit, 'button' );
+		$styles['global']['typography']['fontFamily']                   = $this->font_family_for_slot( $fonts, $font_slots, 'body' );
+		$styles['blocks']['core/paragraph']['typography']['fontFamily'] = $this->font_family_for_slot( $fonts, $font_slots, 'body' );
+		$styles['blocks']['core/heading']['typography']['fontFamily']   = $this->font_family_for_slot( $fonts, $font_slots, 'heading' );
+		$styles['blocks']['core/button']['typography']['fontFamily']    = $this->font_family_for_slot( $fonts, $font_slots, 'button' );
 
 		return array(
 			'version'  => 1,
@@ -74,19 +77,19 @@ final class Email_Design_Normalizer {
 				),
 			),
 			'styles'   => $styles,
-			'brand'    => array( 'fonts' => $brand_kit->fonts() ),
+			'brand'    => array( 'fonts' => $font_slots ),
 		);
 	}
 
 	/**
-	 * Resolve one semantic Brand Kit slot through the normalized font catalog.
+	 * Resolve one semantic type slot through the normalized font catalog.
 	 *
-	 * @param array<int, array<string, mixed>> $fonts     Resolved font presets.
-	 * @param Brand_Kit                        $brand_kit Active brand identity.
-	 * @param string                           $slot      Semantic font slot.
+	 * @param array<int, array<string, mixed>> $fonts      Resolved font presets.
+	 * @param array<string, string>            $font_slots Effective semantic slot map.
+	 * @param string                           $slot       Semantic font slot.
 	 */
-	private function font_family_for_slot( array $fonts, Brand_Kit $brand_kit, string $slot ): string {
-		$slug = $brand_kit->font( $slot );
+	private function font_family_for_slot( array $fonts, array $font_slots, string $slot ): string {
+		$slug = $font_slots[ $slot ] ?? Brand_Kit::FONT_DEFAULTS['body'];
 		foreach ( $fonts as $font ) {
 			if ( $slug === $font['slug'] ) {
 				return $font['family'];
@@ -114,27 +117,58 @@ final class Email_Design_Normalizer {
 	}
 
 	/**
-	 * Resolve manifest font selections through the curated catalog.
+	 * Resolve manifest, Brand Kit, and per-template font selections.
 	 *
-	 * @param array<int, array<string, mixed>> $declared Manifest font selections.
-	 * @param Brand_Kit                        $brand_kit Active brand identity.
+	 * @param array<int, array<string, mixed>> $declared     Manifest font selections.
+	 * @param Brand_Kit                        $brand_kit    Active brand identity.
+	 * @param Design_Font_Registry             $design_fonts Per-template font registry.
 	 * @return array<int, array<string, mixed>>
 	 * @throws Email_Design_Error When a font is not curated.
 	 */
-	private function fonts( array $declared, Brand_Kit $brand_kit ): array {
+	private function fonts( array $declared, Brand_Kit $brand_kit, Design_Font_Registry $design_fonts ): array {
 		$fonts = array();
+		$seen  = array();
 		foreach ( $this->unique_by_slug( $declared ) as $selection ) {
 			$font = Design_Presets::font( $selection['slug'] );
 			if ( null === $font ) {
 				throw new Email_Design_Error( 'design.invalid_font', '$.settings.typography.fontFamilies', 'Email design references an unknown curated font.' );
 			}
-			$fonts[] = array_merge( $font, array( 'name' => $selection['name'] ) );
+			$fonts[]                                      = array_merge( $font, array( 'name' => $selection['name'] ) );
+			$seen[ $font['slug'] ]                        = true;
+			$seen[ strtolower( (string) $font['name'] ) ] = true;
 		}
 
-		foreach ( $brand_kit->custom_fonts() as $custom ) {
-			$fonts[] = array_merge( $custom, array( 'type' => 'web' ) );
+		foreach ( array_merge( $brand_kit->custom_fonts(), $design_fonts->fonts() ) as $custom ) {
+			$family_key = strtolower( (string) $custom['name'] );
+			if ( isset( $seen[ $custom['slug'] ] ) || isset( $seen[ $family_key ] ) ) {
+				continue;
+			}
+			$fonts[]                 = array_merge( $custom, array( 'type' => 'web' ) );
+			$seen[ $custom['slug'] ] = true;
+			$seen[ $family_key ]     = true;
 		}
 		return $fonts;
+	}
+
+	/**
+	 * Overlay valid per-template type choices onto the Brand Kit defaults.
+	 *
+	 * @param array<int, array<string, mixed>> $fonts        Resolved font catalog.
+	 * @param Brand_Kit                        $brand_kit     Active brand identity.
+	 * @param Design_Font_Registry             $design_fonts Per-template font registry.
+	 * @return array<string, string>
+	 */
+	private function font_slots( array $fonts, Brand_Kit $brand_kit, Design_Font_Registry $design_fonts ): array {
+		$resolved = $brand_kit->fonts();
+		$known    = array_fill_keys( array_column( $fonts, 'slug' ), true );
+
+		foreach ( $design_fonts->slots() as $slot => $slug ) {
+			if ( in_array( $slot, Brand_Kit::FONT_SLOTS, true ) && isset( $known[ $slug ] ) ) {
+				$resolved[ $slot ] = $slug;
+			}
+		}
+
+		return $resolved;
 	}
 
 	/**

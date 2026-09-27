@@ -1,6 +1,7 @@
 import {
   requiredEditorFontUrls,
   syncEditorFontStylesheets,
+  syncEditorTypeFontStyles,
 } from '../../src/scripts/editor/editor-font-assets';
 
 const assets = {
@@ -101,6 +102,32 @@ describe('native editor font assets', () => {
     );
     expect(links).toHaveLength(1);
     expect(links[0].dataset.campaignbridgeEditorFont).toBe(assets.montserrat);
+  });
+
+  it('updates and removes live semantic type-slot styles', () => {
+    const canvas = document.implementation.createHTMLDocument('Editor canvas');
+
+    syncEditorTypeFontStyles(
+      canvas,
+      {
+        body: 'Inter,Arial,sans-serif',
+        display: 'Campaign Display,Georgia,serif',
+      },
+      { body: 'body', heading: 'display' }
+    );
+
+    const style = canvas.head.querySelector<HTMLStyleElement>(
+      'style[data-campaignbridge-editor-type-fonts]'
+    );
+    expect(style?.textContent).toContain(
+      '[data-type="core/heading"]){font-family:Campaign Display,Georgia,serif}'
+    );
+    expect(style?.textContent).toContain('font-family:Inter,Arial,sans-serif');
+
+    syncEditorTypeFontStyles(canvas, {}, {});
+    expect(
+      canvas.head.querySelector('style[data-campaignbridge-editor-type-fonts]')
+    ).toBeNull();
   });
 
   it('requests nothing when external font assets are unavailable', () => {

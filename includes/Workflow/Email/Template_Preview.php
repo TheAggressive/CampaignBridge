@@ -12,6 +12,7 @@ namespace CampaignBridge\Workflow\Email;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Compile_Result;
 use CampaignBridge\Domain\Email\Compile_Diagnostic;
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 use CampaignBridge\Domain\Email\Post_Snapshot_Source;
 use CampaignBridge\Domain\Email\Render_Context;
 use CampaignBridge\Domain\Email\Review_Input;
@@ -33,12 +34,14 @@ final class Template_Preview {
 	/**
 	 * Build a preview compiler.
 	 *
-	 * @param Post_Snapshot_Source $snapshots   Immutable post source.
-	 * @param Brand_Kit|null       $brand_kit   Active brand kit. Null uses defaults.
+	 * @param Post_Snapshot_Source      $snapshots    Immutable post source.
+	 * @param Brand_Kit|null            $brand_kit    Active brand kit. Null uses defaults.
+	 * @param Design_Font_Registry|null $design_fonts Per-template font registry.
 	 */
 	public function __construct(
 		private readonly Post_Snapshot_Source $snapshots,
-		private readonly ?Brand_Kit $brand_kit = null
+		private readonly ?Brand_Kit $brand_kit = null,
+		private readonly ?Design_Font_Registry $design_fonts = null
 	) {}
 
 	/**
@@ -71,7 +74,7 @@ final class Template_Preview {
 			Email_Compiler::PROFILE_VERSION
 		);
 
-		return new Review_Input( $content, $blocks, $context, Email_Design_Factory::resolve( $kit ), 1, Email_Compiler::COMPILER_VERSION );
+		return new Review_Input( $content, $blocks, $context, Email_Design_Factory::resolve( $kit, $this->design_fonts ), 1, Email_Compiler::COMPILER_VERSION );
 	}
 
 	/**

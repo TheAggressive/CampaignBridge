@@ -26,18 +26,19 @@ final class Template_Duplication_Test extends Test_Case {
 	 * Reusable email definition fields and the source value for each.
 	 */
 	private const COPIED = array(
-		'campaignbridge_subject'             => 'Launch subject',
-		'campaignbridge_preheader'           => 'Launch preheader',
-		'campaignbridge_sender_name'         => 'Launch Desk',
-		'campaignbridge_sender_email'        => 'launch@example.test',
-		'campaignbridge_view_online_enabled' => true,
-		'campaignbridge_view_online_url'     => 'https://example.test/launch',
-		'campaignbridge_unsubscribe_url'     => 'https://example.test/unsubscribe',
-		'campaignbridge_address_html'        => '<p>1 Launch Street</p>',
-		'campaignbridge_utm_enabled'         => true,
-		'campaignbridge_utm_template'        => 'utm_source=launch',
-		'campaignbridge_footer_enabled'      => true,
-		'campaignbridge_footer_pattern'      => 'launch-footer',
+		'campaignbridge_subject'               => 'Launch subject',
+		'campaignbridge_preheader'             => 'Launch preheader',
+		'campaignbridge_sender_name'           => 'Launch Desk',
+		'campaignbridge_sender_email'          => 'launch@example.test',
+		'campaignbridge_view_online_enabled'   => true,
+		'campaignbridge_view_online_url'       => 'https://example.test/launch',
+		'campaignbridge_unsubscribe_url'       => 'https://example.test/unsubscribe',
+		'campaignbridge_address_html'          => '<p>1 Launch Street</p>',
+		'campaignbridge_utm_enabled'           => true,
+		'campaignbridge_utm_template'          => 'utm_source=launch',
+		'campaignbridge_footer_enabled'        => true,
+		'campaignbridge_footer_pattern'        => 'launch-footer',
+		'campaignbridge_template_design_fonts' => '{"version":1,"fonts":[],"slots":{"heading":"inter"}}',
 	);
 
 	/**

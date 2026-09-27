@@ -26,18 +26,22 @@ final class Template_Revision_Meta_Test extends Test_Case {
 	 * Fields that define the reusable email, with a value for each state.
 	 */
 	private const REVISIONED = array(
-		'campaignbridge_subject'             => array( 'Spring subject', 'Summer subject' ),
-		'campaignbridge_preheader'           => array( 'Spring preheader', 'Summer preheader' ),
-		'campaignbridge_sender_name'         => array( 'Spring Desk', 'Summer Desk' ),
-		'campaignbridge_sender_email'        => array( 'spring@example.test', 'summer@example.test' ),
-		'campaignbridge_view_online_enabled' => array( true, false ),
-		'campaignbridge_view_online_url'     => array( 'https://example.test/spring', 'https://example.test/summer' ),
-		'campaignbridge_unsubscribe_url'     => array( 'https://example.test/unsubscribe/spring', 'https://example.test/unsubscribe/summer' ),
-		'campaignbridge_address_html'        => array( '<p>1 Spring Street</p>', '<p>2 Summer Avenue</p>' ),
-		'campaignbridge_utm_enabled'         => array( true, false ),
-		'campaignbridge_utm_template'        => array( 'utm_source=spring', 'utm_source=summer' ),
-		'campaignbridge_footer_enabled'      => array( true, false ),
-		'campaignbridge_footer_pattern'      => array( 'spring-footer', 'summer-footer' ),
+		'campaignbridge_subject'               => array( 'Spring subject', 'Summer subject' ),
+		'campaignbridge_preheader'             => array( 'Spring preheader', 'Summer preheader' ),
+		'campaignbridge_sender_name'           => array( 'Spring Desk', 'Summer Desk' ),
+		'campaignbridge_sender_email'          => array( 'spring@example.test', 'summer@example.test' ),
+		'campaignbridge_view_online_enabled'   => array( true, false ),
+		'campaignbridge_view_online_url'       => array( 'https://example.test/spring', 'https://example.test/summer' ),
+		'campaignbridge_unsubscribe_url'       => array( 'https://example.test/unsubscribe/spring', 'https://example.test/unsubscribe/summer' ),
+		'campaignbridge_address_html'          => array( '<p>1 Spring Street</p>', '<p>2 Summer Avenue</p>' ),
+		'campaignbridge_utm_enabled'           => array( true, false ),
+		'campaignbridge_utm_template'          => array( 'utm_source=spring', 'utm_source=summer' ),
+		'campaignbridge_footer_enabled'        => array( true, false ),
+		'campaignbridge_footer_pattern'        => array( 'spring-footer', 'summer-footer' ),
+		'campaignbridge_template_design_fonts' => array(
+			'{"version":1,"fonts":[],"slots":{"heading":"arial"}}',
+			'{"version":1,"fonts":[],"slots":{"heading":"inter"}}',
+		),
 	);
 
 	/**

@@ -26,8 +26,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Read and update the stored email brand kit.
  */
 final class Brand_Kit_Routes extends Abstract_Rest_Controller {
-	private const ENDPOINT_PATH = '/brand-kit';
-	private const FONTS_PATH    = '/brand-kit/fonts';
+	private const ENDPOINT_PATH     = '/brand-kit';
+	private const FONTS_PATH        = '/brand-kit/fonts';
+	private const DESIGN_FONTS_PATH = '/design-fonts';
 
 	/**
 	 * Register focused colour and font operations.
@@ -102,6 +103,57 @@ final class Brand_Kit_Routes extends Abstract_Rest_Controller {
 				),
 			)
 		);
+
+		\register_rest_route(
+			Rest_Constants::API_NAMESPACE,
+			self::DESIGN_FONTS_PATH,
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'search_fonts' ),
+					'permission_callback' => array( __CLASS__, 'can_edit_templates' ),
+					'args'                => array(
+						'search' => array(
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'resolve_font' ),
+					'permission_callback' => array( __CLASS__, 'can_edit_templates' ),
+					'args'                => array(
+						'family' => array(
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Resolve one validated Google Font without changing the Brand Kit.
+	 *
+	 * @param WP_REST_Request<array<string, mixed>> $request Request.
+	 */
+	public function resolve_font( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$rate_limit = Rate_Limiter::check_rate_limit( 'design_fonts' );
+		if ( is_wp_error( $rate_limit ) ) {
+			return $rate_limit;
+		}
+
+		$family = $request->get_param( 'family' );
+		$font   = ( new Google_Fonts() )->resolve( is_string( $family ) ? $family : '' );
+		if ( is_wp_error( $font ) ) {
+			return self::create_error( (string) $font->get_error_code(), $font->get_error_message(), Rest_Constants::HTTP_BAD_REQUEST );
+		}
+
+		return self::ensure_response( array( 'font' => $font ) );
 	}
 
 	/**

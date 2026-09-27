@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Admin;
 
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 use CampaignBridge\Domain\Email\Resolved_Email_Design;
 use CampaignBridge\Services\Email\Google_Fonts;
 
@@ -138,16 +139,20 @@ final class Editor_Design_Settings {
 	 * PHP feature tree with the site theme. The native useSetting filter and
 	 * editor-canvas font loader consume this independent immutable payload.
 	 *
-	 * @param Resolved_Email_Design $design Canonical runtime design.
+	 * @param Resolved_Email_Design     $design          Canonical runtime design.
+	 * @param Design_Font_Registry|null $design_fonts    Per-template font registry.
+	 * @param array<string, string>     $base_font_slots Inherited Brand Kit slot map.
 	 * @return array<string, mixed>
 	 */
-	public static function client_config( Resolved_Email_Design $design ): array {
+	public static function client_config( Resolved_Email_Design $design, ?Design_Font_Registry $design_fonts = null, array $base_font_slots = array() ): array {
 		$settings = self::apply( array(), $design );
 
 		return array(
-			'features'     => $settings['__experimentalFeatures'],
-			'fontAssets'   => $settings['campaignbridgeFontAssets'],
-			'defaultFonts' => $settings['campaignbridgeDefaultFonts'],
+			'features'        => $settings['__experimentalFeatures'],
+			'fontAssets'      => $settings['campaignbridgeFontAssets'],
+			'defaultFonts'    => $settings['campaignbridgeDefaultFonts'],
+			'designFontSlugs' => array_column( ( $design_fonts ?? Design_Font_Registry::empty() )->fonts(), 'slug' ),
+			'baseFontSlots'   => $base_font_slots,
 		);
 	}
 

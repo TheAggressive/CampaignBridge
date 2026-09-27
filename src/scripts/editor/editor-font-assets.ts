@@ -59,6 +59,43 @@ export function requiredEditorFontUrls(
   );
 }
 
+/**
+ * Apply effective semantic type slots inside the editor canvas.
+ *
+ * Assigning textContent keeps validated family stacks as CSS values without
+ * constructing HTML. Omitted or unknown slots simply inherit server defaults.
+ */
+export function syncEditorTypeFontStyles(
+  canvasDocument: Document,
+  families: Record<string, string>,
+  slots: Record<string, string>
+): void {
+  const selectorBySlot: Record<string, string> = {
+    body: ':where(.editor-styles-wrapper),:where([data-type="core/paragraph"])',
+    heading: ':where([data-type="core/heading"])',
+    button: ':where([data-type="core/button"] .wp-block-button__link)',
+  };
+  const rules = Object.entries(selectorBySlot)
+    .map(([slot, selector]) => {
+      const family = families[slots[slot]];
+      return family ? `${selector}{font-family:${family}}` : '';
+    })
+    .join('');
+
+  const selector = 'style[data-campaignbridge-editor-type-fonts]';
+  const existing =
+    canvasDocument.head.querySelector<HTMLStyleElement>(selector);
+  if (!rules) {
+    existing?.remove();
+    return;
+  }
+
+  const style = existing ?? canvasDocument.createElement('style');
+  style.dataset.campaignbridgeEditorTypeFonts = '1';
+  style.textContent = rules;
+  if (!existing) canvasDocument.head.appendChild(style);
+}
+
 /** Synchronize CampaignBridge-owned stylesheet links inside the editor canvas. */
 export function syncEditorFontStylesheets(
   canvasDocument: Document,

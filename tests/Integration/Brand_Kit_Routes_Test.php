@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Integration;
 
+use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\REST\Routes;
@@ -16,8 +17,9 @@ use CampaignBridge\Tests\Helpers\Test_Case;
 use WP_REST_Request;
 
 final class Brand_Kit_Routes_Test extends Test_Case {
-	private const ROUTE       = '/campaignbridge/v1/brand-kit';
-	private const FONTS_ROUTE = '/campaignbridge/v1/brand-kit/fonts';
+	private const ROUTE              = '/campaignbridge/v1/brand-kit';
+	private const FONTS_ROUTE        = '/campaignbridge/v1/brand-kit/fonts';
+	private const FONT_RESOLVE_ROUTE = '/campaignbridge/v1/design-fonts';
 
 	public function setUp(): void {
 		parent::setUp();
@@ -34,6 +36,33 @@ final class Brand_Kit_Routes_Test extends Test_Case {
 	public function test_the_route_is_registered(): void {
 		$this->assertArrayHasKey( self::ROUTE, rest_get_server()->get_routes() );
 		$this->assertArrayHasKey( self::FONTS_ROUTE, rest_get_server()->get_routes() );
+		$this->assertArrayHasKey( self::FONT_RESOLVE_ROUTE, rest_get_server()->get_routes() );
+	}
+
+	public function test_font_resolver_does_not_mutate_the_brand_kit(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+
+		$request = new WP_REST_Request( 'POST', self::FONT_RESOLVE_ROUTE );
+		$request->set_param( 'family', 'Agu Display' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( Brand_Kit::custom_font_slug( 'Agu Display' ), $data['font']['slug'] );
+		$this->assertSame( array(), ( new Brand_Kit_Repository() )->get()->custom_fonts() );
+	}
+
+	public function test_template_authors_can_resolve_design_fonts_without_brand_access(): void {
+		$user_id = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		get_userdata( $user_id )->add_cap( Capabilities::EDIT_TEMPLATES );
+		wp_set_current_user( $user_id );
+
+		$resolve = new WP_REST_Request( 'POST', self::FONT_RESOLVE_ROUTE );
+		$resolve->set_param( 'family', 'Agu Display' );
+		$brand = new WP_REST_Request( 'GET', self::ROUTE );
+
+		$this->assertSame( 200, rest_get_server()->dispatch( $resolve )->get_status() );
+		$this->assertSame( 403, rest_get_server()->dispatch( $brand )->get_status() );
 	}
 
 	public function test_font_updates_use_the_focused_fonts_route(): void {

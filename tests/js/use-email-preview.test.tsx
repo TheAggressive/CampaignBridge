@@ -57,6 +57,7 @@ describe('useEmailPreview', () => {
           template_id: 42,
           content: 'edited',
           metadata: { title: 'First title' },
+          design_fonts: '',
         },
       })
     );
