@@ -251,7 +251,10 @@ final class Style_Resolver {
 		// Native preset attribute first, then the style-tree reference core writes.
 		$candidate = $attributes['fontFamily'] ?? null;
 		$path      = 'fontFamily';
-		if ( null === $candidate || ! is_string( $candidate ) || '' === $candidate ) {
+		if ( null !== $candidate && ! is_string( $candidate ) ) {
+			throw new Invalid_Block_Attribute( $path, 'must be a font family preset slug.' );
+		}
+		if ( null === $candidate || '' === $candidate ) {
 			$candidate = self::style_value( $attributes, array( 'typography', 'fontFamily' ) );
 			$path      = 'style.typography.fontFamily';
 		}

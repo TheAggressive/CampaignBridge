@@ -401,6 +401,13 @@ final class Style_Resolver_Test extends TestCase {
 		);
 	}
 
+	/** Malformed top-level font attributes cannot fall through to inheritance. */
+	public function test_rejects_a_non_string_top_level_font_candidate_with_a_resolved_design(): void {
+		$design = $this->resolved_design( array(), array() );
+		$this->expectException( Invalid_Block_Attribute::class );
+		Style_Resolver::resolve_font( array( 'fontFamily' => array( 'georgia' ) ), null, 'body', $design );
+	}
+
 	private function resolved_design( array $families, array $brand_fonts ): Resolved_Email_Design {
 		return new Resolved_Email_Design(
 			array(
