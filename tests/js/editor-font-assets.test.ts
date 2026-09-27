@@ -46,6 +46,32 @@ describe('native editor font assets', () => {
     expect(urls).toHaveLength(3);
   });
 
+  it('loads independently selected custom font presets', () => {
+    const customAssets = {
+      'custom-a1b2c3d4e5f6':
+        'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+      'custom-f6e5d4c3b2a1':
+        'https://fonts.googleapis.com/css2?family=Example+Serif:wght@400&display=swap',
+    };
+    const urls = requiredEditorFontUrls(
+      [
+        {
+          name: 'core/heading',
+          attributes: { fontFamily: 'custom-a1b2c3d4e5f6' },
+        },
+      ],
+      {
+        campaignbridgeFontAssets: customAssets,
+        campaignbridgeDefaultFonts: ['custom-f6e5d4c3b2a1'],
+      }
+    );
+
+    expect(urls).toEqual([
+      customAssets['custom-f6e5d4c3b2a1'],
+      customAssets['custom-a1b2c3d4e5f6'],
+    ]);
+  });
+
   it('does not load unreferenced or unknown font presets', () => {
     expect(
       requiredEditorFontUrls(

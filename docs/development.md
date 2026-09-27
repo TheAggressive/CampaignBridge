@@ -33,6 +33,12 @@ Sites that prohibit external font requests can disable resolution and loading:
 add_filter( 'campaignbridge_external_google_fonts_enabled', '__return_false' );
 ```
 
+Brand Kit stores up to 12 validated custom families. Each new family receives a
+deterministic `custom-<hash>` preset slug, while the legacy `custom` slug remains
+readable after upgrades. Those presets are available to Heading, Body, and
+Button roles and native per-block Typography controls. Only selected or
+explicitly referenced families are loaded into the editor canvas and email.
+
 Custom Google Fonts intentionally load at most weights 400, 600, and 700 when
 those variants exist in the bundled catalogue. This covers normal, semibold,
 and bold email typography without requesting every published family variant;

@@ -71,6 +71,75 @@ final class Brand_Kit_Routes_Test extends Test_Case {
 		$this->assertSame( $before, ( new Brand_Kit_Repository() )->get()->to_array() );
 	}
 
+	public function test_adds_multiple_google_fonts_and_assigns_each_to_a_type_slot(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+
+		$repository = new Brand_Kit_Repository();
+		foreach ( array( 'Roboto', 'Lora' ) as $family ) {
+			$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+			$request->set_param( 'fonts', $repository->get()->fonts() );
+			$request->set_param( 'customFontFamily', $family );
+			$response = rest_get_server()->dispatch( $request );
+			self::assertSame( 200, $response->get_status(), $family );
+		}
+
+		$roboto = Brand_Kit::custom_font_slug( 'Roboto' );
+		$lora   = Brand_Kit::custom_font_slug( 'Lora' );
+		$kit    = $repository->get();
+		self::assertCount( 2, $kit->custom_fonts() );
+		self::assertSame( array( $roboto, $lora ), array_column( $kit->custom_fonts(), 'slug' ) );
+
+		$duplicate = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$duplicate->set_param( 'fonts', $kit->fonts() );
+		$duplicate->set_param( 'customFontFamily', 'Roboto' );
+		self::assertSame( 200, rest_get_server()->dispatch( $duplicate )->get_status() );
+		self::assertCount( 2, $repository->get()->custom_fonts() );
+
+		$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$request->set_param(
+			'fonts',
+			array(
+				'heading' => $lora,
+				'body'    => $roboto,
+			)
+		);
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		self::assertSame( 200, $response->get_status() );
+		self::assertSame( $lora, $repository->get()->font( 'heading' ) );
+		self::assertSame( $roboto, $repository->get()->font( 'body' ) );
+		self::assertContains( $lora, array_column( $data['fontOptions'], 'slug' ) );
+		self::assertContains( $roboto, array_column( $data['fontOptions'], 'slug' ) );
+	}
+
+	public function test_rejects_a_thirteenth_custom_font_without_changing_the_kit(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+
+		$custom = array();
+		for ( $index = 0; $index < Brand_Kit::MAX_CUSTOM_FONTS; ++$index ) {
+			$name     = 'Example Font ' . $index;
+			$custom[] = array(
+				'slug'    => Brand_Kit::custom_font_slug( $name ),
+				'name'    => $name,
+				'family'  => $name . ',Arial,Helvetica,sans-serif',
+				'weights' => array( 400 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Font+' . $index . ':wght@400&display=swap',
+			);
+		}
+		$repository = new Brand_Kit_Repository();
+		$repository->save( Brand_Kit::from_colors( array(), Brand_Kit::SOURCE_CUSTOM, null, null, $custom ) );
+
+		$request = new WP_REST_Request( 'PUT', self::FONTS_ROUTE );
+		$request->set_param( 'fonts', $repository->get()->fonts() );
+		$request->set_param( 'customFontFamily', 'Roboto' );
+		$response = rest_get_server()->dispatch( $request );
+
+		self::assertSame( 400, $response->get_status() );
+		self::assertSame( 'custom_font_limit_reached', $response->get_data()['code'] ?? null );
+		self::assertCount( Brand_Kit::MAX_CUSTOM_FONTS, $repository->get()->custom_fonts() );
+	}
+
 	public function test_get_returns_the_seven_slots(): void {
 		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
 

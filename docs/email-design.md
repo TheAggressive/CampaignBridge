@@ -29,7 +29,7 @@ expand the manifest vocabulary.
 ## Brand Kit and design responsibilities
 
 Brand Kit answers what the brand is: semantic identity colors, font roles, and
-the validated custom Google Font. `email.json` answers how an email uses the
+the validated custom Google Fonts. `email.json` answers how an email uses the
 available identity: layout, available presets, typography, spacing, and block
 defaults. Brand Kit semantic values are merged before manifest design rules are
 applied; explicit block values win last.

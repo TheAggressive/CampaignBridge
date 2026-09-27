@@ -79,6 +79,42 @@ final class Email_Design_Runtime_Test extends TestCase {
 		self::assertSame( 'custom', $design->font_for_slot( 'heading' )['slug'] );
 	}
 
+	/** Multiple custom families independently drive semantic type slots. */
+	public function test_multiple_custom_brand_fonts_flow_into_resolved_styles(): void {
+		$sans_slug  = Brand_Kit::custom_font_slug( 'Example Sans' );
+		$serif_slug = Brand_Kit::custom_font_slug( 'Example Serif' );
+		$custom     = array(
+			array(
+				'slug'    => $sans_slug,
+				'name'    => 'Example Sans',
+				'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+				'weights' => array( 400, 700 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+			),
+			array(
+				'slug'    => $serif_slug,
+				'name'    => 'Example Serif',
+				'family'  => 'Example Serif,Georgia,serif',
+				'weights' => array( 400 ),
+				'url'     => 'https://fonts.googleapis.com/css2?family=Example+Serif:wght@400&display=swap',
+			),
+		);
+		$kit        = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array( 'heading' => $serif_slug, 'body' => $sans_slug, 'button' => $sans_slug ),
+			$custom
+		);
+		$design     = $this->resolve( $kit );
+
+		self::assertContains( $sans_slug, array_column( $design->font_families(), 'slug' ) );
+		self::assertContains( $serif_slug, array_column( $design->font_families(), 'slug' ) );
+		self::assertSame( 'Example Serif,Georgia,serif', $design->block_style( 'core/heading' )['typography']['fontFamily'] );
+		self::assertSame( 'Example Sans,Arial,Helvetica,sans-serif', $design->block_style( 'core/paragraph' )['typography']['fontFamily'] );
+		self::assertSame( $sans_slug, $design->font_for_slot( 'button' )['slug'] );
+	}
+
 	/** Parent and child theme manifests follow Core's low-to-high cascade. */
 	public function test_layers_parent_and_child_theme_email_designs(): void {
 		$fixture = dirname( __DIR__, 2 ) . '/Fixtures/Email/design/';

@@ -102,6 +102,49 @@ final class Email_Design_Compiler_Test extends TestCase {
 		self::assertStringContainsString( 'family=Montserrat', $result->html() );
 	}
 
+	/** Multiple custom presets retain inherited/explicit editor-compiler parity. */
+	public function test_multiple_custom_fonts_compile_as_defaults_and_explicit_overrides(): void {
+		$sans_slug  = Brand_Kit::custom_font_slug( 'Example Sans' );
+		$serif_slug = Brand_Kit::custom_font_slug( 'Example Serif' );
+		$kit        = Brand_Kit::from_colors(
+			array(),
+			Brand_Kit::SOURCE_CUSTOM,
+			null,
+			array( 'heading' => $serif_slug, 'body' => $sans_slug ),
+			array(
+				array(
+					'slug'    => $sans_slug,
+					'name'    => 'Example Sans',
+					'family'  => 'Example Sans,Arial,Helvetica,sans-serif',
+					'weights' => array( 400, 700 ),
+					'url'     => 'https://fonts.googleapis.com/css2?family=Example+Sans:wght@400;700&display=swap',
+				),
+				array(
+					'slug'    => $serif_slug,
+					'name'    => 'Example Serif',
+					'family'  => 'Example Serif,Georgia,serif',
+					'weights' => array( 400 ),
+					'url'     => 'https://fonts.googleapis.com/css2?family=Example+Serif:wght@400&display=swap',
+				),
+			)
+		);
+		$design     = Email_Design_Factory::resolve( $kit );
+		$document   = $this->heading_document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][] = array(
+			'blockName'   => 'core/heading',
+			'attrs'       => array( 'content' => 'Explicit heading', 'fontFamily' => $sans_slug ),
+			'innerBlocks' => array(),
+		);
+
+		$result = Compiler_Factory::create( $design )->compile( $document, $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'font-family:Example Serif,Georgia,serif', $result->html() );
+		self::assertStringContainsString( 'font-family:Example Sans,Arial,Helvetica,sans-serif', $result->html() );
+		self::assertStringContainsString( 'family=Example+Serif', $result->html() );
+		self::assertStringContainsString( 'family=Example+Sans', $result->html() );
+	}
+
 	/** Unknown explicit preset references fail with the stable compiler model. */
 	public function test_unknown_explicit_font_preset_fails_closed(): void {
 		$document = $this->heading_document();

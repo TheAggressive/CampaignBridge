@@ -177,7 +177,7 @@ final class Brand_Kit_Routes extends Abstract_Rest_Controller {
 		$merged[ $slug ] = $hex;
 
 		try {
-			$saved = Brand_Kit::from_colors( $merged, Brand_Kit::SOURCE_CUSTOM, $kit->theme_fingerprint(), $kit->fonts(), $kit->custom_font(), $kit->logo() );
+			$saved = Brand_Kit::from_colors( $merged, Brand_Kit::SOURCE_CUSTOM, $kit->theme_fingerprint(), $kit->fonts(), $kit->custom_fonts(), $kit->logo() );
 		} catch ( \InvalidArgumentException $e ) {
 				return self::create_error(
 					'invalid_brand_color',
@@ -224,29 +224,48 @@ final class Brand_Kit_Routes extends Abstract_Rest_Controller {
 			}
 		}
 
-		$repository  = new Brand_Kit_Repository();
-		$kit         = $repository->get();
-		$custom_font = $kit->custom_font();
+		$repository   = new Brand_Kit_Repository();
+		$kit          = $repository->get();
+		$custom_fonts = $kit->custom_fonts();
 		if ( is_string( $custom_family ) && '' !== trim( $custom_family ) ) {
-			$custom_font = ( new Google_Fonts() )->resolve( $custom_family );
-			if ( is_wp_error( $custom_font ) ) {
-				return self::create_error( (string) $custom_font->get_error_code(), $custom_font->get_error_message(), Rest_Constants::HTTP_BAD_REQUEST );
+			$resolved = ( new Google_Fonts() )->resolve( $custom_family );
+			if ( is_wp_error( $resolved ) ) {
+				return self::create_error( (string) $resolved->get_error_code(), $resolved->get_error_message(), Rest_Constants::HTTP_BAD_REQUEST );
+			}
+
+			$existing = null;
+			foreach ( $custom_fonts as $index => $custom_font ) {
+				if ( 0 === strcasecmp( (string) $custom_font['name'], (string) $resolved['name'] ) ) {
+					$existing = $index;
+					break;
+				}
+			}
+
+			if ( null !== $existing ) {
+				$resolved['slug']          = $custom_fonts[ $existing ]['slug'];
+				$custom_fonts[ $existing ] = $resolved;
+			} elseif ( Brand_Kit::MAX_CUSTOM_FONTS <= count( $custom_fonts ) ) {
+				return self::create_error(
+					'custom_font_limit_reached',
+					sprintf( __( 'You can add up to %d custom Google Fonts.', 'campaignbridge' ), Brand_Kit::MAX_CUSTOM_FONTS ),
+					Rest_Constants::HTTP_BAD_REQUEST
+				);
+			} else {
+				$custom_fonts[] = $resolved;
 			}
 		}
 
+		$custom_slugs = array_column( $custom_fonts, 'slug' );
 		$merged_fonts = $kit->fonts();
 		foreach ( $fonts as $font_slot => $font_slug ) {
-			if ( Brand_Kit::CUSTOM_FONT_SLUG === $font_slug && null === $custom_font ) {
-				return self::create_error( 'custom_font_not_configured', __( 'Choose a Google Font before assigning the custom font.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
-			}
-			if ( Brand_Kit::CUSTOM_FONT_SLUG !== $font_slug && null === Design_Presets::font( $font_slug ) ) {
+			if ( null === Design_Presets::font( $font_slug ) && ! in_array( $font_slug, $custom_slugs, true ) ) {
 				return self::create_error( 'invalid_brand_font', __( 'That font is not available in the CampaignBridge type catalogue.', 'campaignbridge' ), Rest_Constants::HTTP_BAD_REQUEST );
 			}
 
 			$merged_fonts[ $font_slot ] = $font_slug;
 		}
 
-		$saved = Brand_Kit::from_colors( $kit->to_array()['colors'], Brand_Kit::SOURCE_CUSTOM, $kit->theme_fingerprint(), $merged_fonts, $custom_font, $kit->logo() );
+		$saved = Brand_Kit::from_colors( $kit->to_array()['colors'], Brand_Kit::SOURCE_CUSTOM, $kit->theme_fingerprint(), $merged_fonts, $custom_fonts, $kit->logo() );
 		if ( ! $repository->save( $saved ) ) {
 			return self::create_error( 'brand_kit_not_saved', __( 'The brand kit could not be saved.', 'campaignbridge' ), Rest_Constants::HTTP_INTERNAL_SERVER_ERROR );
 		}

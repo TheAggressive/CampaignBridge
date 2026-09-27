@@ -131,15 +131,8 @@ final class Email_Design_Normalizer {
 			$fonts[] = array_merge( $font, array( 'name' => $selection['name'] ) );
 		}
 
-		$custom = $brand_kit->custom_font();
-		if ( null !== $custom ) {
-			$fonts[] = array_merge(
-				$custom,
-				array(
-					'slug' => Brand_Kit::CUSTOM_FONT_SLUG,
-					'type' => 'web',
-				)
-			);
+		foreach ( $brand_kit->custom_fonts() as $custom ) {
+			$fonts[] = array_merge( $custom, array( 'type' => 'web' ) );
 		}
 		return $fonts;
 	}

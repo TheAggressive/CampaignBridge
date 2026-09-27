@@ -28,7 +28,7 @@ V1 does not provide database persistence, uploads, user-created manifests,
 style switching, arbitrary CSS, selectors, HTML, URLs, or asset declarations.
 Theme manifests are code-owned layers and use the same closed contract.
 Font-family entries select from CampaignBridge's curated catalog by slug. Brand
-Kit remains the validated route for brand colors and a custom Google Font.
+Kit remains the validated route for brand colors and bounded custom Google Fonts.
 
 The runtime precedence, from lowest to highest, is:
 

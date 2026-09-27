@@ -278,8 +278,9 @@ final class Style_Resolver {
 					return $font;
 				}
 			}
-			if ( Brand_Kit::CUSTOM_FONT_SLUG === $slug && null !== $kit->custom_font() ) {
-				return array_merge( $kit->custom_font(), array( 'type' => 'web' ) );
+			$custom = $kit->custom_font( $slug );
+			if ( null !== $custom ) {
+				return array_merge( $custom, array( 'type' => 'web' ) );
 			}
 			$font = Design_Presets::font( $slug );
 			if ( null !== $font ) {
@@ -295,8 +296,9 @@ final class Style_Resolver {
 
 		// Backward-compatible direct use outside compilation.
 		$slot_slug = $kit->font( $slot );
-		if ( Brand_Kit::CUSTOM_FONT_SLUG === $slot_slug && null !== $kit->custom_font() ) {
-			return array_merge( $kit->custom_font(), array( 'type' => 'web' ) );
+		$custom    = $kit->custom_font( $slot_slug );
+		if ( null !== $custom ) {
+			return array_merge( $custom, array( 'type' => 'web' ) );
 		}
 		$font = Design_Presets::font( $slot_slug );
 		if ( null !== $font ) {
