@@ -13,8 +13,11 @@ The desired dependency direction is Delivery → Workflow → Domain, with Repos
 
 The M2 campaign storage ports, five site-local tables, migration policy, and
 data-minimization rules are documented in
-[`campaign-persistence.md`](campaign-persistence.md). This is a storage boundary
-only; campaign workflow transitions remain a Workflow responsibility.
+[`campaign-persistence.md`](campaign-persistence.md). The canonical
+provider-neutral application operations, state/concurrency rules, authorization
+inputs, and transaction assumptions are documented in
+[`campaign-workflows.md`](campaign-workflows.md). Future REST, Abilities, CLI,
+and UI adapters must call that workflow layer rather than repositories.
 
 ## Composition root
 

@@ -26,7 +26,8 @@ CampaignBridge stores provider credentials and can create or send public email c
 
 The local fallback encryption key is stored in WordPress options so installations work without external secret infrastructure. Authenticated encryption still prevents undetected ciphertext modification, but a database-only compromise exposes both key and ciphertext. External key injection or a managed KMS remains a production-hardening milestone.
 
-Campaign delivery is not yet implemented. The durable idempotency-record and
-append-only audit storage foundation exists, but #74 workflow authorization and
-later provider mutation/reconciliation behavior are still required before
+Campaign delivery is not yet implemented. Durable idempotency/audit storage and
+#74 workflow authorization now exist, including separate owned-campaign edit
+and approval authority. #75 REST authorization plus later provider mutation,
+reconciliation, jobs, and recovery behavior are still required before
 high-volume or multi-operator sending is considered enterprise-ready.

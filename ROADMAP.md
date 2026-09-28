@@ -46,10 +46,10 @@ but it is not yet a complete campaign-management and delivery product.
 
 | Area               | Shipped today                                                                                                                                                                                                                                                                                                                                                                      | Remaining product boundary                                                                      |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained Core/CampaignBridge block grammar; read-only post selection and immutable snapshot inputs                                                                                                                                                                      | Durable campaign snapshot persistence and campaign-level review workflow                        |
-| Email generation   | Deterministic HTML/plain compiler; renderer registry; compiled preview and exact HTML export; immutable WordPress content snapshot inputs; portable personalization tokens; shared resolved email design; reusable Brand Kit and per-template Google Fonts; structured preflight diagnostics; artifact fingerprinting; representative Outlook/Gmail/Apple Mail structural fixtures | Durable approved-artifact persistence and campaign-level review/approval workflow in M2         |
-| Providers          | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery foundations; HTML export boundary                                                                                                                                                                                                           | Remote draft/content handoff, test send, guarded schedule/send/cancel, reconciliation/reporting |
-| Campaigns          | Provider-neutral campaign state/state-machine foundations                                                                                                                                                                                                                                                                                                                          | Durable campaign/snapshot/attempt/audit storage and canonical workflows                         |
+| Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained Core/CampaignBridge block grammar; read-only post selection and immutable snapshot inputs | Full campaign/operator UI |
+| Email generation | Deterministic HTML/plain compiler; compiled preview/export; immutable content/design inputs; structured diagnostics; artifact fingerprints; durable immutable campaign snapshots and exact approved-artifact references | Provider handoff and delivery |
+| Providers | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery foundations; HTML export boundary | Remote draft/content handoff, test send, guarded schedule/send/cancel, reconciliation/reporting |
+| Campaigns | Durable provider-neutral campaigns, snapshots, attempts and audit history; authoritative state machine; canonical create/edit/audience/snapshot/validate/preview/review/approve/revoke/archive/duplicate workflows; optimistic concurrency | #75 REST adapter, operator UI, and M3 provider operations |
 | Admin              | Settings, Brand Kit, provider connection/verification, audience-selection foundations, template editor lifecycle                                                                                                                                                                                                                                                                   | Full campaign/operator workflow and delivery/recovery surfaces                                  |
 | API                | Editor/content support routes, Brand Kit, compiled preview, template revision restore and core template REST lifecycle                                                                                                                                                                                                                                                             | Campaign/delivery/reconciliation/reporting APIs                                                 |
 | Operations         | Hardened CI, security/accessibility gates, signed/reproducible packaging, runbook foundations                                                                                                                                                                                                                                                                                      | Durable jobs/locks, webhooks, reconciliation monitor, operational metrics and support tooling   |
@@ -136,13 +136,13 @@ begin in M2; they do not introduce another rendering path.
 **Outcome:** CampaignBridge manages a complete local campaign lifecycle through
 approval without depending on Mailchimp-specific types or response shapes.
 
-Current implementation order:
+Implementation status:
 
 - #73 — Durable campaign/snapshot/remote-reference/delivery-attempt/audit storage
-  is the next actionable foundation.
+  is complete.
 - #74 — Canonical campaign workflows, state transitions, concurrency and audit
-  follows #73.
-- #75 — Stable REST adapter follows #73 and #74.
+  are complete.
+- #75 — Stable REST exposure over those workflows remains pending.
 
 **Exit gate:** provider-neutral integration tests exercise every legal
 transition and reject illegal/duplicate transitions; a campaign reaches
