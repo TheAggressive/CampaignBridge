@@ -94,11 +94,11 @@ diagnostics so an approved artifact remains auditable against its source.
 
 The first production set should stay deliberately small:
 
-| Group     | Blocks                                                    |
-| --------- | --------------------------------------------------------- |
-| Document  | email root, preheader, section, compliance footer         |
-| Layout    | one- to six-column row, column, Core spacer and separator |
-| Content   | Core paragraph, heading, image, list, buttons             |
+| Group     | Blocks                                                       |
+| --------- | ------------------------------------------------------------ |
+| Document  | email root, preheader, section, compliance footer            |
+| Layout    | one- to six-column row, column, Core spacer and separator    |
+| Content   | Core paragraph, heading, image, list, buttons                |
 | WordPress | post card, post image, bound Core heading, paragraph, button |
 
 Navigation is now an explicit CampaignBridge email block with one to five
@@ -114,9 +114,10 @@ provide a bounded poster, alternative text, HTTPS destination, and link label.
 The compiler emits a linked image and table-safe play callout, plus the labeled
 URL in plain text; it never emits `video`, `iframe`, script, or author HTML.
 
-Add social links and more layout variants only after the compiler and fixtures
-prove the base contract. Forms, scripts, video embeds, arbitrary HTML, and
-unrestricted nested core blocks remain outside the supported grammar.
+Core Social Icons now provide bounded social links through packaged raster
+assets and deterministic HTML/plain-text renderers. More layout variants remain
+future catalog work. Forms, scripts, video embeds, arbitrary HTML, and
+unrestricted nested Core blocks remain outside the supported grammar.
 
 The post-v1 candidates, classifications, dependencies, patterns, and promotion
 gates are mapped in [`email-block-catalog.md`](email-block-catalog.md). Inclusion
@@ -138,19 +139,19 @@ it:
 
 ### Supported WordPress Core blocks
 
-| Core block       | Email semantics | Normalized from                                                            |
-| ---------------- | --------------- | -------------------------------------------------------------------------- |
-| `core/paragraph` | text            | `<p>` rich text or bound post content/excerpt, `style.typography.textAlign`, colour/typography/spacing |
-| `core/heading`   | heading         | `<h1>`–`<h4>` rich text or a bound post title, `level`, text alignment, colour/typography |
-| `core/image`     | image           | `<img src/alt>`, `figure > a[href]`, pixel `width`/`height`, `align`       |
-| `core/buttons`   | button group    | `layout.justifyContent` (left, center, right)                              |
-| `core/button`    | button          | `<a href>` or a bound post URL, label, `fill`/`outline`/`ghost` style, colours, font family |
-| `core/list`      | list            | `ordered`                                                                  |
-| `core/list-item` | list item       | `<li>` rich text                                                           |
-| `core/separator` | divider         | background colour; thickness and line style come from the email design     |
-| `core/spacer`    | spacer          | `height` (Core default 100px), 0–600 px                                    |
-| `core/social-links` | social links | horizontal alignment, 0–32 px gap, 18/24/36/48 px icon size, labels, new-tab preference |
-| `core/social-link` | social link   | approved service, absolute HTTPS URL, optional plain-text accessible label |
+| Core block          | Email semantics | Normalized from                                                                                        |
+| ------------------- | --------------- | ------------------------------------------------------------------------------------------------------ |
+| `core/paragraph`    | text            | `<p>` rich text or bound post content/excerpt, `style.typography.textAlign`, colour/typography/spacing |
+| `core/heading`      | heading         | `<h1>`–`<h4>` rich text or a bound post title, `level`, text alignment, colour/typography              |
+| `core/image`        | image           | `<img src/alt>`, `figure > a[href]`, pixel `width`/`height`, `align`                                   |
+| `core/buttons`      | button group    | `layout.justifyContent` (left, center, right)                                                          |
+| `core/button`       | button          | `<a href>` or a bound post URL, label, `fill`/`outline`/`ghost` style, colours, font family            |
+| `core/list`         | list            | `ordered`                                                                                              |
+| `core/list-item`    | list item       | `<li>` rich text                                                                                       |
+| `core/separator`    | divider         | background colour; thickness and line style come from the email design                                 |
+| `core/spacer`       | spacer          | `height` (Core default 100px), 0–600 px                                                                |
+| `core/social-links` | social links    | horizontal alignment, 0–32 px gap, 18/24/36/48 px icon size, labels, new-tab preference                |
+| `core/social-link`  | social link     | approved service, absolute HTTPS URL, optional plain-text accessible label                             |
 
 Users insert and edit the real Core blocks with native Gutenberg behaviour
 (inserter, toolbar, inspector, RichText, List View, transforms, undo/redo). The
@@ -473,12 +474,12 @@ map, including a subscriber or provider-owned value, fails with
 Renderers declare which normalized attributes accept tokens through
 `token_attributes()`:
 
-| Block | Attribute | Context |
-| --- | --- | --- |
+| Block                                              | Attribute | Context   |
+| -------------------------------------------------- | --------- | --------- |
 | `core/paragraph`, `core/heading`, `core/list-item` | `content` | rich text |
-| `core/button` | `label` | text |
-| `core/button` | `url` | URL |
-| `campaignbridge/preheader` | `content` | text |
+| `core/button`                                      | `label`   | text      |
+| `core/button`                                      | `url`     | URL       |
+| `campaignbridge/preheader`                         | `content` | text      |
 
 In rich text, tokens may appear in text runs (including inside `strong`, `em`,
 `u`, `s`) and as the complete `href` of an anchor. Entity-encoded braces are

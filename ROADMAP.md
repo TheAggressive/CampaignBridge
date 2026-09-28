@@ -44,15 +44,15 @@ These are durable product rules until an explicit decision changes them:
 CampaignBridge has a production-oriented template/editor/compiler foundation,
 but it is not yet a complete campaign-management and delivery product.
 
-| Area | Shipped today | Remaining product boundary |
-| --- | --- | --- |
-| Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained CampaignBridge block grammar | Dynamic content selection/snapshot and campaign-level review workflow |
-| Email generation | Deterministic HTML/plain compiler; renderer registry; compiled preview; shared resolved email design; Brand Kit; theme `campaignbridge/email.json`; structured diagnostics; artifact fingerprinting | M1 closeout: content snapshots, portable personalization, remaining preflight/compliance gaps, representative client fixtures |
-| Providers | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery foundations; HTML export boundary | Remote draft/content handoff, test send, guarded schedule/send/cancel, reconciliation/reporting |
-| Campaigns | Provider-neutral campaign state/state-machine foundations | Durable campaign/snapshot/attempt/audit storage and canonical workflows |
-| Admin | Settings, Brand Kit, provider connection/verification, audience-selection foundations, template editor lifecycle | Full campaign/operator workflow and delivery/recovery surfaces |
-| API | Editor/content support routes, Brand Kit, compiled preview, template revision restore and core template REST lifecycle | Campaign/delivery/reconciliation/reporting APIs |
-| Operations | Hardened CI, security/accessibility gates, signed/reproducible packaging, runbook foundations | Durable jobs/locks, webhooks, reconciliation monitor, operational metrics and support tooling |
+| Area               | Shipped today                                                                                                                                                                                                                                                                                                                                                                      | Remaining product boundary                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained Core/CampaignBridge block grammar; read-only post selection and immutable snapshot inputs                                                                                                                                                                      | Durable campaign snapshot persistence and campaign-level review workflow                        |
+| Email generation   | Deterministic HTML/plain compiler; renderer registry; compiled preview and exact HTML export; immutable WordPress content snapshot inputs; portable personalization tokens; shared resolved email design; reusable Brand Kit and per-template Google Fonts; structured preflight diagnostics; artifact fingerprinting; representative Outlook/Gmail/Apple Mail structural fixtures | Durable approved-artifact persistence and campaign-level review/approval workflow in M2         |
+| Providers          | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery foundations; HTML export boundary                                                                                                                                                                                                           | Remote draft/content handoff, test send, guarded schedule/send/cancel, reconciliation/reporting |
+| Campaigns          | Provider-neutral campaign state/state-machine foundations                                                                                                                                                                                                                                                                                                                          | Durable campaign/snapshot/attempt/audit storage and canonical workflows                         |
+| Admin              | Settings, Brand Kit, provider connection/verification, audience-selection foundations, template editor lifecycle                                                                                                                                                                                                                                                                   | Full campaign/operator workflow and delivery/recovery surfaces                                  |
+| API                | Editor/content support routes, Brand Kit, compiled preview, template revision restore and core template REST lifecycle                                                                                                                                                                                                                                                             | Campaign/delivery/reconciliation/reporting APIs                                                 |
+| Operations         | Hardened CI, security/accessibility gates, signed/reproducible packaging, runbook foundations                                                                                                                                                                                                                                                                                      | Durable jobs/locks, webhooks, reconciliation monitor, operational metrics and support tooling   |
 
 The README is intentionally conservative: only shipped capabilities belong in
 its "available now" claims.
@@ -97,14 +97,14 @@ metadata/capability discovery.
 Milestones are ordered by dependency and release outcome, not calendar date.
 The live implementation backlog for each milestone is its linked GitHub issue.
 
-### Milestone 0 — Product truth and stable contracts *(complete)*
+### Milestone 0 — Product truth and stable contracts _(complete)_
 
 The repository now has truthful provider connection status, canonical provider
 connection persistence, normalized provider/domain contracts, granular
 capability foundations, architecture decision records, and boundary checks.
 M0 is historical foundation rather than an active backlog.
 
-### Milestone 1 — Production template and email compiler
+### Milestone 1 — Production template and email compiler _(complete)_
 
 **Tracking:** #62
 
@@ -112,16 +112,22 @@ M0 is historical foundation rather than an active backlog.
 content, validated, and compiled into deterministic, compliant, email-safe HTML
 before any provider is involved.
 
-Current actionable slices:
+Completed slices:
 
 - #69 — WordPress content bindings and immutable review snapshot inputs.
 - #70 — Provider-neutral personalization/system-token contract.
-- #71 — Remaining preflight/compliance/artifact-inspection closeout.
-- #72 — Representative Outlook/Gmail/Apple Mail compatibility fixtures.
+- #71 — Preflight, compliance, and exact artifact inspection/export closeout.
+- #72 — Representative Outlook/Gmail/Apple Mail structural compatibility fixtures.
 
 **Exit gate:** the same template + content snapshot + resolved design always
 produces the same reviewed artifact; invalid/non-compliant output cannot advance
 to approval; export contains no provider credentials or WordPress-only markup.
+
+The exit gate is satisfied by the frozen review-input/compiler fingerprint
+contract, fail-closed structured diagnostics, canonical-token provenance rules,
+exact compiled preview/download surface, and repository-owned client expectation
+matrix. Durable storage of approved artifacts and the approval transition itself
+begin in M2; they do not introduce another rendering path.
 
 ### Milestone 2 — Provider-neutral campaign workflow
 
@@ -130,11 +136,13 @@ to approval; export contains no provider credentials or WordPress-only markup.
 **Outcome:** CampaignBridge manages a complete local campaign lifecycle through
 approval without depending on Mailchimp-specific types or response shapes.
 
-Current actionable slices:
+Current implementation order:
 
-- #73 — Durable campaign/snapshot/remote-reference/delivery-attempt/audit storage.
-- #74 — Canonical campaign workflows, state transitions, concurrency and audit.
-- #75 — Stable REST adapter over those workflows.
+- #73 — Durable campaign/snapshot/remote-reference/delivery-attempt/audit storage
+  is the next actionable foundation.
+- #74 — Canonical campaign workflows, state transitions, concurrency and audit
+  follows #73.
+- #75 — Stable REST adapter follows #73 and #74.
 
 **Exit gate:** provider-neutral integration tests exercise every legal
 transition and reject illegal/duplicate transitions; a campaign reaches

@@ -40,22 +40,22 @@ Supported WordPress Core blocks are authored natively and normalized into
 CampaignBridge email semantics (WordPress Native First); see
 [`email-block-architecture.md`](email-block-architecture.md#supported-authoring-contract).
 
-| Block                              | Classification | Purpose                                         | Status             |
-| ---------------------------------- | -------------- | ----------------------------------------------- | ------------------ |
-| `campaignbridge/container`         | Native block   | Locked email document root and width contract   | Compiler-supported |
-| `campaignbridge/preheader`         | Native block   | Hidden inbox preview text                       | Compiler-supported |
-| `campaignbridge/section`           | Native block   | Full-width content row                          | Compiler-supported |
-| `campaignbridge/columns`           | Native block   | One to six columns with optional mobile stacking | Compiler-supported |
-| `campaignbridge/column`            | Native block   | Constrained child of columns                    | Compiler-supported |
-| `core/paragraph`                   | Core block     | Safe rich text and HTTPS links                  | Compiler-supported |
-| `core/heading`                     | Core block     | Portable heading levels 1–4 and typography      | Compiler-supported |
-| `core/image`                       | Core block     | Sized, linked image; Brand Logo binds frozen Brand Kit asset | Compiler-supported |
-| `core/buttons` + `core/button`     | Core block     | Aligned bulletproof calls to action             | Compiler-supported |
-| `core/list` + `core/list-item`     | Core block     | Flat ordered or unordered list                  | Compiler-supported |
-| `core/separator`                   | Core block     | Full-width design divider                       | Compiler-supported |
-| `core/spacer`                      | Core block     | Bounded vertical spacing                        | Compiler-supported |
-| `core/social-links` + `core/social-link` | Core blocks | One to six accessible HTTPS social links with packaged PNG icons | Compiler-supported |
-| `campaignbridge/compliance-footer` | Native block   | Address, unsubscribe, and required controls     | Compiler-supported |
+| Block                                    | Classification | Purpose                                                          | Status             |
+| ---------------------------------------- | -------------- | ---------------------------------------------------------------- | ------------------ |
+| `campaignbridge/container`               | Native block   | Locked email document root and width contract                    | Compiler-supported |
+| `campaignbridge/preheader`               | Native block   | Hidden inbox preview text                                        | Compiler-supported |
+| `campaignbridge/section`                 | Native block   | Full-width content row                                           | Compiler-supported |
+| `campaignbridge/columns`                 | Native block   | One to six columns with optional mobile stacking                 | Compiler-supported |
+| `campaignbridge/column`                  | Native block   | Constrained child of columns                                     | Compiler-supported |
+| `core/paragraph`                         | Core block     | Safe rich text and HTTPS links                                   | Compiler-supported |
+| `core/heading`                           | Core block     | Portable heading levels 1–4 and typography                       | Compiler-supported |
+| `core/image`                             | Core block     | Sized, linked image; Brand Logo binds frozen Brand Kit asset     | Compiler-supported |
+| `core/buttons` + `core/button`           | Core block     | Aligned bulletproof calls to action                              | Compiler-supported |
+| `core/list` + `core/list-item`           | Core block     | Flat ordered or unordered list                                   | Compiler-supported |
+| `core/separator`                         | Core block     | Full-width design divider                                        | Compiler-supported |
+| `core/spacer`                            | Core block     | Bounded vertical spacing                                         | Compiler-supported |
+| `core/social-links` + `core/social-link` | Core blocks    | One to six accessible HTTPS social links with packaged PNG icons | Compiler-supported |
+| `campaignbridge/compliance-footer`       | Native block   | Address, unsubscribe, and required controls                      | Compiler-supported |
 
 The view-online link once grouped with the preheader is not implemented. It is a
 separate document-level concern with its own hosted-URL dependency, and the
@@ -63,17 +63,17 @@ template already stores `campaignbridge_view_online_url` for it.
 
 ## Wave A — general builder parity
 
-Start this wave only after the compiler registry, compiled preview, compliance
-validation, and universal-profile fixtures are operational.
-Issue #72 remains the merge and release gate for new Wave A output. Navigation,
-Brand Logo, and Video participate in the representative compatibility matrix.
+This wave shipped after the compiler registry, compiled preview, compliance
+validation, and universal-profile fixtures became operational. Issue #72 was the
+merge and release gate; Navigation, Brand Logo, Social Links, and Video now
+participate in the representative compatibility matrix.
 
-| Proposed block                | Classification | Output and constraints                                     | Reuse/dependency                                           |
-| ----------------------------- | -------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
-| `core/image` Brand Logo       | Core binding   | Shipped: bounded logo, alt text, optional homepage link    | `campaignbridge/brand-data`; reuses image renderer         |
-| `campaignbridge/navigation`   | Native block   | Shipped: one to five explicit HTTPS links; mobile stack      | No live menu lookup; plain-text links                       |
-| `core/social-links` + `core/social-link` | Core blocks | Shipped: one to six accessible HTTPS links across eight approved services | Packaged PNG assets and plain-text URLs |
-| `campaignbridge/video`        | Native block   | Shipped: bounded linked poster and explicit play action    | HTTPS destination; never emits playable media or scripts   |
+| Proposed block                           | Classification | Output and constraints                                                    | Reuse/dependency                                         |
+| ---------------------------------------- | -------------- | ------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `core/image` Brand Logo                  | Core binding   | Shipped: bounded logo, alt text, optional homepage link                   | `campaignbridge/brand-data`; reuses image renderer       |
+| `campaignbridge/navigation`              | Native block   | Shipped: one to five explicit HTTPS links; mobile stack                   | No live menu lookup; plain-text links                    |
+| `core/social-links` + `core/social-link` | Core blocks    | Shipped: one to six accessible HTTPS links across eight approved services | Packaged PNG assets and plain-text URLs                  |
+| `campaignbridge/video`                   | Native block   | Shipped: bounded linked poster and explicit play action                   | HTTPS destination; never emits playable media or scripts |
 
 The following parity items are not part of Wave A:
 
@@ -90,15 +90,15 @@ The following parity items are not part of Wave A:
 This wave is CampaignBridge's primary product advantage. All bindings resolve
 before rendering and are frozen in the campaign snapshot.
 
-| Proposed block                | Classification | Purpose                                         | Reuse/dependency                                       |
-| ----------------------------- | -------------- | ----------------------------------------------- | ------------------------------------------------------ |
-| `campaignbridge/post-card`    | Binding block  | One selected post or custom post type           | Compiler-supported; immutable snapshot required        |
-| `core/heading` (bound)        | Core block     | Post title, optionally linked to the post       | Shipped; `campaignbridge/post-data` binding source     |
-| `campaignbridge/post-image`   | Binding block  | Featured image within a post composition        | Compiler-supported                                     |
-| `core/paragraph` (bound)      | Core block     | Bounded plain-text excerpt or post body         | Shipped; `campaignbridge/post-data` binding source     |
-| `core/button` (bound)         | Core block     | Post-aware button or text link                  | Shipped; bulletproof renderer                          |
-| `campaignbridge/post-query`   | Binding block  | Snapshot a bounded, ordered collection of posts | Requires query budget and empty-result policy          |
-| `campaignbridge/post-list`    | Binding block  | Render the immutable result of a post query     | Requires deterministic item template and maximum count |
+| Proposed block              | Classification | Purpose                                         | Reuse/dependency                                       |
+| --------------------------- | -------------- | ----------------------------------------------- | ------------------------------------------------------ |
+| `campaignbridge/post-card`  | Binding block  | One selected post or custom post type           | Compiler-supported; immutable snapshot required        |
+| `core/heading` (bound)      | Core block     | Post title, optionally linked to the post       | Shipped; `campaignbridge/post-data` binding source     |
+| `campaignbridge/post-image` | Binding block  | Featured image within a post composition        | Compiler-supported                                     |
+| `core/paragraph` (bound)    | Core block     | Bounded plain-text excerpt or post body         | Shipped; `campaignbridge/post-data` binding source     |
+| `core/button` (bound)       | Core block     | Post-aware button or text link                  | Shipped; bulletproof renderer                          |
+| `campaignbridge/post-query` | Binding block  | Snapshot a bounded, ordered collection of posts | Requires query budget and empty-result policy          |
+| `campaignbridge/post-list`  | Binding block  | Render the immutable result of a post query     | Requires deterministic item template and maximum count |
 
 Featured article, latest posts, category digest, event listing, and author digest
 should initially be patterns over the post blocks. The media-beside-copy card is
