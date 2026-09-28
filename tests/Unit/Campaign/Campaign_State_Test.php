@@ -22,8 +22,8 @@ final class Campaign_State_Test extends Test_Case {
 	/**
 	 * Test that all() returns exactly ten states.
 	 */
-	public function test_all_returns_ten_states(): void {
-		$this->assertCount( 10, Campaign_State::all() );
+	public function test_all_returns_eleven_states(): void {
+		$this->assertCount( 11, Campaign_State::all() );
 	}
 
 	/**
@@ -42,6 +42,7 @@ final class Campaign_State_Test extends Test_Case {
 		$this->assertContains( 'failed', $states );
 		$this->assertContains( 'cancelled', $states );
 		$this->assertContains( 'unknown', $states );
+		$this->assertContains( 'archived', $states );
 	}
 
 	/**
@@ -68,6 +69,7 @@ final class Campaign_State_Test extends Test_Case {
 	public function test_is_terminal_identifies_terminal_states(): void {
 		$this->assertTrue( Campaign_State::is_terminal( 'sent' ) );
 		$this->assertTrue( Campaign_State::is_terminal( 'cancelled' ) );
+		$this->assertTrue( Campaign_State::is_terminal( 'archived' ) );
 	}
 
 	/**

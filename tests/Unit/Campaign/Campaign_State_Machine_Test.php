@@ -65,6 +65,7 @@ final class Campaign_State_Machine_Test extends Test_Case {
 	public function test_terminal_states_have_no_transitions(): void {
 		$this->assertSame( array(), Campaign_State_Machine::allowed_transitions( 'sent' ) );
 		$this->assertSame( array(), Campaign_State_Machine::allowed_transitions( 'cancelled' ) );
+		$this->assertSame( array(), Campaign_State_Machine::allowed_transitions( 'archived' ) );
 	}
 
 	/**
@@ -84,6 +85,19 @@ final class Campaign_State_Machine_Test extends Test_Case {
 		$this->assertTrue( Campaign_State_Machine::can_transition( 'unknown', 'failed' ) );
 		$this->assertTrue( Campaign_State_Machine::can_transition( 'unknown', 'cancelled' ) );
 	}
+
+	/**
+	 * Test that archival is explicit and terminal.
+	 */
+	public function test_archive_transitions_are_state_machine_controlled(): void {
+		$this->assertTrue( Campaign_State_Machine::can_transition( 'draft', 'archived' ) );
+		$this->assertTrue( Campaign_State_Machine::can_transition( 'ready_for_review', 'archived' ) );
+		$this->assertTrue( Campaign_State_Machine::can_transition( 'approved', 'archived' ) );
+		$this->assertTrue( Campaign_State_Machine::can_transition( 'failed', 'archived' ) );
+		$this->assertFalse( Campaign_State_Machine::can_transition( 'scheduled', 'archived' ) );
+		$this->assertSame( array(), Campaign_State_Machine::allowed_transitions( 'archived' ) );
+	}
+
 
 	/**
 	 * Test that invalid states are rejected.
@@ -117,7 +131,7 @@ final class Campaign_State_Machine_Test extends Test_Case {
 	 */
 	public function test_allowed_transitions_returns_correct_sets(): void {
 		$this->assertSame(
-			array( 'ready_for_review', 'cancelled', 'failed' ),
+			array( 'ready_for_review', 'cancelled', 'failed', 'archived' ),
 			Campaign_State_Machine::allowed_transitions( 'draft' )
 		);
 
