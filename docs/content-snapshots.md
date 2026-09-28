@@ -93,11 +93,13 @@ compiler/profile versions, HTML, text, and referenced assets. Equivalent input
 produces identical bytes and fingerprints regardless of object identity or map
 insertion order.
 
-This M1 contract supplies frozen inputs and review invalidation rules. Durable
-storage of inputs/artifacts and reviewed revision/fingerprint pairs belongs to
-M2 (#73/#74), together with authorization, atomic replacement, audit history,
-and campaign state transitions. No persistence, approval UI, provider delivery,
-or personalization implementation is introduced here. Future campaign consumers
+This M1 contract supplies frozen inputs and review invalidation rules. M2
+storage (#73) now persists the complete `Review_Input` and exact successful
+artifact as an insert-only `Campaign_Snapshot`; see
+[`campaign-persistence.md`](campaign-persistence.md). Approval authorization,
+atomic workflow transitions, and the decision to select a reviewed snapshot
+remain #74. No approval UI, provider delivery, or personalization
+implementation is introduced by the storage layer. Future workflow consumers
 must apply `matches_review()` before relying on a previous review.
 
 Referenced image/font URLs and image dimensions are frozen, not the remote
@@ -119,3 +121,5 @@ and fingerprint; it does not archive files served at those URLs.
 - `Review_Input_Test`: frozen output after source edits/deletion/privacy changes,
   explicit refresh and review invalidation, protected/non-public source omission,
   frozen design, and unavailable-compiler diagnostics.
+- `Campaign_Repository_Test`: durable review-input/artifact round trips,
+  insert-only revisions, source-edit independence, and active-snapshot integrity.
