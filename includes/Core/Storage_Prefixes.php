@@ -95,6 +95,7 @@ class Storage_Prefixes {
 		'campaignbridge_last_sync',
 		'campaignbridge_included_post_types',
 		'campaignbridge_provider_connection_mailchimp',
+		'campaignbridge_database_schema',
 	);
 
 	/**

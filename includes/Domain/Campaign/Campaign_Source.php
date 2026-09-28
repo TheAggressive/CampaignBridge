@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed persistence ports use explicit signatures and focused contract comments.
 /**
  * Campaign persistence port.
  *
@@ -13,46 +13,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/**
- * Loads and stores campaign records.
- *
- * Workflow and delivery read through this port. The WordPress post-type
- * implementation lives in the repository layer.
- */
+/** Loads and stores typed provider-neutral campaign records. */
 interface Campaign_Source {
-	/**
-	 * Load a campaign by its identifier.
-	 *
-	 * @param string $id Campaign identifier.
-	 * @return array<string, mixed>|null Campaign record or null when missing.
-	 */
-	public function get( string $id ): ?array;
+	/** Load a campaign by its identifier. */
+	public function get( string $id ): ?Campaign;
+
+	/** Insert a new campaign, refusing duplicate identifiers. */
+	public function add( Campaign $campaign ): bool;
 
 	/**
-	 * Persist a campaign record.
+	 * Replace a campaign only when its stored version matches.
 	 *
-	 * @param string               $id     Campaign identifier.
-	 * @param array<string, mixed> $record Campaign data.
-	 * @return bool True on success.
+	 * The supplied replacement must carry expected version + 1.
 	 */
-	public function save( string $id, array $record ): bool;
+	public function compare_and_swap( Campaign $replacement, int $expected_version ): bool;
 
 	/**
-	 * Transition a campaign to a new state.
+	 * Return a bounded newest-first owner listing.
 	 *
-	 * The transition is validated against the state machine before writing.
-	 *
-	 * @param string $id       Campaign identifier.
-	 * @param string $new_state Target state.
-	 * @return bool True on success.
+	 * @return array<int, Campaign>
 	 */
-	public function transition_state( string $id, string $new_state ): bool;
-
-	/**
-	 * Remove a campaign record.
-	 *
-	 * @param string $id Campaign identifier.
-	 * @return bool True on success.
-	 */
-	public function delete( string $id ): bool;
+	public function for_owner( int $owner_user_id, int $limit = 50, int $offset = 0 ): array;
 }

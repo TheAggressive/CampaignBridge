@@ -5,11 +5,16 @@ CampaignBridge is moving toward four enforceable layers:
 | Layer | Responsibility | May depend on |
 |---|---|---|
 | Domain | Email composition rules and provider-neutral value objects | Pure PHP only |
-| Repository | WordPress options, metadata, posts, cache, and future job persistence | WordPress data APIs |
+| Repository | WordPress options, metadata, posts, cache, and campaign custom-table persistence | WordPress data APIs |
 | Workflow | Credential migration, campaign creation, reconciliation, and sending | Domain and Repository |
 | Delivery | Admin screens, REST controllers, blocks, and provider adapters | Workflow and query interfaces |
 
 The desired dependency direction is Delivery → Workflow → Domain, with Repository implementing persistence ports required by Workflow. New direct WordPress data access outside Repository/Core Storage is prohibited; existing call sites are migrated incrementally.
+
+The M2 campaign storage ports, five site-local tables, migration policy, and
+data-minimization rules are documented in
+[`campaign-persistence.md`](campaign-persistence.md). This is a storage boundary
+only; campaign workflow transitions remain a Workflow responsibility.
 
 ## Composition root
 

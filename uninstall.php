@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) || ! function_exists( 'get_option' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/includes/Autoloader.php';
+CampaignBridge_Autoloader::register();
+
 /**
  * CampaignBridge Uninstall Class
  *
@@ -89,23 +92,27 @@ class CampaignBridge_Uninstaller {
 		$success_count = 0;
 
 		try {
-			// 1. Delete plugin settings and options.
+			// 1. Remove custom lifecycle tables only during explicit uninstall.
+			$tables_deleted = self::cleanup_custom_tables();
+			$success_count += $tables_deleted;
+
+			// 2. Delete plugin settings and options.
 			$options_deleted = self::cleanup_options();
 			$success_count  += $options_deleted;
 
-			// 2. Clean up custom post type data.
+			// 3. Clean up custom post type data.
 			$cpt_deleted    = self::cleanup_custom_post_type();
 			$success_count += $cpt_deleted;
 
-			// 3. Clean up transients and cache.
+			// 4. Clean up transients and cache.
 			$transients_deleted = self::cleanup_transients();
 			$success_count     += $transients_deleted;
 
-			// 4. Clean up user meta.
+			// 5. Clean up user meta.
 			$user_meta_deleted = self::cleanup_user_meta();
 			$success_count    += $user_meta_deleted;
 
-			// 5. Clean up cache data.
+			// 6. Clean up cache data.
 			$cache_cleaned = self::cleanup_cache();
 			$success_count += $cache_cleaned;
 
@@ -125,6 +132,27 @@ class CampaignBridge_Uninstaller {
 			self::log( 'CampaignBridge cleanup failed: ' . $e->getMessage() );
 			self::log( 'CampaignBridge Uninstall Error: ' . $e->getMessage() );
 		}
+	}
+
+	/**
+	 * Remove the allowlisted site-local campaign tables.
+	 *
+	 * @return int Number of tables removed.
+	 */
+	private static function cleanup_custom_tables(): int {
+		global $wpdb;
+		$deleted = 0;
+
+		foreach ( array_reverse( \CampaignBridge\Repository\Schema_Manager::table_names() ) as $table ) {
+			$existed = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+			$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
+			if ( $table === $existed ) {
+				++$deleted;
+			}
+		}
+
+		self::log( "Deleted {$deleted} CampaignBridge custom tables." );
+		return $deleted;
 	}
 
 	/**
