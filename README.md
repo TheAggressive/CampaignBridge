@@ -21,9 +21,12 @@ content before it reaches a provider.
 - A dedicated email-template post type in WordPress's native block editor.
 - A WordPress-native template lifecycle: draft creation, Save, Publish,
   autosave, and revision history.
-- An email-native block grammar with deterministic HTML and plain-text output.
+- A constrained mix of native WordPress Core blocks and CampaignBridge email
+  blocks with deterministic HTML and plain-text output.
+- Read-only WordPress content bindings compiled from immutable snapshot inputs.
 - Compiled previews with visible validation diagnostics.
-- A Brand Kit for portable colors and typography.
+- Portable personalization tokens with synthetic, PII-free preview values.
+- A Brand Kit plus per-template Design Fonts for portable colors and typography.
 - Mailchimp connection settings and discovery foundations.
 - An HTML export provider boundary.
 - Capability-protected REST routes used by the editor and admin screens.
@@ -36,7 +39,7 @@ or reporting.
 ## Current workflow
 
 1. Open **CampaignBridge > Email Templates** in WordPress admin.
-2. Create a template with the CampaignBridge email blocks.
+2. Create a template with the supported Core and CampaignBridge email blocks.
 3. Configure the Brand Kit and template metadata.
 4. Compile the template and resolve preview diagnostics before publishing it.
 

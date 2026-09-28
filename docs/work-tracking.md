@@ -47,12 +47,18 @@ Integration/provider tracks may have their own umbrellas, such as Abilities #40 
 
 A focused action issue should normally be reviewable through one coherent PR or a deliberately small PR sequence. It owns concrete acceptance evidence, not an entire product area.
 
-Examples from the current backlog:
+Completed M1 examples:
 
 - M1 content snapshots — #69
 - M1 personalization — #70
 - M1 preflight closeout — #71
 - M1 client fixtures — #72
+
+Current implementation-ready M2 work begins with storage #73. Its dependent
+slices are M2 workflows #74 and M2 REST #75.
+
+Current and dependency-gated examples:
+
 - M2 storage — #73
 - M2 workflows — #74
 - M2 REST — #75
@@ -87,27 +93,23 @@ The merged PR/closed issues provide the implementation history. Do not copy ever
 
 ## Dependency-first execution order
 
-Issue number is not execution order. Current recommended sequence is:
+Issue number is not execution order. M1 #62 and its action issues #69–#72 are
+complete. The remaining order is:
 
-1. M1 content/snapshot contract — #69.
-2. M1 provider-neutral personalization — #70.
-3. M1 preflight/compliance closeout — #71.
-4. M1 email-client fixtures — #72; can overlap other M1 work where safe.
-5. Close M1 — #62.
-6. M2 durable storage — #73.
-7. M2 canonical campaign workflows — #74.
-8. M2 REST adapter — #75.
-9. Close M2 — #63.
-10. M3 provider discovery/token mapping — #76.
-11. M3 idempotent Mailchimp draft/content handoff — #77.
-12. M3 test delivery — #78.
-13. M3 guarded schedule/send/cancel — #79.
-14. M3 reconciliation and ambiguous outcomes — #80.
-15. Close M3 — #64.
-16. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
-17. Durable jobs/recovery — #66.
-18. Governance/reporting — #67.
-19. GA closeout — #68.
+1. M2 durable storage — #73.
+2. M2 canonical campaign workflows — #74.
+3. M2 REST adapter — #75.
+4. Close M2 — #63.
+5. M3 provider discovery/token mapping — #76.
+6. M3 idempotent Mailchimp draft/content handoff — #77.
+7. M3 test delivery — #78.
+8. M3 guarded schedule/send/cancel — #79.
+9. M3 reconciliation and ambiguous outcomes — #80.
+10. Close M3 — #64.
+11. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
+12. Durable jobs/recovery — #66.
+13. Governance/reporting — #67.
+14. GA closeout — #68.
 
 Cross-cutting work does not need to wait for the numbered milestone when its dependency is already satisfied. Security, accessibility, i18n, performance, package verification, and documentation travel with every relevant PR.
 

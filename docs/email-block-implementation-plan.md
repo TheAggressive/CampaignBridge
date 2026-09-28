@@ -41,10 +41,12 @@ The compiler foundation now replaces the prototype rendering paths:
   `EmailStructure` have been removed;
 - golden artifacts and measured compiler performance are covered by tests.
 
-The remaining production risks are compiled preview/export wiring, snapshot
-resolution and persistence, advanced layout/document blocks, compliance and
-compatibility validators, draft/approval semantics, and email-client evidence.
-Existing prototype templates are not a compatibility boundary for the compiler.
+The M1 compiler closeout is complete: compiled preview/export, immutable
+snapshot resolution, compliance diagnostics, canonical personalization, and
+representative client fixtures all use the same deterministic artifact. Durable
+approved-snapshot persistence and draft/approval transitions belong to M2, and
+later block waves remain dependency-gated in the catalog. Existing prototype
+templates are not a compatibility boundary for the compiler.
 
 ## Product and technical decisions
 
@@ -145,27 +147,29 @@ There is no compatibility facade or parallel transport renderer.
 This is the exact compiler/editor allowlist, defined once in
 `includes/Email_Blocks/email-blocks.json`:
 
-| Block name                         | Role                            | Key constraints                                                       |
-| ---------------------------------- | ------------------------------- | --------------------------------------------------------------------- |
-| `campaignbridge/container`         | One document root               | Exactly one root; 320–900 px; locked                                  |
-| `campaignbridge/section`           | Full-width content row          | Child of container; spacing/background                                |
-| `core/paragraph`                   | Rich email text                 | Safe inline marks and HTTPS links only; left/center/right             |
-| `core/heading`                     | Heading or bound post title                         | Levels 1–4; portable typography; no background                        |
-| `core/image`                       | Email image                     | HTTPS URL, pixel dimensions, explicit alt choice; no caption or crop  |
-| `core/buttons`                     | Button group                    | Children are `core/button` only; left/center/right                    |
-| `core/button`                      | Bulletproof CTA                 | HTTPS URL; fill/outline/ghost; Outlook VML fallback                   |
-| `core/list`                        | Ordered or unordered list       | Children are `core/list-item` only; no nested lists in v1             |
-| `core/list-item`                   | List item                       | Safe inline rich text                                                 |
-| `core/separator`                   | Horizontal divider              | Full width; colour only; thickness/style from the email design        |
-| `core/spacer`                      | Vertical spacing                | 0–600 px; Core default 100 px                                         |
-| `core/social-links`                | Social link row                 | 1–6 children; horizontal; packaged icons; bounded gap and icon size   |
-| `core/social-link`                 | One social destination          | Approved service; absolute HTTPS URL; accessible plain-text label     |
-| `campaignbridge/post-card`         | Immutable post binding          | Child of container/section; snapshot needed; padding, background      |
-| `campaignbridge/post-image`        | Featured image binding          | Child of post card or column; width, align, link-to-post, decorative  |
-| `campaignbridge/preheader`         | Hidden inbox preview            | First child of container; at most one; 1-150 characters               |
-| `campaignbridge/columns`           | One to six columns              | Child of section or post card; 1-6 columns; gap 0-48 px               |
-| `campaignbridge/column`            | Column content                  | Child of columns; integer percentage width; flat (no nested columns)  |
-| `campaignbridge/compliance-footer` | Sender and unsubscribe controls | Last child of container; at most one; address required                |
+| Block name                         | Role                            | Key constraints                                                      |
+| ---------------------------------- | ------------------------------- | -------------------------------------------------------------------- |
+| `campaignbridge/container`         | One document root               | Exactly one root; 320–900 px; locked                                 |
+| `campaignbridge/section`           | Full-width content row          | Child of container; spacing/background                               |
+| `core/paragraph`                   | Rich email text                 | Safe inline marks and HTTPS links only; left/center/right            |
+| `core/heading`                     | Heading or bound post title     | Levels 1–4; portable typography; no background                       |
+| `core/image`                       | Email image                     | HTTPS URL, pixel dimensions, explicit alt choice; no caption or crop |
+| `core/buttons`                     | Button group                    | Children are `core/button` only; left/center/right                   |
+| `core/button`                      | Bulletproof CTA                 | HTTPS URL; fill/outline/ghost; Outlook VML fallback                  |
+| `core/list`                        | Ordered or unordered list       | Children are `core/list-item` only; no nested lists in v1            |
+| `core/list-item`                   | List item                       | Safe inline rich text                                                |
+| `core/separator`                   | Horizontal divider              | Full width; colour only; thickness/style from the email design       |
+| `core/spacer`                      | Vertical spacing                | 0–600 px; Core default 100 px                                        |
+| `core/social-links`                | Social link row                 | 1–6 children; horizontal; packaged icons; bounded gap and icon size  |
+| `core/social-link`                 | One social destination          | Approved service; absolute HTTPS URL; accessible plain-text label    |
+| `campaignbridge/navigation`        | Bounded email navigation        | 1–5 explicit HTTPS links; deterministic horizontal/mobile behavior   |
+| `campaignbridge/video`             | Linked video poster             | HTTPS poster/destination; explicit play action; no embedded playback |
+| `campaignbridge/post-card`         | Immutable post binding          | Child of container/section; snapshot needed; padding, background     |
+| `campaignbridge/post-image`        | Featured image binding          | Child of post card or column; width, align, link-to-post, decorative |
+| `campaignbridge/preheader`         | Hidden inbox preview            | First child of container; at most one; 1-150 characters              |
+| `campaignbridge/columns`           | One to six columns              | Child of section or post card; 1-6 columns; gap 0-48 px              |
+| `campaignbridge/column`            | Column content                  | Child of columns; integer percentage width; flat (no nested columns) |
+| `campaignbridge/compliance-footer` | Sender and unsubscribe controls | Last child of container; at most one; address required               |
 
 `core/columns` and `core/column` are intentionally not adopted; the reasons are
 recorded in [`email-block-architecture.md`](email-block-architecture.md#remaining-campaignbridge-blocks).
