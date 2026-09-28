@@ -257,6 +257,11 @@ class CampaignBridge_Plugin {
 			);
 		}
 
+		// Create durable site-local storage before enabling campaign capabilities.
+		if ( ! \CampaignBridge\Repository\Schema_Manager::migrate() ) {
+			self::deactivate_and_die( 'CampaignBridge could not create or safely upgrade its database schema.' );
+		}
+
 		// Grant CampaignBridge capabilities to administrators and record schema version.
 		\CampaignBridge\Core\Capabilities::activate();
 

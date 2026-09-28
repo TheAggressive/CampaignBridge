@@ -16,6 +16,48 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Runtime design truth shared by editor and compiler consumers. */
 final class Resolved_Email_Design {
 	/**
+	 * Restore an exact normalized design and verify its identity.
+	 *
+	 * @param array<string, mixed> $design      Stored normalized design.
+	 * @param string               $fingerprint Stored deterministic identity.
+	 *
+	 * @throws \InvalidArgumentException When the stored design is malformed or its identity differs.
+	 */
+	public static function from_array( array $design, string $fingerprint ): self {
+		$required_arrays = array(
+			$design['settings'] ?? null,
+			$design['styles'] ?? null,
+			$design['brand'] ?? null,
+			$design['settings']['layout'] ?? null,
+			$design['settings']['color'] ?? null,
+			$design['settings']['typography'] ?? null,
+			$design['settings']['spacing'] ?? null,
+			$design['styles']['global'] ?? null,
+			$design['styles']['blocks'] ?? null,
+			$design['brand']['fonts'] ?? null,
+		);
+		if ( 1 !== ( $design['version'] ?? null ) ) {
+			throw new \InvalidArgumentException( 'Stored email design version is unsupported.' );
+		}
+		foreach ( $required_arrays as $value ) {
+			if ( ! is_array( $value ) ) {
+				throw new \InvalidArgumentException( 'Stored email design is malformed.' );
+			}
+		}
+		$normalized = self::canonicalize( $design );
+		try {
+			$json = json_encode( $normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure domain identity verification requires throwing, deterministic JSON.
+		} catch ( \JsonException $exception ) {
+			throw new \InvalidArgumentException( 'Stored email design cannot be serialized canonically.', 0, $exception );
+		}
+		$actual = 'sha256:' . hash( 'sha256', $json );
+		if ( ! hash_equals( $actual, $fingerprint ) ) {
+			throw new \InvalidArgumentException( 'Stored email design fingerprint does not match its data.' );
+		}
+
+		return new self( $design, $fingerprint );
+	}
+	/**
 	 * Create an immutable resolved design.
 	 *
 	 * @param array<string, mixed> $design      Canonical normalized design.
@@ -158,5 +200,23 @@ final class Resolved_Email_Design {
 	 */
 	public function to_array(): array {
 		return $this->design;
+	}
+
+	/**
+	 * Recursively canonicalize associative maps for identity verification.
+	 *
+	 * @param mixed $value Value to canonicalize.
+	 */
+	private static function canonicalize( mixed $value ): mixed {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+		if ( ! array_is_list( $value ) ) {
+			ksort( $value, SORT_STRING );
+		}
+		foreach ( $value as $key => $item ) {
+			$value[ $key ] = self::canonicalize( $item );
+		}
+		return $value;
 	}
 }
