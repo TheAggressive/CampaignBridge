@@ -1,0 +1,102 @@
+<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+/**
+ * Stable Campaign REST resource mapping.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
+namespace CampaignBridge\REST;
+
+use CampaignBridge\Domain\Campaign\Campaign;
+use CampaignBridge\Domain\Campaign\Campaign_Snapshot;
+use CampaignBridge\Domain\Email\Compile_Result;
+use CampaignBridge\Domain\Email\Token\Token_Preview;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/** Maps typed application values to intentionally bounded transport DTOs. */
+final class Campaign_Rest_Resource {
+	/** @return array<string, mixed> */
+	public static function campaign( Campaign $campaign ): array {
+		return array(
+			'id'                 => $campaign->id(),
+			'state'              => $campaign->state(),
+			'version'            => $campaign->version(),
+			'owner_user_id'      => $campaign->owner_user_id(),
+			'template_id'        => $campaign->template_id(),
+			'provider'           => $campaign->provider(),
+			'audience_reference' => $campaign->audience_reference(),
+			'active_snapshot_id' => $campaign->active_snapshot_id(),
+			'created_at'         => $campaign->created_at(),
+			'updated_at'         => $campaign->updated_at(),
+		);
+	}
+
+	/** @return array<string, mixed> */
+	public static function snapshot( Campaign_Snapshot $snapshot ): array {
+		return array(
+			'id'          => $snapshot->id(),
+			'revision'    => $snapshot->revision(),
+			'fingerprint' => $snapshot->artifact()->fingerprint(),
+			'created_at'  => $snapshot->created_at(),
+		);
+	}
+
+	/**
+	 * Validation outcome shared by the snapshot and validation routes.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function validation( Compile_Result $result ): array {
+		return array(
+			'valid'            => $result->is_success(),
+			'diagnostics'      => self::diagnostics( $result ),
+			'compiler_version' => $result->compiler_version(),
+			'profile_version'  => $result->profile_version(),
+			'fingerprint'      => '' === $result->fingerprint() ? null : $result->fingerprint(),
+		);
+	}
+
+	/**
+	 * The canonical artifact representation established by POST /preview.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function preview( Compile_Result $result ): array {
+		return array(
+			'html'             => $result->html(),
+			'text'             => $result->text(),
+			'diagnostics'      => self::diagnostics( $result ),
+			'assets'           => $result->assets(),
+			'compiler_version' => $result->compiler_version(),
+			'profile_version'  => $result->profile_version(),
+			'fingerprint'      => $result->fingerprint(),
+			'sample'           => self::sample( $result ),
+		);
+	}
+
+	/** @return array<int, array<string, string>> */
+	public static function diagnostics( Compile_Result $result ): array {
+		return array_map(
+			static fn ( $diagnostic ): array => $diagnostic->to_array(),
+			$result->diagnostics()
+		);
+	}
+
+	/** @return array{html: string, text: string}|null */
+	private static function sample( Compile_Result $result ): ?array {
+		$preview = Token_Preview::default();
+		if ( ! $result->is_success() || ! $preview->applies_to( $result->html() . $result->text() ) ) {
+			return null;
+		}
+
+		return array(
+			'html' => $preview->html( $result->html() ),
+			'text' => $preview->text( $result->text() ),
+		);
+	}
+}

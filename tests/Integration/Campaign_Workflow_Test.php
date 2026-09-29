@@ -95,10 +95,10 @@ final class Campaign_Workflow_Test extends Test_Case {
 			$wpdb->query( "DELETE FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted isolated test tables.
 		}
 
-		$this->campaigns = new Campaign_Repository();
-		$this->snapshots = new Campaign_Snapshot_Repository();
-		$this->attempts  = new Delivery_Attempt_Repository();
-		$this->audits    = new Audit_Event_Repository();
+		$this->campaigns   = new Campaign_Repository();
+		$this->snapshots   = new Campaign_Snapshot_Repository();
+		$this->attempts    = new Delivery_Attempt_Repository();
+		$this->audits      = new Audit_Event_Repository();
 		$this->template_id = $this->factory->post->create(
 			array(
 				'post_type'    => Post_Type_Email_Template::POST_TYPE,
@@ -107,8 +107,8 @@ final class Campaign_Workflow_Test extends Test_Case {
 				'post_content' => '<!-- wp:campaignbridge/container /-->',
 			)
 		);
-		$this->actor    = new Campaign_Actor( 7, true, false, true );
-		$this->workflow = $this->workflow( $this->audits );
+		$this->actor       = new Campaign_Actor( 7, true, false, true );
+		$this->workflow    = $this->workflow( $this->audits );
 	}
 
 	public function test_complete_local_lifecycle_preserves_immutable_artifacts_and_history(): void {
@@ -165,6 +165,31 @@ final class Campaign_Workflow_Test extends Test_Case {
 		self::assertSame( 'archived', $archived->campaign()?->state() );
 		self::assertCount( 2, $this->snapshots->for_campaign( $campaign_id ) );
 		self::assertGreaterThanOrEqual( 10, count( $this->audits->for_target( 'campaign', $campaign_id ) ) );
+	}
+
+	public function test_reads_use_object_authorization_and_bounded_owner_queries(): void {
+		$campaign = $this->create_campaign();
+		$stranger = new Campaign_Actor( 8, true, false, false );
+		$manager  = new Campaign_Actor( 9, false, true, false );
+
+		self::assertSame( $campaign->to_array(), $this->workflow->get( $this->actor, $campaign->id() )->campaign()?->to_array() );
+		self::assertSame( $campaign->id(), $this->workflow->get( $manager, $campaign->id() )->campaign()?->id() );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $this->workflow->get( $stranger, $campaign->id() )->error()?->code() );
+		self::assertSame( Campaign_Workflow_Error::NOT_FOUND, $this->workflow->get( $this->actor, 'campaign-missing' )->error()?->code() );
+
+		$this->create_campaign();
+		$page = $this->workflow->list( $this->actor, 7, 1, 1 );
+		self::assertTrue( $page->is_success() );
+		self::assertCount( 1, $page->campaigns() );
+		self::assertSame( 2, $page->total() );
+		self::assertTrue( $this->workflow->list( $manager, 7, 10, 0 )->is_success() );
+
+		$denied = $this->workflow->list( $stranger, 7, 10, 0 );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $denied->error()?->code() );
+		self::assertSame( array(), $denied->campaigns() );
+		self::assertSame( 0, $denied->total() );
+		self::assertSame( Campaign_Workflow_Error::INVALID_INPUT, $this->workflow->list( $this->actor, 7, 101, 0 )->error()?->code() );
+		self::assertSame( Campaign_Workflow_Error::INVALID_INPUT, $this->workflow->list( $this->actor, 7, 10, -1 )->error()?->code() );
 	}
 
 	public function test_stale_mutation_cannot_overwrite_newer_state(): void {

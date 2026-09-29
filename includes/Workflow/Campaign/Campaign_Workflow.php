@@ -44,6 +44,35 @@ final class Campaign_Workflow {
 		private readonly Campaign_Clock $clock
 	) {}
 
+	/** Load one campaign through the same object-authorization boundary as mutations. */
+	public function get( Campaign_Actor $actor, string $campaign_id ): Campaign_Workflow_Result {
+		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_read' );
+		if ( $loaded instanceof Campaign_Workflow_Result ) {
+			return $loaded;
+		}
+
+		return Campaign_Workflow_Result::success( $loaded );
+	}
+
+	/** Return one bounded, authorized owner collection without in-memory filtering. */
+	public function list( Campaign_Actor $actor, int $owner_user_id, int $limit, int $offset ): Campaign_Workflow_List_Result {
+		if ( 1 > $owner_user_id || 1 > $limit || 100 < $limit || 0 > $offset ) {
+			return Campaign_Workflow_List_Result::failure(
+				new Campaign_Workflow_Error( Campaign_Workflow_Error::INVALID_INPUT, 'Campaign collection input is invalid.' )
+			);
+		}
+		if ( ! $actor->can_manage_all() && ( ! $actor->can_create() || $actor->user_id() !== $owner_user_id ) ) {
+			return Campaign_Workflow_List_Result::failure(
+				new Campaign_Workflow_Error( Campaign_Workflow_Error::FORBIDDEN, 'Campaign collection access is not allowed.' )
+			);
+		}
+
+		return Campaign_Workflow_List_Result::success(
+			$this->campaigns->for_owner( $owner_user_id, $limit, $offset ),
+			$this->campaigns->count_for_owner( $owner_user_id )
+		);
+	}
+
 	public function create(
 		Campaign_Actor $actor,
 		int $owner_user_id,

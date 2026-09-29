@@ -121,8 +121,9 @@ denial.
 Template authorization runs before capture or compilation. Denials return the
 stable `forbidden` code without compiler output and without disclosing template
 content or metadata in the result or audit context. Approval authority stays
-separate from authoring and template authority. REST authentication and nonce
-checks remain adapter work for #75.
+separate from authoring and template authority. The #75 REST adapter adds
+WordPress authentication, `wp_rest` nonce handling, and coarse capability
+permission callbacks in front of these checks. It does not replace them.
 
 Successful mutations append actor/action/target/result context in the same
 transaction as the state change. Rejected transitions, conflicts, and denied
@@ -147,8 +148,9 @@ engines.
 
 ## Deferred adapters and provider work
 
-Issue #75 still owns campaign REST routes, schemas, pagination, HTTP permission
-callbacks, rate limits, and error envelopes. Issues #76-#80 still own
+The #75 REST adapter exposes these operations, plus bounded `get`/`list`
+reads, with schemas, pagination, permission callbacks, rate limits, and one
+error envelope. See [`api.md`](api.md#campaigns). Issues #76-#80 still own
 Mailchimp discovery/capability mapping, remote draft creation, test delivery,
 schedule/send/cancel, and reconciliation. There is still no complete operator
 campaign UI or end-to-end Mailchimp delivery flow.

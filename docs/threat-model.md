@@ -28,6 +28,7 @@ The local fallback encryption key is stored in WordPress options so installation
 
 Campaign delivery is not yet implemented. Durable idempotency/audit storage and
 #74 workflow authorization now exist, including separate owned-campaign edit
-and approval authority. #75 REST authorization plus later provider mutation,
-reconciliation, jobs, and recovery behavior are still required before
+and approval authority, and #75 REST authentication, permission callbacks,
+and rate limits sit in front of it. Later provider mutation, reconciliation,
+jobs, and recovery behavior are still required before
 high-volume or multi-operator sending is considered enterprise-ready.

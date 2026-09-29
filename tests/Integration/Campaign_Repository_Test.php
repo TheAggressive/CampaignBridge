@@ -89,6 +89,9 @@ final class Campaign_Repository_Test extends Test_Case {
 
 		self::assertCount( 2, $repository->for_owner( 7, 2 ) );
 		self::assertSame( array(), $repository->for_owner( 0 ) );
+		self::assertSame( 3, $repository->count_for_owner( 7 ) );
+		self::assertSame( 0, $repository->count_for_owner( 8 ) );
+		self::assertSame( 0, $repository->count_for_owner( 0 ) );
 	}
 
 	/** Future and malformed campaign rows fail closed without being rewritten. */

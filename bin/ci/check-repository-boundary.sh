@@ -26,6 +26,12 @@ for file in "${matches[@]}"; do
 		failed=1
 		continue
 	fi
+	if [[ "${file}" == campaign-rest:* ]]; then
+		path="${file#campaign-rest:}"
+		echo "Campaign REST delivery must depend on workflows, not repositories or providers: ${path}" >&2
+		failed=1
+		continue
+	fi
 
 	permitted=0
 	for existing in "${allowed[@]}"; do

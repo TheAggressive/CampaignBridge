@@ -52,8 +52,10 @@ Repository, combines it with content/design sources and compiler services.
 Workflow and delivery code must use ports rather than `$wpdb`, options, post
 meta, or provider responses. Repositories are not authorization boundaries:
 #74 resolves both campaign authority and WordPress-native template object
-authority in the application layer, while #75 remains responsible for REST
-authentication, nonces, and HTTP permission callbacks.
+authority in the application layer, while the #75 REST adapter adds REST
+authentication, nonces, and HTTP permission callbacks without touching
+repositories. Owner listings are bounded, ordered `updated_at DESC, id ASC`,
+and counted with the indexed `owner_updated` key.
 
 Every stored record carries a `data_version`. Typed hydration rejects malformed
 rows, unknown fields, and unsupported versions. List reads skip records that
