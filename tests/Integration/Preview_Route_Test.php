@@ -39,6 +39,11 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 		wp_set_current_user( $user_id );
 	}
 
+	public function tear_down(): void {
+		\CampaignBridge\Tests\Helpers\Test_Case::reset_rest_server();
+		parent::tear_down();
+	}
+
 	public function test_the_route_is_registered(): void {
 		self::assertArrayHasKey( self::ROUTE, rest_get_server()->get_routes() );
 	}
