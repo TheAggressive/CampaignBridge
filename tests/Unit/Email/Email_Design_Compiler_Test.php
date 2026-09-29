@@ -189,6 +189,18 @@ final class Email_Design_Compiler_Test extends TestCase {
 		self::assertStringEndsWith( '.attrs.fontFamily', $result->diagnostics()[0]->path() );
 	}
 
+	/** Curated web-font presets compile with their portable stack and asset. */
+	public function test_anton_font_preset_compiles_with_its_web_font_asset(): void {
+		$document = $this->heading_document();
+		$document[0]['innerBlocks'][0]['innerBlocks'][0]['attrs']['fontFamily'] = 'anton';
+
+		$result = Compiler_Factory::create()->compile( $document, $this->context() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( 'font-family:Anton,Arial,Helvetica,sans-serif', $result->html() );
+		self::assertStringContainsString( 'family=Anton', $result->html() );
+	}
+
 	/** Explicit native font overrides compile for every supported Core content block. */
 	public function test_explicit_font_overrides_resolve_for_every_supported_core_block(): void {
 		$heading = $this->heading_document();
