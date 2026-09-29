@@ -39,6 +39,7 @@ jest.mock('@wordpress/blocks', () => ({
 }));
 // Editor-only side-effect modules; each is covered by its own suite.
 jest.mock('../../src/scripts/editor/post-binding-controls', () => ({}));
+jest.mock('../../src/scripts/editor/block-google-font-control', () => ({}));
 jest.mock(
   '../../src/scripts/editor/components/Sidebars/TemplateSettings',
   () => ({

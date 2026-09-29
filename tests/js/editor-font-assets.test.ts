@@ -111,9 +111,9 @@ describe('native editor font assets', () => {
       canvas,
       {
         body: 'Inter,Arial,sans-serif',
-        display: 'Campaign Display,Georgia,serif',
+        'custom-72cae0925f81': 'Campaign Display,Georgia,serif',
       },
-      { body: 'body', heading: 'display' }
+      { body: 'body', heading: 'custom-72cae0925f81' }
     );
 
     const style = canvas.head.querySelector<HTMLStyleElement>(
@@ -121,6 +121,9 @@ describe('native editor font assets', () => {
     );
     expect(style?.textContent).toContain(
       '[data-type="core/heading"]){font-family:Campaign Display,Georgia,serif}'
+    );
+    expect(style?.textContent).toContain(
+      '.has-custom-72-cae-0925-f-81-font-family{font-family:Campaign Display,Georgia,serif}'
     );
     expect(style?.textContent).toContain('font-family:Inter,Arial,sans-serif');
 
