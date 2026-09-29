@@ -82,7 +82,7 @@ the campaign snapshot.
 
 The implemented [content snapshot and review-input contract](content-snapshots.md)
 defines canonical post objects, typed renderer scopes, frozen compilation,
-explicit refresh revisions, and the boundary with future campaign persistence.
+explicit refresh revisions and the boundary with durable campaign workflows.
 
 Normalization supplies documented defaults for omitted attributes and performs
 lossless canonicalization such as trimming URL fields. It must not clamp,

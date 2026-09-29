@@ -168,6 +168,86 @@ final class Campaign {
 		return $this->updated_at;
 	}
 
+	/** Change the selected template and invalidate any previously frozen artifact. */
+	public function edit_template( int $template_id, string $updated_at ): self {
+		if ( 1 > $template_id ) {
+			throw new \InvalidArgumentException( 'Campaign template identifier must be positive.' );
+		}
+
+		return $this->replacement(
+			Campaign_State_Machine::after_artifact_invalidation( $this->state ),
+			$template_id,
+			$this->provider,
+			$this->audience_reference,
+			null,
+			$updated_at
+		);
+	}
+
+	/** Select normalized provider/audience references without provider traffic or PII. */
+	public function select_audience( ?string $provider, ?string $audience_reference, string $updated_at ): self {
+		return $this->replacement(
+			Campaign_State_Machine::after_approval_invalidation( $this->state ),
+			$this->template_id,
+			$provider,
+			$audience_reference,
+			$this->active_snapshot_id,
+			$updated_at
+		);
+	}
+
+	/** Select one immutable snapshot, revoking approval when it replaces an approved artifact. */
+	public function select_snapshot( string $snapshot_id, string $updated_at ): self {
+		return $this->replacement(
+			Campaign_State_Machine::after_approval_invalidation( $this->state ),
+			$this->template_id,
+			$this->provider,
+			$this->audience_reference,
+			$snapshot_id,
+			$updated_at
+		);
+	}
+
+	/** Apply one legal lifecycle transition. */
+	public function transition_to( string $state, string $updated_at ): self {
+		Campaign_State_Machine::assert_transition( $this->state, $state );
+
+		return $this->replacement(
+			$state,
+			$this->template_id,
+			$this->provider,
+			$this->audience_reference,
+			$this->active_snapshot_id,
+			$updated_at
+		);
+	}
+
+	/** Build the next immutable version after validating the complete record. */
+	private function replacement(
+		string $state,
+		int $template_id,
+		?string $provider,
+		?string $audience_reference,
+		?string $active_snapshot_id,
+		string $updated_at
+	): self {
+		return self::from_array(
+			array(
+				'schema_version'     => self::SCHEMA_VERSION,
+				'id'                 => $this->id,
+				'state'              => $state,
+				'version'            => $this->version + 1,
+				'owner_user_id'      => $this->owner_user_id,
+				'template_id'        => $template_id,
+				'provider'           => $provider,
+				'audience_reference' => $audience_reference,
+				'active_snapshot_id' => $active_snapshot_id,
+				'created_at'         => $this->created_at,
+				'updated_at'         => $updated_at,
+			)
+		);
+	}
+
 	/** @return array<string, mixed> */
 	public function to_array(): array {
 		return array(

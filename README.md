@@ -10,11 +10,11 @@ compiler under active development. It turns a constrained Gutenberg block
 grammar into portable HTML and plain text and reports unsupported or invalid
 content before it reaches a provider.
 
-> **Product status:** The secure WordPress foundation, template editor,
-> compiler, Brand Kit, and early provider adapters are present. Complete
-> campaign, audience, delivery, scheduling, reconciliation, and reporting
-> workflows are roadmap work. See [ROADMAP.md](ROADMAP.md) for the product
-> contract and delivery plan.
+> **Product status:** The secure WordPress foundation, template/compiler,
+> durable campaign persistence, and provider-neutral local campaign workflows
+> are present. Campaign REST/UI exposure and provider draft, delivery,
+> scheduling, reconciliation, and reporting remain roadmap work. See
+> [ROADMAP.md](ROADMAP.md) for the product contract and delivery plan.
 
 ## What is available now
 
@@ -27,14 +27,20 @@ content before it reaches a provider.
 - Compiled previews with visible validation diagnostics.
 - Portable personalization tokens with synthetic, PII-free preview values.
 - A Brand Kit plus per-template Design Fonts for portable colors and typography.
+- Durable provider-neutral campaigns, immutable artifact snapshots, attempts,
+  and bounded/redacted audit history.
+- Canonical local create/edit/audience/snapshot/validate/preview/review/approve/
+  revoke/archive/duplicate workflows with optimistic concurrency and
+  WordPress-native template object authorization. HTML-export-only campaigns can
+  reach local approval without selecting a provider or audience.
 - Mailchimp connection settings and discovery foundations.
 - An HTML export provider boundary.
 - Capability-protected REST routes used by the editor and admin screens.
 - Encrypted storage for provider credentials.
 
-CampaignBridge does not yet provide the complete workflow for audiences,
-provider campaign drafts, test delivery, scheduling, sending, reconciliation,
-or reporting.
+CampaignBridge does not yet expose campaign workflows through REST or a complete
+operator UI, and it does not create provider campaign drafts, send tests,
+schedule, send, cancel, reconcile, or report on provider campaigns.
 
 ## Current workflow
 
@@ -87,8 +93,10 @@ Delivery -> Workflow -> Domain <- Repository implementations
 
 - `Domain` contains provider-neutral email rules and value objects.
 - `Repository` contains WordPress persistence implementations.
-- `Workflow` coordinates use cases such as deterministic compilation and future
-  campaign operations.
+- `Workflow` coordinates deterministic compilation and the canonical local
+  campaign lifecycle used by future REST, Abilities, CLI, and UI adapters.
+- Repository implements Domain ports and never imports Workflow; the CI
+  boundary guard enforces that direction.
 - `Delivery` contains admin screens, REST controllers, blocks, and provider
   adapters.
 
@@ -171,7 +179,9 @@ REST and form operations use explicit CampaignBridge capabilities (defined in
 `includes/Core/Capabilities.php`): administrative operations require
 `campaignbridge_manage`, and email templates require
 `campaignbridge_edit_templates` through the template post type's mapped
-capabilities. They also use nonces where appropriate, type-aware validation and
+capabilities. Campaign workflows separately enforce campaign authority and the
+mapped `edit_post` capability for the exact template object before capturing
+or compiling it. They also use nonces where appropriate, type-aware validation and
 sanitization, and output escaping. Provider credentials are encrypted at rest
 and must not appear in logs, responses, or provider-facing error messages. See [SECURITY.md](SECURITY.md) and
 [docs/threat-model.md](docs/threat-model.md) for the maintained security

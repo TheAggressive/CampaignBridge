@@ -1,8 +1,9 @@
 # Campaign persistence
 
-Issue #73 introduces the provider-neutral storage foundation for the M2
-campaign lifecycle. It does not implement workflow transitions, approval,
-REST endpoints, jobs, or provider mutations.
+Issue #73 introduced the provider-neutral storage foundation for the M2
+campaign lifecycle. #74 now consumes it through the canonical application
+workflow documented in [`campaign-workflows.md`](campaign-workflows.md).
+REST endpoints, jobs, and provider mutations remain outside this layer.
 
 ## Site-local schema
 
@@ -15,7 +16,7 @@ REST endpoints, jobs, or provider mutations.
 | `{prefix}campaignbridge_campaigns` | Current provider-neutral campaign record and optimistic version | Primary `id`; `owner_updated (owner_user_id, updated_at)` supports bounded owner listings |
 | `{prefix}campaignbridge_campaign_snapshots` | Insert-only frozen M1 review input and its exact successful artifact | Primary `id`; unique `campaign_revision (campaign_id, revision)` prevents in-place refresh replacement and supports revision history |
 | `{prefix}campaignbridge_remote_campaigns` | Normalized local/provider/remote identity and observed state | Primary `(campaign_id, provider)` permits one mapping per local campaign/provider; unique `provider_remote (provider, remote_id)` supports reverse lookup without duplicates |
-| `{prefix}campaignbridge_delivery_attempts` | Remote-mutation attempt identity and normalized result | Primary `id`; unique `campaign_idempotency (campaign_id, operation, idempotency_key)` prevents duplicate keyed attempts; `campaign_created (campaign_id, created_at)` supports bounded history |
+| `{prefix}campaignbridge_delivery_attempts` | Keyed attempt identity and normalized result for provider mutations | Primary `id`; unique `campaign_idempotency (campaign_id, operation, idempotency_key)` prevents duplicate keyed attempts; `campaign_created (campaign_id, created_at)` supports bounded history |
 | `{prefix}campaignbridge_audit_events` | Append-only, minimized operator/security history | Primary `id`; `target_created (target_type, target_id, created_at)` supports bounded target history |
 
 Relationships are logical rather than database foreign keys because WordPress
@@ -38,11 +39,21 @@ Domain ports describe typed application needs and never expose database rows:
 - `Remote_Campaign_Reference_Source`
 - `Delivery_Attempt_Source`
 - `Audit_Event_Source`
+- `Campaign_Template_Input_Source`
+- `Campaign_Transaction`
 
-Their WordPress implementations live in `Repository/`. Workflow and delivery
-code must use these ports rather than `$wpdb`, options, post meta, or provider
-responses. Repositories are not authorization boundaries; #74 and #75 must
-enforce operation and object authorization before calling them.
+Their WordPress implementations live in `Repository/`. Repository
+implementations may depend on Domain contracts and WordPress data APIs, but
+must not import Workflow classes. The CI repository-boundary guard fails any
+such dependency. Live template persistence returns a typed
+`Campaign_Template_Input`; the Workflow capture coordinator, outside
+Repository, combines it with content/design sources and compiler services.
+
+Workflow and delivery code must use ports rather than `$wpdb`, options, post
+meta, or provider responses. Repositories are not authorization boundaries:
+#74 resolves both campaign authority and WordPress-native template object
+authority in the application layer, while #75 remains responsible for REST
+authentication, nonces, and HTTP permission callbacks.
 
 Every stored record carries a `data_version`. Typed hydration rejects malformed
 rows, unknown fields, and unsupported versions. List reads skip records that
@@ -59,23 +70,27 @@ not read the live template, source posts, Brand Kit, or theme.
 The repository is insert-only. Both the snapshot ID and campaign/revision pair
 are unique. Refreshing content therefore requires a new snapshot ID and the
 next review revision. Source edits cannot mutate stored review input or output.
-The later #74 workflow remains responsible for deciding when a snapshot is
-reviewed or approved and for atomically selecting it with compare-and-swap.
+The #74 workflow captures live inputs before freezing, recompiles through the
+M1 compiler, and atomically inserts/selects the snapshot with compare-and-swap.
 
 ## Concurrency, idempotency, and remote outcomes
 
 Campaign records carry an integer version. `compare_and_swap()` updates only
 when the stored version equals the caller's expected version, and the
-replacement must carry `expected + 1`. Stale writes return `false`; no workflow
-transition rules are implemented here.
+replacement must carry `expected + 1`. The #74 workflow maps a stale write to
+the stable `conflict` result and never retries or overwrites the newer state.
 
 An idempotency identity is `(campaign_id, operation, idempotency_key)`. A
-non-null key can be inserted only once. Null keys remain representable for
-operations that do not supply an idempotency identity. Attempt results use the
-explicit states `pending`, `succeeded`, `failed`, and `unknown`; an ambiguous
-provider outcome is therefore not collapsed into failure. Retryability is a
-stored classification (`unknown`, `retryable`, or `not_retryable`) and does not
-trigger retries.
+non-null delivery-attempt key can be inserted only once. Attempt results use the
+explicit states `pending`, `succeeded`, `failed`, and `unknown`. Future
+ambiguous provider outcomes therefore cannot be collapsed into failure.
+Retryability remains a stored classification, not an automatic retry trigger.
+
+Local campaign duplication does not create a delivery attempt. It derives a
+deterministic campaign ID from the source campaign and caller idempotency key,
+then relies on the campaign primary key plus a compatibility check to resolve a
+replay. Other local mutations rely on expected versions instead of mechanical
+idempotency keys.
 
 Remote references preserve normalized state and optional bounded cursor data,
 not raw provider payloads. A mapping cannot change its local campaign,

@@ -231,6 +231,14 @@ final class Design_Presets {
 			'url'     => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap',
 		),
 		array(
+			'slug'    => 'anton',
+			'name'    => 'Anton',
+			'family'  => 'Anton,Arial,Helvetica,sans-serif',
+			'type'    => 'web',
+			'weights' => array( 400 ),
+			'url'     => 'https://fonts.googleapis.com/css2?family=Anton:wght@400&display=swap',
+		),
+		array(
 			'slug'    => 'open-sans',
 			'name'    => 'Open Sans',
 			'family'  => '"Open Sans",Arial,Helvetica,sans-serif',

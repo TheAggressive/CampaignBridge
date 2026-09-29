@@ -1,0 +1,154 @@
+# Campaign workflows
+
+Issue #74 adds the canonical provider-neutral application layer for local
+campaign lifecycle mutations. Future REST, Abilities, CLI, and admin adapters
+call `Campaign_Workflow`; they do not write campaign repositories or reproduce
+transition rules.
+
+The workflow composes the #73 ports and implementations:
+
+- `Campaign_Source` for current campaign state and compare-and-swap versions;
+- `Campaign_Snapshot_Source` for immutable review revisions and artifacts;
+- `Audit_Event_Source` for append-only bounded/redacted history;
+- `Campaign_Review_Input_Source` for one live capture before freezing;
+- `Campaign_Template_Authority` for WordPress-native template object access;
+- `Campaign_Transaction` for atomic multi-repository mutations.
+
+`Campaign_Workflow_Factory` builds the production graph. No operation in this
+layer creates a provider campaign, invokes Mailchimp, schedules, sends, cancels,
+or reconciles remote state.
+
+Live capture keeps the dependency direction explicit. The Repository layer
+implements the Domain `Campaign_Template_Input_Source` port and returns only
+typed template content and metadata. The Workflow
+`Campaign_Review_Input_Capture` coordinator combines that value with post and
+Brand Kit sources and the canonical email preview/compiler service. Repository
+classes never import or instantiate Workflow classes; the CI repository-boundary
+guard enforces that rule.
+
+## Operations
+
+The application service owns these operations:
+
+- create a local draft;
+- change the selected template;
+- select normalized provider/audience references without audience PII;
+- capture and persist a new immutable snapshot revision;
+- validate or preview through the production compiler;
+- submit a valid selected artifact for review;
+- approve the exact selected snapshot and artifact fingerprint;
+- revoke approval;
+- archive through the state machine;
+- duplicate reusable authoring references into a new draft.
+
+A duplicate copies template, provider, and audience references. It does not copy
+the active snapshot, state, delivery attempts, remote references, or audit
+history. Its required idempotency key and source campaign ID produce a
+deterministic duplicate campaign ID. The campaign primary key is the local
+idempotency boundary: a compatible replay resolves the existing draft, while a
+reused key whose current source references no longer match returns
+`idempotency_conflict`. Duplication does not create a delivery-attempt row;
+that table is reserved for provider mutations and their remote outcomes. The
+duplicate campaign and its single creation audit are one transaction.
+
+Validation records an audit event because it is an explicit operational review
+action. Preview remains ephemeral and is not audited or persisted. Neither
+operation stores arbitrary preview HTML.
+
+## State and approval
+
+`Campaign_State_Machine` is the one transition authority. #74 adds `archived` as
+a terminal local state. Draft, ready-for-review, approved, and failed campaigns
+may be archived; active or ambiguous provider states cannot be archived by the
+local workflow.
+
+Template edits invalidate the selected artifact and return the campaign to
+`draft`. Audience/reference changes and snapshot refreshes preserve the
+immutable historical snapshot but move an approved campaign back to
+`ready_for_review`. Explicit revocation uses that same approved-to-review
+transition.
+
+Provider and audience references are optional during local review and approval,
+so an HTML-export-only campaign can reach `approved`. Adding, changing, or
+removing those references on an approved campaign still revokes approval and
+returns it to `ready_for_review` while preserving the immutable selected
+snapshot. Submission requires a selected snapshot that recompiles successfully
+to its stored fingerprint. Approval also requires separate approval authority,
+the legal `ready_for_review` state, the selected snapshot, a successful
+canonical compile, and an exact stored fingerprint match. The approved campaign
+therefore identifies frozen HTML, plain text, assets, design/content inputs,
+compiler version, and profile; it never means live WordPress content later.
+
+## Concurrency and results
+
+Every mutable operation after creation accepts the campaign's expected integer
+version. The workflow builds version `expected + 1` and delegates the atomic
+write to `Campaign_Source::compare_and_swap()`. A stale actor receives the
+stable `conflict` result; the workflow never retries or overwrites the newer
+record.
+
+Application results contain typed campaign, snapshot, and compiler values where
+relevant. Stable provider-neutral errors are limited to:
+
+- `not_found`;
+- `invalid_state`;
+- `conflict`;
+- `invalid_input`;
+- `validation_failed`;
+- `missing_snapshot`;
+- `approval_not_allowed`;
+- `forbidden`;
+- `persistence_failed`;
+- `idempotency_conflict`.
+
+No result contains SQL, raw database errors, HTTP responses, provider payloads,
+credentials, or stack traces.
+
+## Authorization and audit
+
+Adapters resolve a `Campaign_Actor` before invocation. The WordPress adapter
+maps `campaignbridge_create_campaigns` to owned-campaign creation/editing,
+`campaignbridge_manage` to cross-owner management, and
+`campaignbridge_send_campaigns` to approval. Campaign authority and template
+authority are independent: operations that introduce or read template content
+also require WordPress object authorization for that exact `cb_templates`
+post through `user_can( $actor_id, 'edit_post', $template_id )`. The mapped
+post-type capabilities therefore remain authoritative for create, template
+change, snapshot, live validation/preview, review submission, approval, and
+duplication. A broad campaign capability cannot bypass a template-specific
+denial.
+
+Template authorization runs before capture or compilation. Denials return the
+stable `forbidden` code without compiler output and without disclosing template
+content or metadata in the result or audit context. Approval authority stays
+separate from authoring and template authority. REST authentication and nonce
+checks remain adapter work for #75.
+
+Successful mutations append actor/action/target/result context in the same
+transaction as the state change. Rejected transitions, conflicts, and denied
+operations append failure/denial events when the target can be represented
+safely. Context continues to use #73's size, depth, field, and redaction limits.
+
+## Atomicity
+
+`Database_Transaction` wraps every multi-repository mutation:
+
+- campaign creation plus audit;
+- snapshot insert, campaign pointer/version change, and audit;
+- state/version change plus audit;
+- duplicate campaign plus its creation audit.
+
+A false repository result or exception rolls the unit back. The implementation
+uses the current WordPress database connection and assumes CampaignBridge tables
+run on a transactional MySQL-compatible engine such as InnoDB, which is the
+supported production/test configuration. CampaignBridge does not provide a
+custom transaction framework or emulate transactions on non-transactional
+engines.
+
+## Deferred adapters and provider work
+
+Issue #75 still owns campaign REST routes, schemas, pagination, HTTP permission
+callbacks, rate limits, and error envelopes. Issues #76-#80 still own
+Mailchimp discovery/capability mapping, remote draft creation, test delivery,
+schedule/send/cancel, and reconciliation. There is still no complete operator
+campaign UI or end-to-end Mailchimp delivery flow.

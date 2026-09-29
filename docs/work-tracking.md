@@ -54,8 +54,8 @@ Completed M1 examples:
 - M1 preflight closeout — #71
 - M1 client fixtures — #72
 
-The M2 storage foundation #73 is complete. The next dependency-gated slices are
-M2 workflows #74 and M2 REST #75.
+The M2 storage foundation #73 and canonical workflows #74 are complete. The
+remaining dependency-gated M2 slice is REST exposure #75.
 
 Completed and dependency-gated examples:
 
@@ -93,21 +93,20 @@ The merged PR/closed issues provide the implementation history. Do not copy ever
 
 ## Dependency-first execution order
 
-Issue number is not execution order. M1 #62, its action issues #69–#72, and M2
-storage #73 are complete. The remaining order is:
+Issue number is not execution order. M1 #62, its action issues #69–#72, M2
+storage #73, and M2 workflows #74 are complete. The remaining order is:
 
-1. M2 canonical campaign workflows — #74.
-2. M2 REST adapter — #75.
-3. Close M2 — #63.
-4. M3 provider discovery/token mapping — #76.
-5. M3 idempotent Mailchimp draft/content handoff — #77.
-6. M3 test delivery — #78.
-7. M3 guarded schedule/send/cancel — #79.
-8. M3 reconciliation and ambiguous outcomes — #80.
-9. Close M3 — #64.
-10. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
-11. Durable jobs/recovery — #66.
-12. Governance/reporting — #67.
+1. M2 REST adapter — #75.
+2. Close M2 — #63.
+3. M3 provider discovery/token mapping — #76.
+4. M3 idempotent Mailchimp draft/content handoff — #77.
+5. M3 test delivery — #78.
+6. M3 guarded schedule/send/cancel — #79.
+7. M3 reconciliation and ambiguous outcomes — #80.
+8. Close M3 — #64.
+9. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
+10. Durable jobs/recovery — #66.
+11. Governance/reporting — #67.
 13. GA closeout — #68.
 
 Cross-cutting work does not need to wait for the numbered milestone when its dependency is already satisfied. Security, accessibility, i18n, performance, package verification, and documentation travel with every relevant PR.

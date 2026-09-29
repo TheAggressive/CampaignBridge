@@ -10,6 +10,12 @@ Email templates use the core `/wp/v2/cb_templates` routes and their `/revisions`
 
 `POST /campaignbridge/v1/preview` compiles unsaved editor content into the canonical email artifact. It accepts `template_id` (integer, required), `content` (string, required, max 512 KB), optional `metadata` (object with `title`, `language`, `background_color`, `unsubscribe_url`), and optional bounded `design_fonts` JSON so unsaved per-template typography is compiled exactly as shown in the editor. The response includes `html`, `text`, `diagnostics`, `assets`, `compiler_version`, `profile_version`, `fingerprint`, and `sample`. `sample` is `null` unless a successful artifact contains provider-resolved tokens; it is then an object with `html` and `text` in which those tokens show fixed synthetic values (or are omitted, per each token's preview behavior). `sample` is display-only: `html`, `text`, and `fingerprint` always describe the canonical artifact with its `{{cb:...}}` tokens. A document that fails validation returns diagnostics with HTTP 200 and no HTML. Requires `campaignbridge_edit_templates` plus `edit_post` on the target template. Rate-limited.
 
+Campaign lifecycle application services now exist below the transport layer,
+but no campaign REST routes are registered yet. Issue #75 will expose those
+services with schemas, pagination, permissions, rate limits, optimistic-version
+inputs, idempotency keys where required, and stable HTTP error envelopes. REST
+controllers must not write campaign repositories or call providers directly.
+
 General administrative endpoints require the `campaignbridge_manage` capability (defined in `includes/Core/Capabilities.php`). Provider credential operations use the narrower `campaignbridge_manage_connections` capability instead. Mutations additionally validate their WordPress nonce. Request arguments use WordPress REST schemas with sanitization and validation callbacks; errors return `WP_Error` with an HTTP status.
 
 Credential encryption and reveal endpoints are rate-limited `campaignbridge_manage_connections` operations. Reveal accepts a registered field identifier only; the server resolves the stored ciphertext and its security context rather than accepting ciphertext from the browser. The current registered credential field is `mailchimp_api_key`. Consumers must not cache responses containing revealed credentials.

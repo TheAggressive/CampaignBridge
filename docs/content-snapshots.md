@@ -94,13 +94,18 @@ produces identical bytes and fingerprints regardless of object identity or map
 insertion order.
 
 This M1 contract supplies frozen inputs and review invalidation rules. M2
-storage (#73) now persists the complete `Review_Input` and exact successful
-artifact as an insert-only `Campaign_Snapshot`; see
-[`campaign-persistence.md`](campaign-persistence.md). Approval authorization,
-atomic workflow transitions, and the decision to select a reviewed snapshot
-remain #74. No approval UI, provider delivery, or personalization
-implementation is introduced by the storage layer. Future workflow consumers
-must apply `matches_review()` before relying on a previous review.
+storage (#73) persists the complete `Review_Input` and exact successful artifact
+as an insert-only `Campaign_Snapshot`. Repository implements
+`Campaign_Template_Input_Source` and returns typed template content, metadata,
+and design-font input without depending on Workflow. The
+`Campaign_Review_Input_Capture` Workflow coordinator combines it with the
+post-snapshot and Brand Kit sources before invoking the canonical preview path.
+The #74 workflow creates a new revision on refresh, atomically selects it,
+revokes prior approval when required, and approves only a successful
+recompile with the exact stored fingerprint. See
+[`campaign-persistence.md`](campaign-persistence.md) and
+[`campaign-workflows.md`](campaign-workflows.md). REST exposure and provider
+delivery remain outside this contract.
 
 Referenced image/font URLs and image dimensions are frozen, not the remote
 binary resources. Reproducibility here means compiler HTML, text, asset records,

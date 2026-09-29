@@ -34,6 +34,7 @@ final class Campaign_State {
 	public const FAILED           = 'failed';
 	public const CANCELLED        = 'cancelled';
 	public const UNKNOWN          = 'unknown';
+	public const ARCHIVED         = 'archived';
 
 	/**
 	 * All valid states.
@@ -52,6 +53,7 @@ final class Campaign_State {
 			self::FAILED,
 			self::CANCELLED,
 			self::UNKNOWN,
+			self::ARCHIVED,
 		);
 	}
 
@@ -70,7 +72,7 @@ final class Campaign_State {
 	 * @param string $state State to check.
 	 */
 	public static function is_terminal( string $state ): bool {
-		return in_array( $state, array( self::SENT, self::CANCELLED ), true );
+		return in_array( $state, array( self::SENT, self::CANCELLED, self::ARCHIVED ), true );
 	}
 
 	/**

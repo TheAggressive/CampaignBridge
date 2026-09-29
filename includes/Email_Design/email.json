@@ -29,6 +29,7 @@
         { "slug": "times-new-roman", "name": "Times New Roman" },
         { "slug": "courier-new", "name": "Courier New" },
         { "slug": "inter", "name": "Inter" },
+        { "slug": "anton", "name": "Anton" },
         { "slug": "open-sans", "name": "Open Sans" },
         { "slug": "roboto", "name": "Roboto" },
         { "slug": "lato", "name": "Lato" },
