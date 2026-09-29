@@ -9,12 +9,15 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Services\Campaign;
 
+use CampaignBridge\Core\Campaign_Authorizer;
 use CampaignBridge\Repository\Audit_Event_Repository;
+use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Campaign_Repository;
-use CampaignBridge\Repository\Campaign_Review_Input_Repository;
 use CampaignBridge\Repository\Campaign_Snapshot_Repository;
+use CampaignBridge\Repository\Campaign_Template_Input_Repository;
 use CampaignBridge\Repository\Database_Transaction;
-use CampaignBridge\Repository\Delivery_Attempt_Repository;
+use CampaignBridge\Repository\Post_Snapshot_Repository;
+use CampaignBridge\Workflow\Campaign\Campaign_Review_Input_Capture;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow;
 use CampaignBridge\Workflow\Campaign\Random_Id_Generator;
 use CampaignBridge\Workflow\Campaign\System_Clock;
@@ -26,12 +29,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Builds the one production application service used by future adapters. */
 final class Campaign_Workflow_Factory {
 	public static function create(): Campaign_Workflow {
+		$authorizer = new Campaign_Authorizer();
+
 		return new Campaign_Workflow(
 			new Campaign_Repository(),
 			new Campaign_Snapshot_Repository(),
-			new Delivery_Attempt_Repository(),
 			new Audit_Event_Repository(),
-			new Campaign_Review_Input_Repository(),
+			new Campaign_Review_Input_Capture(
+				new Campaign_Template_Input_Repository(),
+				new Post_Snapshot_Repository(),
+				new Brand_Kit_Repository()
+			),
+			$authorizer,
 			new Database_Transaction(),
 			new Random_Id_Generator(),
 			new System_Clock()

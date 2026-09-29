@@ -12,6 +12,7 @@ namespace CampaignBridge\Tests\Security;
 use CampaignBridge\Core\Campaign_Authorizer;
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Domain\Campaign\Campaign;
+use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
 /** Proves adapters resolve granular capabilities before workflow execution. */
@@ -41,5 +42,33 @@ final class Campaign_Workflow_Authorization_Test extends Test_Case {
 		$approver = $adapter->actor( $owner_id );
 		self::assertTrue( $approver->can_approve( $owned ) );
 		self::assertFalse( $approver->can_approve( $other ) );
+	}
+
+	public function test_campaign_capability_does_not_grant_template_object_access(): void {
+		$user_id = $this->factory->user->create( array( 'role' => 'subscriber' ) );
+		$user    = get_user_by( 'id', $user_id );
+		self::assertInstanceOf( \WP_User::class, $user );
+		$user->add_cap( Capabilities::CREATE_CAMPAIGNS );
+
+		$template_id = $this->factory->post->create(
+			array(
+				'post_type'    => Post_Type_Email_Template::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_title'   => 'Restricted campaign template',
+				'post_content' => '<!-- wp:campaignbridge/container /-->',
+			)
+		);
+		$normal_post = $this->factory->post->create( array( 'post_status' => 'publish' ) );
+		$adapter     = new Campaign_Authorizer();
+		$actor       = $adapter->actor( $user_id );
+
+		self::assertTrue( $actor->can_create() );
+		self::assertFalse( $adapter->can_use_template( $actor, $template_id ) );
+
+		$user->add_cap( Capabilities::EDIT_TEMPLATES );
+		$authorized = $adapter->actor( $user_id );
+		self::assertTrue( user_can( $user_id, 'edit_post', $template_id ) );
+		self::assertTrue( $adapter->can_use_template( $authorized, $template_id ) );
+		self::assertFalse( $adapter->can_use_template( $authorized, $normal_post ) );
 	}
 }

@@ -12,10 +12,23 @@ foreach ( $files as $file ) {
 		continue;
 	}
 	$relative = substr( $file->getPathname(), strlen( $root ) + 1 );
-	if ( 'includes/Core/Storage.php' === $relative || str_starts_with( $relative, 'includes/Repository/' ) ) {
+	$tokens   = token_get_all( (string) file_get_contents( $file->getPathname() ) );
+	if ( str_starts_with( $relative, 'includes/Repository/' ) ) {
+		foreach ( $tokens as $token ) {
+			if (
+				is_array( $token )
+				&& in_array( $token[0], array( T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED ), true )
+				&& str_starts_with( ltrim( $token[1], '\\' ), 'CampaignBridge\\Workflow\\' )
+			) {
+				$matches[ 'workflow:' . $relative ] = true;
+				break;
+			}
+		}
 		continue;
 	}
-	$tokens = token_get_all( (string) file_get_contents( $file->getPathname() ) );
+	if ( 'includes/Core/Storage.php' === $relative ) {
+		continue;
+	}
 	foreach ( $tokens as $index => $token ) {
 		if ( is_array( $token ) && T_VARIABLE === $token[0] && '$wpdb' === $token[1] ) {
 			$matches[ $relative ] = true;

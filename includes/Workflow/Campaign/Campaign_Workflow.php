@@ -19,11 +19,7 @@ use CampaignBridge\Domain\Campaign\Campaign_Snapshot_Source;
 use CampaignBridge\Domain\Campaign\Campaign_Source;
 use CampaignBridge\Domain\Campaign\Campaign_State;
 use CampaignBridge\Domain\Campaign\Campaign_State_Machine;
-use CampaignBridge\Domain\Campaign\Delivery_Attempt;
-use CampaignBridge\Domain\Campaign\Delivery_Attempt_Source;
-use CampaignBridge\Domain\Campaign\Delivery_Attempt_Status;
-use CampaignBridge\Domain\Campaign\Delivery_Operation;
-use CampaignBridge\Domain\Campaign\Retryability;
+use CampaignBridge\Domain\Campaign\Campaign_Transaction;
 use CampaignBridge\Domain\Email\Compiled_Artifact;
 use CampaignBridge\Services\Email\Compiler_Factory;
 
@@ -40,9 +36,9 @@ final class Campaign_Workflow {
 	public function __construct(
 		private readonly Campaign_Source $campaigns,
 		private readonly Campaign_Snapshot_Source $snapshots,
-		private readonly Delivery_Attempt_Source $attempts,
 		private readonly Audit_Event_Source $audits,
 		private readonly Campaign_Review_Input_Source $review_inputs,
+		private readonly Campaign_Template_Authority $template_authority,
 		private readonly Campaign_Transaction $transaction,
 		private readonly Campaign_Id_Generator $ids,
 		private readonly Campaign_Clock $clock
@@ -58,6 +54,10 @@ final class Campaign_Workflow {
 		$id = $this->ids->generate( 'campaign' );
 		if ( ! $actor->can_create() || ( $owner_user_id !== $actor->user_id() && ! $actor->can_manage_all() ) ) {
 			return $this->failure( Campaign_Workflow_Error::FORBIDDEN, 'Campaign creation is not allowed.', $actor, 'campaign_create', $id, null, array(), 'denied' );
+		}
+		$template_denial = $this->authorize_template( $actor, $template_id, 'campaign_create', $id );
+		if ( null !== $template_denial ) {
+			return $template_denial;
 		}
 
 		try {
@@ -84,6 +84,10 @@ final class Campaign_Workflow {
 		}
 		if ( 1 > $template_id ) {
 			return $this->failure( Campaign_Workflow_Error::INVALID_INPUT, 'Template identifier must be positive.', $actor, 'campaign_edit', $campaign_id, $loaded );
+		}
+		$template_denial = $this->authorize_template( $actor, $template_id, 'campaign_edit', $campaign_id, $loaded );
+		if ( null !== $template_denial ) {
+			return $template_denial;
 		}
 		if ( ! Campaign_State_Machine::is_editable( $loaded->state() ) ) {
 			return $this->failure( Campaign_Workflow_Error::INVALID_STATE, 'Campaign is not editable in its current state.', $actor, 'campaign_edit', $campaign_id, $loaded );
@@ -134,6 +138,10 @@ final class Campaign_Workflow {
 		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_snapshot' );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
 			return $loaded;
+		}
+		$template_denial = $this->authorize_template( $actor, $loaded->template_id(), 'campaign_snapshot', $campaign_id, $loaded );
+		if ( null !== $template_denial ) {
+			return $template_denial;
 		}
 		if ( ! Campaign_State_Machine::is_editable( $loaded->state() ) ) {
 			return $this->failure( Campaign_Workflow_Error::INVALID_STATE, 'A snapshot cannot be refreshed in the current state.', $actor, 'campaign_snapshot', $campaign_id, $loaded );
@@ -207,8 +215,9 @@ final class Campaign_Workflow {
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
 			return $loaded;
 		}
-		if ( null === $loaded->provider() || null === $loaded->audience_reference() ) {
-			return $this->failure( Campaign_Workflow_Error::INVALID_INPUT, 'Provider and audience references are required for review.', $actor, 'campaign_submit_review', $campaign_id, $loaded );
+		$template_denial = $this->authorize_template( $actor, $loaded->template_id(), 'campaign_submit_review', $campaign_id, $loaded );
+		if ( null !== $template_denial ) {
+			return $template_denial;
 		}
 		$artifact = $this->verified_snapshot( $loaded );
 		if ( $artifact instanceof Campaign_Workflow_Error ) {
@@ -241,8 +250,9 @@ final class Campaign_Workflow {
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
 			return $loaded;
 		}
-		if ( null === $loaded->provider() || null === $loaded->audience_reference() ) {
-			return $this->failure( Campaign_Workflow_Error::APPROVAL_NOT_ALLOWED, 'Provider and audience references are required for approval.', $actor, 'campaign_approve', $campaign_id, $loaded );
+		$template_denial = $this->authorize_template( $actor, $loaded->template_id(), 'campaign_approve', $campaign_id, $loaded );
+		if ( null !== $template_denial ) {
+			return $template_denial;
 		}
 		$artifact = $this->verified_snapshot( $loaded );
 		if ( $artifact instanceof Campaign_Workflow_Error ) {
@@ -288,36 +298,37 @@ final class Campaign_Workflow {
 		if ( ! $actor->can_create() ) {
 			return $this->failure( Campaign_Workflow_Error::FORBIDDEN, 'Campaign duplication is not allowed.', $actor, 'campaign_duplicate', $campaign_id, $loaded, array(), 'denied' );
 		}
+		$template_denial = $this->authorize_template( $actor, $loaded->template_id(), 'campaign_duplicate', $campaign_id, $loaded );
+		if ( null !== $template_denial ) {
+			return $template_denial;
+		}
 		if ( '' === $idempotency_key || 191 < strlen( $idempotency_key ) ) {
 			return $this->failure( Campaign_Workflow_Error::INVALID_INPUT, 'A bounded idempotency key is required.', $actor, 'campaign_duplicate', $campaign_id, $loaded );
 		}
 
-		$prior = $this->attempts->find_idempotency( $campaign_id, Delivery_Operation::DUPLICATE, $idempotency_key );
+		$duplicate_id = $this->duplicate_id( $campaign_id, $idempotency_key );
+		$prior        = $this->campaigns->get( $duplicate_id );
 		if ( null !== $prior ) {
-			return $this->duplicate_replay( $prior );
+			return $this->duplicate_replay( $actor, $loaded, $prior );
 		}
 
 		$now       = $this->clock->now();
 		$duplicate = Campaign::create(
-			$this->duplicate_id( $campaign_id, $idempotency_key ),
+			$duplicate_id,
 			$loaded->owner_user_id(),
 			$loaded->template_id(),
 			$loaded->provider(),
 			$loaded->audience_reference(),
 			$now
 		);
-		$attempt   = $this->duplicate_attempt( $this->ids->generate( 'attempt' ), $campaign_id, $idempotency_key, Delivery_Attempt_Status::PENDING, Retryability::UNKNOWN, $now );
-		$completed = $this->duplicate_attempt( $attempt->id(), $campaign_id, $idempotency_key, Delivery_Attempt_Status::SUCCEEDED, Retryability::NOT_RETRYABLE, $now );
 		$written   = $this->transaction->run(
-			fn (): bool => $this->attempts->add( $attempt )
-				&& $this->campaigns->add( $duplicate )
+			fn (): bool => $this->campaigns->add( $duplicate )
 				&& $this->audits->add( $this->event( $actor, 'campaign_duplicate', $duplicate->id(), 'success', array( 'source_campaign_id' => $campaign_id ) ) )
-				&& $this->attempts->update_result( $completed )
 		);
 		if ( ! $written ) {
-			$prior = $this->attempts->find_idempotency( $campaign_id, Delivery_Operation::DUPLICATE, $idempotency_key );
+			$prior = $this->campaigns->get( $duplicate_id );
 			if ( null !== $prior ) {
-				return $this->duplicate_replay( $prior );
+				return $this->duplicate_replay( $actor, $loaded, $prior );
 			}
 			return $this->failure( Campaign_Workflow_Error::PERSISTENCE_FAILED, 'Campaign duplication could not be persisted.', $actor, 'campaign_duplicate', $campaign_id, $loaded );
 		}
@@ -329,6 +340,10 @@ final class Campaign_Workflow {
 		$loaded = $this->authorized( $actor, $campaign_id, $action );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
 			return $loaded;
+		}
+		$template_denial = $this->authorize_template( $actor, $loaded->template_id(), $action, $campaign_id, $loaded );
+		if ( null !== $template_denial ) {
+			return $template_denial;
 		}
 		$input = $this->review_inputs->capture( $loaded, $this->next_revision( $campaign_id ) );
 		if ( null === $input ) {
@@ -438,6 +453,29 @@ final class Campaign_Workflow {
 		return $campaign;
 	}
 
+	private function authorize_template(
+		Campaign_Actor $actor,
+		int $template_id,
+		string $action,
+		string $target_id,
+		?Campaign $campaign = null
+	): ?Campaign_Workflow_Result {
+		if ( $this->template_authority->can_use_template( $actor, $template_id ) ) {
+			return null;
+		}
+
+		return $this->failure(
+			Campaign_Workflow_Error::FORBIDDEN,
+			'Template access is not allowed.',
+			$actor,
+			$action,
+			$target_id,
+			$campaign,
+			array( 'template_id' => $template_id ),
+			'denied'
+		);
+	}
+
 	private function conflict( Campaign_Actor $actor, string $action, Campaign $campaign, int $expected_version ): Campaign_Workflow_Result {
 		return $this->failure(
 			Campaign_Workflow_Error::CONFLICT,
@@ -516,44 +554,30 @@ final class Campaign_Workflow {
 		return isset( $latest[0] ) ? $latest[0]->revision() + 1 : 1;
 	}
 
-	private function duplicate_attempt(
-		string $id,
-		string $campaign_id,
-		string $key,
-		string $status,
-		string $retryability,
-		string $timestamp
-	): Delivery_Attempt {
-		return Delivery_Attempt::from_array(
-			array(
-				'schema_version'     => Delivery_Attempt::SCHEMA_VERSION,
-				'id'                 => $id,
-				'campaign_id'        => $campaign_id,
-				'operation'          => Delivery_Operation::DUPLICATE,
-				'idempotency_key'    => $key,
-				'status'             => $status,
-				'retryability'       => $retryability,
-				'remote_correlation' => null,
-				'created_at'         => $timestamp,
-				'updated_at'         => $timestamp,
-			)
-		);
-	}
-
 	private function duplicate_id( string $campaign_id, string $key ): string {
 		return 'duplicate-' . substr( hash( 'sha256', $campaign_id . "\0" . $key ), 0, 40 );
 	}
 
-	private function duplicate_replay( Delivery_Attempt $attempt ): Campaign_Workflow_Result {
-		$key = $attempt->idempotency_key();
-		if ( Delivery_Attempt_Status::SUCCEEDED !== $attempt->status() || null === $key ) {
-			return Campaign_Workflow_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT, 'The idempotency key is already in use by an incomplete operation.' ) );
-		}
-		$campaign = $this->campaigns->get( $this->duplicate_id( $attempt->campaign_id(), $key ) );
-		if ( null === $campaign ) {
-			return Campaign_Workflow_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT, 'The prior idempotent result is unavailable.' ) );
+	private function duplicate_replay( Campaign_Actor $actor, Campaign $source, Campaign $duplicate ): Campaign_Workflow_Result {
+		if (
+			Campaign_State::DRAFT !== $duplicate->state()
+			|| 1 !== $duplicate->version()
+			|| $source->owner_user_id() !== $duplicate->owner_user_id()
+			|| $source->template_id() !== $duplicate->template_id()
+			|| $source->provider() !== $duplicate->provider()
+			|| $source->audience_reference() !== $duplicate->audience_reference()
+			|| null !== $duplicate->active_snapshot_id()
+		) {
+			return $this->failure(
+				Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT,
+				'The idempotency key does not match the prior duplication result.',
+				$actor,
+				'campaign_duplicate',
+				$source->id(),
+				$source
+			);
 		}
 
-		return Campaign_Workflow_Result::success( $campaign, null, null, true );
+		return Campaign_Workflow_Result::success( $duplicate, null, null, true );
 	}
 }

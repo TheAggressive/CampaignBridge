@@ -1,13 +1,13 @@
 <?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
 /**
- * Atomic campaign workflow boundary.
+ * Atomic campaign persistence boundary.
  *
  * @package CampaignBridge
  */
 
 declare(strict_types=1);
 
-namespace CampaignBridge\Workflow\Campaign;
+namespace CampaignBridge\Domain\Campaign;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

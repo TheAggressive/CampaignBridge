@@ -30,7 +30,9 @@ content before it reaches a provider.
 - Durable provider-neutral campaigns, immutable artifact snapshots, attempts,
   and bounded/redacted audit history.
 - Canonical local create/edit/audience/snapshot/validate/preview/review/approve/
-  revoke/archive/duplicate workflows with optimistic concurrency.
+  revoke/archive/duplicate workflows with optimistic concurrency and
+  WordPress-native template object authorization. HTML-export-only campaigns can
+  reach local approval without selecting a provider or audience.
 - Mailchimp connection settings and discovery foundations.
 - An HTML export provider boundary.
 - Capability-protected REST routes used by the editor and admin screens.
@@ -93,6 +95,8 @@ Delivery -> Workflow -> Domain <- Repository implementations
 - `Repository` contains WordPress persistence implementations.
 - `Workflow` coordinates deterministic compilation and the canonical local
   campaign lifecycle used by future REST, Abilities, CLI, and UI adapters.
+- Repository implements Domain ports and never imports Workflow; the CI
+  boundary guard enforces that direction.
 - `Delivery` contains admin screens, REST controllers, blocks, and provider
   adapters.
 
@@ -175,7 +179,9 @@ REST and form operations use explicit CampaignBridge capabilities (defined in
 `includes/Core/Capabilities.php`): administrative operations require
 `campaignbridge_manage`, and email templates require
 `campaignbridge_edit_templates` through the template post type's mapped
-capabilities. They also use nonces where appropriate, type-aware validation and
+capabilities. Campaign workflows separately enforce campaign authority and the
+mapped `edit_post` capability for the exact template object before capturing
+or compiling it. They also use nonces where appropriate, type-aware validation and
 sanitization, and output escaping. Provider credentials are encrypted at rest
 and must not appear in logs, responses, or provider-facing error messages. See [SECURITY.md](SECURITY.md) and
 [docs/threat-model.md](docs/threat-model.md) for the maintained security

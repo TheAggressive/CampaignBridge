@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Repository;
 
-use CampaignBridge\Workflow\Campaign\Campaign_Transaction;
+use CampaignBridge\Domain\Campaign\Campaign_Transaction;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

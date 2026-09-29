@@ -95,9 +95,13 @@ insertion order.
 
 This M1 contract supplies frozen inputs and review invalidation rules. M2
 storage (#73) persists the complete `Review_Input` and exact successful artifact
-as an insert-only `Campaign_Snapshot`. The #74 canonical workflow now captures
-live inputs before freezing, creates a new revision on refresh, atomically
-selects it, revokes prior approval when required, and approves only a successful
+as an insert-only `Campaign_Snapshot`. Repository implements
+`Campaign_Template_Input_Source` and returns typed template content, metadata,
+and design-font input without depending on Workflow. The
+`Campaign_Review_Input_Capture` Workflow coordinator combines it with the
+post-snapshot and Brand Kit sources before invoking the canonical preview path.
+The #74 workflow creates a new revision on refresh, atomically selects it,
+revokes prior approval when required, and approves only a successful
 recompile with the exact stored fingerprint. See
 [`campaign-persistence.md`](campaign-persistence.md) and
 [`campaign-workflows.md`](campaign-workflows.md). REST exposure and provider

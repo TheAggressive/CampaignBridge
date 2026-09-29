@@ -16,7 +16,7 @@ REST endpoints, jobs, and provider mutations remain outside this layer.
 | `{prefix}campaignbridge_campaigns` | Current provider-neutral campaign record and optimistic version | Primary `id`; `owner_updated (owner_user_id, updated_at)` supports bounded owner listings |
 | `{prefix}campaignbridge_campaign_snapshots` | Insert-only frozen M1 review input and its exact successful artifact | Primary `id`; unique `campaign_revision (campaign_id, revision)` prevents in-place refresh replacement and supports revision history |
 | `{prefix}campaignbridge_remote_campaigns` | Normalized local/provider/remote identity and observed state | Primary `(campaign_id, provider)` permits one mapping per local campaign/provider; unique `provider_remote (provider, remote_id)` supports reverse lookup without duplicates |
-| `{prefix}campaignbridge_delivery_attempts` | Keyed attempt identity and normalized result for remote mutations plus the retry-safe local duplicate workflow | Primary `id`; unique `campaign_idempotency (campaign_id, operation, idempotency_key)` prevents duplicate keyed attempts; `campaign_created (campaign_id, created_at)` supports bounded history |
+| `{prefix}campaignbridge_delivery_attempts` | Keyed attempt identity and normalized result for provider mutations | Primary `id`; unique `campaign_idempotency (campaign_id, operation, idempotency_key)` prevents duplicate keyed attempts; `campaign_created (campaign_id, created_at)` supports bounded history |
 | `{prefix}campaignbridge_audit_events` | Append-only, minimized operator/security history | Primary `id`; `target_created (target_type, target_id, created_at)` supports bounded target history |
 
 Relationships are logical rather than database foreign keys because WordPress
@@ -39,12 +39,21 @@ Domain ports describe typed application needs and never expose database rows:
 - `Remote_Campaign_Reference_Source`
 - `Delivery_Attempt_Source`
 - `Audit_Event_Source`
+- `Campaign_Template_Input_Source`
+- `Campaign_Transaction`
 
-Their WordPress implementations live in `Repository/`. Workflow and delivery
-code must use these ports rather than `$wpdb`, options, post meta, or provider
-responses. Repositories are not authorization boundaries: #74 resolves explicit
-actor authority in the application layer, while #75 remains responsible for
-REST authentication, nonces, and HTTP permission callbacks.
+Their WordPress implementations live in `Repository/`. Repository
+implementations may depend on Domain contracts and WordPress data APIs, but
+must not import Workflow classes. The CI repository-boundary guard fails any
+such dependency. Live template persistence returns a typed
+`Campaign_Template_Input`; the Workflow capture coordinator, outside
+Repository, combines it with content/design sources and compiler services.
+
+Workflow and delivery code must use ports rather than `$wpdb`, options, post
+meta, or provider responses. Repositories are not authorization boundaries:
+#74 resolves both campaign authority and WordPress-native template object
+authority in the application layer, while #75 remains responsible for REST
+authentication, nonces, and HTTP permission callbacks.
 
 Every stored record carries a `data_version`. Typed hydration rejects malformed
 rows, unknown fields, and unsupported versions. List reads skip records that
@@ -72,13 +81,16 @@ replacement must carry `expected + 1`. The #74 workflow maps a stale write to
 the stable `conflict` result and never retries or overwrites the newer state.
 
 An idempotency identity is `(campaign_id, operation, idempotency_key)`. A
-non-null key can be inserted only once. #74 uses it only for retry-safe campaign
-duplication and resolves a replay to the original duplicate; other local
-mutations rely on expected versions instead of mechanical idempotency keys.
-Attempt results use the explicit states `pending`, `succeeded`, `failed`, and
-`unknown`. Future ambiguous provider outcomes therefore cannot be collapsed
-into failure. Retryability remains a stored classification, not an automatic
-retry trigger.
+non-null delivery-attempt key can be inserted only once. Attempt results use the
+explicit states `pending`, `succeeded`, `failed`, and `unknown`. Future
+ambiguous provider outcomes therefore cannot be collapsed into failure.
+Retryability remains a stored classification, not an automatic retry trigger.
+
+Local campaign duplication does not create a delivery attempt. It derives a
+deterministic campaign ID from the source campaign and caller idempotency key,
+then relies on the campaign primary key plus a compatibility check to resolve a
+replay. Other local mutations rely on expected versions instead of mechanical
+idempotency keys.
 
 Remote references preserve normalized state and optional bounded cursor data,
 not raw provider payloads. A mapping cannot change its local campaign,

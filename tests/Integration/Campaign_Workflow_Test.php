@@ -16,26 +16,30 @@ use CampaignBridge\Domain\Campaign\Delivery_Attempt;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\Repository\Audit_Event_Repository;
+use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Campaign_Repository;
-use CampaignBridge\Repository\Campaign_Review_Input_Repository;
 use CampaignBridge\Repository\Campaign_Snapshot_Repository;
+use CampaignBridge\Repository\Campaign_Template_Input_Repository;
 use CampaignBridge\Repository\Database_Transaction;
 use CampaignBridge\Repository\Delivery_Attempt_Repository;
+use CampaignBridge\Repository\Post_Snapshot_Repository;
 use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\Tests\Helpers\Test_Case;
 use CampaignBridge\Workflow\Campaign\Campaign_Actor;
 use CampaignBridge\Workflow\Campaign\Campaign_Clock;
 use CampaignBridge\Workflow\Campaign\Campaign_Id_Generator;
+use CampaignBridge\Workflow\Campaign\Campaign_Review_Input_Capture;
+use CampaignBridge\Workflow\Campaign\Campaign_Template_Authority;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
 
 /** Deterministic IDs for assertions without changing production generation. */
 final class Workflow_Test_Ids implements Campaign_Id_Generator {
-	private int $next = 1;
+	private static int $next = 1;
 
 	public function generate( string $prefix ): string {
-		return $prefix . '-' . $this->next++;
+		return $prefix . '-' . self::$next++;
 	}
 }
 
@@ -61,6 +65,18 @@ final class Failing_Workflow_Audits implements Audit_Event_Source {
 	}
 }
 
+/** Explicit template allowlist for workflow integration tests. */
+final class Workflow_Test_Template_Authority implements Campaign_Template_Authority {
+	/** @param array<int, int> $allowed_template_ids Allowed object IDs. */
+	public function __construct( private readonly array $allowed_template_ids ) {}
+
+	public function can_use_template( Campaign_Actor $actor, int $template_id ): bool {
+		unset( $actor );
+
+		return in_array( $template_id, $this->allowed_template_ids, true );
+	}
+}
+
 /** Proves canonical lifecycle, concurrency, snapshots, audit, and atomicity. */
 final class Campaign_Workflow_Test extends Test_Case {
 	private Campaign_Repository $campaigns;
@@ -83,8 +99,6 @@ final class Campaign_Workflow_Test extends Test_Case {
 		$this->snapshots = new Campaign_Snapshot_Repository();
 		$this->attempts  = new Delivery_Attempt_Repository();
 		$this->audits    = new Audit_Event_Repository();
-		$this->actor     = new Campaign_Actor( 7, true, false, true );
-		$this->workflow  = $this->workflow( $this->audits );
 		$this->template_id = $this->factory->post->create(
 			array(
 				'post_type'    => Post_Type_Email_Template::POST_TYPE,
@@ -93,6 +107,8 @@ final class Campaign_Workflow_Test extends Test_Case {
 				'post_content' => '<!-- wp:campaignbridge/container /-->',
 			)
 		);
+		$this->actor    = new Campaign_Actor( 7, true, false, true );
+		$this->workflow = $this->workflow( $this->audits );
 	}
 
 	public function test_complete_local_lifecycle_preserves_immutable_artifacts_and_history(): void {
@@ -197,16 +213,80 @@ final class Campaign_Workflow_Test extends Test_Case {
 		self::assertSame( Campaign_Workflow_Error::MISSING_SNAPSHOT, $this->workflow->submit_for_review( $this->actor, $campaign->id(), 1 )->error()?->code() );
 	}
 
-	public function test_review_requires_normalized_provider_and_audience_references(): void {
+	public function test_html_export_only_campaign_reaches_approval_without_provider_or_audience(): void {
 		$created = $this->workflow->create( $this->actor, 7, $this->template_id );
 		self::assertTrue( $created->is_success() );
 		$campaign = $created->campaign();
 		self::assertNotNull( $campaign );
-		self::assertTrue( $this->workflow->snapshot( $this->actor, $campaign->id(), 1 )->is_success() );
+		self::assertNull( $campaign->provider() );
+		self::assertNull( $campaign->audience_reference() );
 
-		$result = $this->workflow->submit_for_review( $this->actor, $campaign->id(), 2 );
-		self::assertSame( Campaign_Workflow_Error::INVALID_INPUT, $result->error()?->code() );
-		self::assertSame( 'draft', $this->campaigns->get( $campaign->id() )?->state() );
+		$snapshot = $this->workflow->snapshot( $this->actor, $campaign->id(), 1 );
+		self::assertTrue( $snapshot->is_success() );
+		self::assertTrue( $this->workflow->validate( $this->actor, $campaign->id() )->is_success() );
+		self::assertTrue( $this->workflow->submit_for_review( $this->actor, $campaign->id(), 2 )->is_success() );
+
+		$approved = $this->workflow->approve( $this->actor, $campaign->id(), 3 );
+		self::assertTrue( $approved->is_success() );
+		self::assertSame( 'approved', $approved->campaign()?->state() );
+		self::assertSame( $snapshot->snapshot()?->id(), $approved->campaign()?->active_snapshot_id() );
+		$approved_snapshot = $this->snapshots->get( (string) $approved->campaign()?->active_snapshot_id() );
+		self::assertNotNull( $approved_snapshot );
+		self::assertSame( $snapshot->snapshot()?->artifact()->fingerprint(), $approved_snapshot->artifact()->fingerprint() );
+	}
+
+	public function test_inaccessible_templates_are_rejected_before_capture_or_compile(): void {
+		$secret_template = $this->factory->post->create(
+			array(
+				'post_type'    => Post_Type_Email_Template::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_title'   => 'Restricted template title',
+				'post_content' => '<!-- wp:core/paragraph --><p>Restricted template content</p><!-- /wp:core/paragraph -->',
+			)
+		);
+		$restricted      = $this->workflow( $this->audits, new Workflow_Test_Template_Authority( array() ) );
+		$create          = $restricted->create( $this->actor, 7, $secret_template );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $create->error()?->code() );
+		self::assertNull( $create->campaign() );
+		self::assertNull( $create->compile_result() );
+
+		$campaign = $this->create_campaign();
+		$edit     = $this->workflow->edit_template( $this->actor, $campaign->id(), 1, $secret_template );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $edit->error()?->code() );
+		self::assertSame( $this->template_id, $this->campaigns->get( $campaign->id() )?->template_id() );
+
+		foreach ( array( 'snapshot', 'preview', 'validate' ) as $operation ) {
+			$result = 'snapshot' === $operation
+				? $restricted->snapshot( $this->actor, $campaign->id(), 1 )
+				: $restricted->{$operation}( $this->actor, $campaign->id() );
+			self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $result->error()?->code() );
+			self::assertNull( $result->compile_result() );
+		}
+
+		self::assertSame( array(), $this->snapshots->for_campaign( $campaign->id() ) );
+
+		self::assertTrue( $this->workflow->snapshot( $this->actor, $campaign->id(), 1 )->is_success() );
+		self::assertTrue( $this->workflow->submit_for_review( $this->actor, $campaign->id(), 2 )->is_success() );
+		$approval = $restricted->approve( $this->actor, $campaign->id(), 3 );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $approval->error()?->code() );
+		self::assertSame( 'ready_for_review', $this->campaigns->get( $campaign->id() )?->state() );
+
+		$duplicate = $restricted->duplicate( $this->actor, $campaign->id(), 'restricted-duplicate' );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $duplicate->error()?->code() );
+		self::assertSame( $campaign->id(), $duplicate->campaign()?->id() );
+		self::assertCount( 1, $this->campaigns->for_owner( $campaign->owner_user_id() ) );
+
+		$denials = array_values(
+			array_filter(
+				$this->audits->for_target( 'campaign', $campaign->id() ),
+				static fn ( Audit_Event $event ): bool => 'denied' === $event->result()
+			)
+		);
+		self::assertCount( 6, $denials );
+		foreach ( $denials as $denial ) {
+			self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $denial->context()->to_array()['error_code'] ?? null );
+			self::assertStringNotContainsString( 'Restricted template', (string) wp_json_encode( $denial->to_array() ) );
+		}
 	}
 
 
@@ -215,6 +295,8 @@ final class Campaign_Workflow_Test extends Test_Case {
 		self::assertTrue( $this->workflow->snapshot( $this->actor, $campaign->id(), 1 )->is_success() );
 		self::assertTrue( ( new Remote_Campaign_Reference_Repository() )->add( $this->remote_reference( $campaign->id() ) ) );
 		self::assertTrue( $this->attempts->add( $this->send_attempt( $campaign->id() ) ) );
+		$source_before = $this->campaigns->get( $campaign->id() )?->to_array();
+		$audits_before = count( $this->audits->for_target( 'campaign', $campaign->id() ) );
 
 		$first  = $this->workflow->duplicate( $this->actor, $campaign->id(), 'duplicate-request' );
 		$second = $this->workflow->duplicate( $this->actor, $campaign->id(), 'duplicate-request' );
@@ -222,15 +304,26 @@ final class Campaign_Workflow_Test extends Test_Case {
 		self::assertTrue( $second->is_success() );
 		self::assertTrue( $second->is_idempotent_replay() );
 		self::assertSame( $first->campaign()?->id(), $second->campaign()?->id() );
+		self::assertCount( 2, $this->campaigns->for_owner( 7 ) );
 
 		$duplicate = $first->campaign();
 		self::assertNotNull( $duplicate );
 		self::assertSame( 'draft', $duplicate->state() );
+		self::assertSame( 1, $duplicate->version() );
+		self::assertSame( $source_before, $this->campaigns->get( $campaign->id() )?->to_array() );
 		self::assertNull( $duplicate->active_snapshot_id() );
 		self::assertSame( array(), $this->snapshots->for_campaign( $duplicate->id() ) );
 		self::assertNull( ( new Remote_Campaign_Reference_Repository() )->get( $duplicate->id(), 'provider-one' ) );
 		self::assertSame( array(), $this->attempts->for_campaign( $duplicate->id() ) );
+		self::assertCount( 1, $this->attempts->for_campaign( $campaign->id() ) );
 		self::assertCount( 1, $this->audits->for_target( 'campaign', $duplicate->id() ) );
+		self::assertSame( $audits_before, count( $this->audits->for_target( 'campaign', $campaign->id() ) ) );
+
+		$changed = $this->workflow->select_audience( $this->actor, $campaign->id(), 2, 'provider-one', 'audience-two' );
+		self::assertTrue( $changed->is_success() );
+		$mismatch = $this->workflow->duplicate( $this->actor, $campaign->id(), 'duplicate-request' );
+		self::assertSame( Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT, $mismatch->error()?->code() );
+		self::assertSame( $duplicate->id(), $first->campaign()?->id() );
 	}
 
 	public function test_snapshot_and_approval_companion_failures_roll_back_required_state(): void {
@@ -280,13 +373,17 @@ final class Campaign_Workflow_Test extends Test_Case {
 		self::assertSame( 7, $events[0]->actor_user_id() );
 	}
 
-	private function workflow( Audit_Event_Source $audits ): Campaign_Workflow {
+	private function workflow( Audit_Event_Source $audits, ?Campaign_Template_Authority $template_authority = null ): Campaign_Workflow {
 		return new Campaign_Workflow(
 			$this->campaigns,
 			$this->snapshots,
-			$this->attempts,
 			$audits,
-			new Campaign_Review_Input_Repository(),
+			new Campaign_Review_Input_Capture(
+				new Campaign_Template_Input_Repository(),
+				new Post_Snapshot_Repository(),
+				new Brand_Kit_Repository()
+			),
+			$template_authority ?? new Workflow_Test_Template_Authority( array( $this->template_id ) ),
 			new Database_Transaction(),
 			new Workflow_Test_Ids(),
 			new Workflow_Test_Clock()

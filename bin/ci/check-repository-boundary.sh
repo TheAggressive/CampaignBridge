@@ -20,6 +20,13 @@ mapfile -t matches < <(php bin/ci/find-repository-boundary-violations.php)
 
 failed=0
 for file in "${matches[@]}"; do
+	if [[ "${file}" == workflow:* ]]; then
+		path="${file#workflow:}"
+		echo "Repository must not depend on Workflow: ${path}" >&2
+		failed=1
+		continue
+	fi
+
 	permitted=0
 	for existing in "${allowed[@]}"; do
 		if [[ "${file}" == "${existing}" ]]; then

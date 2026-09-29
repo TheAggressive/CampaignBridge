@@ -22,7 +22,6 @@ final class Delivery_Operation {
 	public const SEND         = 'send';
 	public const CANCEL       = 'cancel';
 	public const RECONCILE    = 'reconcile';
-	public const DUPLICATE    = 'duplicate_campaign';
 
 	/** @return array<int, string> */
 	public static function all(): array {
@@ -34,7 +33,6 @@ final class Delivery_Operation {
 			self::SEND,
 			self::CANCEL,
 			self::RECONCILE,
-			self::DUPLICATE,
 		);
 	}
 }
