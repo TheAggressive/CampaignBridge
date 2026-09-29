@@ -594,6 +594,12 @@ Supported controls are declared per block: Core paragraphs expose text and
 background color, font size, font family, line height, text alignment, and
 spacing; Core headings expose text color, typography, and alignment; Core
 buttons expose colors and font family; Core images expose margin and alignment;
+Core headings, paragraphs, and buttons also expose a Google Font search in the
+block Styles inspector. Applying a result stores the validated family, weights,
+fallback stack, and stylesheet URL in the revisioned per-template font
+registry, then writes only its stable preset slug to the block. The editor and
+compiler load the external asset only when a block or semantic type slot
+actually references that slug.
 Core separators expose a color while their thickness and line style come from
 the email design; Core spacers use their height. Containers, sections, cards and
 footers expose their supported spacing; columns use native block gap. Container content width uses constrained layout.

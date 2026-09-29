@@ -3,6 +3,7 @@ import './editor-design-settings';
 import './post-bindings';
 import './brand-logo';
 import './post-binding-controls';
+import './block-google-font-control';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { dispatch, useSelect } from '@wordpress/data';
 import {
