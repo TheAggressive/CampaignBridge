@@ -129,24 +129,32 @@ exact compiled preview/download surface, and repository-owned client expectation
 matrix. Durable storage of approved artifacts and the approval transition itself
 begin in M2; they do not introduce another rendering path.
 
-### Milestone 2 — Provider-neutral campaign workflow
+### Milestone 2 — Provider-neutral campaign workflow _(complete)_
 
 **Tracking:** #63
 
 **Outcome:** CampaignBridge manages a complete local campaign lifecycle through
 approval without depending on Mailchimp-specific types or response shapes.
 
-Implementation status:
+Completed slices:
 
-- #73 — Durable campaign/snapshot/remote-reference/delivery-attempt/audit storage
-  is complete.
-- #74 — Canonical campaign workflows, state transitions, concurrency and audit
-  are complete.
-- #75 — Stable REST contracts over those workflows are complete.
+- #73 — Durable campaign/snapshot/remote-reference/delivery-attempt/audit storage.
+- #74 — Canonical campaign workflows, state transitions, concurrency and audit.
+- #75 — Stable REST contracts over those workflows.
 
 **Exit gate:** provider-neutral integration tests exercise every legal
 transition and reject illegal/duplicate transitions; a campaign reaches
 `approved` using HTML export only with a complete local audit history.
+
+The exit gate is satisfied by the exhaustive state-machine table test, which
+checks all state pairs, and workflow tests for every local transition. The
+workflow, REST, and security suites prove stale-version, illegal-state and
+idempotent-duplicate refusal without mutation. An HTML-export-only campaign
+reaches `approved` through both the workflow and the REST adapter, with no
+provider or audience, while referencing the exact reviewed snapshot fingerprint
+and recording a complete local audit history. Provider handoff, delivery and
+reconciliation begin in M3 and reuse `Campaign_Workflow` rather than adding a
+second lifecycle.
 
 ### Milestone 3 — Mailchimp end-to-end vertical slice
 
