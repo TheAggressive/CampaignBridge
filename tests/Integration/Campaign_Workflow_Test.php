@@ -220,6 +220,54 @@ final class Campaign_Workflow_Test extends Test_Case {
 		self::assertSame( Campaign_Workflow_Error::CONFLICT, $stale->error()?->code() );
 	}
 
+	public function test_template_edit_returns_reviewed_and_approved_campaigns_to_draft(): void {
+		$replacement = $this->factory->post->create(
+			array(
+				'post_type'    => Post_Type_Email_Template::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_title'   => 'Replacement campaign',
+				'post_content' => '<!-- wp:campaignbridge/container /-->',
+			)
+		);
+		$workflow    = $this->workflow( $this->audits, new Workflow_Test_Template_Authority( array( $this->template_id, $replacement ) ) );
+
+		foreach ( array( 'ready_for_review' => 3, 'approved' => 4 ) as $state => $version ) {
+			$campaign = $this->create_campaign();
+			$snapshot = $workflow->snapshot( $this->actor, $campaign->id(), 1 )->snapshot();
+			self::assertNotNull( $snapshot );
+			self::assertTrue( $workflow->submit_for_review( $this->actor, $campaign->id(), 2 )->is_success() );
+			if ( 'approved' === $state ) {
+				self::assertTrue( $workflow->approve( $this->actor, $campaign->id(), 3 )->is_success() );
+			}
+			self::assertSame( $state, $this->campaigns->get( $campaign->id() )?->state() );
+
+			$edited = $workflow->edit_template( $this->actor, $campaign->id(), $version, $replacement );
+			self::assertTrue( $edited->is_success(), $state );
+			self::assertSame( 'draft', $edited->campaign()?->state() );
+			self::assertSame( $replacement, $edited->campaign()?->template_id() );
+			self::assertNull( $edited->campaign()?->active_snapshot_id() );
+			self::assertSame( $edited->campaign()?->to_array(), $this->campaigns->get( $campaign->id() )?->to_array() );
+			self::assertSame( $snapshot->to_array(), $this->snapshots->get( $snapshot->id() )?->to_array(), 'Snapshot history stays immutable.' );
+
+			$events = array_values(
+				array_filter(
+					$this->audits->for_target( 'campaign', $campaign->id() ),
+					static fn ( Audit_Event $event ): bool => 'campaign_edit' === $event->action() && 'success' === $event->result()
+				)
+			);
+			self::assertCount( 1, $events );
+			self::assertSame( $state, $events[0]->context()->to_array()['from_state'] );
+			self::assertSame( 'draft', $events[0]->context()->to_array()['to_state'] );
+			self::assertTrue( $events[0]->context()->to_array()['snapshot_invalidated'] );
+
+			self::assertSame(
+				Campaign_Workflow_Error::MISSING_SNAPSHOT,
+				$workflow->submit_for_review( $this->actor, $campaign->id(), $version + 1 )->error()?->code(),
+				'Review requires a fresh snapshot of the new template.'
+			);
+		}
+	}
+
 	public function test_blocking_compiler_diagnostics_prevent_snapshot_and_submission(): void {
 		wp_update_post(
 			array(

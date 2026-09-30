@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Tests\Unit\Campaign;
 
+use CampaignBridge\Domain\Campaign\Campaign_State;
 use CampaignBridge\Domain\Campaign\Campaign_State_Machine;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
@@ -151,5 +152,40 @@ final class Campaign_State_Machine_Test extends Test_Case {
 	 */
 	public function test_allowed_transitions_returns_empty_for_invalid_state(): void {
 		$this->assertSame( array(), Campaign_State_Machine::allowed_transitions( 'nonexistent' ) );
+	}
+
+	/**
+	 * Lock the complete transition contract: every legal transition is
+	 * allowed and every other state pair is refused.
+	 *
+	 * The table is written out independently of the implementation so any
+	 * change to the lifecycle must be made deliberately in both places.
+	 */
+	public function test_every_state_pair_matches_the_documented_transition_table(): void {
+		$expected = array(
+			'draft'            => array( 'ready_for_review', 'cancelled', 'failed', 'archived' ),
+			'ready_for_review' => array( 'approved', 'draft', 'cancelled', 'failed', 'archived' ),
+			'approved'         => array( 'provider_draft', 'ready_for_review', 'draft', 'cancelled', 'failed', 'archived' ),
+			'provider_draft'   => array( 'scheduled', 'sending', 'approved', 'cancelled', 'failed', 'unknown' ),
+			'scheduled'        => array( 'sending', 'cancelled', 'failed', 'unknown' ),
+			'sending'          => array( 'sent', 'failed', 'unknown' ),
+			'sent'             => array(),
+			'failed'           => array( 'provider_draft', 'draft', 'cancelled', 'archived' ),
+			'cancelled'        => array(),
+			'unknown'          => array( 'provider_draft', 'failed', 'cancelled' ),
+			'archived'         => array(),
+		);
+		$this->assertSame( Campaign_State::all(), array_keys( $expected ) );
+
+		$legal = 0;
+		foreach ( Campaign_State::all() as $from ) {
+			$this->assertSame( $expected[ $from ], Campaign_State_Machine::allowed_transitions( $from ), $from );
+			foreach ( Campaign_State::all() as $to ) {
+				$allowed = in_array( $to, $expected[ $from ], true );
+				$this->assertSame( $allowed, Campaign_State_Machine::can_transition( $from, $to ), "{$from} -> {$to}" );
+				$legal += $allowed ? 1 : 0;
+			}
+		}
+		$this->assertSame( 35, $legal );
 	}
 }
