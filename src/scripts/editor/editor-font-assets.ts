@@ -59,6 +59,13 @@ export function requiredEditorFontUrls(
   );
 }
 
+/** Match Core's kebab-case output for our constrained lowercase preset slugs. */
+function fontPresetClassSlug(slug: string): string {
+  return slug
+    .replace(/([0-9])([a-z])/g, '$1-$2')
+    .replace(/([a-z])([0-9])/g, '$1-$2');
+}
+
 /**
  * Apply effective semantic type slots inside the editor canvas.
  *
@@ -75,12 +82,23 @@ export function syncEditorTypeFontStyles(
     heading: ':where([data-type="core/heading"])',
     button: ':where([data-type="core/button"] .wp-block-button__link)',
   };
-  const rules = Object.entries(selectorBySlot)
+  const presetRules = Object.entries(families)
+    .filter(
+      ([slug, family]) =>
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && family.length > 0
+    )
+    .map(
+      ([slug, family]) =>
+        `:where(.editor-styles-wrapper) .has-${fontPresetClassSlug(slug)}-font-family{font-family:${family}}`
+    )
+    .join('');
+  const slotRules = Object.entries(selectorBySlot)
     .map(([slot, selector]) => {
       const family = families[slots[slot]];
       return family ? `${selector}{font-family:${family}}` : '';
     })
     .join('');
+  const rules = `${presetRules}${slotRules}`;
 
   const selector = 'style[data-campaignbridge-editor-type-fonts]';
   const existing =

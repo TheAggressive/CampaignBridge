@@ -97,6 +97,38 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 		self::assertStringContainsString( 'family=Campaign+Display', $data['html'] );
 	}
 
+	public function test_unsaved_design_font_compiles_as_an_explicit_block_override(): void {
+		$slug     = Brand_Kit::custom_font_slug( 'Campaign Display' );
+		$registry = Design_Font_Registry::from_array(
+			array(
+				'fonts' => array(
+					array(
+						'slug'    => $slug,
+						'name'    => 'Campaign Display',
+						'family'  => 'Campaign Display,Georgia,serif',
+						'weights' => array( 400, 700 ),
+						'url'     => 'https://fonts.googleapis.com/css2?family=Campaign+Display:wght@400;700&display=swap',
+					),
+				),
+				'slots' => array(),
+			)
+		);
+		$response = $this->preview(
+			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
+			. '<!-- wp:core/heading {"content":"Explicit campaign heading","level":2,"fontFamily":"'
+			. $slug
+			. '"} /-->'
+			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->',
+			$registry->to_json()
+		);
+		$data     = $response->get_data();
+
+		self::assertSame( 200, $response->get_status() );
+		self::assertSame( array(), $data['diagnostics'] );
+		self::assertStringContainsString( 'font-family:Campaign Display,Georgia,serif', $data['html'] );
+		self::assertStringContainsString( 'family=Campaign+Display', $data['html'] );
+	}
+
 	public function test_sample_view_is_null_without_provider_tokens(): void {
 		$data = $this->preview(
 			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
