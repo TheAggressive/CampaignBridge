@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit;
 
 use CampaignBridge\Core\Storage;
+use CampaignBridge\Core\Storage_Prefixes;
 use WP_UnitTestCase;
 
 /**
@@ -185,20 +186,29 @@ class Storage_Test extends WP_UnitTestCase {
 	 * Test transient expiration
 	 */
 	public function test_transient_expiration(): void {
-		$key   = 'expiring_transient';
-		$value = 'will_expire';
+		if ( wp_using_ext_object_cache() ) {
+			$this->markTestSkipped( 'Transient expiry is owned by the external object cache.' );
+		}
 
-		// Set transient with very short expiration (1 second)
-		Storage::set_transient( $key, $value, 1 );
+		$key     = 'expiring_transient';
+		$value   = 'will_expire';
+		$timeout = '_transient_timeout_' . Storage_Prefixes::get_transient_key( $key );
 
-		// Verify it exists immediately
-		$this->assertEquals( $value, Storage::get_transient( $key ) );
+		$before = time();
+		Storage::set_transient( $key, $value, 60 );
+		$after = time();
 
-		// Wait for expiration
-		sleep( 2 );
+		// The TTL is stored as an absolute expiry timestamp.
+		$expires_at = (int) get_option( $timeout );
+		$this->assertGreaterThanOrEqual( $before + 60, $expires_at );
+		$this->assertLessThanOrEqual( $after + 60, $expires_at );
+		$this->assertSame( $value, Storage::get_transient( $key ) );
 
-		// Verify it's expired
+		// Move the expiry into the past instead of sleeping on the wall clock.
+		update_option( $timeout, time() - 1 );
+
 		$this->assertFalse( Storage::get_transient( $key ) );
+		$this->assertFalse( get_option( $timeout ), 'WordPress removes an expired transient when it is read.' );
 	}
 
 	/**
