@@ -129,6 +129,51 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 		self::assertStringContainsString( 'family=Campaign+Display', $data['html'] );
 	}
 
+	public function test_unsaved_design_font_on_a_button_overrides_the_button_slot(): void {
+		$explicit = Brand_Kit::custom_font_slug( 'Campaign Display' );
+		$slotted  = Brand_Kit::custom_font_slug( 'Campaign Slot' );
+		$registry = Design_Font_Registry::from_array(
+			array(
+				'fonts' => array(
+					array(
+						'slug'    => $explicit,
+						'name'    => 'Campaign Display',
+						'family'  => 'Campaign Display,Georgia,serif',
+						'weights' => array( 400, 700 ),
+						'url'     => 'https://fonts.googleapis.com/css2?family=Campaign+Display:wght@400;700&display=swap',
+					),
+					array(
+						'slug'    => $slotted,
+						'name'    => 'Campaign Slot',
+						'family'  => 'Campaign Slot,Arial,sans-serif',
+						'weights' => array( 400, 700 ),
+						'url'     => 'https://fonts.googleapis.com/css2?family=Campaign+Slot:wght@400;700&display=swap',
+					),
+				),
+				'slots' => array( 'button' => $slotted ),
+			)
+		);
+		$response = $this->preview(
+			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
+			. '<!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button {"fontFamily":"' . $explicit . '"} -->'
+			. '<div class="wp-block-button"><a class="wp-block-button__link has-' . $explicit . '-font-family wp-element-button" href="https://example.com/offer">Explicit campaign button</a></div>'
+			. '<!-- /wp:button --></div><!-- /wp:buttons -->'
+			. '<!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->',
+			$registry->to_json()
+		);
+		$data     = $response->get_data();
+
+		self::assertSame( 200, $response->get_status() );
+		self::assertSame( array(), $data['diagnostics'] );
+		self::assertMatchesRegularExpression(
+			'/<a [^>]*style="[^"]*font-family:Campaign Display,Georgia,serif;[^"]*"[^>]*>Explicit campaign button<\/a>/',
+			$data['html']
+		);
+		self::assertStringNotContainsString( 'Campaign Slot', $data['html'] );
+		self::assertSame( 1, substr_count( $data['html'], 'family=Campaign+Display' ) );
+		self::assertSame( 0, substr_count( $data['html'], 'family=Campaign+Slot' ) );
+	}
+
 	public function test_sample_view_is_null_without_provider_tokens(): void {
 		$data = $this->preview(
 			'<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section -->'
