@@ -1,5 +1,8 @@
 import { expect, test } from './support/fixtures';
-import { dismissEditorWelcomeGuide } from './support/editor';
+import {
+  dismissEditorWelcomeGuide,
+  waitForInsertableCanvas,
+} from './support/editor';
 
 test('Brand Logo is a bound Core Image variation', async ({ page }) => {
   await page.goto('/wp-admin/post-new.php?post_type=cb_templates');
@@ -17,6 +20,7 @@ test('Brand Logo is a bound Core Image variation', async ({ page }) => {
     );
   });
   await dismissEditorWelcomeGuide(page);
+  await waitForInsertableCanvas(page);
 
   const state = await page.evaluate(() => {
     const wp = (globalThis as typeof globalThis & { wp: any }).wp;
