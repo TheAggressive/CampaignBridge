@@ -54,8 +54,8 @@ Completed M1 examples:
 - M1 preflight closeout — #71
 - M1 client fixtures — #72
 
-The M2 storage foundation #73, canonical workflows #74, and REST contracts #75
-are complete. M2 closeout #63 is next.
+M2 #63 is complete: storage #73, canonical workflows #74, and REST contracts
+#75. M3 provider discovery #76 is next.
 
 Completed and dependency-gated examples:
 
@@ -93,21 +93,20 @@ The merged PR/closed issues provide the implementation history. Do not copy ever
 
 ## Dependency-first execution order
 
-Issue number is not execution order. M1 #62, its action issues #69–#72, M2
-storage #73, M2 workflows #74, and M2 REST #75 are complete. The remaining
-order is:
+Issue number is not execution order. M1 #62 with its action issues #69–#72,
+and M2 #63 with its action issues #73–#75, are complete. The remaining order
+is:
 
-1. Close M2 — #63.
-2. M3 provider discovery/token mapping — #76.
-3. M3 idempotent Mailchimp draft/content handoff — #77.
-4. M3 test delivery — #78.
-5. M3 guarded schedule/send/cancel — #79.
-6. M3 reconciliation and ambiguous outcomes — #80.
-7. Close M3 — #64.
-8. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
-9. Durable jobs/recovery — #66.
-10. Governance/reporting — #67.
-11. GA closeout — #68.
+1. M3 provider discovery/token mapping — #76.
+2. M3 idempotent Mailchimp draft/content handoff — #77.
+3. M3 test delivery — #78.
+4. M3 guarded schedule/send/cancel — #79.
+5. M3 reconciliation and ambiguous outcomes — #80.
+6. Close M3 — #64.
+7. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
+8. Durable jobs/recovery — #66.
+9. Governance/reporting — #67.
+10. GA closeout — #68.
 
 Cross-cutting work does not need to wait for the numbered milestone when its dependency is already satisfied. Security, accessibility, i18n, performance, package verification, and documentation travel with every relevant PR.
 
@@ -117,7 +116,9 @@ Cross-cutting work does not need to wait for the numbered milestone when its dep
 
 - #82 may build the safe Abilities foundation/read contracts against the current template/Brand Kit architecture.
 - #83 may expose compiler validation/compile through the canonical services.
-- Campaign mutation abilities wait for M2.
+- Campaign mutation abilities may now build on the completed M2
+  `Campaign_Workflow`, as the REST adapter does. They must not wrap REST
+  controller internals.
 - Provider/audience abilities wait for M3 discovery contracts.
 - Delivery abilities wait for M3 delivery workflows; broad automation/MCP exposure of production send also waits for M5 recovery semantics.
 - Reporting abilities wait for M6 metric/governance semantics.
