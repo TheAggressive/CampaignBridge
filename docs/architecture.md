@@ -22,8 +22,12 @@ data-minimization rules are documented in
 [`campaign-persistence.md`](campaign-persistence.md). The canonical
 provider-neutral application operations, state/concurrency rules, authorization
 inputs, and transaction assumptions are documented in
-[`campaign-workflows.md`](campaign-workflows.md). Future REST, Abilities, CLI,
-and UI adapters must call that workflow layer rather than repositories.
+[`campaign-workflows.md`](campaign-workflows.md). The campaign REST adapter
+(`includes/REST/Campaign_Routes.php`, see [`api.md`](api.md)) calls only that
+workflow layer. The repository boundary check rejects campaign REST files that
+import repositories or providers. Future Abilities, CLI, and UI adapters must
+call the same workflow layer rather than repositories or REST controller
+internals.
 
 ## Composition root
 

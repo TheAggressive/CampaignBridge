@@ -34,4 +34,7 @@ interface Campaign_Source {
 	 * @return array<int, Campaign>
 	 */
 	public function for_owner( int $owner_user_id, int $limit = 50, int $offset = 0 ): array;
+
+	/** Count campaigns owned by one user for bounded pagination metadata. */
+	public function count_for_owner( int $owner_user_id ): int;
 }

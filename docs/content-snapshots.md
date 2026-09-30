@@ -104,8 +104,9 @@ The #74 workflow creates a new revision on refresh, atomically selects it,
 revokes prior approval when required, and approves only a successful
 recompile with the exact stored fingerprint. See
 [`campaign-persistence.md`](campaign-persistence.md) and
-[`campaign-workflows.md`](campaign-workflows.md). REST exposure and provider
-delivery remain outside this contract.
+[`campaign-workflows.md`](campaign-workflows.md). The campaign REST snapshot
+route returns only the snapshot ID, revision, fingerprint, and validation
+outcome. Provider delivery remains outside this contract.
 
 Referenced image/font URLs and image dimensions are frozen, not the remote
 binary resources. Reproducibility here means compiler HTML, text, asset records,

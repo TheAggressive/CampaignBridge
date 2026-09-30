@@ -124,6 +124,20 @@ final class Campaign_Repository implements Campaign_Source {
 		return $this->hydrate_many( is_array( $rows ) ? $rows : array() );
 	}
 
+	public function count_for_owner( int $owner_user_id ): int {
+		if ( ! Schema_Manager::is_current() || 1 > $owner_user_id ) {
+			return 0;
+		}
+
+		global $wpdb;
+		$table = Schema_Manager::table( 'campaigns' );
+		$count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Indexed owner count for REST pagination.
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE owner_user_id = %d", $owner_user_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table comes from the Schema_Manager allowlist.
+		);
+
+		return max( 0, (int) $count );
+	}
+
 	/** @param array<string, mixed> $row Database row. */
 	private function hydrate( array $row ): ?Campaign {
 		try {

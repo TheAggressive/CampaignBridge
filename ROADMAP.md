@@ -49,7 +49,7 @@ but it is not yet a complete campaign-management and delivery product.
 | Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained Core/CampaignBridge block grammar; read-only post selection and immutable snapshot inputs | Full campaign/operator UI |
 | Email generation | Deterministic HTML/plain compiler; compiled preview/export; immutable content/design inputs; structured diagnostics; artifact fingerprints; durable immutable campaign snapshots and exact approved-artifact references | Provider handoff and delivery |
 | Providers | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery foundations; HTML export boundary | Remote draft/content handoff, test send, guarded schedule/send/cancel, reconciliation/reporting |
-| Campaigns | Durable provider-neutral campaigns, snapshots, attempts and audit history; authoritative state machine; canonical create/edit/audience/snapshot/validate/preview/review/approve/revoke/archive/duplicate workflows; optimistic concurrency | #75 REST adapter, operator UI, and M3 provider operations |
+| Campaigns | Durable provider-neutral campaigns, snapshots, attempts and audit history; authoritative state machine; canonical create/edit/audience/snapshot/validate/preview/review/approve/revoke/archive/duplicate workflows; optimistic concurrency; stable permission-safe campaign REST contracts | Operator UI and M3 provider operations |
 | Admin              | Settings, Brand Kit, provider connection/verification, audience-selection foundations, template editor lifecycle                                                                                                                                                                                                                                                                   | Full campaign/operator workflow and delivery/recovery surfaces                                  |
 | API                | Editor/content support routes, Brand Kit, compiled preview, template revision restore and core template REST lifecycle                                                                                                                                                                                                                                                             | Campaign/delivery/reconciliation/reporting APIs                                                 |
 | Operations         | Hardened CI, security/accessibility gates, signed/reproducible packaging, runbook foundations                                                                                                                                                                                                                                                                                      | Durable jobs/locks, webhooks, reconciliation monitor, operational metrics and support tooling   |
@@ -142,7 +142,7 @@ Implementation status:
   is complete.
 - #74 — Canonical campaign workflows, state transitions, concurrency and audit
   are complete.
-- #75 — Stable REST exposure over those workflows remains pending.
+- #75 — Stable REST contracts over those workflows are complete.
 
 **Exit gate:** provider-neutral integration tests exercise every legal
 transition and reject illegal/duplicate transitions; a campaign reaches

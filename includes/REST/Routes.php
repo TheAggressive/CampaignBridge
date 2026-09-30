@@ -68,6 +68,13 @@ class Routes extends Abstract_Rest_Controller {
 	private static Preview_Routes $preview_routes;
 
 	/**
+	 * Canonical campaign lifecycle routes instance.
+	 *
+	 * @var Campaign_Routes
+	 */
+	private static Campaign_Routes $campaign_routes;
+
+	/**
 	 * Initialize shared state.
 	 *
 	 * @return void
@@ -75,6 +82,7 @@ class Routes extends Abstract_Rest_Controller {
 	public static function init(): void {
 		self::$preview_routes  = new Preview_Routes();
 		self::$form_controller = new Form_Rest_Controller();
+		self::$campaign_routes = new Campaign_Routes();
 
 		// Register AJAX handlers.
 		\add_action( 'wp_ajax_campaignbridge_evaluate_conditions', array( self::$form_controller, 'handle_ajax_evaluate_conditions' ) );
@@ -86,13 +94,17 @@ class Routes extends Abstract_Rest_Controller {
 	 * @return void
 	 */
 	public static function register() {
-		static $registered = false;
+		// Idempotent per server instance, not per process: a replacement server
+		// (tests, long-running workers) must receive the routes again. The weak
+		// reference neither keeps a discarded server alive nor matches a new
+		// server that reuses its object ID.
+		static $registered_on = null;
 
-		// Use static variable for function-level idempotency.
-		if ( $registered ) {
+		$server = \rest_get_server();
+		if ( $registered_on instanceof \WeakReference && $registered_on->get() === $server ) {
 			return;
 		}
-		$registered = true;
+		$registered_on = \WeakReference::create( $server );
 
 		self::register_posts_route();
 		self::register_post_types_route();
@@ -104,6 +116,8 @@ class Routes extends Abstract_Rest_Controller {
 
 		// Register compiled preview routes.
 		self::$preview_routes->register();
+
+		self::$campaign_routes->register();
 	}
 
 	/**

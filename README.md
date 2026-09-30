@@ -11,9 +11,10 @@ grammar into portable HTML and plain text and reports unsupported or invalid
 content before it reaches a provider.
 
 > **Product status:** The secure WordPress foundation, template/compiler,
-> durable campaign persistence, and provider-neutral local campaign workflows
-> are present. Campaign REST/UI exposure and provider draft, delivery,
-> scheduling, reconciliation, and reporting remain roadmap work. See
+> durable campaign persistence, provider-neutral local campaign workflows, and
+> their stable REST contracts are present. A complete campaign operator UI and
+> provider draft, delivery, scheduling, reconciliation, and reporting remain
+> roadmap work. See
 > [ROADMAP.md](ROADMAP.md) for the product contract and delivery plan.
 
 ## What is available now
@@ -33,14 +34,17 @@ content before it reaches a provider.
   revoke/archive/duplicate workflows with optimistic concurrency and
   WordPress-native template object authorization. HTML-export-only campaigns can
   reach local approval without selecting a provider or audience.
+- Stable, capability-protected campaign REST contracts over those workflows,
+  with schemas, pagination, optimistic versions, idempotent duplication, rate
+  limits, and one documented error envelope (see [docs/api.md](docs/api.md)).
 - Mailchimp connection settings and discovery foundations.
 - An HTML export provider boundary.
 - Capability-protected REST routes used by the editor and admin screens.
 - Encrypted storage for provider credentials.
 
-CampaignBridge does not yet expose campaign workflows through REST or a complete
-operator UI, and it does not create provider campaign drafts, send tests,
-schedule, send, cancel, reconcile, or report on provider campaigns.
+CampaignBridge does not yet provide a complete campaign operator UI, and it
+does not create provider campaign drafts, send tests, schedule, send, cancel,
+reconcile, or report on provider campaigns.
 
 ## Current workflow
 
@@ -125,7 +129,7 @@ includes/
   Post_Types/             Email-template post type
   Providers/              Provider contracts and adapters
   Repository/             WordPress persistence implementations
-  REST/                   Editor, preview, and Brand Kit REST controllers
+  REST/                   Editor, preview, Brand Kit, and campaign REST controllers
   Services/Email/         Deterministic compiler and renderers
   Workflow/               Application workflows
 src/

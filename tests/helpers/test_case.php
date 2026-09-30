@@ -30,12 +30,26 @@ abstract class Test_Case extends WP_UnitTestCase {
 	 */
 	public function tearDown(): void {
 		$this->cleanup_test_data();
+		self::reset_rest_server();
 		parent::tearDown();
 
 		// Clean up output buffer to suppress form HTML output during tests
 		if ( ob_get_level() > 0 ) {
 			ob_end_clean();
 		}
+	}
+
+	/**
+	 * Discard the global REST server so the next test builds a fresh one.
+	 *
+	 * Tests that fire `rest_api_init` would otherwise append another full set
+	 * of core and plugin controllers to one process-wide server per test,
+	 * growing memory across the whole suite. WordPress core's REST test case
+	 * resets the server the same way.
+	 */
+	public static function reset_rest_server(): void {
+		global $wp_rest_server;
+		$wp_rest_server = null;
 	}
 
 	/**
