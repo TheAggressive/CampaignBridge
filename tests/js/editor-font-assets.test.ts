@@ -122,8 +122,13 @@ describe('native editor font assets', () => {
     expect(style?.textContent).toContain(
       '[data-type="core/heading"]){font-family:Campaign Display,Georgia,serif}'
     );
+    // Explicit block fonts must outrank Core's equal-specificity
+    // `:root :where(.wp-block-button__link){font-family:inherit}` rule.
     expect(style?.textContent).toContain(
-      '.has-custom-72-cae-0925-f-81-font-family{font-family:Campaign Display,Georgia,serif}'
+      '.editor-styles-wrapper .has-custom-72-cae-0925-f-81-font-family{font-family:Campaign Display,Georgia,serif!important}'
+    );
+    expect(style?.textContent).not.toContain(
+      ':where(.editor-styles-wrapper) .has-custom'
     );
     expect(style?.textContent).toContain('font-family:Inter,Arial,sans-serif');
 
