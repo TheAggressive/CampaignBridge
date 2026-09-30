@@ -522,6 +522,108 @@ test('applies a per-block Google Font to the Core Button link', async ({
   );
 });
 
+test('saved per-block Google Fonts are styled by server preset rules after reload', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.goto(NEW_TEMPLATE_PATH);
+  await waitForNativeEditor(page);
+  cleanupPostId = (await editorSnapshot(page)).postId;
+
+  const headingId = await insertSectionAndSelect(
+    page,
+    [
+      ['core/heading', { content: 'Saved Google Heading' }],
+      [
+        'core/buttons',
+        {},
+        [
+          [
+            'core/button',
+            { text: 'Saved Google Button', url: 'https://example.com/offer' },
+          ],
+        ],
+      ],
+    ],
+    [0]
+  );
+  const applied = await applyGoogleFontToSelectedBlock(
+    page,
+    headingId,
+    'Aguafina Script'
+  );
+  await page.evaluate(slug => {
+    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+    const editor = wp.data.select('core/block-editor');
+    const button = editor
+      .getBlocks()
+      .flatMap(function flatten(block: any): any[] {
+        return [block, ...block.innerBlocks.flatMap(flatten)];
+      })
+      .find((block: any) => block.name === 'core/button');
+    wp.data
+      .dispatch('core/block-editor')
+      .updateBlockAttributes(button.clientId, { fontFamily: slug });
+  }, applied.slug);
+
+  await page.getByRole('button', { name: 'Save draft' }).click();
+  await page.waitForFunction(() => {
+    const editor = (
+      globalThis as typeof globalThis & { wp: any }
+    ).wp.data.select('core/editor');
+    return !editor.isSavingPost() && !editor.isEditedPostDirty();
+  });
+  await page.reload();
+  await waitForNativeEditor(page);
+
+  const canvas = page.frameLocator('iframe[name="editor-canvas"]');
+  const targets = [
+    canvas.locator('[data-type="core/heading"]', {
+      hasText: 'Saved Google Heading',
+    }),
+    canvas.locator('[data-type="core/button"] .wp-block-button__link', {
+      hasText: 'Saved Google Button',
+    }),
+  ];
+  for (const target of targets) {
+    await expect(target).toHaveCSS('font-family', /Aguafina Script/);
+    // A server-emitted preset rule (not the client type-font stylesheet)
+    // must match the class Core wrote on the block.
+    const serverRules = await target.evaluate(element => {
+      const matches: string[] = [];
+      for (const sheet of Array.from(element.ownerDocument.styleSheets)) {
+        const owner = sheet.ownerNode as Element | null;
+        if (owner?.hasAttribute('data-campaignbridge-editor-type-fonts')) {
+          continue;
+        }
+        let rules: CSSRule[] = [];
+        try {
+          rules = Array.from((sheet as CSSStyleSheet).cssRules);
+        } catch {
+          continue;
+        }
+        for (const rule of rules) {
+          const style = (rule as CSSStyleRule).style;
+          const selector = (rule as CSSStyleRule).selectorText;
+          if (
+            selector?.includes('-font-family') &&
+            style?.getPropertyPriority('font-family') === 'important' &&
+            element.matches(selector)
+          ) {
+            matches.push(selector);
+          }
+        }
+      }
+      return matches;
+    });
+    expect(serverRules).toEqual([
+      expect.stringMatching(
+        /^\.editor-styles-wrapper \.has-custom-[a-z0-9-]+-font-family$/
+      ),
+    ]);
+  }
+});
+
 test('native editor owns the template lifecycle and previews unsaved blocks', async ({
   page,
 }) => {

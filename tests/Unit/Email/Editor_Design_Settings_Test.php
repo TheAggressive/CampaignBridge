@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit\Email;
 
 use CampaignBridge\Domain\Email\Brand_Kit;
+use CampaignBridge\Domain\Email\Design_Font_Registry;
 use CampaignBridge\Domain\Email\Design_Presets;
 use CampaignBridge\Admin\Editor_Design_Settings;
 use CampaignBridge\Services\Email\Design\Email_Design_Factory;
@@ -142,6 +143,46 @@ final class Editor_Design_Settings_Test extends TestCase {
 		self::assertArrayHasKey( $sans_slug, $assets );
 		self::assertArrayHasKey( $serif_slug, $assets );
 		self::assertSame( array( $serif_slug, $sans_slug, 'arial' ), $settings['campaignbridgeDefaultFonts'] );
+	}
+
+	/**
+	 * Saved template design fonts must style the class Core writes on blocks.
+	 *
+	 * Core kebab-cases preset slugs at letter/digit boundaries, so the stored
+	 * slug `custom-e0d98d3d3199` becomes `custom-e-0-d-98-d-3-d-3199` in block
+	 * classes and preset variables. The literal below is Core's own output.
+	 */
+	public function test_custom_font_preset_css_uses_cores_class_and_variable_names(): void {
+		$slug = Brand_Kit::custom_font_slug( 'Campaign Display' );
+		self::assertSame( 'custom-e0d98d3d3199', $slug );
+		$registry = Design_Font_Registry::from_array(
+			array(
+				'fonts' => array(
+					array(
+						'slug'    => $slug,
+						'name'    => 'Campaign Display',
+						'family'  => 'Campaign Display,Georgia,serif',
+						'weights' => array( 400 ),
+						'url'     => 'https://fonts.googleapis.com/css2?family=Campaign+Display:wght@400&display=swap',
+					),
+				),
+				'slots' => array(),
+			)
+		);
+
+		$settings = Editor_Design_Settings::apply( array(), Email_Design_Factory::resolve( null, $registry ) );
+		$css      = $settings['styles'][0]['css'];
+		$fonts    = $settings['__experimentalFeatures']['typography']['fontFamilies']['theme'];
+
+		self::assertContains( $slug, array_column( $fonts, 'slug' ), 'Core receives the stored slug unchanged.' );
+		self::assertStringContainsString( '--wp--preset--font-family--custom-e-0-d-98-d-3-d-3199:Campaign Display,Georgia,serif', $css );
+		self::assertStringContainsString(
+			'.editor-styles-wrapper .has-custom-e-0-d-98-d-3-d-3199-font-family{font-family:var(--wp--preset--font-family--custom-e-0-d-98-d-3-d-3199)!important}',
+			$css
+		);
+		self::assertStringNotContainsString( 'custom-e0d98d3d3199', $css );
+		self::assertStringContainsString( '.editor-styles-wrapper .has-inter-font-family{', $css, 'Named slugs are unchanged.' );
+		self::assertStringContainsString( '--wp--preset--spacing--40:', $css, 'Numeric slugs are unchanged.' );
 	}
 
 	/** External-font policy prevents every remote editor-canvas request. */
