@@ -82,6 +82,10 @@ export function syncEditorTypeFontStyles(
     heading: ':where([data-type="core/heading"])',
     button: ':where([data-type="core/button"] .wp-block-button__link)',
   };
+  // Mirror Core's preset utility classes (and the server's saved-preset
+  // rules): an explicit block font must beat semantic slots and Core's
+  // `:root :where(.wp-element-button, .wp-block-button__link)` inherit rule,
+  // which has equal specificity to a single class and is emitted later.
   const presetRules = Object.entries(families)
     .filter(
       ([slug, family]) =>
@@ -89,7 +93,7 @@ export function syncEditorTypeFontStyles(
     )
     .map(
       ([slug, family]) =>
-        `:where(.editor-styles-wrapper) .has-${fontPresetClassSlug(slug)}-font-family{font-family:${family}}`
+        `.editor-styles-wrapper .has-${fontPresetClassSlug(slug)}-font-family{font-family:${family}!important}`
     )
     .join('');
   const slotRules = Object.entries(selectorBySlot)

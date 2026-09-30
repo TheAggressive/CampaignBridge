@@ -242,30 +242,68 @@ test('native font presets update the editor canvas and reset to inheritance', as
   expect(inherited.content).not.toContain('"fontFamily"');
 });
 
-test('searches and applies a Google Font directly to one block', async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await page.goto(NEW_TEMPLATE_PATH);
-  await waitForNativeEditor(page);
-  cleanupPostId = (await editorSnapshot(page)).postId;
+const DESIGN_FONT_META_KEY = 'campaignbridge_template_design_fonts';
 
-  const headingId = await page.evaluate(() => {
-    const wp = (globalThis as typeof globalThis & { wp: any }).wp;
-    const root = wp.data.select('core/block-editor').getBlocks()[0];
-    const heading = wp.blocks.createBlock('core/heading', {
-      content: 'Direct Google Font',
-    });
-    const section = wp.blocks.createBlock('campaignbridge/section', {}, [
-      heading,
-    ]);
-    wp.data
-      .dispatch('core/block-editor')
-      .insertBlocks(section, undefined, root.clientId);
-    wp.data.dispatch('core/block-editor').selectBlock(heading.clientId);
-    return heading.clientId as string;
-  });
+interface AppliedGoogleFont {
+  slug: string;
+  registry: { fonts: Array<{ name: string; slug: string; url: string }> };
+}
 
+function editorFontLinkLoaded(page: Page, family: string): Promise<boolean> {
+  return page
+    .frameLocator('iframe[name="editor-canvas"]')
+    .locator('head link[data-campaignbridge-editor-font]')
+    .evaluateAll(
+      (links, needle) =>
+        links.some(link =>
+          (
+            (link as HTMLLinkElement).dataset.campaignbridgeEditorFont ?? ''
+          ).includes(needle)
+        ),
+      `family=${family.replaceAll(' ', '+')}`
+    );
+}
+
+/** Insert one section with the given blocks and select the target block. */
+async function insertSectionAndSelect(
+  page: Page,
+  blocks: Array<
+    [string, Record<string, unknown>, Array<[string, Record<string, unknown>]>?]
+  >,
+  selectPath: number[]
+): Promise<string> {
+  return page.evaluate(
+    ({ specs, path }) => {
+      const wp = (globalThis as typeof globalThis & { wp: any }).wp;
+      const build = ([name, attributes, inner = []]: any): any =>
+        wp.blocks.createBlock(name, attributes, inner.map(build));
+      const children = specs.map(build);
+      const root = wp.data.select('core/block-editor').getBlocks()[0];
+      const section = wp.blocks.createBlock(
+        'campaignbridge/section',
+        {},
+        children
+      );
+      wp.data
+        .dispatch('core/block-editor')
+        .insertBlocks(section, undefined, root.clientId);
+      const target = path.reduce(
+        (block: any, index: number) => block.innerBlocks[index],
+        section
+      );
+      wp.data.dispatch('core/block-editor').selectBlock(target.clientId);
+      return target.clientId as string;
+    },
+    { specs: blocks, path: selectPath }
+  );
+}
+
+/** Search, resolve, and apply a Google Font through the block Styles panel. */
+async function applyGoogleFontToSelectedBlock(
+  page: Page,
+  clientId: string,
+  family: string
+): Promise<AppliedGoogleFont> {
   const fontSearch = page.getByRole('textbox', {
     name: 'Find a Google Font for this block',
   });
@@ -286,7 +324,7 @@ test('searches and applies a Google Font directly to one block', async ({
   }
   await expect(fontSearch).toBeVisible();
 
-  await fontSearch.fill('Aguafina Script');
+  await fontSearch.fill(family);
   const searchResponse = page.waitForResponse(
     response =>
       response.request().method() === 'GET' &&
@@ -300,15 +338,13 @@ test('searches and applies a Google Font directly to one block', async ({
       response.request().method() === 'POST' &&
       matchesRoute(response.request(), '/campaignbridge/v1/design-fonts')
   );
-  await page
-    .getByRole('button', { name: 'Add and use Aguafina Script' })
-    .click();
+  await page.getByRole('button', { name: `Add and use ${family}` }).click();
   expect((await resolveResponse).ok()).toBe(true);
 
   await page.waitForFunction(
-    ({ clientId, metaKey }) => {
+    ({ id, metaKey, name }) => {
       const wp = (globalThis as typeof globalThis & { wp: any }).wp;
-      const block = wp.data.select('core/block-editor').getBlock(clientId);
+      const block = wp.data.select('core/block-editor').getBlock(id);
       const meta =
         wp.data.select('core/editor').getEditedPostAttribute('meta') ?? {};
       const raw = meta[metaKey];
@@ -316,34 +352,60 @@ test('searches and applies a Google Font directly to one block', async ({
         typeof block?.attributes?.fontFamily === 'string' &&
         block.attributes.fontFamily.startsWith('custom-') &&
         typeof raw === 'string' &&
-        raw.includes('Aguafina Script')
+        raw.includes(name)
       );
     },
-    {
-      clientId: headingId,
-      metaKey: 'campaignbridge_template_design_fonts',
-    }
+    { id: clientId, metaKey: DESIGN_FONT_META_KEY, name: family }
   );
 
-  const applied = await page.evaluate(
-    ({ clientId, metaKey }) => {
+  return page.evaluate(
+    ({ id, metaKey }) => {
       const wp = (globalThis as typeof globalThis & { wp: any }).wp;
-      const block = wp.data.select('core/block-editor').getBlock(clientId);
+      const block = wp.data.select('core/block-editor').getBlock(id);
       const raw =
         wp.data.select('core/editor').getEditedPostAttribute('meta')?.[
           metaKey
         ] ?? '';
       return {
         slug: block.attributes.fontFamily as string,
-        registry: JSON.parse(raw) as {
-          fonts: Array<{ name: string; slug: string; url: string }>;
-        },
+        registry: JSON.parse(raw),
       };
     },
-    {
-      clientId: headingId,
-      metaKey: 'campaignbridge_template_design_fonts',
-    }
+    { id: clientId, metaKey: DESIGN_FONT_META_KEY }
+  );
+}
+
+/** Open Email Preview and return the unsaved request body it compiled. */
+async function openEmailPreview(page: Page): Promise<Record<string, unknown>> {
+  await page.getByRole('button', { name: /^(Preview|View)$/ }).click();
+  const previewRequest = page.waitForRequest(request =>
+    matchesRoute(request, '/campaignbridge/v1/preview')
+  );
+  await page.getByRole('menuitem', { name: 'Email Preview' }).click();
+  const body = (await previewRequest).postDataJSON() as Record<string, unknown>;
+  await expect(page.locator('.cb-editor__preview-status')).toContainText(
+    'Preview up to date'
+  );
+  return body;
+}
+
+test('searches and applies a Google Font directly to one block', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.goto(NEW_TEMPLATE_PATH);
+  await waitForNativeEditor(page);
+  cleanupPostId = (await editorSnapshot(page)).postId;
+
+  const headingId = await insertSectionAndSelect(
+    page,
+    [['core/heading', { content: 'Direct Google Font' }]],
+    [0]
+  );
+  const applied = await applyGoogleFontToSelectedBlock(
+    page,
+    headingId,
+    'Aguafina Script'
   );
   expect(applied.registry.fonts).toEqual([
     expect.objectContaining({
@@ -358,40 +420,106 @@ test('searches and applies a Google Font directly to one block', async ({
     .locator(`[data-block="${headingId}"]`);
   await expect(heading).toHaveCSS('font-family', /Aguafina Script/);
   await expect
-    .poll(() =>
-      page
-        .frameLocator('iframe[name="editor-canvas"]')
-        .locator('head link[data-campaignbridge-editor-font]')
-        .evaluateAll(links =>
-          links.some(link =>
-            (
-              (link as HTMLLinkElement).dataset.campaignbridgeEditorFont ?? ''
-            ).includes('family=Aguafina+Script')
-          )
-        )
-    )
+    .poll(() => editorFontLinkLoaded(page, 'Aguafina Script'))
     .toBe(true);
 
-  await page.getByRole('button', { name: /^(Preview|View)$/ }).click();
-  const previewRequest = page.waitForRequest(request =>
-    matchesRoute(request, '/campaignbridge/v1/preview')
-  );
-  await page.getByRole('menuitem', { name: 'Email Preview' }).click();
-  const request = await previewRequest;
-  expect(request.postDataJSON()).toEqual(
+  const request = await openEmailPreview(page);
+  expect(request).toEqual(
     expect.objectContaining({
       content: expect.stringContaining(`"fontFamily":"${applied.slug}"`),
       design_fonts: expect.stringContaining('Aguafina Script'),
     })
-  );
-  await expect(page.locator('.cb-editor__preview-status')).toContainText(
-    'Preview up to date'
   );
   await expect(
     page.frameLocator('iframe[title="Email preview"]').getByRole('heading', {
       name: 'Direct Google Font',
     })
   ).toHaveCSS('font-family', /Aguafina Script/);
+});
+
+test('applies a per-block Google Font to the Core Button link', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.goto(NEW_TEMPLATE_PATH);
+  await waitForNativeEditor(page);
+  cleanupPostId = (await editorSnapshot(page)).postId;
+
+  const buttonId = await insertSectionAndSelect(
+    page,
+    [
+      ['core/paragraph', { content: 'Unchanged paragraph' }],
+      [
+        'core/buttons',
+        {},
+        [
+          [
+            'core/button',
+            { text: 'Direct Google Button', url: 'https://example.com/offer' },
+          ],
+        ],
+      ],
+    ],
+    [1, 0]
+  );
+  expect(await editorFontLinkLoaded(page, 'Aguafina Script')).toBe(false);
+
+  const applied = await applyGoogleFontToSelectedBlock(
+    page,
+    buttonId,
+    'Aguafina Script'
+  );
+  expect(applied.slug).toMatch(/^custom-[a-f0-9]{12}$/);
+  expect(applied.registry.fonts).toEqual([
+    expect.objectContaining({
+      name: 'Aguafina Script',
+      slug: applied.slug,
+      url: expect.stringContaining('family=Aguafina+Script'),
+    }),
+  ]);
+
+  const serialized = (await editorSnapshot(page)).content;
+  expect(serialized).toContain(
+    `<!-- wp:button {"fontFamily":"${applied.slug}"`
+  );
+  expect(serialized).not.toContain('Aguafina Script');
+
+  const canvas = page.frameLocator('iframe[name="editor-canvas"]');
+  await expect(
+    canvas.locator(`[data-block="${buttonId}"] .wp-block-button__link`)
+  ).toHaveCSS('font-family', /Aguafina Script/);
+  await expect(
+    canvas.locator('[data-type="core/paragraph"]', {
+      hasText: 'Unchanged paragraph',
+    })
+  ).not.toHaveCSS('font-family', /Aguafina Script/);
+  await expect
+    .poll(() => editorFontLinkLoaded(page, 'Aguafina Script'))
+    .toBe(true);
+
+  const request = await openEmailPreview(page);
+  expect(request).toEqual(
+    expect.objectContaining({
+      content: expect.stringContaining(
+        `<!-- wp:button {"fontFamily":"${applied.slug}"`
+      ),
+      design_fonts: expect.stringContaining('Aguafina Script'),
+    })
+  );
+
+  const preview = page.frameLocator('iframe[title="Email preview"]');
+  await expect(
+    preview.getByRole('link', { name: 'Direct Google Button' })
+  ).toHaveCSS('font-family', /Aguafina Script/);
+  await expect(
+    preview.locator(
+      'head link[rel="stylesheet"][href*="family=Aguafina+Script"]'
+    )
+  ).toHaveCount(1);
+  await expect(preview.getByText('Unchanged paragraph')).not.toHaveCSS(
+    'font-family',
+    /Aguafina Script/
+  );
 });
 
 test('native editor owns the template lifecycle and previews unsaved blocks', async ({
