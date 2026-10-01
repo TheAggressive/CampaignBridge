@@ -104,16 +104,16 @@ final class Editor_Design_Settings {
 		// control settings alone leaves those old lengths active in the canvas.
 		$declarations = array();
 		foreach ( $spacing as $preset ) {
-			$declarations[] = sprintf( '--wp--preset--spacing--%s:%s', $preset['slug'], $preset['size'] );
+			$declarations[] = sprintf( '--wp--preset--spacing--%s:%s', self::css_slug( $preset['slug'] ), $preset['size'] );
 		}
 		foreach ( $palette as $preset ) {
-			$declarations[] = sprintf( '--wp--preset--color--%s:%s', $preset['slug'], $preset['color'] );
+			$declarations[] = sprintf( '--wp--preset--color--%s:%s', self::css_slug( $preset['slug'] ), $preset['color'] );
 		}
 		foreach ( $font_sizes as $preset ) {
-			$declarations[] = sprintf( '--wp--preset--font-size--%s:%s', $preset['slug'], $preset['size'] );
+			$declarations[] = sprintf( '--wp--preset--font-size--%s:%s', self::css_slug( $preset['slug'] ), $preset['size'] );
 		}
 		foreach ( $fonts as $preset ) {
-			$declarations[] = sprintf( '--wp--preset--font-family--%s:%s', $preset['slug'], $preset['family'] );
+			$declarations[] = sprintf( '--wp--preset--font-family--%s:%s', self::css_slug( $preset['slug'] ), $preset['family'] );
 		}
 		$preset_rules       = self::preset_rules( $palette, $font_sizes, $fonts );
 		$styles             = isset( $settings['styles'] ) && is_array( $settings['styles'] ) ? $settings['styles'] : array();
@@ -171,22 +171,36 @@ final class Editor_Design_Settings {
 	private static function preset_rules( array $palette, array $font_sizes, array $fonts ): string {
 		$rules = array();
 		foreach ( $palette as $preset ) {
-			$slug     = (string) $preset['slug'];
+			$slug     = self::css_slug( (string) $preset['slug'] );
 			$variable = 'var(--wp--preset--color--' . $slug . ')';
 			$rules[]  = '.editor-styles-wrapper .has-' . $slug . '-color{color:' . $variable . '!important}';
 			$rules[]  = '.editor-styles-wrapper .has-' . $slug . '-background-color{background-color:' . $variable . '!important}';
 			$rules[]  = '.editor-styles-wrapper .has-' . $slug . '-border-color{border-color:' . $variable . '!important}';
 		}
 		foreach ( $font_sizes as $preset ) {
-			$slug    = (string) $preset['slug'];
+			$slug    = self::css_slug( (string) $preset['slug'] );
 			$rules[] = '.editor-styles-wrapper .has-' . $slug . '-font-size{font-size:var(--wp--preset--font-size--' . $slug . ')!important}';
 		}
 		foreach ( $fonts as $preset ) {
-			$slug    = (string) $preset['slug'];
+			$slug    = self::css_slug( (string) $preset['slug'] );
 			$rules[] = '.editor-styles-wrapper .has-' . $slug . '-font-family{font-family:var(--wp--preset--font-family--' . $slug . ')!important}';
 		}
 
 		return implode( '', $rules );
+	}
+
+	/**
+	 * Name a preset in CSS exactly as Core does for its classes and variables.
+	 *
+	 * Core kebab-cases preset slugs at letter/digit boundaries, so a block
+	 * using `custom-72cae0925f81` carries `has-custom-72-cae-0925-f-81-font-family`
+	 * and references `--wp--preset--font-family--custom-72-cae-0925-f-81`. The
+	 * stored slug itself is unchanged; only its CSS spelling follows Core.
+	 *
+	 * @param string $slug Stored preset slug.
+	 */
+	private static function css_slug( string $slug ): string {
+		return _wp_to_kebab_case( $slug );
 	}
 
 	/**
