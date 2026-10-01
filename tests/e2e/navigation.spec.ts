@@ -1,5 +1,8 @@
 import { expect, test } from './support/fixtures';
-import { dismissEditorWelcomeGuide } from './support/editor';
+import {
+  dismissEditorWelcomeGuide,
+  waitForInsertableCanvas,
+} from './support/editor';
 
 test('navigation links use native block state and serialize bounded controls', async ({
   page,
@@ -14,6 +17,7 @@ test('navigation links use native block state and serialize bounded controls', a
     );
   });
   await dismissEditorWelcomeGuide(page);
+  await waitForInsertableCanvas(page);
 
   const sectionId = await page.evaluate(() => {
     const wp = (globalThis as typeof globalThis & { wp: any }).wp;
