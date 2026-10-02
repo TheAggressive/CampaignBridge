@@ -13,9 +13,9 @@ foreach ( $files as $file ) {
 	}
 	$relative = substr( $file->getPathname(), strlen( $root ) + 1 );
 	$tokens   = token_get_all( (string) file_get_contents( $file->getPathname() ) );
-	// Campaign REST is a Delivery adapter: it may reach persistence and
-	// providers only through Campaign_Workflow.
-	if ( str_starts_with( $relative, 'includes/REST/Campaign' ) ) {
+	// Campaign and provider REST are Delivery adapters: they may reach
+	// persistence and providers only through workflows and Services factories.
+	if ( str_starts_with( $relative, 'includes/REST/Campaign' ) || str_starts_with( $relative, 'includes/REST/Provider' ) ) {
 		foreach ( $tokens as $token ) {
 			if ( ! is_array( $token ) || ! in_array( $token[0], array( T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED ), true ) ) {
 				continue;

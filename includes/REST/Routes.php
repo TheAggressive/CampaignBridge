@@ -75,6 +75,13 @@ class Routes extends Abstract_Rest_Controller {
 	private static Campaign_Routes $campaign_routes;
 
 	/**
+	 * Provider capability and discovery routes instance.
+	 *
+	 * @var Provider_Discovery_Routes
+	 */
+	private static Provider_Discovery_Routes $provider_discovery_routes;
+
+	/**
 	 * Initialize shared state.
 	 *
 	 * @return void
@@ -83,6 +90,8 @@ class Routes extends Abstract_Rest_Controller {
 		self::$preview_routes  = new Preview_Routes();
 		self::$form_controller = new Form_Rest_Controller();
 		self::$campaign_routes = new Campaign_Routes();
+
+		self::$provider_discovery_routes = new Provider_Discovery_Routes();
 
 		// Register AJAX handlers.
 		\add_action( 'wp_ajax_campaignbridge_evaluate_conditions', array( self::$form_controller, 'handle_ajax_evaluate_conditions' ) );
@@ -118,6 +127,8 @@ class Routes extends Abstract_Rest_Controller {
 		self::$preview_routes->register();
 
 		self::$campaign_routes->register();
+
+		self::$provider_discovery_routes->register();
 	}
 
 	/**
