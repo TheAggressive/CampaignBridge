@@ -261,6 +261,19 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
+	/** @return array<string, mixed> */
+	public static function provider_draft_result(): array {
+		return self::document(
+			'campaignbridge-campaign-provider-draft-result',
+			array(
+				'campaign'          => self::campaign(),
+				'remote'            => self::remote(),
+				'attempt'           => array_merge( self::attempt(), array( 'type' => array( 'object', 'null' ) ) ),
+				'idempotent_replay' => array( 'type' => 'boolean' ),
+			)
+		);
+	}
+
 	/**
 	 * The WordPress REST error envelope used by every campaign route.
 	 *
@@ -290,7 +303,63 @@ final class Campaign_Rest_Schema {
 							'minimum' => 1,
 						),
 						'diagnostics'     => self::diagnostics(),
+						'remote'          => self::remote(),
+						'attempt'         => self::attempt(),
+						'provider_error'  => array(
+							'type'                 => 'object',
+							'additionalProperties' => false,
+							'required'             => array( 'code', 'category', 'retryable' ),
+							'properties'           => array(
+								'code'      => array( 'type' => 'string' ),
+								'category'  => array( 'type' => 'string' ),
+								'retryable' => array( 'type' => 'boolean' ),
+							),
+						),
 					),
+				),
+			),
+		);
+	}
+
+	/** @return array<string, mixed> */
+	private static function remote(): array {
+		return array(
+			'type'                 => 'object',
+			'additionalProperties' => false,
+			'required'             => array( 'provider', 'remote_id', 'observed_state', 'observed_at' ),
+			'properties'           => array(
+				'provider'       => array(
+					'type'    => 'string',
+					'pattern' => self::IDENTIFIER_PATTERN,
+				),
+				'remote_id'      => array( 'type' => 'string' ),
+				'observed_state' => array(
+					'type'    => 'string',
+					'pattern' => '^[a-z0-9][a-z0-9_-]{0,31}$',
+				),
+				'observed_at'    => self::timestamp(),
+			),
+		);
+	}
+
+	/** @return array<string, mixed> */
+	private static function attempt(): array {
+		return array(
+			'type'                 => 'object',
+			'additionalProperties' => false,
+			'required'             => array( 'id', 'status', 'retryability' ),
+			'properties'           => array(
+				'id'           => array(
+					'type'    => 'string',
+					'pattern' => self::IDENTIFIER_PATTERN,
+				),
+				'status'       => array(
+					'type' => 'string',
+					'enum' => array( 'pending', 'succeeded', 'failed', 'unknown' ),
+				),
+				'retryability' => array(
+					'type' => 'string',
+					'enum' => array( 'unknown', 'retryable', 'not_retryable' ),
 				),
 			),
 		);

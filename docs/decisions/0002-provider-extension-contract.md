@@ -132,9 +132,27 @@ fields prove the field exists, because audience owners can rename or delete
 those fields. Audience custom merge fields stay provider-scoped and never
 become canonical tokens.
 
-Handoff (#77) must also neutralize author-typed literal provider syntax.
-CampaignBridge treats text such as `*|FNAME|*` as literal content, but
-Mailchimp would evaluate it as a merge tag once handed off.
+A mapping may declare the provider's own literal token syntax. Canonical
+content that already contains it fails translation, because the provider
+would evaluate author-typed text such as `*|FNAME|*` after handoff.
+
+**Remote drafts (#77).** `Provider_Draft_Gateway` creates and fills one
+remote draft and never schedules or sends. An adapter must not retry a
+non-idempotent create, and must classify every result as a `Draft_Outcome`:
+
+- `created`: the draft exists with the uploaded content;
+- `content_pending`: the draft exists and its ID is known, but the content
+  upload did not complete;
+- `failed`: the provider definitely created nothing;
+- `ambiguous`: the provider may have created a draft.
+
+A refusal reported before creation (validation, authentication,
+authorization, not found, conflict, rate limit) is definite. A timeout,
+transport loss, server error, or unreadable response is ambiguous.
+`Mailchimp_Draft_Gateway` sends `POST /campaigns` once, without retry, then
+uploads content with an idempotent `PUT`. Response bodies are read only for
+the draft ID. `Campaign_Draft_Handoff` owns the protocol around the gateway;
+see `campaign-workflows.md`.
 
 ## Ownership boundaries
 

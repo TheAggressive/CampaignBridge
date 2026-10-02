@@ -1,0 +1,106 @@
+<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
+// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+/**
+ * Provider-neutral remote draft request.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
+namespace CampaignBridge\Domain\Provider;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Everything a provider needs to create one draft from an approved artifact.
+ *
+ * Content is already translated into the provider's token syntax and comes
+ * only from the approved snapshot. `correlation` is a bounded label the
+ * adapter attaches to the remote draft so reconciliation can find it.
+ */
+final class Draft_Content {
+	/** Upper bound on uploaded HTML, in bytes. */
+	public const MAX_HTML_BYTES = 2097152;
+
+	private function __construct(
+		private readonly string $audience_id,
+		private readonly string $subject,
+		private readonly string $preview_text,
+		private readonly string $from_name,
+		private readonly string $reply_to,
+		private readonly string $html,
+		private readonly string $text,
+		private readonly string $fingerprint,
+		private readonly string $correlation
+	) {}
+
+	public static function create(
+		string $audience_id,
+		string $subject,
+		string $preview_text,
+		string $from_name,
+		string $reply_to,
+		string $html,
+		string $text,
+		string $fingerprint,
+		string $correlation
+	): self {
+		if ( '' === $subject || '' === $from_name || '' === $html ) {
+			throw new \InvalidArgumentException( 'A draft requires a subject, sender name, and HTML.' );
+		}
+		if ( false === filter_var( $reply_to, FILTER_VALIDATE_EMAIL ) ) {
+			throw new \InvalidArgumentException( 'Draft reply-to must be a valid email address.' );
+		}
+		if ( self::MAX_HTML_BYTES < strlen( $html ) || self::MAX_HTML_BYTES < strlen( $text ) ) {
+			throw new \InvalidArgumentException( 'Draft content exceeds the upload bound.' );
+		}
+		if ( 1 !== preg_match( '/^sha256:[0-9a-f]{64}$/', $fingerprint ) ) {
+			throw new \InvalidArgumentException( 'Draft fingerprint is invalid.' );
+		}
+		if ( 1 !== preg_match( '/^[A-Za-z0-9][A-Za-z0-9 _:-]{0,99}$/', $correlation ) ) {
+			throw new \InvalidArgumentException( 'Draft correlation label is invalid.' );
+		}
+
+		return new self( Discovery_Values::remote_id( $audience_id, 'Audience ID' ), $subject, $preview_text, $from_name, strtolower( $reply_to ), $html, $text, $fingerprint, $correlation );
+	}
+
+	public function audience_id(): string {
+		return $this->audience_id;
+	}
+
+	public function subject(): string {
+		return $this->subject;
+	}
+
+	public function preview_text(): string {
+		return $this->preview_text;
+	}
+
+	public function from_name(): string {
+		return $this->from_name;
+	}
+
+	public function reply_to(): string {
+		return $this->reply_to;
+	}
+
+	public function html(): string {
+		return $this->html;
+	}
+
+	public function text(): string {
+		return $this->text;
+	}
+
+	/** Fingerprint of the approved artifact this content was translated from. */
+	public function fingerprint(): string {
+		return $this->fingerprint;
+	}
+
+	public function correlation(): string {
+		return $this->correlation;
+	}
+}

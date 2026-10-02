@@ -11,6 +11,8 @@ namespace CampaignBridge\REST;
 
 use CampaignBridge\Domain\Campaign\Campaign;
 use CampaignBridge\Domain\Campaign\Campaign_Snapshot;
+use CampaignBridge\Domain\Campaign\Delivery_Attempt;
+use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Email\Compile_Result;
 use CampaignBridge\Domain\Email\Token\Token_Preview;
 
@@ -44,6 +46,33 @@ final class Campaign_Rest_Resource {
 			'fingerprint' => $snapshot->artifact()->fingerprint(),
 			'created_at'  => $snapshot->created_at(),
 			'envelope'    => self::envelope( $snapshot ),
+		);
+	}
+
+	/**
+	 * The normalized remote draft reference; never a provider payload.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function remote( Remote_Campaign_Reference $reference ): array {
+		return array(
+			'provider'       => $reference->provider(),
+			'remote_id'      => $reference->remote_id(),
+			'observed_state' => $reference->observed_state(),
+			'observed_at'    => $reference->observed_at(),
+		);
+	}
+
+	/**
+	 * The delivery attempt identity and its known outcome.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function attempt( Delivery_Attempt $attempt ): array {
+		return array(
+			'id'           => $attempt->id(),
+			'status'       => $attempt->status(),
+			'retryability' => $attempt->retryability(),
 		);
 	}
 

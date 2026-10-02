@@ -44,6 +44,9 @@ final class Mailchimp_Token_Mapper implements Provider_Token_Mapper {
 		'cb:campaign.unsubscribe_url' => array( '*|UNSUB|*', null ),
 	);
 
+	/** Mailchimp merge-tag syntax, which must never appear in canonical content. */
+	public const LITERAL_SYNTAX = '/\*\|[^|]*\|\*/';
+
 	public function map( Token_Registry $registry, string $audience_id, ?Discovery_Result $merge_fields ): Token_Mapping {
 		if (
 			null !== $merge_fields
@@ -81,6 +84,6 @@ final class Mailchimp_Token_Mapper implements Provider_Token_Mapper {
 			}
 		}
 
-		return Token_Mapping::create( 'mailchimp', $audience_id, $mapped, $unsupported, $registry );
+		return Token_Mapping::create( 'mailchimp', $audience_id, $mapped, $unsupported, $registry, self::LITERAL_SYNTAX );
 	}
 }

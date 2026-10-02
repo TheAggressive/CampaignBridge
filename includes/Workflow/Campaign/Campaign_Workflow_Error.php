@@ -26,6 +26,12 @@ final class Campaign_Workflow_Error {
 	public const PERSISTENCE_FAILED   = 'persistence_failed';
 	public const IDEMPOTENCY_CONFLICT = 'idempotency_conflict';
 
+	/** A prior remote mutation has an unknown outcome and must be reconciled first. */
+	public const RECONCILIATION_REQUIRED = 'reconciliation_required';
+
+	/** The provider definitely refused or could not complete the operation. */
+	public const PROVIDER_FAILED = 'provider_failed';
+
 	public function __construct(
 		private readonly string $code,
 		private readonly string $message
@@ -56,6 +62,8 @@ final class Campaign_Workflow_Error {
 			self::FORBIDDEN,
 			self::PERSISTENCE_FAILED,
 			self::IDEMPOTENCY_CONFLICT,
+			self::RECONCILIATION_REQUIRED,
+			self::PROVIDER_FAILED,
 		);
 	}
 }

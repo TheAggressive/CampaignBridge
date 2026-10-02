@@ -1,0 +1,424 @@
+<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Public operation names and typed signatures form the application contract.
+/**
+ * Idempotent remote draft handoff for approved campaigns.
+ *
+ * @package CampaignBridge
+ */
+
+declare(strict_types=1);
+
+namespace CampaignBridge\Workflow\Campaign;
+
+use CampaignBridge\Domain\Campaign\Audit_Context;
+use CampaignBridge\Domain\Campaign\Audit_Event;
+use CampaignBridge\Domain\Campaign\Audit_Event_Source;
+use CampaignBridge\Domain\Campaign\Campaign;
+use CampaignBridge\Domain\Campaign\Campaign_Snapshot;
+use CampaignBridge\Domain\Campaign\Campaign_Snapshot_Source;
+use CampaignBridge\Domain\Campaign\Campaign_Source;
+use CampaignBridge\Domain\Campaign\Campaign_State;
+use CampaignBridge\Domain\Campaign\Campaign_Transaction;
+use CampaignBridge\Domain\Campaign\Delivery_Attempt;
+use CampaignBridge\Domain\Campaign\Delivery_Attempt_Source;
+use CampaignBridge\Domain\Campaign\Delivery_Attempt_Status;
+use CampaignBridge\Domain\Campaign\Delivery_Operation;
+use CampaignBridge\Domain\Campaign\Provider_Error;
+use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
+use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference_Source;
+use CampaignBridge\Domain\Campaign\Retryability;
+use CampaignBridge\Domain\Email\Token\Token_Parser;
+use CampaignBridge\Domain\Email\Token\Token_Registry;
+use CampaignBridge\Domain\Provider\Discovery_Kind;
+use CampaignBridge\Domain\Provider\Draft_Content;
+use CampaignBridge\Domain\Provider\Draft_Outcome;
+use CampaignBridge\Domain\Provider\Provider_Capabilities;
+use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
+use CampaignBridge\Domain\Provider\Provider_Operation;
+use CampaignBridge\Domain\Provider\Provider_Token_Mapper;
+use CampaignBridge\Domain\Provider\Token_Mapping;
+use CampaignBridge\Workflow\Provider\Provider_Discovery_Service;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Creates exactly one remote draft from an approved campaign artifact.
+ *
+ * Protocol:
+ *
+ * 1. One draft per campaign and provider. An existing remote reference is a
+ *    replay; nothing new is created.
+ * 2. Write-ahead. A `pending` attempt is stored before the remote create, and
+ *    the remote draft carries the attempt ID so reconciliation can find it.
+ * 3. Never retry blindly. While any create attempt is `pending` or `unknown`,
+ *    further creates are refused with `reconciliation_required`.
+ * 4. Outcomes are recorded as known: created, definitely failed, or unknown.
+ * 5. A draft whose content upload failed is kept as `content_pending`; the
+ *    next request re-uploads content only, which is idempotent.
+ *
+ * Content comes only from the approved snapshot and its frozen envelope. A
+ * draft is never scheduled or sent here.
+ */
+final class Campaign_Draft_Handoff {
+	/** The remote draft exists with the approved content. */
+	public const OBSERVED_DRAFT = 'draft';
+
+	/** The remote draft exists but its content upload has not completed. */
+	public const OBSERVED_CONTENT_PENDING = 'content_pending';
+
+	private const ACTION = 'campaign_provider_draft';
+
+	public function __construct(
+		private readonly Campaign_Source $campaigns,
+		private readonly Campaign_Snapshot_Source $snapshots,
+		private readonly Remote_Campaign_Reference_Source $references,
+		private readonly Delivery_Attempt_Source $attempts,
+		private readonly Audit_Event_Source $audits,
+		private readonly Campaign_Transaction $transaction,
+		private readonly Campaign_Id_Generator $ids,
+		private readonly Campaign_Clock $clock,
+		private readonly Provider_Draft_Gateway $gateway,
+		private readonly Provider_Capabilities $capabilities,
+		private readonly Provider_Token_Mapper $tokens,
+		private readonly Provider_Discovery_Service $discovery
+	) {}
+
+	/**
+	 * Create, resume, or replay the remote draft for an approved campaign.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 */
+	public function create_draft( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Draft_Result {
+		$campaign = $this->campaigns->get( $campaign_id );
+		if ( null === $campaign ) {
+			return $this->refuse( Campaign_Workflow_Error::NOT_FOUND, 'Campaign was not found.', $actor, $campaign_id );
+		}
+		if ( ! $actor->can_approve( $campaign ) ) {
+			return $this->refuse( Campaign_Workflow_Error::FORBIDDEN, 'Campaign operation is not allowed.', $actor, $campaign_id, $campaign, 'denied' );
+		}
+		if ( '' === $idempotency_key || 191 < strlen( $idempotency_key ) ) {
+			return $this->refuse( Campaign_Workflow_Error::INVALID_INPUT, 'A bounded idempotency key is required.', $actor, $campaign_id, $campaign );
+		}
+		$provider = $this->gateway->slug();
+		$audience = $campaign->audience_reference();
+		if ( ! $this->capabilities->supports( Provider_Operation::CREATE_DRAFT ) || $provider !== $campaign->provider() || null === $audience ) {
+			return $this->refuse( Campaign_Workflow_Error::INVALID_INPUT, 'The campaign must target this provider and an audience before a draft can be created.', $actor, $campaign_id, $campaign );
+		}
+
+		$reference = $this->references->get( $campaign_id, $provider );
+		if ( null !== $reference && self::OBSERVED_DRAFT === $reference->observed_state() && Campaign_State::PROVIDER_DRAFT === $campaign->state() ) {
+			return Campaign_Draft_Result::success( $campaign, $reference, null, true );
+		}
+		if ( null === $reference ) {
+			$blocked = $this->unresolved_attempt( $campaign_id, $idempotency_key );
+			if ( null !== $blocked ) {
+				return $this->refuse( $blocked[0], $blocked[1], $actor, $campaign_id, $campaign, 'failure', $blocked[2] );
+			}
+		}
+		if ( Campaign_State::APPROVED !== $campaign->state() ) {
+			return $this->refuse( Campaign_Workflow_Error::INVALID_STATE, 'Only an approved campaign can become a provider draft.', $actor, $campaign_id, $campaign );
+		}
+		if ( $campaign->version() !== $expected_version ) {
+			return $this->refuse( Campaign_Workflow_Error::CONFLICT, 'Campaign version is stale.', $actor, $campaign_id, $campaign );
+		}
+		if ( null !== $reference && self::OBSERVED_DRAFT === $reference->observed_state() ) {
+			// The draft was created earlier but the campaign transition did not persist.
+			return $this->finalize( $actor, $campaign, $expected_version, $reference->remote_id(), null, $reference );
+		}
+
+		$attempt_id = null === $reference ? $this->ids->generate( 'attempt' ) : null;
+		$content    = $this->content( $campaign, $audience, $settings, $attempt_id ?? $reference->remote_id() );
+		if ( $content instanceof Campaign_Workflow_Error ) {
+			return $this->refuse( $content->code(), $content->message(), $actor, $campaign_id, $campaign );
+		}
+
+		if ( null !== $reference ) {
+			// Resume: the draft exists and only its idempotent content upload is outstanding.
+			$outcome = $this->gateway->upload_content( $settings, $reference->remote_id(), $content );
+
+			return Draft_Outcome::CREATED === $outcome->status()
+				? $this->finalize( $actor, $campaign, $expected_version, $reference->remote_id(), null, $reference )
+				: $this->provider_failure( $actor, $campaign, $reference, null, $outcome->error(), 'The provider draft exists but its content could not be uploaded. Repeat the request to resume.' );
+		}
+
+		$attempt = $this->attempt( (string) $attempt_id, $campaign_id, $idempotency_key, Delivery_Attempt_Status::PENDING, Retryability::UNKNOWN, null, null );
+		if ( ! $this->attempts->add( $attempt ) ) {
+			// A concurrent request claimed this key first; its outcome is not ours to assume.
+			return $this->refuse( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'Another draft request is already in progress for this campaign.', $actor, $campaign_id, $campaign );
+		}
+
+		$outcome = $this->gateway->create_draft( $settings, $content );
+
+		return match ( $outcome->status() ) {
+			Draft_Outcome::CREATED         => $this->finalize( $actor, $campaign, $expected_version, (string) $outcome->remote_id(), $attempt, null ),
+			Draft_Outcome::CONTENT_PENDING => $this->content_pending( $actor, $campaign, $attempt, (string) $outcome->remote_id(), $outcome->error() ),
+			Draft_Outcome::FAILED          => $this->definite_failure( $actor, $campaign, $attempt, $outcome->error() ),
+			default                        => $this->ambiguous( $actor, $campaign, $attempt, $outcome->error() ),
+		};
+	}
+
+	/**
+	 * Build provider content from the approved snapshot only.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 */
+	private function content( Campaign $campaign, string $audience, array $settings, string $correlation_id ): Draft_Content|Campaign_Workflow_Error {
+		$snapshot = ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
+		if ( $snapshot instanceof Campaign_Workflow_Error ) {
+			return $snapshot;
+		}
+		$envelope = $snapshot->envelope();
+		$problems = null === $envelope ? array( 'envelope_missing' ) : $envelope->problems();
+		if ( null === $envelope || array() !== $problems ) {
+			return new Campaign_Workflow_Error(
+				Campaign_Workflow_Error::VALIDATION_FAILED,
+				'The approved envelope is incomplete (' . implode( ', ', $problems ) . '). Update the template, snapshot, and approve again.'
+			);
+		}
+
+		$registry = Token_Registry::default();
+		$mapping  = $this->tokens->map( $registry, $audience, $this->discovery->cached( Discovery_Kind::MERGE_FIELDS, $settings, $audience )->result() );
+		$fields   = array(
+			'html'         => $snapshot->artifact()->html(),
+			'text'         => $snapshot->artifact()->text(),
+			'subject'      => $envelope->subject(),
+			'preview_text' => $envelope->preview_text(),
+		);
+		foreach ( $fields as $name => $value ) {
+			$translation = $mapping->translate( $value, $registry, new Token_Parser() );
+			if ( ! $translation->is_complete() ) {
+				return new Campaign_Workflow_Error( Campaign_Workflow_Error::VALIDATION_FAILED, $this->translation_problem( $name, $translation->has_literal_conflict(), $translation->unmapped(), $mapping ) );
+			}
+			$fields[ $name ] = $translation->content();
+		}
+
+		try {
+			return Draft_Content::create(
+				$audience,
+				$fields['subject'],
+				$fields['preview_text'],
+				$envelope->from_name(),
+				$envelope->from_email(),
+				$fields['html'],
+				$fields['text'],
+				$snapshot->artifact()->fingerprint(),
+				'CampaignBridge ' . $correlation_id
+			);
+		} catch ( \InvalidArgumentException ) {
+			return new Campaign_Workflow_Error( Campaign_Workflow_Error::INVALID_INPUT, 'The approved artifact cannot be sent to this provider.' );
+		}
+	}
+
+	/** @param array<int, string> $unmapped Canonical tokens without a provider representation. */
+	private function translation_problem( string $field, bool $literal, array $unmapped, Token_Mapping $mapping ): string {
+		if ( $literal ) {
+			return sprintf( 'The approved %s contains literal provider merge syntax, which the provider would evaluate. Remove it, snapshot, and approve again.', $field );
+		}
+		if ( array() === $unmapped ) {
+			return sprintf( 'The approved %s contains tokens that could not be read.', $field );
+		}
+		$reasons = array_unique( array_intersect_key( $mapping->unsupported(), array_flip( $unmapped ) ) );
+
+		return in_array( Token_Mapping::REASON_MERGE_FIELDS_INCOMPLETE, $reasons, true )
+			? sprintf( 'The approved %s uses %s, but this audience\'s merge fields have not been fully discovered. Refresh merge fields and try again.', $field, implode( ', ', $unmapped ) )
+			: sprintf( 'The approved %s uses %s, which this audience cannot substitute.', $field, implode( ', ', $unmapped ) );
+	}
+
+	/**
+	 * Refuse a new create while an earlier one is unresolved or already settled for this key.
+	 *
+	 * @return array{0: string, 1: string, 2: Delivery_Attempt}|null
+	 */
+	private function unresolved_attempt( string $campaign_id, string $idempotency_key ): ?array {
+		$candidates = $this->attempts->for_campaign( $campaign_id, 50 );
+		$same_key   = $this->attempts->find_idempotency( $campaign_id, Delivery_Operation::CREATE_DRAFT, $idempotency_key );
+		if ( null !== $same_key ) {
+			$candidates[] = $same_key;
+		}
+		foreach ( $candidates as $attempt ) {
+			if ( Delivery_Operation::CREATE_DRAFT !== $attempt->operation() ) {
+				continue;
+			}
+			if ( in_array( $attempt->status(), array( Delivery_Attempt_Status::PENDING, Delivery_Attempt_Status::UNKNOWN, Delivery_Attempt_Status::SUCCEEDED ), true ) ) {
+				return array( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'An earlier draft request has an unconfirmed outcome and must be reconciled before another draft is created.', $attempt );
+			}
+		}
+
+		return null === $same_key
+			? null
+			: array( Campaign_Workflow_Error::PROVIDER_FAILED, 'This idempotency key belongs to a draft request that failed. Use a new key to try again.', $same_key );
+	}
+
+	/** Record the created draft and move the campaign to provider_draft. */
+	private function finalize( Campaign_Actor $actor, Campaign $campaign, int $expected_version, string $remote_id, ?Delivery_Attempt $attempt, ?Remote_Campaign_Reference $existing ): Campaign_Draft_Result {
+		$reference = $this->reference( $campaign->id(), $remote_id, self::OBSERVED_DRAFT );
+		$succeeded = null === $attempt ? null : $this->attempt( $attempt->id(), $campaign->id(), (string) $attempt->idempotency_key(), Delivery_Attempt_Status::SUCCEEDED, Retryability::NOT_RETRYABLE, $remote_id, $attempt->created_at() );
+		$after     = $campaign->transition_to( Campaign_State::PROVIDER_DRAFT, $this->clock->now() );
+		$record    = fn (): bool => ( null === $existing ? $this->references->add( $reference ) : $this->references->update_observation( $reference ) )
+			&& ( null === $succeeded || $this->attempts->update_result( $succeeded ) );
+
+		$written = $this->transaction->run(
+			fn (): bool => $record()
+				&& $this->campaigns->compare_and_swap( $after, $expected_version )
+				&& $this->audits->add( $this->event( $actor, $campaign->id(), 'success', $this->audit_context( $campaign, $after, $remote_id, $attempt ) ) )
+		);
+		if ( $written ) {
+			return Campaign_Draft_Result::success( $after, $reference, $succeeded, false );
+		}
+
+		// The remote draft exists. Its identity must survive even when the campaign changed concurrently.
+		$kept    = $this->transaction->run(
+			fn (): bool => $record()
+				&& $this->audits->add( $this->event( $actor, $campaign->id(), 'failure', array_merge( $this->audit_context( $campaign, $campaign, $remote_id, $attempt ), array( 'error_code' => Campaign_Workflow_Error::CONFLICT ) ) ) )
+		);
+		$current = $this->campaigns->get( $campaign->id() ) ?? $campaign;
+
+		return $kept
+			? Campaign_Draft_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::CONFLICT, 'The provider draft was created, but the campaign changed concurrently. Repeat the request with the current version to finish.' ), $current, $reference, $succeeded )
+			: Campaign_Draft_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'The provider draft was created but could not be recorded. Reconcile before creating another draft.' ), $current, null, $attempt );
+	}
+
+	private function content_pending( Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, string $remote_id, ?Provider_Error $error ): Campaign_Draft_Result {
+		$reference = $this->reference( $campaign->id(), $remote_id, self::OBSERVED_CONTENT_PENDING );
+		$failed    = $this->attempt( $attempt->id(), $campaign->id(), (string) $attempt->idempotency_key(), Delivery_Attempt_Status::FAILED, Retryability::RETRYABLE, $remote_id, $attempt->created_at() );
+		$kept      = $this->transaction->run( fn (): bool => $this->references->add( $reference ) && $this->attempts->update_result( $failed ) );
+		if ( ! $kept ) {
+			$this->audit( $actor, $campaign, 'unknown', $error, $attempt );
+
+			return Campaign_Draft_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'The provider draft was created but could not be recorded. Reconcile before creating another draft.' ), $campaign, null, $attempt, $error );
+		}
+
+		return $this->provider_failure( $actor, $campaign, $reference, $failed, $error, 'The provider draft was created but its content could not be uploaded. Repeat the request to resume.' );
+	}
+
+	private function definite_failure( Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, ?Provider_Error $error ): Campaign_Draft_Result {
+		$failed = $this->attempt(
+			$attempt->id(),
+			$campaign->id(),
+			(string) $attempt->idempotency_key(),
+			Delivery_Attempt_Status::FAILED,
+			null !== $error && $error->is_retryable() ? Retryability::RETRYABLE : Retryability::NOT_RETRYABLE,
+			null,
+			$attempt->created_at()
+		);
+		if ( ! $this->attempts->update_result( $failed ) ) {
+			// The provider refused, but that could not be recorded: the pending attempt blocks further creates.
+			$this->audit( $actor, $campaign, 'unknown', $error, $attempt );
+
+			return Campaign_Draft_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'The draft request outcome could not be recorded. Reconcile before creating another draft.' ), $campaign, null, $attempt, $error );
+		}
+
+		return $this->provider_failure( $actor, $campaign, null, $failed, $error, 'The provider refused the draft. No draft was created.' );
+	}
+
+	private function ambiguous( Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, ?Provider_Error $error ): Campaign_Draft_Result {
+		$unknown = $this->attempt( $attempt->id(), $campaign->id(), (string) $attempt->idempotency_key(), Delivery_Attempt_Status::UNKNOWN, Retryability::UNKNOWN, null, $attempt->created_at() );
+		$stored  = $this->attempts->update_result( $unknown );
+		$this->audit( $actor, $campaign, 'unknown', $error, $attempt );
+
+		return Campaign_Draft_Result::failure(
+			new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'The provider did not confirm whether the draft was created. It will not be retried automatically; reconcile before creating another draft.' ),
+			$campaign,
+			null,
+			$stored ? $unknown : $attempt,
+			$error
+		);
+	}
+
+	private function provider_failure( Campaign_Actor $actor, Campaign $campaign, ?Remote_Campaign_Reference $reference, ?Delivery_Attempt $attempt, ?Provider_Error $error, string $message ): Campaign_Draft_Result {
+		$this->audit( $actor, $campaign, 'failure', $error, $attempt );
+
+		return Campaign_Draft_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::PROVIDER_FAILED, $message ), $campaign, $reference, $attempt, $error );
+	}
+
+	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null ): Campaign_Draft_Result {
+		try {
+			$this->audits->add( $this->event( $actor, $campaign_id, $result, array( 'error_code' => $code ) ) );
+		} catch ( \InvalidArgumentException ) {
+			// A malformed external identifier cannot become an unsafe audit record.
+			unset( $result );
+		}
+
+		return Campaign_Draft_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null, $attempt );
+	}
+
+	private function audit( Campaign_Actor $actor, Campaign $campaign, string $result, ?Provider_Error $error, ?Delivery_Attempt $attempt ): void {
+		$this->audits->add(
+			$this->event(
+				$actor,
+				$campaign->id(),
+				$result,
+				array(
+					'provider'       => $this->gateway->slug(),
+					'attempt_id'     => $attempt?->id(),
+					'error_category' => $error?->category(),
+					'error_code'     => $error?->code(),
+				)
+			)
+		);
+	}
+
+	/** @return array<string, mixed> */
+	private function audit_context( Campaign $before, Campaign $after, string $remote_id, ?Delivery_Attempt $attempt ): array {
+		return array(
+			'provider'    => $this->gateway->slug(),
+			'remote_id'   => $remote_id,
+			'attempt_id'  => $attempt?->id(),
+			'snapshot_id' => $before->active_snapshot_id(),
+			'from_state'  => $before->state(),
+			'to_state'    => $after->state(),
+		);
+	}
+
+	/** @param array<string, mixed> $context Safe audit context. */
+	private function event( Campaign_Actor $actor, string $campaign_id, string $result, array $context ): Audit_Event {
+		return Audit_Event::from_array(
+			array(
+				'schema_version' => Audit_Event::SCHEMA_VERSION,
+				'id'             => $this->ids->generate( 'audit' ),
+				'actor_user_id'  => $actor->user_id(),
+				'action'         => self::ACTION,
+				'target_type'    => 'campaign',
+				'target_id'      => $campaign_id,
+				'result'         => $result,
+				'context'        => Audit_Context::from_array( $context )->to_array(),
+				'created_at'     => $this->clock->now(),
+			)
+		);
+	}
+
+	private function reference( string $campaign_id, string $remote_id, string $state ): Remote_Campaign_Reference {
+		return Remote_Campaign_Reference::from_array(
+			array(
+				'schema_version' => Remote_Campaign_Reference::SCHEMA_VERSION,
+				'campaign_id'    => $campaign_id,
+				'provider'       => $this->gateway->slug(),
+				'remote_id'      => $remote_id,
+				'observed_state' => $state,
+				'cursor'         => null,
+				'observed_at'    => $this->clock->now(),
+				'reconciled_at'  => null,
+			)
+		);
+	}
+
+	private function attempt( string $id, string $campaign_id, string $key, string $status, string $retryability, ?string $correlation, ?string $created_at ): Delivery_Attempt {
+		$now = $this->clock->now();
+
+		return Delivery_Attempt::from_array(
+			array(
+				'schema_version'     => Delivery_Attempt::SCHEMA_VERSION,
+				'id'                 => $id,
+				'campaign_id'        => $campaign_id,
+				'operation'          => Delivery_Operation::CREATE_DRAFT,
+				'idempotency_key'    => $key,
+				'status'             => $status,
+				'retryability'       => $retryability,
+				'remote_correlation' => $correlation,
+				'created_at'         => $created_at ?? $now,
+				'updated_at'         => $now,
+			)
+		);
+	}
+}

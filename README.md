@@ -12,9 +12,10 @@ content before it reaches a provider.
 
 > **Product status:** The secure WordPress foundation, template/compiler,
 > durable campaign persistence, provider-neutral local campaign workflows, and
-> their stable REST contracts are present. A complete campaign operator UI and
-> provider draft, delivery, scheduling, reconciliation, and reporting remain
-> roadmap work. See
+> their stable REST contracts are present, along with Mailchimp discovery and
+> idempotent creation of a Mailchimp draft from an approved campaign. A
+> complete campaign operator UI and provider test delivery, scheduling,
+> sending, reconciliation, and reporting remain roadmap work. See
 > [ROADMAP.md](ROADMAP.md) for the product contract and delivery plan.
 
 ## What is available now
@@ -42,9 +43,11 @@ content before it reaches a provider.
 - Capability-protected REST routes used by the editor and admin screens.
 - Encrypted storage for provider credentials.
 
-CampaignBridge does not yet provide a complete campaign operator UI, and it
-does not create provider campaign drafts, send tests, schedule, send, cancel,
-reconcile, or report on provider campaigns.
+CampaignBridge can create one Mailchimp draft from an approved campaign through
+its REST API. It does not yet provide a complete campaign operator UI, and it
+does not send tests, schedule, send, cancel, reconcile, or report on provider
+campaigns. A draft whose creation could not be confirmed must currently be
+resolved manually (see [docs/runbook.md](docs/runbook.md)).
 
 ## Current workflow
 

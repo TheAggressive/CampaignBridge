@@ -29,7 +29,8 @@ final class Token_Translation {
 	public function __construct(
 		private readonly string $content,
 		private readonly array $unmapped,
-		private readonly array $parse_codes
+		private readonly array $parse_codes,
+		private readonly bool $literal_conflict = false
 	) {}
 
 	public function content(): string {
@@ -46,7 +47,15 @@ final class Token_Translation {
 		return $this->parse_codes;
 	}
 
+	/**
+	 * Whether the canonical content already contained the provider's own
+	 * token syntax, which the provider would evaluate after handoff.
+	 */
+	public function has_literal_conflict(): bool {
+		return $this->literal_conflict;
+	}
+
 	public function is_complete(): bool {
-		return array() === $this->unmapped && array() === $this->parse_codes;
+		return array() === $this->unmapped && array() === $this->parse_codes && ! $this->literal_conflict;
 	}
 }

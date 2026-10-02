@@ -11,7 +11,9 @@ namespace CampaignBridge\REST;
 
 use CampaignBridge\Core\Campaign_Authorizer;
 use CampaignBridge\Core\Capabilities;
+use CampaignBridge\Services\Campaign\Campaign_Draft_Handoff_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Workflow_Factory;
+use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 use CampaignBridge\Workflow\Campaign\Campaign_Actor;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
@@ -121,6 +123,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		$this->register_action( '/revoke-approval', 'revoke_approval', array(), true );
 		$this->register_action( '/archive', 'archive_campaign', array(), true );
 		$this->register_action( '/duplicate', 'duplicate_campaign', array( 'idempotency_key' => Campaign_Rest_Schema::idempotency_key() ), false, 'duplicate_result' );
+		$this->register_action( '/provider-draft', 'create_provider_draft', array( 'idempotency_key' => Campaign_Rest_Schema::idempotency_key() ), true, 'provider_draft_result', 'can_approve_campaigns' );
 	}
 
 	/** A useful coarse gate; exact campaign/template authorization remains in the workflow. */
@@ -324,6 +327,63 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 			new WP_REST_Response(
 				array(
 					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'idempotent_replay' => $result->is_idempotent_replay(),
+				),
+				$result->is_idempotent_replay() ? 200 : Rest_Constants::HTTP_CREATED
+			)
+		);
+	}
+
+	/**
+	 * Create, resume, or replay the campaign's remote provider draft.
+	 *
+	 * The provider comes from the campaign's own targeting. Credentials are
+	 * decrypted for this one call and never returned. This never schedules or
+	 * sends.
+	 */
+	public function create_provider_draft( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$limited = $this->rate_limit( 'campaign_provider_draft', self::EXPENSIVE_LIMIT );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
+		}
+
+		$actor  = $this->actor();
+		$loaded = $this->workflow->get( $actor, $this->campaign_id( $request ) );
+		if ( ! $loaded->is_success() || null === $loaded->campaign() ) {
+			return Campaign_Rest_Errors::from_result( $loaded );
+		}
+		$provider = $loaded->campaign()->provider();
+		$handoff  = null === $provider ? null : Campaign_Draft_Handoff_Factory::create( $provider );
+		if ( null === $provider || null === $handoff ) {
+			return new WP_Error(
+				'campaignbridge_campaign_invalid_input',
+				__( 'The campaign must target a provider that supports remote drafts.', 'campaignbridge' ),
+				array( 'status' => Rest_Constants::HTTP_BAD_REQUEST )
+			);
+		}
+
+		$settings = Provider_Discovery_Factory::settings( $provider );
+		$result   = $handoff->create_draft(
+			$actor,
+			$this->campaign_id( $request ),
+			$this->expected_version( $request ),
+			(string) $request->get_param( 'idempotency_key' ),
+			$settings
+		);
+		unset( $settings );
+
+		$campaign  = $result->campaign();
+		$reference = $result->reference();
+		if ( ! $result->is_success() || null === $campaign || null === $reference ) {
+			return Campaign_Rest_Errors::from_draft( $result );
+		}
+
+		return $this->no_store(
+			new WP_REST_Response(
+				array(
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'remote'            => Campaign_Rest_Resource::remote( $reference ),
+					'attempt'           => null === $result->attempt() ? null : Campaign_Rest_Resource::attempt( $result->attempt() ),
 					'idempotent_replay' => $result->is_idempotent_replay(),
 				),
 				$result->is_idempotent_replay() ? 200 : Rest_Constants::HTTP_CREATED

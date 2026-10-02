@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\REST;
 
+use CampaignBridge\Workflow\Campaign\Campaign_Draft_Result;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Result;
 use WP_Error;
@@ -39,6 +40,41 @@ final class Campaign_Rest_Errors {
 			$error->message(),
 			$data
 		);
+	}
+
+	/**
+	 * Convert a failed draft handoff into the same public envelope.
+	 *
+	 * After a partial or ambiguous provider outcome the envelope also reports
+	 * what already exists: the remote reference and the attempt, plus the
+	 * normalized provider error. Raw provider detail is never included.
+	 */
+	public static function from_draft( Campaign_Draft_Result $result ): WP_Error {
+		$error = $result->error();
+		if ( null === $error ) {
+			return self::unexpected();
+		}
+
+		$data = array( 'status' => self::status( $error ) );
+		if ( Campaign_Workflow_Error::CONFLICT === $error->code() && null !== $result->campaign() ) {
+			$data['current_version'] = $result->campaign()->version();
+		}
+		if ( null !== $result->reference() ) {
+			$data['remote'] = Campaign_Rest_Resource::remote( $result->reference() );
+		}
+		if ( null !== $result->attempt() ) {
+			$data['attempt'] = Campaign_Rest_Resource::attempt( $result->attempt() );
+		}
+		$provider = $result->provider_error();
+		if ( null !== $provider ) {
+			$data['provider_error'] = array(
+				'code'      => $provider->code(),
+				'category'  => $provider->category(),
+				'retryable' => $provider->is_retryable(),
+			);
+		}
+
+		return new WP_Error( 'campaignbridge_campaign_' . $error->code(), $error->message(), $data );
 	}
 
 	/** Convert a collection failure into the same public envelope. */
@@ -73,7 +109,9 @@ final class Campaign_Rest_Errors {
 			Campaign_Workflow_Error::CONFLICT,
 			Campaign_Workflow_Error::MISSING_SNAPSHOT,
 			Campaign_Workflow_Error::APPROVAL_NOT_ALLOWED,
-			Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT => Rest_Constants::HTTP_CONFLICT,
+			Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT,
+			Campaign_Workflow_Error::RECONCILIATION_REQUIRED => Rest_Constants::HTTP_CONFLICT,
+			Campaign_Workflow_Error::PROVIDER_FAILED => Rest_Constants::HTTP_BAD_GATEWAY,
 			default => Rest_Constants::HTTP_INTERNAL_SERVER_ERROR,
 		};
 	}
