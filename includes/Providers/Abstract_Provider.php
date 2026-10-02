@@ -20,6 +20,7 @@ namespace CampaignBridge\Providers;
 use CampaignBridge\Domain\Campaign\Connection_Result;
 use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
+use CampaignBridge\Domain\Provider\Provider_Capabilities;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -159,6 +160,18 @@ abstract class Abstract_Provider implements Provider_Interface {
 	 */
 	public function get_capabilities(): array {
 		return $this->capabilities;
+	}
+
+	/**
+	 * Validated, explicit capability advertisement.
+	 *
+	 * Rejects unknown operation names and non-boolean flags, so a provider
+	 * can never advertise an operation that does not exist.
+	 *
+	 * @return Provider_Capabilities Every known operation, supported or not.
+	 */
+	public function capabilities(): Provider_Capabilities {
+		return Provider_Capabilities::from_flags( $this->slug(), $this->get_capabilities() );
 	}
 
 	/**

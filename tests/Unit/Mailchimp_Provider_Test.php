@@ -105,7 +105,10 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 		self::assertTrue( $capabilities['verify_connection'] );
 		self::assertFalse( $capabilities['discover_template_sections'] );
 		self::assertTrue( $capabilities['discover_audiences'] );
+		self::assertTrue( $capabilities['discover_merge_fields'] );
+		self::assertFalse( $capabilities['create_draft'] );
 		self::assertFalse( $capabilities['schedule'] );
+		self::assertFalse( $capabilities['cancel'] );
 		self::assertFalse( $capabilities['reports'] );
 	}
 
@@ -114,7 +117,7 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 	 */
 	public function test_audiences_are_normalized_for_the_admin_ui(): void {
 		$this->http_filter = static function ( mixed $preempt, array $args, string $url ): array {
-			self::assertSame( 'https://us20.api.mailchimp.com/3.0/lists?count=1000&fields=lists.id,lists.name,total_items', $url );
+			self::assertSame( 'https://us20.api.mailchimp.com/3.0/lists?count=1000&offset=0&fields=lists.id%2Clists.name%2Clists.stats.member_count%2Clists.campaign_defaults.from_name%2Clists.campaign_defaults.from_email%2Ctotal_items', $url );
 			return array(
 				'headers'  => array(),
 				'body'     => '{"lists":[{"id":"abc123","name":"Customers"},{"id":"def456","name":"Newsletter"}],"total_items":2}',
