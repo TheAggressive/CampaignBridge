@@ -21,6 +21,10 @@ use CampaignBridge\Providers\Mailchimp_Provider;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Theme_Brand_Asset_Reader;
 use CampaignBridge\Repository\Theme_Style_Reader;
+use CampaignBridge\Domain\Campaign\Provider_Error_Category;
+use CampaignBridge\Domain\Provider\Discovered_Audience;
+use CampaignBridge\Domain\Provider\Discovery_Kind;
+use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 
 /**
  * Settings Controller class.
@@ -153,51 +157,44 @@ class Settings_Controller {
 	}
 
 	/**
-	 * Get cached, normalized Mailchimp audience choices.
+	 * Get normalized Mailchimp audience choices through the discovery service.
+	 *
+	 * Uses the cached list when present. Only when nothing is cached does
+	 * viewing connection settings explicitly refresh once from Mailchimp, so
+	 * this screen never creates a second cache or audience request path.
 	 *
 	 * @param bool $connected Whether the stored credential was verified.
 	 * @return array{options: array<string, string>, error: string}
 	 */
 	private function get_mailchimp_audiences( bool $connected ): array {
-		if ( ! $connected ) {
+		$service = Provider_Discovery_Factory::service( 'mailchimp' );
+		if ( ! $connected || null === $service ) {
 			return array(
 				'options' => array(),
 				'error'   => '',
 			);
 		}
 
-		$connection = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' );
-		$stored_key = $connection ? $connection->api_key() : '';
-		try {
-			$api_key = '' !== $stored_key ? Encryption::decrypt( $stored_key ) : '';
-		} catch ( \Throwable $error ) {
-			return array(
-				'options' => array(),
-				'error'   => __( 'Reconnect Mailchimp to load audiences.', 'campaignbridge' ),
-			);
+		$settings = Provider_Discovery_Factory::settings( 'mailchimp' );
+		$lookup   = $service->cached( Discovery_Kind::AUDIENCES, $settings );
+		if ( null === $lookup->result() && null === $lookup->error() ) {
+			$lookup = $service->refresh( Discovery_Kind::AUDIENCES, $settings );
 		}
+		unset( $settings );
 
-		$cache_key = 'mailchimp_audiences_' . hash( 'sha256', $api_key );
-		$cached    = Storage::get_transient( $cache_key );
-		if ( is_array( $cached ) ) {
-			return array(
-				'options' => $cached,
-				'error'   => '',
-			);
+		$options = array();
+		foreach ( $lookup->result()?->items() ?? array() as $audience ) {
+			if ( $audience instanceof Discovered_Audience ) {
+				$options[ $audience->id() ] = $audience->name();
+			}
 		}
+		$error = $lookup->error();
 
-		$result = ( new Mailchimp_Provider() )->get_audiences( array( 'api_key' => $api_key ) );
-		if ( is_wp_error( $result ) ) {
-			return array(
-				'options' => array(),
-				'error'   => $result->get_error_message(),
-			);
-		}
-
-		Storage::set_transient( $cache_key, $result, 15 * MINUTE_IN_SECONDS );
 		return array(
-			'options' => $result,
-			'error'   => '',
+			'options' => $options,
+			'error'   => null === $error
+				? ''
+				: ( Provider_Error_Category::VALIDATION === $error->category() ? __( 'Reconnect Mailchimp to load audiences.', 'campaignbridge' ) : $error->message() ),
 		);
 	}
 

@@ -57,6 +57,7 @@ class Rest_Constants {
 	public const HTTP_NOT_FOUND             = 404;
 	public const HTTP_FORBIDDEN             = 403;
 	public const HTTP_CONFLICT              = 409;
+	public const HTTP_BAD_GATEWAY           = 502;
 
 	/**
 	 * Query defaults for posts endpoint.

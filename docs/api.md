@@ -1,6 +1,6 @@
 # CampaignBridge REST API
 
-The API namespace is `campaignbridge/v1`. Routes are registered in `includes/REST/Routes.php`, `includes/REST/Brand_Kit_Routes.php`, `includes/REST/Preview_Routes.php`, and `includes/REST/Campaign_Routes.php`.
+The API namespace is `campaignbridge/v1`. Routes are registered in `includes/REST/Routes.php`, `includes/REST/Brand_Kit_Routes.php`, `includes/REST/Preview_Routes.php`, `includes/REST/Campaign_Routes.php`, and `includes/REST/Provider_Discovery_Routes.php`.
 
 Email templates use the core `/wp/v2/cb_templates` routes and their `/revisions` and `/autosaves` sub-routes for create, save, publish, autosave, revision listing, revision fetching, and duplication; CampaignBridge adds no parallel template persistence endpoints. Revision restore fetches one core revision and applies its editable fields as unsaved core-data edits; the operator must explicitly save to change the canonical template. The `cb_templates` post type maps its post capabilities, including create and publish, to `campaignbridge_edit_templates`, and every registered template meta key's REST `auth_callback` requires the same capability; generic `edit_posts` does not grant template access. The editor pages revision history through the core revisions collection using `X-WP-Total` and `X-WP-TotalPages`, excluding the template's autosave IDs in the request. Duplication creates a new draft through the core create route with the saved title, content, and only the meta keys returned by `Post_Type_Email_Template::get_duplicable_meta_keys()`. If a core create fails after inserting the template, the inserted template is deleted, so a failed create leaves nothing behind.
 
@@ -253,6 +253,77 @@ Limits are per authenticated user per 60-second window and use the shared
 - 30 per window: each versioned lifecycle mutation (template, targeting,
   submit, approve, revoke-approval, archive).
 - Unlimited: reads (`GET`), which are bounded by pagination instead.
+
+## Provider capabilities and discovery
+
+`includes/REST/Provider_Discovery_Routes.php` exposes provider capabilities
+and discovered targeting references. It wraps
+`Workflow\Provider\Provider_Discovery_Service` (see ADR 0002). Only
+providers with a discovery adapter are served (currently `mailchimp`).
+Others return `404 campaignbridge_provider_not_found`.
+
+| Method | Route | Remote call |
+| --- | --- | --- |
+| `GET` | `/providers/{provider}/capabilities` | No |
+| `GET` | `/providers/{provider}/discovery/{kind}` | No: reads the cache only |
+| `POST` | `/providers/{provider}/discovery/{kind}/refresh` | Yes: the only remote path |
+
+- `kind` is one of `audiences`, `merge_fields`, or `segments`.
+- `merge_fields` and `segments` require `audience` (an opaque ID matching
+  `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`). `audiences` must omit it. A scope
+  mismatch returns `400 campaignbridge_discovery_invalid_scope`.
+- Every route requires authentication plus `campaignbridge_create_campaigns`,
+  `campaignbridge_manage`, or `campaignbridge_manage_connections`.
+- Refresh is limited to 10 requests per user per 60 seconds. Cache reads are
+  not rate-limited.
+- Credentials are decrypted server-side for one call and never returned.
+- Every successful response sends `Cache-Control: no-store`.
+
+`capabilities` returns `{ provider, operations }`, where `operations` maps
+every known operation to `true` or `false`.
+
+A discovery response is:
+
+```json
+{
+  "provider": "mailchimp",
+  "kind": "audiences",
+  "audience": null,
+  "supported": true,
+  "source": "cache",
+  "stale": false,
+  "fetched_at": "2026-10-01T12:00:00Z",
+  "complete": true,
+  "items": [
+    { "id": "abc123", "name": "Customers", "member_count": 12,
+      "default_sender": { "from_name": "Example Shop", "from_email": "news@example.com" } }
+  ],
+  "error": null
+}
+```
+
+- `source` is `remote` after a successful refresh, `cache` for a cached
+  list, or `none` when nothing is cached.
+- `stale` is `true` once a list is older than 15 minutes, or when it is
+  returned after a failed refresh.
+- `complete` is `false` when the provider holds more than 1000 entries or
+  an entry failed validation.
+- Merge-field items are `{ tag, name, type, required }`.
+- Segment items are `{ id, name, kind: "segment"|"tag", member_count }`.
+- An unsupported kind returns `supported: false` with no items.
+
+When a refresh fails but a previous list is cached, the response is 200
+with the stale list and the normalized `error`
+(`{ code, category, message, retryable }`). When nothing is cached, the
+failure is returned as a WordPress error with `data.category` and
+`data.retryable`:
+
+- `409` when the provider is not configured;
+- `429` when the provider rate-limits;
+- `502` for any other upstream failure, including rejected credentials.
+
+Raw provider error bodies, member records, and credentials never appear in
+responses.
 
 ## Contract source
 

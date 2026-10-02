@@ -28,7 +28,7 @@ for file in "${matches[@]}"; do
 	fi
 	if [[ "${file}" == campaign-rest:* ]]; then
 		path="${file#campaign-rest:}"
-		echo "Campaign REST delivery must depend on workflows, not repositories or providers: ${path}" >&2
+		echo "Campaign/provider REST delivery must depend on workflows, not repositories or providers: ${path}" >&2
 		failed=1
 		continue
 	fi
