@@ -61,6 +61,58 @@ layers. It exposes:
 - `account_details(): array<string, mixed>`
 - `to_array(): array<string, mixed>`
 
+## Capabilities and discovery (#76)
+
+Amended 2026-10-01 for M3 provider discovery.
+
+**Capabilities.** `Provider_Operation` is the closed vocabulary of
+operations. These cover verification, discovery of audiences, merge fields,
+segments, senders and template sections, export, draft, test, schedule,
+send, cancel, reconcile, and reports. `Abstract_Provider::capabilities()`
+validates an adapter's flags into a `Provider_Capabilities` value. Unknown
+operation names and non-boolean flags are rejected. Every operation is
+reported as explicitly supported or unsupported; nothing is guessed.
+Mailchimp's flags live in `Mailchimp_Provider::CAPABILITIES` as the single
+source of truth.
+
+**Discovery port.** Read-only reference discovery is a separate port,
+`Domain\Provider\Provider_Discovery`, rather than more methods on
+`Provider_Interface`. Existing providers are therefore unaffected. An
+adapter:
+
+- receives decrypted settings for one call only and never caches or
+  persists them;
+- returns a bounded `Discovery_Batch` of normalized DTOs
+  (`Discovered_Audience`, `Sender_Identity`, `Discovered_Merge_Field`,
+  `Discovered_Segment`) or a `Provider_Error`;
+- requests only the fields it keeps, never member records, and reports
+  `complete: false` when the remote list is longer than the bound or an
+  entry fails validation;
+- exposes `account_key()`, a non-reversible account identity used only to
+  partition the cache.
+
+Audiences are account-wide. Merge fields and segments are scoped to one
+audience. Sender identities are the audience's default from-name and
+from-address, which belong to the organization, not to subscribers.
+Mailchimp tags are reported as segments of kind `tag`.
+
+**Cache and refresh.** `Workflow\Provider\Provider_Discovery_Service` owns
+the explicit refresh contract, and `Provider_Discovery_Repository` stores
+results as transients under hashed keys.
+
+- `cached()` never contacts the provider, so listing references cannot
+  become an implicit remote call.
+- `refresh()` is the only remote path.
+- A result older than `FRESH_SECONDS` (15 minutes) is still returned but
+  flagged stale. It is retained for at most `RETENTION_SECONDS` (one day).
+- A failed refresh returns the previous cached list flagged stale, with the
+  normalized error, and never overwrites the cached list.
+- Unsupported kinds return an explicit unsupported outcome.
+
+**Errors.** `Mailchimp_Errors` maps every Mailchimp transport and HTTP
+failure to the shared categories, used by both verification and discovery.
+Raw Mailchimp error bodies are never read into results.
+
 ## Ownership boundaries
 
 - `Provider_Interface` defines the contract; it contains no implementation.
