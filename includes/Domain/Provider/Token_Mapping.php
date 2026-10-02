@@ -45,14 +45,18 @@ final class Token_Mapping {
 		private readonly string $provider,
 		private readonly string $scope,
 		private readonly array $mapped,
-		private readonly array $unsupported
+		private readonly array $unsupported,
+		private readonly ?string $literal_pattern
 	) {}
 
 	/**
 	 * @param array<string, string> $mapped      Token ID => provider representation.
 	 * @param array<string, string> $unsupported Token ID => reason code.
 	 */
-	public static function create( string $provider, string $scope, array $mapped, array $unsupported, Token_Registry $registry ): self {
+	public static function create( string $provider, string $scope, array $mapped, array $unsupported, Token_Registry $registry, ?string $literal_pattern = null ): self {
+		if ( null !== $literal_pattern && false === @preg_match( $literal_pattern, '' ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Validates an adapter-supplied pattern without emitting a warning.
+			throw new \InvalidArgumentException( 'Provider literal pattern is invalid.' );
+		}
 		if ( 1 !== preg_match( '/^[a-z0-9][a-z0-9_-]{0,63}$/', $provider ) ) {
 			throw new \InvalidArgumentException( 'Provider slug is invalid.' );
 		}
@@ -74,7 +78,7 @@ final class Token_Mapping {
 			}
 		}
 
-		return new self( $provider, $scope, $mapped, $unsupported );
+		return new self( $provider, $scope, $mapped, $unsupported, $literal_pattern );
 	}
 
 	public function provider(): string {
@@ -104,6 +108,10 @@ final class Token_Mapping {
 	 * compiler, so one left in the content is reported as unmapped.
 	 */
 	public function translate( string $content, Token_Registry $registry, Token_Parser $parser ): Token_Translation {
+		if ( null !== $this->literal_pattern && 1 === preg_match( $this->literal_pattern, $content ) ) {
+			// Author-typed provider syntax would be evaluated by the provider, so it fails closed.
+			return new Token_Translation( $content, array(), array(), true );
+		}
 		$parsed = $parser->parse( $content, $registry );
 		if ( ! $parsed->is_successful() ) {
 			return new Token_Translation(

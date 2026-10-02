@@ -137,9 +137,13 @@ final class Mailchimp_Token_Mapper_Test extends WP_UnitTestCase {
 		self::assertNotEmpty( $malformed->parse_errors() );
 		self::assertSame( 'Hi {{cb:subscriber.FIRST}} and {{cb:subscriber.first_name}}', $malformed->content(), 'Nothing is translated when parsing fails.' );
 
-		$literal = $mapping->translate( 'Mailchimp syntax *|FNAME|* stays literal.', $registry, $parser );
-		self::assertTrue( $literal->is_complete() );
-		self::assertSame( 'Mailchimp syntax *|FNAME|* stays literal.', $literal->content() );
+		// Mailchimp would evaluate author-typed merge syntax after handoff, so it fails closed.
+		$literal = $mapping->translate( 'Mailchimp syntax *|FNAME|* is not literal there.', $registry, $parser );
+		self::assertTrue( $literal->has_literal_conflict() );
+		self::assertFalse( $literal->is_complete() );
+		self::assertSame( 'Mailchimp syntax *|FNAME|* is not literal there.', $literal->content() );
+		self::assertTrue( $mapping->translate( 'A plain *| pipe |* free sentence.', $registry, $parser )->has_literal_conflict() );
+		self::assertFalse( $mapping->translate( 'Price: 5 * 3 | total', $registry, $parser )->has_literal_conflict() );
 	}
 
 	public function test_mappings_must_cover_every_provider_token_explicitly(): void {

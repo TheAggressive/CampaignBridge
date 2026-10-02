@@ -164,10 +164,14 @@ second lifecycle.
 campaign through Mailchimp draft creation, testing, scheduling/sending, and
 status reconciliation.
 
+Implementation status:
+
+- #76 — Provider capabilities, Mailchimp discovery and personalization mapping
+  are complete.
+- #77 — Idempotent Mailchimp draft/content handoff is complete.
+
 Current actionable slices:
 
-- #76 — Provider capabilities, Mailchimp discovery and personalization mapping.
-- #77 — Idempotent Mailchimp draft/content handoff.
 - #78 — Test delivery.
 - #79 — Guarded schedule/send/cancel operations.
 - #80 — Remote-state reconciliation and ambiguous-outcome recovery.

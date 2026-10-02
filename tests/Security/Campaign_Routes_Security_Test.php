@@ -71,12 +71,12 @@ final class Campaign_Routes_Security_Test extends Test_Case {
 				continue;
 			}
 			foreach ( $endpoints as $endpoint ) {
-				$expected = str_ends_with( $route, '/approve' ) ? 'can_approve_campaigns' : 'can_access_campaigns';
+				$expected = str_ends_with( $route, '/approve' ) || str_ends_with( $route, '/provider-draft' ) ? 'can_approve_campaigns' : 'can_access_campaigns';
 				self::assertSame( array( Campaign_Routes::class, $expected ), $endpoint['permission_callback'], $route );
 				++$guarded;
 			}
 		}
-		self::assertSame( 13, $guarded );
+		self::assertSame( 14, $guarded );
 
 		$campaign = $this->create_campaign()['id'];
 		wp_set_current_user( 0 );

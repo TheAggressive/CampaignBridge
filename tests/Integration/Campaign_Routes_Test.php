@@ -408,6 +408,7 @@ final class Campaign_Routes_Test extends Test_Case {
 			'/c1/revoke-approval' => 'campaignbridge-campaign-result',
 			'/c1/archive'         => 'campaignbridge-campaign-result',
 			'/c1/duplicate'       => 'campaignbridge-campaign-duplicate-result',
+			'/c1/provider-draft'  => 'campaignbridge-campaign-provider-draft-result',
 		);
 		foreach ( $routes as $suffix => $title ) {
 			$options = $this->request( 'OPTIONS', self::COLLECTION . $suffix );

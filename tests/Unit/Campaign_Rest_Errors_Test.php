@@ -80,6 +80,8 @@ final class Campaign_Rest_Errors_Test extends WP_UnitTestCase {
 			'forbidden'            => array( Campaign_Workflow_Error::FORBIDDEN, 403 ),
 			'persistence failed'   => array( Campaign_Workflow_Error::PERSISTENCE_FAILED, 500 ),
 			'idempotency conflict' => array( Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT, 409 ),
+			'reconciliation'       => array( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 409 ),
+			'provider failed'      => array( Campaign_Workflow_Error::PROVIDER_FAILED, 502 ),
 		);
 	}
 }

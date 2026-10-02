@@ -47,7 +47,7 @@ final class Provider_Capabilities_Test extends WP_UnitTestCase {
 		Provider_Capabilities::from_flags( $provider, $flags );
 	}
 
-	public function test_mailchimp_advertises_discovery_but_no_delivery_operation(): void {
+	public function test_mailchimp_advertises_discovery_and_drafts_but_no_delivery_operation(): void {
 		$capabilities = ( new Mailchimp_Provider() )->capabilities();
 
 		self::assertSame(
@@ -57,10 +57,12 @@ final class Provider_Capabilities_Test extends WP_UnitTestCase {
 				Provider_Operation::DISCOVER_MERGE_FIELDS,
 				Provider_Operation::DISCOVER_SEGMENTS,
 				Provider_Operation::DISCOVER_SENDERS,
+				Provider_Operation::CREATE_DRAFT,
 			),
 			$capabilities->supported()
 		);
-		foreach ( array( 'create_draft', 'send_test', 'schedule', 'send', 'cancel', 'reconcile', 'reports' ) as $operation ) {
+		// A draft is reversible remote state; nothing that delivers mail is advertised.
+		foreach ( array( 'send_test', 'schedule', 'send', 'cancel', 'reconcile', 'reports' ) as $operation ) {
 			self::assertFalse( $capabilities->supports( $operation ), $operation );
 		}
 		self::assertSame( $capabilities->to_array(), ( new Mailchimp_Discovery() )->capabilities()->to_array() );

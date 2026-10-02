@@ -47,10 +47,11 @@ All routes are under `/campaignbridge/v1`. Every action route is `POST`.
 | `POST` | `/campaigns/{id}/revoke-approval` | `expected_version` | `revoke_approval` | 200 campaign |
 | `POST` | `/campaigns/{id}/archive` | `expected_version` | `archive` | 200 campaign |
 | `POST` | `/campaigns/{id}/duplicate` | `idempotency_key` | `duplicate` | 201 new, or 200 replay |
+| `POST` | `/campaigns/{id}/provider-draft` | `expected_version`, `idempotency_key` | draft handoff | 201 created, or 200 replay |
 
-There are no provider draft, test-send, schedule, send, cancel, or reconcile
-campaign routes. Those operations belong to M3 (#76–#80) and will be separate
-contracts.
+There are no test-send, schedule, send, cancel, or reconcile campaign routes.
+Those operations belong to M3 (#78–#80) and will be separate contracts.
+Creating a provider draft never schedules or sends it.
 
 Validation and preview are `POST` because they compile live template content,
 are rate-limited, and validation writes an audit event. Neither persists
@@ -211,6 +212,68 @@ Collection (`campaignbridge-campaign-collection`):
 
 Diagnostics are `{ "severity": "error"|"warning", "code", "path", "message" }`.
 
+### Provider draft handoff
+
+`POST /campaigns/{id}/provider-draft` creates one remote draft from an
+approved campaign, using the provider in the campaign's own targeting
+(currently `mailchimp`). It requires `campaignbridge_send_campaigns` plus
+management of the campaign, the same authority as approval. It is limited to
+10 requests per user per minute.
+
+Preconditions, all checked before any provider call:
+
+- The campaign is `approved` at `expected_version` and targets a provider
+  that supports drafts and an audience.
+- The selected snapshot still reproduces its fingerprint. Content comes only
+  from that snapshot, never live WordPress content.
+- The snapshot's frozen envelope is complete.
+- Every canonical token in the HTML, text, subject, and preview text maps to
+  the provider for that audience. First- and last-name tokens need that
+  audience's merge fields to have been discovered; refresh them through the
+  discovery route first.
+- The content contains no author-typed provider merge syntax such as
+  `*|FNAME|*`, because the provider would evaluate it.
+
+A failed precondition returns `400 validation_failed` or `invalid_input`,
+`409 invalid_state` or `conflict`, or `403 forbidden`, and nothing is sent.
+
+A success response is `campaignbridge-campaign-provider-draft-result`:
+
+```json
+{
+  "campaign": { "…": "campaign, now provider_draft, version incremented" },
+  "remote": { "provider": "mailchimp", "remote_id": "mc0042", "observed_state": "draft", "observed_at": "2026-10-01T12:00:00Z" },
+  "attempt": { "id": "attempt-9f2c…", "status": "succeeded", "retryability": "not_retryable" },
+  "idempotent_replay": false
+}
+```
+
+There is exactly one remote draft per campaign and provider. Once it
+exists, any further request returns it with 200, `idempotent_replay: true`,
+and `attempt: null`, whatever key is sent, and nothing is sent to the
+provider.
+
+Outcomes after the provider is contacted:
+
+- **Created:** 201. The campaign moves to `provider_draft`.
+- **Refused by the provider** (a definite 4xx): `502 provider_failed`. No
+  draft exists. The same `idempotency_key` returns the same failure without
+  contacting the provider; use a new key to try again.
+- **Unconfirmed** (timeout, lost connection, 5xx, or an unreadable
+  response): `409 reconciliation_required`. The draft may or may not exist.
+  It is never retried automatically, and every further request is refused
+  with the same code, whatever key is sent, until the attempt is reconciled.
+- **Draft created but content upload failed:** `502 provider_failed` with
+  `data.remote.observed_state` of `content_pending`. Repeat the request to
+  resume; only the content is re-uploaded and no second draft is created.
+- **Draft created but the campaign changed concurrently:** `409 conflict`
+  with `data.remote`. The draft's identity is kept.
+
+Error `data` may include `remote`, `attempt` (`id`, `status`,
+`retryability`), and `provider_error` (`code`, `category`, `retryable`), so a
+client knows what already exists. Raw provider error bodies and credentials
+are never returned.
+
 ### Content validation outcomes
 
 Content problems are not server errors. `/validation` and `/preview` treat
@@ -247,6 +310,8 @@ is the single mapping:
 | `missing_snapshot` | 409 | `campaignbridge_campaign_missing_snapshot` |
 | `approval_not_allowed` | 409 | `campaignbridge_campaign_approval_not_allowed` |
 | `idempotency_conflict` | 409 | `campaignbridge_campaign_idempotency_conflict` |
+| `reconciliation_required` | 409 | `campaignbridge_campaign_reconciliation_required` |
+| `provider_failed` | 502 | `campaignbridge_campaign_provider_failed` |
 | `persistence_failed` (and any unmapped code) | 500 | `campaignbridge_campaign_persistence_failed` |
 
 The repository does not use 422. Transport-level refusals keep WordPress codes:

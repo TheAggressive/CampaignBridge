@@ -155,11 +155,44 @@ supported production/test configuration. CampaignBridge does not provide a
 custom transaction framework or emulate transactions on non-transactional
 engines.
 
+## Provider draft handoff
+
+`Campaign_Draft_Handoff` creates exactly one remote draft from an approved
+campaign through a `Provider_Draft_Gateway`. It requires approval authority
+and never schedules or sends. Its protocol uses only the #73 records:
+
+1. **One draft per campaign and provider.** A remote reference that already
+   exists is a replay; nothing new is created. The `(provider, remote_id)`
+   uniqueness means one remote draft can never map to two campaigns.
+2. **Write-ahead.** A `pending` `create_draft` attempt is stored before the
+   remote create. The remote draft's title carries the attempt ID, so
+   reconciliation can find a draft whose response was lost.
+3. **Never retry blindly.** While any create attempt is `pending` or
+   `unknown`, further creates are refused with `reconciliation_required`,
+   whatever idempotency key is sent.
+4. **Record what is known.** A provider refusal before creation marks the
+   attempt `failed`. A timeout, lost connection, server error, or unreadable
+   response marks it `unknown`.
+5. **Resume partial work.** If the draft was created but its content upload
+   failed, the reference is stored as `content_pending`. The next request
+   re-uploads content only, which is an idempotent operation.
+
+On success, one transaction stores the reference, marks the attempt
+`succeeded`, moves the campaign `approved → provider_draft`, and audits it.
+If the campaign changed concurrently, the reference and attempt are still
+stored and the result is `conflict`; the concurrent change is not
+overwritten.
+
+Content is the approved snapshot's artifact and frozen envelope, verified by
+`Campaign_Snapshot_Verifier`, the same check used for review and approval.
+Tokens are translated with the provider's `Token_Mapping`; the stored
+artifact is never altered. Audit events record identifiers, states, and
+normalized error categories, never content or provider payloads.
+
 ## Deferred adapters and provider work
 
 The #75 REST adapter exposes these operations, plus bounded `get`/`list`
 reads, with schemas, pagination, permission callbacks, rate limits, and one
-error envelope. See [`api.md`](api.md#campaigns). Issues #76-#80 still own
-Mailchimp discovery/capability mapping, remote draft creation, test delivery,
-schedule/send/cancel, and reconciliation. There is still no complete operator
+error envelope. See [`api.md`](api.md#campaigns). Issues #78-#80 still own
+test delivery, schedule/send/cancel, and reconciliation. There is still no complete operator
 campaign UI or end-to-end Mailchimp delivery flow.

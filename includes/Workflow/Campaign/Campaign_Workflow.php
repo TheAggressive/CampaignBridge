@@ -427,19 +427,7 @@ final class Campaign_Workflow {
 	}
 
 	private function verified_snapshot( Campaign $campaign ): Campaign_Snapshot|Campaign_Workflow_Error {
-		if ( null === $campaign->active_snapshot_id() ) {
-			return new Campaign_Workflow_Error( Campaign_Workflow_Error::MISSING_SNAPSHOT, 'Campaign has no selected immutable snapshot.' );
-		}
-		$snapshot = $this->snapshots->get( $campaign->active_snapshot_id() );
-		if ( null === $snapshot || $snapshot->campaign_id() !== $campaign->id() ) {
-			return new Campaign_Workflow_Error( Campaign_Workflow_Error::MISSING_SNAPSHOT, 'Campaign snapshot is unavailable.' );
-		}
-		$result = Compiler_Factory::create( $snapshot->review_input()->design() )->compile( $snapshot->review_input()->blocks(), $snapshot->review_input()->context() );
-		if ( ! $result->is_success() || ! hash_equals( $snapshot->artifact()->fingerprint(), $result->fingerprint() ) ) {
-			return new Campaign_Workflow_Error( Campaign_Workflow_Error::VALIDATION_FAILED, 'The selected snapshot does not reproduce its reviewed artifact.' );
-		}
-
-		return $snapshot;
+		return ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
 	}
 
 

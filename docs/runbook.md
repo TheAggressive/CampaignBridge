@@ -21,6 +21,20 @@
 3. Reconcile content and send state before resuming.
 4. Preserve correlation IDs and sanitized error logs for incident review.
 
+### Draft handoff returned `reconciliation_required`
+
+The provider did not confirm whether a draft was created. CampaignBridge will
+not create another draft for that campaign until this is resolved, whatever
+idempotency key is sent.
+
+1. Do not retry. Note the `attempt.id` from the error response.
+2. In Mailchimp, look for a draft campaign titled
+   `CampaignBridge <attempt id>`.
+3. If it exists, record its campaign ID for reconciliation. If it does not,
+   the create did not take effect.
+4. Automated reconciliation is tracked in #80. Until it ships, resolving the
+   attempt requires a developer to update the attempt record.
+
 ## Release procedure
 
 1. Run the complete quality pipeline.

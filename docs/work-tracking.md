@@ -94,19 +94,17 @@ The merged PR/closed issues provide the implementation history. Do not copy ever
 ## Dependency-first execution order
 
 Issue number is not execution order. M1 #62 with its action issues #69–#72,
-and M2 #63 with its action issues #73–#75, are complete. The remaining order
-is:
+M2 #63 with its action issues #73–#75, M3 provider discovery #76, and the M3
+Mailchimp draft handoff #77 are complete. The remaining order is:
 
-1. M3 provider discovery/token mapping — #76.
-2. M3 idempotent Mailchimp draft/content handoff — #77.
-3. M3 test delivery — #78.
-4. M3 guarded schedule/send/cancel — #79.
-5. M3 reconciliation and ambiguous outcomes — #80.
-6. Close M3 — #64.
-7. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
-8. Durable jobs/recovery — #66.
-9. Governance/reporting — #67.
-10. GA closeout — #68.
+1. M3 test delivery — #78.
+2. M3 guarded schedule/send/cancel — #79.
+3. M3 reconciliation and ambiguous outcomes — #80.
+4. Close M3 — #64.
+5. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
+6. Durable jobs/recovery — #66.
+7. Governance/reporting — #67.
+8. GA closeout — #68.
 
 Cross-cutting work does not need to wait for the numbered milestone when its dependency is already satisfied. Security, accessibility, i18n, performance, package verification, and documentation travel with every relevant PR.
 
