@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Workflow\Campaign;
 
 use CampaignBridge\Domain\Campaign\Campaign;
+use CampaignBridge\Domain\Campaign\Campaign_Review_Capture;
 use CampaignBridge\Domain\Campaign\Campaign_Review_Input_Source;
 use CampaignBridge\Domain\Campaign\Campaign_Template_Input_Source;
 use CampaignBridge\Domain\Email\Brand_Kit_Source;
@@ -30,6 +31,10 @@ final class Campaign_Review_Input_Capture implements Campaign_Review_Input_Sourc
 	) {}
 
 	public function capture( Campaign $campaign, int $revision ): ?Review_Input {
+		return $this->capture_for_snapshot( $campaign, $revision )?->review_input();
+	}
+
+	public function capture_for_snapshot( Campaign $campaign, int $revision ): ?Campaign_Review_Capture {
 		if ( 1 > $revision ) {
 			return null;
 		}
@@ -44,13 +49,16 @@ final class Campaign_Review_Input_Capture implements Campaign_Review_Input_Sourc
 			$template->metadata()
 		);
 
-		return new Review_Input(
-			$input->content(),
-			$input->blocks(),
-			$input->context(),
-			$input->design(),
-			$revision,
-			$input->compiler_version()
+		return new Campaign_Review_Capture(
+			new Review_Input(
+				$input->content(),
+				$input->blocks(),
+				$input->context(),
+				$input->design(),
+				$revision,
+				$input->compiler_version()
+			),
+			$template->envelope()
 		);
 	}
 }

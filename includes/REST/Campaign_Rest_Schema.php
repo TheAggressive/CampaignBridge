@@ -182,8 +182,9 @@ final class Campaign_Rest_Schema {
 				'snapshot'   => array(
 					'type'                 => 'object',
 					'additionalProperties' => false,
-					'required'             => array( 'id', 'revision', 'fingerprint', 'created_at' ),
+					'required'             => array( 'id', 'revision', 'fingerprint', 'created_at', 'envelope' ),
 					'properties'           => array(
+						'envelope'    => self::envelope(),
 						'id'          => array(
 							'type'    => 'string',
 							'pattern' => self::IDENTIFIER_PATTERN,
@@ -289,6 +290,35 @@ final class Campaign_Rest_Schema {
 							'minimum' => 1,
 						),
 						'diagnostics'     => self::diagnostics(),
+					),
+				),
+			),
+		);
+	}
+
+	/**
+	 * The frozen envelope reviewed with a snapshot.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private static function envelope(): array {
+		$text = array( 'type' => 'string' );
+
+		return array(
+			'type'                 => array( 'object', 'null' ),
+			'additionalProperties' => false,
+			'required'             => array( 'subject', 'preview_text', 'from_name', 'from_email', 'complete', 'problems' ),
+			'properties'           => array(
+				'subject'      => $text,
+				'preview_text' => $text,
+				'from_name'    => $text,
+				'from_email'   => $text,
+				'complete'     => array( 'type' => 'boolean' ),
+				'problems'     => array(
+					'type'  => 'array',
+					'items' => array(
+						'type'    => 'string',
+						'pattern' => '^[a-z_]+$',
 					),
 				),
 			),

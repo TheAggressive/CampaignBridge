@@ -43,6 +43,28 @@ final class Campaign_Rest_Resource {
 			'revision'    => $snapshot->revision(),
 			'fingerprint' => $snapshot->artifact()->fingerprint(),
 			'created_at'  => $snapshot->created_at(),
+			'envelope'    => self::envelope( $snapshot ),
+		);
+	}
+
+	/**
+	 * The reviewed envelope and what a provider handoff would refuse.
+	 *
+	 * @return array<string, mixed>|null Null for a pre-envelope snapshot.
+	 */
+	private static function envelope( Campaign_Snapshot $snapshot ): ?array {
+		$envelope = $snapshot->envelope();
+		if ( null === $envelope ) {
+			return null;
+		}
+		$problems = $envelope->problems();
+
+		return array_merge(
+			$envelope->to_array(),
+			array(
+				'complete' => array() === $problems,
+				'problems' => $problems,
+			)
 		);
 	}
 

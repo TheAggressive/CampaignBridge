@@ -268,6 +268,41 @@ final class Campaign_Workflow_Test extends Test_Case {
 		}
 	}
 
+	public function test_snapshot_freezes_the_authored_envelope_against_later_edits(): void {
+		update_post_meta( $this->template_id, 'campaignbridge_subject', 'Spring sale for {{cb:subscriber.first_name}}' );
+		update_post_meta( $this->template_id, 'campaignbridge_preheader', 'Two days only' );
+		update_post_meta( $this->template_id, 'campaignbridge_sender_name', 'Example Shop' );
+		update_post_meta( $this->template_id, 'campaignbridge_sender_email', 'news@example.com' );
+		$campaign = $this->create_campaign();
+
+		$frozen = $this->workflow->snapshot( $this->actor, $campaign->id(), 1 )->snapshot();
+		self::assertNotNull( $frozen );
+		$expected = array(
+			'subject'      => 'Spring sale for {{cb:subscriber.first_name}}',
+			'preview_text' => 'Two days only',
+			'from_name'    => 'Example Shop',
+			'from_email'   => 'news@example.com',
+		);
+		self::assertSame( $expected, $frozen->envelope()?->to_array() );
+
+		update_post_meta( $this->template_id, 'campaignbridge_subject', 'Edited after review' );
+		update_post_meta( $this->template_id, 'campaignbridge_sender_email', '' );
+		self::assertSame( $expected, $this->snapshots->get( $frozen->id() )?->envelope()?->to_array(), 'Live edits never change a frozen envelope.' );
+
+		$events = array_values(
+			array_filter(
+				$this->audits->for_target( 'campaign', $campaign->id() ),
+				static fn ( Audit_Event $event ): bool => 'campaign_snapshot' === $event->action() && 'success' === $event->result()
+			)
+		);
+		self::assertTrue( $events[0]->context()->to_array()['envelope_complete'] );
+		self::assertStringNotContainsString( 'news@example.com', (string) wp_json_encode( $events[0]->context()->to_array() ), 'Audit records completeness, not envelope values.' );
+
+		$refreshed = $this->workflow->snapshot( $this->actor, $campaign->id(), 2 )->snapshot();
+		self::assertSame( 'Edited after review', $refreshed?->envelope()?->subject() );
+		self::assertSame( array( 'sender_email_invalid' ), $refreshed?->envelope()?->problems() );
+	}
+
 	public function test_blocking_compiler_diagnostics_prevent_snapshot_and_submission(): void {
 		wp_update_post(
 			array(

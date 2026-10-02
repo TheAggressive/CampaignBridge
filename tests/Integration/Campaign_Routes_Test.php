@@ -179,6 +179,9 @@ final class Campaign_Routes_Test extends Test_Case {
 		self::assertTrue( $snapshot->get_data()['validation']['valid'] );
 		self::assertSame( $snapshot->get_data()['snapshot']['fingerprint'], $snapshot->get_data()['validation']['fingerprint'] );
 		self::assertMatchesRegularExpression( '/^sha256:[0-9a-f]{64}$/', $snapshot->get_data()['snapshot']['fingerprint'] );
+		// The envelope is frozen even when incomplete; only provider handoff requires it.
+		self::assertFalse( $snapshot->get_data()['snapshot']['envelope']['complete'] );
+		self::assertContains( 'subject_missing', $snapshot->get_data()['snapshot']['envelope']['problems'] );
 
 		$validation = $this->action( $id, 'validation' );
 		self::assertSame( 200, $validation->get_status() );

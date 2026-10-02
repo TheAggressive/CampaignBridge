@@ -16,6 +16,7 @@ use CampaignBridge\Repository\Campaign_Repository;
 use CampaignBridge\Repository\Campaign_Snapshot_Repository;
 use CampaignBridge\Repository\Post_Snapshot_Repository;
 use CampaignBridge\Repository\Schema_Manager;
+use CampaignBridge\Domain\Email\Review_Input;
 use CampaignBridge\Tests\Helpers\Test_Case;
 use CampaignBridge\Workflow\Email\Template_Preview;
 
@@ -211,18 +212,54 @@ final class Campaign_Repository_Test extends Test_Case {
 	}
 
 	/** Build a snapshot from canonical M1 values. */
-	private function snapshot( string $id, string $campaign_id, \CampaignBridge\Domain\Email\Review_Input $input, Compiled_Artifact $artifact ): Campaign_Snapshot {
-		return Campaign_Snapshot::from_array(
-			array(
-				'schema_version' => 1,
-				'id'             => $id,
-				'campaign_id'    => $campaign_id,
-				'revision'       => $input->revision(),
-				'review_input'   => $input->to_array(),
-				'artifact'       => $artifact->to_array(),
-				'created_at'     => '2026-01-01T00:00:00Z',
-			)
+	/** @param array<string, string>|null $envelope Frozen envelope, or null for a pre-envelope snapshot. */
+	private function snapshot( string $id, string $campaign_id, \CampaignBridge\Domain\Email\Review_Input $input, Compiled_Artifact $artifact, ?array $envelope = null ): Campaign_Snapshot {
+		$data = array(
+			'schema_version' => null === $envelope ? Campaign_Snapshot::LEGACY_SCHEMA_VERSION : Campaign_Snapshot::SCHEMA_VERSION,
+			'id'             => $id,
+			'campaign_id'    => $campaign_id,
+			'revision'       => $input->revision(),
+			'review_input'   => $input->to_array(),
+			'artifact'       => $artifact->to_array(),
+			'created_at'     => '2026-01-01T00:00:00Z',
 		);
+		if ( null !== $envelope ) {
+			$data['envelope'] = $envelope;
+		}
+
+		return Campaign_Snapshot::from_array( $data );
+	}
+
+	/** Envelope snapshots round-trip exactly; pre-envelope rows still read without one. */
+	public function test_snapshot_envelopes_round_trip_and_legacy_rows_read_without_one(): void {
+		$preview  = new Template_Preview( new Post_Snapshot_Repository() );
+		$input    = $preview->capture( '<!-- wp:campaignbridge/container /-->' );
+		$artifact = Compiled_Artifact::from_result( $preview->compile_frozen( $input ) );
+		$campaign = $this->campaign( 'campaign-envelope' );
+		self::assertTrue( ( new Campaign_Repository() )->add( $campaign ) );
+		$repository = new Campaign_Snapshot_Repository();
+
+		$envelope = array(
+			'subject'      => 'Spring sale for {{cb:subscriber.first_name}}',
+			'preview_text' => 'Two days only',
+			'from_name'    => 'Example Shop',
+			'from_email'   => 'news@example.com',
+		);
+		$current  = $this->snapshot( 'snapshot-envelope', $campaign->id(), $input, $artifact, $envelope );
+		self::assertTrue( $repository->add( $current ) );
+		$loaded = $repository->get( 'snapshot-envelope' );
+		self::assertSame( $current->to_array(), $loaded?->to_array() );
+		self::assertSame( Campaign_Snapshot::SCHEMA_VERSION, $loaded?->to_array()['schema_version'] );
+		self::assertSame( $envelope, $loaded?->envelope()?->to_array() );
+
+		$legacy = $this->snapshot( 'snapshot-legacy', $campaign->id(), Review_Input::from_array( array_merge( $input->to_array(), array( 'revision' => 2 ) ) ), $artifact );
+		self::assertTrue( $repository->add( $legacy ) );
+		self::assertNull( $repository->get( 'snapshot-legacy' )?->envelope() );
+		self::assertSame( Campaign_Snapshot::LEGACY_SCHEMA_VERSION, $repository->get( 'snapshot-legacy' )?->to_array()['schema_version'] );
+
+		global $wpdb;
+		$wpdb->update( Schema_Manager::table( 'campaign_snapshots' ), array( 'envelope' => null ), array( 'id' => 'snapshot-envelope' ) );
+		self::assertNull( $repository->get( 'snapshot-envelope' ), 'A version-2 snapshot without its envelope fails closed.' );
 	}
 
 	/** Template fixture that binds a post title through the frozen snapshot. */

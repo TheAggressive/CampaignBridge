@@ -25,7 +25,8 @@ final class Campaign_Template_Input {
 	public function __construct(
 		private readonly string $content,
 		private readonly array $metadata,
-		private readonly Design_Font_Registry $design_fonts
+		private readonly Design_Font_Registry $design_fonts,
+		private readonly Campaign_Envelope $envelope
 	) {}
 
 	public function content(): string {
@@ -43,5 +44,10 @@ final class Campaign_Template_Input {
 
 	public function design_fonts(): Design_Font_Registry {
 		return $this->design_fonts;
+	}
+
+	/** The authored subject, preview text, and sender, as captured. */
+	public function envelope(): Campaign_Envelope {
+		return $this->envelope;
 	}
 }

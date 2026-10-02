@@ -17,9 +17,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Couples one frozen M1 review input to its exact successful artifact. */
+/**
+ * Couples one frozen M1 review input to its exact successful artifact.
+ *
+ * Schema version 2 also freezes the authored envelope (subject, preview
+ * text, sender) reviewed with the artifact. Version 1 snapshots predate the
+ * envelope and read with none, so they can still be reviewed locally but
+ * must be re-snapshotted before any provider handoff.
+ */
 final class Campaign_Snapshot {
-	public const SCHEMA_VERSION = 1;
+	public const SCHEMA_VERSION = 2;
+
+	/** The pre-envelope schema version that remains readable. */
+	public const LEGACY_SCHEMA_VERSION = 1;
 
 	private function __construct(
 		private readonly string $id,
@@ -27,16 +37,24 @@ final class Campaign_Snapshot {
 		private readonly int $revision,
 		private readonly Review_Input $review_input,
 		private readonly Compiled_Artifact $artifact,
-		private readonly string $created_at
+		private readonly string $created_at,
+		private readonly ?Campaign_Envelope $envelope
 	) {}
 
 	/** @param array<string, mixed> $data Persisted values. */
 	public static function from_array( array $data ): self {
 		Record_Validation::known_keys(
 			$data,
-			array( 'schema_version', 'id', 'campaign_id', 'revision', 'review_input', 'artifact', 'created_at' )
+			array( 'schema_version', 'id', 'campaign_id', 'revision', 'review_input', 'artifact', 'created_at', 'envelope' )
 		);
-		if ( self::SCHEMA_VERSION !== ( $data['schema_version'] ?? null ) ) {
+		$version  = $data['schema_version'] ?? null;
+		$envelope = $data['envelope'] ?? null;
+		if ( self::SCHEMA_VERSION === $version ) {
+			if ( ! is_array( $envelope ) ) {
+				throw new \InvalidArgumentException( 'Campaign snapshot envelope is missing.' );
+			}
+			$envelope = Campaign_Envelope::from_array( $envelope );
+		} elseif ( self::LEGACY_SCHEMA_VERSION !== $version || null !== $envelope ) {
 			throw new \InvalidArgumentException( 'Unsupported campaign-snapshot schema version.' );
 		}
 		$revision    = $data['revision'] ?? null;
@@ -61,7 +79,8 @@ final class Campaign_Snapshot {
 			$revision,
 			$review,
 			$result,
-			Record_Validation::timestamp( $data['created_at'] ?? null, 'Snapshot timestamp' )
+			Record_Validation::timestamp( $data['created_at'] ?? null, 'Snapshot timestamp' ),
+			$envelope
 		);
 	}
 
@@ -89,10 +108,15 @@ final class Campaign_Snapshot {
 		return $this->created_at;
 	}
 
+	/** The reviewed envelope, or null for a pre-envelope snapshot. */
+	public function envelope(): ?Campaign_Envelope {
+		return $this->envelope;
+	}
+
 	/** @return array<string, mixed> */
 	public function to_array(): array {
-		return array(
-			'schema_version' => self::SCHEMA_VERSION,
+		$data = array(
+			'schema_version' => null === $this->envelope ? self::LEGACY_SCHEMA_VERSION : self::SCHEMA_VERSION,
 			'id'             => $this->id,
 			'campaign_id'    => $this->campaign_id,
 			'revision'       => $this->revision,
@@ -100,5 +124,10 @@ final class Campaign_Snapshot {
 			'artifact'       => $this->artifact->to_array(),
 			'created_at'     => $this->created_at,
 		);
+		if ( null !== $this->envelope ) {
+			$data['envelope'] = $this->envelope->to_array();
+		}
+
+		return $data;
 	}
 }
