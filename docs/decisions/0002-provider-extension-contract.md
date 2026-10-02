@@ -113,6 +113,29 @@ results as transients under hashed keys.
 failure to the shared categories, used by both verification and discovery.
 Raw Mailchimp error bodies are never read into results.
 
+**Token mapping.** The compiled artifact keeps canonical `{{cb:...}}`
+tokens. A `Provider_Token_Mapper` produces a `Token_Mapping` for one
+audience. Every provider-resolved token in the registry is either mapped to
+the provider's representation or declared unsupported with a reason code:
+`merge_field_missing`, `merge_fields_incomplete`, or `unsupported`.
+Construction refuses a mapping that leaves any token unaccounted for.
+`Token_Mapping::translate()` validates content with the canonical
+`Token_Parser`, then substitutes only validated tokens. It returns new
+content and never alters the artifact. A parse error, or any token without
+a representation, makes the translation incomplete, and incomplete content
+must not be handed off.
+
+Mailchimp maps email, view-online and unsubscribe to the system tags
+`*|EMAIL|*`, `*|ARCHIVE|*` and `*|UNSUB|*`. First and last name map to
+`*|FNAME|*` and `*|LNAME|*` only when that audience's discovered merge
+fields prove the field exists, because audience owners can rename or delete
+those fields. Audience custom merge fields stay provider-scoped and never
+become canonical tokens.
+
+Handoff (#77) must also neutralize author-typed literal provider syntax.
+CampaignBridge treats text such as `*|FNAME|*` as literal content, but
+Mailchimp would evaluate it as a merge tag once handed off.
+
 ## Ownership boundaries
 
 - `Provider_Interface` defines the contract; it contains no implementation.
