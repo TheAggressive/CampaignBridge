@@ -178,10 +178,20 @@ Snapshot result (`campaignbridge-campaign-snapshot-result`):
 ```json
 {
   "campaign": { "…": "campaign as above, version incremented" },
-  "snapshot": { "id": "snapshot-8c1d…", "revision": 1, "fingerprint": "sha256:…", "created_at": "2026-09-29T12:01:00Z" },
+  "snapshot": {
+    "id": "snapshot-8c1d…", "revision": 1, "fingerprint": "sha256:…", "created_at": "2026-09-29T12:01:00Z",
+    "envelope": { "subject": "Spring sale", "preview_text": "", "from_name": "Example Shop",
+      "from_email": "news@example.com", "complete": true, "problems": [] }
+  },
   "validation": { "valid": true, "diagnostics": [], "compiler_version": "…", "profile_version": "…", "fingerprint": "sha256:…" }
 }
 ```
+
+`snapshot.envelope` is the subject, preview text, and sender frozen with the
+snapshot. `complete` is `false` and `problems` lists codes such as
+`subject_missing` or `sender_email_invalid` when a provider handoff would
+refuse it; local review and HTML-export approval do not require it. It is
+`null` for a snapshot taken before envelopes were frozen.
 
 Validation result (`campaignbridge-campaign-validation-result`):
 `{ "campaign": …, "validation": { "valid", "diagnostics", "compiler_version", "profile_version", "fingerprint" } }`.

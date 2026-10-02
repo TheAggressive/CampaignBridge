@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Owns restartable, forward-safe database migrations for campaign storage. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 1;
+	public const SCHEMA_VERSION = 2;
 	public const OPTION         = 'database_schema';
 
 	private static ?bool $tables_ready = null;
@@ -152,6 +152,7 @@ final class Schema_Manager {
 				compiler_version varchar(32) NOT NULL,
 				profile_version varchar(32) NOT NULL,
 				created_at datetime NOT NULL,
+				envelope text NULL,
 				PRIMARY KEY  (id),
 				UNIQUE KEY campaign_revision (campaign_id, revision)
 			) {$collate};",

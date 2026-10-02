@@ -180,10 +180,11 @@ final class Campaign_Workflow {
 		}
 
 		$revision = $this->next_revision( $campaign_id );
-		$input    = $this->review_inputs->capture( $loaded, $revision );
-		if ( null === $input ) {
+		$capture  = $this->review_inputs->capture_for_snapshot( $loaded, $revision );
+		if ( null === $capture ) {
 			return $this->failure( Campaign_Workflow_Error::INVALID_INPUT, 'The campaign template could not be captured.', $actor, 'campaign_snapshot', $campaign_id, $loaded );
 		}
+		$input    = $capture->review_input();
 		$compiled = Compiler_Factory::create( $input->design() )->compile( $input->blocks(), $input->context() );
 		if ( ! $compiled->is_success() ) {
 			$this->audit_failure( $actor, 'campaign_snapshot', $campaign_id, Campaign_Workflow_Error::VALIDATION_FAILED, array( 'revision' => $revision ) );
@@ -203,6 +204,7 @@ final class Campaign_Workflow {
 				'review_input'   => $input->to_array(),
 				'artifact'       => Compiled_Artifact::from_result( $compiled )->to_array(),
 				'created_at'     => $this->clock->now(),
+				'envelope'       => $capture->envelope()->to_array(),
 			)
 		);
 		$replacement = $loaded->select_snapshot( $snapshot->id(), $this->clock->now() );
@@ -220,6 +222,7 @@ final class Campaign_Workflow {
 							'snapshot_id'          => $snapshot->id(),
 							'artifact_fingerprint' => $snapshot->artifact()->fingerprint(),
 							'approval_invalidated' => Campaign_State::APPROVED === $loaded->state(),
+							'envelope_complete'    => array() === $capture->envelope()->problems(),
 						)
 					)
 				)

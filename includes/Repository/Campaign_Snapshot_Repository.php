@@ -39,12 +39,13 @@ final class Campaign_Snapshot_Repository implements Campaign_Snapshot_Source {
 
 		global $wpdb;
 		$artifact   = $snapshot->artifact();
+		$envelope   = $snapshot->envelope();
 		$suppressed = $wpdb->suppress_errors();
 		$inserted   = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Insert-only repository write.
 			Schema_Manager::table( 'campaign_snapshots' ),
 			array(
 				'id'                   => $snapshot->id(),
-				'data_version'         => Campaign_Snapshot::SCHEMA_VERSION,
+				'data_version'         => $snapshot->to_array()['schema_version'],
 				'campaign_id'          => $snapshot->campaign_id(),
 				'revision'             => $snapshot->revision(),
 				'review_input'         => Database_Values::encode_json( $snapshot->review_input()->to_array() ),
@@ -55,8 +56,9 @@ final class Campaign_Snapshot_Repository implements Campaign_Snapshot_Source {
 				'compiler_version'     => $artifact->compiler_version(),
 				'profile_version'      => $artifact->profile_version(),
 				'created_at'           => Database_Values::to_database_time( $snapshot->created_at() ),
+				'envelope'             => null === $envelope ? null : Database_Values::encode_json( $envelope->to_array() ),
 			),
-			array( '%s', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%s', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 		$wpdb->suppress_errors( $suppressed );
 		return false !== $inserted;
@@ -94,25 +96,29 @@ final class Campaign_Snapshot_Repository implements Campaign_Snapshot_Source {
 		try {
 			$review = Database_Values::decode_json( $row['review_input'] ?? null );
 			$assets = Database_Values::decode_json( $row['assets_json'] ?? null );
-			return Campaign_Snapshot::from_array(
-				array(
-					'schema_version' => Database_Values::integer( $row['data_version'] ?? null, 'Snapshot data version' ),
-					'id'             => $row['id'] ?? null,
-					'campaign_id'    => $row['campaign_id'] ?? null,
-					'revision'       => Database_Values::integer( $row['revision'] ?? null, 'Snapshot revision' ),
-					'review_input'   => $review,
-					'artifact'       => array(
-						'schema_version'   => 1,
-						'html'             => $row['artifact_html'] ?? null,
-						'text'             => $row['artifact_text'] ?? null,
-						'assets'           => $assets,
-						'fingerprint'      => $row['artifact_fingerprint'] ?? null,
-						'compiler_version' => $row['compiler_version'] ?? null,
-						'profile_version'  => $row['profile_version'] ?? null,
-					),
-					'created_at'     => Database_Values::from_database_time( $row['created_at'] ?? null ),
-				)
+			$stored = $row['envelope'] ?? null;
+			$data   = array(
+				'schema_version' => Database_Values::integer( $row['data_version'] ?? null, 'Snapshot data version' ),
+				'id'             => $row['id'] ?? null,
+				'campaign_id'    => $row['campaign_id'] ?? null,
+				'revision'       => Database_Values::integer( $row['revision'] ?? null, 'Snapshot revision' ),
+				'review_input'   => $review,
+				'artifact'       => array(
+					'schema_version'   => 1,
+					'html'             => $row['artifact_html'] ?? null,
+					'text'             => $row['artifact_text'] ?? null,
+					'assets'           => $assets,
+					'fingerprint'      => $row['artifact_fingerprint'] ?? null,
+					'compiler_version' => $row['compiler_version'] ?? null,
+					'profile_version'  => $row['profile_version'] ?? null,
+				),
+				'created_at'     => Database_Values::from_database_time( $row['created_at'] ?? null ),
 			);
+			if ( null !== $stored && '' !== $stored ) {
+				$data['envelope'] = Database_Values::decode_json( $stored );
+			}
+
+			return Campaign_Snapshot::from_array( $data );
 		} catch ( \InvalidArgumentException | \JsonException ) {
 			return null;
 		}

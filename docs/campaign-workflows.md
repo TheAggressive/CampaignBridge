@@ -79,6 +79,15 @@ canonical compile, and an exact stored fingerprint match. The approved campaign
 therefore identifies frozen HTML, plain text, assets, design/content inputs,
 compiler version, and profile; it never means live WordPress content later.
 
+A snapshot also freezes the template's authored envelope: subject, preview
+text, sender name, and sender email. It is read in the same template load as
+the content, so both come from the same edit. The envelope is captured as
+authored, even when incomplete, so HTML-export-only review and approval are
+unchanged. `Campaign_Envelope::problems()` reports what a provider handoff
+would refuse, and the snapshot audit records only whether the envelope is
+complete, never its values. Provider handoff (#77) uses the approved
+snapshot's envelope, never the live template.
+
 ## Concurrency and results
 
 Every mutable operation after creation accepts the campaign's expected integer

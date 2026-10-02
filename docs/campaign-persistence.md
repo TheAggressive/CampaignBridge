@@ -69,6 +69,14 @@ exact successful `Compiled_Artifact`: HTML, plain text, bounded asset records,
 artifact fingerprint, compiler version, and profile version. Loading it does
 not read the live template, source posts, Brand Kit, or theme.
 
+Schema version 2 adds a nullable `envelope` JSON column. It freezes the
+authored subject, preview text, sender name, and sender email reviewed with
+the snapshot (`Campaign_Envelope`). Version-1 snapshot rows predate it and
+read with no envelope. They remain usable for local review, but must be
+re-snapshotted before any provider handoff. A version-2 row without its
+envelope fails closed. Upgrading from schema 1 adds the column through
+`dbDelta()` without touching existing rows.
+
 The repository is insert-only. Both the snapshot ID and campaign/revision pair
 are unique. Refreshing content therefore requires a new snapshot ID and the
 next review revision. Source edits cannot mutate stored review input or output.

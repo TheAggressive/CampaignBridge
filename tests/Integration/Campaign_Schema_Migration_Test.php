@@ -45,7 +45,39 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 		Storage::update_option( Schema_Manager::OPTION, 0 );
 
 		self::assertTrue( Schema_Manager::migrate() );
-		self::assertSame( 1, Storage::get_option( Schema_Manager::OPTION ) );
+		self::assertSame( Schema_Manager::SCHEMA_VERSION, Storage::get_option( Schema_Manager::OPTION ) );
+	}
+
+	/** Version 1 gains the snapshot envelope column without losing snapshot rows. */
+	public function test_upgrade_from_version_one_adds_the_envelope_column(): void {
+		global $wpdb;
+		self::assertTrue( Schema_Manager::migrate() );
+		$table = Schema_Manager::table( 'campaign_snapshots' );
+		$wpdb->query( "ALTER TABLE {$table} DROP COLUMN envelope" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Recreates the version-1 shape.
+		$wpdb->insert(
+			$table,
+			array(
+				'id'                   => 'legacy-snapshot',
+				'data_version'         => 1,
+				'campaign_id'          => 'legacy-campaign',
+				'revision'             => 1,
+				'review_input'         => '{}',
+				'artifact_html'        => '<p>Legacy</p>',
+				'artifact_text'        => 'Legacy',
+				'assets_json'          => '[]',
+				'artifact_fingerprint' => 'sha256:' . str_repeat( 'a', 64 ),
+				'compiler_version'     => '1',
+				'profile_version'      => 'universal@1',
+				'created_at'           => '2026-01-01 00:00:00',
+			)
+		);
+		Storage::update_option( Schema_Manager::OPTION, 1 );
+		self::assertFalse( Schema_Manager::is_current() );
+
+		self::assertTrue( Schema_Manager::migrate() );
+		self::assertSame( Schema_Manager::SCHEMA_VERSION, Storage::get_option( Schema_Manager::OPTION ) );
+		self::assertContains( 'envelope', $wpdb->get_col( "DESCRIBE {$table}", 0 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+		self::assertSame( 'legacy-snapshot', $wpdb->get_var( "SELECT id FROM {$table} WHERE envelope IS NULL" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
 	}
 
 	/** Product read paths and identity rules have their documented indexes. */
