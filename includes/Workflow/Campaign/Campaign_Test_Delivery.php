@@ -54,7 +54,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  *    When the site restricts test-recipient domains, every recipient must
  *    use one of them.
  * 3. A durable per-campaign quota bounds tests independently of the
- *    per-user transport limit.
+ *    per-user transport limit. It is checked before any provider call and
+ *    decided again once this request's attempt is stored: concurrent
+ *    requests that all passed the first check cannot all send, because the
+ *    last to store its attempt always counts every other. A request that
+ *    loses that race settles its attempt as failed, counted toward the
+ *    quota, and sends nothing.
  * 4. Write-ahead. A `pending` test_send attempt is stored before the call.
  *    Its idempotency key identifies one test request: repeating the key
  *    returns the recorded outcome and never sends again.
@@ -162,6 +167,13 @@ final class Campaign_Test_Delivery {
 			// A concurrent request claimed this key first; its outcome is not ours to assume.
 			return $this->refuse( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'Another test request with this key is already in progress.', $actor, $campaign_id, $campaign );
 		}
+		if ( self::QUOTA < $this->recent_tests( $campaign_id ) ) {
+			// Concurrent requests filled the quota after the first check; give way without sending.
+			$released = $this->settled( $attempt, Delivery_Attempt_Status::FAILED, Retryability::NOT_RETRYABLE );
+			$stored   = $this->attempts->update_result( $released );
+
+			return $this->refuse( Campaign_Workflow_Error::RATE_LIMITED, sprintf( 'This campaign has reached its limit of %d test sends per day.', self::QUOTA ), $actor, $campaign_id, $campaign, 'failure', $stored ? $released : $attempt );
+		}
 
 		$outcome = $this->gateway->send_test( $settings, $reference->remote_id(), $delivery );
 
@@ -176,12 +188,18 @@ final class Campaign_Test_Delivery {
 	private function replay( Campaign_Actor $actor, Campaign $campaign, ?Remote_Campaign_Reference $reference, Delivery_Attempt $recorded ): Campaign_Test_Result {
 		return match ( $recorded->status() ) {
 			Delivery_Attempt_Status::SUCCEEDED => Campaign_Test_Result::replay( $campaign, $reference, $recorded ),
-			Delivery_Attempt_Status::FAILED    => $this->refuse( Campaign_Workflow_Error::PROVIDER_FAILED, 'This idempotency key belongs to a test the provider refused. Use a new key to try again.', $actor, $campaign->id(), $campaign, 'failure', $recorded ),
+			Delivery_Attempt_Status::FAILED    => $this->refuse( Campaign_Workflow_Error::PROVIDER_FAILED, 'This idempotency key belongs to a test that was not sent. Use a new key to try again.', $actor, $campaign->id(), $campaign, 'failure', $recorded ),
 			default                            => $this->refuse( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'This idempotency key belongs to a test whose delivery was not confirmed. Check the test inboxes, then use a new key to send another test.', $actor, $campaign->id(), $campaign, 'failure', $recorded ),
 		};
 	}
 
-	/** Test sends attempted for this campaign within the rolling quota window. */
+	/**
+	 * Test sends attempted for this campaign within the rolling quota window.
+	 *
+	 * Reads stored attempts, which concurrent requests change between calls.
+	 *
+	 * @phpstan-impure
+	 */
 	private function recent_tests( string $campaign_id ): int {
 		$since = gmdate( 'Y-m-d\TH:i:s\Z', (int) strtotime( $this->clock->now() ) - self::QUOTA_WINDOW );
 

@@ -136,8 +136,9 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		$response = $this->http->get(
 			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) ) . '?fields=status,recipients.list_id,recipients.segment_opts',
 			array(
-				'headers' => array( 'Authorization' => 'Bearer ' . $api_key ),
-				'timeout' => self::TIMEOUT,
+				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
+				'timeout'               => self::TIMEOUT,
+				'campaignbridge_origin' => Mailchimp_Provider::origin(),
 			)
 		);
 		$error    = $this->failure( $response );
@@ -167,7 +168,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 	}
 
 	/** Upload content with an idempotent PUT; null on success. */
-	private function upload( string $api_key, string $remote_id, Draft_Content $content ): ?Provider_Error {
+	private function upload( #[\SensitiveParameter] string $api_key, string $remote_id, Draft_Content $content ): ?Provider_Error {
 		return $this->failure(
 			$this->http->put(
 				Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) . '/content' ),
@@ -222,15 +223,16 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 	 * @param array<string, mixed> $body JSON body.
 	 * @return array<string, mixed>
 	 */
-	private function json_request( string $api_key, array $body, bool $may_retry ): array {
+	private function json_request( #[\SensitiveParameter] string $api_key, array $body, bool $may_retry ): array {
 		return array(
-			'headers'              => array(
+			'headers'               => array(
 				'Authorization' => 'Bearer ' . $api_key,
 				'Content-Type'  => 'application/json',
 			),
-			'body'                 => (string) wp_json_encode( $body ),
-			'timeout'              => self::TIMEOUT,
-			'campaignbridge_retry' => $may_retry,
+			'body'                  => (string) wp_json_encode( $body ),
+			'timeout'               => self::TIMEOUT,
+			'campaignbridge_retry'  => $may_retry,
+			'campaignbridge_origin' => Mailchimp_Provider::origin(),
 		);
 	}
 

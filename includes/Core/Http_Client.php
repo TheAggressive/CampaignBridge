@@ -39,6 +39,12 @@ class Http_Client {
 	private const MAX_RETRY_DELAY = 5;
 
 	/**
+	 * Error code for a request refused before it left WordPress because its
+	 * URL is not within the caller's declared trusted origin.
+	 */
+	public const UNTRUSTED_ORIGIN = 'campaignbridge_untrusted_origin';
+
+	/**
 	 * Metrics storage for performance tracking.
 	 *
 	 * @var array<string, mixed>
@@ -133,6 +139,11 @@ class Http_Client {
 	/**
 	 * Make an HTTP request with retry logic and error handling.
 	 *
+	 * Every request must declare `campaignbridge_origin`, an Http_Origin fixed
+	 * by the integration. A request without one, or whose URL is outside it,
+	 * is refused before any network activity. Redirects are never followed,
+	 * so credentials sent to the declared origin cannot be forwarded.
+	 *
 	 * @param string               $method The HTTP method.
 	 * @param string               $url    The URL to request.
 	 * @param array<string, mixed> $args   Request arguments.
@@ -141,6 +152,17 @@ class Http_Client {
 	private static function request( string $method, string $url, array $args = array() ): array|\WP_Error {
 		$start_time = microtime( true );
 		++self::$metrics['requests_total'];
+
+		$origin = $args['campaignbridge_origin'] ?? null;
+		unset( $args['campaignbridge_origin'] );
+		if ( ! $origin instanceof Http_Origin || ! $origin->allows( $url ) ) {
+			++self::$metrics['requests_error'];
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				Error_Handler::warning( 'Outbound HTTP request refused: untrusted origin', array( 'url' => self::safe_url_for_log( $url ) ) );
+			}
+
+			return new \WP_Error( self::UNTRUSTED_ORIGIN, 'The request destination is not a trusted origin for this integration.' );
+		}
 
 		$http_method    = strtoupper( (string) ( $args['method'] ?? $method ) );
 		$retry_override = $args['campaignbridge_retry'] ?? null;

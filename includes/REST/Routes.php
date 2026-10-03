@@ -38,6 +38,12 @@ class Routes extends Abstract_Rest_Controller {
 	private const ENDPOINT_ENCRYPT_FIELD = '/encrypt-field';
 
 	/**
+	 * Per-user requests per window for credential reveal and encryption.
+	 */
+	private const DECRYPT_LIMIT = 10;
+	private const ENCRYPT_LIMIT = 20;
+
+	/**
 	 * Server-owned encrypted credential fields that may be edited/revealed.
 	 *
 	 * The browser supplies only the field identifier. Reveal resolves the stored
@@ -384,18 +390,11 @@ class Routes extends Abstract_Rest_Controller {
 			return new WP_Error( 'invalid_nonce', 'Security validation failed', array( 'status' => 403 ) );
 		}
 
-		// Rate limiting to prevent brute force attacks (max 10 requests per minute per user).
-		$user_id        = get_current_user_id();
-		$rate_limit_key = "decrypt_rate_limit_{$user_id}";
-		$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
-		$requests       = $requests ?? 0;
-
-		if ( $requests >= 10 ) {
-			\CampaignBridge\Core\Error_Handler::warning( 'Rate limit exceeded for decrypt requests', array( 'user_id' => $user_id ) );
-			return new WP_Error( 'rate_limit_exceeded', 'Too many requests. Please try again later.', array( 'status' => 429 ) );
+		// Credential reveal is bounded per user (10 per minute) and the claim is atomic.
+		$limited = Rate_Limiter::check_rate_limit_authenticated( 'decrypt_field', Rest_Constants::CACHE_KEY_PREFIX_GENERAL, self::DECRYPT_LIMIT, Rest_Constants::RATE_LIMIT_WINDOW );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
 		}
-
-		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute window
 
 		$field_id = (string) $request->get_param( 'field_id' );
 		if ( ! self::validate_encrypted_field_id( $field_id ) ) {
@@ -497,18 +496,11 @@ class Routes extends Abstract_Rest_Controller {
 			return new WP_Error( 'invalid_nonce', 'Security validation failed', array( 'status' => 403 ) );
 		}
 
-		// Rate limiting to prevent abuse (max 20 requests per minute per user).
-		$user_id        = get_current_user_id();
-		$rate_limit_key = "encrypt_rate_limit_{$user_id}";
-		$requests       = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
-		$requests       = $requests ?? 0;
-
-		if ( $requests >= 20 ) {
-			\CampaignBridge\Core\Error_Handler::warning( 'Rate limit exceeded for encrypt requests', array( 'user_id' => $user_id ) );
-			return new WP_Error( 'rate_limit_exceeded', 'Too many requests. Please try again later.', array( 'status' => 429 ) );
+		// Bounded per user (20 per minute); the claim is atomic.
+		$limited = Rate_Limiter::check_rate_limit_authenticated( 'encrypt_field', Rest_Constants::CACHE_KEY_PREFIX_GENERAL, self::ENCRYPT_LIMIT, Rest_Constants::RATE_LIMIT_WINDOW );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
 		}
-
-		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $requests + 1, 60 ); // 1 minute window
 
 		$field_id  = (string) $request->get_param( 'field_id' );
 		$new_value = $request->get_param( 'new_value' );

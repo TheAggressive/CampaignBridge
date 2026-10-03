@@ -7,12 +7,79 @@
 3. Confirm outbound HTTPS and DNS access to `<dc>.api.mailchimp.com`.
 4. Rotate the provider credential if disclosure is suspected. Do not rotate the local encryption key as a substitute for rotating the provider key.
 
+## Encryption key configuration
+
+By default the credential encryption key is generated and stored in WordPress
+options, so a database-only compromise exposes it with the ciphertext. Keep
+the key outside the database on production sites.
+
+### Configure an external key
+
+1. Generate 32 random bytes, base64-encoded: `openssl rand -base64 32`.
+2. Store the value in the host's secret store or environment, and back it up
+   with the same care as the database. Losing it makes every credential
+   encrypted with it unreadable.
+3. In `wp-config.php`, define the canonical constant before WordPress loads:
+
+   ```php
+   define( 'CAMPAIGNBRIDGE_ENCRYPTION_KEY', getenv( 'CAMPAIGNBRIDGE_ENCRYPTION_KEY' ) );
+   ```
+
+   The constant must be the base64 encoding of exactly 32 bytes. If it is
+   defined but empty or malformed (for example, a missing environment
+   variable), CampaignBridge refuses to encrypt or decrypt any credential
+   rather than fall back to the database key.
+4. Open **CampaignBridge → Status**. **Credential Encryption** shows the key
+   source and whether the Mailchimp credential uses the current key.
+5. Existing credentials stay readable through the database key. To move the
+   credential to the external key, open **Settings → Providers** as a user
+   who can manage connections and save. The credential is re-encrypted,
+   verified, and only then stored; the database key is not deleted.
+6. Once Status reports the credential as protected by the current key, the
+   database fallback key protects nothing current. It may be removed with
+   `wp option delete campaignbridge_master_key campaignbridge_retired_encryption_keys campaignbridge_key_metadata`.
+   Keep it while database backups that predate re-encryption must remain
+   restorable.
+
+### Rotate an external key
+
+1. Generate a new key. Set it as `CAMPAIGNBRIDGE_ENCRYPTION_KEY` and move the
+   old key to `CAMPAIGNBRIDGE_ENCRYPTION_RETIRED_KEYS` (a comma-separated list
+   in the same format), which is used only for decryption.
+2. Save **Settings → Providers** to re-encrypt the credential, and confirm in
+   Status.
+3. Remove the old key from the retired list.
+
+### Roll back to the database key
+
+1. Move the external key from `CAMPAIGNBRIDGE_ENCRYPTION_KEY` to
+   `CAMPAIGNBRIDGE_ENCRYPTION_RETIRED_KEYS`. The database key becomes current
+   again (it is created if it was removed).
+2. Save **Settings → Providers**, then confirm in Status before removing the
+   retired constant.
+
+Removing an external key without retiring it makes credentials encrypted
+with it unreadable; restore the constant or re-enter the provider API key.
+
 ## Encryption failures
 
 1. Preserve the database and configuration before changing keys.
-2. Check `campaignbridge_key_metadata` and the retired-key option; do not delete either during recovery.
-3. Confirm OpenSSL and AES-256-GCM support through the plugin security check.
-4. If migration fails, restore the backup and investigate the original stored format. Never replace an unreadable value with plaintext.
+2. Check **CampaignBridge → Status → Credential Encryption**. "Invalid" means
+   `CAMPAIGNBRIDGE_ENCRYPTION_KEY` is defined but is not the base64 encoding
+   of 32 bytes. "Cannot be decrypted with the configured keys" means the key
+   that encrypted the credential is no longer configured: restore it as a
+   retired key, or re-enter the provider API key.
+3. Do not delete `campaignbridge_key_metadata` or the retired-key option during
+   recovery.
+4. Confirm OpenSSL and AES-256-GCM support through the plugin security check.
+5. Never replace an unreadable value with plaintext.
+
+## Requests refused with `503 rate_limit_unavailable`
+
+Rate limits are counted in the `{prefix}campaignbridge_rate_limits` table and
+fail closed. A 503 means the CampaignBridge schema migration has not
+completed. Load any wp-admin page to retry it, and confirm the database user
+can create tables.
 
 ## Duplicate or uncertain remote campaign
 
@@ -109,4 +176,4 @@ attempt was recorded.
 
 ## Rollback
 
-Reinstall the last known-good ZIP. Restore data only when a versioned migration changed persisted state. Credential schema migrations are idempotent and key rotation retains previous decrypt keys, so normal code rollback does not require ciphertext rollback.
+Reinstall the last known-good ZIP. Restore data only when a versioned migration changed persisted state. Credential schema migrations are idempotent and key rotation retains previous decrypt keys, so normal code rollback does not require ciphertext rollback. A credential re-encrypted under `CAMPAIGNBRIDGE_ENCRYPTION_KEY` cannot be read by a release that predates external key support; roll back the key first (see above) before installing such a release.

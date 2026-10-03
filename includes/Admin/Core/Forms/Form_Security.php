@@ -170,89 +170,6 @@ class Form_Security {
 	}
 
 	/**
-	 * Set security headers for form pages.
-	 *
-	 * Adds comprehensive security headers including CSP, HSTS, and other protections.
-	 * Should be called during form rendering or page initialization.
-	 *
-	 * @param array<string, mixed> $options Security header options.
-	 * @return void
-	 */
-	public function set_security_headers( array $options = array() ): void {
-		if ( headers_sent() ) {
-			return; // Headers already sent, cannot modify.
-		}
-
-		$defaults = array(
-			'csp_enabled'          => true,
-			'hsts_enabled'         => is_ssl(),
-			'frame_options'        => 'SAMEORIGIN',
-			'content_type_options' => true,
-			'xss_protection'       => true,
-			'referrer_policy'      => 'strict-origin-when-cross-origin',
-		);
-
-		$options = wp_parse_args( $options, $defaults );
-
-		// Content Security Policy.
-		if ( $options['csp_enabled'] ) {
-			$csp_directives = array(
-				"default-src 'self'",
-				"script-src 'self' 'unsafe-inline'",
-				"style-src 'self' 'unsafe-inline'",
-				"img-src 'self' data: https:",
-				"font-src 'self'",
-				"connect-src 'self'",
-				"media-src 'self'",
-				"object-src 'none'",
-				"frame-src 'none'",
-				"base-uri 'self'",
-				"form-action 'self'",
-			);
-
-			header( 'Content-Security-Policy: ' . implode( '; ', $csp_directives ) );
-		}
-
-		// HTTP Strict Transport Security.
-		if ( $options['hsts_enabled'] ) {
-			header( 'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload' );
-		}
-
-		// X-Frame-Options.
-		if ( ! empty( $options['frame_options'] ) ) {
-			header( 'X-Frame-Options: ' . $options['frame_options'] );
-		}
-
-		// X-Content-Type-Options.
-		if ( $options['content_type_options'] ) {
-			header( 'X-Content-Type-Options: nosniff' );
-		}
-
-		// X-XSS-Protection.
-		if ( $options['xss_protection'] ) {
-			header( 'X-XSS-Protection: 1; mode=block' );
-		}
-
-		// Referrer Policy.
-		if ( ! empty( $options['referrer_policy'] ) ) {
-			header( 'Referrer-Policy: ' . $options['referrer_policy'] );
-		}
-
-		// Permissions Policy (formerly Feature Policy).
-		header( 'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()' );
-
-		// Log security headers implementation.
-		$this->log_security_event(
-			'security_headers_set',
-			array(
-				'form_id'      => $this->form_id,
-				'csp_enabled'  => $options['csp_enabled'],
-				'hsts_enabled' => $options['hsts_enabled'],
-			)
-		);
-	}
-
-	/**
 	 * Sanitize input based on field configuration.
 	 *
 	 * Validates input against potential attacks before applying field-specific sanitization
@@ -617,45 +534,6 @@ class Form_Security {
 	private function is_dangerous_filename( string $filename ): bool {
 		// Only check for directory traversal attempts - WordPress handles MIME types and dangerous extensions.
 		return strpos( $filename, '..' ) !== false || strpos( $filename, '/' ) !== false || strpos( $filename, '\\' ) !== false;
-	}
-
-	/**
-	 * Rate limiting for form submissions.
-	 *
-	 * @param int $max_attempts Maximum attempts allowed.
-	 * @param int $time_window  Time window in seconds.
-	 * @return bool True if within limits, false if rate limited.
-	 */
-	public function check_rate_limit( int $max_attempts = 10, int $time_window = 300 ): bool {
-		$user_id   = \get_current_user_id();
-		$client_ip = $this->get_client_ip();
-
-		// Create composite key for user + IP based rate limiting.
-		$rate_limit_key = $user_id . '_' . $client_ip;
-		$transient_key  = 'form_rate_limit_' . $this->form_id . '_' . md5( $rate_limit_key );
-
-		$attempts = \CampaignBridge\Core\Storage::get_transient( $transient_key );
-
-		if ( false === $attempts ) {
-			$attempts = 0;
-		}
-
-		if ( $attempts >= $max_attempts ) {
-			$this->log_security_event(
-				'rate_limit_exceeded',
-				array(
-					'user_id'   => $user_id,
-					'client_ip' => $client_ip,
-					'attempts'  => $attempts,
-					'limit'     => $max_attempts,
-					'form_id'   => $this->form_id,
-				)
-			);
-			return false; // Rate limited.
-		}
-
-		\CampaignBridge\Core\Storage::set_transient( $transient_key, $attempts + 1, $time_window );
-		return true;
 	}
 
 	/**

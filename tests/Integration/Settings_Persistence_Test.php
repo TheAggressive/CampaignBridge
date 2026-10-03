@@ -484,6 +484,60 @@ class Settings_Persistence_Test extends Test_Case {
 	}
 
 	/**
+	 * Saving the providers screen deliberately moves an unchanged credential to
+	 * the current key, keeping its verification state and the previous key.
+	 */
+	public function test_saving_an_unchanged_credential_reencrypts_it_under_the_current_key(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+		$plaintext  = str_repeat( 'a', 32 ) . '-us1';
+		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$previous   = \CampaignBridge\Core\Encryption::encrypt( $plaintext );
+		$this->assertTrue( $repository->save( \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $previous, 'aud-1' )->with_verification( true, '2025-01-15T10:30:00Z' ) ) );
+
+		$this->assertTrue( \CampaignBridge\Core\Encryption::rotate_master_key( true ) );
+		$this->assertSame( 'previous', \CampaignBridge\Core\Encryption::key_status( $previous ) );
+
+		$this->assertTrue(
+			\CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+				array(
+					'provider'           => 'mailchimp',
+					'mailchimp_api_key'  => '',
+					'mailchimp_audience' => 'aud-1',
+				)
+			)
+		);
+
+		$saved = $repository->get( 'mailchimp' );
+		$this->assertNotSame( $previous, $saved?->api_key() );
+		$this->assertSame( 'current', \CampaignBridge\Core\Encryption::key_status( (string) $saved?->api_key() ) );
+		$this->assertSame( $plaintext, \CampaignBridge\Core\Encryption::decrypt( (string) $saved?->api_key() ) );
+		$this->assertTrue( $saved?->is_verified(), 'The credential itself did not change.' );
+		$this->assertSame( $plaintext, \CampaignBridge\Core\Encryption::decrypt( $previous ), 'The previous key is kept for recovery.' );
+	}
+
+	/**
+	 * A stored credential that cannot be decrypted is never replaced or dropped by a save.
+	 */
+	public function test_an_unreadable_stored_credential_aborts_the_save_unchanged(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$orphaned   = \CampaignBridge\Core\Encryption::encrypt( str_repeat( 'a', 32 ) . '-us1', \CampaignBridge\Core\Encryption_Keyring::from_configuration( base64_encode( random_bytes( 32 ) ), null ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		$this->assertTrue( $repository->save( \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', $orphaned, 'aud-1' ) ) );
+
+		$this->assertFalse(
+			\CampaignBridge\Admin\Controllers\Provider_Save_Handler::handle(
+				array(
+					'provider'           => 'mailchimp',
+					'mailchimp_api_key'  => '',
+					'mailchimp_audience' => 'aud-2',
+				)
+			)
+		);
+		$this->assertSame( $orphaned, $repository->get( 'mailchimp' )?->api_key() );
+		$this->assertSame( 'aud-1', $repository->get( 'mailchimp' )?->audience_id() );
+	}
+
+	/**
 	 * Test that an invalid new Mailchimp API key is rejected.
 	 */
 	public function test_invalid_new_key_is_rejected(): void {

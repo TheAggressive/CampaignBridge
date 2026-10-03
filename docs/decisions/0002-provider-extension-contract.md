@@ -214,6 +214,13 @@ retryable definite refusal and is never retried automatically.
 - `Provider_Connection_Repository` (Repository) persists and retrieves
   `Provider_Connection` value objects. It is the sole storage boundary for
   provider credentials.
+- Every adapter request passes `campaignbridge_origin`: an `Http_Origin`
+  fixed in the adapter's code that names the only HTTPS hosts its credential
+  may reach (`Mailchimp_Provider::origin()` allows `<dc>.api.mailchimp.com`).
+  `Http_Client` refuses a request with no origin, or a URL outside it, before
+  any network activity, and reports `Http_Client::UNTRUSTED_ORIGIN`. Adapters
+  classify that refusal as a definite failure, because nothing was sent.
+  Origins never come from settings, REST input, or provider responses.
 
 ## Versioning and migration
 

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Providers;
 
+use CampaignBridge\Core\Http_Client;
 use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 
@@ -32,7 +33,11 @@ final class Mailchimp_Errors {
 	 * @param \WP_Error $error Transport error.
 	 */
 	public static function from_transport( \WP_Error $error ): Provider_Error {
-		$code    = $error->get_error_code();
+		$code = $error->get_error_code();
+		if ( Http_Client::UNTRUSTED_ORIGIN === $code ) {
+			// Refused before any network activity: definitely not applied.
+			return self::for_category( Provider_Error_Category::VALIDATION );
+		}
 		$message = strtolower( $error->get_error_message() );
 		$timeout = in_array( $code, array( 'connect_timeout', 'timeout' ), true )
 			|| str_contains( $message, 'timed out' )

@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit;
 
 use CampaignBridge\Core\Http_Client;
+use CampaignBridge\Core\Http_Origin;
 use ReflectionMethod;
 use WP_UnitTestCase;
 
@@ -67,7 +68,13 @@ class Http_Client_Retry_Test extends WP_UnitTestCase {
 		add_filter( 'pre_http_request', $preempt, 10, 3 );
 
 		try {
-			Http_Client::post( 'https://api.example.com/resource', array( 'redirection' => 5 ) );
+			Http_Client::post(
+				'https://api.example.com/resource',
+				array(
+					'redirection'           => 5,
+					'campaignbridge_origin' => Http_Origin::host( 'api.example.com' ),
+				)
+			);
 		} finally {
 			remove_filter( 'pre_http_request', $preempt, 10 );
 		}

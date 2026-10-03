@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit\Provider;
 
 use CampaignBridge\Core\Http_Client_Interface;
+use CampaignBridge\Core\Http_Origin;
 use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Provider\Discovery_Batch;
@@ -25,6 +26,9 @@ final class Scripted_Http_Client implements Http_Client_Interface {
 	public function __construct( private readonly array|\WP_Error $response ) {}
 
 	public function get( string $url, array $args = array() ) {
+		if ( ! ( $args['campaignbridge_origin'] ?? null ) instanceof Http_Origin || ! $args['campaignbridge_origin']->allows( $url ) ) {
+			throw new \LogicException( 'Every Mailchimp request must declare a trusted origin that allows its URL.' );
+		}
 		$this->requests[] = array(
 			'url'  => $url,
 			'args' => $args,

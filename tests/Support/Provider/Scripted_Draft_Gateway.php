@@ -42,6 +42,9 @@ final class Scripted_Draft_Gateway implements Provider_Draft_Gateway {
 	/** @var (\Closure(): void)|null Runs while the remote create is in flight. */
 	public ?\Closure $during_create = null;
 
+	/** @var (\Closure(): void)|null Runs while a sync is in flight, as a concurrent request could. */
+	public ?\Closure $during_sync = null;
+
 	public string $next_remote_id = 'mc0001';
 
 	/** Remote status as the provider would report it. */
@@ -79,6 +82,11 @@ final class Scripted_Draft_Gateway implements Provider_Draft_Gateway {
 	public function sync_draft( array $settings, string $remote_id, Draft_Content $content ): Action_Outcome {
 		++$this->syncs;
 		$this->contents[] = $content;
+		if ( null !== $this->during_sync ) {
+			$concurrent        = $this->during_sync;
+			$this->during_sync = null;
+			$concurrent();
+		}
 		$outcome          = array_shift( $this->sync_outcomes ) ?? Action_Outcome::accepted();
 		if ( Action_Outcome::ACCEPTED === $outcome->status() && ! $this->sync_ignores_audience ) {
 			$this->remote_audience = $content->audience_id();

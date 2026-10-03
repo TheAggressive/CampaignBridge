@@ -214,6 +214,31 @@ final class Provider_Connection {
 	}
 
 	/**
+	 * Return a new instance holding the same credential in a new envelope.
+	 *
+	 * Verification state is preserved because the plaintext is unchanged;
+	 * only the encryption key that protects it differs.
+	 *
+	 * @param string $api_key Re-encrypted API key envelope.
+	 * @throws \InvalidArgumentException When the envelope is empty.
+	 */
+	public function with_reencrypted_api_key( string $api_key ): self {
+		if ( '' === $api_key ) {
+			throw new \InvalidArgumentException( 'Invalid API key.' );
+		}
+
+		return new self(
+			$this->provider_slug,
+			$api_key,
+			$this->audience_id,
+			$this->schema_version,
+			$this->last_verified_at,
+			$this->verified,
+			$this->account_details
+		);
+	}
+
+	/**
 	 * Serialize for storage.
 	 *
 	 * @return array<string, mixed>

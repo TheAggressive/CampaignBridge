@@ -34,6 +34,7 @@ class Status_Controller {
 		$this->load_system_info();
 		$this->load_plugin_info();
 		$this->load_integrations_info();
+		$this->load_encryption_info();
 		$this->load_stats_info();
 	}
 
@@ -107,6 +108,24 @@ class Status_Controller {
 				'configured' => true, // HTML export always works.
 				'version'    => '1.0.0',
 			),
+		);
+	}
+
+	/**
+	 * Load credential encryption status.
+	 *
+	 * Reports only the key source and whether the stored credential uses the
+	 * current key; never key IDs, key material, or ciphertext.
+	 *
+	 * @return void
+	 */
+	private function load_encryption_info(): void {
+		$keyring    = \CampaignBridge\Core\Encryption_Keyring::configured();
+		$connection = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' );
+
+		$this->data['encryption'] = array(
+			'source'     => $keyring->is_valid() ? $keyring->source() : 'invalid',
+			'credential' => null === $connection ? 'none' : \CampaignBridge\Core\Encryption::key_status( $connection->api_key(), $keyring ),
 		);
 	}
 
