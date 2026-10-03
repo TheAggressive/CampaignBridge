@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Providers;
 
 use CampaignBridge\Core\Encryption;
+use CampaignBridge\Core\Http_Origin;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -117,8 +118,9 @@ class Mailchimp_Provider extends Abstract_Provider {
 		$response = \CampaignBridge\Core\Http_Client::get(
 			self::build_api_url( $api_key, self::ENDPOINT_PING ),
 			array(
-				'headers'              => array( 'Authorization' => 'Bearer ' . $api_key ),
-				'campaignbridge_retry' => false,
+				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
+				'campaignbridge_retry'  => false,
+				'campaignbridge_origin' => self::origin(),
 			)
 		);
 		if ( is_wp_error( $response ) ) {
@@ -183,6 +185,16 @@ class Mailchimp_Provider extends Abstract_Provider {
 	}
 
 	/**
+	 * The only hosts that may receive a Mailchimp credential.
+	 *
+	 * Mailchimp shards accounts across data-center hosts such as
+	 * `us20.api.mailchimp.com`; nothing else is a Mailchimp API origin.
+	 */
+	public static function origin(): Http_Origin {
+		return Http_Origin::subdomain( '[a-z]{2}[0-9]{1,4}', 'api.mailchimp.com' );
+	}
+
+	/**
 	 * Build a Mailchimp API URL from the data center encoded in the API key.
 	 *
 	 * @param string $api_key  Mailchimp API key.
@@ -190,7 +202,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 	 * @return string Fully qualified API URL.
 	 * @throws \InvalidArgumentException When the key has no valid data center.
 	 */
-	public static function build_api_url( string $api_key, string $endpoint ): string {
+	public static function build_api_url( #[\SensitiveParameter] string $api_key, string $endpoint ): string {
 		if ( 1 !== preg_match( '/-([a-z]{2}[0-9]+)$/', $api_key, $matches ) ) {
 			throw new \InvalidArgumentException( 'Mailchimp API key does not contain a valid data center.' );
 		}

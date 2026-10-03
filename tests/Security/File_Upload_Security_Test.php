@@ -305,45 +305,6 @@ class File_Upload_Security_Test extends Test_Case {
 	}
 
 	/**
-	 * Test enhanced rate limiting with IP tracking
-	 */
-	public function test_enhanced_rate_limiting_with_ip_tracking(): void {
-		$form_security = new Form_Security( 'test' );
-
-		// Test that rate limiting method exists and doesn't throw errors
-		$result = $form_security->check_rate_limit( 10, 300 );
-		$this->assertIsBool( $result );
-
-		// Test IP detection
-		$reflection = new ReflectionClass( $form_security );
-		$method     = $reflection->getMethod( 'get_client_ip' );
-
-		$ip = $method->invoke( $form_security );
-		$this->assertIsString( $ip );
-	}
-
-	/**
-	 * Test security headers setting
-	 */
-	public function test_security_headers_setting(): void {
-		$form_security = new Form_Security( 'test' );
-
-		// Test security headers method exists and doesn't throw errors
-		$form_security->set_security_headers();
-
-		// Test with custom options
-		$form_security->set_security_headers(
-			array(
-				'csp_enabled'   => false,
-				'hsts_enabled'  => false,
-				'frame_options' => 'DENY',
-			)
-		);
-
-		$this->assertTrue( true ); // If we get here, no exceptions thrown
-	}
-
-	/**
 	 * Test advanced XSS protection
 	 */
 	public function test_advanced_xss_protection(): void {

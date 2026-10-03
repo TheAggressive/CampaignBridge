@@ -125,7 +125,10 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 
 		$response = $this->http->get(
 			Mailchimp_Provider::build_api_url( $api_key, $endpoint ),
-			array( 'headers' => array( 'Authorization' => 'Bearer ' . $api_key ) )
+			array(
+				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
+				'campaignbridge_origin' => Mailchimp_Provider::origin(),
+			)
 		);
 		if ( is_wp_error( $response ) ) {
 			return Mailchimp_Errors::from_transport( $response );

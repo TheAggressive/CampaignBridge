@@ -62,18 +62,19 @@ final class Mailchimp_Test_Gateway implements Provider_Test_Gateway {
 		$response = $this->http->post(
 			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) . '/actions/test' ),
 			array(
-				'headers'              => array(
+				'headers'               => array(
 					'Authorization' => 'Bearer ' . $api_key,
 					'Content-Type'  => 'application/json',
 				),
-				'body'                 => (string) wp_json_encode(
+				'body'                  => (string) wp_json_encode(
 					array(
 						'test_emails' => $delivery->recipients(),
 						'send_type'   => self::SEND_TYPES[ $delivery->format() ],
 					)
 				),
-				'timeout'              => self::TIMEOUT,
-				'campaignbridge_retry' => false,
+				'timeout'               => self::TIMEOUT,
+				'campaignbridge_retry'  => false,
+				'campaignbridge_origin' => Mailchimp_Provider::origin(),
 			)
 		);
 		if ( is_wp_error( $response ) ) {

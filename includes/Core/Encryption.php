@@ -21,12 +21,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Encryption class.
  *
  * Handles encryption/decryption of sensitive data with:
- * - AES-256-GCM encryption for authenticated encryption
+ * - AES-256-GCM authenticated encryption in versioned `cbenc:v1:<key-id>:`
+ *   envelopes, so every key source shares one ciphertext format
  * - Context-aware permission levels (api_key, sensitive, personal, public)
- * - Secure key derivation and management
- * - Key rotation capabilities
- * - Comprehensive error handling
- * - WordPress security best practices
+ * - Keys resolved by Encryption_Keyring: an external key from wp-config.php
+ *   when configured, otherwise the database fallback key
+ * - Deliberate re-encryption under the current key; never automatic
  */
 class Encryption {
 
@@ -35,11 +35,6 @@ class Encryption {
 	 */
 	private const ALGORITHM = 'aes-256-gcm';
 
-
-	/**
-	 * Key length for AES-256.
-	 */
-	private const KEY_LENGTH = 32;
 
 	/**
 	 * IV length for GCM mode.
@@ -57,21 +52,6 @@ class Encryption {
 	private const ENVELOPE_PREFIX = 'cbenc:v1:';
 
 	/**
-	 * Option name for storing the master encryption key.
-	 */
-	private const MASTER_KEY_OPTION = 'campaignbridge_master_key';
-
-	/**
-	 * Option name for storing key rotation metadata.
-	 */
-	private const KEY_META_OPTION = 'campaignbridge_key_metadata';
-
-	/**
-	 * Retired keys retained for decrypting data written before rotation.
-	 */
-	private const RETIRED_KEYS_OPTION = 'campaignbridge_retired_encryption_keys';
-
-	/**
 	 * Minimum PHP version required for GCM support and security features.
 	 */
 	private const MIN_PHP_VERSION = '8.2.0';
@@ -79,20 +59,21 @@ class Encryption {
 	/**
 	 * Encrypt an API key with authenticated encryption.
 	 *
-	 * @param string $plaintext The API key to encrypt.
+	 * @param string                  $plaintext The API key to encrypt.
+	 * @param Encryption_Keyring|null $keyring   Key sources; the site configuration by default.
 	 * @return string The encrypted API key with metadata.
-	 * @throws \RuntimeException If encryption fails or PHP version is insufficient.
+	 * @throws \RuntimeException If encryption fails, no valid key is configured, or PHP version is insufficient.
 	 */
-	public static function encrypt( string $plaintext ): string {
+	public static function encrypt( #[\SensitiveParameter] string $plaintext, ?Encryption_Keyring $keyring = null ): string {
 		self::validate_php_version();
 
 		if ( empty( $plaintext ) ) {
 			return '';
 		}
 
-		$stored_key = self::get_master_key();
-		$key        = self::key_material( $stored_key );
-		$key_id     = self::key_id( $stored_key );
+		$current    = ( $keyring ?? Encryption_Keyring::configured() )->current();
+		$key        = $current['material'];
+		$key_id     = $current['id'];
 		$iv         = random_bytes( self::IV_LENGTH );
 		$tag        = '';
 		$ciphertext = openssl_encrypt(
@@ -121,11 +102,12 @@ class Encryption {
 	 * This method is unrestricted and can be called in any context where
 	 * decrypted API keys are needed for functionality.
 	 *
-	 * @param string $encrypted The encrypted API key from storage.
+	 * @param string                  $encrypted The encrypted API key from storage.
+	 * @param Encryption_Keyring|null $keyring   Key sources; the site configuration by default.
 	 * @return string The decrypted API key.
 	 * @throws \RuntimeException If decryption fails or data is corrupted.
 	 */
-	public static function decrypt( string $encrypted ): string {
+	public static function decrypt( string $encrypted, ?Encryption_Keyring $keyring = null ): string {
 		self::validate_php_version();
 
 		if ( empty( $encrypted ) ) {
@@ -137,17 +119,15 @@ class Encryption {
 				throw new \RuntimeException( 'Refusing to decrypt plaintext or an unknown ciphertext format' );
 			}
 
-			return self::decrypt_envelope( $encrypted );
+			return self::decrypt_envelope( $encrypted, $keyring ?? Encryption_Keyring::configured() );
 
 		} catch ( \Throwable $e ) {
-			// Log the error for debugging but don't expose details.
+			// Log only the fixed internal message. A stack trace can carry
+			// argument values, which here are ciphertext and key material.
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				\CampaignBridge\Core\Error_Handler::error(
 					'CampaignBridge API key decryption failed',
-					array(
-						'error' => $e->getMessage(),
-						'trace' => $e->getTraceAsString(),
-					)
+					array( 'error' => $e->getMessage() )
 				);
 			}
 
@@ -239,121 +219,114 @@ class Encryption {
 	}
 
 	/**
-	 * Rotate the master encryption key for enhanced security.
+	 * Rotate the database fallback key, keeping the old key for decryption.
 	 *
-	 * This should be called periodically or when security incidents occur.
-	 * All existing encrypted API keys will need to be re-encrypted with the new key.
+	 * Existing values stay decryptable and are moved to the new key only by
+	 * a deliberate re-encryption. External keys are rotated by the operator in
+	 * wp-config.php, so this refuses when one is configured.
 	 *
 	 * @param bool $force Force rotation even if not scheduled.
 	 * @return bool True if rotation was performed.
 	 */
 	public static function rotate_master_key( bool $force = false ): bool {
-		$metadata = self::get_key_metadata();
+		$metadata = Encryption_Keyring::database_metadata();
 
 		// Check if rotation is needed (30 days max age).
 		$should_rotate = $force ||
 			! isset( $metadata['created'] ) ||
 			( time() - $metadata['created'] ) > ( 30 * DAY_IN_SECONDS );
 
-		if ( ! $should_rotate ) {
+		if ( ! $should_rotate || ! Encryption_Keyring::configured()->rotate_database_key() ) {
 			return false;
 		}
 
-		// Retain the current key so existing envelopes remain decryptable.
-		$current_key = self::get_master_key();
-		$retired     = self::get_retired_keys();
-
-		$retired[ self::key_id( $current_key ) ] = $current_key;
-
-		// Generate new master key.
-		$new_key = self::generate_master_key();
-
-		// Store the new key.
-		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key rotation, no user request context available
-		$retired_saved = \CampaignBridge\Core\Storage::update_option( self::RETIRED_KEYS_OPTION, $retired );
-		$success       = $retired_saved && \CampaignBridge\Core\Storage::update_option( self::MASTER_KEY_OPTION, $new_key );
-
-		if ( $success ) {
-			// Update metadata.
-			$metadata['created'] = time();
-			$metadata['version'] = ( $metadata['version'] ?? 0 ) + 1;
-			// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key rotation, no user request context available
-			\CampaignBridge\Core\Storage::update_option( self::KEY_META_OPTION, $metadata );
-
-			// Log the rotation (without exposing the key).
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				\CampaignBridge\Core\Error_Handler::info(
-					'CampaignBridge master encryption key rotated',
-					array( 'version' => $metadata['version'] )
-				);
-			}
-		}
-
-		return $success;
-	}
-
-	/**
-	 * Get the current master encryption key.
-	 *
-	 * @return string The master key for encryption/decryption.
-	 */
-	private static function get_master_key(): string {
-		$stored_key = \CampaignBridge\Core\Storage::get_option( self::MASTER_KEY_OPTION );
-
-		if ( ! $stored_key ) {
-			// Generate and store new master key.
-			$stored_key = self::generate_master_key();
-			// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key generation, no user request context available
-			\CampaignBridge\Core\Storage::add_option( self::MASTER_KEY_OPTION, $stored_key );
-
-			// Initialize metadata.
-			$metadata = array(
-				'created' => time(),
-				'version' => 1,
+		// Log the rotation (without exposing the key).
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			\CampaignBridge\Core\Error_Handler::info(
+				'CampaignBridge master encryption key rotated',
+				array( 'version' => Encryption_Keyring::database_metadata()['version'] ?? null )
 			);
-			// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key generation, no user request context available
-			\CampaignBridge\Core\Storage::add_option( self::KEY_META_OPTION, $metadata );
-
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				\CampaignBridge\Core\Error_Handler::info(
-					'CampaignBridge master encryption key generated'
-				);
-			}
 		}
 
-		return $stored_key;
+		return true;
 	}
 
 	/**
-	 * Generate a new master key using cryptographically secure methods.
+	 * Re-encrypt a value under the current key.
 	 *
-	 * @return string Base64-encoded master key.
+	 * A value already under the current key is returned unchanged. The new
+	 * envelope is decrypted and compared before it is returned, so a caller
+	 * that stores it never replaces a readable value with an unreadable one.
+	 *
+	 * @param string                  $encrypted Stored envelope.
+	 * @param Encryption_Keyring|null $keyring   Key sources; the site configuration by default.
+	 * @return string Envelope under the current key.
+	 * @throws \RuntimeException When the value cannot be decrypted or verified.
 	 */
-	private static function generate_master_key(): string {
-		$random_bytes = random_bytes( self::KEY_LENGTH );
-		return base64_encode( $random_bytes ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+	public static function reencrypt( string $encrypted, ?Encryption_Keyring $keyring = null ): string {
+		$keyring = $keyring ?? Encryption_Keyring::configured();
+		if ( null !== $keyring->current_id() && self::key_id_of( $encrypted ) === $keyring->current_id() ) {
+			return $encrypted;
+		}
+
+		$plaintext = self::decrypt( $encrypted, $keyring );
+		$replaced  = self::encrypt( $plaintext, $keyring );
+		if ( ! hash_equals( $plaintext, self::decrypt( $replaced, $keyring ) ) ) {
+			throw new \RuntimeException( 'Re-encrypted value could not be verified' );
+		}
+
+		return $replaced;
+	}
+
+	/**
+	 * Which key protects a stored value, without decrypting it.
+	 *
+	 * @param string                  $encrypted Stored envelope.
+	 * @param Encryption_Keyring|null $keyring   Key sources; the site configuration by default.
+	 * @return string `current` when under the key that encrypts new values,
+	 *                `previous` when readable only through a retired or
+	 *                database fallback key, or `unavailable`.
+	 */
+	public static function key_status( string $encrypted, ?Encryption_Keyring $keyring = null ): string {
+		$keyring = $keyring ?? Encryption_Keyring::configured();
+		$key_id  = self::key_id_of( $encrypted );
+		if ( null === $key_id || null === $keyring->source_of( $key_id ) ) {
+			return 'unavailable';
+		}
+
+		return $key_id === $keyring->current_id() ? 'current' : 'previous';
+	}
+
+	/**
+	 * Key ID named by a versioned envelope.
+	 *
+	 * @param string $encrypted Stored envelope.
+	 * @return string|null Key ID, or null when the value is not an envelope.
+	 */
+	public static function key_id_of( string $encrypted ): ?string {
+		return self::is_encrypted_value( $encrypted ) ? explode( ':', $encrypted, 4 )[2] : null;
 	}
 
 	/**
 	 * Decrypt a versioned envelope.
 	 *
-	 * @param string $encrypted Versioned ciphertext.
+	 * @param string             $encrypted Versioned ciphertext.
+	 * @param Encryption_Keyring $keyring   Key sources.
 	 * @return string Plaintext.
 	 * @throws \RuntimeException When the envelope or key is invalid.
 	 */
-	private static function decrypt_envelope( string $encrypted ): string {
+	private static function decrypt_envelope( string $encrypted, Encryption_Keyring $keyring ): string {
 		$parts = explode( ':', $encrypted, 4 );
 		if ( 4 !== count( $parts ) || 'cbenc' !== $parts[0] || 'v1' !== $parts[1] ) {
 			throw new \RuntimeException( 'Invalid encrypted data format' );
 		}
 
-		$key_id = $parts[2];
-		$keys   = self::get_decryption_keys();
-		if ( ! isset( $keys[ $key_id ] ) ) {
+		$key = $keyring->material_for( $parts[2] );
+		if ( null === $key ) {
 			throw new \RuntimeException( 'Encryption key is unavailable' );
 		}
 
-		return self::decrypt_payload( $parts[3], self::key_material( $keys[ $key_id ] ) );
+		return self::decrypt_payload( $parts[3], $key );
 	}
 
 	/**
@@ -364,7 +337,7 @@ class Encryption {
 	 * @return string Plaintext.
 	 * @throws \RuntimeException When authentication or payload validation fails.
 	 */
-	private static function decrypt_payload( string $payload, string $key ): string {
+	private static function decrypt_payload( string $payload, #[\SensitiveParameter] string $key ): string {
 		$decoded = base64_decode( $payload, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 		if ( false === $decoded || strlen( $decoded ) < self::IV_LENGTH + self::TAG_LENGTH ) {
 			throw new \RuntimeException( 'Invalid encrypted data format' );
@@ -380,61 +353,6 @@ class Encryption {
 		}
 
 		return $plaintext;
-	}
-
-	/**
-	 * Return current and retired keys indexed by stable key ID.
-	 *
-	 * @return array<string, string>
-	 */
-	private static function get_decryption_keys(): array {
-		$current = self::get_master_key();
-		return array( self::key_id( $current ) => $current ) + self::get_retired_keys();
-	}
-
-	/**
-	 * Get retired encryption keys.
-	 *
-	 * @return array<string, string>
-	 */
-	private static function get_retired_keys(): array {
-		$keys = \CampaignBridge\Core\Storage::get_option( self::RETIRED_KEYS_OPTION, array() );
-		return is_array( $keys ) ? array_filter( $keys, 'is_string' ) : array();
-	}
-
-	/**
-	 * Derive binary AES key material from a stored key.
-	 *
-	 * @param string $stored_key Base64 stored key.
-	 * @return string Binary key.
-	 * @throws \RuntimeException When stored key material is invalid.
-	 */
-	private static function key_material( string $stored_key ): string {
-		$decoded = base64_decode( $stored_key, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
-		if ( false === $decoded || self::KEY_LENGTH !== strlen( $decoded ) ) {
-			throw new \RuntimeException( 'Invalid encryption key material' );
-		}
-
-		return $decoded;
-	}
-
-	/**
-	 * Generate a non-secret identifier for an encryption key.
-	 *
-	 * @param string $stored_key Stored key.
-	 * @return string Key identifier.
-	 */
-	private static function key_id( string $stored_key ): string {
-		return substr( hash( 'sha256', $stored_key ), 0, 16 );
-	}
-
-	/**
-	 * Get key rotation metadata.
-	 *
-	 * @return array<string, mixed> Key metadata including creation time and version.
-	 */
-	private static function get_key_metadata(): array {
-		return \CampaignBridge\Core\Storage::get_option( self::KEY_META_OPTION, array() );
 	}
 
 	/**
@@ -477,9 +395,17 @@ class Encryption {
 			$secure   = false;
 		}
 
-		// Check key age.
-		$metadata = self::get_key_metadata();
-		if ( isset( $metadata['created'] ) ) {
+		$keyring = Encryption_Keyring::configured();
+		if ( ! $keyring->is_valid() ) {
+			$issues[] = sprintf( '%s is defined but is not the base64 encoding of 32 bytes; credentials cannot be encrypted or decrypted', Encryption_Keyring::KEY_CONSTANT );
+			$secure   = false;
+		} elseif ( Encryption_Keyring::SOURCE_DATABASE === $keyring->source() ) {
+			$issues[] = sprintf( 'The encryption key is stored in the database; define %s in wp-config.php to keep it outside the database', Encryption_Keyring::KEY_CONSTANT );
+		}
+
+		// Check database fallback key age.
+		$metadata = Encryption_Keyring::database_metadata();
+		if ( Encryption_Keyring::SOURCE_DATABASE === $keyring->source() && isset( $metadata['created'] ) ) {
 			$key_age_days = ( time() - $metadata['created'] ) / DAY_IN_SECONDS;
 			if ( $key_age_days > 90 ) {
 				$issues[] = sprintf( 'Master key is %d days old, consider rotation', (int) $key_age_days );
@@ -492,8 +418,10 @@ class Encryption {
 			'php_version_supported' => version_compare( PHP_VERSION, self::MIN_PHP_VERSION, '>=' ),
 			'openssl_available'     => extension_loaded( 'openssl' ),
 			'gcm_supported'         => in_array( self::ALGORITHM, openssl_get_cipher_methods(), true ),
-			'master_key_exists'     => \CampaignBridge\Core\Storage::get_option( self::MASTER_KEY_OPTION ) !== false,
-			'key_rotation_due'      => isset( $metadata['created'] ) && ( time() - $metadata['created'] ) > ( 90 * DAY_IN_SECONDS ),
+			'key_source'            => $keyring->source(),
+			'key_configuration_ok'  => $keyring->is_valid(),
+			'master_key_exists'     => Encryption_Keyring::database_key_exists(),
+			'key_rotation_due'      => Encryption_Keyring::SOURCE_DATABASE === $keyring->source() && isset( $metadata['created'] ) && ( time() - $metadata['created'] ) > ( 90 * DAY_IN_SECONDS ),
 		);
 	}
 

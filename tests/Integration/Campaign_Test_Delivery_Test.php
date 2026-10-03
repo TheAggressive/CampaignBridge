@@ -348,6 +348,30 @@ final class Campaign_Test_Delivery_Test extends Test_Case {
 		self::assertSame( Campaign_Test_Delivery::QUOTA + 1, $this->gateway->sends );
 	}
 
+	public function test_concurrent_requests_for_the_last_quota_slot_send_only_one_test(): void {
+		$campaign = $this->provider_draft_campaign();
+		for ( $i = 1; $i < Campaign_Test_Delivery::QUOTA; ++$i ) {
+			self::assertTrue( $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com' ), 'html', "test-key-{$i}", self::settings() )->is_success() );
+		}
+
+		// Both requests pass the first quota check. While the first re-asserts
+		// the remote draft, the second runs to completion and takes the slot.
+		$concurrent                = null;
+		$this->drafts->during_sync = function () use ( $campaign, &$concurrent ): void {
+			$concurrent = $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com' ), 'html', 'test-key-concurrent', self::settings() );
+		};
+		$late = $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com' ), 'html', 'test-key-late', self::settings() );
+
+		self::assertTrue( $concurrent?->is_success() );
+		self::assertSame( Campaign_Workflow_Error::RATE_LIMITED, $late->error()?->code() );
+		self::assertSame( Campaign_Test_Delivery::QUOTA, $this->gateway->sends, 'The quota is never exceeded by concurrent requests.' );
+		self::assertSame( array( 'failed', 'not_retryable' ), array( $late->attempt()?->status(), $late->attempt()?->retryability() ) );
+
+		$replay = $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com' ), 'html', 'test-key-late', self::settings() );
+		self::assertFalse( $replay->is_success() );
+		self::assertSame( Campaign_Test_Delivery::QUOTA, $this->gateway->sends, 'A released key never sends later.' );
+	}
+
 	public function test_preconditions_are_checked_before_any_provider_call(): void {
 		$campaign = $this->provider_draft_campaign();
 

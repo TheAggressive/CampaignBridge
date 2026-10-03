@@ -7,7 +7,7 @@ REST endpoints, jobs, and provider mutations remain outside this layer.
 
 ## Site-local schema
 
-`Schema_Manager` owns schema version 1 in the
+`Schema_Manager` owns the schema version in the
 `campaignbridge_database_schema` site option. Tables use the active site's
 `$wpdb->prefix`; CampaignBridge is not network-global.
 
@@ -18,6 +18,7 @@ REST endpoints, jobs, and provider mutations remain outside this layer.
 | `{prefix}campaignbridge_remote_campaigns` | Normalized local/provider/remote identity and observed state | Primary `(campaign_id, provider)` permits one mapping per local campaign/provider; unique `provider_remote (provider, remote_id)` supports reverse lookup without duplicates |
 | `{prefix}campaignbridge_delivery_attempts` | Keyed attempt identity and normalized result for provider mutations | Primary `id`; unique `campaign_idempotency (campaign_id, operation, idempotency_key)` prevents duplicate keyed attempts; `campaign_created (campaign_id, created_at)` supports bounded history |
 | `{prefix}campaignbridge_audit_events` | Append-only, minimized operator/security history | Primary `id`; `target_created (target_type, target_id, created_at)` supports bounded target history |
+| `{prefix}campaignbridge_rate_limits` | Fixed-window request counters for `Rate_Limiter`; holds only a hashed scope, a count, and an expiry | Primary `limit_key` arbitrates concurrent window creation; `expires_at` supports purging ended windows |
 
 Relationships are logical rather than database foreign keys because WordPress
 `dbDelta()` does not provide a reliable cross-version foreign-key migration
@@ -132,7 +133,7 @@ encrypted repository and are not copied into these tables.
 Activation runs the migration before granting campaign capabilities. Admin
 initialization retries it so an interrupted/current-version install with a
 missing table is repaired. `dbDelta()` receives the full idempotent schema and
-the version is stamped only after all five tables can be described. Repeated
+the version is stamped only after every table can be described. Repeated
 runs preserve rows.
 
 An absent version is version zero. Malformed or newer schema versions fail
@@ -140,5 +141,5 @@ closed: no migration, downgrade, option rewrite, or data deletion occurs.
 Repositories also refuse access unless the installed schema is current.
 Rolling plugin code back across an unsupported future schema therefore leaves
 the newer data intact for operator recovery or re-upgrade. Explicit WordPress
-plugin uninstall removes the five allowlisted tables and schema option;
+plugin uninstall removes the allowlisted tables and schema option;
 deactivation does not.

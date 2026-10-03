@@ -16,9 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Owns restartable, forward-safe database migrations for campaign storage. */
+/** Owns restartable, forward-safe database migrations for campaign storage and request counters. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 4;
+	public const SCHEMA_VERSION = 5;
 	public const OPTION         = 'database_schema';
 
 	private static ?bool $tables_ready = null;
@@ -29,6 +29,7 @@ final class Schema_Manager {
 		'remote_campaigns',
 		'delivery_attempts',
 		'audit_events',
+		'rate_limits',
 	);
 
 	/** Run an upgrade only when the installed schema is older. */
@@ -197,6 +198,13 @@ final class Schema_Manager {
 				created_at datetime NOT NULL,
 				PRIMARY KEY  (id),
 				KEY target_created (target_type, target_id, created_at)
+			) {$collate};",
+			'CREATE TABLE ' . self::table( 'rate_limits' ) . " (
+				limit_key char(64) NOT NULL,
+				hits int unsigned NOT NULL,
+				expires_at bigint unsigned NOT NULL,
+				PRIMARY KEY  (limit_key),
+				KEY expires_at (expires_at)
 			) {$collate};",
 		);
 	}

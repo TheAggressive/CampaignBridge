@@ -30,13 +30,6 @@ class Admin {
 	private Admin_Menu_Manager $menu_manager;
 
 	/**
-	 * Security manager instance.
-	 *
-	 * @var Admin_Security_Manager
-	 */
-	private Admin_Security_Manager $security_manager;
-
-	/**
 	 * Singleton instance.
 	 *
 	 * @var Admin|null
@@ -75,13 +68,11 @@ class Admin {
 		$this->screen_registry = new Screen_Registry( $screens_path, 'campaignbridge' );
 		$this->screen_registry->init();
 
-		// Initialize menu and security managers.
-		$this->menu_manager     = new Admin_Menu_Manager();
-		$this->security_manager = new Admin_Security_Manager();
-
-		// Initialize menu and security systems.
+		// Response security headers on admin screens (X-Frame-Options,
+		// frame-ancestors, Referrer-Policy, no-cache) are owned by WordPress
+		// core; transport policy such as HSTS belongs to the site and server.
+		$this->menu_manager = new Admin_Menu_Manager();
 		$this->menu_manager->init();
-		$this->security_manager->init();
 
 		// Enqueue global assets.
 		\add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_global_assets' ) );

@@ -41,7 +41,7 @@ class Rest_Constants {
 	public const RATE_LIMIT_WINDOW   = 60;
 
 	/**
-	 * Cache key prefixes for rate limiting.
+	 * Counter namespaces for rate limiting.
 	 */
 	public const CACHE_KEY_PREFIX_GENERAL = 'campaignbridge_rate_limit_';
 	public const CACHE_KEY_PREFIX_EDITOR  = 'campaignbridge_rate_limit_editor_settings_';
@@ -59,6 +59,7 @@ class Rest_Constants {
 	public const HTTP_FORBIDDEN             = 403;
 	public const HTTP_CONFLICT              = 409;
 	public const HTTP_BAD_GATEWAY           = 502;
+	public const HTTP_SERVICE_UNAVAILABLE   = 503;
 
 	/**
 	 * Query defaults for posts endpoint.

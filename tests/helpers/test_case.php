@@ -15,11 +15,19 @@ use WP_UnitTestCase;
 abstract class Test_Case extends WP_UnitTestCase {
 
 	/**
+	 * Simulate the activated plugin before any subclass set_up() logic, so a
+	 * test can still remove what activation created.
+	 */
+	public function set_up(): void {
+		parent::set_up();
+		$this->setup_plugin_environment();
+	}
+
+	/**
 	 * Set up test environment.
 	 */
 	public function setUp(): void {
 		parent::setUp();
-		$this->setup_plugin_environment();
 
 		// Start output buffering to suppress form HTML output during tests
 		ob_start();
@@ -61,7 +69,10 @@ abstract class Test_Case extends WP_UnitTestCase {
 			do_action( 'campaignbridge_init' );
 		}
 
-		// Grant plugin capabilities to the administrator role (simulates activation).
+		// Simulate activation: create site-local storage (campaign tables and
+		// the request counters every rate-limited route depends on), then grant
+		// plugin capabilities to the administrator role.
+		\CampaignBridge\Repository\Schema_Manager::migrate();
 		\CampaignBridge\Core\Capabilities::register();
 	}
 

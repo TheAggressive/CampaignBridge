@@ -12,6 +12,7 @@ namespace CampaignBridge\Tests\Integration;
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Design_Font_Registry;
+use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\REST\Routes;
 use WP_REST_Request;
 
@@ -22,6 +23,7 @@ final class Preview_Route_Test extends \WP_UnitTestCase {
 
 	public function set_up(): void {
 		parent::set_up();
+		self::assertTrue( Schema_Manager::migrate(), 'Rate-limited routes need the activated schema.' );
 
 		do_action( 'rest_api_init' );
 		Routes::register();

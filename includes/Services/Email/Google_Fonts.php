@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Services\Email;
 
 use CampaignBridge\Core\Http_Client;
+use CampaignBridge\Core\Http_Origin;
 use CampaignBridge\Core\Storage;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use WP_Error;
@@ -188,9 +189,10 @@ final class Google_Fonts {
 		$response = Http_Client::get(
 			self::CSS_URL . '?family=' . str_replace( '%20', '+', rawurlencode( $family ) ) . '&display=swap',
 			array(
-				'campaignbridge_retry' => false,
-				'timeout'              => 3,
-				'limit_response_size'  => self::MAX_CSS_SIZE,
+				'campaignbridge_retry'  => false,
+				'campaignbridge_origin' => Http_Origin::host( 'fonts.googleapis.com' ),
+				'timeout'               => 3,
+				'limit_response_size'   => self::MAX_CSS_SIZE,
 			)
 		);
 		if ( is_wp_error( $response ) ) {

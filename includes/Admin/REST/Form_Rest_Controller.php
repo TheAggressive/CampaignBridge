@@ -130,9 +130,6 @@ class Form_Rest_Controller {
 	 * @return void
 	 */
 	public function handle_ajax_evaluate_conditions(): void {
-		// Security: Add security headers for AJAX responses.
-		$this->add_security_headers();
-
 		// WordPress built-in: Verify user authentication.
 		if ( ! is_user_logged_in() ) {
 			wp_send_json_error( 'Authentication required.', 401 );
@@ -161,16 +158,16 @@ class Form_Rest_Controller {
 			wp_send_json_error( 'Insufficient permissions.', 403 );
 		}
 
-		// Security: Enhanced rate limiting with sliding window (60-second window).
-		if ( ! $this->check_rate_limit( get_current_user_id() ) ) {
-			\CampaignBridge\Core\Error_Handler::error(
-				'Rate limit exceeded',
-				array(
-					'user_id' => get_current_user_id(),
-					'ip'      => $this->get_client_ip(),
-				)
-			);
-			wp_send_json_error( 'Rate limit exceeded. Please wait before making another request.', 429 );
+		// Security: atomic per-user rate limit.
+		$limited = \CampaignBridge\REST\Rate_Limiter::check_rate_limit_authenticated(
+			'form_conditions',
+			\CampaignBridge\REST\Rest_Constants::CACHE_KEY_PREFIX_GENERAL,
+			self::RATE_LIMIT_REQUESTS,
+			\CampaignBridge\REST\Rest_Constants::RATE_LIMIT_WINDOW
+		);
+		if ( is_wp_error( $limited ) ) {
+			$data = $limited->get_error_data();
+			wp_send_json_error( $limited->get_error_message(), is_array( $data ) && is_int( $data['status'] ?? null ) ? $data['status'] : 429 );
 		}
 
 		// Read the bounded raw shape before sanitizing individual values.
@@ -347,90 +344,6 @@ class Form_Rest_Controller {
 
 			default:
 				return ''; // Reject unknown types.
-		}
-	}
-
-	/**
-	 * Enhanced rate limiting with sliding window to prevent burst attacks.
-	 *
-	 * @param int $user_id User ID to check rate limit for.
-	 * @return bool True if within limits, false if exceeded.
-	 */
-	private function check_rate_limit( int $user_id ): bool {
-		$current_time   = time();
-		$window_seconds = 60; // 1-minute sliding window
-		$max_requests   = self::RATE_LIMIT_REQUESTS;
-
-		$rate_limit_key  = 'conditional_rate_limit_' . $user_id;
-		$transient_value = \CampaignBridge\Core\Storage::get_transient( $rate_limit_key );
-
-		// Use more efficient array structure for better performance.
-		if ( ! is_array( $transient_value ) ) {
-			$transient_value = array(
-				'requests'     => array(),
-				'last_cleanup' => $current_time,
-			);
-		}
-
-		// Periodic cleanup to prevent array from growing too large.
-		if ( $current_time - $transient_value['last_cleanup'] > 30 ) {
-			$transient_value['requests']     = array_filter(
-				$transient_value['requests'],
-				function ( $timestamp ) use ( $current_time, $window_seconds ) {
-					return ( $current_time - $timestamp ) < $window_seconds;
-				}
-			);
-			$transient_value['last_cleanup'] = $current_time;
-		}
-
-		// Check if under the limit.
-		if ( count( $transient_value['requests'] ) >= $max_requests ) {
-			return false;
-		}
-
-		// Add current request timestamp.
-		$transient_value['requests'][] = $current_time;
-
-		// Store updated request log with optimized TTL.
-		$ttl = min( $window_seconds, 300 ); // Don't cache longer than 5 minutes.
-		\CampaignBridge\Core\Storage::set_transient( $rate_limit_key, $transient_value, $ttl );
-
-		return true;
-	}
-
-	/**
-	 * Get client IP address for security logging.
-	 *
-	 * @return string Client IP address.
-	 */
-	private function get_client_ip(): string {
-		return \CampaignBridge\Core\Client_Address::get();
-	}
-
-	/**
-	 * Add security headers for AJAX responses.
-	 */
-	private function add_security_headers(): void {
-		if ( ! headers_sent() ) {
-			// Prevent MIME type sniffing.
-			header( 'X-Content-Type-Options: nosniff' );
-
-			// Enable XSS protection.
-			header( 'X-XSS-Protection: 1; mode=block' );
-
-			// Prevent clickjacking.
-			header( 'X-Frame-Options: SAMEORIGIN' );
-
-			// Referrer policy for AJAX.
-			header( 'Referrer-Policy: strict-origin-when-cross-origin' );
-
-			// Content Security Policy for AJAX responses.
-			header( "Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'" );
-
-			// Prevent caching of sensitive responses.
-			header( 'Cache-Control: no-cache, no-store, must-revalidate' );
-			header( 'Pragma: no-cache' );
-			header( 'Expires: 0' );
 		}
 	}
 }

@@ -76,9 +76,10 @@ final class Mailchimp_Delivery_Gateway implements Provider_Delivery_Gateway {
 		}
 
 		$request = array(
-			'headers'              => array( 'Authorization' => 'Bearer ' . $api_key ),
-			'timeout'              => self::TIMEOUT,
-			'campaignbridge_retry' => false,
+			'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
+			'timeout'               => self::TIMEOUT,
+			'campaignbridge_retry'  => false,
+			'campaignbridge_origin' => Mailchimp_Provider::origin(),
 		);
 		if ( null !== $body ) {
 			$request['headers']['Content-Type'] = 'application/json';

@@ -520,25 +520,6 @@ class Form {
 	}
 
 	/**
-	 * Enable security headers for this form.
-	 *
-	 * Adds comprehensive security headers including CSP, HSTS, and other protections
-	 * to enhance security when the form is rendered.
-	 *
-	 * @param array<string, mixed> $options Security header options.
-	 * @return self
-	 */
-	public function enable_security_headers( array $options = array() ): self {
-		$this->on(
-			'before_render',
-			function () use ( $options ) {
-				$this->security->set_security_headers( $options );
-			}
-		);
-
-		return $this;
-	}
-	/**
 	 * Set table layout
 	 *
 	 * @return static

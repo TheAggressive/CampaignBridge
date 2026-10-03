@@ -45,18 +45,19 @@ final class Provider_Save_Handler {
 				return false;
 			}
 
-			if ( '' !== $new_key && null !== $existing && $new_key === $existing->api_key() ) {
+			if ( null !== $existing && ( '' === $new_key || $new_key === $existing->api_key() ) ) {
 				// Unchanged credential: preserve verification state, timestamp, account details.
-				$connection = $existing->with_audience( $audience );
-			} elseif ( '' !== $new_key ) {
+				$current = self::under_current_key( $existing );
+				if ( null === $current ) {
+					return false;
+				}
+				$connection = $current->with_audience( $audience );
+			} else {
 				// New or changed credential: validate format before persisting.
 				if ( ! self::validate_new_api_key( $new_key ) ) {
 					return false;
 				}
 				$connection = Provider_Connection::create( 'mailchimp', $new_key, $audience );
-			} else {
-				// Empty key with existing connection: audience-only update.
-				$connection = $existing->with_audience( $audience );
 			}
 
 			// Save connection first; only persist provider selection on success.
@@ -71,6 +72,27 @@ final class Provider_Save_Handler {
 		// Non-mailchimp provider: no connection to save.
 		Storage::update_option( 'campaignbridge_provider', $provider );
 		return true;
+	}
+
+	/**
+	 * Move an unchanged credential under the current encryption key.
+	 *
+	 * This is the deliberate re-encryption step after a key change: an
+	 * operator who can manage connections saves the providers screen. The new
+	 * envelope is verified before it is returned, and the previous key is
+	 * left in place, so a failure keeps the stored value readable.
+	 *
+	 * @param Provider_Connection $existing Stored connection.
+	 * @return Provider_Connection|null The connection under the current key, or null when it cannot be re-encrypted.
+	 */
+	private static function under_current_key( Provider_Connection $existing ): ?Provider_Connection {
+		try {
+			$envelope = Encryption::reencrypt( $existing->api_key() );
+		} catch ( \RuntimeException ) {
+			return null;
+		}
+
+		return $envelope === $existing->api_key() ? $existing : $existing->with_reencrypted_api_key( $envelope );
 	}
 
 	/**

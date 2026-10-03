@@ -12,7 +12,7 @@ Email templates use the core `/wp/v2/cb_templates` routes and their `/revisions`
 
 General administrative endpoints require the `campaignbridge_manage` capability (defined in `includes/Core/Capabilities.php`). Provider credential operations use the narrower `campaignbridge_manage_connections` capability instead. Mutations additionally validate their WordPress nonce. Request arguments use WordPress REST schemas with sanitization and validation callbacks; errors return `WP_Error` with an HTTP status.
 
-Credential encryption and reveal endpoints are rate-limited `campaignbridge_manage_connections` operations. Reveal accepts a registered field identifier only; the server resolves the stored ciphertext and its security context rather than accepting ciphertext from the browser. The current registered credential field is `mailchimp_api_key`. Consumers must not cache responses containing revealed credentials.
+Credential encryption and reveal endpoints are `campaignbridge_manage_connections` operations, atomically rate-limited per user (20 and 10 requests per minute). Reveal accepts a registered field identifier only; the server resolves the stored ciphertext and its security context rather than accepting ciphertext from the browser. The current registered credential field is `mailchimp_api_key`. Consumers must not cache responses containing revealed credentials.
 
 ## Campaigns
 
@@ -330,7 +330,10 @@ Preconditions, all checked before any provider call:
 - The campaign has sent fewer than 10 tests in the last 24 hours. This
   quota is durable and per campaign, so another user or a new transport
   window does not reset it. It is in addition to the limit of 10 requests
-  per user per minute.
+  per user per minute. It is checked again once the request's attempt is
+  stored; a request that loses a concurrent race for the last slot returns
+  `429 rate_limited`, sends nothing, and its attempt is recorded as `failed`
+  and counts toward the quota.
 
 A failed precondition returns `400 invalid_input`, `409 invalid_state`,
 `429 rate_limited`, or `403 forbidden`, and nothing is sent or recorded as
@@ -516,8 +519,11 @@ The repository does not use 422. Transport-level refusals keep WordPress codes:
 
 ### Rate limits
 
-Limits are per authenticated user per 60-second window and use the shared
-`Rate_Limiter`:
+Limits are per authenticated user per fixed 60-second window and use the
+shared `Rate_Limiter`. Each request is claimed atomically, so concurrent
+requests cannot exceed a limit. A refused request returns
+`429 rate_limit_exceeded`; when the counter cannot be established the
+request is refused with `503 rate_limit_unavailable`.
 
 - 10 per window: create, snapshot, validation, preview, duplicate,
   provider-draft, test-send, schedule, and unschedule. These compile, capture, create records, or
