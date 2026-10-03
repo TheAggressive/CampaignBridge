@@ -43,6 +43,8 @@ content before it reaches a provider.
 - An HTML export provider boundary.
 - Capability-protected REST routes used by the editor and admin screens.
 - Encrypted storage for provider credentials.
+- Opt-in delivery policies: separation of duties between approval and
+  delivery, and an allowlist of test-recipient domains.
 
 CampaignBridge can create one Mailchimp draft from an approved campaign, send
 tests of that draft to up to five named addresses, and schedule or unschedule

@@ -163,30 +163,34 @@ final class Campaign_Rest_Schema {
 		return array(
 			'type'                 => 'object',
 			'additionalProperties' => false,
-			'required'             => array( 'id', 'state', 'version', 'owner_user_id', 'template_id', 'provider', 'audience_reference', 'active_snapshot_id', 'created_at', 'updated_at', 'scheduled_for' ),
+			'required'             => array( 'id', 'state', 'version', 'owner_user_id', 'template_id', 'provider', 'audience_reference', 'active_snapshot_id', 'created_at', 'updated_at', 'scheduled_for', 'approved_by_user_id' ),
 			'properties'           => array(
-				'id'                 => self::field( self::campaign_id() ),
-				'state'              => array(
+				'id'                  => self::field( self::campaign_id() ),
+				'state'               => array(
 					'type' => 'string',
 					'enum' => Campaign_State::all(),
 				),
-				'version'            => array(
+				'version'             => array(
 					'type'    => 'integer',
 					'minimum' => 1,
 				),
-				'owner_user_id'      => self::field( self::owner_user_id() ),
-				'template_id'        => self::field( self::template_id() ),
-				'provider'           => self::field( self::provider() ),
-				'audience_reference' => self::field( self::audience_reference() ),
-				'active_snapshot_id' => array(
+				'owner_user_id'       => self::field( self::owner_user_id() ),
+				'template_id'         => self::field( self::template_id() ),
+				'provider'            => self::field( self::provider() ),
+				'audience_reference'  => self::field( self::audience_reference() ),
+				'active_snapshot_id'  => array(
 					'type'    => array( 'string', 'null' ),
 					'pattern' => self::IDENTIFIER_PATTERN,
 				),
-				'created_at'         => self::timestamp(),
-				'updated_at'         => self::timestamp(),
-				'scheduled_for'      => array(
+				'created_at'          => self::timestamp(),
+				'updated_at'          => self::timestamp(),
+				'scheduled_for'       => array(
 					'type'   => array( 'string', 'null' ),
 					'format' => 'date-time',
+				),
+				'approved_by_user_id' => array(
+					'type'    => array( 'integer', 'null' ),
+					'minimum' => 1,
 				),
 			),
 		);

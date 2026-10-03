@@ -15,6 +15,7 @@ use CampaignBridge\Domain\Campaign\Campaign_Source;
 use CampaignBridge\Domain\Campaign\Campaign_State;
 use CampaignBridge\Domain\Campaign\Delivery_Attempt;
 use CampaignBridge\Domain\Campaign\Delivery_Attempt_Source;
+use CampaignBridge\Domain\Campaign\Delivery_Policy;
 use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
@@ -41,6 +42,7 @@ use CampaignBridge\Repository\Provider_Discovery_Repository;
 use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\Tests\Helpers\Test_Case;
+use CampaignBridge\Tests\Support\Campaign\Fixed_Delivery_Policy;
 use CampaignBridge\Tests\Support\Provider\Scripted_Draft_Gateway;
 use CampaignBridge\Workflow\Campaign\Campaign_Actor;
 use CampaignBridge\Workflow\Campaign\Campaign_Clock;
@@ -192,6 +194,8 @@ final class Campaign_Scheduler_Test extends Test_Case {
 
 	private Scripted_Draft_Gateway $drafts;
 
+	private Fixed_Delivery_Policy $policies;
+
 	private Scheduler_Clock $clock;
 
 	private Campaign_Scheduler $scheduler;
@@ -218,6 +222,7 @@ final class Campaign_Scheduler_Test extends Test_Case {
 		$this->audits     = new Audit_Event_Repository();
 		$this->gateway    = new Scripted_Delivery_Gateway();
 		$this->drafts     = new Scripted_Draft_Gateway();
+		$this->policies   = new Fixed_Delivery_Policy();
 		$this->clock      = new Scheduler_Clock();
 		$this->sender     = new Campaign_Actor( 7, true, false, true, false );
 		$this->workflow   = new Campaign_Workflow(
@@ -332,6 +337,49 @@ final class Campaign_Scheduler_Test extends Test_Case {
 		$this->scheduler->schedule( $this->sender, $campaign->id(), $campaign->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() );
 
 		self::assertSame( 0, $this->drafts->syncs, 'A campaign the provider already scheduled is not modified.' );
+	}
+
+	public function test_separate_delivery_stops_the_approver_and_allows_a_second_person(): void {
+		$campaign = $this->provider_draft_campaign();
+		self::assertSame( 7, $campaign->approved_by_user_id(), 'Approval records the approver.' );
+		$this->policies->policy = Delivery_Policy::from_settings( true, '' );
+
+		$denied = $this->scheduler->schedule( $this->sender, $campaign->id(), $campaign->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $denied->error()?->code() );
+		self::assertStringContainsString( 'Separation of duties', (string) $denied->error()?->message() );
+		self::assertSame( array( array(), 0 ), array( $this->gateway->calls, $this->drafts->syncs ), 'The approver reaches no provider call.' );
+		self::assertSame( array(), $this->delivery_attempts( $campaign->id() ) );
+		$event = $this->events( $campaign->id(), 'campaign_schedule' )[0];
+		self::assertSame( array( 'denied', 'separate_delivery' ), array( $event->result(), $event->context()->to_array()['policy'] ?? null ) );
+
+		$second    = new Campaign_Actor( 8, false, true, true, false );
+		$scheduled = $this->scheduler->schedule( $second, $campaign->id(), $campaign->version(), self::SEND_AT, self::AUDIENCE, 'schedule-2', self::settings() );
+		self::assertTrue( $scheduled->is_success() );
+		self::assertSame( 7, $scheduled->campaign()?->approved_by_user_id() );
+
+		// Unscheduling stops delivery, so the approver may still do it.
+		self::assertTrue( $this->scheduler->unschedule( $this->sender, $campaign->id(), (int) $scheduled->campaign()?->version(), 'unschedule-1', self::settings() )->is_success() );
+	}
+
+	public function test_separate_delivery_fails_closed_without_a_recorded_approver(): void {
+		$campaign = $this->provider_draft_campaign();
+		$legacy   = Campaign::from_array(
+			array_merge(
+				$campaign->to_array(),
+				array(
+					'approved_by_user_id' => null,
+					'version'             => $campaign->version() + 1,
+				)
+			)
+		);
+		self::assertTrue( $this->campaigns->compare_and_swap( $legacy, $campaign->version() ) );
+		$this->policies->policy = Delivery_Policy::from_settings( true, '' );
+
+		$denied = $this->scheduler->schedule( new Campaign_Actor( 8, false, true, true, false ), $campaign->id(), $legacy->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $denied->error()?->code() );
+		self::assertStringContainsString( 'approved before approvers were recorded', (string) $denied->error()?->message() );
+		self::assertSame( array(), $this->gateway->calls );
 	}
 
 	public function test_repeats_and_double_clicks_never_reach_the_provider_twice(): void {
@@ -483,7 +531,8 @@ final class Campaign_Scheduler_Test extends Test_Case {
 			( new Mailchimp_Provider() )->capabilities(),
 			$this->drafts,
 			new Mailchimp_Token_Mapper(),
-			new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock() )
+			new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock() ),
+			$this->policies
 		);
 	}
 

@@ -26,17 +26,18 @@ final class Campaign_Rest_Resource {
 	/** @return array<string, mixed> */
 	public static function campaign( Campaign $campaign ): array {
 		return array(
-			'id'                 => $campaign->id(),
-			'state'              => $campaign->state(),
-			'version'            => $campaign->version(),
-			'owner_user_id'      => $campaign->owner_user_id(),
-			'template_id'        => $campaign->template_id(),
-			'provider'           => $campaign->provider(),
-			'audience_reference' => $campaign->audience_reference(),
-			'active_snapshot_id' => $campaign->active_snapshot_id(),
-			'created_at'         => $campaign->created_at(),
-			'updated_at'         => $campaign->updated_at(),
-			'scheduled_for'      => $campaign->scheduled_for(),
+			'id'                  => $campaign->id(),
+			'state'               => $campaign->state(),
+			'version'             => $campaign->version(),
+			'owner_user_id'       => $campaign->owner_user_id(),
+			'template_id'         => $campaign->template_id(),
+			'provider'            => $campaign->provider(),
+			'audience_reference'  => $campaign->audience_reference(),
+			'active_snapshot_id'  => $campaign->active_snapshot_id(),
+			'created_at'          => $campaign->created_at(),
+			'updated_at'          => $campaign->updated_at(),
+			'scheduled_for'       => $campaign->scheduled_for(),
+			'approved_by_user_id' => $campaign->approved_by_user_id(),
 		);
 	}
 

@@ -21,6 +21,7 @@ use CampaignBridge\Domain\Campaign\Delivery_Attempt;
 use CampaignBridge\Domain\Campaign\Delivery_Attempt_Source;
 use CampaignBridge\Domain\Campaign\Delivery_Attempt_Status;
 use CampaignBridge\Domain\Campaign\Delivery_Operation;
+use CampaignBridge\Domain\Campaign\Delivery_Policy_Source;
 use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference_Source;
@@ -63,6 +64,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  *    may or may not deliver; it is never retried automatically.
  * 6. A repeated idempotency key returns the recorded outcome and never
  *    contacts the provider again.
+ * 7. Governance policy applies. With separate delivery on, the person who
+ *    approved the campaign cannot schedule it, and an unrecorded approver
+ *    fails closed. Unscheduling stops delivery, so it is never blocked.
  */
 final class Campaign_Scheduler {
 	/** Observed remote state of a scheduled campaign. */
@@ -84,7 +88,8 @@ final class Campaign_Scheduler {
 		private readonly Provider_Capabilities $capabilities,
 		private readonly Provider_Draft_Gateway $drafts,
 		private readonly Provider_Token_Mapper $tokens,
-		private readonly Provider_Discovery_Service $discovery
+		private readonly Provider_Discovery_Service $discovery,
+		private readonly Delivery_Policy_Source $policies
 	) {}
 
 	/**
@@ -98,6 +103,22 @@ final class Campaign_Scheduler {
 		$campaign  = $this->authorized( $actor, $campaign_id, $idempotency_key, $operation );
 		if ( $campaign instanceof Campaign_Delivery_Result ) {
 			return $campaign;
+		}
+		if ( ! $this->policies->current()->allows_delivery_by( $actor->user_id(), $campaign->approved_by_user_id() ) ) {
+			return $this->refuse(
+				$operation,
+				Campaign_Workflow_Error::FORBIDDEN,
+				null === $campaign->approved_by_user_id()
+					? 'Separation of duties is required, but this campaign was approved before approvers were recorded, so it cannot be verified. A manager must recreate and approve the campaign, or turn the policy off to deliver it.'
+					: 'Separation of duties is required: the person who approved this campaign cannot schedule it. Ask another person with delivery authority.',
+				$actor,
+				$campaign_id,
+				$campaign,
+				'denied',
+				null,
+				null,
+				array( 'policy' => 'separate_delivery' )
+			);
 		}
 		if ( null === $campaign->audience_reference() || ! hash_equals( $campaign->audience_reference(), $confirm_audience ) ) {
 			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, 'The confirmed audience does not match the campaign\'s audience. Nothing was scheduled.', $actor, $campaign_id, $campaign );
@@ -321,7 +342,8 @@ final class Campaign_Scheduler {
 		);
 	}
 
-	private function refuse( string $operation, string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null ): Campaign_Delivery_Result {
+	/** @param array<string, string> $context Additional safe audit context. */
+	private function refuse( string $operation, string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null, array $context = array() ): Campaign_Delivery_Result {
 		try {
 			$this->audits->add(
 				$this->event(
@@ -329,9 +351,12 @@ final class Campaign_Scheduler {
 					$operation,
 					$campaign_id,
 					$result,
-					array(
-						'error_code'          => $code,
-						'provider_error_code' => $error?->code(),
+					array_merge(
+						array(
+							'error_code'          => $code,
+							'provider_error_code' => $error?->code(),
+						),
+						$context
 					)
 				)
 			);

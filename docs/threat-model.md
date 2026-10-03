@@ -18,6 +18,8 @@ CampaignBridge stores provider credentials and can create or send public email c
 | Key rotation destroys old ciphertext | Retired-key ring and envelope key IDs | `Encryption_Test::test_key_rotation` |
 | Wrong Mailchimp region | Data center parsed from validated key | `Mailchimp_Provider_Test` |
 | Duplicate campaign creation after 5xx | POST/PATCH retries disabled by default | `Http_Client_Retry_Test` |
+| One person approves and delivers alone | Opt-in separation of duties on the recorded approver; manager-only policy settings | `Campaign_Scheduler_Test`, `Campaign_Schedule_Route_Test`, `Admin_Form_Screens_Test` |
+| Test sends leak content outside the organization | Opt-in exact-domain allowlist that fails closed when misconfigured | `Campaign_Test_Delivery_Test`, `Delivery_Policy_Test` |
 | Test send used to mail arbitrary addresses | Separate test capability, 1–5 recipients, per-user and durable per-campaign limits | `Campaign_Test_Delivery_Test`, `Campaign_Routes_Security_Test` |
 | Approval bypassed by editing or retargeting the provider draft | Approved audience, envelope, and content re-asserted and verified (unsent, exact list, no segment) before every test or schedule | `Campaign_Scheduler_Test`, `Campaign_Draft_Handoff_Test`, `Campaign_Schedule_Route_Test` |
 | Duplicate or mistargeted audience delivery | Audience confirmation, version claim before contact, one unresolved delivery attempt blocks all others, no automatic retry | `Campaign_Scheduler_Test`, `Campaign_Schedule_Route_Test` |
