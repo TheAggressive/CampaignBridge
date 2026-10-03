@@ -48,10 +48,11 @@ All routes are under `/campaignbridge/v1`. Every action route is `POST`.
 | `POST` | `/campaigns/{id}/archive` | `expected_version` | `archive` | 200 campaign |
 | `POST` | `/campaigns/{id}/duplicate` | `idempotency_key` | `duplicate` | 201 new, or 200 replay |
 | `POST` | `/campaigns/{id}/provider-draft` | `expected_version`, `idempotency_key` | draft handoff | 201 created, or 200 replay |
+| `POST` | `/campaigns/{id}/test-send` | `recipients`, `format?`, `idempotency_key` | test delivery | 202 sent, or 200 replay |
 
-There are no test-send, schedule, send, cancel, or reconcile campaign routes.
-Those operations belong to M3 (#78–#80) and will be separate contracts.
-Creating a provider draft never schedules or sends it.
+There are no schedule, send, cancel, or reconcile campaign routes. Those
+operations belong to M3 (#79–#80) and will be separate contracts. Creating a
+provider draft or sending a test never schedules or sends to the audience.
 
 Validation and preview are `POST` because they compile live template content,
 are rate-limited, and validation writes an audit event. Neither persists
@@ -70,6 +71,8 @@ the workflow runs. The bounds match the domain:
   enforces a 191-byte limit; a longer multibyte value returns
   `campaignbridge_campaign_invalid_input`.
 - `idempotency_key`: `^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$`.
+- `recipients`: 1–5 email addresses, each at most 254 characters.
+- `format`: `html` (default) or `text`.
 - `page`: 1–1000000; `per_page`: 1–100.
 
 Unknown body fields are ignored and never reach the workflow. Values are never
@@ -82,8 +85,10 @@ truncated.
   with no nonce is treated as logged out (401). An invalid nonce returns
   `rest_cookie_invalid_nonce` (403). Application passwords work as in core.
 - Every route's permission callback requires `campaignbridge_create_campaigns`
-  or `campaignbridge_manage`. `/approve` also requires
-  `campaignbridge_send_campaigns`. Callers without these capabilities receive
+  or `campaignbridge_manage`. `/approve` and `/provider-draft` also require
+  `campaignbridge_send_campaigns`. `/test-send` also requires
+  `campaignbridge_test_campaigns`, which is separate from approval and send
+  authority. Callers without these capabilities receive
   `rest_forbidden` (401 logged out, 403 logged in) before any campaign is
   loaded.
 - Object authority remains in the workflow. Holders of
@@ -274,6 +279,74 @@ Error `data` may include `remote`, `attempt` (`id`, `status`,
 client knows what already exists. Raw provider error bodies and credentials
 are never returned.
 
+### Test delivery
+
+`POST /campaigns/{id}/test-send` sends one test of the campaign's existing
+remote draft to named addresses, using the provider in the campaign's own
+targeting (currently `mailchimp`). The provider sends the draft content it
+received from the approved snapshot; editor HTML is never sent. It requires
+`campaignbridge_test_campaigns` plus management of the campaign. Holding
+`campaignbridge_send_campaigns` does not grant it. A test never changes the
+campaign's state or version.
+
+```json
+{ "recipients": ["qa@example.com"], "format": "html", "idempotency_key": "test-7f3a" }
+```
+
+Preconditions, all checked before any provider call:
+
+- `recipients` holds 1–5 valid addresses. Duplicates are merged after
+  lowercasing. `format` is `html` or `text`.
+- The campaign is `provider_draft` and its remote draft is confirmed
+  (`observed_state` `draft`).
+- The campaign has sent fewer than 10 tests in the last 24 hours. This
+  quota is durable and per campaign, so another user or a new transport
+  window does not reset it. It is in addition to the limit of 10 requests
+  per user per minute.
+
+A failed precondition returns `400 invalid_input`, `409 invalid_state`,
+`429 rate_limited`, or `403 forbidden`, and nothing is sent or recorded as
+an attempt.
+
+Recipients are used for the one provider call and never stored, logged, or
+returned. The attempt and audit event record only the recipient count, the
+format, the remote draft ID, and the snapshot ID and fingerprint tested.
+
+A success response is `campaignbridge-campaign-test-send-result`:
+
+```json
+{
+  "campaign": { "…": "campaign, unchanged" },
+  "remote": { "provider": "mailchimp", "remote_id": "mc0042", "observed_state": "draft", "observed_at": "2026-10-01T12:00:00Z" },
+  "attempt": { "id": "attempt-4b7e…", "status": "succeeded", "retryability": "not_retryable" },
+  "test": { "format": "html", "recipient_count": 1, "snapshot_id": "snapshot-8c1d…", "fingerprint": "sha256:…" },
+  "idempotent_replay": false
+}
+```
+
+The `idempotency_key` identifies one test request. Repeating a key never
+sends again: a key whose test succeeded returns 200 with
+`idempotent_replay: true`, the recorded `attempt`, and `test: null`, because
+the request was not stored. A key is not compared with the recipients sent
+with it.
+
+Outcomes after the provider is contacted:
+
+- **Sent:** 202. The provider accepted the test for delivery.
+- **Refused by the provider** (a definite 4xx, such as a rejected address or
+  an exhausted provider test quota): `502 provider_failed`. Nothing was
+  sent. The same key returns the same failure; use a new key to try again.
+- **Unconfirmed** (timeout, lost connection, 5xx, or an unexpected
+  response): `409 reconciliation_required`. The test may or may not have
+  been delivered. It is never retried automatically, and the same key keeps
+  returning this error. Check the test inboxes before sending another test
+  with a new key. Unlike an unconfirmed draft, this does not block further
+  tests, because a duplicate test reaches only the named test addresses.
+
+Mailchimp has no private preview link for a draft. Its archive URL is a
+public link, so it is not returned. The compiled preview
+(`POST /campaigns/{id}/preview`) and the test email are the review surfaces.
+
 ### Content validation outcomes
 
 Content problems are not server errors. `/validation` and `/preview` treat
@@ -312,6 +385,7 @@ is the single mapping:
 | `idempotency_conflict` | 409 | `campaignbridge_campaign_idempotency_conflict` |
 | `reconciliation_required` | 409 | `campaignbridge_campaign_reconciliation_required` |
 | `provider_failed` | 502 | `campaignbridge_campaign_provider_failed` |
+| `rate_limited` | 429 | `campaignbridge_campaign_rate_limited` |
 | `persistence_failed` (and any unmapped code) | 500 | `campaignbridge_campaign_persistence_failed` |
 
 The repository does not use 422. Transport-level refusals keep WordPress codes:
@@ -323,8 +397,10 @@ The repository does not use 422. Transport-level refusals keep WordPress codes:
 Limits are per authenticated user per 60-second window and use the shared
 `Rate_Limiter`:
 
-- 10 per window: create, snapshot, validation, preview, and duplicate. These
-  compile, capture, or create records.
+- 10 per window: create, snapshot, validation, preview, duplicate,
+  provider-draft, and test-send. These compile, capture, create records, or
+  call the provider. Test sends also have the durable per-campaign quota
+  described above.
 - 30 per window: each versioned lifecycle mutation (template, targeting,
   submit, approve, revoke-approval, archive).
 - Unlimited: reads (`GET`), which are bounded by pagination instead.

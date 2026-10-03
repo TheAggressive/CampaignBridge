@@ -409,6 +409,7 @@ final class Campaign_Routes_Test extends Test_Case {
 			'/c1/archive'         => 'campaignbridge-campaign-result',
 			'/c1/duplicate'       => 'campaignbridge-campaign-duplicate-result',
 			'/c1/provider-draft'  => 'campaignbridge-campaign-provider-draft-result',
+			'/c1/test-send'       => 'campaignbridge-campaign-test-send-result',
 		);
 		foreach ( $routes as $suffix => $title ) {
 			$options = $this->request( 'OPTIONS', self::COLLECTION . $suffix );
@@ -423,6 +424,13 @@ final class Campaign_Routes_Test extends Test_Case {
 		yield 'validation' => array( '/campaign-missing/validation', array() );
 		yield 'preview' => array( '/campaign-missing/preview', array() );
 		yield 'duplicate' => array( '/campaign-missing/duplicate', array( 'idempotency_key' => 'rate-limit' ) );
+		yield 'test send' => array(
+			'/campaign-missing/test-send',
+			array(
+				'recipients'      => array( 'qa@example.com' ),
+				'idempotency_key' => 'rate-limit',
+			),
+		);
 	}
 
 	/**

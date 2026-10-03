@@ -154,6 +154,22 @@ uploads content with an idempotent `PUT`. Response bodies are read only for
 the draft ID. `Campaign_Draft_Handoff` owns the protocol around the gateway;
 see `campaign-workflows.md`.
 
+`Provider_Error_Category::may_have_applied()` is the one rule for this
+classification, shared by draft and test outcomes.
+
+**Test delivery (#78).** `Provider_Test_Gateway` sends one test of an
+existing remote draft to the addresses in a bounded `Test_Delivery` (1–5
+normalized addresses, `html` or `text`). It never sends to the audience,
+never retries, and classifies every result as a `Test_Outcome`: `sent`,
+`failed` (a definite refusal), or `ambiguous`. Test recipients are passed for
+the one call only; adapters must not store or log them.
+`Mailchimp_Test_Gateway` sends `POST /campaigns/{id}/actions/test` once,
+with `send_type` `html` or `plaintext`, and treats `204` as sent. A `400`
+maps to `mailchimp_request_rejected` rather than a credential error, because
+Mailchimp uses it for rejected addresses and exhausted test quotas. Mailchimp
+exposes no private draft preview link, only public archive URLs, so none is
+surfaced.
+
 ## Ownership boundaries
 
 - `Provider_Interface` defines the contract; it contains no implementation.

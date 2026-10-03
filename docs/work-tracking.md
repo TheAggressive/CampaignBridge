@@ -55,7 +55,8 @@ Completed M1 examples:
 - M1 client fixtures — #72
 
 M2 #63 is complete: storage #73, canonical workflows #74, and REST contracts
-#75. M3 provider discovery #76 is next.
+#75. In M3, discovery #76, draft handoff #77, and test delivery #78 are
+complete; guarded schedule/send/cancel #79 is next.
 
 Completed and dependency-gated examples:
 
@@ -94,17 +95,17 @@ The merged PR/closed issues provide the implementation history. Do not copy ever
 ## Dependency-first execution order
 
 Issue number is not execution order. M1 #62 with its action issues #69–#72,
-M2 #63 with its action issues #73–#75, M3 provider discovery #76, and the M3
-Mailchimp draft handoff #77 are complete. The remaining order is:
+M2 #63 with its action issues #73–#75, M3 provider discovery #76, the M3
+Mailchimp draft handoff #77, and M3 test delivery #78 are complete. The
+remaining order is:
 
-1. M3 test delivery — #78.
-2. M3 guarded schedule/send/cancel — #79.
-3. M3 reconciliation and ambiguous outcomes — #80.
-4. Close M3 — #64.
-5. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
-6. Durable jobs/recovery — #66.
-7. Governance/reporting — #67.
-8. GA closeout — #68.
+1. M3 guarded schedule/send/cancel — #79.
+2. M3 reconciliation and ambiguous outcomes — #80.
+3. Close M3 — #64.
+4. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
+5. Durable jobs/recovery — #66.
+6. Governance/reporting — #67.
+7. GA closeout — #68.
 
 Cross-cutting work does not need to wait for the numbered milestone when its dependency is already satisfied. Security, accessibility, i18n, performance, package verification, and documentation travel with every relevant PR.
 
@@ -117,7 +118,8 @@ Cross-cutting work does not need to wait for the numbered milestone when its dep
 - Campaign mutation abilities may now build on the completed M2
   `Campaign_Workflow`, as the REST adapter does. They must not wrap REST
   controller internals.
-- Provider/audience abilities wait for M3 discovery contracts.
+- Provider/audience abilities may build on the completed M3 #76 discovery
+  contracts.
 - Delivery abilities wait for M3 delivery workflows; broad automation/MCP exposure of production send also waits for M5 recovery semantics.
 - Reporting abilities wait for M6 metric/governance semantics.
 

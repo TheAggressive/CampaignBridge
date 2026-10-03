@@ -25,6 +25,7 @@ class Capabilities_Test extends Test_Case {
 		$this->assertSame( 'campaignbridge_create_campaigns', Capabilities::CREATE_CAMPAIGNS );
 		$this->assertSame( 'campaignbridge_send_campaigns', Capabilities::SEND_CAMPAIGNS );
 		$this->assertSame( 'campaignbridge_view_reports', Capabilities::VIEW_REPORTS );
+		$this->assertSame( 'campaignbridge_test_campaigns', Capabilities::TEST_CAMPAIGNS );
 	}
 
 	/**
@@ -39,6 +40,7 @@ class Capabilities_Test extends Test_Case {
 				'campaignbridge_create_campaigns',
 				'campaignbridge_send_campaigns',
 				'campaignbridge_view_reports',
+				'campaignbridge_test_campaigns',
 			),
 			Capabilities::ALL
 		);
@@ -183,6 +185,22 @@ class Capabilities_Test extends Test_Case {
 		);
 
 		// Verify schema version is updated.
+		$this->assertSame( Capabilities::SCHEMA_VERSION, get_option( 'campaignbridge_capability_schema' ) );
+	}
+
+	/**
+	 * Test that a schema-1 install receives the test-send capability on upgrade.
+	 */
+	public function test_schema_one_install_gains_the_test_capability(): void {
+		$admin_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+		update_option( 'campaignbridge_capability_schema', 1 );
+		get_role( 'administrator' )->remove_cap( Capabilities::TEST_CAMPAIGNS );
+
+		Capabilities::ensure_registered();
+
+		$this->assertTrue( get_role( 'administrator' )->has_cap( Capabilities::TEST_CAMPAIGNS ) );
+		$this->assertSame( 2, Capabilities::SCHEMA_VERSION );
 		$this->assertSame( Capabilities::SCHEMA_VERSION, get_option( 'campaignbridge_capability_schema' ) );
 	}
 

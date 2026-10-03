@@ -21,7 +21,8 @@ final class Campaign_Actor {
 		private readonly int $user_id,
 		private readonly bool $can_create,
 		private readonly bool $can_manage_all,
-		private readonly bool $can_approve
+		private readonly bool $can_approve,
+		private readonly bool $can_test = false
 	) {
 		if ( 1 > $user_id ) {
 			throw new \InvalidArgumentException( 'Campaign actor must be a positive user ID.' );
@@ -42,6 +43,11 @@ final class Campaign_Actor {
 
 	public function can_approve( Campaign $campaign ): bool {
 		return $this->can_approve && $this->can_manage( $campaign );
+	}
+
+	/** Test sends are separate from approval and production send authority. */
+	public function can_test( Campaign $campaign ): bool {
+		return $this->can_test && $this->can_manage( $campaign );
 	}
 
 	public function can_manage_all(): bool {

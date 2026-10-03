@@ -36,6 +36,9 @@ final class Capabilities {
 	/** Approve, schedule, send, and cancel campaigns. */
 	public const SEND_CAMPAIGNS = 'campaignbridge_send_campaigns';
 
+	/** Send tests of a provider draft to named addresses; never to the audience. */
+	public const TEST_CAMPAIGNS = 'campaignbridge_test_campaigns';
+
 	/** View delivery reports and audit logs. */
 	public const VIEW_REPORTS = 'campaignbridge_view_reports';
 
@@ -51,6 +54,7 @@ final class Capabilities {
 		self::CREATE_CAMPAIGNS,
 		self::SEND_CAMPAIGNS,
 		self::VIEW_REPORTS,
+		self::TEST_CAMPAIGNS,
 	);
 
 	/**
@@ -59,7 +63,7 @@ final class Capabilities {
 	 * Increment this constant when the set of capabilities changes so that
 	 * existing installations are repaired on the next admin request.
 	 */
-	public const SCHEMA_VERSION = 1;
+	public const SCHEMA_VERSION = 2;
 
 	/**
 	 * Option name that stores the last-applied capability schema version.

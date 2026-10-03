@@ -55,7 +55,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 		'discover_template_sections' => false,
 		'export'                     => false,
 		'create_draft'               => true,
-		'send_test'                  => false,
+		'send_test'                  => true,
 		'schedule'                   => false,
 		'send'                       => false,
 		'cancel'                     => false,

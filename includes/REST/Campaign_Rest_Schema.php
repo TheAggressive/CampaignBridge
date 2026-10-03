@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\REST;
 
 use CampaignBridge\Domain\Campaign\Campaign_State;
+use CampaignBridge\Domain\Provider\Test_Delivery;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -85,6 +86,32 @@ final class Campaign_Rest_Schema {
 			'minLength'   => 1,
 			'maxLength'   => 191,
 			'pattern'     => self::IDEMPOTENCY_KEY_PATTERN,
+		);
+	}
+
+	/** @return array<string, mixed> */
+	public static function test_recipients(): array {
+		return array(
+			'description' => __( 'Addresses that receive this test only. They are never stored.', 'campaignbridge' ),
+			'type'        => 'array',
+			'required'    => true,
+			'minItems'    => 1,
+			'maxItems'    => Test_Delivery::MAX_RECIPIENTS,
+			'items'       => array(
+				'type'      => 'string',
+				'format'    => 'email',
+				'maxLength' => 254,
+			),
+		);
+	}
+
+	/** @return array<string, mixed> */
+	public static function test_format(): array {
+		return array(
+			'description' => __( 'Which part of the draft to test.', 'campaignbridge' ),
+			'type'        => 'string',
+			'default'     => Test_Delivery::FORMAT_HTML,
+			'enum'        => array( Test_Delivery::FORMAT_HTML, Test_Delivery::FORMAT_TEXT ),
 		);
 	}
 
@@ -269,6 +296,40 @@ final class Campaign_Rest_Schema {
 				'campaign'          => self::campaign(),
 				'remote'            => self::remote(),
 				'attempt'           => array_merge( self::attempt(), array( 'type' => array( 'object', 'null' ) ) ),
+				'idempotent_replay' => array( 'type' => 'boolean' ),
+			)
+		);
+	}
+
+	/** @return array<string, mixed> */
+	public static function test_send_result(): array {
+		return self::document(
+			'campaignbridge-campaign-test-send-result',
+			array(
+				'campaign'          => self::campaign(),
+				'remote'            => array_merge( self::remote(), array( 'type' => array( 'object', 'null' ) ) ),
+				'attempt'           => self::attempt(),
+				'test'              => array(
+					'type'                 => array( 'object', 'null' ),
+					'additionalProperties' => false,
+					'required'             => array( 'format', 'recipient_count', 'snapshot_id', 'fingerprint' ),
+					'properties'           => array(
+						'format'          => self::field( self::test_format() ),
+						'recipient_count' => array(
+							'type'    => 'integer',
+							'minimum' => 1,
+							'maximum' => Test_Delivery::MAX_RECIPIENTS,
+						),
+						'snapshot_id'     => array(
+							'type'    => 'string',
+							'pattern' => self::IDENTIFIER_PATTERN,
+						),
+						'fingerprint'     => array(
+							'type'    => 'string',
+							'pattern' => '^sha256:[0-9a-f]{64}$',
+						),
+					),
+				),
 				'idempotent_replay' => array( 'type' => 'boolean' ),
 			)
 		);

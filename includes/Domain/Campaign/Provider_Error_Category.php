@@ -77,4 +77,21 @@ final class Provider_Error_Category {
 			true
 		);
 	}
+
+	/**
+	 * Determine whether a failed non-idempotent mutation may still have applied.
+	 *
+	 * A refusal the provider reported is definite. Transport loss, timeouts,
+	 * server errors, and unreadable responses may follow a mutation the
+	 * provider accepted, so its outcome is unknown.
+	 *
+	 * @param string $category Category to check.
+	 */
+	public static function may_have_applied( string $category ): bool {
+		return in_array(
+			$category,
+			array( self::TIMEOUT, self::NETWORK, self::PROVIDER_ERROR, self::UNKNOWN ),
+			true
+		);
+	}
 }
