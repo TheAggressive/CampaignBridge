@@ -47,7 +47,7 @@ final class Provider_Capabilities_Test extends WP_UnitTestCase {
 		Provider_Capabilities::from_flags( $provider, $flags );
 	}
 
-	public function test_mailchimp_advertises_discovery_and_drafts_but_no_delivery_operation(): void {
+	public function test_mailchimp_advertises_only_implemented_operations(): void {
 		$capabilities = ( new Mailchimp_Provider() )->capabilities();
 
 		self::assertSame(
@@ -59,11 +59,13 @@ final class Provider_Capabilities_Test extends WP_UnitTestCase {
 				Provider_Operation::DISCOVER_SENDERS,
 				Provider_Operation::CREATE_DRAFT,
 				Provider_Operation::SEND_TEST,
+				Provider_Operation::SCHEDULE,
+				Provider_Operation::UNSCHEDULE,
 			),
 			$capabilities->supported()
 		);
-		// Tests reach only named addresses; nothing that delivers to the audience is advertised.
-		foreach ( array( 'schedule', 'send', 'cancel', 'reconcile', 'reports' ) as $operation ) {
+		// Immediate send, in-flight cancel, reconciliation, and reports are not implemented yet.
+		foreach ( array( 'send', 'cancel', 'reconcile', 'reports' ) as $operation ) {
 			self::assertFalse( $capabilities->supports( $operation ), $operation );
 		}
 		self::assertSame( $capabilities->to_array(), ( new Mailchimp_Discovery() )->capabilities()->to_array() );

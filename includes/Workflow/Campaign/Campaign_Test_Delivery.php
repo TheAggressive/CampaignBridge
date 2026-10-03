@@ -29,7 +29,7 @@ use CampaignBridge\Domain\Provider\Provider_Capabilities;
 use CampaignBridge\Domain\Provider\Provider_Operation;
 use CampaignBridge\Domain\Provider\Provider_Test_Gateway;
 use CampaignBridge\Domain\Provider\Test_Delivery;
-use CampaignBridge\Domain\Provider\Test_Outcome;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -130,8 +130,8 @@ final class Campaign_Test_Delivery {
 		$outcome = $this->gateway->send_test( $settings, $reference->remote_id(), $delivery );
 
 		return match ( $outcome->status() ) {
-			Test_Outcome::SENT   => $this->sent( $actor, $campaign, $reference, $attempt, $snapshot, $delivery ),
-			Test_Outcome::FAILED => $this->definite_failure( $actor, $campaign, $reference, $attempt, $snapshot, $delivery, $outcome->error() ),
+			Action_Outcome::ACCEPTED   => $this->sent( $actor, $campaign, $reference, $attempt, $snapshot, $delivery ),
+			Action_Outcome::FAILED => $this->definite_failure( $actor, $campaign, $reference, $attempt, $snapshot, $delivery, $outcome->error() ),
 			default              => $this->ambiguous( $actor, $campaign, $reference, $attempt, $snapshot, $delivery, $outcome->error() ),
 		};
 	}

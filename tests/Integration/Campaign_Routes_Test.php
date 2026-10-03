@@ -410,6 +410,8 @@ final class Campaign_Routes_Test extends Test_Case {
 			'/c1/duplicate'       => 'campaignbridge-campaign-duplicate-result',
 			'/c1/provider-draft'  => 'campaignbridge-campaign-provider-draft-result',
 			'/c1/test-send'       => 'campaignbridge-campaign-test-send-result',
+			'/c1/schedule'        => 'campaignbridge-campaign-delivery-result',
+			'/c1/unschedule'      => 'campaignbridge-campaign-delivery-result',
 		);
 		foreach ( $routes as $suffix => $title ) {
 			$options = $this->request( 'OPTIONS', self::COLLECTION . $suffix );

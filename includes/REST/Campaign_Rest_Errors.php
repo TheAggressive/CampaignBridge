@@ -43,12 +43,15 @@ final class Campaign_Rest_Errors {
 	}
 
 	/**
-	 * Convert a failed remote operation (draft handoff, test send) into the
-	 * same public envelope.
+	 * Convert a failed remote operation (draft handoff, test send, schedule)
+	 * into the same public envelope.
 	 *
 	 * After a partial or ambiguous provider outcome the envelope also reports
 	 * what already exists: the remote reference and the attempt, plus the
-	 * normalized provider error. Raw provider detail is never included.
+	 * normalized provider error. Once the provider was contacted it also
+	 * reports `current_version`, because a delivery claim consumed one. Raw
+	 * provider detail is never included, and a denial never reveals the
+	 * version.
 	 */
 	public static function from_remote( Campaign_Remote_Result $result ): WP_Error {
 		$error = $result->error();
@@ -56,8 +59,9 @@ final class Campaign_Rest_Errors {
 			return self::unexpected();
 		}
 
-		$data = array( 'status' => self::status( $error ) );
-		if ( Campaign_Workflow_Error::CONFLICT === $error->code() && null !== $result->campaign() ) {
+		$data      = array( 'status' => self::status( $error ) );
+		$versioned = array( Campaign_Workflow_Error::CONFLICT, Campaign_Workflow_Error::PROVIDER_FAILED, Campaign_Workflow_Error::RECONCILIATION_REQUIRED );
+		if ( in_array( $error->code(), $versioned, true ) && null !== $result->campaign() ) {
 			$data['current_version'] = $result->campaign()->version();
 		}
 		if ( null !== $result->reference() ) {

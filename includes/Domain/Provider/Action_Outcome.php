@@ -1,6 +1,6 @@
 <?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
 /**
- * Normalized outcome of one test delivery.
+ * Normalized outcome of one non-idempotent remote action.
  *
  * @package CampaignBridge
  */
@@ -17,15 +17,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * What is known after a test send, never more.
+ * What is known after a remote action such as a test send, schedule, or
+ * unschedule, never more.
  *
- * - `sent`: the provider accepted the test for delivery.
- * - `failed`: the provider definitely refused it; nothing was sent.
- * - `ambiguous`: the test may or may not have been sent. A test is not
- *   idempotent, so this is reported and never retried blindly.
+ * - `accepted`: the provider accepted the action.
+ * - `failed`: the provider definitely refused it; nothing changed remotely.
+ * - `ambiguous`: the action may or may not have taken effect. It is
+ *   reported and never retried blindly.
  */
-final class Test_Outcome {
-	public const SENT      = 'sent';
+final class Action_Outcome {
+	public const ACCEPTED  = 'accepted';
 	public const FAILED    = 'failed';
 	public const AMBIGUOUS = 'ambiguous';
 
@@ -34,11 +35,11 @@ final class Test_Outcome {
 		private readonly ?Provider_Error $error
 	) {}
 
-	public static function sent(): self {
-		return new self( self::SENT, null );
+	public static function accepted(): self {
+		return new self( self::ACCEPTED, null );
 	}
 
-	/** Classify a failed test send by what the error proves. */
+	/** Classify a failed action by what the error proves. */
 	public static function from_error( Provider_Error $error ): self {
 		return new self( Provider_Error_Category::may_have_applied( $error->category() ) ? self::AMBIGUOUS : self::FAILED, $error );
 	}

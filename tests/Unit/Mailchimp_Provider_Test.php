@@ -109,7 +109,8 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 		self::assertTrue( $capabilities['create_draft'] );
 		self::assertTrue( $capabilities['send_test'] );
 		self::assertFalse( $capabilities['send'] );
-		self::assertFalse( $capabilities['schedule'] );
+		self::assertTrue( $capabilities['schedule'] );
+		self::assertTrue( $capabilities['unschedule'] );
 		self::assertFalse( $capabilities['cancel'] );
 		self::assertFalse( $capabilities['reports'] );
 	}

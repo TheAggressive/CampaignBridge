@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Owns restartable, forward-safe database migrations for campaign storage. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 2;
+	public const SCHEMA_VERSION = 3;
 	public const OPTION         = 'database_schema';
 
 	private static ?bool $tables_ready = null;
@@ -136,6 +136,7 @@ final class Schema_Manager {
 				active_snapshot_id varchar(64) NULL,
 				created_at datetime NOT NULL,
 				updated_at datetime NOT NULL,
+				scheduled_for datetime NULL,
 				PRIMARY KEY  (id),
 				KEY owner_updated (owner_user_id, updated_at)
 			) {$collate};",

@@ -12,7 +12,7 @@ namespace CampaignBridge\Tests\Unit\Provider;
 use CampaignBridge\Core\Http_Client_Interface;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Provider\Test_Delivery;
-use CampaignBridge\Domain\Provider\Test_Outcome;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Providers\Mailchimp_Test_Gateway;
 use WP_UnitTestCase;
 
@@ -79,7 +79,7 @@ final class Mailchimp_Test_Gateway_Test extends WP_UnitTestCase {
 		$http    = new Recording_Test_Http_Client( self::reply( 204 ) );
 		$outcome = ( new Mailchimp_Test_Gateway( $http ) )->send_test( self::settings(), 'mc0042', Test_Delivery::create( array( 'QA@example.com', 'lead@example.org' ), Test_Delivery::FORMAT_TEXT ) );
 
-		self::assertSame( Test_Outcome::SENT, $outcome->status() );
+		self::assertSame( Action_Outcome::ACCEPTED, $outcome->status() );
 		self::assertCount( 1, $http->requests );
 		$request = $http->requests[0];
 		self::assertSame( 'POST', $request['method'] );
@@ -105,14 +105,14 @@ final class Mailchimp_Test_Gateway_Test extends WP_UnitTestCase {
 	/** @return array<string, array{array<string, mixed>|\WP_Error, string, string}> */
 	public static function failures(): array {
 		return array(
-			'rejected request'  => array( self::reply( 400, '{"detail":"private detail"}' ), Test_Outcome::FAILED, 'mailchimp_request_rejected' ),
-			'bad credentials'   => array( self::reply( 401 ), Test_Outcome::FAILED, 'mailchimp_authentication_failed' ),
-			'missing draft'     => array( self::reply( 404 ), Test_Outcome::FAILED, 'mailchimp_not_found' ),
-			'throttled'         => array( self::reply( 429 ), Test_Outcome::FAILED, 'mailchimp_rate_limited' ),
-			'server error'      => array( self::reply( 503 ), Test_Outcome::AMBIGUOUS, 'mailchimp_provider_error' ),
-			'unexpected status' => array( self::reply( 302 ), Test_Outcome::AMBIGUOUS, 'mailchimp_provider_error' ),
-			'timeout'           => array( new \WP_Error( 'http_request_failed', 'cURL error 28: Operation timed out' ), Test_Outcome::AMBIGUOUS, 'mailchimp_connection_timeout' ),
-			'network'           => array( new \WP_Error( 'http_request_failed', 'Could not resolve host' ), Test_Outcome::AMBIGUOUS, 'mailchimp_connection_unavailable' ),
+			'rejected request'  => array( self::reply( 400, '{"detail":"private detail"}' ), Action_Outcome::FAILED, 'mailchimp_request_rejected' ),
+			'bad credentials'   => array( self::reply( 401 ), Action_Outcome::FAILED, 'mailchimp_authentication_failed' ),
+			'missing draft'     => array( self::reply( 404 ), Action_Outcome::FAILED, 'mailchimp_not_found' ),
+			'throttled'         => array( self::reply( 429 ), Action_Outcome::FAILED, 'mailchimp_rate_limited' ),
+			'server error'      => array( self::reply( 503 ), Action_Outcome::AMBIGUOUS, 'mailchimp_provider_error' ),
+			'unexpected status' => array( self::reply( 302 ), Action_Outcome::AMBIGUOUS, 'mailchimp_provider_error' ),
+			'timeout'           => array( new \WP_Error( 'http_request_failed', 'cURL error 28: Operation timed out' ), Action_Outcome::AMBIGUOUS, 'mailchimp_connection_timeout' ),
+			'network'           => array( new \WP_Error( 'http_request_failed', 'Could not resolve host' ), Action_Outcome::AMBIGUOUS, 'mailchimp_connection_unavailable' ),
 		);
 	}
 
@@ -134,7 +134,7 @@ final class Mailchimp_Test_Gateway_Test extends WP_UnitTestCase {
 		$http    = new Recording_Test_Http_Client( self::reply( 204 ) );
 		$outcome = ( new Mailchimp_Test_Gateway( $http ) )->send_test( array( 'api_key' => 'nope' ), 'mc0042', Test_Delivery::create( array( 'qa@example.com' ), 'html' ) );
 
-		self::assertSame( Test_Outcome::FAILED, $outcome->status() );
+		self::assertSame( Action_Outcome::FAILED, $outcome->status() );
 		self::assertSame( Provider_Error_Category::VALIDATION, $outcome->error()?->category() );
 		self::assertSame( array(), $http->requests );
 	}

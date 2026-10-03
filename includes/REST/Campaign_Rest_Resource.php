@@ -36,6 +36,7 @@ final class Campaign_Rest_Resource {
 			'active_snapshot_id' => $campaign->active_snapshot_id(),
 			'created_at'         => $campaign->created_at(),
 			'updated_at'         => $campaign->updated_at(),
+			'scheduled_for'      => $campaign->scheduled_for(),
 		);
 	}
 

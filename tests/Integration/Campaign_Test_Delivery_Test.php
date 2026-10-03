@@ -17,7 +17,7 @@ use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Provider\Provider_Test_Gateway;
 use CampaignBridge\Domain\Provider\Test_Delivery;
-use CampaignBridge\Domain\Provider\Test_Outcome;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\Providers\Mailchimp_Provider;
 use CampaignBridge\Repository\Audit_Event_Repository;
@@ -48,21 +48,21 @@ final class Scripted_Test_Gateway implements Provider_Test_Gateway {
 	/** @var array<int, array{remote_id: string, delivery: Test_Delivery}> */
 	public array $calls = array();
 
-	/** @var array<int, Test_Outcome> Outcomes for successive sends; empty means sent. */
+	/** @var array<int, Action_Outcome> Outcomes for successive sends; empty means sent. */
 	public array $outcomes = array();
 
 	public function slug(): string {
 		return 'mailchimp';
 	}
 
-	public function send_test( array $settings, string $remote_id, Test_Delivery $delivery ): Test_Outcome {
+	public function send_test( array $settings, string $remote_id, Test_Delivery $delivery ): Action_Outcome {
 		++$this->sends;
 		$this->calls[] = array(
 			'remote_id' => $remote_id,
 			'delivery'  => $delivery,
 		);
 
-		return array_shift( $this->outcomes ) ?? Test_Outcome::sent();
+		return array_shift( $this->outcomes ) ?? Action_Outcome::accepted();
 	}
 }
 
@@ -225,7 +225,7 @@ final class Campaign_Test_Delivery_Test extends Test_Case {
 
 	public function test_an_unconfirmed_test_is_reported_and_never_retried(): void {
 		$campaign                = $this->provider_draft_campaign();
-		$this->gateway->outcomes = array( Test_Outcome::from_error( Provider_Error::timeout( 'mailchimp_connection_timeout', 'Mailchimp request timed out.', 'mailchimp' ) ) );
+		$this->gateway->outcomes = array( Action_Outcome::from_error( Provider_Error::timeout( 'mailchimp_connection_timeout', 'Mailchimp request timed out.', 'mailchimp' ) ) );
 
 		$unknown = $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com' ), 'html', 'test-key-1', self::settings() );
 		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $unknown->error()?->code() );
@@ -246,7 +246,7 @@ final class Campaign_Test_Delivery_Test extends Test_Case {
 
 	public function test_a_provider_refusal_records_a_failed_attempt_and_settles_its_key(): void {
 		$campaign                = $this->provider_draft_campaign();
-		$this->gateway->outcomes = array( Test_Outcome::from_error( Provider_Error::from_category( Provider_Error_Category::VALIDATION, 'mailchimp_request_rejected', 'Mailchimp rejected the request.', 'mailchimp' ) ) );
+		$this->gateway->outcomes = array( Action_Outcome::from_error( Provider_Error::from_category( Provider_Error_Category::VALIDATION, 'mailchimp_request_rejected', 'Mailchimp rejected the request.', 'mailchimp' ) ) );
 
 		$refused = $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com' ), 'html', 'test-key-1', self::settings() );
 		self::assertSame( Campaign_Workflow_Error::PROVIDER_FAILED, $refused->error()?->code() );

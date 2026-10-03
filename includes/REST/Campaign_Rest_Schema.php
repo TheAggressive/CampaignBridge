@@ -106,6 +106,28 @@ final class Campaign_Rest_Schema {
 	}
 
 	/** @return array<string, mixed> */
+	public static function scheduled_for(): array {
+		return array(
+			'description' => __( 'Delivery time as an RFC 3339 date-time with an explicit offset, on the provider\'s scheduling interval.', 'campaignbridge' ),
+			'type'        => 'string',
+			'required'    => true,
+			'format'      => 'date-time',
+			'pattern'     => '(Z|[+-][0-9]{2}:[0-9]{2})$',
+		);
+	}
+
+	/** @return array<string, mixed> */
+	public static function confirm_audience_reference(): array {
+		return array(
+			'description' => __( 'The campaign\'s audience reference, repeated to confirm who will receive it.', 'campaignbridge' ),
+			'type'        => 'string',
+			'required'    => true,
+			'minLength'   => 1,
+			'maxLength'   => 191,
+		);
+	}
+
+	/** @return array<string, mixed> */
 	public static function test_format(): array {
 		return array(
 			'description' => __( 'Which part of the draft to test.', 'campaignbridge' ),
@@ -141,7 +163,7 @@ final class Campaign_Rest_Schema {
 		return array(
 			'type'                 => 'object',
 			'additionalProperties' => false,
-			'required'             => array( 'id', 'state', 'version', 'owner_user_id', 'template_id', 'provider', 'audience_reference', 'active_snapshot_id', 'created_at', 'updated_at' ),
+			'required'             => array( 'id', 'state', 'version', 'owner_user_id', 'template_id', 'provider', 'audience_reference', 'active_snapshot_id', 'created_at', 'updated_at', 'scheduled_for' ),
 			'properties'           => array(
 				'id'                 => self::field( self::campaign_id() ),
 				'state'              => array(
@@ -162,6 +184,10 @@ final class Campaign_Rest_Schema {
 				),
 				'created_at'         => self::timestamp(),
 				'updated_at'         => self::timestamp(),
+				'scheduled_for'      => array(
+					'type'   => array( 'string', 'null' ),
+					'format' => 'date-time',
+				),
 			),
 		);
 	}
@@ -290,8 +316,18 @@ final class Campaign_Rest_Schema {
 
 	/** @return array<string, mixed> */
 	public static function provider_draft_result(): array {
+		return self::remote_result( 'campaignbridge-campaign-provider-draft-result' );
+	}
+
+	/** @return array<string, mixed> */
+	public static function delivery_result(): array {
+		return self::remote_result( 'campaignbridge-campaign-delivery-result' );
+	}
+
+	/** @return array<string, mixed> */
+	private static function remote_result( string $title ): array {
 		return self::document(
-			'campaignbridge-campaign-provider-draft-result',
+			$title,
 			array(
 				'campaign'          => self::campaign(),
 				'remote'            => self::remote(),

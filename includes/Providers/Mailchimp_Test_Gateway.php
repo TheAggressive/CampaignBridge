@@ -14,7 +14,7 @@ use CampaignBridge\Core\Http_Client_Interface;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Provider\Provider_Test_Gateway;
 use CampaignBridge\Domain\Provider\Test_Delivery;
-use CampaignBridge\Domain\Provider\Test_Outcome;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -53,10 +53,10 @@ final class Mailchimp_Test_Gateway implements Provider_Test_Gateway {
 		return 'mailchimp';
 	}
 
-	public function send_test( array $settings, string $remote_id, Test_Delivery $delivery ): Test_Outcome {
+	public function send_test( array $settings, string $remote_id, Test_Delivery $delivery ): Action_Outcome {
 		$api_key = $settings['api_key'] ?? null;
 		if ( ! is_string( $api_key ) || ! ( new Mailchimp_Provider() )->is_valid_api_key( $api_key ) ) {
-			return Test_Outcome::from_error( Mailchimp_Errors::for_category( Provider_Error_Category::VALIDATION ) );
+			return Action_Outcome::from_error( Mailchimp_Errors::for_category( Provider_Error_Category::VALIDATION ) );
 		}
 
 		$response = $this->http->post(
@@ -77,13 +77,13 @@ final class Mailchimp_Test_Gateway implements Provider_Test_Gateway {
 			)
 		);
 		if ( is_wp_error( $response ) ) {
-			return Test_Outcome::from_error( Mailchimp_Errors::from_transport( $response ) );
+			return Action_Outcome::from_error( Mailchimp_Errors::from_transport( $response ) );
 		}
 		$status = $response['status_code'] ?? 0;
 		if ( 204 === $status || 200 === $status ) {
-			return Test_Outcome::sent();
+			return Action_Outcome::accepted();
 		}
 
-		return Test_Outcome::from_error( 400 === $status ? Mailchimp_Errors::request_rejected() : Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 ) );
+		return Action_Outcome::from_error( 400 === $status ? Mailchimp_Errors::request_rejected() : Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 ) );
 	}
 }

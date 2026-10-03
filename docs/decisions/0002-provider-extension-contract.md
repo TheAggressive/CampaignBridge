@@ -155,13 +155,13 @@ the draft ID. `Campaign_Draft_Handoff` owns the protocol around the gateway;
 see `campaign-workflows.md`.
 
 `Provider_Error_Category::may_have_applied()` is the one rule for this
-classification, shared by draft and test outcomes.
+classification, shared by draft outcomes and `Action_Outcome`.
 
 **Test delivery (#78).** `Provider_Test_Gateway` sends one test of an
 existing remote draft to the addresses in a bounded `Test_Delivery` (1–5
 normalized addresses, `html` or `text`). It never sends to the audience,
-never retries, and classifies every result as a `Test_Outcome`: `sent`,
-`failed` (a definite refusal), or `ambiguous`. Test recipients are passed for
+never retries, and classifies every result as an `Action_Outcome`:
+`accepted`, `failed` (a definite refusal), or `ambiguous`. Test recipients are passed for
 the one call only; adapters must not store or log them.
 `Mailchimp_Test_Gateway` sends `POST /campaigns/{id}/actions/test` once,
 with `send_type` `html` or `plaintext`, and treats `204` as sent. A `400`
@@ -169,6 +169,18 @@ maps to `mailchimp_request_rejected` rather than a credential error, because
 Mailchimp uses it for rejected addresses and exhausted test quotas. Mailchimp
 exposes no private draft preview link, only public archive URLs, so none is
 surfaced.
+
+**Scheduling (#79).** `Provider_Delivery_Gateway` schedules an existing
+remote draft for one UTC time, or unschedules it, and reports its
+scheduling interval (`schedule_interval_minutes()`). Each call is a separate
+operation that may reach the audience; it is never retried and returns an
+`Action_Outcome`. `Mailchimp_Delivery_Gateway` posts
+`/campaigns/{id}/actions/schedule` with `schedule_time` in `+00:00` form, or
+`/actions/unschedule`, once each, and reports a 15-minute interval. It never
+calls `/actions/send` or `/actions/cancel-send`. `schedule` and `unschedule`
+are separate `Provider_Operation` capabilities. Mailchimp does not document
+`Retry-After` for its 429 responses, so a throttled action is reported as a
+retryable definite refusal and is never retried automatically.
 
 ## Ownership boundaries
 

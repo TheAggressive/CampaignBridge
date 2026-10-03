@@ -18,6 +18,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Campaign {
 	public const SCHEMA_VERSION = 1;
 
+	/** States in which a campaign may carry a delivery time. */
+	private const SCHEDULE_STATES = array(
+		Campaign_State::SCHEDULED,
+		Campaign_State::SENDING,
+		Campaign_State::SENT,
+		Campaign_State::FAILED,
+		Campaign_State::CANCELLED,
+		Campaign_State::UNKNOWN,
+	);
+
 	private function __construct(
 		private readonly string $id,
 		private readonly string $state,
@@ -28,7 +38,8 @@ final class Campaign {
 		private readonly ?string $audience_reference,
 		private readonly ?string $active_snapshot_id,
 		private readonly string $created_at,
-		private readonly string $updated_at
+		private readonly string $updated_at,
+		private readonly ?string $scheduled_for
 	) {}
 
 	/** Create a new draft campaign. */
@@ -77,6 +88,7 @@ final class Campaign {
 				'active_snapshot_id',
 				'created_at',
 				'updated_at',
+				'scheduled_for',
 			)
 		);
 		if ( self::SCHEMA_VERSION !== ( $data['schema_version'] ?? null ) ) {
@@ -113,6 +125,13 @@ final class Campaign {
 		if ( $updated_at < $created_at ) {
 			throw new \InvalidArgumentException( 'Campaign updated timestamp cannot precede creation.' );
 		}
+		$scheduled_for = $data['scheduled_for'] ?? null;
+		if ( null !== $scheduled_for ) {
+			$scheduled_for = Record_Validation::timestamp( $scheduled_for, 'Scheduled delivery time' );
+			if ( ! in_array( $state, self::SCHEDULE_STATES, true ) ) {
+				throw new \InvalidArgumentException( 'Only a campaign at or past scheduling may carry a delivery time.' );
+			}
+		}
 
 		return new self(
 			Record_Validation::identifier( $data['id'] ?? null, 'Campaign ID' ),
@@ -124,7 +143,8 @@ final class Campaign {
 			$audience,
 			$snapshot_id,
 			$created_at,
-			$updated_at
+			$updated_at,
+			$scheduled_for
 		);
 	}
 
@@ -168,6 +188,11 @@ final class Campaign {
 		return $this->updated_at;
 	}
 
+	/** The UTC time the campaign was scheduled to send, if it was scheduled. */
+	public function scheduled_for(): ?string {
+		return $this->scheduled_for;
+	}
+
 	/** Change the selected template and invalidate any previously frozen artifact. */
 	public function edit_template( int $template_id, string $updated_at ): self {
 		if ( 1 > $template_id ) {
@@ -208,7 +233,12 @@ final class Campaign {
 		);
 	}
 
-	/** Apply one legal lifecycle transition. */
+	/**
+	 * Apply one legal lifecycle transition.
+	 *
+	 * A delivery time survives into states that follow scheduling and is
+	 * cleared when the campaign returns to an unscheduled state.
+	 */
 	public function transition_to( string $state, string $updated_at ): self {
 		Campaign_State_Machine::assert_transition( $this->state, $state );
 
@@ -218,7 +248,42 @@ final class Campaign {
 			$this->provider,
 			$this->audience_reference,
 			$this->active_snapshot_id,
-			$updated_at
+			$updated_at,
+			in_array( $state, self::SCHEDULE_STATES, true ) ? $this->scheduled_for : null
+		);
+	}
+
+	/** Move a provider draft to `scheduled` for one UTC delivery time. */
+	public function schedule_for( string $scheduled_for, string $updated_at ): self {
+		Campaign_State_Machine::assert_transition( $this->state, Campaign_State::SCHEDULED );
+
+		return $this->replacement(
+			Campaign_State::SCHEDULED,
+			$this->template_id,
+			$this->provider,
+			$this->audience_reference,
+			$this->active_snapshot_id,
+			$updated_at,
+			$scheduled_for
+		);
+	}
+
+	/**
+	 * Claim the next version without changing anything else.
+	 *
+	 * A remote delivery operation claims the campaign before contacting the
+	 * provider, so concurrent requests holding the same expected version are
+	 * refused instead of reaching the provider twice.
+	 */
+	public function claim( string $updated_at ): self {
+		return $this->replacement(
+			$this->state,
+			$this->template_id,
+			$this->provider,
+			$this->audience_reference,
+			$this->active_snapshot_id,
+			$updated_at,
+			$this->scheduled_for
 		);
 	}
 
@@ -229,7 +294,8 @@ final class Campaign {
 		?string $provider,
 		?string $audience_reference,
 		?string $active_snapshot_id,
-		string $updated_at
+		string $updated_at,
+		?string $scheduled_for = null
 	): self {
 		return self::from_array(
 			array(
@@ -244,6 +310,7 @@ final class Campaign {
 				'active_snapshot_id' => $active_snapshot_id,
 				'created_at'         => $this->created_at,
 				'updated_at'         => $updated_at,
+				'scheduled_for'      => $scheduled_for,
 			)
 		);
 	}
@@ -262,6 +329,7 @@ final class Campaign {
 			'active_snapshot_id' => $this->active_snapshot_id,
 			'created_at'         => $this->created_at,
 			'updated_at'         => $this->updated_at,
+			'scheduled_for'      => $this->scheduled_for,
 		);
 	}
 }
