@@ -24,5 +24,5 @@ interface Provider_Test_Gateway {
 	public function slug(): string;
 
 	/** @param array<string, mixed> $settings Decrypted provider settings. */
-	public function send_test( array $settings, string $remote_id, Test_Delivery $delivery ): Test_Outcome;
+	public function send_test( array $settings, string $remote_id, Test_Delivery $delivery ): Action_Outcome;
 }

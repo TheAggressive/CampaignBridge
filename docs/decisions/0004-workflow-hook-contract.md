@@ -56,6 +56,7 @@ responsibility:
 | `approve` | Transition `ready_for_review → approved`. |
 | `create_provider_draft` | Call provider, transition `approved → provider_draft`. |
 | `schedule` | Call provider, transition `provider_draft → scheduled`. |
+| `unschedule` | Call provider, transition `scheduled → provider_draft` before the send time. |
 | `send` | Call provider, transition `provider_draft/scheduled → sending → sent`. |
 | `cancel` | Transition any non-terminal state → `cancelled`. |
 | `retry` | Transition `failed/unknown → provider_draft`. |
@@ -116,6 +117,7 @@ Each workflow operation requires a specific capability from
 | `create_provider_draft` | `campaignbridge_send_campaigns` |
 | `send_test` | `campaignbridge_test_campaigns` |
 | `schedule` | `campaignbridge_send_campaigns` |
+| `unschedule` | `campaignbridge_send_campaigns` |
 | `send` | `campaignbridge_send_campaigns` |
 | `cancel` | `campaignbridge_send_campaigns` |
 | `retry` | `campaignbridge_send_campaigns` |

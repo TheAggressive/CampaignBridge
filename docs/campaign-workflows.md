@@ -118,7 +118,8 @@ credentials, or stack traces.
 Adapters resolve a `Campaign_Actor` before invocation. The WordPress adapter
 maps `campaignbridge_create_campaigns` to owned-campaign creation/editing,
 `campaignbridge_manage` to cross-owner management, and
-`campaignbridge_send_campaigns` to approval and provider draft creation, and
+`campaignbridge_send_campaigns` to approval, provider draft creation, and
+scheduling, and
 `campaignbridge_test_campaigns` to test sends. Campaign authority and template
 authority are independent: operations that introduce or read template content
 also require WordPress object authorization for that exact `cb_templates`
@@ -217,10 +218,43 @@ never changes the campaign's state or version. Its protocol:
    unconfirmed draft, it does not block tests with a new key, because a
    duplicate test reaches only named test addresses.
 
+## Scheduling
+
+`Campaign_Scheduler` schedules a confirmed remote draft through a
+`Provider_Delivery_Gateway`, or unschedules it. Both require delivery
+authority plus management of the campaign. Its protocol:
+
+1. **Check everything first.** Delivery authority, the audience
+   confirmation (schedule only), state, version, the confirmed remote
+   reference, the schedule time (`Schedule_Time`: explicit offset, provider
+   interval, at least 10 minutes ahead, within a year), and the approved
+   snapshot and envelope, via `Campaign_Snapshot_Verifier`.
+2. **One delivery operation at a time.** While any `schedule`,
+   `unschedule`, or `send` attempt is `pending` or `unknown`, every new one
+   is refused with `reconciliation_required`, whatever key is sent. This is
+   stricter than test sends, because these reach the audience.
+3. **Claim before contact.** One transaction stores the `pending` attempt
+   and consumes the campaign version (`Campaign::claim()`). A concurrent
+   request holding the same expected version fails its compare-and-swap,
+   rolls back its attempt, and never reaches the provider.
+4. **Record what is known.** On acceptance, one transaction marks the
+   attempt `succeeded`, updates the reference's observed state, applies the
+   transition, and audits it. A definite refusal leaves the campaign where
+   it was. An unconfirmed outcome marks the attempt `unknown` and moves the
+   campaign to `unknown`, which keeps `scheduled_for` for reconciliation.
+5. **Unscheduling cannot pretend.** Once `scheduled_for` has passed, an
+   unschedule is refused without a provider call; the send may have
+   started.
+
+The `scheduled → provider_draft` transition was added for unscheduling. No
+existing campaign is in an affected state, so it needs no data migration.
+Audit events identify the actor, operation, snapshot and fingerprint, remote
+reference, delivery time, states, and normalized result.
+
 ## Deferred adapters and provider work
 
 The #75 REST adapter exposes these operations, plus bounded `get`/`list`
 reads, with schemas, pagination, permission callbacks, rate limits, and one
 error envelope. See [`api.md`](api.md#campaigns). Issues #79-#80 still own
-schedule/send/cancel and reconciliation. There is still no complete operator
+immediate send and reconciliation. There is still no complete operator
 campaign UI or end-to-end Mailchimp delivery flow.

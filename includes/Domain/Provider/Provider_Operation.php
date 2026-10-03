@@ -31,6 +31,7 @@ final class Provider_Operation {
 	public const CREATE_DRAFT               = 'create_draft';
 	public const SEND_TEST                  = 'send_test';
 	public const SCHEDULE                   = 'schedule';
+	public const UNSCHEDULE                 = 'unschedule';
 	public const SEND                       = 'send';
 	public const CANCEL                     = 'cancel';
 	public const RECONCILE                  = 'reconcile';
@@ -53,6 +54,7 @@ final class Provider_Operation {
 			self::CREATE_DRAFT,
 			self::SEND_TEST,
 			self::SCHEDULE,
+			self::UNSCHEDULE,
 			self::SEND,
 			self::CANCEL,
 			self::RECONCILE,

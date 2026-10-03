@@ -40,6 +40,14 @@ final class Campaign_State_Machine_Test extends Test_Case {
 	}
 
 	/**
+	 * Test that unscheduling returns a scheduled campaign to its provider draft.
+	 */
+	public function test_scheduled_can_return_to_provider_draft(): void {
+		$this->assertTrue( Campaign_State_Machine::can_transition( 'scheduled', 'provider_draft' ) );
+		$this->assertFalse( Campaign_State_Machine::can_transition( 'sending', 'provider_draft' ), 'A send that has started cannot be unscheduled.' );
+	}
+
+	/**
 	 * Test that cancellation is allowed from non-terminal states.
 	 */
 	public function test_cancellation_allowed_from_non_terminal_states(): void {
@@ -167,7 +175,7 @@ final class Campaign_State_Machine_Test extends Test_Case {
 			'ready_for_review' => array( 'approved', 'draft', 'cancelled', 'failed', 'archived' ),
 			'approved'         => array( 'provider_draft', 'ready_for_review', 'draft', 'cancelled', 'failed', 'archived' ),
 			'provider_draft'   => array( 'scheduled', 'sending', 'approved', 'cancelled', 'failed', 'unknown' ),
-			'scheduled'        => array( 'sending', 'cancelled', 'failed', 'unknown' ),
+			'scheduled'        => array( 'sending', 'provider_draft', 'cancelled', 'failed', 'unknown' ),
 			'sending'          => array( 'sent', 'failed', 'unknown' ),
 			'sent'             => array(),
 			'failed'           => array( 'provider_draft', 'draft', 'cancelled', 'archived' ),
@@ -186,6 +194,6 @@ final class Campaign_State_Machine_Test extends Test_Case {
 				$legal += $allowed ? 1 : 0;
 			}
 		}
-		$this->assertSame( 35, $legal );
+		$this->assertSame( 36, $legal );
 	}
 }

@@ -20,7 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * draft → ready_for_review → approved → provider_draft → scheduled|sending → sent
  *
  * Recovery paths allow retry from failed or unknown states back to
- * provider_draft. Cancellation is permitted from any non-terminal state.
+ * provider_draft. Unscheduling returns a scheduled campaign to
+ * provider_draft before it starts sending. Cancellation is permitted from any non-terminal state.
  */
 final class Campaign_State_Machine {
 	/**
@@ -33,7 +34,7 @@ final class Campaign_State_Machine {
 		Campaign_State::READY_FOR_REVIEW => array( Campaign_State::APPROVED, Campaign_State::DRAFT, Campaign_State::CANCELLED, Campaign_State::FAILED, Campaign_State::ARCHIVED ),
 		Campaign_State::APPROVED         => array( Campaign_State::PROVIDER_DRAFT, Campaign_State::READY_FOR_REVIEW, Campaign_State::DRAFT, Campaign_State::CANCELLED, Campaign_State::FAILED, Campaign_State::ARCHIVED ),
 		Campaign_State::PROVIDER_DRAFT   => array( Campaign_State::SCHEDULED, Campaign_State::SENDING, Campaign_State::APPROVED, Campaign_State::CANCELLED, Campaign_State::FAILED, Campaign_State::UNKNOWN ),
-		Campaign_State::SCHEDULED        => array( Campaign_State::SENDING, Campaign_State::CANCELLED, Campaign_State::FAILED, Campaign_State::UNKNOWN ),
+		Campaign_State::SCHEDULED        => array( Campaign_State::SENDING, Campaign_State::PROVIDER_DRAFT, Campaign_State::CANCELLED, Campaign_State::FAILED, Campaign_State::UNKNOWN ),
 		Campaign_State::SENDING          => array( Campaign_State::SENT, Campaign_State::FAILED, Campaign_State::UNKNOWN ),
 		Campaign_State::SENT             => array(),
 		Campaign_State::FAILED           => array( Campaign_State::PROVIDER_DRAFT, Campaign_State::DRAFT, Campaign_State::CANCELLED, Campaign_State::ARCHIVED ),

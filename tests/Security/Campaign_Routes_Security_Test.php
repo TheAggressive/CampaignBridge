@@ -74,13 +74,14 @@ final class Campaign_Routes_Security_Test extends Test_Case {
 				$expected = match ( true ) {
 					str_ends_with( $route, '/approve' ), str_ends_with( $route, '/provider-draft' ) => 'can_approve_campaigns',
 					str_ends_with( $route, '/test-send' ) => 'can_test_campaigns',
+					str_ends_with( $route, '/schedule' ), str_ends_with( $route, '/unschedule' ) => 'can_deliver_campaigns',
 					default => 'can_access_campaigns',
 				};
 				self::assertSame( array( Campaign_Routes::class, $expected ), $endpoint['permission_callback'], $route );
 				++$guarded;
 			}
 		}
-		self::assertSame( 15, $guarded );
+		self::assertSame( 17, $guarded );
 
 		$campaign = $this->create_campaign()['id'];
 		wp_set_current_user( 0 );

@@ -12,7 +12,7 @@ namespace CampaignBridge\Tests\Unit\Provider;
 use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Provider\Test_Delivery;
-use CampaignBridge\Domain\Provider\Test_Outcome;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 use WP_UnitTestCase;
 
 /** Proves test requests are bounded before any provider call and outcomes are classified truthfully. */
@@ -60,12 +60,12 @@ final class Test_Delivery_Test extends WP_UnitTestCase {
 		$ambiguous = array( Provider_Error_Category::TIMEOUT, Provider_Error_Category::NETWORK, Provider_Error_Category::PROVIDER_ERROR, Provider_Error_Category::UNKNOWN );
 
 		foreach ( $definite as $category ) {
-			self::assertSame( Test_Outcome::FAILED, Test_Outcome::from_error( Provider_Error::from_category( $category, 'code', 'Message.', 'mailchimp' ) )->status(), $category );
+			self::assertSame( Action_Outcome::FAILED, Action_Outcome::from_error( Provider_Error::from_category( $category, 'code', 'Message.', 'mailchimp' ) )->status(), $category );
 		}
 		foreach ( $ambiguous as $category ) {
-			self::assertSame( Test_Outcome::AMBIGUOUS, Test_Outcome::from_error( Provider_Error::from_category( $category, 'code', 'Message.', 'mailchimp' ) )->status(), $category );
+			self::assertSame( Action_Outcome::AMBIGUOUS, Action_Outcome::from_error( Provider_Error::from_category( $category, 'code', 'Message.', 'mailchimp' ) )->status(), $category );
 		}
-		self::assertSame( Test_Outcome::SENT, Test_Outcome::sent()->status() );
-		self::assertNull( Test_Outcome::sent()->error() );
+		self::assertSame( Action_Outcome::ACCEPTED, Action_Outcome::accepted()->status() );
+		self::assertNull( Action_Outcome::accepted()->error() );
 	}
 }

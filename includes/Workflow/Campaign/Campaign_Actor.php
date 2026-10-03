@@ -45,6 +45,11 @@ final class Campaign_Actor {
 		return $this->can_approve && $this->can_manage( $campaign );
 	}
 
+	/** Scheduling, sending, and unscheduling share the approval capability. */
+	public function can_deliver( Campaign $campaign ): bool {
+		return $this->can_approve( $campaign );
+	}
+
 	/** Test sends are separate from approval and production send authority. */
 	public function can_test( Campaign $campaign ): bool {
 		return $this->can_test && $this->can_manage( $campaign );

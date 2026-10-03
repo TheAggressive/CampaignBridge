@@ -12,10 +12,13 @@ namespace CampaignBridge\REST;
 use CampaignBridge\Core\Campaign_Authorizer;
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Services\Campaign\Campaign_Draft_Handoff_Factory;
+use CampaignBridge\Services\Campaign\Campaign_Scheduler_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Test_Delivery_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Workflow_Factory;
 use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 use CampaignBridge\Workflow\Campaign\Campaign_Actor;
+use CampaignBridge\Workflow\Campaign\Campaign_Delivery_Result;
+use CampaignBridge\Workflow\Campaign\Campaign_Scheduler;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Result;
@@ -137,6 +140,19 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 			'test_send_result',
 			'can_test_campaigns'
 		);
+		$this->register_action(
+			'/schedule',
+			'schedule_campaign',
+			array(
+				'scheduled_for'              => Campaign_Rest_Schema::scheduled_for(),
+				'confirm_audience_reference' => Campaign_Rest_Schema::confirm_audience_reference(),
+				'idempotency_key'            => Campaign_Rest_Schema::idempotency_key(),
+			),
+			true,
+			'delivery_result',
+			'can_deliver_campaigns'
+		);
+		$this->register_action( '/unschedule', 'unschedule_campaign', array( 'idempotency_key' => Campaign_Rest_Schema::idempotency_key() ), true, 'delivery_result', 'can_deliver_campaigns' );
 	}
 
 	/** A useful coarse gate; exact campaign/template authorization remains in the workflow. */
@@ -147,6 +163,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 
 	/** Approval additionally requires the dedicated approval capability. */
 	public static function can_approve_campaigns(): bool {
+		return self::can_access_campaigns() && current_user_can( Capabilities::SEND_CAMPAIGNS );
+	}
+
+	/** Scheduling and sending require the same delivery capability as approval. */
+	public static function can_deliver_campaigns(): bool {
 		return self::can_access_campaigns() && current_user_can( Capabilities::SEND_CAMPAIGNS );
 	}
 
@@ -465,6 +486,93 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 					'idempotent_replay' => $result->is_idempotent_replay(),
 				),
 				$result->is_idempotent_replay() ? 200 : Rest_Constants::HTTP_ACCEPTED
+			)
+		);
+	}
+
+	/**
+	 * Schedule the campaign's remote draft to send to its audience.
+	 *
+	 * The operator must echo the campaign's audience reference, so a stale
+	 * screen or a mistargeted call cannot schedule the wrong audience.
+	 */
+	public function schedule_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		return $this->delivery(
+			$request,
+			'campaign_schedule',
+			fn ( Campaign_Scheduler $scheduler, Campaign_Actor $actor, array $settings ): Campaign_Delivery_Result => $scheduler->schedule(
+				$actor,
+				$this->campaign_id( $request ),
+				$this->expected_version( $request ),
+				(string) $request->get_param( 'scheduled_for' ),
+				(string) $request->get_param( 'confirm_audience_reference' ),
+				(string) $request->get_param( 'idempotency_key' ),
+				$settings
+			)
+		);
+	}
+
+	/** Return a scheduled campaign to its provider draft before it sends. */
+	public function unschedule_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		return $this->delivery(
+			$request,
+			'campaign_unschedule',
+			fn ( Campaign_Scheduler $scheduler, Campaign_Actor $actor, array $settings ): Campaign_Delivery_Result => $scheduler->unschedule(
+				$actor,
+				$this->campaign_id( $request ),
+				$this->expected_version( $request ),
+				(string) $request->get_param( 'idempotency_key' ),
+				$settings
+			)
+		);
+	}
+
+	/**
+	 * Resolve the campaign's provider, run one delivery operation, and map it.
+	 *
+	 * Credentials are decrypted for this one call and never returned.
+	 *
+	 * @param callable(Campaign_Scheduler, Campaign_Actor, array<string, mixed>): Campaign_Delivery_Result $operation Workflow call.
+	 */
+	private function delivery( WP_REST_Request $request, string $rate_key, callable $operation ): WP_REST_Response|WP_Error {
+		$limited = $this->rate_limit( $rate_key, self::EXPENSIVE_LIMIT );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
+		}
+
+		$actor  = $this->actor();
+		$loaded = $this->workflow->get( $actor, $this->campaign_id( $request ) );
+		if ( ! $loaded->is_success() || null === $loaded->campaign() ) {
+			return Campaign_Rest_Errors::from_result( $loaded );
+		}
+		$provider  = $loaded->campaign()->provider();
+		$scheduler = null === $provider ? null : Campaign_Scheduler_Factory::create( $provider );
+		if ( null === $provider || null === $scheduler ) {
+			return new WP_Error(
+				'campaignbridge_campaign_invalid_input',
+				__( 'The campaign must target a provider that supports scheduled delivery.', 'campaignbridge' ),
+				array( 'status' => Rest_Constants::HTTP_BAD_REQUEST )
+			);
+		}
+
+		$settings = Provider_Discovery_Factory::settings( $provider );
+		$result   = $operation( $scheduler, $actor, $settings );
+		unset( $settings );
+
+		$campaign  = $result->campaign();
+		$reference = $result->reference();
+		if ( ! $result->is_success() || null === $campaign || null === $reference ) {
+			return Campaign_Rest_Errors::from_remote( $result );
+		}
+
+		return $this->no_store(
+			new WP_REST_Response(
+				array(
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'remote'            => Campaign_Rest_Resource::remote( $reference ),
+					'attempt'           => null === $result->attempt() ? null : Campaign_Rest_Resource::attempt( $result->attempt() ),
+					'idempotent_replay' => $result->is_idempotent_replay(),
+				)
 			)
 		);
 	}

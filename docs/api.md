@@ -49,10 +49,12 @@ All routes are under `/campaignbridge/v1`. Every action route is `POST`.
 | `POST` | `/campaigns/{id}/duplicate` | `idempotency_key` | `duplicate` | 201 new, or 200 replay |
 | `POST` | `/campaigns/{id}/provider-draft` | `expected_version`, `idempotency_key` | draft handoff | 201 created, or 200 replay |
 | `POST` | `/campaigns/{id}/test-send` | `recipients`, `format?`, `idempotency_key` | test delivery | 202 sent, or 200 replay |
+| `POST` | `/campaigns/{id}/schedule` | `expected_version`, `scheduled_for`, `confirm_audience_reference`, `idempotency_key` | scheduler | 200 scheduled or replay |
+| `POST` | `/campaigns/{id}/unschedule` | `expected_version`, `idempotency_key` | scheduler | 200 unscheduled or replay |
 
-There are no schedule, send, cancel, or reconcile campaign routes. Those
-operations belong to M3 (#79–#80) and will be separate contracts. Creating a
-provider draft or sending a test never schedules or sends to the audience.
+There are no immediate send, cancel, or reconcile campaign routes yet. Those
+belong to M3 (#79–#80) and will be separate contracts. Creating a provider
+draft or sending a test never reaches the audience; only `/schedule` does.
 
 Validation and preview are `POST` because they compile live template content,
 are rate-limited, and validation writes an audit event. Neither persists
@@ -73,6 +75,9 @@ the workflow runs. The bounds match the domain:
 - `idempotency_key`: `^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$`.
 - `recipients`: 1–5 email addresses, each at most 254 characters.
 - `format`: `html` (default) or `text`.
+- `scheduled_for`: RFC 3339 date-time with an explicit offset (`Z` or
+  `±hh:mm`).
+- `confirm_audience_reference`: string of 1–191 characters.
 - `page`: 1–1000000; `per_page`: 1–100.
 
 Unknown body fields are ignored and never reach the workflow. Values are never
@@ -85,8 +90,8 @@ truncated.
   with no nonce is treated as logged out (401). An invalid nonce returns
   `rest_cookie_invalid_nonce` (403). Application passwords work as in core.
 - Every route's permission callback requires `campaignbridge_create_campaigns`
-  or `campaignbridge_manage`. `/approve` and `/provider-draft` also require
-  `campaignbridge_send_campaigns`. `/test-send` also requires
+  or `campaignbridge_manage`. `/approve`, `/provider-draft`, `/schedule`,
+  and `/unschedule` also require `campaignbridge_send_campaigns`. `/test-send` also requires
   `campaignbridge_test_campaigns`, which is separate from approval and send
   authority. Callers without these capabilities receive
   `rest_forbidden` (401 logged out, 403 logged in) before any campaign is
@@ -174,10 +179,15 @@ Campaign (`campaignbridge-campaign-result` wraps it as `{ "campaign": … }`):
     "audience_reference": null,
     "active_snapshot_id": "snapshot-8c1d…",
     "created_at": "2026-09-29T12:00:00Z",
-    "updated_at": "2026-09-29T12:05:00Z"
+    "updated_at": "2026-09-29T12:05:00Z",
+    "scheduled_for": null
   }
 }
 ```
+
+`scheduled_for` is the UTC delivery time once the campaign is scheduled. It is
+kept through `sending`, `sent`, and `unknown`, and is `null` before
+scheduling and after unscheduling.
 
 Snapshot result (`campaignbridge-campaign-snapshot-result`):
 
@@ -347,6 +357,73 @@ Mailchimp has no private preview link for a draft. Its archive URL is a
 public link, so it is not returned. The compiled preview
 (`POST /campaigns/{id}/preview`) and the test email are the review surfaces.
 
+### Scheduling
+
+`POST /campaigns/{id}/schedule` schedules the campaign's remote draft to send
+to its audience. This is the first route that can reach the audience. It
+requires `campaignbridge_send_campaigns` plus management of the campaign;
+the test-send capability does not grant it.
+
+```json
+{ "expected_version": 5, "scheduled_for": "2026-10-05T08:00:00-07:00", "confirm_audience_reference": "abc123", "idempotency_key": "schedule-7f3a" }
+```
+
+Preconditions, all checked before any provider call:
+
+- `confirm_audience_reference` equals the campaign's `audience_reference`.
+  A client should show the audience to the operator and send back what was
+  confirmed, so a stale screen or a mistargeted call cannot schedule the
+  wrong audience.
+- The campaign is `provider_draft` at `expected_version`, and its remote
+  draft is confirmed (`observed_state` `draft`).
+- `scheduled_for` has an explicit offset, falls on the provider's
+  scheduling interval (Mailchimp: :00, :15, :30, :45), is at least 10
+  minutes ahead, and is within one year. It is stored in UTC.
+- The selected snapshot still reproduces its fingerprint and its envelope
+  is complete.
+- No earlier schedule, unschedule, or send attempt for the campaign is
+  `pending` or `unknown`.
+
+A failed precondition returns `400 invalid_input` or `validation_failed`,
+`409 invalid_state`, `conflict`, or `reconciliation_required`, or
+`403 forbidden`. Nothing is sent, and no version is consumed.
+
+Before contacting the provider, one transaction records a `pending` attempt
+and consumes a campaign version. Concurrent requests holding the same
+`expected_version` are refused with `409 conflict`, so a double-click
+cannot reach the provider twice.
+
+A success response is `campaignbridge-campaign-delivery-result`, the same
+shape as the provider draft result. The campaign is `scheduled`, its
+`scheduled_for` is set, and its version has advanced by two (the claim and
+the transition). The same key returns 200 with `idempotent_replay: true` and
+contacts nothing.
+
+Outcomes after the provider is contacted:
+
+- **Scheduled:** 200.
+- **Refused by the provider** (a definite 4xx, such as a campaign Mailchimp
+  considers not ready): `502 provider_failed`. The campaign stays
+  `provider_draft` at the version the claim consumed, which the error
+  reports as `data.current_version`. The same key returns the same failure;
+  use a new key and the new version to try again.
+- **Unconfirmed** (timeout, lost connection, 5xx, or an unexpected status):
+  `409 reconciliation_required`. The campaign moves to `unknown`, because it
+  may or may not send. It is never retried automatically, and every further
+  schedule, unschedule, or send is refused until reconciliation (#80).
+
+`POST /campaigns/{id}/unschedule` returns a `scheduled` campaign to
+`provider_draft` and clears `scheduled_for`. It needs no audience
+confirmation, because it stops delivery rather than starting it. It is
+refused with `409 invalid_state` once `scheduled_for` has passed, because the
+send may already have started; unscheduling cannot pretend to stop a send
+the provider has accepted. Its outcomes mirror scheduling: an unconfirmed
+unschedule moves the campaign to `unknown`.
+
+Mailchimp's in-flight cancel (`/actions/cancel-send`) is not used. It requires
+Mailchimp Pro and cannot recall delivered messages, so CampaignBridge does not
+advertise it.
+
 ### Content validation outcomes
 
 Content problems are not server errors. `/validation` and `/preview` treat
@@ -366,8 +443,9 @@ Errors use the WordPress REST envelope:
 { "code": "campaignbridge_campaign_conflict", "message": "Campaign version is stale.", "data": { "status": 409, "current_version": 4 } }
 ```
 
-`data` always contains `status`. It adds `current_version` only for
-`conflict` and `diagnostics` only for compiler failures. Messages are fixed
+`data` always contains `status`. It adds `current_version` for `conflict`,
+and for `provider_failed` and `reconciliation_required` from remote
+operations, and `diagnostics` only for compiler failures. Messages are fixed
 workflow strings. They never contain SQL, exception traces, class names, raw
 persistence errors, credentials, or provider payloads. `Campaign_Rest_Errors`
 is the single mapping:
@@ -398,7 +476,7 @@ Limits are per authenticated user per 60-second window and use the shared
 `Rate_Limiter`:
 
 - 10 per window: create, snapshot, validation, preview, duplicate,
-  provider-draft, and test-send. These compile, capture, create records, or
+  provider-draft, test-send, schedule, and unschedule. These compile, capture, create records, or
   call the provider. Test sends also have the durable per-campaign quota
   described above.
 - 30 per window: each versioned lifecycle mutation (template, targeting,

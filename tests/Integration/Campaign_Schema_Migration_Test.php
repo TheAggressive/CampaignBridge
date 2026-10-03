@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Core\Storage;
+use CampaignBridge\Repository\Campaign_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\Tests\Helpers\Test_Case;
 
@@ -78,6 +79,35 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 		self::assertSame( Schema_Manager::SCHEMA_VERSION, Storage::get_option( Schema_Manager::OPTION ) );
 		self::assertContains( 'envelope', $wpdb->get_col( "DESCRIBE {$table}", 0 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
 		self::assertSame( 'legacy-snapshot', $wpdb->get_var( "SELECT id FROM {$table} WHERE envelope IS NULL" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+	}
+
+	/** Version 2 gains the campaign delivery-time column; existing campaigns stay readable. */
+	public function test_upgrade_from_version_two_adds_the_scheduled_for_column(): void {
+		global $wpdb;
+		self::assertTrue( Schema_Manager::migrate() );
+		$table = Schema_Manager::table( 'campaigns' );
+		$wpdb->query( "ALTER TABLE {$table} DROP COLUMN scheduled_for" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Recreates the version-2 shape.
+		$wpdb->insert(
+			$table,
+			array(
+				'id'            => 'legacy-campaign',
+				'data_version'  => 1,
+				'state'         => 'provider_draft',
+				'version'       => 5,
+				'owner_user_id' => 7,
+				'template_id'   => 42,
+				'created_at'    => '2026-01-01 00:00:00',
+				'updated_at'    => '2026-01-02 00:00:00',
+			)
+		);
+		Storage::update_option( Schema_Manager::OPTION, 2 );
+		self::assertFalse( Schema_Manager::is_current() );
+
+		self::assertTrue( Schema_Manager::migrate() );
+		self::assertSame( Schema_Manager::SCHEMA_VERSION, Storage::get_option( Schema_Manager::OPTION ) );
+		self::assertContains( 'scheduled_for', $wpdb->get_col( "DESCRIBE {$table}", 0 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+		$campaign = ( new Campaign_Repository() )->get( 'legacy-campaign' );
+		self::assertSame( array( 'provider_draft', 5, null ), array( $campaign?->state(), $campaign?->version(), $campaign?->scheduled_for() ) );
 	}
 
 	/** Product read paths and identity rules have their documented indexes. */
