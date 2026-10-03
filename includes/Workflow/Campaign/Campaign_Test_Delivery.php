@@ -21,6 +21,7 @@ use CampaignBridge\Domain\Campaign\Delivery_Attempt;
 use CampaignBridge\Domain\Campaign\Delivery_Attempt_Source;
 use CampaignBridge\Domain\Campaign\Delivery_Attempt_Status;
 use CampaignBridge\Domain\Campaign\Delivery_Operation;
+use CampaignBridge\Domain\Campaign\Delivery_Policy_Source;
 use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference_Source;
@@ -50,6 +51,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *    sent.
  * 2. Recipients are validated and bounded before anything is recorded, and
  *    are never persisted: attempts and audit events record only their count.
+ *    When the site restricts test-recipient domains, every recipient must
+ *    use one of them.
  * 3. A durable per-campaign quota bounds tests independently of the
  *    per-user transport limit.
  * 4. Write-ahead. A `pending` test_send attempt is stored before the call.
@@ -82,7 +85,8 @@ final class Campaign_Test_Delivery {
 		private readonly Provider_Capabilities $capabilities,
 		private readonly Provider_Draft_Gateway $drafts,
 		private readonly Provider_Token_Mapper $tokens,
-		private readonly Provider_Discovery_Service $discovery
+		private readonly Provider_Discovery_Service $discovery,
+		private readonly Delivery_Policy_Source $policies
 	) {}
 
 	/**
@@ -106,6 +110,22 @@ final class Campaign_Test_Delivery {
 			$delivery = Test_Delivery::create( $recipients, $format );
 		} catch ( \InvalidArgumentException ) {
 			return $this->refuse( Campaign_Workflow_Error::INVALID_INPUT, sprintf( 'A test needs between 1 and %d valid email addresses and a known format.', Test_Delivery::MAX_RECIPIENTS ), $actor, $campaign_id, $campaign );
+		}
+		$policy = $this->policies->current();
+		foreach ( $delivery->recipients() as $recipient ) {
+			if ( ! $policy->allows_test_recipient( $recipient ) ) {
+				$domains = (array) $policy->test_domains();
+
+				return $this->refuse(
+					Campaign_Workflow_Error::INVALID_INPUT,
+					array() === $domains
+						? 'Test recipients are restricted, but no valid domain is configured. Ask a manager to correct the test-recipient policy.'
+						: sprintf( 'Test recipients must use an allowed domain: %s.', implode( ', ', $domains ) ),
+					$actor,
+					$campaign_id,
+					$campaign
+				);
+			}
 		}
 		$provider = $this->gateway->slug();
 		if ( ! $this->capabilities->supports( Provider_Operation::SEND_TEST ) || $provider !== $campaign->provider() ) {

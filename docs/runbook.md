@@ -85,6 +85,20 @@ attempt was recorded.
 4. Retry the request. Any content or settings edited in Mailchimp are
    overwritten with the approved values.
 
+### Delivery refused by a policy
+
+- **"Separation of duties is required"** (`403`): the person scheduling
+  approved the campaign. Ask another person with delivery authority. If the
+  message says the campaign was approved before approvers were recorded,
+  independence cannot be verified. A manager decides: duplicate the
+  campaign and have it approved again, or deliver it with the policy
+  temporarily off.
+- **"Test recipients must use an allowed domain"** (`400`): use an address
+  on an allowed domain, or ask a manager to update
+  **Settings → Policies**. "No valid domain is configured" means the policy
+  was saved with entries that are not domains, so all tests are blocked
+  until it is corrected.
+
 ## Release procedure
 
 1. Run the complete quality pipeline.

@@ -294,7 +294,7 @@ final class Campaign_Workflow {
 			return $this->conflict( $actor, 'campaign_approve', $loaded, $expected_version );
 		}
 		try {
-			$replacement = $loaded->transition_to( Campaign_State::APPROVED, $this->clock->now() );
+			$replacement = $loaded->approve_by( $actor->user_id(), $this->clock->now() );
 		} catch ( \InvalidArgumentException ) {
 			return $this->failure( Campaign_Workflow_Error::APPROVAL_NOT_ALLOWED, 'Campaign cannot be approved from its current state.', $actor, 'campaign_approve', $campaign_id, $loaded );
 		}

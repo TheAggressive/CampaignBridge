@@ -17,6 +17,7 @@ use CampaignBridge\Repository\Audit_Event_Repository;
 use CampaignBridge\Repository\Campaign_Repository;
 use CampaignBridge\Repository\Campaign_Snapshot_Repository;
 use CampaignBridge\Repository\Delivery_Attempt_Repository;
+use CampaignBridge\Repository\Delivery_Policy_Repository;
 use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 use CampaignBridge\Workflow\Campaign\Campaign_Test_Delivery;
@@ -48,7 +49,8 @@ final class Campaign_Test_Delivery_Factory {
 			( new Mailchimp_Provider() )->capabilities(),
 			new Mailchimp_Draft_Gateway(),
 			new Mailchimp_Token_Mapper(),
-			$discovery
+			$discovery,
+			new Delivery_Policy_Repository()
 		);
 	}
 }

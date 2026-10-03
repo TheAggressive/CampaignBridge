@@ -110,6 +110,34 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 		self::assertSame( array( 'provider_draft', 5, null ), array( $campaign?->state(), $campaign?->version(), $campaign?->scheduled_for() ) );
 	}
 
+	/** Version 3 gains the campaign approver column; existing approvals stay readable without one. */
+	public function test_upgrade_from_version_three_adds_the_approver_column(): void {
+		global $wpdb;
+		self::assertTrue( Schema_Manager::migrate() );
+		$table = Schema_Manager::table( 'campaigns' );
+		$wpdb->query( "ALTER TABLE {$table} DROP COLUMN approved_by_user_id" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Recreates the version-3 shape.
+		$wpdb->insert(
+			$table,
+			array(
+				'id'            => 'legacy-approved',
+				'data_version'  => 1,
+				'state'         => 'approved',
+				'version'       => 4,
+				'owner_user_id' => 7,
+				'template_id'   => 42,
+				'created_at'    => '2026-01-01 00:00:00',
+				'updated_at'    => '2026-01-02 00:00:00',
+			)
+		);
+		Storage::update_option( Schema_Manager::OPTION, 3 );
+		self::assertFalse( Schema_Manager::is_current() );
+
+		self::assertTrue( Schema_Manager::migrate() );
+		self::assertContains( 'approved_by_user_id', $wpdb->get_col( "DESCRIBE {$table}", 0 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+		$campaign = ( new Campaign_Repository() )->get( 'legacy-approved' );
+		self::assertSame( array( 'approved', null ), array( $campaign?->state(), $campaign?->approved_by_user_id() ) );
+	}
+
 	/** Product read paths and identity rules have their documented indexes. */
 	public function test_expected_query_indexes_exist(): void {
 		global $wpdb;

@@ -12,6 +12,7 @@ namespace CampaignBridge\Tests\Integration;
 use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Campaign;
 use CampaignBridge\Domain\Campaign\Campaign_State;
+use CampaignBridge\Domain\Campaign\Delivery_Policy;
 use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
@@ -39,6 +40,7 @@ use CampaignBridge\Repository\Provider_Discovery_Repository;
 use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\Tests\Helpers\Test_Case;
+use CampaignBridge\Tests\Support\Campaign\Fixed_Delivery_Policy;
 use CampaignBridge\Tests\Support\Provider\Scripted_Draft_Gateway;
 use CampaignBridge\Workflow\Campaign\Campaign_Actor;
 use CampaignBridge\Workflow\Campaign\Campaign_Clock;
@@ -117,6 +119,8 @@ final class Campaign_Test_Delivery_Test extends Test_Case {
 
 	private Scripted_Draft_Gateway $drafts;
 
+	private Fixed_Delivery_Policy $policies;
+
 	private Movable_Clock $clock;
 
 	private Campaign_Test_Delivery $delivery;
@@ -142,6 +146,7 @@ final class Campaign_Test_Delivery_Test extends Test_Case {
 		$this->audits     = new Audit_Event_Repository();
 		$this->gateway    = new Scripted_Test_Gateway();
 		$this->drafts     = new Scripted_Draft_Gateway();
+		$this->policies   = new Fixed_Delivery_Policy();
 		$this->clock      = new Movable_Clock();
 		$this->tester     = new Campaign_Actor( 7, true, false, true, true );
 		$this->workflow   = new Campaign_Workflow(
@@ -166,7 +171,8 @@ final class Campaign_Test_Delivery_Test extends Test_Case {
 			( new Mailchimp_Provider() )->capabilities(),
 			$this->drafts,
 			new Mailchimp_Token_Mapper(),
-			new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock() )
+			new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock() ),
+			$this->policies
 		);
 
 		kses_remove_filters();
@@ -245,6 +251,31 @@ final class Campaign_Test_Delivery_Test extends Test_Case {
 
 		self::assertTrue( $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com' ), 'html', 'test-key-1', self::settings() )->is_success() );
 		self::assertSame( 1, $this->drafts->inspections, 'Only scheduling verifies the whole-audience target.' );
+	}
+
+	public function test_restricted_test_domains_are_enforced_before_any_provider_call(): void {
+		$campaign               = $this->provider_draft_campaign();
+		$this->policies->policy = Delivery_Policy::from_settings( false, "example.com\nexample.org" );
+
+		$refused = $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com', 'outsider@other.test' ), 'html', 'test-key-1', self::settings() );
+		self::assertSame( Campaign_Workflow_Error::INVALID_INPUT, $refused->error()?->code() );
+		self::assertSame( 'Test recipients must use an allowed domain: example.com, example.org.', $refused->error()?->message(), 'The refusal names allowed domains, never the rejected address.' );
+		self::assertSame( array( 0, 0 ), array( $this->gateway->sends, $this->drafts->syncs ) );
+		self::assertSame( array(), $this->attempts->for_campaign( $campaign->id() ) );
+		$this->assert_no_recipient_is_stored( array( 'outsider@other.test' ) );
+
+		self::assertTrue( $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com', 'lead@example.org' ), 'html', 'test-key-2', self::settings() )->is_success() );
+	}
+
+	public function test_a_misconfigured_domain_policy_allows_no_test(): void {
+		$campaign               = $this->provider_draft_campaign();
+		$this->policies->policy = Delivery_Policy::from_settings( false, 'not a domain' );
+
+		$refused = $this->delivery->send_test( $this->tester, $campaign->id(), array( 'qa@example.com' ), 'html', 'test-key-1', self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::INVALID_INPUT, $refused->error()?->code() );
+		self::assertStringContainsString( 'no valid domain is configured', (string) $refused->error()?->message() );
+		self::assertSame( 0, $this->gateway->sends );
 	}
 
 	public function test_a_repeated_key_replays_the_recorded_test_and_a_new_key_sends_again(): void {
