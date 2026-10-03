@@ -180,10 +180,16 @@ Campaign (`campaignbridge-campaign-result` wraps it as `{ "campaign": … }`):
     "active_snapshot_id": "snapshot-8c1d…",
     "created_at": "2026-09-29T12:00:00Z",
     "updated_at": "2026-09-29T12:05:00Z",
-    "scheduled_for": null
+    "scheduled_for": null,
+    "approved_by_user_id": null
   }
 }
 ```
+
+`approved_by_user_id` is the user whose approval the campaign carries. It is
+set by `/approve`, kept through provider draft and delivery, and cleared when
+the campaign returns to `draft` or `ready_for_review`. It is `null` for
+approvals recorded before it existed.
 
 `scheduled_for` is the UTC delivery time once the campaign is scheduled. It is
 kept through `sending`, `sent`, and `unknown`, and is `null` before
@@ -313,6 +319,10 @@ campaign's state or version.
 
 Preconditions, all checked before any provider call:
 
+- When the site restricts test-recipient domains (see
+  [Delivery policies](#delivery-policies)), every recipient uses an allowed
+  domain. The refusal (`400 invalid_input`) names the allowed domains, never
+  the rejected address.
 - `recipients` holds 1–5 valid addresses. Duplicates are merged after
   lowercasing. `format` is `html` or `text`.
 - The campaign is `provider_draft` and its remote draft is confirmed
@@ -391,6 +401,9 @@ Preconditions, all checked before any provider call:
   is complete and translatable for the audience.
 - No earlier schedule, unschedule, or send attempt for the campaign is
   `pending` or `unknown`.
+- **Separation of duties**, when the site enables it (see
+  [Delivery policies](#delivery-policies)): the caller is not the campaign's
+  approver. A denial is `403 forbidden` with only `status` in `data`.
 - **The remote draft matches what was approved.** CampaignBridge never
   trusts it as-is. It reads the draft and requires it to be unsent,
   re-asserts the approved audience, envelope, and content with idempotent
@@ -440,6 +453,20 @@ unschedule moves the campaign to `unknown`.
 Mailchimp's in-flight cancel (`/actions/cancel-send`) is not used. It requires
 Mailchimp Pro and cannot recall delivered messages, so CampaignBridge does not
 advertise it.
+
+### Delivery policies
+
+Managers (`campaignbridge_manage`) set opt-in governance policies on the
+**Settings → Policies** tab. Both are off by default and only ever add
+refusals. People who only approve, test, or send cannot change them, and
+"Reset all settings" leaves them unchanged.
+
+| Policy | Effect |
+| --- | --- |
+| Require a second person to deliver | The campaign's approver (`approved_by_user_id`) cannot schedule it, or send it once sending exists. An approval recorded before the approver was tracked fails closed; a manager recreates the campaign or delivers it with the policy off. Unscheduling is never blocked, because it stops delivery. |
+| Allowed test-recipient domains | Tests may go only to these exact domains (no implied subdomains). When the setting is non-empty but no entry is a valid domain, no test can be sent. |
+
+Policy denials are audited with `result` `denied` and the policy name.
 
 ### Content validation outcomes
 

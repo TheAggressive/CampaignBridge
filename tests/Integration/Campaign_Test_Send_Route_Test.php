@@ -108,7 +108,7 @@ final class Campaign_Test_Send_Route_Test extends Test_Case {
 			wp_delete_post( $template_id, true );
 		}
 		( new Provider_Connection_Repository() )->delete( 'mailchimp' );
-		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '%discovery\_%' OR option_name LIKE '%rate\_limit%'" );
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '%discovery\_%' OR option_name LIKE '%rate\_limit%' OR option_name LIKE 'campaignbridge\_policy\_%'" );
 		$this->truncate();
 		// Workflow transactions commit, so cleanup of committed fixtures must commit too.
 		$wpdb->query( 'COMMIT' );
@@ -213,6 +213,20 @@ final class Campaign_Test_Send_Route_Test extends Test_Case {
 
 		self::assertCount( $requests, $this->requests, 'Invalid requests never reach Mailchimp.' );
 		self::assertSame( array(), array_filter( ( new Delivery_Attempt_Repository() )->for_campaign( $campaign['id'] ), static fn ( $attempt ): bool => 'test_send' === $attempt->operation() ) );
+	}
+
+	public function test_the_stored_domain_policy_restricts_test_recipients_over_rest(): void {
+		$campaign = $this->provider_draft_campaign();
+		update_option( 'campaignbridge_policy_test_recipient_domains', 'example.com' );
+		$requests = count( $this->requests );
+
+		$refused = $this->test_send( $campaign['id'], array( 'outsider@other.test' ), 'rest-test-1' );
+		self::assertSame( 400, $refused->get_status() );
+		self::assertSame( 'campaignbridge_campaign_invalid_input', $refused->get_data()['code'] );
+		self::assertStringNotContainsString( 'outsider@other.test', (string) wp_json_encode( $refused->get_data() ) );
+		self::assertCount( $requests, $this->requests, 'A refused recipient never reaches Mailchimp.' );
+
+		self::assertSame( 202, $this->test_send( $campaign['id'], array( 'qa@example.com' ), 'rest-test-2' )->get_status() );
 	}
 
 	public function test_a_campaign_without_a_provider_draft_cannot_be_tested(): void {

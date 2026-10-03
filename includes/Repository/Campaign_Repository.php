@@ -48,20 +48,21 @@ final class Campaign_Repository implements Campaign_Source {
 		$inserted   = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Repository write.
 			Schema_Manager::table( 'campaigns' ),
 			array(
-				'id'                 => $campaign->id(),
-				'data_version'       => Campaign::SCHEMA_VERSION,
-				'state'              => $campaign->state(),
-				'version'            => $campaign->version(),
-				'owner_user_id'      => $campaign->owner_user_id(),
-				'template_id'        => $campaign->template_id(),
-				'provider'           => $data['provider'],
-				'audience_reference' => $data['audience_reference'],
-				'active_snapshot_id' => $data['active_snapshot_id'],
-				'created_at'         => Database_Values::to_database_time( $campaign->created_at() ),
-				'updated_at'         => Database_Values::to_database_time( $campaign->updated_at() ),
-				'scheduled_for'      => self::database_time( $campaign->scheduled_for() ),
+				'id'                  => $campaign->id(),
+				'data_version'        => Campaign::SCHEMA_VERSION,
+				'state'               => $campaign->state(),
+				'version'             => $campaign->version(),
+				'owner_user_id'       => $campaign->owner_user_id(),
+				'template_id'         => $campaign->template_id(),
+				'provider'            => $data['provider'],
+				'audience_reference'  => $data['audience_reference'],
+				'active_snapshot_id'  => $data['active_snapshot_id'],
+				'created_at'          => Database_Values::to_database_time( $campaign->created_at() ),
+				'updated_at'          => Database_Values::to_database_time( $campaign->updated_at() ),
+				'scheduled_for'       => self::database_time( $campaign->scheduled_for() ),
+				'approved_by_user_id' => $campaign->approved_by_user_id(),
 			),
-			array( '%s', '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%s', '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
 		);
 		$wpdb->suppress_errors( $suppressed );
 		return false !== $inserted;
@@ -80,23 +81,24 @@ final class Campaign_Repository implements Campaign_Source {
 		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Version-guarded repository write.
 			Schema_Manager::table( 'campaigns' ),
 			array(
-				'data_version'       => Campaign::SCHEMA_VERSION,
-				'state'              => $replacement->state(),
-				'version'            => $replacement->version(),
-				'owner_user_id'      => $replacement->owner_user_id(),
-				'template_id'        => $replacement->template_id(),
-				'provider'           => $data['provider'],
-				'audience_reference' => $data['audience_reference'],
-				'active_snapshot_id' => $data['active_snapshot_id'],
-				'updated_at'         => Database_Values::to_database_time( $replacement->updated_at() ),
-				'scheduled_for'      => self::database_time( $replacement->scheduled_for() ),
+				'data_version'        => Campaign::SCHEMA_VERSION,
+				'state'               => $replacement->state(),
+				'version'             => $replacement->version(),
+				'owner_user_id'       => $replacement->owner_user_id(),
+				'template_id'         => $replacement->template_id(),
+				'provider'            => $data['provider'],
+				'audience_reference'  => $data['audience_reference'],
+				'active_snapshot_id'  => $data['active_snapshot_id'],
+				'updated_at'          => Database_Values::to_database_time( $replacement->updated_at() ),
+				'scheduled_for'       => self::database_time( $replacement->scheduled_for() ),
+				'approved_by_user_id' => $replacement->approved_by_user_id(),
 			),
 			array(
 				'id'         => $replacement->id(),
 				'version'    => $expected_version,
 				'created_at' => Database_Values::to_database_time( $replacement->created_at() ),
 			),
-			array( '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s' ),
+			array( '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d' ),
 			array( '%s', '%d', '%s' )
 		);
 
@@ -149,18 +151,19 @@ final class Campaign_Repository implements Campaign_Source {
 		try {
 			return Campaign::from_array(
 				array(
-					'schema_version'     => Database_Values::integer( $row['data_version'] ?? null, 'Campaign data version' ),
-					'id'                 => $row['id'] ?? null,
-					'state'              => $row['state'] ?? null,
-					'version'            => Database_Values::integer( $row['version'] ?? null, 'Campaign version' ),
-					'owner_user_id'      => Database_Values::integer( $row['owner_user_id'] ?? null, 'Campaign owner' ),
-					'template_id'        => Database_Values::integer( $row['template_id'] ?? null, 'Campaign template' ),
-					'provider'           => $row['provider'] ?? null,
-					'audience_reference' => $row['audience_reference'] ?? null,
-					'active_snapshot_id' => $row['active_snapshot_id'] ?? null,
-					'created_at'         => Database_Values::from_database_time( $row['created_at'] ?? null ),
-					'updated_at'         => Database_Values::from_database_time( $row['updated_at'] ?? null ),
-					'scheduled_for'      => null === ( $row['scheduled_for'] ?? null ) ? null : Database_Values::from_database_time( $row['scheduled_for'] ),
+					'schema_version'      => Database_Values::integer( $row['data_version'] ?? null, 'Campaign data version' ),
+					'id'                  => $row['id'] ?? null,
+					'state'               => $row['state'] ?? null,
+					'version'             => Database_Values::integer( $row['version'] ?? null, 'Campaign version' ),
+					'owner_user_id'       => Database_Values::integer( $row['owner_user_id'] ?? null, 'Campaign owner' ),
+					'template_id'         => Database_Values::integer( $row['template_id'] ?? null, 'Campaign template' ),
+					'provider'            => $row['provider'] ?? null,
+					'audience_reference'  => $row['audience_reference'] ?? null,
+					'active_snapshot_id'  => $row['active_snapshot_id'] ?? null,
+					'created_at'          => Database_Values::from_database_time( $row['created_at'] ?? null ),
+					'updated_at'          => Database_Values::from_database_time( $row['updated_at'] ?? null ),
+					'scheduled_for'       => null === ( $row['scheduled_for'] ?? null ) ? null : Database_Values::from_database_time( $row['scheduled_for'] ),
+					'approved_by_user_id' => null === ( $row['approved_by_user_id'] ?? null ) ? null : Database_Values::integer( $row['approved_by_user_id'], 'Campaign approver' ),
 				)
 			);
 		} catch ( \InvalidArgumentException ) {

@@ -96,6 +96,8 @@ class Storage_Prefixes {
 		'campaignbridge_included_post_types',
 		'campaignbridge_provider_connection_mailchimp',
 		'campaignbridge_database_schema',
+		'campaignbridge_policy_separate_delivery',
+		'campaignbridge_policy_test_recipient_domains',
 	);
 
 	/**

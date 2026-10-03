@@ -266,6 +266,25 @@ existing campaign is in an affected state, so it needs no data migration.
 Audit events identify the actor, operation, snapshot and fingerprint, remote
 reference, delivery time, states, and normalized result.
 
+## Delivery policies
+
+`Delivery_Policy` holds the site's opt-in governance rules and
+`Delivery_Policy_Source` supplies it (`Delivery_Policy_Repository` reads the
+manager-only Policies settings). Policies only add refusals:
+
+- **Separate delivery.** `Campaign::approve_by()` records the approver
+  (`approved_by_user_id`), which survives provider draft and delivery and
+  is cleared when approval is invalidated. With the policy on,
+  `Campaign_Scheduler` refuses the approver with `forbidden` before any
+  provider call, and fails closed for an unrecorded approver. Unscheduling
+  is exempt.
+- **Test-recipient domains.** `Campaign_Test_Delivery` refuses any
+  recipient outside the configured domains before anything is recorded. A
+  configured list with no valid domain allows no test.
+
+Authorization reads the approver from the campaign record, never from the
+audit log, which is observational and may later be subject to retention.
+
 ## Deferred adapters and provider work
 
 The #75 REST adapter exposes these operations, plus bounded `get`/`list`

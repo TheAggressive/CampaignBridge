@@ -113,7 +113,7 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 			wp_delete_post( $template_id, true );
 		}
 		( new Provider_Connection_Repository() )->delete( 'mailchimp' );
-		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '%discovery\_%' OR option_name LIKE '%rate\_limit%'" );
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '%discovery\_%' OR option_name LIKE '%rate\_limit%' OR option_name LIKE 'campaignbridge\_policy\_%'" );
 		$this->truncate();
 		// Workflow transactions commit, so cleanup of committed fixtures must commit too.
 		$wpdb->query( 'COMMIT' );
@@ -234,6 +234,22 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 
 		self::assertCount( $requests, $this->requests, 'Invalid requests never reach Mailchimp.' );
 		self::assertSame( 5, ( new Campaign_Repository() )->get( $campaign['id'] )?->version() );
+	}
+
+	public function test_the_stored_separation_policy_stops_the_approver_over_rest(): void {
+		$campaign = $this->provider_draft_campaign();
+		self::assertSame( $this->admin_id, $campaign['approved_by_user_id'] );
+		update_option( 'campaignbridge_policy_separate_delivery', 1 );
+		$actions = $this->action_count();
+
+		$denied = $this->schedule( $campaign['id'], 5, self::send_at(), 'abc123', 'rest-schedule-1' );
+		self::assertSame( 403, $denied->get_status() );
+		self::assertSame( 'campaignbridge_campaign_forbidden', $denied->get_data()['code'] );
+		self::assertSame( array( 'status' => 403 ), $denied->get_data()['data'], 'A denial reveals no campaign state.' );
+		self::assertSame( $actions, $this->action_count() );
+
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+		self::assertSame( 200, $this->schedule( $campaign['id'], 5, self::send_at(), 'abc123', 'rest-schedule-2' )->get_status(), 'A second person may schedule.' );
 	}
 
 	public function test_scheduling_requires_delivery_authority(): void {

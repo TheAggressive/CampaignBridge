@@ -39,7 +39,8 @@ final class Campaign {
 		private readonly ?string $active_snapshot_id,
 		private readonly string $created_at,
 		private readonly string $updated_at,
-		private readonly ?string $scheduled_for
+		private readonly ?string $scheduled_for,
+		private readonly ?int $approved_by_user_id
 	) {}
 
 	/** Create a new draft campaign. */
@@ -89,6 +90,7 @@ final class Campaign {
 				'created_at',
 				'updated_at',
 				'scheduled_for',
+				'approved_by_user_id',
 			)
 		);
 		if ( self::SCHEMA_VERSION !== ( $data['schema_version'] ?? null ) ) {
@@ -132,6 +134,15 @@ final class Campaign {
 				throw new \InvalidArgumentException( 'Only a campaign at or past scheduling may carry a delivery time.' );
 			}
 		}
+		$approved_by = $data['approved_by_user_id'] ?? null;
+		if ( null !== $approved_by ) {
+			if ( ! is_int( $approved_by ) || 1 > $approved_by ) {
+				throw new \InvalidArgumentException( 'Campaign approver must be a positive user ID.' );
+			}
+			if ( ! self::retains_approval( $state ) ) {
+				throw new \InvalidArgumentException( 'Only an approved campaign may record its approver.' );
+			}
+		}
 
 		return new self(
 			Record_Validation::identifier( $data['id'] ?? null, 'Campaign ID' ),
@@ -144,7 +155,8 @@ final class Campaign {
 			$snapshot_id,
 			$created_at,
 			$updated_at,
-			$scheduled_for
+			$scheduled_for,
+			$approved_by
 		);
 	}
 
@@ -186,6 +198,11 @@ final class Campaign {
 
 	public function updated_at(): string {
 		return $this->updated_at;
+	}
+
+	/** The user whose approval the campaign carries; null before approval or for unrecorded legacy approvals. */
+	public function approved_by_user_id(): ?int {
+		return $this->approved_by_user_id;
 	}
 
 	/** The UTC time the campaign was scheduled to send, if it was scheduled. */
@@ -253,6 +270,25 @@ final class Campaign {
 		);
 	}
 
+	/** Approve the reviewed campaign and record who approved it. */
+	public function approve_by( int $user_id, string $updated_at ): self {
+		Campaign_State_Machine::assert_transition( $this->state, Campaign_State::APPROVED );
+		if ( 1 > $user_id ) {
+			throw new \InvalidArgumentException( 'Campaign approver must be a positive user ID.' );
+		}
+
+		return $this->replacement(
+			Campaign_State::APPROVED,
+			$this->template_id,
+			$this->provider,
+			$this->audience_reference,
+			$this->active_snapshot_id,
+			$updated_at,
+			null,
+			$user_id
+		);
+	}
+
 	/** Move a provider draft to `scheduled` for one UTC delivery time. */
 	public function schedule_for( string $scheduled_for, string $updated_at ): self {
 		Campaign_State_Machine::assert_transition( $this->state, Campaign_State::SCHEDULED );
@@ -295,41 +331,54 @@ final class Campaign {
 		?string $audience_reference,
 		?string $active_snapshot_id,
 		string $updated_at,
-		?string $scheduled_for = null
+		?string $scheduled_for = null,
+		?int $approved_by_user_id = null
 	): self {
 		return self::from_array(
 			array(
-				'schema_version'     => self::SCHEMA_VERSION,
-				'id'                 => $this->id,
-				'state'              => $state,
-				'version'            => $this->version + 1,
-				'owner_user_id'      => $this->owner_user_id,
-				'template_id'        => $template_id,
-				'provider'           => $provider,
-				'audience_reference' => $audience_reference,
-				'active_snapshot_id' => $active_snapshot_id,
-				'created_at'         => $this->created_at,
-				'updated_at'         => $updated_at,
-				'scheduled_for'      => $scheduled_for,
+				'schema_version'      => self::SCHEMA_VERSION,
+				'id'                  => $this->id,
+				'state'               => $state,
+				'version'             => $this->version + 1,
+				'owner_user_id'       => $this->owner_user_id,
+				'template_id'         => $template_id,
+				'provider'            => $provider,
+				'audience_reference'  => $audience_reference,
+				'active_snapshot_id'  => $active_snapshot_id,
+				'created_at'          => $this->created_at,
+				'updated_at'          => $updated_at,
+				'scheduled_for'       => $scheduled_for,
+				'approved_by_user_id' => self::retains_approval( $state ) ? ( $approved_by_user_id ?? $this->approved_by_user_id ) : null,
 			)
 		);
+	}
+
+	/**
+	 * Whether a state still carries the approval it passed through.
+	 *
+	 * Returning to draft or review invalidates approval, so it also clears
+	 * the recorded approver.
+	 */
+	private static function retains_approval( string $state ): bool {
+		return ! in_array( $state, array( Campaign_State::DRAFT, Campaign_State::READY_FOR_REVIEW ), true );
 	}
 
 	/** @return array<string, mixed> */
 	public function to_array(): array {
 		return array(
-			'schema_version'     => self::SCHEMA_VERSION,
-			'id'                 => $this->id,
-			'state'              => $this->state,
-			'version'            => $this->version,
-			'owner_user_id'      => $this->owner_user_id,
-			'template_id'        => $this->template_id,
-			'provider'           => $this->provider,
-			'audience_reference' => $this->audience_reference,
-			'active_snapshot_id' => $this->active_snapshot_id,
-			'created_at'         => $this->created_at,
-			'updated_at'         => $this->updated_at,
-			'scheduled_for'      => $this->scheduled_for,
+			'schema_version'      => self::SCHEMA_VERSION,
+			'id'                  => $this->id,
+			'state'               => $this->state,
+			'version'             => $this->version,
+			'owner_user_id'       => $this->owner_user_id,
+			'template_id'         => $this->template_id,
+			'provider'            => $this->provider,
+			'audience_reference'  => $this->audience_reference,
+			'active_snapshot_id'  => $this->active_snapshot_id,
+			'created_at'          => $this->created_at,
+			'updated_at'          => $this->updated_at,
+			'scheduled_for'       => $this->scheduled_for,
+			'approved_by_user_id' => $this->approved_by_user_id,
 		);
 	}
 }

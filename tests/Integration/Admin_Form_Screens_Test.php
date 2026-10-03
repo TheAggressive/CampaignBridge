@@ -18,16 +18,16 @@ class Admin_Form_Screens_Test extends Test_Case {
 
 	public function setUp(): void {
 		parent::setUp();
-		$this->original_post = $_POST;
+		$this->original_post   = $_POST;
 		$this->original_server = $_SERVER;
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		set_current_screen( 'admin' );
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_SERVER['REQUEST_URI'] = '/wp-admin/admin.php?page=campaignbridge-settings';
+		$_SERVER['REQUEST_URI']    = '/wp-admin/admin.php?page=campaignbridge-settings';
 	}
 
 	public function tearDown(): void {
-		$_POST = $this->original_post;
+		$_POST   = $this->original_post;
 		$_SERVER = $this->original_server;
 		set_current_screen( 'front' );
 		parent::tearDown();
@@ -64,14 +64,19 @@ class Admin_Form_Screens_Test extends Test_Case {
 	}
 
 	public function test_provider_screen_encrypts_credentials(): void {
-		$key = str_repeat( 'a', 32 ) . '-us1';
+		$key   = str_repeat( 'a', 32 ) . '-us1';
 		$_POST = array(
-			'providers' => array( 'form_id' => 'providers', 'provider' => 'mailchimp', 'mailchimp_api_key' => $key, 'mailchimp_audience' => 'audience' ),
+			'providers'         => array(
+				'form_id'            => 'providers',
+				'provider'           => 'mailchimp',
+				'mailchimp_api_key'  => $key,
+				'mailchimp_audience' => 'audience',
+			),
 			'providers_wpnonce' => wp_create_nonce( 'campaignbridge_form_providers' ),
 		);
-		$html = $this->render_screen( 'providers' );
-		$repo     = new \CampaignBridge\Repository\Provider_Connection_Repository();
-		$conn     = $repo->get( 'mailchimp' );
+		$html  = $this->render_screen( 'providers' );
+		$repo  = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$conn  = $repo->get( 'mailchimp' );
 		$this->assertNotNull( $conn );
 		$stored = $conn->api_key();
 		$this->assertTrue( Encryption::is_encrypted_value( $stored ) );
@@ -80,9 +85,56 @@ class Admin_Form_Screens_Test extends Test_Case {
 		$this->assertSame( 'mailchimp', get_option( 'campaignbridge_provider' ) );
 	}
 
+	public function test_policies_screen_saves_and_shows_the_effective_policy(): void {
+		$this->submit_policies( '1', "Example.com\nnot a domain" );
+		$html = $this->render_screen( 'policies' );
+
+		$this->assertSame( 1, (int) get_option( 'campaignbridge_policy_separate_delivery' ) );
+		$this->assertSame( array( 'example.com' ), ( new \CampaignBridge\Repository\Delivery_Policy_Repository() )->current()->test_domains() );
+		$this->assertTrue( ( new \CampaignBridge\Repository\Delivery_Policy_Repository() )->current()->requires_separate_delivery() );
+		$this->assertStringContainsString( 'tests may be sent only to example.com', $html );
+		$this->assertStringContainsString( 'delivery_policies_wpnonce', $html );
+	}
+
+	public function test_people_who_approve_or_send_cannot_relax_the_policies(): void {
+		update_option( 'campaignbridge_policy_separate_delivery', 1 );
+		update_option( 'campaignbridge_policy_test_recipient_domains', 'example.com' );
+
+		$sender = self::factory()->user->create( array( 'role' => 'editor' ) );
+		get_userdata( $sender )->add_cap( \CampaignBridge\Core\Capabilities::CREATE_CAMPAIGNS );
+		get_userdata( $sender )->add_cap( \CampaignBridge\Core\Capabilities::SEND_CAMPAIGNS );
+		wp_set_current_user( $sender );
+		$this->submit_policies( '0', '' );
+		$this->render_screen( 'policies' );
+		$this->assertSame( 1, (int) get_option( 'campaignbridge_policy_separate_delivery' ) );
+		$this->assertSame( 'example.com', get_option( 'campaignbridge_policy_test_recipient_domains' ) );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->submit_policies( '0', '' );
+		$_POST['delivery_policies_wpnonce'] = 'invalid';
+		$this->render_screen( 'policies' );
+		$this->assertSame( 1, (int) get_option( 'campaignbridge_policy_separate_delivery' ), 'A forged request cannot relax the policy.' );
+	}
+
+	private function submit_policies( string $separate, string $domains ): void {
+		$_POST = array(
+			'delivery_policies'         => array(
+				'form_id'                       => 'delivery_policies',
+				'policy_separate_delivery'      => $separate,
+				'policy_test_recipient_domains' => $domains,
+			),
+			'delivery_policies_wpnonce' => wp_create_nonce( 'campaignbridge_form_delivery_policies' ),
+		);
+	}
+
 	private function submit_general(): void {
 		$_POST = array(
-			'general_settings' => array( 'form_id' => 'general_settings', 'from_name' => 'Sender name', 'from_email' => 'sender@example.com', 'reply_to' => 'reply@example.com' ),
+			'general_settings'         => array(
+				'form_id'    => 'general_settings',
+				'from_name'  => 'Sender name',
+				'from_email' => 'sender@example.com',
+				'reply_to'   => 'reply@example.com',
+			),
 			'general_settings_wpnonce' => wp_create_nonce( 'campaignbridge_form_general_settings' ),
 		);
 	}

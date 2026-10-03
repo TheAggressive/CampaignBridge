@@ -32,5 +32,10 @@ return array(
 			'order'      => 30,
 			'capability' => \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS,
 		),
+		'policies'  => array(
+			'label'      => __( 'Policies', 'campaignbridge' ),
+			'order'      => 40,
+			'capability' => \CampaignBridge\Core\Capabilities::MANAGE,
+		),
 	),
 );
