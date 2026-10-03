@@ -10,9 +10,12 @@ declare(strict_types=1);
 namespace CampaignBridge\Tests\Unit\Provider;
 
 use CampaignBridge\Core\Http_Client_Interface;
+use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Draft_Content;
 use CampaignBridge\Domain\Provider\Draft_Outcome;
+use CampaignBridge\Domain\Provider\Remote_Draft_State;
 use CampaignBridge\Providers\Mailchimp_Draft_Gateway;
 use WP_UnitTestCase;
 
@@ -34,6 +37,10 @@ final class Sequenced_Http_Client implements Http_Client_Interface {
 
 	public function put( string $url, array $args = array() ) {
 		return $this->record( 'PUT', $url, $args );
+	}
+
+	public function patch( string $url, array $args = array() ) {
+		return $this->record( 'PATCH', $url, $args );
 	}
 
 	public function delete( string $url, array $args = array() ) {
@@ -185,14 +192,73 @@ final class Mailchimp_Draft_Gateway_Test extends WP_UnitTestCase {
 		}
 	}
 
-	public function test_content_can_be_re_uploaded_to_an_existing_draft(): void {
-		$http    = new Sequenced_Http_Client( array( self::reply( 200 ) ) );
-		$outcome = ( new Mailchimp_Draft_Gateway( $http ) )->upload_content( self::settings(), 'mc9876', self::content() );
+	public function test_sync_re_asserts_audience_envelope_and_content_idempotently(): void {
+		$http    = new Sequenced_Http_Client( array( self::reply( 200 ), self::reply( 200 ) ) );
+		$outcome = ( new Mailchimp_Draft_Gateway( $http ) )->sync_draft( self::settings(), 'mc9876', self::content() );
 
-		self::assertSame( Draft_Outcome::CREATED, $outcome->status() );
-		self::assertSame( 'PUT', $http->requests[0]['method'] );
-		self::assertTrue( $http->requests[0]['args']['campaignbridge_retry'], 'An idempotent upload may retry.' );
+		self::assertSame( Action_Outcome::ACCEPTED, $outcome->status() );
+		self::assertSame( array( 'PATCH', 'PUT' ), array_column( $http->requests, 'method' ) );
+		self::assertSame( 'https://us20.api.mailchimp.com/3.0/campaigns/mc9876', $http->requests[0]['url'] );
+		self::assertSame(
+			array(
+				'recipients' => array( 'list_id' => 'abc123' ),
+				'settings'   => array(
+					'subject_line' => 'Spring sale for *|FNAME|*',
+					'preview_text' => 'Two days only',
+					'from_name'    => 'Example Shop',
+					'reply_to'     => 'news@example.com',
+				),
+			),
+			json_decode( $http->requests[0]['args']['body'], true )
+		);
+		self::assertTrue( $http->requests[0]['args']['campaignbridge_retry'], 'The update is idempotent, so it may retry.' );
+		self::assertSame( 'https://us20.api.mailchimp.com/3.0/campaigns/mc9876/content', $http->requests[1]['url'] );
+		self::assertTrue( $http->requests[1]['args']['campaignbridge_retry'] );
+	}
+
+	public function test_a_failed_settings_update_never_uploads_content(): void {
+		$http    = new Sequenced_Http_Client( array( self::reply( 404, '{"detail":"private detail"}' ) ) );
+		$outcome = ( new Mailchimp_Draft_Gateway( $http ) )->sync_draft( self::settings(), 'mc9876', self::content() );
+
+		self::assertSame( Action_Outcome::FAILED, $outcome->status() );
+		self::assertSame( 'mailchimp_not_found', $outcome->error()?->code() );
 		self::assertCount( 1, $http->requests );
+	}
+
+	/** @return array<string, array{string, string, bool}> */
+	public static function observations(): array {
+		return array(
+			'unsent draft'        => array( '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{}}}', Remote_Draft_State::DRAFT, false ),
+			'no segment options'  => array( '{"status":"save","recipients":{"list_id":"abc123"}}', Remote_Draft_State::DRAFT, false ),
+			'empty conditions'    => array( '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{"saved_segment_id":0,"match":"any","conditions":[]}}}', Remote_Draft_State::DRAFT, false ),
+			'saved segment'       => array( '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{"saved_segment_id":12}}}', Remote_Draft_State::DRAFT, true ),
+			'prebuilt segment'    => array( '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{"prebuilt_segment_id":"subscribers-female"}}}', Remote_Draft_State::DRAFT, true ),
+			'conditions'          => array( '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{"match":"all","conditions":[{"field":"EMAIL"}]}}}', Remote_Draft_State::DRAFT, true ),
+			'unreadable segment'  => array( '{"status":"save","recipients":{"list_id":"abc123","segment_opts":"all"}}', Remote_Draft_State::DRAFT, true ),
+			'scheduled elsewhere' => array( '{"status":"schedule","recipients":{"list_id":"abc123"}}', Remote_Draft_State::SCHEDULED, false ),
+			'sent elsewhere'      => array( '{"status":"sent","recipients":{"list_id":"abc123"}}', Remote_Draft_State::SENT, false ),
+			'paused'              => array( '{"status":"paused","recipients":{"list_id":"abc123"}}', Remote_Draft_State::OTHER, false ),
+		);
+	}
+
+	/** @dataProvider observations */
+	public function test_inspection_reads_only_status_audience_and_segment( string $body, string $status, bool $segmented ): void {
+		$http  = new Sequenced_Http_Client( array( self::reply( 200, $body ) ) );
+		$state = ( new Mailchimp_Draft_Gateway( $http ) )->inspect_draft( self::settings(), 'mc9876' );
+
+		self::assertInstanceOf( Remote_Draft_State::class, $state );
+		self::assertSame( array( $status, 'abc123', $segmented ), array( $state->status(), $state->audience_id(), $state->is_segmented() ) );
+		self::assertSame( 'GET', $http->requests[0]['method'] );
+		self::assertSame( 'https://us20.api.mailchimp.com/3.0/campaigns/mc9876?fields=status,recipients.list_id,recipients.segment_opts', $http->requests[0]['url'] );
+		self::assertSame( Remote_Draft_State::DRAFT === $status && ! $segmented, $state->matches( 'abc123' ) );
+		self::assertFalse( $state->matches( 'other-audience' ) );
+	}
+
+	public function test_an_unreadable_inspection_fails_closed(): void {
+		foreach ( array( self::reply( 200, 'not json' ), self::reply( 200, '{"status":"save"}' ), self::reply( 503 ) ) as $reply ) {
+			$state = ( new Mailchimp_Draft_Gateway( new Sequenced_Http_Client( array( $reply ) ) ) )->inspect_draft( self::settings(), 'mc9876' );
+			self::assertInstanceOf( Provider_Error::class, $state );
+		}
 	}
 
 	public function test_invalid_credentials_fail_before_any_request(): void {
@@ -206,7 +272,15 @@ final class Mailchimp_Draft_Gateway_Test extends WP_UnitTestCase {
 
 	public function test_draft_content_rejects_incomplete_or_unbounded_requests(): void {
 		$valid = array( 'abc123', 'Subject', '', 'Shop', 'a@example.com', '<p>Hi</p>', 'Hi', 'sha256:' . str_repeat( 'a', 64 ), 'CampaignBridge attempt-1' );
-		foreach ( array( 1 => '', 3 => '', 4 => 'not-an-email', 5 => '', 7 => 'md5:abc', 8 => "bad\nlabel", 0 => '../lists' ) as $index => $bad ) {
+		foreach ( array(
+			1 => '',
+			3 => '',
+			4 => 'not-an-email',
+			5 => '',
+			7 => 'md5:abc',
+			8 => "bad\nlabel",
+			0 => '../lists',
+		) as $index => $bad ) {
 			$arguments           = $valid;
 			$arguments[ $index ] = $bad;
 			try {

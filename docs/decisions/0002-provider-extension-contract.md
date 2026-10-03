@@ -154,6 +154,24 @@ uploads content with an idempotent `PUT`. Response bodies are read only for
 the draft ID. `Campaign_Draft_Handoff` owns the protocol around the gateway;
 see `campaign-workflows.md`.
 
+An existing remote draft is never trusted as-is, because it can be edited in
+the provider or keep an old audience after approval is revoked and given
+again. The port therefore also requires:
+
+- `sync_draft()`: overwrite the draft's audience, envelope, and content with
+  the approved values. It must be idempotent. Mailchimp sends
+  `PATCH /campaigns/{id}` (`recipients.list_id` and the envelope settings,
+  opting into retry) and then the content `PUT`.
+- `inspect_draft()`: a read-only observation normalized to
+  `Remote_Draft_State` (status `draft`/`scheduled`/`sending`/`sent`/`other`,
+  audience ID, and whether a segment applies). Mailchimp reads only
+  `status`, `recipients.list_id`, and `recipients.segment_opts`; unreadable
+  segment data counts as segmented, so it fails closed.
+
+`Campaign_Remote_Draft_Guard` combines them before a test or a schedule.
+`Http_Client_Interface` gained `patch()`; like POST, it is retried only when
+the caller opts in for an idempotent update.
+
 `Provider_Error_Category::may_have_applied()` is the one rule for this
 classification, shared by draft outcomes and `Action_Outcome`.
 

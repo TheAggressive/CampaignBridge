@@ -25,11 +25,14 @@ use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference_Source;
 use CampaignBridge\Domain\Campaign\Retryability;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Provider_Capabilities;
+use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
 use CampaignBridge\Domain\Provider\Provider_Operation;
+use CampaignBridge\Domain\Provider\Provider_Token_Mapper;
 use CampaignBridge\Domain\Provider\Provider_Test_Gateway;
 use CampaignBridge\Domain\Provider\Test_Delivery;
-use CampaignBridge\Domain\Provider\Action_Outcome;
+use CampaignBridge\Workflow\Provider\Provider_Discovery_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -41,8 +44,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Protocol:
  *
  * 1. Only a `provider_draft` campaign whose remote draft is confirmed can be
- *    tested. The test sends what the provider holds for that draft; editor
- *    HTML is never sent.
+ *    tested. Before the test, `Campaign_Remote_Draft_Guard` re-asserts the
+ *    approved audience, envelope, and content on the unsent remote draft, so
+ *    the test shows exactly what would be delivered; editor HTML is never
+ *    sent.
  * 2. Recipients are validated and bounded before anything is recorded, and
  *    are never persisted: attempts and audit events record only their count.
  * 3. A durable per-campaign quota bounds tests independently of the
@@ -74,7 +79,10 @@ final class Campaign_Test_Delivery {
 		private readonly Campaign_Id_Generator $ids,
 		private readonly Campaign_Clock $clock,
 		private readonly Provider_Test_Gateway $gateway,
-		private readonly Provider_Capabilities $capabilities
+		private readonly Provider_Capabilities $capabilities,
+		private readonly Provider_Draft_Gateway $drafts,
+		private readonly Provider_Token_Mapper $tokens,
+		private readonly Provider_Discovery_Service $discovery
 	) {}
 
 	/**
@@ -113,12 +121,20 @@ final class Campaign_Test_Delivery {
 		if ( Campaign_State::PROVIDER_DRAFT !== $campaign->state() || null === $reference || Campaign_Draft_Handoff::OBSERVED_DRAFT !== $reference->observed_state() ) {
 			return $this->refuse( Campaign_Workflow_Error::INVALID_STATE, 'Only a campaign whose provider draft has been created can send a test.', $actor, $campaign_id, $campaign );
 		}
-		$snapshot = null === $campaign->active_snapshot_id() ? null : $this->snapshots->get( $campaign->active_snapshot_id() );
-		if ( null === $snapshot || $snapshot->campaign_id() !== $campaign_id ) {
-			return $this->refuse( Campaign_Workflow_Error::MISSING_SNAPSHOT, 'Campaign snapshot is unavailable.', $actor, $campaign_id, $campaign );
+		$snapshot = ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
+		if ( $snapshot instanceof Campaign_Workflow_Error ) {
+			return $this->refuse( $snapshot->code(), $snapshot->message(), $actor, $campaign_id, $campaign );
 		}
 		if ( self::QUOTA <= $this->recent_tests( $campaign_id ) ) {
 			return $this->refuse( Campaign_Workflow_Error::RATE_LIMITED, sprintf( 'This campaign has reached its limit of %d test sends per day.', self::QUOTA ), $actor, $campaign_id, $campaign );
+		}
+		$content = ( new Campaign_Draft_Content_Builder( $this->tokens, $this->discovery ) )->build( $snapshot, (string) $campaign->audience_reference(), $settings, $reference->remote_id() );
+		if ( $content instanceof Campaign_Workflow_Error ) {
+			return $this->refuse( $content->code(), $content->message(), $actor, $campaign_id, $campaign );
+		}
+		$drift = ( new Campaign_Remote_Draft_Guard( $this->drafts ) )->reassert( $settings, $reference->remote_id(), $content, false );
+		if ( null !== $drift ) {
+			return $this->refuse( $drift[0], $drift[1], $actor, $campaign_id, $campaign, 'failure', null, $drift[2] );
 		}
 
 		$attempt = $this->attempt( $this->ids->generate( 'attempt' ), $campaign_id, $idempotency_key, Delivery_Attempt_Status::PENDING, Retryability::UNKNOWN, $reference->remote_id(), null );
@@ -191,15 +207,25 @@ final class Campaign_Test_Delivery {
 		);
 	}
 
-	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null ): Campaign_Test_Result {
+	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null ): Campaign_Test_Result {
 		try {
-			$this->audits->add( $this->event( $actor, $campaign_id, $result, array( 'error_code' => $code ) ) );
+			$this->audits->add(
+				$this->event(
+					$actor,
+					$campaign_id,
+					$result,
+					array(
+						'error_code'          => $code,
+						'provider_error_code' => $error?->code(),
+					)
+				)
+			);
 		} catch ( \InvalidArgumentException ) {
 			// A malformed external identifier cannot become an unsafe audit record.
 			unset( $result );
 		}
 
-		return Campaign_Test_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null, $attempt );
+		return Campaign_Test_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null, $attempt, $error );
 	}
 
 	/** Record the tested artifact and request size; never the recipients. */

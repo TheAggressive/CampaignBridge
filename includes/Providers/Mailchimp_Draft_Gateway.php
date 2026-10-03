@@ -11,23 +11,28 @@ namespace CampaignBridge\Providers;
 
 use CampaignBridge\Core\Http_Client_Instance;
 use CampaignBridge\Core\Http_Client_Interface;
+use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Draft_Content;
 use CampaignBridge\Domain\Provider\Draft_Outcome;
 use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
+use CampaignBridge\Domain\Provider\Remote_Draft_State;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Creates one regular Mailchimp campaign draft and uploads its content.
+ * Creates, re-asserts, and inspects one regular Mailchimp campaign draft.
  *
  * The create request is never retried: Mailchimp has no idempotency key for
  * campaign creation, so a lost response may hide a created draft and is
- * reported as ambiguous. The content upload is an idempotent PUT. No
+ * reported as ambiguous. Re-asserting a draft is an idempotent PATCH of its
+ * audience and envelope followed by an idempotent PUT of its content.
+ * Inspection is a read-only GET of the status, list, and segment. No
  * schedule or send endpoint is ever called. Response bodies are read only for
- * the draft ID and never leave this class.
+ * those fields and never leave this class.
  */
 final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 	/** Seconds to wait for a draft mutation before the outcome is unknown. */
@@ -87,35 +92,128 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 			return Draft_Outcome::from_create_error( Mailchimp_Errors::unexpected_response() );
 		}
 
-		return $this->upload_content( $settings, $remote_id, $content );
+		$error = $this->upload( $api_key, $remote_id, $content );
+
+		return null === $error ? Draft_Outcome::created( $remote_id ) : Draft_Outcome::content_pending( $remote_id, $error );
 	}
 
-	public function upload_content( array $settings, string $remote_id, Draft_Content $content ): Draft_Outcome {
+	public function sync_draft( array $settings, string $remote_id, Draft_Content $content ): Action_Outcome {
 		$api_key = $this->api_key( $settings );
 		if ( null === $api_key ) {
-			return Draft_Outcome::content_pending( $remote_id, Mailchimp_Errors::for_category( Provider_Error_Category::VALIDATION ) );
+			return Action_Outcome::from_error( Mailchimp_Errors::for_category( Provider_Error_Category::VALIDATION ) );
 		}
 
-		$response = $this->http->put(
-			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) . '/content' ),
+		$response = $this->http->patch(
+			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) ),
 			$this->json_request(
 				$api_key,
 				array(
-					'html'       => $content->html(),
-					'plain_text' => $content->text(),
+					'recipients' => array( 'list_id' => $content->audience_id() ),
+					'settings'   => array(
+						'subject_line' => $content->subject(),
+						'preview_text' => $content->preview_text(),
+						'from_name'    => $content->from_name(),
+						'reply_to'     => $content->reply_to(),
+					),
 				),
 				true
 			)
 		);
-		if ( is_wp_error( $response ) ) {
-			return Draft_Outcome::content_pending( $remote_id, Mailchimp_Errors::from_transport( $response ) );
-		}
-		$status = $response['status_code'] ?? 0;
-		if ( ! is_int( $status ) || 200 !== $status ) {
-			return Draft_Outcome::content_pending( $remote_id, Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 ) );
+		$error    = $this->failure( $response );
+		if ( null === $error ) {
+			$error = $this->upload( $api_key, $remote_id, $content );
 		}
 
-		return Draft_Outcome::created( $remote_id );
+		return null === $error ? Action_Outcome::accepted() : Action_Outcome::from_error( $error );
+	}
+
+	public function inspect_draft( array $settings, string $remote_id ): Remote_Draft_State|Provider_Error {
+		$api_key = $this->api_key( $settings );
+		if ( null === $api_key ) {
+			return Mailchimp_Errors::for_category( Provider_Error_Category::VALIDATION );
+		}
+
+		$response = $this->http->get(
+			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) ) . '?fields=status,recipients.list_id,recipients.segment_opts',
+			array(
+				'headers' => array( 'Authorization' => 'Bearer ' . $api_key ),
+				'timeout' => self::TIMEOUT,
+			)
+		);
+		$error    = $this->failure( $response );
+		if ( null !== $error ) {
+			return $error;
+		}
+
+		$decoded    = json_decode( is_array( $response ) && is_string( $response['body'] ?? null ) ? $response['body'] : '', true );
+		$status     = is_array( $decoded ) ? ( $decoded['status'] ?? null ) : null;
+		$recipients = is_array( $decoded ) && is_array( $decoded['recipients'] ?? null ) ? $decoded['recipients'] : null;
+		$list_id    = $recipients['list_id'] ?? null;
+		if ( ! is_string( $status ) || ! is_string( $list_id ) ) {
+			return Mailchimp_Errors::unexpected_response();
+		}
+
+		return Remote_Draft_State::create(
+			match ( $status ) {
+				'save'     => Remote_Draft_State::DRAFT,
+				'schedule' => Remote_Draft_State::SCHEDULED,
+				'sending'  => Remote_Draft_State::SENDING,
+				'sent'     => Remote_Draft_State::SENT,
+				default    => Remote_Draft_State::OTHER,
+			},
+			$list_id,
+			self::is_segmented( $recipients['segment_opts'] ?? null )
+		);
+	}
+
+	/** Upload content with an idempotent PUT; null on success. */
+	private function upload( string $api_key, string $remote_id, Draft_Content $content ): ?Provider_Error {
+		return $this->failure(
+			$this->http->put(
+				Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) . '/content' ),
+				$this->json_request(
+					$api_key,
+					array(
+						'html'       => $content->html(),
+						'plain_text' => $content->text(),
+					),
+					true
+				)
+			)
+		);
+	}
+
+	/**
+	 * Normalize a non-200 response; null on success.
+	 *
+	 * @param array<string, mixed>|\WP_Error $response Transport response.
+	 */
+	private function failure( array|\WP_Error $response ): ?Provider_Error {
+		if ( is_wp_error( $response ) ) {
+			return Mailchimp_Errors::from_transport( $response );
+		}
+		$status = $response['status_code'] ?? 0;
+
+		return is_int( $status ) && 200 === $status ? null : Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 );
+	}
+
+	/**
+	 * Whether any segment narrows or replaces the whole-list audience.
+	 *
+	 * Unreadable segment data counts as segmented, so it fails closed.
+	 */
+	private static function is_segmented( mixed $options ): bool {
+		if ( null === $options || array() === $options ) {
+			return false;
+		}
+		if ( ! is_array( $options ) ) {
+			return true;
+		}
+		$saved      = $options['saved_segment_id'] ?? 0;
+		$prebuilt   = $options['prebuilt_segment_id'] ?? '';
+		$conditions = $options['conditions'] ?? array();
+
+		return ! ( in_array( $saved, array( 0, '0' ), true ) && '' === $prebuilt && array() === $conditions );
 	}
 
 	/**

@@ -19,9 +19,16 @@ use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Provider\Action_Outcome;
+use CampaignBridge\Domain\Provider\Discovered_Merge_Field;
+use CampaignBridge\Domain\Provider\Discovery_Batch;
+use CampaignBridge\Domain\Provider\Discovery_Kind;
+use CampaignBridge\Domain\Provider\Discovery_Result;
 use CampaignBridge\Domain\Provider\Provider_Delivery_Gateway;
+use CampaignBridge\Domain\Provider\Remote_Draft_State;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
+use CampaignBridge\Providers\Mailchimp_Discovery;
 use CampaignBridge\Providers\Mailchimp_Provider;
+use CampaignBridge\Providers\Mailchimp_Token_Mapper;
 use CampaignBridge\Repository\Audit_Event_Repository;
 use CampaignBridge\Repository\Brand_Kit_Repository;
 use CampaignBridge\Repository\Campaign_Repository;
@@ -30,9 +37,11 @@ use CampaignBridge\Repository\Campaign_Template_Input_Repository;
 use CampaignBridge\Repository\Database_Transaction;
 use CampaignBridge\Repository\Delivery_Attempt_Repository;
 use CampaignBridge\Repository\Post_Snapshot_Repository;
+use CampaignBridge\Repository\Provider_Discovery_Repository;
 use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\Tests\Helpers\Test_Case;
+use CampaignBridge\Tests\Support\Provider\Scripted_Draft_Gateway;
 use CampaignBridge\Workflow\Campaign\Campaign_Actor;
 use CampaignBridge\Workflow\Campaign\Campaign_Clock;
 use CampaignBridge\Workflow\Campaign\Campaign_Draft_Handoff;
@@ -42,6 +51,8 @@ use CampaignBridge\Workflow\Campaign\Campaign_Template_Authority;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
 use CampaignBridge\Workflow\Campaign\Random_Id_Generator;
+use CampaignBridge\Workflow\Campaign\System_Clock;
+use CampaignBridge\Workflow\Provider\Provider_Discovery_Service;
 
 /** Stands in for the provider: counts delivery actions and replays scripted outcomes. */
 final class Scripted_Delivery_Gateway implements Provider_Delivery_Gateway {
@@ -179,6 +190,8 @@ final class Campaign_Scheduler_Test extends Test_Case {
 
 	private Scripted_Delivery_Gateway $gateway;
 
+	private Scripted_Draft_Gateway $drafts;
+
 	private Scheduler_Clock $clock;
 
 	private Campaign_Scheduler $scheduler;
@@ -204,6 +217,7 @@ final class Campaign_Scheduler_Test extends Test_Case {
 		$this->attempts   = new Delivery_Attempt_Repository();
 		$this->audits     = new Audit_Event_Repository();
 		$this->gateway    = new Scripted_Delivery_Gateway();
+		$this->drafts     = new Scripted_Draft_Gateway();
 		$this->clock      = new Scheduler_Clock();
 		$this->sender     = new Campaign_Actor( 7, true, false, true, false );
 		$this->workflow   = new Campaign_Workflow(
@@ -218,12 +232,16 @@ final class Campaign_Scheduler_Test extends Test_Case {
 		);
 		$this->scheduler  = $this->scheduler( $this->attempts );
 		kses_remove_filters();
+		$this->cache_merge_fields();
+		// The remote draft as the handoff left it.
+		$this->drafts->remote_audience = self::AUDIENCE;
 	}
 
 	/** The workflow commits real transactions, so shared fixtures are removed explicitly. */
 	public function tearDown(): void {
 		global $wpdb;
 		kses_init_filters();
+		$this->clear_merge_fields();
 		foreach ( $this->template_ids as $template_id ) {
 			wp_delete_post( $template_id, true );
 		}
@@ -255,6 +273,11 @@ final class Campaign_Scheduler_Test extends Test_Case {
 		self::assertSame( $stored?->to_array(), $result->campaign()?->to_array() );
 		self::assertSame( Campaign_Scheduler::OBSERVED_SCHEDULED, $this->references->get( $campaign->id(), 'mailchimp' )?->observed_state() );
 
+		// The approved draft was re-asserted and read back before anything was scheduled.
+		self::assertSame( array( 1, 2 ), array( $this->drafts->syncs, $this->drafts->inspections ) );
+		self::assertSame( array( self::AUDIENCE, 'Spring sale', $snapshot?->artifact()->fingerprint() ), array( $this->drafts->contents[0]->audience_id(), $this->drafts->contents[0]->subject(), $this->drafts->contents[0]->fingerprint() ) );
+		self::assertStringContainsString( '*|FNAME|*', $this->drafts->contents[0]->html(), 'Re-asserted content is translated for the provider.' );
+
 		$attempt = $this->delivery_attempts( $campaign->id() )[0];
 		self::assertSame( array( 'schedule', 'schedule-1', 'succeeded', 'mc0001' ), array( $attempt->operation(), $attempt->idempotency_key(), $attempt->status(), $attempt->remote_correlation() ) );
 
@@ -266,6 +289,49 @@ final class Campaign_Scheduler_Test extends Test_Case {
 			array( 'mailchimp', 'mc0001', $attempt->id(), $snapshot?->id(), $snapshot?->artifact()->fingerprint(), self::SEND_AT, 'provider_draft', 'scheduled' ),
 			array( $context['provider'], $context['remote_id'], $context['attempt_id'], $context['snapshot_id'], $context['fingerprint'], $context['scheduled_for'], $context['from_state'], $context['to_state'] )
 		);
+	}
+
+	/** @return array<string, array{\Closure(Scripted_Draft_Gateway): void, string}> */
+	public static function drifted_drafts(): array {
+		return array(
+			'scheduled in the provider' => array( static fn ( Scripted_Draft_Gateway $drafts ) => $drafts->remote_status = Remote_Draft_State::SCHEDULED, Campaign_Workflow_Error::RECONCILIATION_REQUIRED ),
+			'sent in the provider'      => array( static fn ( Scripted_Draft_Gateway $drafts ) => $drafts->remote_status = Remote_Draft_State::SENT, Campaign_Workflow_Error::RECONCILIATION_REQUIRED ),
+			'segmented in the provider' => array( static fn ( Scripted_Draft_Gateway $drafts ) => $drafts->remote_segmented = true, Campaign_Workflow_Error::RECONCILIATION_REQUIRED ),
+			'audience not re-asserted'  => array(
+				static function ( Scripted_Draft_Gateway $drafts ): void {
+					$drafts->remote_audience       = 'other-audience';
+					$drafts->sync_ignores_audience = true;
+				},
+				Campaign_Workflow_Error::RECONCILIATION_REQUIRED,
+			),
+			'draft deleted'             => array( static fn ( Scripted_Draft_Gateway $drafts ) => $drafts->sync_outcomes = array( Action_Outcome::from_error( Provider_Error::from_category( Provider_Error_Category::NOT_FOUND, 'mailchimp_not_found', 'Not found.', 'mailchimp' ) ) ), Campaign_Workflow_Error::PROVIDER_FAILED ),
+			'draft unreadable'          => array( static fn ( Scripted_Draft_Gateway $drafts ) => $drafts->inspect_error = Provider_Error::timeout( 'mailchimp_connection_timeout', 'Timed out.', 'mailchimp' ), Campaign_Workflow_Error::PROVIDER_FAILED ),
+		);
+	}
+
+	/**
+	 * @dataProvider drifted_drafts
+	 * @param \Closure(Scripted_Draft_Gateway): void $drift How the remote draft changed outside CampaignBridge.
+	 */
+	public function test_a_draft_changed_outside_campaignbridge_never_reaches_the_audience( \Closure $drift, string $code ): void {
+		$campaign = $this->provider_draft_campaign();
+		$drift( $this->drafts );
+
+		$refused = $this->scheduler->schedule( $this->sender, $campaign->id(), $campaign->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() );
+
+		self::assertSame( $code, $refused->error()?->code() );
+		self::assertSame( array(), $this->gateway->calls, 'Nothing was scheduled.' );
+		self::assertSame( array(), $this->delivery_attempts( $campaign->id() ), 'No attempt is left to reconcile.' );
+		self::assertSame( $campaign->to_array(), $this->campaigns->get( $campaign->id() )?->to_array(), 'No version was consumed.' );
+	}
+
+	public function test_a_scheduled_or_sent_draft_is_never_overwritten(): void {
+		$campaign                    = $this->provider_draft_campaign();
+		$this->drafts->remote_status = Remote_Draft_State::SCHEDULED;
+
+		$this->scheduler->schedule( $this->sender, $campaign->id(), $campaign->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() );
+
+		self::assertSame( 0, $this->drafts->syncs, 'A campaign the provider already scheduled is not modified.' );
 	}
 
 	public function test_repeats_and_double_clicks_never_reach_the_provider_twice(): void {
@@ -414,7 +480,10 @@ final class Campaign_Scheduler_Test extends Test_Case {
 			new Random_Id_Generator(),
 			$this->clock,
 			$this->gateway,
-			( new Mailchimp_Provider() )->capabilities()
+			( new Mailchimp_Provider() )->capabilities(),
+			$this->drafts,
+			new Mailchimp_Token_Mapper(),
+			new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock() )
 		);
 	}
 
@@ -485,6 +554,25 @@ final class Campaign_Scheduler_Test extends Test_Case {
 	/** @return array<int, Audit_Event> */
 	private function events( string $campaign_id, string $action ): array {
 		return array_values( array_filter( $this->audits->for_target( 'campaign', $campaign_id ), static fn ( Audit_Event $event ): bool => $action === $event->action() ) );
+	}
+
+	private function cache_merge_fields(): void {
+		$this->clear_merge_fields();
+		( new Provider_Discovery_Repository() )->save(
+			(string) ( new Mailchimp_Discovery() )->account_key( self::settings() ),
+			Discovery_Result::create(
+				'mailchimp',
+				self::AUDIENCE,
+				Discovery_Batch::create( Discovery_Kind::MERGE_FIELDS, array( Discovered_Merge_Field::create( 'FNAME', 'FNAME', 'text', false ) ), true ),
+				gmdate( 'Y-m-d\\TH:i:s\\Z' )
+			)
+		);
+	}
+
+	private function clear_merge_fields(): void {
+		global $wpdb;
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '%discovery\\_%'" );
+		wp_cache_flush();
 	}
 
 	private function truncate(): void {

@@ -18,9 +18,8 @@ use CampaignBridge\Domain\Provider\Discovered_Merge_Field;
 use CampaignBridge\Domain\Provider\Discovery_Batch;
 use CampaignBridge\Domain\Provider\Discovery_Kind;
 use CampaignBridge\Domain\Provider\Discovery_Result;
-use CampaignBridge\Domain\Provider\Draft_Content;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Draft_Outcome;
-use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\Providers\Mailchimp_Discovery;
 use CampaignBridge\Providers\Mailchimp_Provider;
@@ -37,6 +36,7 @@ use CampaignBridge\Repository\Provider_Discovery_Repository;
 use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\Tests\Helpers\Test_Case;
+use CampaignBridge\Tests\Support\Provider\Scripted_Draft_Gateway;
 use CampaignBridge\Workflow\Campaign\Campaign_Actor;
 use CampaignBridge\Workflow\Campaign\Campaign_Draft_Handoff;
 use CampaignBridge\Workflow\Campaign\Campaign_Review_Input_Capture;
@@ -46,48 +46,6 @@ use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
 use CampaignBridge\Workflow\Campaign\Random_Id_Generator;
 use CampaignBridge\Workflow\Campaign\System_Clock;
 use CampaignBridge\Workflow\Provider\Provider_Discovery_Service;
-
-/** Stands in for the provider: counts mutations and replays scripted outcomes. */
-final class Scripted_Draft_Gateway implements Provider_Draft_Gateway {
-	public int $creates = 0;
-
-	public int $uploads = 0;
-
-	/** @var array<int, Draft_Content> */
-	public array $contents = array();
-
-	/** @var array<int, Draft_Outcome> Outcomes for successive creates. */
-	public array $create_outcomes = array();
-
-	/** @var array<int, Draft_Outcome> Outcomes for successive content uploads. */
-	public array $upload_outcomes = array();
-
-	/** @var (\Closure(): void)|null Runs while the remote create is in flight. */
-	public ?\Closure $during_create = null;
-
-	public string $next_remote_id = 'mc0001';
-
-	public function slug(): string {
-		return 'mailchimp';
-	}
-
-	public function create_draft( array $settings, Draft_Content $content ): Draft_Outcome {
-		++$this->creates;
-		$this->contents[] = $content;
-		if ( null !== $this->during_create ) {
-			( $this->during_create )();
-		}
-
-		return array_shift( $this->create_outcomes ) ?? Draft_Outcome::created( $this->next_remote_id );
-	}
-
-	public function upload_content( array $settings, string $remote_id, Draft_Content $content ): Draft_Outcome {
-		++$this->uploads;
-		$this->contents[] = $content;
-
-		return array_shift( $this->upload_outcomes ) ?? Draft_Outcome::created( $remote_id );
-	}
-}
 
 /** Grants every template so these tests exercise handoff rules only. */
 final class Handoff_Template_Authority implements Campaign_Template_Authority {
@@ -237,7 +195,7 @@ final class Campaign_Draft_Handoff_Test extends Test_Case {
 			self::assertSame( $first->reference()?->to_array(), $again->reference()?->to_array() );
 		}
 		self::assertSame( 1, $this->gateway->creates, 'No repeat may create a second remote draft.' );
-		self::assertSame( 0, $this->gateway->uploads );
+		self::assertSame( 0, $this->gateway->syncs );
 		self::assertCount( 1, $this->attempts->for_campaign( $campaign->id() ) );
 	}
 
@@ -302,9 +260,55 @@ final class Campaign_Draft_Handoff_Test extends Test_Case {
 
 		$resumed = $this->handoff->create_draft( $this->approver, $campaign->id(), $campaign->version(), 'draft-key-2', self::settings() );
 		self::assertTrue( $resumed->is_success() );
-		self::assertSame( array( 1, 1 ), array( $this->gateway->creates, $this->gateway->uploads ), 'Resuming uploads content only.' );
+		self::assertSame( array( 1, 1 ), array( $this->gateway->creates, $this->gateway->syncs ), 'Resuming re-asserts the existing draft and creates nothing.' );
 		self::assertSame( Campaign_Draft_Handoff::OBSERVED_DRAFT, $this->references->get( $campaign->id(), 'mailchimp' )?->observed_state() );
 		self::assertSame( 'provider_draft', $this->campaigns->get( $campaign->id() )?->state() );
+	}
+
+	public function test_a_resumed_draft_is_re_targeted_after_approval_was_revoked_and_changed(): void {
+		$this->template_id              = $this->template(
+			'Hello <a href="{{cb:campaign.unsubscribe_url}}">unsubscribe</a>',
+			array(
+				'campaignbridge_subject'      => 'Spring sale',
+				'campaignbridge_sender_name'  => 'Example Shop',
+				'campaignbridge_sender_email' => 'news@example.com',
+			)
+		);
+		$campaign                       = $this->approved_campaign();
+		$this->gateway->create_outcomes = array(
+			Draft_Outcome::content_pending( 'mc0001', Provider_Error::from_category( Provider_Error_Category::PROVIDER_ERROR, 'mailchimp_provider_error', 'Mailchimp service returned an error.', 'mailchimp' ) ),
+		);
+		self::assertSame( Campaign_Workflow_Error::PROVIDER_FAILED, $this->handoff->create_draft( $this->approver, $campaign->id(), $campaign->version(), 'draft-key-1', self::settings() )->error()?->code() );
+		self::assertSame( self::AUDIENCE, $this->gateway->remote_audience );
+
+		// Approval is revoked and the campaign retargeted before the draft is resumed.
+		$revoked    = $this->workflow->revoke_approval( $this->approver, $campaign->id(), $campaign->version() )->campaign();
+		$retargeted = $this->workflow->select_audience( $this->approver, $campaign->id(), (int) $revoked?->version(), 'mailchimp', 'xyz789' )->campaign();
+		$reapproved = $this->workflow->approve( $this->approver, $campaign->id(), (int) $retargeted?->version() )->campaign();
+		self::assertSame( array( 'approved', 'xyz789' ), array( $reapproved?->state(), $reapproved?->audience_reference() ) );
+
+		$resumed = $this->handoff->create_draft( $this->approver, $campaign->id(), (int) $reapproved?->version(), 'draft-key-2', self::settings() );
+
+		self::assertTrue( $resumed->is_success() );
+		self::assertSame( array( 1, 1 ), array( $this->gateway->creates, $this->gateway->syncs ) );
+		self::assertSame( 'xyz789', $this->gateway->contents[1]->audience_id(), 'The existing draft is re-targeted, not trusted as-is.' );
+		self::assertSame( 'xyz789', $this->gateway->remote_audience );
+		self::assertSame( 'Spring sale', $this->gateway->contents[1]->subject() );
+	}
+
+	public function test_a_draft_that_cannot_be_re_asserted_is_not_relied_on(): void {
+		$campaign                       = $this->approved_campaign();
+		$this->gateway->create_outcomes = array(
+			Draft_Outcome::content_pending( 'mc0001', Provider_Error::from_category( Provider_Error_Category::PROVIDER_ERROR, 'mailchimp_provider_error', 'Mailchimp service returned an error.', 'mailchimp' ) ),
+		);
+		$this->handoff->create_draft( $this->approver, $campaign->id(), $campaign->version(), 'draft-key-1', self::settings() );
+		$this->gateway->sync_outcomes = array( Action_Outcome::from_error( Provider_Error::from_category( Provider_Error_Category::NOT_FOUND, 'mailchimp_not_found', 'The Mailchimp resource was not found.', 'mailchimp' ) ) );
+
+		$failed = $this->handoff->create_draft( $this->approver, $campaign->id(), $campaign->version(), 'draft-key-2', self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::PROVIDER_FAILED, $failed->error()?->code() );
+		self::assertSame( 'approved', $this->campaigns->get( $campaign->id() )?->state(), 'An unverified draft never becomes the provider draft.' );
+		self::assertSame( 1, $this->gateway->creates );
 	}
 
 	public function test_a_concurrent_campaign_change_never_loses_the_created_draft(): void {
@@ -368,10 +372,10 @@ final class Campaign_Draft_Handoff_Test extends Test_Case {
 		);
 
 		return array(
-			'incomplete envelope'      => array( 'Hello', array( 'campaignbridge_subject' => 'Spring sale' ), array( 'FNAME' ), 'sender_name_missing' ),
-			'undiscovered merge field' => array( 'Hello {{cb:subscriber.last_name}}', $complete, array(), 'Refresh merge fields' ),
-			'missing merge field'      => array( 'Hello {{cb:subscriber.last_name}}', $complete, array( 'FNAME' ), 'cannot substitute' ),
-			'literal provider syntax'  => array( 'Hello *|FNAME|*', $complete, array( 'FNAME' ), 'literal provider merge syntax' ),
+			'incomplete envelope'       => array( 'Hello', array( 'campaignbridge_subject' => 'Spring sale' ), array( 'FNAME' ), 'sender_name_missing' ),
+			'undiscovered merge field'  => array( 'Hello {{cb:subscriber.last_name}}', $complete, array(), 'Refresh merge fields' ),
+			'missing merge field'       => array( 'Hello {{cb:subscriber.last_name}}', $complete, array( 'FNAME' ), 'cannot substitute' ),
+			'literal provider syntax'   => array( 'Hello *|FNAME|*', $complete, array( 'FNAME' ), 'literal provider merge syntax' ),
 			'literal syntax in subject' => array( 'Hello', array_merge( $complete, array( 'campaignbridge_subject' => 'Hi *|EMAIL|*' ) ), array( 'FNAME' ), 'approved subject' ),
 		);
 	}
@@ -401,7 +405,7 @@ final class Campaign_Draft_Handoff_Test extends Test_Case {
 
 	/** @param array<string, string>|null $meta Envelope meta; null uses a complete envelope. */
 	private function template( string $paragraph, ?array $meta = null ): int {
-		$id = $this->factory->post->create(
+		$id   = $this->factory->post->create(
 			array(
 				'post_type'    => Post_Type_Email_Template::POST_TYPE,
 				'post_status'  => 'publish',

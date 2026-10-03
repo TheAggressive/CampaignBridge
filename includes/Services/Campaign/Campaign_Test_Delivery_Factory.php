@@ -9,13 +9,16 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Services\Campaign;
 
+use CampaignBridge\Providers\Mailchimp_Draft_Gateway;
 use CampaignBridge\Providers\Mailchimp_Provider;
 use CampaignBridge\Providers\Mailchimp_Test_Gateway;
+use CampaignBridge\Providers\Mailchimp_Token_Mapper;
 use CampaignBridge\Repository\Audit_Event_Repository;
 use CampaignBridge\Repository\Campaign_Repository;
 use CampaignBridge\Repository\Campaign_Snapshot_Repository;
 use CampaignBridge\Repository\Delivery_Attempt_Repository;
 use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
+use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 use CampaignBridge\Workflow\Campaign\Campaign_Test_Delivery;
 use CampaignBridge\Workflow\Campaign\Random_Id_Generator;
 use CampaignBridge\Workflow\Campaign\System_Clock;
@@ -28,7 +31,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Campaign_Test_Delivery_Factory {
 	/** The test delivery for one provider, or null when it cannot send tests. */
 	public static function create( string $provider ): ?Campaign_Test_Delivery {
-		if ( 'mailchimp' !== $provider ) {
+		$discovery = Provider_Discovery_Factory::service( $provider );
+		if ( 'mailchimp' !== $provider || null === $discovery ) {
 			return null;
 		}
 
@@ -41,7 +45,10 @@ final class Campaign_Test_Delivery_Factory {
 			new Random_Id_Generator(),
 			new System_Clock(),
 			new Mailchimp_Test_Gateway(),
-			( new Mailchimp_Provider() )->capabilities()
+			( new Mailchimp_Provider() )->capabilities(),
+			new Mailchimp_Draft_Gateway(),
+			new Mailchimp_Token_Mapper(),
+			$discovery
 		);
 	}
 }
