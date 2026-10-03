@@ -1,8 +1,6 @@
 <?php
 /**
- * Form Security
- *
- * Handles security features including nonces, CSRF protection, and input sanitization.
+ * Form request verification and upload policy.
  *
  * @package CampaignBridge\Admin\Core\Forms
  */
@@ -10,14 +8,17 @@
 namespace CampaignBridge\Admin\Core\Forms;
 
 /**
- * Form Security Class
+ * Verifies form submissions and checks uploads against a field's policy.
  *
- * @package CampaignBridge\Admin\Core\Forms
+ * A submission must be a POST carrying this form's nonce (CSRF) from a user
+ * with `campaignbridge_manage` (authorization). Values are then sanitized
+ * per field type by Field_Sanitizer and escaped when rendered; there is no
+ * separate attack-pattern filter.
  */
 class Form_Security {
 
 	/**
-	 * Form ID for unique nonce generation
+	 * Form ID; scopes the nonce action and field name.
 	 *
 	 * @var string
 	 */
@@ -33,391 +34,72 @@ class Form_Security {
 	}
 
 	/**
-	 * Set form ID
+	 * Verify a form submission: POST, valid nonce, and capability.
 	 *
-	 * @param string $form_id Form identifier.
-	 * @return void
-	 */
-	public function set_form_id( string $form_id ): void {
-		$this->form_id = $form_id;
-	}
-
-	/**
-	 * Verify security for form submission
-	 *
-	 * @return bool True if security checks pass, false otherwise.
+	 * @return bool True if the request may be processed.
 	 */
 	public function verify_request(): bool {
-		// Verify nonce.
-		$nonce_action = 'campaignbridge_form_' . $this->form_id;
-		$nonce_name   = $this->form_id . '_wpnonce';
-		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput
-		if ( ! isset( $_POST[ $nonce_name ] ) || ! \wp_verify_nonce( sanitize_text_field( \wp_unslash( $_POST[ $nonce_name ] ) ), $nonce_action ) ) {
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+		if ( 'POST' !== $request_method ) {
 			return false;
 		}
 
-		// Check user capabilities.
-		if ( ! \current_user_can( 'campaignbridge_manage' ) ) {
+		$nonce_name = $this->form_id . '_wpnonce';
+		if ( ! isset( $_POST[ $nonce_name ] ) || ! \wp_verify_nonce( sanitize_text_field( \wp_unslash( $_POST[ $nonce_name ] ) ), 'campaignbridge_form_' . $this->form_id ) ) {
 			return false;
 		}
 
-		// Check if request is coming from admin area.
-		if ( ! \is_admin() ) {
-			return false;
-		}
-
-		// Check referer.
-		$admin_url = \admin_url();
-		$referer   = \wp_get_referer();
-
-		if ( $referer && strpos( $referer, $admin_url ) !== 0 ) {
-			return false;
-		}
-
-		// Validate request method.
-		if ( ! $this->validate_request_method() ) {
-			return false;
-		}
-
-		// Check for suspicious patterns in form data.
-		if ( ! $this->validate_form_data_integrity() ) {
-			return false;
-		}
-
-		return true;
+		return \current_user_can( \CampaignBridge\Core\Capabilities::MANAGE );
 	}
 
 	/**
-	 * Validate request method for security.
-	 *
-	 * @return bool True if request method is valid.
-	 */
-	private function validate_request_method(): bool {
-		$allowed_methods = array( 'POST' );
-
-		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ?
-			sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
-
-		return in_array( $request_method, $allowed_methods, true );
-	}
-
-	/**
-	 * Validate form data integrity for suspicious patterns.
-	 *
-	 * @return bool True if form data appears legitimate.
-	 *
-	 * @phpcs:disable WordPress.Security.NonceVerification.Missing -- Security validation method called after nonce verification
-	 * @phpcs:disable CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Intentionally accessing raw POST data for security validation
-	 */
-	private function validate_form_data_integrity(): bool {
-		// Get sanitized POST data.
-		$post_data = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Intentionally accessing raw POST data for security validation
-
-		// Check for excessive form fields (potential DoS).
-		$field_count = count( $post_data );
-		if ( $field_count > 100 ) { // Reasonable upper limit.
-			return false;
-		}
-
-		// Check for suspicious field names or values.
-		foreach ( $post_data as $key => $value ) {
-			// Skip WordPress core fields.
-			if ( in_array( $key, array( '_wpnonce', '_wp_http_referer', 'action' ), true ) ) {
-				continue;
-			}
-
-			// Check field name length (prevent extremely long names).
-			if ( strlen( $key ) > 200 ) {
-				return false;
-			}
-
-			// Check for suspicious patterns in field names.
-			if ( preg_match( '/[<>\'"]/', $key ) ) {
-				return false;
-			}
-
-			// Check value size (prevent oversized submissions).
-			if ( is_string( $value ) && strlen( $value ) > 10000 ) { // 10KB limit per field.
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Render security fields
+	 * Render the nonce field for this form.
 	 */
 	public function render_security_fields(): void {
-		$nonce_action = 'campaignbridge_form_' . $this->form_id;
-		$nonce_name   = $this->form_id . '_wpnonce';
-
-		\wp_nonce_field( $nonce_action, $nonce_name );
-
-		// Add additional security fields.
-		printf(
-			'<input type="hidden" name="%s[form_id]" value="%s" />',
-			\esc_attr( $this->form_id ),
-			\esc_attr( $this->form_id )
-		);
-
-		// Add timestamp for additional verification.
-		printf(
-			'<input type="hidden" name="%s[timestamp]" value="%s" />',
-			\esc_attr( $this->form_id ),
-			\esc_attr( (string) time() )
-		);
+		\wp_nonce_field( 'campaignbridge_form_' . $this->form_id, $this->form_id . '_wpnonce' );
 	}
 
 	/**
-	 * Sanitize input based on field configuration.
+	 * Check an upload against the field's policy before wp_handle_upload().
 	 *
-	 * Validates input against potential attacks before applying field-specific sanitization
-	 * using the unified Field_Sanitizer.
+	 * WordPress remains authoritative for the upload test, filename
+	 * sanitization, and the site-wide type list. This adds the field's own
+	 * rules: an explicit MIME allowlist, never SVG (no reviewed sanitizer
+	 * exists), the detected type matching the claimed one, and a size limit.
 	 *
-	 * @param mixed                $value        The value to sanitize.
-	 * @param array<string, mixed> $field_config Field configuration containing type and validation rules.
-	 * @return mixed Sanitized value, or empty string if dangerous content detected.
-	 */
-	public function sanitize_input( $value, array $field_config ) {
-		// Basic attack validation before using WordPress native sanitization functions.
-		$attack_check = $this->validate_against_attacks( $value );
-		if ( is_wp_error( $attack_check ) ) {
-			$this->log_security_event(
-				'dangerous_content_blocked',
-				array(
-					'field_type' => $field_config['type'] ?? 'unknown',
-					'form_id'    => $this->form_id,
-				)
-			);
-			return ''; // Return empty string for dangerous content.
-		}
-
-		// Handle special cases that need security-specific logic.
-		$field_type = $field_config['type'] ?? 'text';
-
-		switch ( $field_type ) {
-			case 'integer':
-				return absint( $value );
-
-			case 'multiselect':
-				if ( is_array( $value ) ) {
-					return array_map( 'sanitize_text_field', $value );
-				}
-				return array();
-
-			case 'textarea':
-			case 'wysiwyg':
-				return $this->sanitize_rich_content( $value );
-
-			default:
-				// Use unified Field_Sanitizer for all other field types.
-				return \CampaignBridge\Admin\Core\Forms\Field_Sanitizer::sanitize( $value, $field_config );
-		}
-	}
-
-	/**
-	 * Advanced XSS protection for rich content.
-	 *
-	 * Provides enhanced XSS protection beyond WordPress defaults,
-	 * including detection of dangerous JavaScript patterns and encoded attacks.
-	 *
-	 * @param string $content Content to sanitize.
-	 * @return string Sanitized content.
-	 */
-	public function sanitize_rich_content( string $content ): string {
-		// Leverage WordPress native KSES - it handles all the XSS protection we need.
-		return wp_kses_post( $content );
-	}
-
-	/**
-	 * Validate input against obvious attack patterns.
-	 *
-	 * Basic validation for obviously malicious content. WordPress handles most
-	 * sanitization through wp_kses and prepared statements.
-	 *
-	 * @param mixed $value Value to validate.
-	 * @return bool|\WP_Error True if safe, WP_Error if dangerous content detected.
-	 */
-	public function validate_against_attacks( $value ) {
-		if ( ! is_string( $value ) ) {
-			return true; // Non-string values are handled by type validation.
-		}
-
-		// Basic detection for obviously malicious content
-		// WordPress handles most sanitization through wp_kses and prepared statements.
-		$malicious_patterns = array(
-			'/<script[^>]*>.*?<\/script>/is',  // Script tags (caught by wp_kses, but early detection).
-		);
-
-		foreach ( $malicious_patterns as $pattern ) {
-			if ( preg_match( $pattern, $value ) ) {
-				$this->log_security_event(
-					'malicious_content_detected',
-					array(
-						'pattern'      => $pattern,
-						'value_length' => strlen( $value ),
-						'form_id'      => $this->form_id,
-					)
-				);
-				return new \WP_Error( 'security_violation', 'Potentially malicious content detected.' );
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Validate file upload security.
-	 *
-	 * @param array<string, mixed> $file     File data from $_FILES.
+	 * @param array<string, mixed> $file         One entry from $_FILES.
 	 * @param array<string, mixed> $field_config Field configuration.
-	 * @param bool                 $skip_upload_check Skip upload check.
 	 * @return bool|\WP_Error True if valid, \WP_Error if invalid.
 	 */
-	public function validate_file_upload( array $file, array $field_config, bool $skip_upload_check = false ) {
-		// Check for upload errors.
-		$upload_error = $this->validate_upload_error( $file );
-		if ( is_wp_error( $upload_error ) ) {
-			return $upload_error;
+	public function validate_file_upload( array $file, array $field_config ) {
+		$error = $file['error'] ?? UPLOAD_ERR_NO_FILE;
+		if ( UPLOAD_ERR_OK !== $error ) {
+			return new \WP_Error( 'upload_error', $this->get_upload_error_message( (int) $error ) );
 		}
 
-		// Verify file is actually uploaded via HTTP POST.
-		$upload_check = $this->validate_upload_method( $file, $skip_upload_check );
-		if ( is_wp_error( $upload_check ) ) {
-			return $upload_check;
+		$filename = is_string( $file['name'] ?? null ) ? $file['name'] : '';
+		if ( '' === $filename ) {
+			return new \WP_Error( 'invalid_filename', \__( 'Filename is required.', 'campaignbridge' ) );
 		}
 
-		// Validate filename security.
-		$filename_validation = $this->validate_filename( $file );
-		if ( is_wp_error( $filename_validation ) ) {
-			return $filename_validation;
-		}
-
-		$filename = $file['name'];
-
-		// Check file size.
-		$size_validation = $this->validate_file_size( $file, $field_config, $filename );
+		$size_validation = $this->validate_file_size( $file, $field_config );
 		if ( is_wp_error( $size_validation ) ) {
 			return $size_validation;
 		}
 
-		// Validate MIME type.
-		$mime_validation = $this->validate_mime_type( $file, $field_config, $filename );
-		if ( is_wp_error( $mime_validation ) ) {
-			return $mime_validation;
-		}
-
-		return true;
-	}
-
-	/**
-	 * Validate upload error codes.
-	 *
-	 * @param array<string, mixed> $file File data.
-	 * @return bool|\WP_Error True if no error, WP_Error if upload failed.
-	 */
-	private function validate_upload_error( array $file ) {
-		if ( UPLOAD_ERR_OK !== $file['error'] ) {
-			// Log security-relevant upload errors (excluding benign cases like no file selected).
-			if ( UPLOAD_ERR_NO_FILE !== $file['error'] ) {
-				$this->log_security_event(
-					'file_upload_error',
-					array(
-						'error_code' => $file['error'],
-						'filename'   => sanitize_file_name( $file['name'] ?? 'unknown' ),
-					)
-				);
-			}
-
-			return new \WP_Error(
-				'upload_error',
-				$this->get_upload_error_message( $file['error'] )
-			);
-		}
-
-		return true;
-	}
-
-	/**
-	 * Validate upload method (ensure file was uploaded via HTTP POST).
-	 *
-	 * @param array<string, mixed> $file File data.
-	 * @param bool                 $skip_check Skip validation.
-	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
-	 */
-	private function validate_upload_method( array $file, bool $skip_check ) {
-		if ( ! $skip_check && ! is_uploaded_file( $file['tmp_name'] ) ) {
-			$this->log_security_event(
-				'invalid_upload_method',
-				array(
-					'filename' => sanitize_file_name( $file['name'] ?? 'unknown' ),
-					'tmp_name' => $file['tmp_name'] ?? 'none',
-				)
-			);
-
-			return new \WP_Error(
-				'upload_error',
-				\__( 'File was not uploaded properly.', 'campaignbridge' )
-			);
-		}
-
-		return true;
-	}
-
-	/**
-	 * Validate filename security.
-	 *
-	 * @param array<string, mixed> $file File data.
-	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
-	 */
-	private function validate_filename( array $file ) {
-		$filename = $file['name'] ?? '';
-		if ( empty( $filename ) ) {
-			return new \WP_Error(
-				'invalid_filename',
-				\__( 'Filename is required.', 'campaignbridge' )
-			);
-		}
-
-		// Check for dangerous filename patterns.
-		if ( $this->is_dangerous_filename( $filename ) ) {
-			$this->log_security_event(
-				'dangerous_filename_attempted',
-				array(
-					'filename' => $filename,
-				)
-			);
-
-			return new \WP_Error(
-				'invalid_filename',
-				\__( 'Filename contains invalid characters.', 'campaignbridge' )
-			);
-		}
-
-		return true;
+		return $this->validate_mime_type( $file, $field_config, $filename );
 	}
 
 	/**
 	 * Validate file size.
 	 *
-	 * @param array<string, mixed> $file File data.
+	 * @param array<string, mixed> $file         File data.
 	 * @param array<string, mixed> $field_config Field configuration.
-	 * @param string               $filename Filename for logging.
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
-	private function validate_file_size( array $file, array $field_config, string $filename ) {
+	private function validate_file_size( array $file, array $field_config ) {
 		$max_size = $field_config['max_size'] ?? \wp_max_upload_size();
 		if ( $file['size'] > $max_size ) {
-			$this->log_security_event(
-				'file_too_large',
-				array(
-					'filename'  => $filename,
-					'file_size' => $file['size'],
-					'max_size'  => $max_size,
-				)
-			);
-
 			return new \WP_Error(
 				'file_too_large',
 				sprintf(
@@ -428,23 +110,19 @@ class Form_Security {
 			);
 		}
 
-		// Check file size is not zero (empty file).
 		if ( 0 === $file['size'] ) {
-			return new \WP_Error(
-				'empty_file',
-				\__( 'Uploaded file is empty.', 'campaignbridge' )
-			);
+			return new \WP_Error( 'empty_file', \__( 'Uploaded file is empty.', 'campaignbridge' ) );
 		}
 
 		return true;
 	}
 
 	/**
-	 * Validate MIME type.
+	 * Validate the detected MIME type against the field's explicit allowlist.
 	 *
-	 * @param array<string, mixed> $file File data.
+	 * @param array<string, mixed> $file         File data.
 	 * @param array<string, mixed> $field_config Field configuration.
-	 * @param string               $filename Filename for logging.
+	 * @param string               $filename     Client filename, used for extension detection.
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
 	private function validate_mime_type( array $file, array $field_config, string $filename ) {
@@ -463,10 +141,7 @@ class Form_Security {
 			)
 		);
 		if ( array() === $allowed_types || in_array( 'image/svg+xml', $allowed_types, true ) ) {
-			return new \WP_Error(
-				'invalid_file_type',
-				\__( 'File type not allowed.', 'campaignbridge' )
-			);
+			return new \WP_Error( 'invalid_file_type', \__( 'File type not allowed.', 'campaignbridge' ) );
 		}
 
 		$tmp_name      = is_string( $file['tmp_name'] ?? null ) ? $file['tmp_name'] : '';
@@ -478,24 +153,7 @@ class Form_Security {
 			&& 'image/svg+xml' !== $detected_mime
 			&& ( '' === $provided_mime || $provided_mime === $detected_mime );
 
-		if ( $valid_type ) {
-			return true;
-		}
-
-		$this->log_security_event(
-			'disallowed_file_type',
-			array(
-				'filename'      => $filename,
-				'provided_mime' => $provided_mime,
-				'detected_mime' => $detected_mime,
-				'allowed_types' => $allowed_types,
-			)
-		);
-
-		return new \WP_Error(
-			'invalid_file_type',
-			\__( 'File type not allowed.', 'campaignbridge' )
-		);
+		return $valid_type ? true : new \WP_Error( 'invalid_file_type', \__( 'File type not allowed.', 'campaignbridge' ) );
 	}
 
 	/**
@@ -523,49 +181,5 @@ class Form_Security {
 			default:
 				return \__( 'Unknown upload error.', 'campaignbridge' );
 		}
-	}
-
-	/**
-	 * Check if filename contains dangerous patterns.
-	 *
-	 * @param string $filename Filename to check.
-	 * @return bool True if dangerous.
-	 */
-	private function is_dangerous_filename( string $filename ): bool {
-		// Only check for directory traversal attempts - WordPress handles MIME types and dangerous extensions.
-		return strpos( $filename, '..' ) !== false || strpos( $filename, '/' ) !== false || strpos( $filename, '\\' ) !== false;
-	}
-
-	/**
-	 * Log security event.
-	 *
-	 * @param string               $event     Event type.
-	 * @param array<string, mixed> $context   Additional context.
-	 */
-	public function log_security_event( string $event, array $context = array() ): void {
-		$log_data = array_merge(
-			$context,
-			array(
-				'event'     => $event,
-				'form_id'   => $this->form_id,
-				'user_id'   => \get_current_user_id(),
-				'user_ip'   => $this->get_client_ip(),
-				'timestamp' => current_time( 'mysql' ),
-			)
-		);
-
-		\CampaignBridge\Core\Error_Handler::info(
-			'[SECURITY] ' . $event,
-			$log_data
-		);
-	}
-
-	/**
-	 * Get client IP address.
-	 *
-	 * @return string Client IP address.
-	 */
-	public static function get_client_ip(): string {
-		return \CampaignBridge\Core\Client_Address::get();
 	}
 }

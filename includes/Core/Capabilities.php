@@ -117,7 +117,7 @@ final class Capabilities {
 
 		self::register();
 		// Server-side schema repair on admin_init; authorized by manage_options above.
-		\update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Server-side repair guarded by current_user_can('manage_options'); no form context for nonce.
+		\update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION );
 	}
 
 	/**
@@ -134,7 +134,7 @@ final class Capabilities {
 	public static function activate(): void {
 		self::register();
 		// Trusted activation context; no user authentication required.
-		\update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Called from register_activation_hook; trusted activation context, no form or nonce context.
+		\update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION );
 	}
 
 	/**

@@ -538,41 +538,43 @@ class REST_API_Test extends Test_Case {
 	}
 
 	/**
-	 * CRITICAL SECURITY TEST: Ensure encrypt-field rejects malicious input.
+	 * Encrypt-field returns ciphertext and a mask, never the submitted text.
+	 *
+	 * The value is only encrypted, never rendered as HTML, and cannot be stored
+	 * unless it matches the provider key format (Provider_Save_Handler), so
+	 * HTML-looking input is encrypted like any other bounded text.
 	 */
-	public function test_encrypt_field_rejects_malicious_input(): void {
-		// Arrange: Create admin user.
-		$user_id = $this->create_test_user( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $user_id );
+	public function test_encrypt_field_never_echoes_the_submitted_value(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
 
-		$malicious_inputs = array(
-			'<script>alert("xss")</script>'  => 'script_tag',
-			'javascript:alert(1)'            => 'javascript_url',
-			'onclick=alert(1)'               => 'event_handler',
-			'"><img src=x onerror=alert(1)>' => 'html_injection',
-		);
+		foreach ( array( 'javascript:alert(1)', 'onclick=alert(1)', 'key"><b>bold</b>' ) as $value ) {
+			$response = $this->encrypt_field( $value );
+			$data     = $response->get_data();
 
-		foreach ( $malicious_inputs as $malicious_value => $test_name ) {
-			// Act: Try to encrypt malicious value.
-			$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
-			$request->set_param( 'field_id', 'mailchimp_api_key' );
-			$request->set_param( 'new_value', $malicious_value );
-			$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
-			$response = rest_do_request( $request );
-
-			// Assert: Should reject malicious input.
-			$this->assertEquals( 400, $response->get_status(), "Should reject malicious input: {$test_name}" );
-
-			$data = $response->get_data();
-			$this->assertArrayHasKey( 'code', $data, 'Should have error code' );
-
-			// CRITICAL: Should not encrypt malicious content.
-			$this->assertArrayNotHasKey( 'encrypted', $data, 'Should not return encrypted malicious content' );
-			$this->assertArrayNotHasKey( 'masked', $data, 'Should not return masked malicious content' );
-
-			// CRITICAL: Malicious content should not appear in response.
-			$this->assertStringNotContainsString( $malicious_value, json_encode( $data ), 'Should not echo malicious content' );
+			$this->assertSame( 200, $response->get_status() );
+			$this->assertTrue( \CampaignBridge\Core\Encryption::is_encrypted_value( $data['data']['encrypted'] ) );
+			$this->assertMatchesRegularExpression( '/^•+.{4}$/u', $data['data']['masked'] );
+			$this->assertStringNotContainsString( sanitize_text_field( $value ), (string) wp_json_encode( $data ) );
 		}
+	}
+
+	/**
+	 * Encrypt-field refuses empty and oversized values with a 400, not a fatal error.
+	 */
+	public function test_encrypt_field_refuses_empty_and_oversized_values(): void {
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+
+		$this->assertSame( 400, $this->encrypt_field( '   ' )->get_status() );
+		$this->assertSame( 400, $this->encrypt_field( str_repeat( 'a', 1001 ) )->get_status() );
+	}
+
+	private function encrypt_field( string $value ): \WP_REST_Response {
+		$request = new \WP_REST_Request( 'POST', '/campaignbridge/v1/encrypt-field' );
+		$request->set_param( 'field_id', 'mailchimp_api_key' );
+		$request->set_param( 'new_value', $value );
+		$request->set_param( '_wpnonce', wp_create_nonce( 'campaignbridge_encrypted_fields' ) );
+
+		return rest_do_request( $request );
 	}
 
 	/**

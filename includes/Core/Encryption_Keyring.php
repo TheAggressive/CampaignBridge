@@ -205,9 +205,7 @@ final class Encryption_Keyring {
 		$retired                             = self::database_retired();
 		$retired[ self::key_id( $current ) ] = $current;
 
-		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key rotation, no user request context available
 		$retired_saved = Storage::update_option( self::RETIRED_KEYS_OPTION, $retired );
-		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key rotation, no user request context available
 		if ( ! $retired_saved || ! Storage::update_option( self::MASTER_KEY_OPTION, self::generate() ) ) {
 			return false;
 		}
@@ -215,7 +213,6 @@ final class Encryption_Keyring {
 		$metadata            = self::database_metadata();
 		$metadata['created'] = time();
 		$metadata['version'] = (int) ( $metadata['version'] ?? 0 ) + 1;
-		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key rotation, no user request context available
 		Storage::update_option( self::KEY_META_OPTION, $metadata );
 
 		return true;
@@ -318,14 +315,12 @@ final class Encryption_Keyring {
 		}
 
 		$stored = self::generate();
-		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key generation, no user request context available
 		if ( ! Storage::add_option( self::MASTER_KEY_OPTION, $stored ) ) {
 			// Another request created it first; use the stored key, never ours.
 			$existing = Storage::get_option( self::MASTER_KEY_OPTION );
 
 			return is_string( $existing ) && '' !== $existing ? $existing : null;
 		}
-		// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Internal key generation, no user request context available
 		Storage::add_option(
 			self::KEY_META_OPTION,
 			array(

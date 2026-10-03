@@ -2,36 +2,36 @@
 /**
  * File Uploader
  *
- * Secure file upload processing with WordPress integration.
- *
  * @package CampaignBridge\Admin\Core\Forms
  */
 
 namespace CampaignBridge\Admin\Core\Forms;
 
 /**
- * File Uploader Class
+ * Stores uploads through wp_handle_upload() after the field's own policy.
  *
- * Handles secure file uploads using WordPress's wp_handle_upload().
- *
- * @package CampaignBridge\Admin\Core\Forms
+ * A failed upload never leaves files or attachments behind: a failed
+ * attachment insert removes its file, and a failed multi-file upload removes
+ * everything the earlier files created.
  */
 class Form_File_Uploader {
 
 	/**
-	 * Security handler instance.
+	 * Stores one validated upload; wp_handle_upload() outside tests.
 	 *
-	 * @var Form_Security
+	 * @var callable(array<string, mixed>, array<string, mixed>): array<string, mixed>
 	 */
-	private Form_Security $security;
+	private $store;
 
 	/**
 	 * Constructor
 	 *
-	 * Initializes the file uploader with security handler.
+	 * @param callable|null $store Storage function with wp_handle_upload()'s signature. Tests pass
+	 *                             wp_handle_sideload(), whose only difference is not requiring
+	 *                             the file to have arrived over HTTP.
 	 */
-	public function __construct() {
-		$this->security = new Form_Security( 'file_upload' );
+	public function __construct( ?callable $store = null ) {
+		$this->store = $store ?? 'wp_handle_upload';
 	}
 
 	/**
@@ -42,19 +42,13 @@ class Form_File_Uploader {
 	 * @return array<string, mixed>|\WP_Error Upload result or error.
 	 */
 	public function process_upload( array $file, array $config = array() ): array|\WP_Error {
-		// Pre-validate file with our security checks.
 		$validation = $this->validate_file( $file, $config );
 		if ( is_wp_error( $validation ) ) {
 			return $validation;
 		}
 
-		// Use WordPress's built-in upload handling.
-		$upload_overrides = array(
-			'test_form'            => false, // We're not testing.
-			'upload_error_handler' => array( $this, 'handle_upload_error' ),
-		);
-
-		// Apply any additional overrides from config.
+		// The form's own nonce was verified; wp_handle_upload() runs its other tests.
+		$upload_overrides = array( 'test_form' => false );
 		if ( ! empty( $config['upload_overrides'] ) ) {
 			$upload_overrides = array_merge( $upload_overrides, $config['upload_overrides'] );
 		}
@@ -64,7 +58,7 @@ class Form_File_Uploader {
 		 *
 		 * @var array<string, mixed>|\WP_Error $upload_result
 		 */
-		$upload_result = wp_handle_upload( $file, $upload_overrides );
+		$upload_result = ( $this->store )( $file, $upload_overrides );
 		if ( $upload_result instanceof \WP_Error ) {
 			return $upload_result;
 		}
@@ -72,14 +66,16 @@ class Form_File_Uploader {
 			return new \WP_Error( 'upload_failed', $upload_result['error'] );
 		}
 
-		// Add additional metadata.
 		$upload_result['filename'] = basename( $upload_result['file'] );
 		$upload_result['size']     = $file['size'] ?? 0;
 		$upload_result['type']     = $upload_result['type'] ?? ( $file['type'] ?? '' );
 
-		// Create WordPress attachment if requested.
 		if ( ! empty( $config['create_attachment'] ) ) {
-			$attachment_id                  = $this->create_attachment( $upload_result );
+			$attachment_id = $this->create_attachment( $upload_result );
+			if ( is_wp_error( $attachment_id ) ) {
+				\wp_delete_file( $upload_result['file'] );
+				return $attachment_id;
+			}
 			$upload_result['attachment_id'] = $attachment_id;
 		}
 
@@ -87,47 +83,23 @@ class Form_File_Uploader {
 	}
 
 	/**
-	 * Validate uploaded file
-	 *
-	 * Performs comprehensive security validation on uploaded files.
+	 * Validate an uploaded file against the field's policy.
 	 *
 	 * @param array<string, mixed> $file   File data from $_FILES.
 	 * @param array<string, mixed> $config Field configuration.
 	 * @return bool|\WP_Error True if valid, WP_Error if invalid.
 	 */
 	public function validate_file( array $file, array $config = array() ): bool|\WP_Error {
-		// Use comprehensive Form_Security validation for all security checks.
-		return $this->security->validate_file_upload( $file, $config );
+		return ( new Form_Security( 'file_upload' ) )->validate_file_upload( $file, $config );
 	}
 
 	/**
-	 * Handle upload errors from wp_handle_upload
-	 *
-	 * Logs security events for upload errors and returns WP_Error.
-	 *
-	 * @param array<string, mixed> $file File array.
-	 * @param string               $message Error message.
-	 * @return \WP_Error Error object.
-	 */
-	public function handle_upload_error( array $file, string $message ): \WP_Error {
-		$this->security->log_security_event(
-			'upload_error',
-			array(
-				'filename' => sanitize_file_name( $file['name'] ?? 'unknown' ),
-				'error'    => $message,
-			)
-		);
-
-		return new \WP_Error( 'upload_failed', $message );
-	}
-
-	/**
-	 * Create WordPress attachment
+	 * Create a media library attachment for a stored upload.
 	 *
 	 * @param array<string, mixed> $upload_result Upload result data.
-	 * @return int Attachment ID.
+	 * @return int|\WP_Error Attachment ID, or an error when WordPress refused the insert.
 	 */
-	private function create_attachment( array $upload_result ): int {
+	private function create_attachment( array $upload_result ): int|\WP_Error {
 		$attachment_data = array(
 			'guid'           => $upload_result['url'],
 			'post_mime_type' => $upload_result['type'],
@@ -136,28 +108,18 @@ class Form_File_Uploader {
 			'post_status'    => 'inherit',
 		);
 
-		/**
-		 * Attachment ID from wp_insert_attachment().
-		 *
-		 * @var int $attachment_id
-		 */
-		$attachment_id = wp_insert_attachment( $attachment_data, $upload_result['file'] );
+		$attachment_id = wp_insert_attachment( $attachment_data, $upload_result['file'], 0, true );
+		if ( is_wp_error( $attachment_id ) || 0 === $attachment_id ) {
+			return new \WP_Error( 'attachment_failed', \__( 'The file was uploaded but could not be added to the media library.', 'campaignbridge' ) );
+		}
 
-		// Note: wp_insert_attachment can return WP_Error, but PHPStan analysis
-		// shows it doesn't in this context, so we treat it as always successful.
-
-		// Generate attachment metadata.
-		$attachment_data = wp_generate_attachment_metadata( $attachment_id, $upload_result['file'] );
-		wp_update_attachment_metadata( $attachment_id, $attachment_data );
+		wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, $upload_result['file'] ) );
 
 		return $attachment_id;
 	}
 
 	/**
-	 * Process multiple file uploads
-	 *
-	 * Handles multiple file uploads from HTML multiple file inputs.
-	 * Reorganizes the $_FILES array and processes each file individually.
+	 * Process multiple file uploads, all or nothing.
 	 *
 	 * @param array<string, mixed> $files  Files data from $_FILES.
 	 * @param array<string, mixed> $config Field configuration.
@@ -166,21 +128,15 @@ class Form_File_Uploader {
 	public function process_multiple_uploads( array $files, array $config = array() ): array|\WP_Error {
 		$results = array();
 
-		// Reorganize files array for easier processing.
-		$reorganized_files = $this->reorganize_files_array( $files );
-
-		foreach ( $reorganized_files as $index => $file ) {
+		foreach ( $this->reorganize_files_array( $files ) as $file ) {
 			if ( empty( $file['name'] ) ) {
-				continue; // Skip empty file slots.
+				continue;
 			}
 
 			$result = $this->process_upload( $file, $config );
 			if ( is_wp_error( $result ) ) {
-				// Clean up any successfully uploaded files on error.
 				foreach ( $results as $previous_result ) {
-					if ( isset( $previous_result['file'] ) ) {
-						$this->cleanup_file( $previous_result['file'] );
-					}
+					$this->remove_upload( $previous_result );
 				}
 				return $result;
 			}
@@ -192,13 +148,20 @@ class Form_File_Uploader {
 	}
 
 	/**
-	 * Clean up uploaded file
+	 * Remove a stored upload and the attachment created for it, if any.
 	 *
-	 * @param string $file_path File path to clean up.
+	 * @param array<string, mixed> $upload_result Upload result data.
 	 */
-	private function cleanup_file( string $file_path ): void {
-		// wp_delete_file handles permission checks internally and fails gracefully.
-		wp_delete_file( $file_path );
+	private function remove_upload( array $upload_result ): void {
+		$attachment_id = $upload_result['attachment_id'] ?? 0;
+		if ( is_int( $attachment_id ) && 0 < $attachment_id ) {
+			// Force-deleting an attachment also deletes its file.
+			\wp_delete_attachment( $attachment_id, true );
+			return;
+		}
+		if ( is_string( $upload_result['file'] ?? null ) ) {
+			\wp_delete_file( $upload_result['file'] );
+		}
 	}
 
 	/**

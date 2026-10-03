@@ -308,13 +308,7 @@ class Routes extends Abstract_Rest_Controller {
 	}
 
 	/**
-	 * GET /post-types endpoint.
-	 * Returns allowed public post types based on settings (excludes unchecked types).
-	 *
-	 * @return \WP_REST_Response|\WP_Error
-	 */
-	/**
-	 * GET /post-types endpoint.
+	 * GET /post-types endpoint: allowed public post types, excluding pages and attachments.
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
@@ -380,7 +374,6 @@ class Routes extends Abstract_Rest_Controller {
 	 *
 	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 * @return \WP_REST_Response|\WP_Error Response or error.
-	 * @throws \RuntimeException When decryption fails.
 	 */
 	public static function r_decrypt_field( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		// Verify nonce for CSRF protection.
@@ -410,18 +403,10 @@ class Routes extends Abstract_Rest_Controller {
 			$context   = self::ENCRYPTED_FIELD_CONTRACTS[ $field_id ]['context'];
 			$decrypted = \CampaignBridge\Core\Encryption::decrypt_for_context( $encrypted_value, $context );
 
-			// Ensure the decrypted value is safe for JSON transmission.
-			// Remove any potential binary data or problematic characters.
-			$safe_decrypted = self::sanitize_decrypted_value( $decrypted );
-
-			// Add small random delay to prevent timing attacks (10-50ms).
-			usleep( wp_rand( 10000, 50000 ) );
-
-			// Return response in the format JavaScript expects.
 			return self::ensure_response(
 				array(
 					'success' => true,
-					'data'    => array( 'decrypted' => $safe_decrypted ),
+					'data'    => array( 'decrypted' => self::sanitize_decrypted_value( $decrypted ) ),
 				)
 			);
 		} catch ( \RuntimeException $e ) {
@@ -486,7 +471,6 @@ class Routes extends Abstract_Rest_Controller {
 	 *
 	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 * @return \WP_REST_Response|\WP_Error Response or error.
-	 * @throws \InvalidArgumentException When validation fails.
 	 */
 	public static function r_encrypt_field( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		// Verify nonce for CSRF protection.
@@ -502,37 +486,24 @@ class Routes extends Abstract_Rest_Controller {
 			return $limited;
 		}
 
-		$field_id  = (string) $request->get_param( 'field_id' );
-		$new_value = $request->get_param( 'new_value' );
-
+		$field_id = (string) $request->get_param( 'field_id' );
 		if ( ! self::validate_encrypted_field_id( $field_id ) ) {
 			return new WP_Error( 'invalid_encrypted_field', 'Encrypted field is not available.', array( 'status' => 400 ) );
 		}
 
+		// Already sanitized by the route schema.
+		$new_value = (string) $request->get_param( 'new_value' );
+		if ( '' === $new_value ) {
+			return new WP_Error( 'invalid_encrypted_value', 'A value is required.', array( 'status' => 400 ) );
+		}
+
 		try {
-			// Validate the new value.
-			$new_value = sanitize_text_field( $new_value );
-
-			if ( empty( $new_value ) ) {
-				throw new \InvalidArgumentException( 'New value cannot be empty' );
-			}
-
-			// Encrypt the new value using sensitive context for admin operations.
-			$encrypted = \CampaignBridge\Core\Encryption::encrypt( $new_value );
-
-			// Generate masked version for display.
-			$masked = self::mask_value( $new_value );
-
-			// Add small random delay to prevent timing attacks (10-50ms).
-			usleep( wp_rand( 10000, 50000 ) );
-
-			// Return response in the format JavaScript expects.
 			return self::ensure_response(
 				array(
 					'success' => true,
 					'data'    => array(
-						'encrypted' => $encrypted,
-						'masked'    => $masked,
+						'encrypted' => \CampaignBridge\Core\Encryption::encrypt( $new_value ),
+						'masked'    => self::mask_value( $new_value ),
 					),
 				)
 			);
@@ -589,35 +560,16 @@ class Routes extends Abstract_Rest_Controller {
 	}
 
 	/**
-	 * Validate field value parameter.
+	 * Bound a credential value before it is encrypted.
+	 *
+	 * The value is only ever encrypted and validated against the provider's
+	 * key format before storage; it is never rendered as HTML.
 	 *
 	 * @param string $value The value to validate.
 	 * @return bool True if valid.
 	 */
 	public static function validate_field_value( string $value ): bool {
-		// Check length (reasonable limit for field values).
-		if ( strlen( $value ) > 1000 ) {
-			return false;
-		}
-
-		// Check for potentially dangerous content.
-		$suspicious = array(
-			'<script',
-			'javascript:',
-			'onclick=',
-			'onload=',
-			'onerror=',
-			'vbscript:',
-			'data:text/html',
-		);
-
-		foreach ( $suspicious as $pattern ) {
-			if ( stripos( $value, $pattern ) !== false ) {
-				return false;
-			}
-		}
-
-		return true;
+		return strlen( $value ) <= 1000;
 	}
 
 	/**
