@@ -100,6 +100,17 @@ class Http_Client {
 	}
 
 	/**
+	 * Make a PATCH request.
+	 *
+	 * @param string               $url     The URL to request.
+	 * @param array<string, mixed> $args    Request arguments.
+	 * @return array<string, mixed>|\WP_Error Response data or WP_Error on failure.
+	 */
+	public static function patch( string $url, array $args = array() ): array|\WP_Error {
+		return self::request( 'patch', $url, $args );
+	}
+
+	/**
 	 * Make a DELETE request.
 	 *
 	 * @param string               $url     The URL to request.

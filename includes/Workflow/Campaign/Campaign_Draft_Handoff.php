@@ -13,7 +13,6 @@ use CampaignBridge\Domain\Campaign\Audit_Context;
 use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
 use CampaignBridge\Domain\Campaign\Campaign;
-use CampaignBridge\Domain\Campaign\Campaign_Snapshot;
 use CampaignBridge\Domain\Campaign\Campaign_Snapshot_Source;
 use CampaignBridge\Domain\Campaign\Campaign_Source;
 use CampaignBridge\Domain\Campaign\Campaign_State;
@@ -26,16 +25,13 @@ use CampaignBridge\Domain\Campaign\Provider_Error;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference_Source;
 use CampaignBridge\Domain\Campaign\Retryability;
-use CampaignBridge\Domain\Email\Token\Token_Parser;
-use CampaignBridge\Domain\Email\Token\Token_Registry;
-use CampaignBridge\Domain\Provider\Discovery_Kind;
+use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Draft_Content;
 use CampaignBridge\Domain\Provider\Draft_Outcome;
 use CampaignBridge\Domain\Provider\Provider_Capabilities;
 use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
 use CampaignBridge\Domain\Provider\Provider_Operation;
 use CampaignBridge\Domain\Provider\Provider_Token_Mapper;
-use CampaignBridge\Domain\Provider\Token_Mapping;
 use CampaignBridge\Workflow\Provider\Provider_Discovery_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -54,8 +50,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 3. Never retry blindly. While any create attempt is `pending` or `unknown`,
  *    further creates are refused with `reconciliation_required`.
  * 4. Outcomes are recorded as known: created, definitely failed, or unknown.
- * 5. A draft whose content upload failed is kept as `content_pending`; the
- *    next request re-uploads content only, which is idempotent.
+ * 5. A draft whose content upload failed is kept as `content_pending`. The
+ *    next request re-asserts the approved audience, envelope, and content
+ *    with idempotent updates; no second draft is created.
+ * 6. An existing draft is never trusted as-is. Approval may have been
+ *    revoked and the audience or snapshot changed since it was created, so
+ *    it is re-asserted before the campaign relies on it.
  *
  * Content comes only from the approved snapshot and its frozen envelope. A
  * draft is never scheduled or sent here.
@@ -122,10 +122,6 @@ final class Campaign_Draft_Handoff {
 		if ( $campaign->version() !== $expected_version ) {
 			return $this->refuse( Campaign_Workflow_Error::CONFLICT, 'Campaign version is stale.', $actor, $campaign_id, $campaign );
 		}
-		if ( null !== $reference && self::OBSERVED_DRAFT === $reference->observed_state() ) {
-			// The draft was created earlier but the campaign transition did not persist.
-			return $this->finalize( $actor, $campaign, $expected_version, $reference->remote_id(), null, $reference );
-		}
 
 		$attempt_id = null === $reference ? $this->ids->generate( 'attempt' ) : null;
 		$content    = $this->content( $campaign, $audience, $settings, $attempt_id ?? $reference->remote_id() );
@@ -134,12 +130,12 @@ final class Campaign_Draft_Handoff {
 		}
 
 		if ( null !== $reference ) {
-			// Resume: the draft exists and only its idempotent content upload is outstanding.
-			$outcome = $this->gateway->upload_content( $settings, $reference->remote_id(), $content );
+			// The draft exists from an earlier request: re-assert the approved audience, envelope, and content.
+			$outcome = $this->gateway->sync_draft( $settings, $reference->remote_id(), $content );
 
-			return Draft_Outcome::CREATED === $outcome->status()
+			return Action_Outcome::ACCEPTED === $outcome->status()
 				? $this->finalize( $actor, $campaign, $expected_version, $reference->remote_id(), null, $reference )
-				: $this->provider_failure( $actor, $campaign, $reference, null, $outcome->error(), 'The provider draft exists but its content could not be uploaded. Repeat the request to resume.' );
+				: $this->provider_failure( $actor, $campaign, $reference, null, $outcome->error(), 'The provider draft exists but could not be brought in line with the approved campaign. Repeat the request to resume.' );
 		}
 
 		$attempt = $this->attempt( (string) $attempt_id, $campaign_id, $idempotency_key, Delivery_Attempt_Status::PENDING, Retryability::UNKNOWN, null, null );
@@ -159,70 +155,16 @@ final class Campaign_Draft_Handoff {
 	}
 
 	/**
-	 * Build provider content from the approved snapshot only.
+	 * Build provider content from the verified, approved snapshot only.
 	 *
 	 * @param array<string, mixed> $settings Decrypted provider settings.
 	 */
 	private function content( Campaign $campaign, string $audience, array $settings, string $correlation_id ): Draft_Content|Campaign_Workflow_Error {
 		$snapshot = ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
-		if ( $snapshot instanceof Campaign_Workflow_Error ) {
-			return $snapshot;
-		}
-		$envelope = $snapshot->envelope();
-		$problems = null === $envelope ? array( 'envelope_missing' ) : $envelope->problems();
-		if ( null === $envelope || array() !== $problems ) {
-			return new Campaign_Workflow_Error(
-				Campaign_Workflow_Error::VALIDATION_FAILED,
-				'The approved envelope is incomplete (' . implode( ', ', $problems ) . '). Update the template, snapshot, and approve again.'
-			);
-		}
 
-		$registry = Token_Registry::default();
-		$mapping  = $this->tokens->map( $registry, $audience, $this->discovery->cached( Discovery_Kind::MERGE_FIELDS, $settings, $audience )->result() );
-		$fields   = array(
-			'html'         => $snapshot->artifact()->html(),
-			'text'         => $snapshot->artifact()->text(),
-			'subject'      => $envelope->subject(),
-			'preview_text' => $envelope->preview_text(),
-		);
-		foreach ( $fields as $name => $value ) {
-			$translation = $mapping->translate( $value, $registry, new Token_Parser() );
-			if ( ! $translation->is_complete() ) {
-				return new Campaign_Workflow_Error( Campaign_Workflow_Error::VALIDATION_FAILED, $this->translation_problem( $name, $translation->has_literal_conflict(), $translation->unmapped(), $mapping ) );
-			}
-			$fields[ $name ] = $translation->content();
-		}
-
-		try {
-			return Draft_Content::create(
-				$audience,
-				$fields['subject'],
-				$fields['preview_text'],
-				$envelope->from_name(),
-				$envelope->from_email(),
-				$fields['html'],
-				$fields['text'],
-				$snapshot->artifact()->fingerprint(),
-				'CampaignBridge ' . $correlation_id
-			);
-		} catch ( \InvalidArgumentException ) {
-			return new Campaign_Workflow_Error( Campaign_Workflow_Error::INVALID_INPUT, 'The approved artifact cannot be sent to this provider.' );
-		}
-	}
-
-	/** @param array<int, string> $unmapped Canonical tokens without a provider representation. */
-	private function translation_problem( string $field, bool $literal, array $unmapped, Token_Mapping $mapping ): string {
-		if ( $literal ) {
-			return sprintf( 'The approved %s contains literal provider merge syntax, which the provider would evaluate. Remove it, snapshot, and approve again.', $field );
-		}
-		if ( array() === $unmapped ) {
-			return sprintf( 'The approved %s contains tokens that could not be read.', $field );
-		}
-		$reasons = array_unique( array_intersect_key( $mapping->unsupported(), array_flip( $unmapped ) ) );
-
-		return in_array( Token_Mapping::REASON_MERGE_FIELDS_INCOMPLETE, $reasons, true )
-			? sprintf( 'The approved %s uses %s, but this audience\'s merge fields have not been fully discovered. Refresh merge fields and try again.', $field, implode( ', ', $unmapped ) )
-			: sprintf( 'The approved %s uses %s, which this audience cannot substitute.', $field, implode( ', ', $unmapped ) );
+		return $snapshot instanceof Campaign_Workflow_Error
+			? $snapshot
+			: ( new Campaign_Draft_Content_Builder( $this->tokens, $this->discovery ) )->build( $snapshot, $audience, $settings, $correlation_id );
 	}
 
 	/**

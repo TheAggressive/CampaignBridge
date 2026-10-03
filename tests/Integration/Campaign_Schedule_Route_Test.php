@@ -74,6 +74,7 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 			);
 			$reply            = match ( true ) {
 				str_contains( $url, '/actions/' ) => array_shift( $this->action_replies ) ?? array( 204, '' ),
+				str_contains( $url, '/campaigns/mc0042?fields=' ) => array( 200, '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{}}}' ),
 				'POST' === $method                => array( 200, '{"id":"mc0042","status":"save"}' ),
 				default                           => array( 200, '{}' ),
 			};
@@ -134,7 +135,19 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertFalse( $data['idempotent_replay'] );
 		self::assertSame( 'no-store', $scheduled->get_headers()['Cache-Control'] );
 		self::assertStringNotContainsString( self::api_key(), (string) wp_json_encode( $data ) );
-		self::assertSame( 'POST ' . self::ACTIONS . 'schedule', $this->last_request() );
+		self::assertSame(
+			array(
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,recipients.list_id,recipients.segment_opts',
+				'PATCH https://us20.api.mailchimp.com/3.0/campaigns/mc0042',
+				'PUT https://us20.api.mailchimp.com/3.0/campaigns/mc0042/content',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,recipients.list_id,recipients.segment_opts',
+				'POST ' . self::ACTIONS . 'schedule',
+			),
+			array_map( static fn ( array $request ): string => $request['method'] . ' ' . $request['url'], array_slice( $this->requests, -5 ) ),
+			'The approved draft is read, re-asserted, and verified before it is scheduled.'
+		);
+		$patch = json_decode( $this->requests[ count( $this->requests ) - 4 ]['body'], true );
+		self::assertSame( array( 'abc123', 'Spring sale' ), array( $patch['recipients']['list_id'], $patch['settings']['subject_line'] ) );
 		self::assertSame( array( 'schedule_time' => str_replace( 'Z', '+00:00', $send_at ) ), json_decode( $this->requests[ count( $this->requests ) - 1 ]['body'], true ) );
 
 		$requests = count( $this->requests );
@@ -160,7 +173,7 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 
 	public function test_an_unconfirmed_schedule_returns_a_conflict_and_leaves_the_campaign_unknown(): void {
 		$campaign             = $this->provider_draft_campaign();
-		$requests             = count( $this->requests );
+		$actions              = $this->action_count();
 		$this->action_replies = array( array( 503, '{"detail":"private upstream detail"}' ) );
 
 		$unknown = $this->schedule( $campaign['id'], 5, self::send_at(), 'abc123', 'rest-schedule-1' );
@@ -174,7 +187,7 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 
 		$again = $this->schedule( $campaign['id'], 7, self::send_at(), 'abc123', 'rest-schedule-2' );
 		self::assertSame( 'campaignbridge_campaign_reconciliation_required', $again->get_data()['code'] );
-		self::assertCount( $requests + 1, $this->requests, 'Exactly one schedule action was sent; a 5xx is never retried.' );
+		self::assertSame( $actions + 1, $this->action_count(), 'Exactly one schedule action was sent; a 5xx is never retried.' );
 	}
 
 	public function test_a_provider_refusal_reports_the_claimed_version_for_a_retry(): void {
@@ -302,6 +315,11 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 				'idempotency_key'            => $key,
 			)
 		);
+	}
+
+	/** Delivery actions sent to Mailchimp, excluding draft reads and re-assertion. */
+	private function action_count(): int {
+		return count( array_filter( $this->requests, static fn ( array $request ): bool => str_contains( $request['url'], '/actions/' ) ) );
 	}
 
 	private function last_request(): string {

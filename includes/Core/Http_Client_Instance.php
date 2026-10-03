@@ -58,6 +58,17 @@ class Http_Client_Instance implements Http_Client_Interface {
 	}
 
 	/**
+	 * Make a PATCH request.
+	 *
+	 * @param string               $url     The URL to request.
+	 * @param array<string, mixed> $args    Request arguments.
+	 * @return array<string, mixed>|\WP_Error Response data or WP_Error on failure.
+	 */
+	public function patch( string $url, array $args = array() ) {
+		return Http_Client::patch( $url, $args );
+	}
+
+	/**
 	 * Make a DELETE request.
 	 *
 	 * @param string               $url     The URL to request.

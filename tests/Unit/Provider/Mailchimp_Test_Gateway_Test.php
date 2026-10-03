@@ -36,6 +36,10 @@ final class Recording_Test_Http_Client implements Http_Client_Interface {
 		return $this->record( 'PUT', $url, $args );
 	}
 
+	public function patch( string $url, array $args = array() ) {
+		return $this->record( 'PATCH', $url, $args );
+	}
+
 	public function delete( string $url, array $args = array() ) {
 		return $this->record( 'DELETE', $url, $args );
 	}

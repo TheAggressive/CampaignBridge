@@ -29,7 +29,10 @@ use CampaignBridge\Domain\Campaign\Schedule_Time;
 use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Provider_Capabilities;
 use CampaignBridge\Domain\Provider\Provider_Delivery_Gateway;
+use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
 use CampaignBridge\Domain\Provider\Provider_Operation;
+use CampaignBridge\Domain\Provider\Provider_Token_Mapper;
+use CampaignBridge\Workflow\Provider\Provider_Discovery_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -40,20 +43,25 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Protocol:
  *
- * 1. Check everything before the provider is contacted: delivery
- *    authority, the audience confirmation, state, version, the remote
- *    reference, the schedule time, and that the approved snapshot still
- *    reproduces its artifact with a complete envelope.
- * 2. One delivery operation at a time. While any schedule, unschedule, or
+ * 1. Check everything locally first: delivery authority, the audience
+ *    confirmation, state, version, the remote reference, the schedule time,
+ *    and that the approved snapshot still reproduces its artifact with a
+ *    complete, translatable envelope.
+ * 2. Never trust the remote draft as-is. `Campaign_Remote_Draft_Guard`
+ *    requires an unsent draft, re-asserts the approved audience, envelope,
+ *    and content, and proves it targets exactly the approved audience with no
+ *    segment. A draft changed outside CampaignBridge cannot reach the
+ *    audience.
+ * 3. One delivery operation at a time. While any schedule, unschedule, or
  *    send attempt is `pending` or `unknown`, every new one is refused with
  *    `reconciliation_required`, whatever idempotency key is sent.
- * 3. Claim before contact. One transaction stores the `pending` attempt and
+ * 4. Claim before delivery. One transaction stores the `pending` attempt and
  *    consumes the campaign version, so concurrent requests holding the same
  *    expected version are refused before any provider call.
- * 4. Record what is known. A definite refusal leaves the campaign where it
+ * 5. Record what is known. A definite refusal leaves the campaign where it
  *    was. An unconfirmed outcome moves the campaign to `unknown`, because it
  *    may or may not deliver; it is never retried automatically.
- * 5. A repeated idempotency key returns the recorded outcome and never
+ * 6. A repeated idempotency key returns the recorded outcome and never
  *    contacts the provider again.
  */
 final class Campaign_Scheduler {
@@ -73,7 +81,10 @@ final class Campaign_Scheduler {
 		private readonly Campaign_Id_Generator $ids,
 		private readonly Campaign_Clock $clock,
 		private readonly Provider_Delivery_Gateway $gateway,
-		private readonly Provider_Capabilities $capabilities
+		private readonly Provider_Capabilities $capabilities,
+		private readonly Provider_Draft_Gateway $drafts,
+		private readonly Provider_Token_Mapper $tokens,
+		private readonly Provider_Discovery_Service $discovery
 	) {}
 
 	/**
@@ -105,8 +116,13 @@ final class Campaign_Scheduler {
 		if ( $snapshot instanceof Campaign_Workflow_Error ) {
 			return $this->refuse( $operation, $snapshot->code(), $snapshot->message(), $actor, $campaign_id, $campaign );
 		}
-		if ( null === $snapshot->envelope() || array() !== $snapshot->envelope()->problems() ) {
-			return $this->refuse( $operation, Campaign_Workflow_Error::VALIDATION_FAILED, 'The approved envelope is incomplete. Update the template, snapshot, and approve again.', $actor, $campaign_id, $campaign );
+		$content = ( new Campaign_Draft_Content_Builder( $this->tokens, $this->discovery ) )->build( $snapshot, (string) $campaign->audience_reference(), $settings, $reference->remote_id() );
+		if ( $content instanceof Campaign_Workflow_Error ) {
+			return $this->refuse( $operation, $content->code(), $content->message(), $actor, $campaign_id, $campaign );
+		}
+		$drift = ( new Campaign_Remote_Draft_Guard( $this->drafts ) )->reassert( $settings, $reference->remote_id(), $content, true );
+		if ( null !== $drift ) {
+			return $this->refuse( $operation, $drift[0], $drift[1], $actor, $campaign_id, $campaign, 'failure', null, $drift[2] );
 		}
 
 		return $this->perform(
@@ -305,15 +321,26 @@ final class Campaign_Scheduler {
 		);
 	}
 
-	private function refuse( string $operation, string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null ): Campaign_Delivery_Result {
+	private function refuse( string $operation, string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null ): Campaign_Delivery_Result {
 		try {
-			$this->audits->add( $this->event( $actor, $operation, $campaign_id, $result, array( 'error_code' => $code ) ) );
+			$this->audits->add(
+				$this->event(
+					$actor,
+					$operation,
+					$campaign_id,
+					$result,
+					array(
+						'error_code'          => $code,
+						'provider_error_code' => $error?->code(),
+					)
+				)
+			);
 		} catch ( \InvalidArgumentException ) {
 			// A malformed external identifier cannot become an unsafe audit record.
 			unset( $result );
 		}
 
-		return Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null, $attempt );
+		return Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null, $attempt, $error );
 	}
 
 	/** @param array<string, mixed> $context Safe audit context. */

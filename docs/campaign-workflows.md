@@ -177,7 +177,13 @@ and never schedules or sends. Its protocol uses only the #73 records:
    response marks it `unknown`.
 5. **Resume partial work.** If the draft was created but its content upload
    failed, the reference is stored as `content_pending`. The next request
-   re-uploads content only, which is an idempotent operation.
+   re-asserts the draft (`sync_draft`) and creates nothing.
+6. **Never trust an existing draft.** Approval may have been revoked and
+   given again with another audience or snapshot since the draft was
+   created. Whenever a request relies on an existing draft, its audience,
+   envelope, and content are re-asserted from the currently approved
+   snapshot with idempotent updates before the campaign moves to
+   `provider_draft`.
 
 On success, one transaction stores the reference, marks the attempt
 `succeeded`, moves the campaign `approved → provider_draft`, and audits it.
@@ -199,9 +205,10 @@ management of the campaign; approval authority does not grant it. A test
 never changes the campaign's state or version. Its protocol:
 
 1. **Test only the approved remote draft.** The campaign must be
-   `provider_draft` with a confirmed remote reference. The provider sends the
-   content it received from the approved snapshot at handoff; editor HTML is
-   never sent.
+   `provider_draft` with a confirmed remote reference.
+   `Campaign_Remote_Draft_Guard` requires the remote draft to be unsent and
+   re-asserts the approved audience, envelope, and content first, so the test
+   shows exactly what would be delivered. Editor HTML is never sent.
 2. **Bound the request first.** `Test_Delivery` accepts 1–5 normalized
    addresses and a format. A durable quota of 10 `test_send` attempts per
    campaign in a rolling 24 hours is counted from the attempt records, so it
@@ -228,21 +235,29 @@ authority plus management of the campaign. Its protocol:
    confirmation (schedule only), state, version, the confirmed remote
    reference, the schedule time (`Schedule_Time`: explicit offset, provider
    interval, at least 10 minutes ahead, within a year), and the approved
-   snapshot and envelope, via `Campaign_Snapshot_Verifier`.
-2. **One delivery operation at a time.** While any `schedule`,
+   snapshot and envelope, via `Campaign_Snapshot_Verifier` and
+   `Campaign_Draft_Content_Builder`.
+2. **Never trust the remote draft.** `Campaign_Remote_Draft_Guard` reads
+   the draft and requires it to be unsent, re-asserts the approved
+   audience, envelope, and content, and reads it back to require exactly the
+   approved audience with no segment. A draft edited, scheduled, sent, or
+   segmented in the provider after approval cannot reach the audience. The
+   guard only reads or makes idempotent updates, so a refusal leaves no
+   attempt to reconcile.
+3. **One delivery operation at a time.** While any `schedule`,
    `unschedule`, or `send` attempt is `pending` or `unknown`, every new one
    is refused with `reconciliation_required`, whatever key is sent. This is
    stricter than test sends, because these reach the audience.
-3. **Claim before contact.** One transaction stores the `pending` attempt
+4. **Claim before contact.** One transaction stores the `pending` attempt
    and consumes the campaign version (`Campaign::claim()`). A concurrent
    request holding the same expected version fails its compare-and-swap,
    rolls back its attempt, and never reaches the provider.
-4. **Record what is known.** On acceptance, one transaction marks the
+5. **Record what is known.** On acceptance, one transaction marks the
    attempt `succeeded`, updates the reference's observed state, applies the
    transition, and audits it. A definite refusal leaves the campaign where
    it was. An unconfirmed outcome marks the attempt `unknown` and moves the
    campaign to `unknown`, which keeps `scheduled_for` for reconciliation.
-5. **Unscheduling cannot pretend.** Once `scheduled_for` has passed, an
+6. **Unscheduling cannot pretend.** Once `scheduled_for` has passed, an
    unschedule is refused without a provider call; the send may have
    started.
 

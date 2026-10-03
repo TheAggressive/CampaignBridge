@@ -46,6 +46,18 @@ interface Http_Client_Interface {
 	public function put( string $url, array $args = array() );
 
 	/**
+	 * Make a PATCH request.
+	 *
+	 * PATCH fails closed like POST: it is retried only when the caller opts in
+	 * with `campaignbridge_retry` because the exact update is idempotent.
+	 *
+	 * @param string               $url     The URL to request.
+	 * @param array<string, mixed> $args    Request arguments.
+	 * @return array<string, mixed>|\WP_Error Response data or WP_Error on failure.
+	 */
+	public function patch( string $url, array $args = array() );
+
+	/**
 	 * Make a DELETE request.
 	 *
 	 * @param string               $url     The URL to request.

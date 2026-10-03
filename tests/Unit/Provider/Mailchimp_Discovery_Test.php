@@ -41,6 +41,10 @@ final class Scripted_Http_Client implements Http_Client_Interface {
 		throw new \LogicException( 'Discovery must never write to Mailchimp.' );
 	}
 
+	public function patch( string $url, array $args = array() ) {
+		throw new \LogicException( 'Discovery must never write to Mailchimp.' );
+	}
+
 	public function delete( string $url, array $args = array() ) {
 		throw new \LogicException( 'Discovery must never write to Mailchimp.' );
 	}
@@ -66,7 +70,7 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 	}
 
 	public function test_audiences_request_only_kept_fields_and_normalize_defaults(): void {
-		$http   = new Scripted_Http_Client(
+		$http  = new Scripted_Http_Client(
 			self::ok(
 				array(
 					'lists'       => array(
@@ -74,7 +78,7 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 							'id'                  => 'abc123',
 							'name'                => 'Customers',
 							'stats'               => array(
-								'member_count'     => 1200,
+								'member_count'      => 1200,
 								'unsubscribe_count' => 4,
 							),
 							'campaign_defaults'   => array(
@@ -100,7 +104,7 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 				)
 			)
 		);
-		$batch  = ( new Mailchimp_Discovery( $http ) )->discover_audiences( array( 'api_key' => self::api_key() ) );
+		$batch = ( new Mailchimp_Discovery( $http ) )->discover_audiences( array( 'api_key' => self::api_key() ) );
 
 		self::assertInstanceOf( Discovery_Batch::class, $batch );
 		self::assertSame(
@@ -261,7 +265,7 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 		$body = '{"title":"API Key Invalid","detail":"Your API key may be invalid ' . self::api_key() . '","instance":"x"}';
 
 		return array(
-			'unauthorized'    => array(
+			'unauthorized'     => array(
 				array(
 					'status_code' => 401,
 					'body'        => $body,
@@ -269,7 +273,7 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 				Provider_Error_Category::AUTHENTICATION,
 				false,
 			),
-			'forbidden'       => array(
+			'forbidden'        => array(
 				array(
 					'status_code' => 403,
 					'body'        => $body,
@@ -285,7 +289,7 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 				Provider_Error_Category::NOT_FOUND,
 				false,
 			),
-			'rate limited'    => array(
+			'rate limited'     => array(
 				array(
 					'status_code' => 429,
 					'body'        => $body,
@@ -293,7 +297,7 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 				Provider_Error_Category::RATE_LIMITED,
 				true,
 			),
-			'server error'    => array(
+			'server error'     => array(
 				array(
 					'status_code' => 503,
 					'body'        => $body,
@@ -301,9 +305,9 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 				Provider_Error_Category::PROVIDER_ERROR,
 				false,
 			),
-			'timeout'         => array( new \WP_Error( 'http_request_failed', 'cURL error 28: Operation timed out' ), Provider_Error_Category::TIMEOUT, true ),
-			'network'         => array( new \WP_Error( 'http_request_failed', 'Could not resolve host' ), Provider_Error_Category::NETWORK, true ),
-			'malformed body'  => array(
+			'timeout'          => array( new \WP_Error( 'http_request_failed', 'cURL error 28: Operation timed out' ), Provider_Error_Category::TIMEOUT, true ),
+			'network'          => array( new \WP_Error( 'http_request_failed', 'Could not resolve host' ), Provider_Error_Category::NETWORK, true ),
+			'malformed body'   => array(
 				array(
 					'status_code' => 200,
 					'body'        => '<html>maintenance</html>',
@@ -311,7 +315,7 @@ final class Mailchimp_Discovery_Test extends WP_UnitTestCase {
 				Provider_Error_Category::UNKNOWN,
 				true,
 			),
-			'wrong shape'     => array( self::ok( array( 'lists' => 'nope' ) ), Provider_Error_Category::UNKNOWN, true ),
+			'wrong shape'      => array( self::ok( array( 'lists' => 'nope' ) ), Provider_Error_Category::UNKNOWN, true ),
 		);
 	}
 

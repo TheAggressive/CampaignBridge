@@ -280,7 +280,11 @@ Outcomes after the provider is contacted:
   with the same code, whatever key is sent, until the attempt is reconciled.
 - **Draft created but content upload failed:** `502 provider_failed` with
   `data.remote.observed_state` of `content_pending`. Repeat the request to
-  resume; only the content is re-uploaded and no second draft is created.
+  resume. The existing draft's audience, envelope, and content are
+  re-asserted from the currently approved snapshot with idempotent updates,
+  so a campaign whose approval was revoked and given again with a new
+  audience or snapshot never relies on stale remote settings. No second
+  draft is created.
 - **Draft created but the campaign changed concurrently:** `409 conflict`
   with `data.remote`. The draft's identity is kept.
 
@@ -293,8 +297,12 @@ are never returned.
 
 `POST /campaigns/{id}/test-send` sends one test of the campaign's existing
 remote draft to named addresses, using the provider in the campaign's own
-targeting (currently `mailchimp`). The provider sends the draft content it
-received from the approved snapshot; editor HTML is never sent. It requires
+targeting (currently `mailchimp`). Before the test, the remote draft must
+still be unsent, and its audience, envelope, and content are re-asserted from
+the approved snapshot, so the test shows exactly what would be delivered even
+if the draft was edited in the provider. Editor HTML is never sent. A remote
+campaign that was scheduled or sent outside CampaignBridge is refused with
+`409 reconciliation_required`. It requires
 `campaignbridge_test_campaigns` plus management of the campaign. Holding
 `campaignbridge_send_campaigns` does not grant it. A test never changes the
 campaign's state or version.
@@ -380,13 +388,22 @@ Preconditions, all checked before any provider call:
   scheduling interval (Mailchimp: :00, :15, :30, :45), is at least 10
   minutes ahead, and is within one year. It is stored in UTC.
 - The selected snapshot still reproduces its fingerprint and its envelope
-  is complete.
+  is complete and translatable for the audience.
 - No earlier schedule, unschedule, or send attempt for the campaign is
   `pending` or `unknown`.
+- **The remote draft matches what was approved.** CampaignBridge never
+  trusts it as-is. It reads the draft and requires it to be unsent,
+  re-asserts the approved audience, envelope, and content with idempotent
+  updates, then reads it back and requires exactly the approved audience
+  with no segment. A draft that was scheduled, sent, or segmented in the
+  provider is refused with `409 reconciliation_required`; a draft that could
+  not be read or updated is refused with `502 provider_failed`. These calls
+  never reach the audience.
 
 A failed precondition returns `400 invalid_input` or `validation_failed`,
-`409 invalid_state`, `conflict`, or `reconciliation_required`, or
-`403 forbidden`. Nothing is sent, and no version is consumed.
+`409 invalid_state`, `conflict`, or `reconciliation_required`,
+`502 provider_failed`, or `403 forbidden`. Nothing is scheduled, no attempt
+is recorded, and no version is consumed.
 
 Before contacting the provider, one transaction records a `pending` attempt
 and consumes a campaign version. Concurrent requests holding the same

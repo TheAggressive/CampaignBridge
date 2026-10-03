@@ -67,6 +67,24 @@ further schedule, unschedule, or send for it, whatever key is sent.
 4. Automated reconciliation is tracked in #80. Until it ships, resolving
    the attempt and the campaign state requires a developer.
 
+### Test or schedule refused because the provider draft changed
+
+CampaignBridge re-asserts the approved draft before every test or schedule.
+It refuses when the provider reports the campaign as scheduled, sent, or
+otherwise not an unsent draft (`409 reconciliation_required`), or when a
+segment narrows the approved audience. It also refuses when the draft could
+not be read or updated (`502 provider_failed`). Nothing was delivered and no
+attempt was recorded.
+
+1. Open the campaign in Mailchimp by its `remote_id`.
+2. If it was scheduled or sent there, it was changed outside CampaignBridge.
+   Unschedule it there if it should not send, and reconcile the campaign
+   (#80).
+3. If a segment was added, remove it, or create a new campaign with the
+   intended audience in CampaignBridge.
+4. Retry the request. Any content or settings edited in Mailchimp are
+   overwritten with the approved values.
+
 ## Release procedure
 
 1. Run the complete quality pipeline.

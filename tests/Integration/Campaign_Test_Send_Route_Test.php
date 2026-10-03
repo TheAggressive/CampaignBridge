@@ -69,6 +69,7 @@ final class Campaign_Test_Send_Route_Test extends Test_Case {
 			);
 			$reply            = match ( true ) {
 				str_ends_with( $url, '/actions/test' ) => array_shift( $this->test_replies ) ?? array( 204, '' ),
+				str_contains( $url, '/campaigns/mc0042?fields=' ) => array( 200, '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{}}}' ),
 				'POST' === $method                      => array( 200, '{"id":"mc0042","status":"save"}' ),
 				default                                 => array( 200, '{}' ),
 			};
@@ -159,7 +160,7 @@ final class Campaign_Test_Send_Route_Test extends Test_Case {
 
 	public function test_unconfirmed_test_returns_a_conflict_and_is_not_retried(): void {
 		$campaign           = $this->provider_draft_campaign();
-		$requests           = count( $this->requests );
+		$actions            = $this->action_count();
 		$this->test_replies = array( array( 503, '{"detail":"private upstream detail"}' ) );
 
 		$unknown = $this->test_send( $campaign['id'], array( 'qa@example.com' ), 'rest-test-1' );
@@ -169,11 +170,11 @@ final class Campaign_Test_Send_Route_Test extends Test_Case {
 		self::assertSame( 'unknown', $unknown->get_data()['data']['attempt']['status'] );
 		self::assertSame( 'provider_error', $unknown->get_data()['data']['provider_error']['category'] );
 		self::assertStringNotContainsString( 'private upstream detail', (string) wp_json_encode( $unknown->get_data() ) );
-		self::assertCount( $requests + 1, $this->requests, 'Exactly one test action was sent; a 5xx is never retried.' );
+		self::assertSame( $actions + 1, $this->action_count(), 'Exactly one test action was sent; a 5xx is never retried.' );
 
 		$same_key = $this->test_send( $campaign['id'], array( 'qa@example.com' ), 'rest-test-1' );
 		self::assertSame( 409, $same_key->get_status() );
-		self::assertCount( $requests + 1, $this->requests );
+		self::assertSame( $actions + 1, $this->action_count() );
 		self::assertSame( 'provider_draft', ( new Campaign_Repository() )->get( $campaign['id'] )?->state() );
 	}
 
@@ -286,6 +287,11 @@ final class Campaign_Test_Send_Route_Test extends Test_Case {
 				static fn ( mixed $value ): bool => null !== $value
 			)
 		);
+	}
+
+	/** Delivery actions sent to Mailchimp, excluding draft reads and re-assertion. */
+	private function action_count(): int {
+		return count( array_filter( $this->requests, static fn ( array $request ): bool => str_contains( $request['url'], '/actions/' ) ) );
 	}
 
 	private function last_request(): string {
