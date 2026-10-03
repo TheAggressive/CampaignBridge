@@ -20,95 +20,25 @@ Our PHPCS configuration enforces WordPress coding standards, security best pract
 
 ### 🔧 **Custom CampaignBridge Sniffs**
 
-#### 1. **StorageUsageSniff** (`CampaignBridge.Standard.Sniffs.Database.StorageUsage.ForbiddenStorageFunction`)
-**Location**: `phpcs/CampaignBridge/Sniffs/Database/StorageUsageSniff.php`
-**Severity**: Error
+Custom sniffs exist only for CampaignBridge architectural boundaries that the
+standard rulesets do not know about. Nonce verification, input sanitization,
+and output escaping are enforced by the maintained `WordPress.Security` sniffs
+above, not by custom heuristics. Repository persistence boundaries are also
+checked by `bin/ci/check-repository-boundary.sh`.
 
-Enforces usage of CampaignBridge Storage wrapper instead of direct WordPress functions:
+| Sniff | Severity | Boundary enforced |
+|---|---|---|
+| `Database/DatabaseOperationSniff` | Error | No raw `mysql*`/PDO SQL; `$wpdb` writes and interpolated SQL stay in repository/Core storage classes |
+| `Database/DirectDatabaseQuerySniff` | Warning | Direct `$wpdb` methods and properties stay in repository/Core storage classes |
+| `Http/DirectHttpRequestSniff` | Warning | Outbound HTTP goes through `Core\Http_Client`, which enforces the declared trusted origin and redirect policy |
+| `Logging/DirectLoggingSniff` | Warning | Logging goes through `Core\Error_Handler`, which sanitizes context |
+| `Assets/AssetEnqueueSniff` | Warning | Admin assets are enqueued through the asset manager |
 
-**❌ Forbidden (Direct WordPress calls):**
-```php
-get_option('key')
-update_option('key', 'value')
-get_transient('key')
-set_transient('key', 'value', 3600)
-get_post_meta($id, 'key', true)
-update_post_meta($id, 'key', 'value')
-get_user_meta($id, 'key', true)
-wp_cache_get('key', 'group')
-```
-
-**✅ Required (Storage wrapper calls):**
-```php
-\CampaignBridge\Core\Storage::get_option('key')
-\CampaignBridge\Core\Storage::update_option('key', 'value')
-\CampaignBridge\Core\Storage::get_transient('key')
-\CampaignBridge\Core\Storage::set_transient('key', 'value', 3600)
-\CampaignBridge\Core\Storage::get_post_meta($id, 'key', true)
-\CampaignBridge\Core\Storage::update_post_meta($id, 'key', 'value')
-\CampaignBridge\Core\Storage::get_user_meta($id, 'key', true)
-\CampaignBridge\Core\Storage::wp_cache_get('key', 'group')
-```
-
-#### 2. **HookUsageSniff** (`CampaignBridge.Standard.Sniffs.Hooks.HookUsage.InvalidHookParameters`)
-**Location**: `phpcs/CampaignBridge/Sniffs/Hooks/HookUsageSniff.php`
-**Severity**: Warning
-
-Validates proper WordPress hook usage:
-- Ensures hook functions have proper parameters
-- Validates hook parameter structure
-- Checks for proper hook registration patterns
-
-**Monitored Functions:**
-- `add_action()`, `add_filter()`
-- `do_action()`, `apply_filters()`
-- `remove_action()`, `remove_filter()`
-- `remove_all_actions()`, `remove_all_filters()`
-
-#### 3. **SecurityValidationSniff** (`CampaignBridge.Standard.Sniffs.Security.SecurityValidation.*`)
-**Location**: `phpcs/CampaignBridge/Sniffs/Security/SecurityValidationSniff.php`
-**Severity**: Warning
-
-Enforces WordPress security best practices:
-
-**Nonce Validation** (`MissingNonceVerification`):
-- Requires `wp_verify_nonce()`, `check_ajax_referer()`, or `check_admin_referer()` before:
-  - `wp_insert_post()`, `wp_update_post()`, `wp_delete_post()`
-  - `update_option()`, `delete_option()`
-  - `wp_create_user()`, `wp_update_user()`, `wp_delete_user()`
-
-**Capability Checks** (`MissingCapabilityCheck`):
-- Requires `current_user_can()` or `user_can()` before privileged operations
-- Applies to post/user management and email sending functions
-
-**Input Sanitization** (`UnsanitizedInput`):
-- Warns about direct use of `$_POST`, `$_GET`, `$_REQUEST` without sanitization
-- Recommends: `sanitize_text_field()`, `sanitize_email()`, `intval()`, `wp_kses()`, etc.
-
-#### 4. **DatabaseOperationSniff** (`CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.*`)
-**Location**: `phpcs/CampaignBridge/Sniffs/Database/DatabaseOperationSniff.php`
-**Severity**: Error
-
-Enforces proper database operations:
-
-**❌ Forbidden Direct SQL** (`DirectSQLFunction`):
-```php
-mysql_query($sql)      // Forbidden
-mysqli_query($link, $sql)  // Forbidden
-PDO::query($sql)       // Forbidden
-```
-
-**✅ Required WordPress API** (`InvalidWpdbUsage`):
-```php
-$wpdb->get_var($sql)   // ✅ Correct
-$wpdb->get_results($sql)  // ✅ Correct
-$wpdb->prepare($sql, $param)  // ✅ Correct
-```
-
-**SQL Injection Prevention** (`PotentialSQLInjection`):
-- Warns about string concatenation in SQL: `$sql = "SELECT * FROM table WHERE id = " . $id;`
-- Warns about variable interpolation: `$sql = "SELECT * FROM table WHERE id = $id";`
-- Recommends prepared statements: `$wpdb->prepare("SELECT * FROM table WHERE id = %d", $id)`
+Removed: `SecurityValidationSniff` looked for `wp_verify_nonce()` lexically
+inside the same function as `update_option()` and similar calls, so it flagged
+correct code whose nonce was verified by the caller, and it accepted a nonce as
+a capability check. `HookUsageSniff` only checked that `add_action` was
+followed by `(`. Both produced suppressions without catching defects.
 
 ### 🎯 **Performance & Best Practices**
 
@@ -167,9 +97,8 @@ CampaignBridge.Standard.Sniffs.{Category}.{SniffName}.{ErrorCode}
 ```
 
 Examples:
-- `CampaignBridge.Standard.Sniffs.Database.StorageUsage.ForbiddenStorageFunction`
-- `CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification`
 - `CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectSQLFunction`
+- `CampaignBridge.Standard.Sniffs.Http.DirectHttpRequest.DirectHttpFunction`
 
 ### VS Code Integration
 PHPCS errors appear in VS Code with:

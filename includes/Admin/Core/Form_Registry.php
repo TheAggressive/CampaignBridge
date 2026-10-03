@@ -53,7 +53,6 @@ class Form_Registry {
 			// Persist to database for AJAX requests.
 			$forms_data             = \CampaignBridge\Core\Storage::get_option( self::OPTION_KEY, array() );
 			$forms_data[ $form_id ] = $config->all();
-			// phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Form registration happens during rendering, not submission. Actual form submissions are nonce-verified separately.
 			\CampaignBridge\Core\Storage::update_option( self::OPTION_KEY, $forms_data );
 		} catch ( \Throwable $e ) {
 			Error_Handler::error( sprintf( 'Form_Registry: Failed to register form "%s": %s', $form_id, $e->getMessage() ) );

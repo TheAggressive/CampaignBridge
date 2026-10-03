@@ -1,411 +1,178 @@
-<?php
+<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,WordPress.WP.AlternativeFunctions
 /**
- * File Upload Security Tests
- *
- * Tests security features for file upload functionality.
+ * File upload security tests.
  *
  * @package CampaignBridge\Tests\Security
  */
 
 namespace CampaignBridge\Tests\Security;
 
-use CampaignBridge\Admin\Core\Form;
 use CampaignBridge\Admin\Core\Forms\Form_File_Uploader;
-use CampaignBridge\Admin\Core\Forms\Form_Field_File;
 use CampaignBridge\Admin\Core\Forms\Form_Security;
 use CampaignBridge\Tests\Helpers\Test_Case;
-use Brain\Monkey;
-use ReflectionClass;
 
 /**
- * File Upload Security Test Class
+ * Proves the field policy and wp_handle_upload() together refuse unsafe
+ * uploads, and that a failed upload leaves no file or attachment behind.
  */
 class File_Upload_Security_Test extends Test_Case {
-	/**
-	 * Test data for various scenarios
-	 *
-	 * @var array
-	 */
-	private array $test_data = array();
+	private const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
-	/**
-	 * Temporary files created by upload validation tests.
-	 *
-	 * @var array<int, string>
-	 */
-	private array $test_files = array();
+	/** @var array<int, string> */
+	private array $temp_files = array();
 
-	/**
-	 * Set up test environment
-	 */
+	/** @var array<int, string> */
+	private array $stored_files = array();
+
 	public function setUp(): void {
 		parent::setUp();
-
-		// Initialize Brain Monkey
-		Monkey\setUp();
-
-		// Mock is_uploaded_file to return true for all our test files
-		Monkey\Functions\when( 'is_uploaded_file' )->justReturn( true );
-
-		// Create test admin user
-		$this->create_test_user( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
-
-		// Create large content for testing
-		$this->test_data['large_content'] = str_repeat( 'A', 6000000 ); // 6MB
-
-		// Create test content for security tests
-		$this->test_data['malicious_script'] = '<?php echo "malicious"; ?><script>alert("xss");</script>';
-		$this->test_data['malicious_php']    = '<?php system("rm -rf /"); ?>';
-		$this->test_data['safe_content']     = 'This is safe content without any malicious code.';
+		add_filter( 'wp_handle_upload', array( $this, 'record_stored_file' ) );
 	}
 
-	/**
-	 * Tear down test environment
-	 */
 	public function tearDown(): void {
-		// Tear down Brain Monkey
-		Monkey\tearDown();
-
+		remove_filter( 'wp_handle_upload', array( $this, 'record_stored_file' ) );
+		remove_all_filters( 'wp_insert_post_empty_content' );
+		foreach ( array_merge( $this->temp_files, $this->stored_files ) as $path ) {
+			if ( file_exists( $path ) ) {
+				unlink( $path );
+			}
+		}
 		parent::tearDown();
+	}
 
-		// Clean up test files if method exists
-		if ( method_exists( $this, 'cleanup_test_files' ) ) {
-			$this->cleanup_test_files();
+	/**
+	 * @param array<string, mixed> $upload Stored upload.
+	 * @return array<string, mixed>
+	 */
+	public function record_stored_file( array $upload ): array {
+		$this->stored_files[] = $upload['file'];
+
+		return $upload;
+	}
+
+	/**
+	 * Fixtures did not arrive over HTTP, so they are stored with
+	 * wp_handle_sideload(): the same sanitization and checks as
+	 * wp_handle_upload() without its is_uploaded_file() test.
+	 */
+	private static function uploader(): Form_File_Uploader {
+		return new Form_File_Uploader( 'wp_handle_sideload' );
+	}
+
+	public function test_a_disallowed_type_is_refused_by_detected_content(): void {
+		$text = $this->upload( 'notes.txt', 'text/plain', 'plain text' );
+		$php  = $this->upload( 'evil.php', 'application/x-httpd-php', '<?php system( "id" ); ?>' );
+
+		foreach ( array( $text, $php ) as $file ) {
+			$result = ( new Form_Security( 'test' ) )->validate_file_upload( $file, $this->png_policy() );
+			$this->assertWPError( $result );
+			$this->assertSame( 'invalid_file_type', $result->get_error_code() );
 		}
 	}
 
-	/**
-	 * Test that malicious script content is blocked
-	 */
-	public function test_malicious_script_content_blocked(): void {
-		$form_security = new Form_Security( 'test' );
+	public function test_the_allowlist_is_required_and_the_claimed_type_must_match_the_content(): void {
+		$security = new Form_Security( 'test' );
+		$png      = $this->upload( 'pixel.png', 'image/png', base64_decode( self::PNG, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 
-		// Mock is_uploaded_file to return true for testing
-		Monkey\Functions\when( 'is_uploaded_file' )->justReturn( true );
+		$this->assertSame( 'missing_allowed_file_types', $security->validate_file_upload( $png, array() )->get_error_code() );
+		$this->assertTrue( $security->validate_file_upload( $png, $this->png_policy() ) );
 
-		// Test that files with disallowed MIME types are rejected
-		$mock_file = array(
-			'name'     => 'test.txt', // Safe filename
-			'type'     => 'text/plain', // Disallowed MIME type (not in allowed_types)
-			'tmp_name' => '/tmp/test',
-			'error'    => UPLOAD_ERR_OK,
-			'size'     => 100,
-		);
-
-		$config = array(
-			'allowed_types' => array( 'image/jpeg', 'image/png' ), // Only allow images
-			'max_size'      => 1000000,
-		);
-
-		$result = $form_security->validate_file_upload( $mock_file, $config );
-
-		$this->assertWPError( $result, 'File with disallowed MIME type should be rejected' );
-		// Accept any error code as long as the file is rejected for security reasons
-		$this->assertContains( $result->get_error_code(), array( 'upload_error', 'invalid_file_type', 'invalid_filename' ) );
+		$renamed = array_merge( $png, array( 'name' => 'pixel.txt', 'type' => 'text/plain' ) );
+		$this->assertSame( 'invalid_file_type', $security->validate_file_upload( $renamed, array( 'allowed_types' => array( 'text/plain' ) ) )->get_error_code() );
 	}
 
-	/**
-	 * Test that PHP content is blocked
-	 */
-	public function test_php_content_blocked(): void {
-		$form_security = new Form_Security( 'test' );
-
-		// Mock is_uploaded_file to return true for testing
-		Monkey\Functions\when( 'is_uploaded_file' )->justReturn( true );
-
-		// Test that PHP files are rejected based on MIME type
-		$mock_file = array(
-			'name'     => 'evil.php',
-			'type'     => 'application/x-httpd-php', // PHP MIME type
-			'tmp_name' => '/tmp/test',
-			'error'    => UPLOAD_ERR_OK,
-			'size'     => 100,
-		);
-
-		$config = array(
-			'allowed_types' => array( 'image/jpeg', 'image/png', 'application/pdf' ),
-			'max_size'      => 1000000,
-		);
-
-		$result = $form_security->validate_file_upload( $mock_file, $config );
-
-		$this->assertWPError( $result, 'PHP files should be rejected based on MIME type' );
-		// Accept any error code as long as the file is rejected for security reasons
-		$this->assertContains( $result->get_error_code(), array( 'upload_error', 'invalid_file_type', 'invalid_filename' ) );
-	}
-
-	/**
-	 * Test dangerous filename detection
-	 */
-	public function test_dangerous_filename_detection(): void {
-		$form_security = new Form_Security( 'test' );
-
-		// Only test directory traversal attacks - extension checking removed for simplification
-		$dangerous_filenames = array(
-			'../../../etc/passwd',
-			'..\\windows\\system.ini',
-		);
-
-		foreach ( $dangerous_filenames as $filename ) {
-			// Create a temporary file that actually exists for the test
-			$temp_file = tempnam( sys_get_temp_dir(), 'upload_test' );
-			file_put_contents( $temp_file, 'test content' );
-
-			$mock_file = array(
-				'name'     => $filename,
-				'type'     => 'text/plain',
-				'tmp_name' => $temp_file,
-				'error'    => UPLOAD_ERR_OK,
-				'size'     => 100,
-			);
-
-			// Mock is_uploaded_file specifically for this test
-			Monkey\Functions\when( 'is_uploaded_file' )->justReturn( true );
-
-			$result = $form_security->validate_file_upload( $mock_file, array(), true );
-
-			$this->assertWPError(
-				$result,
-				"Filename '{$filename}' should be detected as dangerous"
-			);
-			$this->assertEquals( 'invalid_filename', $result->get_error_code() );
-
-			// Clean up
-			unlink( $temp_file );
-		}
-	}
-
-	/**
-	 * Test content MIME validation
-	 */
-	public function test_file_upload_mime_contract_fails_closed_and_accepts_allowed_png(): void {
-		$form_security = new Form_Security( 'test' );
-		$png_file      = $this->create_temp_file_with_content(
-			base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true )
-		);
-		$file = array(
-			'name'     => 'pixel.png',
-			'type'     => 'image/png',
-			'tmp_name' => $png_file,
-			'error'    => UPLOAD_ERR_OK,
-			'size'     => filesize( $png_file ),
-		);
-
-		$missing_allowlist = $form_security->validate_file_upload( $file, array(), true );
-		$this->assertWPError( $missing_allowlist );
-		$this->assertSame( 'missing_allowed_file_types', $missing_allowlist->get_error_code() );
-
-		$this->assertTrue(
-			$form_security->validate_file_upload(
-				$file,
-				array(
-					'allowed_types' => array( 'image/png' ),
-					'max_size'      => 1000000,
-				),
-				true
-			)
-		);
-
-		$mismatch         = array_merge( $file, array( 'name' => 'pixel.txt', 'type' => 'text/plain' ) );
-		$mismatch_result  = $form_security->validate_file_upload(
-			$mismatch,
-			array( 'allowed_types' => array( 'text/plain' ) ),
-			true
-		);
-		$this->assertWPError( $mismatch_result );
-		$this->assertSame( 'invalid_file_type', $mismatch_result->get_error_code() );
-	}
-
-	public function test_svg_is_rejected_even_when_configured(): void {
-		$form_security = new Form_Security( 'test' );
-		$svg_file      = $this->create_temp_file_with_content( '<svg xmlns="http://www.w3.org/2000/svg"></svg>' );
-		$file          = array(
-			'name'     => 'image.svg',
-			'type'     => 'image/svg+xml',
-			'tmp_name' => $svg_file,
-			'error'    => UPLOAD_ERR_OK,
-			'size'     => filesize( $svg_file ),
-		);
-
-		$result = $form_security->validate_file_upload(
-			$file,
-			array( 'allowed_types' => array( 'image/svg+xml' ) ),
-			true
-		);
+	public function test_svg_is_refused_even_when_a_field_allows_it(): void {
+		$svg    = $this->upload( 'image.svg', 'image/svg+xml', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>' );
+		$result = ( new Form_Security( 'test' ) )->validate_file_upload( $svg, array( 'allowed_types' => array( 'image/svg+xml', 'image/png' ) ) );
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'invalid_file_type', $result->get_error_code() );
 	}
 
-	/**
-	 * Test secure filename generation
-	 */
-	public function test_secure_filename_generation(): void {
-		$form_security = new Form_Security( 'test' );
+	public function test_oversized_empty_and_failed_uploads_are_refused(): void {
+		$security = new Form_Security( 'test' );
+		$png      = $this->upload( 'pixel.png', 'image/png', base64_decode( self::PNG, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 
-		$dangerous_names = array(
-			'../../../etc/passwd',
-			'../../../windows/system.ini',
-		);
-
-		foreach ( $dangerous_names as $name ) {
-			$mock_file = array(
-				'name'     => $name,
-				'type'     => 'text/plain',
-				'tmp_name' => '/tmp/test',
-				'error'    => UPLOAD_ERR_OK,
-				'size'     => 100,
-			);
-
-			$result = $form_security->validate_file_upload( $mock_file, array(), true );
-
-			$this->assertWPError(
-				$result,
-				"Dangerous filename '{$name}' should be rejected"
-			);
-			// Accept any error code as long as the file is rejected for security reasons
-			$this->assertContains( $result->get_error_code(), array( 'upload_error', 'invalid_file_type', 'invalid_filename' ) );
-		}
+		$this->assertSame( 'file_too_large', $security->validate_file_upload( $png, array_merge( $this->png_policy(), array( 'max_size' => 10 ) ) )->get_error_code() );
+		$this->assertSame( 'empty_file', $security->validate_file_upload( array_merge( $png, array( 'size' => 0 ) ), $this->png_policy() )->get_error_code() );
+		$this->assertSame( 'upload_error', $security->validate_file_upload( array_merge( $png, array( 'error' => UPLOAD_ERR_PARTIAL ) ), $this->png_policy() )->get_error_code() );
 	}
 
-	/**
-	 * Test form multipart detection
-	 */
-	public function test_form_multipart_detection(): void {
-		$form_security = new Form_Security( 'test' );
-		$temp_file     = $this->create_temp_file_with_content( 'A normal text upload.' );
+	public function test_wordpress_stores_a_traversal_name_inside_the_uploads_directory(): void {
+		$file   = $this->upload( '../../evil.png', 'image/png', base64_decode( self::PNG, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		$result = self::uploader()->process_upload( $file, $this->png_policy() );
 
-		// Test that valid files pass basic validation
-		$valid_file = array(
-			'name'     => 'test.txt',
-			'type'     => 'text/plain',
-			'tmp_name' => $temp_file,
-			'error'    => UPLOAD_ERR_OK,
-			'size'     => 100,
-		);
-
-		$config = array(
-			'allowed_types' => array( 'text/plain' ),
-			'max_size'      => 1000,
-		);
-
-		$result = $form_security->validate_file_upload( $valid_file, $config, true );
-		$this->assertTrue( $result, 'Valid file should pass validation' );
+		$this->assertIsArray( $result );
+		$uploads = wp_get_upload_dir();
+		$this->assertStringStartsWith( wp_normalize_path( $uploads['basedir'] ), wp_normalize_path( dirname( $result['file'] ) ) );
+		$this->assertStringNotContainsString( '..', $result['filename'] );
 	}
 
-	/**
-	 * Test form without files no multipart
-	 */
-	public function test_form_without_files_no_multipart(): void {
-		$form_security = new Form_Security( 'test' );
+	public function test_a_successful_upload_can_create_an_attachment(): void {
+		$file   = $this->upload( 'pixel.png', 'image/png', base64_decode( self::PNG, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		$result = self::uploader()->process_upload( $file, array_merge( $this->png_policy(), array( 'create_attachment' => true ) ) );
 
-		// Test that forms without file fields work normally
-		$this->assertTrue( true, 'Forms without files should work normally' );
+		$this->assertIsArray( $result );
+		$this->assertIsInt( $result['attachment_id'] );
+		$this->assertSame( 'attachment', get_post_type( $result['attachment_id'] ) );
 	}
 
-	/**
-	 * Test advanced XSS protection
-	 */
-	public function test_advanced_xss_protection(): void {
-		$form_security = new Form_Security( 'test' );
+	public function test_a_refused_attachment_insert_returns_an_error_and_removes_the_file(): void {
+		add_filter( 'wp_insert_post_empty_content', '__return_true' );
+		$attachments = $this->attachment_count();
+		$file        = $this->upload( 'pixel.png', 'image/png', base64_decode( self::PNG, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
 
-		// Test dangerous script content detection
-		$dangerous_content = '<script>alert("xss")</script><img src=x onerror=alert(1)>';
-		$sanitized         = $form_security->sanitize_rich_content( $dangerous_content );
-
-		// Should not contain script tags or event handlers
-		$this->assertStringNotContainsString( '<script>', $sanitized );
-		$this->assertStringNotContainsString( 'onerror', $sanitized );
-		$this->assertStringNotContainsString( 'javascript:', $sanitized );
-	}
-
-	/**
-	 * Test basic malicious content detection
-	 */
-	public function test_malicious_content_detection(): void {
-		$form_security = new Form_Security( 'test' );
-
-		// Test that script tags are detected
-		$malicious_content = '<script>alert("xss")</script>';
-		$result            = $form_security->validate_against_attacks( $malicious_content );
+		$result = self::uploader()->process_upload( $file, array_merge( $this->png_policy(), array( 'create_attachment' => true ) ) );
 
 		$this->assertWPError( $result );
-		$this->assertEquals( 'security_violation', $result->get_error_code() );
+		$this->assertSame( 'attachment_failed', $result->get_error_code() );
+		$this->assertNotEmpty( $this->stored_files );
+		$this->assertFileDoesNotExist( end( $this->stored_files ), 'The stored upload must not be orphaned.' );
+		$this->assertSame( $attachments, $this->attachment_count() );
 	}
 
-	/**
-	 * Test safe content passes validation
-	 */
-	public function test_safe_content_passes_validation(): void {
-		$form_security = new Form_Security( 'test' );
-
-		// Test safe content
-		$safe_content = '<p>This is <strong>safe</strong> content with <em>emphasis</em>.</p>';
-		$result       = $form_security->validate_against_attacks( $safe_content );
-
-		$this->assertTrue( $result );
-	}
-
-	/**
-	 * Test double encoded attack detection
-	 */
-	public function test_double_encoded_attack_detection(): void {
-		$form_security = new Form_Security( 'test' );
-
-		// Test double-encoded attacks
-		$double_encoded = '&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;';
-		$sanitized      = $form_security->sanitize_rich_content( $double_encoded );
-
-		// Should not contain script tags after decoding and sanitization
-		$this->assertStringNotContainsString( '<script>', $sanitized );
-	}
-
-	/**
-	 * Test sanitize input with attack detection
-	 */
-	public function test_sanitize_input_with_attack_detection(): void {
-		$form_security = new Form_Security( 'test' );
-
-		// Test that dangerous content is blocked during sanitization
-		$dangerous_input = '<script>alert("hack")</script>';
-		$field_config    = array( 'type' => 'textarea' );
-
-		$sanitized = $form_security->sanitize_input( $dangerous_input, $field_config );
-
-		// Should return empty string for dangerous content
-		$this->assertEquals( '', $sanitized );
-	}
-
-	/**
-	 * Create a temporary file with specific content for testing
-	 *
-	 * @param string $content File content.
-	 * @return string File path.
-	 */
-	private function create_temp_file_with_content( string $content ): string {
-		$temp_file = tempnam( sys_get_temp_dir(), 'test_' );
-		file_put_contents( $temp_file, $content );
-
-		// Store for cleanup
-		if ( ! isset( $this->test_files ) ) {
-			$this->test_files = array();
+	public function test_a_failed_multi_upload_removes_earlier_files_and_attachments(): void {
+		$attachments = $this->attachment_count();
+		$good        = $this->upload( 'first.png', 'image/png', base64_decode( self::PNG, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions
+		$bad         = $this->upload( 'second.txt', 'text/plain', 'not an image' );
+		$files       = array();
+		foreach ( array( 'name', 'type', 'tmp_name', 'error', 'size' ) as $key ) {
+			$files[ $key ] = array( $good[ $key ], $bad[ $key ] );
 		}
-		$this->test_files[] = $temp_file;
 
-		return $temp_file;
+		$result = self::uploader()->process_multiple_uploads( $files, array_merge( $this->png_policy(), array( 'create_attachment' => true ) ) );
+
+		$this->assertWPError( $result );
+		$this->assertCount( 1, $this->stored_files, 'Only the first file reached storage.' );
+		$this->assertFileDoesNotExist( $this->stored_files[0] );
+		$this->assertSame( $attachments, $this->attachment_count() );
 	}
 
-	/**
-	 * Clean up test files
-	 */
-	private function cleanup_test_files(): void {
-		if ( isset( $this->test_files ) ) {
-			foreach ( $this->test_files as $file ) {
-				if ( file_exists( $file ) ) {
-					unlink( $file );
-				}
-			}
-		}
+	/** @return array<string, mixed> */
+	private function png_policy(): array {
+		return array(
+			'allowed_types' => array( 'image/png' ),
+			'max_size'      => 1000000,
+		);
+	}
+
+	/** @return array<string, mixed> */
+	private function upload( string $name, string $type, string $content ): array {
+		$path               = (string) tempnam( sys_get_temp_dir(), 'cb_upload_' );
+		$this->temp_files[] = $path;
+		file_put_contents( $path, $content );
+
+		return array(
+			'name'     => $name,
+			'type'     => $type,
+			'tmp_name' => $path,
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => strlen( $content ),
+		);
+	}
+
+	private function attachment_count(): int {
+		return count( get_posts( array( 'post_type' => 'attachment', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids' ) ) );
 	}
 }

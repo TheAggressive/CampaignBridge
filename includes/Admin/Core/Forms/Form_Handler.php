@@ -191,7 +191,7 @@ class Form_Handler {
 	 *
 	 * @return bool True if security checks pass.
 	 */
-	private function verify_security(): bool { // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Security verification is handled by Form_Security with proper sanitization.
+	private function verify_security(): bool {
 		if ( ! $this->security->verify_request() ) {
 			$this->notice_handler->trigger_error(
 				$this->config,
@@ -349,26 +349,19 @@ class Form_Handler {
 	}
 
 	/**
-	 * Get raw form data from superglobals
+	 * Get the submitted form values.
 	 *
-	 * @return array<string, mixed> Raw form data.
+	 * Form_Security::verify_request() admits only POST, so values are read
+	 * from $_POST alone.
 	 *
-	 * @phpcs:disable CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput
+	 * @return array<string, mixed> Raw form data, sanitized per field afterwards.
 	 */
 	private function get_raw_form_data(): array {
-		$method  = strtoupper( $this->config->get( 'method', 'POST' ) );
 		$form_id = $this->config->get( 'form_id', 'form' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified in handle_submission(); each configured field is sanitized in sanitize_field_value().
+		$raw_data = \wp_unslash( $_POST[ $form_id ] ?? array() );
 
-		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce already verified in handle_submission(), data sanitized per field via sanitize_field_value().
-		if ( 'POST' === $method ) {
-			$raw_data = \wp_unslash( $_POST[ $form_id ] ?? array() );
-			return $raw_data; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing, CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Data sanitized per field in sanitize_field_value(), nonce verified in handle_submission().
-		} elseif ( 'GET' === $method ) {
-			$raw_data = \wp_unslash( $_GET[ $form_id ] ?? array() );
-			return $raw_data; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing, CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Data sanitized per field in sanitize_field_value(), nonce verified in handle_submission().
-		}
-
-		return array();
+		return is_array( $raw_data ) ? $raw_data : array();
 	}
 
 	/**
@@ -380,7 +373,7 @@ class Form_Handler {
 	private function process_raw_form_data( array $form_data ): array {
 		$data = array();
 
-		foreach ( $this->fields as $field_id => $field_config ) { // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.UnsanitizedInput -- Form data already sanitized per field in sanitize_field_value().
+		foreach ( $this->fields as $field_id => $field_config ) {
 			$value = $form_data[ $field_id ] ?? null;
 
 			if ( $this->is_file_field( $field_config ) ) {
@@ -460,7 +453,6 @@ class Form_Handler {
 	 * @return mixed Processed file data or null.
 	 */
 	private function process_file_upload( string $field_id, array $field_config ) {
-		// Security: This method should only be called after nonce verification in handle_submission().
 		if ( ! $this->is_submitted ) {
 			return null;
 		}
@@ -583,26 +575,18 @@ class Form_Handler {
 	private function sanitize_field_value( $value, array $field_config ) {
 		$type = $field_config['type'] ?? 'text';
 
-		// Handle encrypted fields specially (encryption is done here).
+		// Plaintext secrets are encrypted before anything else sees them;
+		// a value that is already an envelope is kept as submitted.
 		if ( 'encrypted' === $type ) {
-			// Encrypt sensitive data before saving to database.
 			if ( ! empty( $value ) && ! \CampaignBridge\Core\Encryption::is_encrypted_value( $value ) ) {
-				// Security: Reject oversized input to prevent DoS.
+				// Credentials are short; refuse to encrypt unbounded input.
 				if ( strlen( $value ) > 1000 ) {
-					\CampaignBridge\Core\Error_Handler::warning(
-						'Encrypted field input too large',
-						array(
-							'field'        => array_keys( $field_config ),
-							'input_length' => strlen( $value ),
-						)
-					);
 					return '';
 				}
 
 				try {
 					return \CampaignBridge\Core\Encryption::encrypt( $value );
 				} catch ( \RuntimeException $e ) {
-					// Log error but don't expose details to user.
 					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 						\CampaignBridge\Core\Error_Handler::error(
 							'Failed to encrypt form field',
@@ -615,8 +599,7 @@ class Form_Handler {
 			return $value;
 		}
 
-		// Use unified Field_Sanitizer for all other field types.
-		return \CampaignBridge\Admin\Core\Forms\Field_Sanitizer::sanitize( $value, $field_config );
+		return Field_Sanitizer::sanitize( $value, $field_config );
 	}
 
 	/**
@@ -651,7 +634,7 @@ class Form_Handler {
 	private function save_to_options( array $data ): bool {
 		foreach ( $data as $field_id => $value ) {
 			$option_key = $this->config->get( 'prefix', '' ) . $field_id . $this->config->get( 'suffix', '' );
-			\CampaignBridge\Core\Storage::update_option( $option_key, $value ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification
+			\CampaignBridge\Core\Storage::update_option( $option_key, $value );
 
 			// Clear cache for this specific option.
 			\CampaignBridge\Core\Storage::wp_cache_delete( $option_key, 'options' );
@@ -684,7 +667,7 @@ class Form_Handler {
 
 		// For Settings API, we save the entire data array as one option.
 		// This mimics how WordPress Settings API typically works.
-		$result = \CampaignBridge\Core\Storage::update_option( $settings_group, $data ); // phpcs:ignore CampaignBridge.Standard.Sniffs.Security.SecurityValidation.MissingNonceVerification -- Nonce verification handled at form submission level.
+		$result = \CampaignBridge\Core\Storage::update_option( $settings_group, $data );
 
 		// Clear cache for this settings group.
 		\CampaignBridge\Core\Storage::wp_cache_delete( $settings_group, 'options' );

@@ -11,7 +11,6 @@
 namespace CampaignBridge\Admin\Core\Forms;
 
 use CampaignBridge\Admin\Core\Forms\Validation_Messages;
-use CampaignBridge\Admin\Core\Forms\Field_Sanitizer;
 
 /**
  * Form Validator - Centralized validation logic
@@ -664,16 +663,5 @@ class Form_Validator {
 	private function is_valid_date( string $date ): bool {
 		$timestamp = strtotime( $date );
 		return false !== $timestamp && gmdate( 'Y-m-d', $timestamp ) === $date;
-	}
-
-	/**
-	 * Sanitize field value based on type
-	 *
-	 * @param mixed                $value       Raw value.
-	 * @param array<string, mixed> $field_config Field configuration.
-	 * @return mixed Sanitized value.
-	 */
-	public function sanitize_value( $value, array $field_config ) {
-		return Field_Sanitizer::sanitize( $value, $field_config );
 	}
 }

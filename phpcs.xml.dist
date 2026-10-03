@@ -13,14 +13,6 @@
 
   <!-- Custom CampaignBridge rules -->
 
-  <rule ref="./phpcs/CampaignBridge/Sniffs/Hooks/HookUsageSniff.php">
-    <severity>warning</severity>
-  </rule>
-
-  <rule ref="./phpcs/CampaignBridge/Sniffs/Security/SecurityValidationSniff.php">
-    <severity>warning</severity>
-  </rule>
-
   <rule ref="./phpcs/CampaignBridge/Sniffs/Database/DatabaseOperationSniff.php">
     <severity>error</severity>
   </rule>
