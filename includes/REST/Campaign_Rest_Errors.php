@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\REST;
 
-use CampaignBridge\Workflow\Campaign\Campaign_Draft_Result;
+use CampaignBridge\Workflow\Campaign\Campaign_Remote_Result;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Result;
 use WP_Error;
@@ -43,13 +43,14 @@ final class Campaign_Rest_Errors {
 	}
 
 	/**
-	 * Convert a failed draft handoff into the same public envelope.
+	 * Convert a failed remote operation (draft handoff, test send) into the
+	 * same public envelope.
 	 *
 	 * After a partial or ambiguous provider outcome the envelope also reports
 	 * what already exists: the remote reference and the attempt, plus the
 	 * normalized provider error. Raw provider detail is never included.
 	 */
-	public static function from_draft( Campaign_Draft_Result $result ): WP_Error {
+	public static function from_remote( Campaign_Remote_Result $result ): WP_Error {
 		$error = $result->error();
 		if ( null === $error ) {
 			return self::unexpected();
@@ -112,6 +113,7 @@ final class Campaign_Rest_Errors {
 			Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT,
 			Campaign_Workflow_Error::RECONCILIATION_REQUIRED => Rest_Constants::HTTP_CONFLICT,
 			Campaign_Workflow_Error::PROVIDER_FAILED => Rest_Constants::HTTP_BAD_GATEWAY,
+			Campaign_Workflow_Error::RATE_LIMITED => Rest_Constants::HTTP_TOO_MANY_REQUESTS,
 			default => Rest_Constants::HTTP_INTERNAL_SERVER_ERROR,
 		};
 	}

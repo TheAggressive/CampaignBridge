@@ -47,19 +47,9 @@ final class Draft_Outcome {
 		return new self( self::CONTENT_PENDING, Discovery_Values::remote_id( $remote_id, 'Remote draft ID' ), $error );
 	}
 
-	/**
-	 * Classify a failed create by what the error proves.
-	 *
-	 * A refusal the provider reported before creating anything is definite.
-	 * Transport loss, timeouts, server errors, and unreadable responses may
-	 * follow a successful create, so they are ambiguous.
-	 */
+	/** Classify a failed create by what the error proves. */
 	public static function from_create_error( Provider_Error $error ): self {
-		$ambiguous = in_array(
-			$error->category(),
-			array( Provider_Error_Category::TIMEOUT, Provider_Error_Category::NETWORK, Provider_Error_Category::PROVIDER_ERROR, Provider_Error_Category::UNKNOWN ),
-			true
-		);
+		$ambiguous = Provider_Error_Category::may_have_applied( $error->category() );
 
 		return new self( $ambiguous ? self::AMBIGUOUS : self::FAILED, null, $error );
 	}

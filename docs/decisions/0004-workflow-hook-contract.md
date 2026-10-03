@@ -114,6 +114,7 @@ Each workflow operation requires a specific capability from
 | `submit_for_review` | `campaignbridge_create_campaigns` |
 | `approve` | `campaignbridge_send_campaigns` |
 | `create_provider_draft` | `campaignbridge_send_campaigns` |
+| `send_test` | `campaignbridge_test_campaigns` |
 | `schedule` | `campaignbridge_send_campaigns` |
 | `send` | `campaignbridge_send_campaigns` |
 | `cancel` | `campaignbridge_send_campaigns` |

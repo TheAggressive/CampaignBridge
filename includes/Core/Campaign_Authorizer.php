@@ -24,7 +24,8 @@ final class Campaign_Authorizer implements Campaign_Template_Authority {
 			$user_id,
 			user_can( $user_id, Capabilities::CREATE_CAMPAIGNS ),
 			user_can( $user_id, Capabilities::MANAGE ),
-			user_can( $user_id, Capabilities::SEND_CAMPAIGNS )
+			user_can( $user_id, Capabilities::SEND_CAMPAIGNS ),
+			user_can( $user_id, Capabilities::TEST_CAMPAIGNS )
 		);
 	}
 

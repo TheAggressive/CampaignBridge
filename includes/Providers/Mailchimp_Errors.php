@@ -50,6 +50,21 @@ final class Mailchimp_Errors {
 		return self::for_category( self::category_for_status( $status ) );
 	}
 
+	/**
+	 * Normalize a 400 refusal of a valid, authenticated request.
+	 *
+	 * Mailchimp answers bad test addresses and exhausted test-email quotas
+	 * with 400; that is not a credential problem.
+	 */
+	public static function request_rejected(): Provider_Error {
+		return Provider_Error::from_category(
+			Provider_Error_Category::VALIDATION,
+			'mailchimp_request_rejected',
+			__( 'Mailchimp rejected the request. Check the addresses and the account\'s test-email limit.', 'campaignbridge' ),
+			self::PROVIDER
+		);
+	}
+
 	/** Normalize a success status whose body could not be understood. */
 	public static function unexpected_response(): Provider_Error {
 		return self::for_category( Provider_Error_Category::UNKNOWN );

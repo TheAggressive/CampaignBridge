@@ -32,6 +32,9 @@ final class Campaign_Workflow_Error {
 	/** The provider definitely refused or could not complete the operation. */
 	public const PROVIDER_FAILED = 'provider_failed';
 
+	/** A durable per-campaign operation quota is exhausted. */
+	public const RATE_LIMITED = 'rate_limited';
+
 	public function __construct(
 		private readonly string $code,
 		private readonly string $message
@@ -64,6 +67,7 @@ final class Campaign_Workflow_Error {
 			self::IDEMPOTENCY_CONFLICT,
 			self::RECONCILIATION_REQUIRED,
 			self::PROVIDER_FAILED,
+			self::RATE_LIMITED,
 		);
 	}
 }

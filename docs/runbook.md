@@ -35,6 +35,24 @@ idempotency key is sent.
 4. Automated reconciliation is tracked in #80. Until it ships, resolving the
    attempt requires a developer to update the attempt record.
 
+### Test send returned `reconciliation_required`
+
+The provider did not confirm whether a test was delivered. CampaignBridge
+will not resend it with the same idempotency key.
+
+1. Do not retry with the same key. Note the `attempt.id` from the error
+   response.
+2. Check the test inboxes. If the test arrived, nothing more is needed.
+3. If it did not arrive, send another test with a new key. Unconfirmed tests
+   do not block further tests.
+
+### Test send returned `rate_limited`
+
+The campaign has sent 10 tests in the last 24 hours. The quota is per
+campaign and rolling, so it frees up as the earliest tests age out. A `502
+provider_failed` with `mailchimp_request_rejected` is different: Mailchimp
+refused the addresses or its own account test-email limit was reached.
+
 ## Release procedure
 
 1. Run the complete quality pipeline.

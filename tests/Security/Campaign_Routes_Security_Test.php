@@ -71,12 +71,16 @@ final class Campaign_Routes_Security_Test extends Test_Case {
 				continue;
 			}
 			foreach ( $endpoints as $endpoint ) {
-				$expected = str_ends_with( $route, '/approve' ) || str_ends_with( $route, '/provider-draft' ) ? 'can_approve_campaigns' : 'can_access_campaigns';
+				$expected = match ( true ) {
+					str_ends_with( $route, '/approve' ), str_ends_with( $route, '/provider-draft' ) => 'can_approve_campaigns',
+					str_ends_with( $route, '/test-send' ) => 'can_test_campaigns',
+					default => 'can_access_campaigns',
+				};
 				self::assertSame( array( Campaign_Routes::class, $expected ), $endpoint['permission_callback'], $route );
 				++$guarded;
 			}
 		}
-		self::assertSame( 14, $guarded );
+		self::assertSame( 15, $guarded );
 
 		$campaign = $this->create_campaign()['id'];
 		wp_set_current_user( 0 );
@@ -148,6 +152,45 @@ final class Campaign_Routes_Security_Test extends Test_Case {
 		}
 		self::assertSame( 1, ( new Campaign_Repository() )->get( $campaign )?->version() );
 		self::assertCount( 1, ( new Campaign_Repository() )->for_owner( $owner ) );
+	}
+
+	public function test_test_send_requires_its_own_capability_and_campaign_authority_before_any_provider_call(): void {
+		$calls  = 0;
+		$filter = static function () use ( &$calls ): \WP_Error {
+			++$calls;
+			return new \WP_Error( 'unexpected_request', 'No provider call is expected.' );
+		};
+		add_filter( 'pre_http_request', $filter );
+		$owner    = $this->campaign_author();
+		$campaign = $this->create_campaign( $owner, array( 'provider' => 'mailchimp' ) )['id'];
+		$params   = array(
+			'recipients'      => array( 'qa@example.com' ),
+			'idempotency_key' => 'security-test',
+		);
+
+		wp_set_current_user( 0 );
+		self::assertSame( 401, $this->request( 'POST', self::COLLECTION . "/{$campaign}/test-send", $params )->get_status() );
+
+		// Approval and production send authority do not grant test sends.
+		get_userdata( $owner )->add_cap( Capabilities::SEND_CAMPAIGNS );
+		wp_set_current_user( $owner );
+		$refused = $this->request( 'POST', self::COLLECTION . "/{$campaign}/test-send", $params );
+		self::assertSame( 403, $refused->get_status() );
+		self::assertSame( 'rest_forbidden', $refused->get_data()['code'] );
+		$this->assert_no_campaign_data( $refused, $campaign );
+
+		// The test capability alone does not reach another owner's campaign.
+		$intruder = $this->campaign_author();
+		get_userdata( $intruder )->add_cap( Capabilities::TEST_CAMPAIGNS );
+		wp_set_current_user( $intruder );
+		$denied = $this->request( 'POST', self::COLLECTION . "/{$campaign}/test-send", $params );
+		self::assertSame( 403, $denied->get_status() );
+		self::assertSame( 'campaignbridge_campaign_forbidden', $denied->get_data()['code'] );
+		$this->assert_no_campaign_data( $denied, $campaign );
+
+		remove_filter( 'pre_http_request', $filter );
+		self::assertSame( 0, $calls );
+		self::assertSame( 'draft', ( new Campaign_Repository() )->get( $campaign )?->state() );
 	}
 
 	public function test_success_representations_exclude_credentials_and_persistence_internals(): void {

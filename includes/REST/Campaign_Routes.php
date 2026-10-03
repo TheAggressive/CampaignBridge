@@ -12,6 +12,7 @@ namespace CampaignBridge\REST;
 use CampaignBridge\Core\Campaign_Authorizer;
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Services\Campaign\Campaign_Draft_Handoff_Factory;
+use CampaignBridge\Services\Campaign\Campaign_Test_Delivery_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Workflow_Factory;
 use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 use CampaignBridge\Workflow\Campaign\Campaign_Actor;
@@ -124,6 +125,18 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		$this->register_action( '/archive', 'archive_campaign', array(), true );
 		$this->register_action( '/duplicate', 'duplicate_campaign', array( 'idempotency_key' => Campaign_Rest_Schema::idempotency_key() ), false, 'duplicate_result' );
 		$this->register_action( '/provider-draft', 'create_provider_draft', array( 'idempotency_key' => Campaign_Rest_Schema::idempotency_key() ), true, 'provider_draft_result', 'can_approve_campaigns' );
+		$this->register_action(
+			'/test-send',
+			'send_test',
+			array(
+				'recipients'      => Campaign_Rest_Schema::test_recipients(),
+				'format'          => Campaign_Rest_Schema::test_format(),
+				'idempotency_key' => Campaign_Rest_Schema::idempotency_key(),
+			),
+			false,
+			'test_send_result',
+			'can_test_campaigns'
+		);
 	}
 
 	/** A useful coarse gate; exact campaign/template authorization remains in the workflow. */
@@ -135,6 +148,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	/** Approval additionally requires the dedicated approval capability. */
 	public static function can_approve_campaigns(): bool {
 		return self::can_access_campaigns() && current_user_can( Capabilities::SEND_CAMPAIGNS );
+	}
+
+	/** Test sends require their own capability, separate from approval and send. */
+	public static function can_test_campaigns(): bool {
+		return self::can_access_campaigns() && current_user_can( Capabilities::TEST_CAMPAIGNS );
 	}
 
 	public function list_campaigns( WP_REST_Request $request ): WP_REST_Response|WP_Error {
@@ -375,7 +393,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		$campaign  = $result->campaign();
 		$reference = $result->reference();
 		if ( ! $result->is_success() || null === $campaign || null === $reference ) {
-			return Campaign_Rest_Errors::from_draft( $result );
+			return Campaign_Rest_Errors::from_remote( $result );
 		}
 
 		return $this->no_store(
@@ -387,6 +405,66 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 					'idempotent_replay' => $result->is_idempotent_replay(),
 				),
 				$result->is_idempotent_replay() ? 200 : Rest_Constants::HTTP_CREATED
+			)
+		);
+	}
+
+	/**
+	 * Send one test of the campaign's remote draft to named addresses.
+	 *
+	 * The provider comes from the campaign's own targeting. Credentials and
+	 * recipients are used for this one call and never returned or stored.
+	 * The campaign's state and version never change.
+	 */
+	public function send_test( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$limited = $this->rate_limit( 'campaign_test_send', self::EXPENSIVE_LIMIT );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
+		}
+
+		$actor  = $this->actor();
+		$loaded = $this->workflow->get( $actor, $this->campaign_id( $request ) );
+		if ( ! $loaded->is_success() || null === $loaded->campaign() ) {
+			return Campaign_Rest_Errors::from_result( $loaded );
+		}
+		$provider = $loaded->campaign()->provider();
+		$delivery = null === $provider ? null : Campaign_Test_Delivery_Factory::create( $provider );
+		if ( null === $provider || null === $delivery ) {
+			return new WP_Error(
+				'campaignbridge_campaign_invalid_input',
+				__( 'The campaign must target a provider that supports test sends.', 'campaignbridge' ),
+				array( 'status' => Rest_Constants::HTTP_BAD_REQUEST )
+			);
+		}
+
+		$recipients = $request->get_param( 'recipients' );
+		$settings   = Provider_Discovery_Factory::settings( $provider );
+		$result     = $delivery->send_test(
+			$actor,
+			$this->campaign_id( $request ),
+			is_array( $recipients ) ? $recipients : array(),
+			(string) $request->get_param( 'format' ),
+			(string) $request->get_param( 'idempotency_key' ),
+			$settings
+		);
+		unset( $settings, $recipients );
+
+		$campaign = $result->campaign();
+		$attempt  = $result->attempt();
+		if ( ! $result->is_success() || null === $campaign || null === $attempt ) {
+			return Campaign_Rest_Errors::from_remote( $result );
+		}
+
+		return $this->no_store(
+			new WP_REST_Response(
+				array(
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'remote'            => null === $result->reference() ? null : Campaign_Rest_Resource::remote( $result->reference() ),
+					'attempt'           => Campaign_Rest_Resource::attempt( $attempt ),
+					'test'              => Campaign_Rest_Resource::test( $result ),
+					'idempotent_replay' => $result->is_idempotent_replay(),
+				),
+				$result->is_idempotent_replay() ? 200 : Rest_Constants::HTTP_ACCEPTED
 			)
 		);
 	}

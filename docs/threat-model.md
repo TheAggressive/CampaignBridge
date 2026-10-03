@@ -18,6 +18,8 @@ CampaignBridge stores provider credentials and can create or send public email c
 | Key rotation destroys old ciphertext | Retired-key ring and envelope key IDs | `Encryption_Test::test_key_rotation` |
 | Wrong Mailchimp region | Data center parsed from validated key | `Mailchimp_Provider_Test` |
 | Duplicate campaign creation after 5xx | POST/PATCH retries disabled by default | `Http_Client_Retry_Test` |
+| Test send used to mail arbitrary addresses | Separate test capability, 1–5 recipients, per-user and durable per-campaign limits | `Campaign_Test_Delivery_Test`, `Campaign_Routes_Security_Test` |
+| Test recipients retained as personal data | Recipients used for one call; only counts recorded | `Campaign_Test_Delivery_Test` |
 | Spoofed client IP bypasses throttling | `REMOTE_ADDR` default, trusted filter opt-in | `Rate_Limiter_Test` |
 | Compromised moving Action tag | Full-SHA workflow pins | `bin/ci/check-action-pins.sh` |
 | Development files or secrets ship | Allowlist package and archive verification | `bin/release/verify-package.sh` |

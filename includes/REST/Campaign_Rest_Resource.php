@@ -15,6 +15,7 @@ use CampaignBridge\Domain\Campaign\Delivery_Attempt;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Email\Compile_Result;
 use CampaignBridge\Domain\Email\Token\Token_Preview;
+use CampaignBridge\Workflow\Campaign\Campaign_Test_Result;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -73,6 +74,27 @@ final class Campaign_Rest_Resource {
 			'id'           => $attempt->id(),
 			'status'       => $attempt->status(),
 			'retryability' => $attempt->retryability(),
+		);
+	}
+
+	/**
+	 * What a new test send tested; never its recipients. Null on replay,
+	 * because test requests are not stored.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	public static function test( Campaign_Test_Result $result ): ?array {
+		$snapshot = $result->snapshot();
+		$delivery = $result->delivery();
+		if ( null === $snapshot || null === $delivery ) {
+			return null;
+		}
+
+		return array(
+			'format'          => $delivery->format(),
+			'recipient_count' => $delivery->recipient_count(),
+			'snapshot_id'     => $snapshot->id(),
+			'fingerprint'     => $snapshot->artifact()->fingerprint(),
 		);
 	}
 

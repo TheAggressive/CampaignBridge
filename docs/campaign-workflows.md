@@ -118,7 +118,8 @@ credentials, or stack traces.
 Adapters resolve a `Campaign_Actor` before invocation. The WordPress adapter
 maps `campaignbridge_create_campaigns` to owned-campaign creation/editing,
 `campaignbridge_manage` to cross-owner management, and
-`campaignbridge_send_campaigns` to approval. Campaign authority and template
+`campaignbridge_send_campaigns` to approval and provider draft creation, and
+`campaignbridge_test_campaigns` to test sends. Campaign authority and template
 authority are independent: operations that introduce or read template content
 also require WordPress object authorization for that exact `cb_templates`
 post through `user_can( $actor_id, 'edit_post', $template_id )`. The mapped
@@ -189,10 +190,37 @@ Tokens are translated with the provider's `Token_Mapping`; the stored
 artifact is never altered. Audit events record identifiers, states, and
 normalized error categories, never content or provider payloads.
 
+## Test delivery
+
+`Campaign_Test_Delivery` sends one test of a campaign's existing remote draft
+through a `Provider_Test_Gateway`. It requires the test capability plus
+management of the campaign; approval authority does not grant it. A test
+never changes the campaign's state or version. Its protocol:
+
+1. **Test only the approved remote draft.** The campaign must be
+   `provider_draft` with a confirmed remote reference. The provider sends the
+   content it received from the approved snapshot at handoff; editor HTML is
+   never sent.
+2. **Bound the request first.** `Test_Delivery` accepts 1–5 normalized
+   addresses and a format. A durable quota of 10 `test_send` attempts per
+   campaign in a rolling 24 hours is counted from the attempt records, so it
+   holds across users and transport windows.
+3. **Never store recipients.** The attempt records the remote draft ID as its
+   correlation. The audit event records the remote ID, attempt ID, snapshot
+   ID and fingerprint, format, and recipient count. Neither records an
+   address.
+4. **Write-ahead, one send per key.** A `pending` `test_send` attempt is
+   stored before the provider call. A repeated idempotency key returns the
+   recorded outcome and never sends again.
+5. **Never retry an unconfirmed test.** An ambiguous result marks the attempt
+   `unknown` and returns `reconciliation_required` for that key. Unlike an
+   unconfirmed draft, it does not block tests with a new key, because a
+   duplicate test reaches only named test addresses.
+
 ## Deferred adapters and provider work
 
 The #75 REST adapter exposes these operations, plus bounded `get`/`list`
 reads, with schemas, pagination, permission callbacks, rate limits, and one
-error envelope. See [`api.md`](api.md#campaigns). Issues #78-#80 still own
-test delivery, schedule/send/cancel, and reconciliation. There is still no complete operator
+error envelope. See [`api.md`](api.md#campaigns). Issues #79-#80 still own
+schedule/send/cancel and reconciliation. There is still no complete operator
 campaign UI or end-to-end Mailchimp delivery flow.

@@ -58,11 +58,12 @@ final class Provider_Capabilities_Test extends WP_UnitTestCase {
 				Provider_Operation::DISCOVER_SEGMENTS,
 				Provider_Operation::DISCOVER_SENDERS,
 				Provider_Operation::CREATE_DRAFT,
+				Provider_Operation::SEND_TEST,
 			),
 			$capabilities->supported()
 		);
-		// A draft is reversible remote state; nothing that delivers mail is advertised.
-		foreach ( array( 'send_test', 'schedule', 'send', 'cancel', 'reconcile', 'reports' ) as $operation ) {
+		// Tests reach only named addresses; nothing that delivers to the audience is advertised.
+		foreach ( array( 'schedule', 'send', 'cancel', 'reconcile', 'reports' ) as $operation ) {
 			self::assertFalse( $capabilities->supports( $operation ), $operation );
 		}
 		self::assertSame( $capabilities->to_array(), ( new Mailchimp_Discovery() )->capabilities()->to_array() );
