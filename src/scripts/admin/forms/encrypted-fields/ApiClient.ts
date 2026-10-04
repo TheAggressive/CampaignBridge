@@ -231,15 +231,33 @@ export class ApiClient {
   /**
    * Show error to user
    */
-  showError(message: string): void {
-    // Use WordPress notices system for consistent admin experience
+  showError(message: string, field?: HTMLElement): void {
+    // Settings screens render no notices store, so show the error beside the field.
+    if (field) {
+      this.clearError(field);
+      const error = document.createElement('p');
+      error.className = 'campaignbridge-encrypted-field__error';
+      error.setAttribute('role', 'alert');
+      error.textContent = message;
+      field.appendChild(error);
+    }
+
+    // Editor screens also show it as a snackbar.
     dispatch(noticesStore).createNotice('error', message, {
       type: 'snackbar',
       isDismissible: true,
       explicitDismiss: true,
     });
 
-    // Also announce to screen readers
     this.accessibility.announceToScreenReader(`Error: ${message}`);
+  }
+
+  /**
+   * Remove a field's inline error
+   */
+  clearError(field: HTMLElement): void {
+    field
+      .querySelectorAll('.campaignbridge-encrypted-field__error')
+      .forEach(error => error.remove());
   }
 }

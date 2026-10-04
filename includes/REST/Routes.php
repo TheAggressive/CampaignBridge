@@ -402,6 +402,13 @@ class Routes extends Abstract_Rest_Controller {
 		try {
 			$context   = self::ENCRYPTED_FIELD_CONTRACTS[ $field_id ]['context'];
 			$decrypted = \CampaignBridge\Core\Encryption::decrypt_for_context( $encrypted_value, $context );
+			\CampaignBridge\Core\Error_Handler::info(
+				'Provider credential revealed',
+				array(
+					'field'   => $field_id,
+					'user_id' => get_current_user_id(),
+				)
+			);
 
 			return self::ensure_response(
 				array(

@@ -75,6 +75,12 @@ class Settings_Controller {
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in individual handler methods
+		$disconnect = isset( $_POST['disconnect_provider'] ) ? sanitize_key( wp_unslash( $_POST['disconnect_provider'] ) ) : '';
+		if ( '' !== $disconnect ) {
+			$this->handle_disconnect_provider( $disconnect );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in individual handler methods
 		$export_settings = isset( $_POST['export_settings'] ) ? sanitize_text_field( wp_unslash( $_POST['export_settings'] ) ) : '';
 		if ( ! empty( $export_settings ) ) {
 			$this->handle_export_settings();
@@ -326,6 +332,34 @@ class Settings_Controller {
 				array(
 					'page'  => 'campaignbridge-settings',
 					'reset' => 'success',
+				),
+				\admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Remove a stored provider connection, then return to the providers tab.
+	 *
+	 * @param string $provider Provider slug from the request.
+	 * @return void
+	 */
+	private function handle_disconnect_provider( string $provider ): void {
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_disconnect_' . $provider ) ) {
+			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ), '', array( 'response' => 403 ) );
+		}
+		if ( ! Provider_Disconnect_Handler::handle( $provider ) ) {
+			wp_die( esc_html__( 'The provider connection could not be removed.', 'campaignbridge' ), '', array( 'response' => 403 ) );
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'         => 'campaignbridge-settings',
+					'tab'          => 'providers',
+					'disconnected' => $provider,
 				),
 				\admin_url( 'admin.php' )
 			)

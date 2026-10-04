@@ -26,8 +26,11 @@ $campaignbridge_mailchimp_status    = $screen ? $screen->get( 'mailchimp_status'
 $campaignbridge_mailchimp_audiences = $screen ? $screen->get( 'mailchimp_audiences', array() ) : array();
 $campaignbridge_audience_error      = $screen ? $screen->get( 'mailchimp_audience_error', '' ) : '';
 $campaignbridge_is_mailchimp        = 'mailchimp' === $campaignbridge_provider;
-$campaignbridge_templates_url       = admin_url( 'edit.php?post_type=cb_templates' );
-$campaignbridge_audience_options    = is_array( $campaignbridge_mailchimp_audiences ) ? $campaignbridge_mailchimp_audiences : array();
+$campaignbridge_can_disconnect      = null !== $cb_conn && current_user_can( \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS );
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display-only flag set by the disconnect redirect.
+$campaignbridge_disconnected     = isset( $_GET['disconnected'] ) && 'mailchimp' === sanitize_key( wp_unslash( $_GET['disconnected'] ) );
+$campaignbridge_templates_url    = admin_url( 'edit.php?post_type=cb_templates' );
+$campaignbridge_audience_options = is_array( $campaignbridge_mailchimp_audiences ) ? $campaignbridge_mailchimp_audiences : array();
 if ( '' !== $campaignbridge_mailchimp_audience && ! isset( $campaignbridge_audience_options[ $campaignbridge_mailchimp_audience ] ) ) {
 	$campaignbridge_audience_options[ $campaignbridge_mailchimp_audience ] = __( 'Current audience (temporarily unavailable)', 'campaignbridge' );
 }
@@ -50,6 +53,8 @@ $form = Form::make( 'providers' )
 		->description( __( 'Choose how CampaignBridge prepares your email templates for delivery.', 'campaignbridge' ) )
 		->required()
 	->encrypted( 'mailchimp_api_key', __( 'Mailchimp API key', 'campaignbridge' ) )
+		// The custom save handler owns storage, so the form cannot load the key itself.
+		->default( $campaignbridge_mailchimp_api_key )
 		->context( 'api_key' )
 		->validation( 'min_length', 10 )
 		->description( __( 'Create or copy a key from your Mailchimp account settings. Existing saved keys remain encrypted.', 'campaignbridge' ) )
@@ -105,9 +110,20 @@ $form = Form::make( 'providers' )
 					<div data-mailchimp-field <?php echo $campaignbridge_is_mailchimp ? '' : 'hidden'; ?>><?php $form->render_field( 'mailchimp_audience' ); ?></div>
 				<?php endif; ?>
 			</div>
-			<footer class="cb-admin-card__footer campaignbridge-providers__save"><span><?php esc_html_e( 'Connection details are encrypted before storage.', 'campaignbridge' ); ?></span><?php $form->render_submit(); ?></footer>
+			<footer class="cb-admin-card__footer campaignbridge-providers__save"><?php $form->render_submit(); ?></footer>
 			<?php $form->form_end(); ?>
 		</section>
+
+		<?php if ( $campaignbridge_disconnected ) : ?>
+			<div class="notice notice-success" role="status"><p><?php esc_html_e( 'Mailchimp was disconnected and its API key was removed from this site.', 'campaignbridge' ); ?></p></div>
+		<?php endif; ?>
+
+		<?php if ( $campaignbridge_can_disconnect ) : ?>
+			<section class="cb-admin-notice cb-admin-notice--error campaignbridge-providers__disconnect" aria-labelledby="campaignbridge-disconnect-title">
+				<div><span class="dashicons dashicons-dismiss"></span><span><strong id="campaignbridge-disconnect-title"><?php esc_html_e( 'Disconnect Mailchimp', 'campaignbridge' ); ?></strong><small><?php esc_html_e( 'Removes the stored API key from this site. Campaigns already scheduled in Mailchimp still send, and CampaignBridge cannot unschedule or reconcile them until you reconnect. To revoke the key itself, delete it in Mailchimp.', 'campaignbridge' ); ?></small></span></div>
+				<form method="post" data-confirm="<?php echo esc_attr__( 'Disconnect Mailchimp? The stored API key will be removed from this site.', 'campaignbridge' ); ?>"><?php wp_nonce_field( 'campaignbridge_disconnect_mailchimp' ); ?><button class="button button-destructive" type="submit" name="disconnect_provider" value="mailchimp"><span class="dashicons dashicons-dismiss"></span><?php esc_html_e( 'Disconnect', 'campaignbridge' ); ?></button></form>
+			</section>
+		<?php endif; ?>
 
 		<section class="cb-admin-card campaignbridge-providers__html" aria-labelledby="campaignbridge-html-provider-title">
 			<div class="campaignbridge-providers__html-mark" aria-hidden="true">&lt;/&gt;</div>

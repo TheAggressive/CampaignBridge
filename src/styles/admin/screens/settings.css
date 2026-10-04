@@ -786,6 +786,57 @@
     }
   }
 
+  /* Matches the General tab's reset box: stacked text, action on the right. */
+  &__disconnect {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px 24px;
+    padding: 14px 17px;
+    border: 1px solid #f6b5b5;
+    border-radius: 8px;
+    background: #fff;
+  }
+  &__disconnect > div {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+  &__disconnect > div > .dashicons {
+    color: #c52222;
+    margin-top: 1px;
+  }
+  &__disconnect strong,
+  &__disconnect small {
+    display: block;
+  }
+  &__disconnect strong {
+    color: #b42318;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  &__disconnect small {
+    max-width: 68ch;
+    margin-top: 4px;
+    color: #7b5960;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  &__disconnect form {
+    flex-shrink: 0;
+    margin: 0;
+  }
+  &__disconnect .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #d62626;
+    border-color: #e65353;
+  }
+
   &__fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -825,13 +876,7 @@
   &__save {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-
-    > span {
-      color: var(--cb-muted);
-      font-size: 11px;
-    }
+    justify-content: flex-end;
 
     .submit {
       margin: 0;

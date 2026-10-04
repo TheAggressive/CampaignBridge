@@ -172,27 +172,29 @@ class Form_Field_Encrypted extends Form_Field_Input {
 	 * @return string HTML output.
 	 */
 	private function render_masked_field(): string {
-		return $this->render_masked_field_with_values( $this->get_value(), $this->get_value() );
+		return $this->render_masked_field_with_values( $this->get_value() );
 	}
 
 	/**
-	 * Render field with specific encrypted and display values
+	 * Render the masked display with reveal and edit controls.
 	 *
-	 * @param string $encrypted_value The actual encrypted value for the hidden input.
-	 * @param string $display_value   The value to show in the display input.
+	 * @param string $display_value The masked value to show.
 	 * @return string HTML output.
 	 */
-	private function render_masked_field_with_values( string $encrypted_value, string $display_value ): string {
+	private function render_masked_field_with_values( string $display_value ): string {
 		$attrs = $this->get_attributes();
 
 		// Create masked display.
 		$field_id   = $this->config['id'] ?? '';
 		$field_name = $this->config['name'] ?? '';
 
-		$html = '<div class="campaignbridge-encrypted-field" data-field-id="' . esc_attr( $field_id ) . '">';
+		// data-field-id is unique on the page; data-credential is the
+		// unscoped name the server's reveal/update allowlist recognizes.
+		$html = '<div class="campaignbridge-encrypted-field" data-field-id="' . esc_attr( $field_id ) . '" data-credential="' . esc_attr( (string) ( $this->config['key'] ?? '' ) ) . '">';
 
-		// Hidden input with actual encrypted value.
-		$html .= '<input type="hidden" name="' . esc_attr( $field_name ) . '" value="' . esc_attr( $encrypted_value ) . '" />';
+		// Submitted empty unless the value is replaced: the stored ciphertext
+		// never leaves the server, and an empty submission keeps it.
+		$html .= '<input type="hidden" name="' . esc_attr( $field_name ) . '" value="" />';
 
 		// Masked display input (readonly).
 		$display_attrs             = $attrs;
@@ -270,7 +272,7 @@ class Form_Field_Encrypted extends Form_Field_Input {
 			$masked    = $this->mask_value( $decrypted );
 
 			// Render masked field with proper encrypted/masked values.
-			return $this->render_masked_field_with_values( $value, $masked );
+			return $this->render_masked_field_with_values( $masked );
 
 		} catch ( \RuntimeException $e ) {
 			// Permission denied - show permission error.

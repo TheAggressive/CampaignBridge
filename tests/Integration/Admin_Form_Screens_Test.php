@@ -85,6 +85,69 @@ class Admin_Form_Screens_Test extends Test_Case {
 		$this->assertSame( 'mailchimp', get_option( 'campaignbridge_provider' ) );
 	}
 
+	public function test_provider_screen_shows_a_saved_key_masked_after_reload(): void {
+		$key = str_repeat( 'b', 28 ) . 'c0de-us1';
+		( new \CampaignBridge\Repository\Provider_Connection_Repository() )->save( \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', Encryption::encrypt( $key ), '' ) );
+		update_option( 'campaignbridge_provider', 'mailchimp' );
+		$_POST = array();
+
+		$html = $this->render_screen( 'providers' );
+
+		$this->assertStringContainsString( 'campaignbridge-encrypted-field', $html );
+		$this->assertMatchesRegularExpression( '/value="•+-us1"/u', $html, 'The saved key is shown masked, not as an empty field.' );
+		$this->assertStringNotContainsString( $key, $html );
+		$this->assertStringNotContainsString( 'cbenc:', $html, 'The stored ciphertext never reaches the page.' );
+		$this->assertStringContainsString( 'data-credential="mailchimp_api_key"', $html, 'Reveal and update name the credential the server allowlists.' );
+	}
+
+	public function test_a_connection_manager_can_disconnect_mailchimp(): void {
+		$this->store_mailchimp_key();
+
+		$html = $this->render_screen( 'providers' );
+		$this->assertStringContainsString( 'name="disconnect_provider" value="mailchimp"', $html );
+		$this->assertStringContainsString( 'data-confirm=', $html );
+
+		$this->assertTrue( \CampaignBridge\Admin\Controllers\Provider_Disconnect_Handler::handle( 'mailchimp' ) );
+		$this->assertNull( ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' ) );
+		$this->assertSame( 'html', get_option( 'campaignbridge_provider' ) );
+		$this->assertStringNotContainsString( 'name="disconnect_provider"', $this->render_screen( 'providers' ), 'Nothing is left to disconnect.' );
+	}
+
+	public function test_disconnecting_requires_the_connection_capability(): void {
+		$this->store_mailchimp_key();
+		$manager = self::factory()->user->create( array( 'role' => 'editor' ) );
+		get_userdata( $manager )->add_cap( \CampaignBridge\Core\Capabilities::MANAGE );
+		wp_set_current_user( $manager );
+
+		$this->assertStringNotContainsString( 'name="disconnect_provider"', $this->render_screen( 'providers' ) );
+		$this->assertFalse( \CampaignBridge\Admin\Controllers\Provider_Disconnect_Handler::handle( 'mailchimp' ) );
+		$this->assertFalse( \CampaignBridge\Admin\Controllers\Provider_Disconnect_Handler::handle( 'unknown' ) );
+		$this->assertNotNull( ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' ) );
+	}
+
+	public function test_a_disconnect_request_without_a_valid_nonce_is_refused(): void {
+		$this->store_mailchimp_key();
+		$_POST = array(
+			'disconnect_provider' => 'mailchimp',
+			'_wpnonce'            => wp_create_nonce( 'campaignbridge_reset_all' ),
+		);
+		// The constructor verifies the stored key with Mailchimp; only request handling is under test.
+		$controller = ( new \ReflectionClass( \CampaignBridge\Admin\Controllers\Settings_Controller::class ) )->newInstanceWithoutConstructor();
+
+		try {
+			$controller->handle_request();
+			$this->fail( 'A request without a valid nonce must be refused.' );
+		} catch ( \WPDieException ) {
+			$this->assertNotNull( ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' ) );
+		}
+	}
+
+	private function store_mailchimp_key(): void {
+		( new \CampaignBridge\Repository\Provider_Connection_Repository() )->save( \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', Encryption::encrypt( str_repeat( 'd', 32 ) . '-us1' ), '' ) );
+		update_option( 'campaignbridge_provider', 'mailchimp' );
+		$_POST = array();
+	}
+
 	public function test_policies_screen_saves_and_shows_the_effective_policy(): void {
 		$this->submit_policies( '1', "Example.com\nnot a domain" );
 		$html = $this->render_screen( 'policies' );
