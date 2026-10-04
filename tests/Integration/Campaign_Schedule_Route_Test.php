@@ -45,6 +45,9 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 	/** @var array<int, array{0: int, 1: string}> Scripted replies for campaign actions; empty means 204. */
 	private array $action_replies = array();
 
+	/** @var array<int, array{method: string, path: string, status: int, body: string}>|null Recorded Mailchimp exchanges to replay in order. */
+	private ?array $recorded = null;
+
 	/** Body Mailchimp returns when the campaign is read. */
 	private string $remote_status = '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{}}}';
 
@@ -75,6 +78,22 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 				'url'    => $url,
 				'body'   => is_string( $args['body'] ?? null ) ? $args['body'] : '',
 			);
+			if ( null !== $this->recorded ) {
+				$expected = array_shift( $this->recorded );
+				self::assertNotNull( $expected, 'CampaignBridge made a request the live recording does not contain: ' . $method . ' ' . $url );
+				self::assertSame( $expected['method'] . ' ' . $expected['path'], $method . ' ' . preg_replace( '#^https://[^/]+#', '', $url ), 'Requests follow the recorded live order.' );
+
+				return array(
+					'headers'  => array(),
+					'body'     => $expected['body'],
+					'response' => array(
+						'code'    => $expected['status'],
+						'message' => '',
+					),
+					'cookies'  => array(),
+					'filename' => null,
+				);
+			}
 			$reply            = match ( true ) {
 				str_contains( $url, '/actions/' ) => array_shift( $this->action_replies ) ?? array( 204, '' ),
 				str_contains( $url, '/campaigns/mc0042?fields=' ) => array( 200, $this->remote_status ),
@@ -140,10 +159,10 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertStringNotContainsString( self::api_key(), (string) wp_json_encode( $data ) );
 		self::assertSame(
 			array(
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 				'PATCH https://us20.api.mailchimp.com/3.0/campaigns/mc0042',
 				'PUT https://us20.api.mailchimp.com/3.0/campaigns/mc0042/content',
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 				'POST ' . self::ACTIONS . 'schedule',
 			),
 			array_map( static fn ( array $request ): string => $request['method'] . ' ' . $request['url'], array_slice( $this->requests, -5 ) ),
@@ -190,10 +209,10 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertStringNotContainsString( self::api_key(), (string) wp_json_encode( $sent->get_data() ) );
 		self::assertSame(
 			array(
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 				'PATCH https://us20.api.mailchimp.com/3.0/campaigns/mc0042',
 				'PUT https://us20.api.mailchimp.com/3.0/campaigns/mc0042/content',
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 				'POST ' . self::ACTIONS . 'send',
 			),
 			array_map( static fn ( array $request ): string => $request['method'] . ' ' . $request['url'], array_slice( $this->requests, -5 ) ),
@@ -222,6 +241,47 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 
 		self::assertSame( 409, $this->send( $campaign['id'], 7, 'abc123', 'rest-send-2' )->get_status() );
 		self::assertSame( $actions + 1, $this->action_count(), 'A 5xx on send is never retried, whatever key is sent.' );
+	}
+
+	public function test_the_recorded_live_mailchimp_schedule_cycle_replays_exactly(): void {
+		$campaign = $this->provider_draft_campaign();
+		$send_at  = self::send_at();
+		$fixture  = json_decode( (string) file_get_contents( dirname( __DIR__ ) . '/Fixtures/Mailchimp/schedule-cycle.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local test fixture.
+		$this->recorded = array_map(
+			static fn ( array $exchange ): array => array_merge( $exchange, array( 'body' => str_replace( '{{scheduled_for}}', str_replace( 'Z', '+00:00', $send_at ), $exchange['body'] ) ) ),
+			$fixture['exchanges']
+		);
+		$state          = fn ( WP_REST_Response $response ): array => array( $response->get_status(), $response->get_data()['campaign']['state'] ?? null, $response->get_data()['remote']['observed_state'] ?? null );
+
+		self::assertSame( array( 200, 'provider_draft', 'draft' ), $state( $this->request( 'POST', "/{$campaign['id']}/reconcile" ) ), 'Mailchimp reports the unscheduled campaign as paused; it is a draft.' );
+		$scheduled = $this->schedule( $campaign['id'], 6, $send_at, 'abc123', 'live-schedule' );
+		self::assertSame( array( 200, 'scheduled', 'scheduled' ), $state( $scheduled ) );
+		$reconciled = $this->request( 'POST', "/{$campaign['id']}/reconcile" );
+		self::assertSame( array( 200, 'scheduled', 'scheduled' ), $state( $reconciled ) );
+		self::assertSame( $send_at, $reconciled->get_data()['campaign']['scheduled_for'], 'Mailchimp send_time is the scheduled delivery time.' );
+		$unscheduled = $this->request(
+			'POST',
+			"/{$campaign['id']}/unschedule",
+			array(
+				'expected_version' => $reconciled->get_data()['campaign']['version'],
+				'idempotency_key'  => 'live-unschedule',
+			)
+		);
+		self::assertSame( array( 200, 'provider_draft', 'draft' ), $state( $unscheduled ) );
+		self::assertSame( array( 200, 'provider_draft', 'draft' ), $state( $this->request( 'POST', "/{$campaign['id']}/reconcile" ) ) );
+		self::assertSame( array(), $this->recorded, 'Every recorded exchange was used, in order.' );
+	}
+
+	public function test_the_recorded_live_mailchimp_send_replays_to_sent(): void {
+		$campaign       = $this->provider_draft_campaign();
+		$fixture        = json_decode( (string) file_get_contents( dirname( __DIR__ ) . '/Fixtures/Mailchimp/send-cycle.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local test fixture.
+		$this->recorded = $fixture['exchanges'];
+		$state          = fn ( WP_REST_Response $response ): array => array( $response->get_status(), $response->get_data()['campaign']['state'] ?? null, $response->get_data()['remote']['observed_state'] ?? null );
+
+		self::assertSame( array( 200, 'sending', 'sending' ), $state( $this->send( $campaign['id'], 5, 'abc123', 'live-send' ) ), 'Mailchimp accepted the paused draft; acceptance is not delivery.' );
+		self::assertSame( array( 200, 'sending', 'sending' ), $state( $this->request( 'POST', "/{$campaign['id']}/reconcile" ) ) );
+		self::assertSame( array( 200, 'sent', 'sent' ), $state( $this->request( 'POST', "/{$campaign['id']}/reconcile" ) ), 'Reconciliation records the terminal state once Mailchimp reports sent.' );
+		self::assertSame( array(), $this->recorded, 'Every recorded exchange was used, in order.' );
 	}
 
 	public function test_an_unconfirmed_schedule_returns_a_conflict_and_leaves_the_campaign_unknown(): void {

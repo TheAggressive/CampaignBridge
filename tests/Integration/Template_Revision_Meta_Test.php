@@ -129,7 +129,8 @@ final class Template_Revision_Meta_Test extends Test_Case {
 		self::assertCount( $count + 1, $revisions );
 		self::assertSame(
 			'Only the subject changed',
-			get_post_meta( (int) array_key_first( $revisions ), 'campaignbridge_subject', true )
+			// The newest revision has the highest ID; dates can tie within one second.
+			get_post_meta( (int) max( array_keys( $revisions ) ), 'campaignbridge_subject', true )
 		);
 	}
 

@@ -512,12 +512,17 @@ What it does depends on what exists:
   seconds have passed since the request. Several matches, or a search that
   cannot prove absence, stay unresolved.
 - **A remote draft exists:** the campaign follows the provider's status.
+  `paused` counts as unsent only for a regular campaign that has sent
+  nothing; any other `paused` campaign is untracked (`other`).
   `save`, or `paused` (how Mailchimp reports an unscheduled campaign) →
   `provider_draft`, `schedule` → `scheduled` with the provider's send
   time, `sending` → `sending`, `sent` → `sent`, `canceled` → `cancelled`. Each
   unconfirmed schedule, unschedule, or send is settled by whether that status
   shows it took effect; one that did not is `failed` and, when the campaign
-  can accept a new request, `retryable`.
+  can accept a new request, `retryable`. Evidence that it took effect
+  settles at once, but "not applied" is accepted only once the attempt is
+  300 seconds old: a provider may still be applying a request whose response
+  was lost, and reopening it early could deliver twice.
 - **Nothing reached the provider:** 200 with nothing changed.
 
 A `pending` attempt younger than 300 seconds may still be in flight, so the
