@@ -13,6 +13,7 @@ use CampaignBridge\Domain\Campaign\Audit_Context;
 use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
 use CampaignBridge\Domain\Campaign\Campaign;
+use CampaignBridge\Domain\Campaign\Campaign_Snapshot;
 use CampaignBridge\Domain\Campaign\Campaign_Snapshot_Source;
 use CampaignBridge\Domain\Campaign\Campaign_Source;
 use CampaignBridge\Domain\Campaign\Campaign_State;
@@ -23,6 +24,7 @@ use CampaignBridge\Domain\Campaign\Delivery_Attempt_Status;
 use CampaignBridge\Domain\Campaign\Delivery_Operation;
 use CampaignBridge\Domain\Campaign\Delivery_Policy_Source;
 use CampaignBridge\Domain\Campaign\Provider_Error;
+use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference_Source;
 use CampaignBridge\Domain\Campaign\Retryability;
@@ -103,43 +105,35 @@ final class Campaign_Scheduler {
 	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	public function schedule( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $scheduled_for, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
-		$operation = Delivery_Operation::SCHEDULE;
-		$campaign  = $this->authorized( $actor, $campaign_id, $idempotency_key, $operation );
-		if ( $campaign instanceof Campaign_Delivery_Result ) {
-			return $campaign;
-		}
-		$refused = $this->audience_delivery_refusal( $actor, $campaign, $confirm_audience, $operation );
-		if ( null !== $refused ) {
-			return $refused;
-		}
-		$reference = $this->ready( $actor, $campaign, $expected_version, $idempotency_key, $operation, Campaign_State::PROVIDER_DRAFT, Campaign_Draft_Handoff::OBSERVED_DRAFT );
-		if ( $reference instanceof Campaign_Delivery_Result ) {
-			return $reference;
-		}
+		$time     = null;
+		$prepared = $this->prepare_audience_delivery(
+			$actor,
+			$campaign_id,
+			$expected_version,
+			$confirm_audience,
+			$idempotency_key,
+			Delivery_Operation::SCHEDULE,
+			$settings,
+			function () use ( $scheduled_for, &$time ): ?string {
+				try {
+					$time = Schedule_Time::parse( $scheduled_for, $this->clock->now(), $this->gateway->schedule_interval_minutes() );
+				} catch ( \InvalidArgumentException $invalid ) {
+					return $invalid->getMessage();
+				}
 
-		try {
-			$time = Schedule_Time::parse( $scheduled_for, $this->clock->now(), $this->gateway->schedule_interval_minutes() );
-		} catch ( \InvalidArgumentException $invalid ) {
-			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, $invalid->getMessage(), $actor, $campaign_id, $campaign );
+				return null;
+			}
+		);
+		if ( $prepared instanceof Campaign_Delivery_Result || ! $time instanceof Schedule_Time ) {
+			return $prepared instanceof Campaign_Delivery_Result ? $prepared : Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::INVALID_INPUT, 'The schedule time is invalid.' ) );
 		}
-		$snapshot = ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
-		if ( $snapshot instanceof Campaign_Workflow_Error ) {
-			return $this->refuse( $operation, $snapshot->code(), $snapshot->message(), $actor, $campaign_id, $campaign );
-		}
-		$content = ( new Campaign_Draft_Content_Builder( $this->tokens, $this->discovery ) )->build( $snapshot, (string) $campaign->audience_reference(), $settings, $reference->remote_id() );
-		if ( $content instanceof Campaign_Workflow_Error ) {
-			return $this->refuse( $operation, $content->code(), $content->message(), $actor, $campaign_id, $campaign );
-		}
-		$drift = ( new Campaign_Remote_Draft_Guard( $this->drafts ) )->reassert( $settings, $reference->remote_id(), $content, true );
-		if ( null !== $drift ) {
-			return $this->refuse( $operation, $drift[0], $drift[1], $actor, $campaign_id, $campaign, 'failure', null, $drift[2] );
-		}
+		list( $campaign, $reference, $snapshot ) = $prepared;
 
 		return $this->perform(
 			$actor,
 			$campaign,
 			$reference,
-			$operation,
+			Delivery_Operation::SCHEDULE,
 			$idempotency_key,
 			fn (): Action_Outcome => $this->gateway->schedule( $settings, $reference->remote_id(), $time->utc() ),
 			fn ( Campaign $claimed ): Campaign => $claimed->schedule_for( $time->utc(), $this->clock->now() ),
@@ -155,18 +149,51 @@ final class Campaign_Scheduler {
 	/**
 	 * Send the campaign's remote draft to its audience now.
 	 *
-	 * The most irreversible operation, so it uses every protection scheduling
-	 * does: delivery authority, separation of duties, the confirmed audience,
-	 * the single-unresolved-attempt rule, the version claim, and the remote
-	 * draft guard. An accepted send leaves the campaign `sending`; reconcile
-	 * to record `sent`. An unconfirmed send leaves it `unknown`.
+	 * The most irreversible operation, so it shares scheduling's entire
+	 * preparation (see prepare_audience_delivery()). An accepted send leaves
+	 * the campaign `sending`; reconcile to record `sent`. An unconfirmed send
+	 * leaves it `unknown`.
 	 *
 	 * @param string               $confirm_audience The audience reference the operator confirmed.
 	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	public function send( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
-		$operation = Delivery_Operation::SEND;
-		$campaign  = $this->authorized( $actor, $campaign_id, $idempotency_key, $operation );
+		$prepared = $this->prepare_audience_delivery( $actor, $campaign_id, $expected_version, $confirm_audience, $idempotency_key, Delivery_Operation::SEND, $settings, null );
+		if ( $prepared instanceof Campaign_Delivery_Result ) {
+			return $prepared;
+		}
+		list( $campaign, $reference, $snapshot ) = $prepared;
+
+		return $this->perform(
+			$actor,
+			$campaign,
+			$reference,
+			Delivery_Operation::SEND,
+			$idempotency_key,
+			fn (): Action_Outcome => $this->gateway->send( $settings, $reference->remote_id() ),
+			fn ( Campaign $claimed ): Campaign => $claimed->transition_to( Campaign_State::SENDING, $this->clock->now() ),
+			self::OBSERVED_SENDING,
+			array(
+				'snapshot_id' => $snapshot->id(),
+				'fingerprint' => $snapshot->artifact()->fingerprint(),
+			)
+		);
+	}
+
+	/**
+	 * Every check an operation that reaches the audience needs, in one order.
+	 *
+	 * Authority and provider support, separation of duties and the confirmed
+	 * audience, the replayed key or nothing unresolved, state and version, the
+	 * operation's own precheck, the verified snapshot and translatable content,
+	 * and finally the remote draft guard, the only step that writes remotely.
+	 *
+	 * @param array<string, mixed>        $settings Decrypted provider settings.
+	 * @param (callable(): ?string)|null  $precheck Operation-specific check; returns a refusal message.
+	 * @return array{0: Campaign, 1: Remote_Campaign_Reference, 2: Campaign_Snapshot}|Campaign_Delivery_Result
+	 */
+	private function prepare_audience_delivery( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $confirm_audience, string $idempotency_key, string $operation, array $settings, ?callable $precheck ): array|Campaign_Delivery_Result {
+		$campaign = $this->authorized( $actor, $campaign_id, $idempotency_key, $operation );
 		if ( $campaign instanceof Campaign_Delivery_Result ) {
 			return $campaign;
 		}
@@ -178,7 +205,10 @@ final class Campaign_Scheduler {
 		if ( $reference instanceof Campaign_Delivery_Result ) {
 			return $reference;
 		}
-
+		$invalid = null === $precheck ? null : $precheck();
+		if ( null !== $invalid ) {
+			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, $invalid, $actor, $campaign_id, $campaign );
+		}
 		$snapshot = ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
 		if ( $snapshot instanceof Campaign_Workflow_Error ) {
 			return $this->refuse( $operation, $snapshot->code(), $snapshot->message(), $actor, $campaign_id, $campaign );
@@ -192,20 +222,7 @@ final class Campaign_Scheduler {
 			return $this->refuse( $operation, $drift[0], $drift[1], $actor, $campaign_id, $campaign, 'failure', null, $drift[2] );
 		}
 
-		return $this->perform(
-			$actor,
-			$campaign,
-			$reference,
-			$operation,
-			$idempotency_key,
-			fn (): Action_Outcome => $this->gateway->send( $settings, $reference->remote_id() ),
-			fn ( Campaign $claimed ): Campaign => $claimed->transition_to( Campaign_State::SENDING, $this->clock->now() ),
-			self::OBSERVED_SENDING,
-			array(
-				'snapshot_id' => $snapshot->id(),
-				'fingerprint' => $snapshot->artifact()->fingerprint(),
-			)
-		);
+		return array( $campaign, $reference, $snapshot );
 	}
 
 	/**
@@ -253,12 +270,14 @@ final class Campaign_Scheduler {
 		if ( '' === $idempotency_key || 191 < strlen( $idempotency_key ) ) {
 			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, 'A bounded idempotency key is required.', $actor, $campaign_id, $campaign );
 		}
+		// Each operation names its own capability; an unlisted one is refused, never mapped to another's.
 		$supported = match ( $operation ) {
-			Delivery_Operation::SCHEDULE => Provider_Operation::SCHEDULE,
-			Delivery_Operation::SEND     => Provider_Operation::SEND,
-			default                      => Provider_Operation::UNSCHEDULE,
+			Delivery_Operation::SCHEDULE   => Provider_Operation::SCHEDULE,
+			Delivery_Operation::UNSCHEDULE => Provider_Operation::UNSCHEDULE,
+			Delivery_Operation::SEND       => Provider_Operation::SEND,
+			default                        => null,
 		};
-		if ( ! $this->capabilities->supports( $supported ) || $this->gateway->slug() !== $campaign->provider() ) {
+		if ( null === $supported || ! $this->capabilities->supports( $supported ) || $this->gateway->slug() !== $campaign->provider() ) {
 			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, 'The campaign must target a provider that supports this delivery operation.', $actor, $campaign_id, $campaign );
 		}
 
@@ -350,10 +369,15 @@ final class Campaign_Scheduler {
 				: $this->refuse( $operation, Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'Another delivery request for this campaign is already in progress.', $actor, $campaign->id(), $current );
 		}
 
-		$outcome = $call();
+		try {
+			$outcome = $call();
+		} catch ( \Throwable ) {
+			// The request may have reached the provider before failing, so it is unconfirmed.
+			$outcome = Action_Outcome::from_error( Provider_Error::from_category( Provider_Error_Category::UNKNOWN, 'provider_call_failed', 'The provider call failed unexpectedly.', $this->gateway->slug() ) );
+		}
 
-		// Once the provider has been contacted, nothing may escape: a failure to
-		// record the outcome keeps the pending attempt and requires reconciliation.
+		// Once the provider has been contacted, nothing may escape. Each handler
+		// writes its audit event last, so a failure is never audited twice.
 		try {
 			return match ( $outcome->status() ) {
 				Action_Outcome::ACCEPTED => $this->accepted( $actor, $claimed, $reference, $attempt, $operation, $finish, $observed, $context ),
@@ -361,21 +385,30 @@ final class Campaign_Scheduler {
 				default                  => $this->ambiguous( $actor, $claimed, $reference, $attempt, $operation, $context, $outcome->error() ),
 			};
 		} catch ( \Throwable ) {
-			try {
-				$this->audit( $actor, $operation, $claimed, 'unknown', $this->context( $claimed, $claimed, $reference, $attempt, $context, $outcome->error() ) );
-			} catch ( \Throwable ) {
-				// The pending attempt alone still blocks further delivery.
-				unset( $context );
-			}
-
-			return Campaign_Delivery_Result::failure(
-				new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The %s request reached the provider, but its outcome could not be recorded. Reconcile before any further delivery request.', $operation ) ),
-				$claimed,
-				$reference,
-				$attempt,
-				$outcome->error()
-			);
+			return $this->unrecorded( $actor, $claimed, $reference, $attempt, $operation, $context, $outcome->error() );
 		}
+	}
+
+	/**
+	 * Report what was stored when recording an outcome failed part-way.
+	 *
+	 * @param array<string, string|null> $context Operation-specific audit context.
+	 */
+	private function unrecorded( Campaign_Actor $actor, Campaign $claimed, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, string $operation, array $context, ?Provider_Error $error ): Campaign_Delivery_Result {
+		$current = $claimed;
+		$stored  = $attempt;
+		try {
+			$current = $this->campaigns->get( $claimed->id() ) ?? $claimed;
+			$stored  = $this->attempts->get( $attempt->id() ) ?? $attempt;
+			$this->audit( $actor, $operation, $claimed, 'unknown', $this->context( $claimed, $current, $reference, $stored, $context, $error ) );
+		} catch ( \Throwable ) {
+			// What could be read is reported; a pending attempt still blocks further delivery.
+			unset( $context );
+		}
+
+		return Delivery_Attempt_Status::FAILED === $stored->status()
+			? Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::PROVIDER_FAILED, sprintf( 'The provider refused the %s request. Nothing changed.', $operation ) ), $current, $reference, $stored, $error )
+			: Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The %s request reached the provider, but its outcome could not be fully recorded. Reconcile before any further delivery request.', $operation ) ), $current, $reference, $stored, $error );
 	}
 
 	/**
@@ -397,11 +430,12 @@ final class Campaign_Scheduler {
 		}
 
 		// The provider accepted, but it could not be recorded; the pending attempt keeps further delivery blocked.
+		$current = $this->campaigns->get( $claimed->id() ) ?? $claimed;
 		$this->audit( $actor, $operation, $claimed, 'unknown', $this->context( $claimed, $claimed, $reference, $attempt, $context, null ) );
 
 		return Campaign_Delivery_Result::failure(
 			new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The provider accepted the %s request, but it could not be recorded. Reconcile before any further delivery request.', $operation ) ),
-			$this->campaigns->get( $claimed->id() ) ?? $claimed,
+			$current,
 			$reference,
 			$attempt
 		);

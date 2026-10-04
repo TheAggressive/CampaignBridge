@@ -14,9 +14,9 @@ content before it reaches a provider.
 > durable campaign persistence, provider-neutral local campaign workflows, and
 > their stable REST contracts are present, along with Mailchimp discovery,
 > idempotent creation of a Mailchimp draft from an approved campaign, test
-> sends of that draft, and guarded scheduling and unscheduling. A complete
-> campaign operator UI and immediate sending, reconciliation, and reporting
-> remain roadmap work. See
+> sends of that draft, guarded scheduling, unscheduling, and immediate sending,
+> and on-demand reconciliation of uncertain outcomes. A complete campaign
+> operator UI, background reconciliation, and reporting remain roadmap work. See
 > [ROADMAP.md](ROADMAP.md) for the product contract and delivery plan.
 
 ## What is available now

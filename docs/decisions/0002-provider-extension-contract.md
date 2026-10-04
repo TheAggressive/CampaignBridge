@@ -168,7 +168,7 @@ again. The port therefore also requires:
   `status`, `recipients.list_id`, and `recipients.segment_opts`; unreadable
   segment data counts as segmented, so it fails closed.
 
-`Campaign_Remote_Draft_Guard` combines them before a test or a schedule.
+`Campaign_Remote_Draft_Guard` combines them before a test, schedule, or send.
 `Http_Client_Interface` gained `patch()`; like POST, it is retried only when
 the caller opts in for an idempotent update.
 
@@ -189,14 +189,21 @@ exposes no private draft preview link, only public archive URLs, so none is
 surfaced.
 
 **Scheduling (#79).** `Provider_Delivery_Gateway` schedules an existing
-remote draft for one UTC time, or unschedules it, and reports its
-scheduling interval (`schedule_interval_minutes()`). Each call is a separate
-operation that may reach the audience; it is never retried and returns an
-`Action_Outcome`. `Mailchimp_Delivery_Gateway` posts
-`/campaigns/{id}/actions/schedule` with `schedule_time` in `+00:00` form, or
-`/actions/unschedule`, once each, and reports a 15-minute interval. It never
-calls `/actions/send` or `/actions/cancel-send`. `schedule` and `unschedule`
-are separate `Provider_Operation` capabilities. Mailchimp does not document
+remote draft for one UTC time, unschedules it, or sends it immediately, and
+reports its scheduling interval (`schedule_interval_minutes()`). Each call is
+a separate operation that may reach the audience; it is never retried and
+returns an `Action_Outcome`. `Mailchimp_Delivery_Gateway` posts
+`/campaigns/{id}/actions/schedule` with `schedule_time` in `+00:00` form,
+`/actions/unschedule`, or `/actions/send`, once each, and reports a 15-minute
+interval. It never calls `/actions/cancel-send`. `schedule`, `unschedule`,
+and `send` are separate `Provider_Operation` capabilities, and each workflow
+operation checks only its own.
+
+`inspect_draft()` must report a campaign as an unsent draft only with proof
+that it has sent nothing. Mailchimp reports an unscheduled regular campaign
+as `paused`, but it also pauses campaigns it halts mid-send, so the adapter
+maps `paused` to a draft only for a `regular` campaign with `emails_sent` 0,
+and otherwise to `other`. Mailchimp does not document
 `Retry-After` for its 429 responses, so a throttled action is reported as a
 retryable definite refusal and is never retried automatically.
 

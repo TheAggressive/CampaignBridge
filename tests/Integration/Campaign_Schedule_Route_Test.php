@@ -140,10 +140,10 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertStringNotContainsString( self::api_key(), (string) wp_json_encode( $data ) );
 		self::assertSame(
 			array(
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 				'PATCH https://us20.api.mailchimp.com/3.0/campaigns/mc0042',
 				'PUT https://us20.api.mailchimp.com/3.0/campaigns/mc0042/content',
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 				'POST ' . self::ACTIONS . 'schedule',
 			),
 			array_map( static fn ( array $request ): string => $request['method'] . ' ' . $request['url'], array_slice( $this->requests, -5 ) ),
@@ -190,10 +190,10 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertStringNotContainsString( self::api_key(), (string) wp_json_encode( $sent->get_data() ) );
 		self::assertSame(
 			array(
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 				'PATCH https://us20.api.mailchimp.com/3.0/campaigns/mc0042',
 				'PUT https://us20.api.mailchimp.com/3.0/campaigns/mc0042/content',
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 				'POST ' . self::ACTIONS . 'send',
 			),
 			array_map( static fn ( array $request ): string => $request['method'] . ' ' . $request['url'], array_slice( $this->requests, -5 ) ),
