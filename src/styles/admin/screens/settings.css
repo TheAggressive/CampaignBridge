@@ -876,13 +876,7 @@
   &__save {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-
-    > span {
-      color: var(--cb-muted);
-      font-size: 11px;
-    }
+    justify-content: flex-end;
 
     .submit {
       margin: 0;

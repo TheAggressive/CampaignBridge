@@ -110,7 +110,7 @@ $form = Form::make( 'providers' )
 					<div data-mailchimp-field <?php echo $campaignbridge_is_mailchimp ? '' : 'hidden'; ?>><?php $form->render_field( 'mailchimp_audience' ); ?></div>
 				<?php endif; ?>
 			</div>
-			<footer class="cb-admin-card__footer campaignbridge-providers__save"><span><?php esc_html_e( 'Connection details are encrypted before storage.', 'campaignbridge' ); ?></span><?php $form->render_submit(); ?></footer>
+			<footer class="cb-admin-card__footer campaignbridge-providers__save"><?php $form->render_submit(); ?></footer>
 			<?php $form->form_end(); ?>
 		</section>
 
