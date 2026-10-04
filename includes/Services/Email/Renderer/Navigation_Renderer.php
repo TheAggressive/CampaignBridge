@@ -14,6 +14,7 @@ use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Invalid_Block_Attribute;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 use CampaignBridge\Services\Email\Email_Block_Contract;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,7 +33,7 @@ final class Navigation_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'items' );
+		return array( 'items', 'textColor', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -47,7 +48,8 @@ final class Navigation_Renderer extends Abstract_Renderer {
 	 * @throws Invalid_Block_Attribute When a link is malformed or out of bounds.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		$items = $block->attributes()['items'] ?? null;
+		$attributes = Native_Style_Support::attributes( $block );
+		$items      = $attributes['items'] ?? null;
 		if ( ! is_array( $items ) || ! array_is_list( $items ) || 1 > count( $items ) || self::MAX_ITEMS < count( $items ) ) {
 			throw new Invalid_Block_Attribute( 'items', 'must contain one through five links.' );
 		}
@@ -77,7 +79,12 @@ final class Navigation_Renderer extends Abstract_Renderer {
 			);
 		}
 
-		return $block->with_attributes( array( 'items' => $normalized ) );
+		return $block->with_attributes(
+			array(
+				'items' => $normalized,
+				'style' => $attributes['style'],
+			)
+		);
 	}
 
 	/**
@@ -89,7 +96,7 @@ final class Navigation_Renderer extends Abstract_Renderer {
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$kit   = Renderer_Support::brand_kit( $context );
-		$color = $kit->color( Brand_Kit::SLOT_TEXT ) ?? '#111111';
+		$color = Style_Resolver::color( array( 'style' => $block->attributes()['style'] ), 'text', null, $kit ) ?? $kit->color( Brand_Kit::SLOT_TEXT ) ?? '#111111';
 		$font  = Renderer_Support::resolve_font( array(), $context )['family'];
 		$cells = array();
 		$width = (string) intdiv( 100, count( $block->attributes()['items'] ) ) . '%';

@@ -151,7 +151,10 @@ export function TemplateEmailSettings(
         onChange={value => update('campaignbridge_unsubscribe_url', value)}
         type='url'
         placeholder={__('https://unsubscribe...', 'campaignbridge')}
-        help={__('Can use merge tags like {unsubscribe_url}', 'campaignbridge')}
+        help={__(
+          'Leave empty to use your email provider’s unsubscribe link. Mailchimp requires its own link, so leave this empty for Mailchimp campaigns.',
+          'campaignbridge'
+        )}
         __nextHasNoMarginBottom
         __next40pxDefaultSize
       />

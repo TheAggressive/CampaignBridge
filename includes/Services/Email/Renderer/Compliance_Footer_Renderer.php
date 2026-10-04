@@ -22,11 +22,20 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Renders the required sender identity and unsubscribe controls.
  *
  * The sender name and postal address are authored content and live on the
- * block. The unsubscribe destination is per-send and is read from immutable
- * context metadata, so no provider merge syntax reaches this renderer.
+ * block. The unsubscribe destination is never a block attribute: it is the
+ * template's own URL from immutable context metadata, or, when the template
+ * names none, the canonical unsubscribe token that providers translate. No
+ * provider merge syntax reaches this renderer.
  */
 final class Compliance_Footer_Renderer extends Abstract_Renderer {
 	public const MAX_ADDRESS_LENGTH = 300;
+
+	/**
+	 * The canonical provider-resolved unsubscribe link, used when the template
+	 * names no unsubscribe URL of its own. Each provider translates it at
+	 * handoff (Mailchimp to `*|UNSUB|*`); HTML export keeps it canonical.
+	 */
+	private const PROVIDER_UNSUBSCRIBE = '{{cb:campaign.unsubscribe_url}}';
 
 	private const DEFAULT_PADDING = array(
 		'top'    => 24,
@@ -104,9 +113,9 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 
 		if ( null === $this->unsubscribe_url( $context ) ) {
 			$diagnostics[] = Compile_Diagnostic::error(
-				'compliance.unsubscribe.missing',
+				'compliance.unsubscribe.invalid',
 				$block->path(),
-				'This template has no unsubscribe URL. Set one on the email template before approval.'
+				"The template's unsubscribe URL must be an absolute HTTP(S) URL. Leave it empty to use the provider's unsubscribe link."
 			);
 		}
 
@@ -198,11 +207,18 @@ final class Compliance_Footer_Renderer extends Abstract_Renderer {
 	}
 
 	/**
-	 * Read the validated per-send unsubscribe destination.
+	 * Read the unsubscribe destination.
 	 *
 	 * @param Render_Context $context Immutable scoped context.
+	 * @return string|null The template's URL, the canonical provider token when
+	 *                     none is set, or null when the set URL is not HTTP(S).
 	 */
 	private function unsubscribe_url( Render_Context $context ): ?string {
-		return Renderer_Support::https_url( $context->metadata( 'unsubscribe_url' ) );
+		$configured = $context->metadata( 'unsubscribe_url' );
+		if ( null === $configured || '' === $configured ) {
+			return self::PROVIDER_UNSUBSCRIBE;
+		}
+
+		return Renderer_Support::https_url( $configured );
 	}
 }
