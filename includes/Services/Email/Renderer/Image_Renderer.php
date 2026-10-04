@@ -28,7 +28,7 @@ final class Image_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'url', 'alt', 'decorative', 'width', 'height', 'linkUrl', 'align', 'style', Brand_Binding_Support::ATTRIBUTE );
+		return array( 'url', 'alt', 'decorative', 'width', 'height', 'linkUrl', 'align', 'style', 'borderColor', Brand_Binding_Support::ATTRIBUTE );
 	}
 
 	/**
@@ -105,8 +105,12 @@ final class Image_Renderer extends Abstract_Renderer {
 		$attributes = $block->attributes();
 		$style_tree = is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array();
 
-		// Base image style.
-		$image_style = 'display:block;width:100%;max-width:' . (int) $attributes['width'] . 'px;height:auto;border:0';
+		// Base image style; an authored border replaces the reset.
+		$kit         = Renderer_Support::brand_kit( $context );
+		$box         = Box_Style::css( $style_tree, $kit );
+		$image_style = 'display:block;width:100%;max-width:' . (int) $attributes['width'] . 'px;height:auto'
+			. ( array() === Box_Style::borders( $style_tree, $kit ) ? ';border:0' : '' )
+			. ( '' === $box ? '' : ';' . $box );
 
 		// Margin: design-system shape first.
 		if ( isset( $style_tree['spacing']['margin'] ) ) {

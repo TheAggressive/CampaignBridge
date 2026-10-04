@@ -139,19 +139,19 @@ it:
 
 ### Supported WordPress Core blocks
 
-| Core block          | Email semantics | Normalized from                                                                                        |
-| ------------------- | --------------- | ------------------------------------------------------------------------------------------------------ |
-| `core/paragraph`    | text            | `<p>` rich text or bound post content/excerpt, `style.typography.textAlign`, colour/typography/spacing |
-| `core/heading`      | heading         | `<h1>`–`<h4>` rich text or a bound post title, `level`, text alignment, colour/typography              |
-| `core/image`        | image           | `<img src/alt>`, `figure > a[href]`, pixel `width`/`height`, `align`                                   |
-| `core/buttons`      | button group    | `layout.justifyContent` (left, center, right)                                                          |
-| `core/button`       | button          | `<a href>` or a bound post URL, label, `fill`/`outline`/`ghost` style, colours, font family            |
-| `core/list`         | list            | `ordered`                                                                                              |
-| `core/list-item`    | list item       | `<li>` rich text                                                                                       |
-| `core/separator`    | divider         | background colour; thickness and line style come from the email design                                 |
-| `core/spacer`       | spacer          | `height` (Core default 100px), 0–600 px                                                                |
-| `core/social-links` | social links    | horizontal alignment, 0–32 px gap, 18/24/36/48 px icon size, labels, new-tab preference                |
-| `core/social-link`  | social link     | approved service, absolute HTTPS URL, optional plain-text accessible label                             |
+| Core block          | Email semantics | Normalized from                                                                                                            |
+| ------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `core/paragraph`    | text            | `<p>` rich text or bound post content/excerpt, `style.typography.textAlign`, colour/typography/spacing                     |
+| `core/heading`      | heading         | `<h1>`–`<h4>` rich text or a bound post title, `level`, text alignment, colour/typography, background, margin/padding      |
+| `core/image`        | image           | `<img src/alt>`, `figure > a[href]`, pixel `width`/`height`, `align`, margin, border, corner radius                        |
+| `core/buttons`      | button group    | `layout.justifyContent` (left, center, right), margin                                                                      |
+| `core/button`       | button          | `<a href>` or a bound post URL, label, `fill`/`outline`/`ghost` style, colours, typography, padding, border, corner radius |
+| `core/list`         | list            | `ordered`, margin/padding                                                                                                  |
+| `core/list-item`    | list item       | `<li>` rich text                                                                                                           |
+| `core/separator`    | divider         | background colour and margin; thickness and line style come from the email design                                          |
+| `core/spacer`       | spacer          | `height` (Core default 100px), 0–600 px                                                                                    |
+| `core/social-links` | social links    | horizontal alignment, 0–32 px gap, margin, 18/24/36/48 px icon size, labels, new-tab preference                            |
+| `core/social-link`  | social link     | approved service, absolute HTTPS URL, optional plain-text accessible label                                                 |
 
 Users insert and edit the real Core blocks with native Gutenberg behaviour
 (inserter, toolbar, inspector, RichText, List View, transforms, undo/redo). The
@@ -327,8 +327,8 @@ the exact block path. There is no adapter or generic fallback that silently
 strips or approximates markup.
 
 Known v1 limits: nested lists, list `start`/`reversed`/`type`, image captions,
-cropping (`aspectRatio`/`scale`), `space-between` button groups, and button
-widths, border radius, or font size are rejected. Several buttons in one
+cropping (`aspectRatio`/`scale`), `space-between` button groups, button widths,
+and buttons with different borders per side are rejected. Several buttons in one
 `core/buttons` group render as stacked rows. The editor removes list insertion
 inside list items, but Core's keyboard indent in a list still creates a nested
 list; the compiler reports it as `block.child.unsupported`. Core controls the
@@ -592,8 +592,11 @@ the editor adapter and compiler; neither consumer interprets raw manifest data.
 
 Supported controls are declared per block: Core paragraphs expose text and
 background color, font size, font family, line height, text alignment, and
-spacing; Core headings expose text color, typography, and alignment; Core
-buttons expose colors and font family; Core images expose margin and alignment;
+spacing; Core headings expose text and background color, typography,
+alignment, margin, and padding; Core buttons expose colors, typography,
+padding, border, and corner radius; Core images expose margin, alignment,
+border, and corner radius; Core lists expose margin and padding; Core
+separators, button groups, and Social Icons expose a margin;
 Core headings, paragraphs, and buttons also expose a Google Font search in the
 block Styles inspector. Applying a result stores the validated family, weights,
 fallback stack, and stylesheet URL in the revisioned per-template font
@@ -602,7 +605,19 @@ compiler load the external asset only when a block or semantic type slot
 actually references that slug.
 Core separators expose a color while their thickness and line style come from
 the email design; Core spacers use their height. Containers, sections, cards and
-footers expose their supported spacing; columns use native block gap. Container content width uses constrained layout.
+footers expose their supported spacing; columns use native block gap and
+padding. Sections, columns, and cards also expose a border and corner radius.
+
+Borders accept one value for all sides or one per side, with widths up to 8px
+and solid, dashed, or dotted lines; buttons need the same border on every side
+because Outlook's VML draws one outline. A corner radius is up to 999px, set
+once or per corner. Margins render as the padding of a wrapping presentation
+cell rather than CSS margins, which clients treat inconsistently. A button's
+default corner radius, padding, size, weight, and line height come from the
+email design (`styles.blocks.core/button`), which the editor canvas and the
+compiler both read, so an unstyled button looks the same in both. Outlook's
+Word engine ignores CSS radii: buttons stay rounded through VML, using the
+largest corner, while other rounded boxes and images render square. Container content width uses constrained layout.
 Gap applies only between columns, without adding outside gutters. The preview
 uses the compiled artifact for both desktop and mobile.
 

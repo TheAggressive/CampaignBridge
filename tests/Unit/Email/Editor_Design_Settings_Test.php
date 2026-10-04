@@ -82,6 +82,19 @@ final class Editor_Design_Settings_Test extends TestCase {
 		);
 	}
 
+	/** The canvas draws buttons with the compiler's design radius and padding, over Core's defaults. */
+	public function test_canvas_buttons_use_the_design_radius_and_padding_over_cores_defaults(): void {
+		$settings = Editor_Design_Settings::apply( array(), Email_Design_Factory::resolve() );
+		$css      = implode( '', array_column( $settings['styles'], 'css' ) );
+
+		// Core's stylesheet sets `.wp-block-button__link{border-radius:9999px}`; a
+		// zero-specificity :where() rule would lose to it.
+		self::assertMatchesRegularExpression(
+			'/\.editor-styles-wrapper \[data-type="core\/button"\] \.wp-block-button__link\{[^}]*font-size:16px;font-weight:700;line-height:1\.25;padding:12px 24px 12px 24px;border-radius:999px\}/',
+			$css
+		);
+	}
+
 	/** A configured brand font is exposed as a bounded editor preset. */
 	public function test_custom_brand_font_is_available_to_individual_blocks(): void {
 		$custom = array(

@@ -30,7 +30,7 @@ final class Social_Links_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'align', 'gap', 'iconSize', 'openInNewTab', 'showLabels' );
+		return array( 'align', 'gap', 'iconSize', 'openInNewTab', 'showLabels', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -62,6 +62,15 @@ final class Social_Links_Renderer extends Abstract_Renderer {
 	/**
 	 * {@inheritDoc}
 	 *
+	 * @param Block_Node $block Source block.
+	 */
+	public function normalize( Block_Node $block ): Block_Node {
+		return $block->with_attributes( array( 'style' => Native_Style_Support::attributes( $block )['style'] ) + $block->attributes() );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
 	 * @param Block_Node     $block   Normalized block.
 	 * @param Render_Context $context Render context.
 	 */
@@ -78,12 +87,13 @@ final class Social_Links_Renderer extends Abstract_Renderer {
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$align = $block->attributes()['align'];
-
-		return sprintf(
+		$html  = sprintf(
 			'<div role="navigation" aria-label="Social links"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="%1$s" style="border-collapse:collapse"><tr>%2$s</tr></table></div>',
 			$align,
 			$children
 		);
+
+		return Box_Style::with_margin( $html, $block->attributes()['style'] );
 	}
 
 	/**

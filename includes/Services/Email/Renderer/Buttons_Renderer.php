@@ -32,7 +32,7 @@ final class Buttons_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'align' );
+		return array( 'align', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -46,7 +46,14 @@ final class Buttons_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		return $block->with_attributes( array( 'align' => Renderer_Support::alignment_attribute( $block->attributes(), 'align' ) ) );
+		$attributes = Native_Style_Support::attributes( $block );
+
+		return $block->with_attributes(
+			array(
+				'align' => Renderer_Support::alignment_attribute( $attributes, 'align' ),
+				'style' => $attributes['style'],
+			)
+		);
 	}
 
 	/**
@@ -66,8 +73,8 @@ final class Buttons_Renderer extends Abstract_Renderer {
 	 * @param string         $children Compiled child HTML.
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
-	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-		return $children;
+	public function render_html( Block_Node $block, string $children, Render_Context $context ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+		return Box_Style::with_margin( $children, $block->attributes()['style'] );
 	}
 
 	/**

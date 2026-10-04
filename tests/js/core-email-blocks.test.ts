@@ -116,7 +116,7 @@ describe('WordPress Core email authoring blocks', () => {
     expect(paragraph.supports.anchor).toBe(true);
   });
 
-  it('removes heading backgrounds and limits heading levels to the compiler range', () => {
+  it('keeps heading backgrounds and limits heading levels to the compiler range', () => {
     const next = constrainCoreEmailBlock(
       {
         supports: { color: { gradients: true } },
@@ -128,7 +128,7 @@ describe('WordPress Core email authoring blocks', () => {
     expect((next.supports as Record<string, any>).color).toEqual({
       gradients: false,
       text: true,
-      background: false,
+      background: true,
     });
     expect(next.attributes?.levelOptions).toEqual({
       type: 'array',
@@ -226,6 +226,85 @@ describe('WordPress Core email authoring blocks', () => {
     });
   });
 
+  it('offers the border, padding, and type controls the compiler renders on buttons', () => {
+    const button = constrainCoreEmailBlock(
+      {
+        supports: {
+          __experimentalBorder: {
+            color: true,
+            radius: true,
+            style: true,
+            width: true,
+            __experimentalSkipSerialization: true,
+          },
+          shadow: true,
+          spacing: { padding: ['horizontal', 'vertical'] },
+          dimensions: { width: true },
+          typography: {
+            fontSize: true,
+            lineHeight: true,
+            __experimentalFontWeight: true,
+            __experimentalLetterSpacing: true,
+            __experimentalTextTransform: true,
+          },
+        },
+      },
+      'core/button'
+    );
+    const supports = button.supports as Record<string, any>;
+
+    expect(supports.__experimentalBorder).toEqual({
+      color: true,
+      radius: true,
+      style: true,
+      width: true,
+      __experimentalSkipSerialization: true,
+    });
+    expect(supports.shadow).toBe(false);
+    expect(supports.dimensions).toBe(false);
+    expect(supports.spacing).toEqual({ padding: ['horizontal', 'vertical'] });
+    expect(supports.typography).toEqual({
+      fontSize: true,
+      lineHeight: true,
+      __experimentalFontWeight: true,
+      __experimentalLetterSpacing: false,
+      __experimentalTextTransform: false,
+    });
+  });
+
+  it('offers image borders and spacing on lists, separators, and button groups', () => {
+    const border = { color: true, radius: true, style: true, width: true };
+    const spacing = { margin: true, padding: true, blockGap: true };
+    const supportsOf = (name: string) =>
+      constrainCoreEmailBlock(
+        { supports: { __experimentalBorder: border, spacing } },
+        name
+      ).supports as Record<string, any>;
+
+    expect(supportsOf('core/image').__experimentalBorder).toEqual(border);
+    expect(supportsOf('core/list').spacing).toEqual({
+      margin: true,
+      padding: true,
+      blockGap: false,
+    });
+    expect(supportsOf('core/separator').spacing).toEqual({
+      margin: true,
+      padding: false,
+      blockGap: false,
+    });
+    expect(supportsOf('core/buttons').spacing).toEqual({
+      margin: true,
+      padding: false,
+      blockGap: false,
+    });
+    expect(supportsOf('core/heading').spacing).toEqual({
+      margin: true,
+      padding: true,
+      blockGap: false,
+    });
+    expect(supportsOf('core/list').__experimentalBorder).toBe(false);
+  });
+
   it('keeps list items flat as the v1 grammar requires', () => {
     expect(
       constrainCoreEmailBlock(
@@ -285,7 +364,7 @@ describe('WordPress Core email authoring blocks', () => {
     expect((parent.supports as Record<string, any>).color).toBe(false);
     expect((parent.supports as Record<string, any>).spacing).toEqual({
       blockGap: true,
-      margin: false,
+      margin: true,
       padding: false,
     });
     expect(parent.styles).toEqual([

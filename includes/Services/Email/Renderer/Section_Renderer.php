@@ -39,7 +39,7 @@ final class Section_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'padding', 'backgroundColor', 'style' );
+		return array( 'padding', 'backgroundColor', 'borderColor', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -80,14 +80,17 @@ final class Section_Renderer extends Abstract_Renderer {
 			? '#ffffff'
 			: Renderer_Support::resolve_color( $raw, $kit, 'backgroundColor' );
 
+		$box  = Box_Style::css( is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(), $kit );
 		$html = sprintf(
-			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse;background-color:%1$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',
+			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:%7$s;background-color:%1$s%8$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',
 			$background,
 			$padding['top'],
 			$padding['right'],
 			$padding['bottom'],
 			$padding['left'],
-			$children
+			$children,
+			str_contains( $box, 'border-radius' ) ? 'separate' : 'collapse',
+			'' === $box ? '' : ';' . $box
 		);
 		if ( isset( $attributes['style']['spacing']['margin'] ) ) {
 			$margin = Style_Resolver::spacing(

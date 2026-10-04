@@ -101,12 +101,43 @@ final class Email_Design_Block_Defaults {
 		if ( isset( $style['spacing']['blockGap'] ) && 'campaignbridge/columns' === $block_name ) {
 			$attributes = $this->default_attribute( $attributes, 'gap', $style['spacing']['blockGap'] );
 		}
+		if ( 'core/button' === $block_name ) {
+			$attributes = $this->apply_button_defaults( $attributes, $style );
+		}
 		if ( isset( $style['border'] ) && 'core/separator' === $block_name ) {
 			$border     = $style['border'];
 			$attributes = $this->default_attribute( $attributes, 'color', $border['color'] ?? null );
 			$attributes = $this->default_attribute( $attributes, 'thickness', $border['width'] ?? null );
 			$attributes = $this->default_attribute( $attributes, 'variant', $border['style'] ?? null );
 		}
+		return $attributes;
+	}
+
+	/**
+	 * Supply the design's button corner radius and padding per unset corner and side.
+	 *
+	 * The editor canvas applies the same design values through CSS, so a corner
+	 * or side the author left unset looks the same in both.
+	 *
+	 * @param array<string, mixed> $attributes Source attributes.
+	 * @param array<string, mixed> $style      Resolved block style.
+	 * @return array<string, mixed>
+	 */
+	private function apply_button_defaults( array $attributes, array $style ): array {
+		if ( isset( $style['border']['radius'] ) ) {
+			$authored = is_array( $attributes['style'] ?? null ) && is_array( $attributes['style']['border'] ?? null ) ? ( $attributes['style']['border']['radius'] ?? null ) : null;
+			if ( is_array( $authored ) ) {
+				foreach ( array( 'topLeft', 'topRight', 'bottomRight', 'bottomLeft' ) as $corner ) {
+					$attributes = $this->default_style( $attributes, array( 'border', 'radius', $corner ), $style['border']['radius'] );
+				}
+			} else {
+				$attributes = $this->default_style( $attributes, array( 'border', 'radius' ), $style['border']['radius'] );
+			}
+		}
+		foreach ( is_array( $style['spacing']['padding'] ?? null ) ? $style['spacing']['padding'] : array() as $side => $value ) {
+			$attributes = $this->default_style( $attributes, array( 'spacing', 'padding', (string) $side ), $value );
+		}
+
 		return $attributes;
 	}
 

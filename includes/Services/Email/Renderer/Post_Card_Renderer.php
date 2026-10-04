@@ -36,7 +36,7 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'postId', 'postType', 'padding', 'backgroundColor', 'style' );
+		return array( 'postId', 'postType', 'padding', 'backgroundColor', 'borderColor', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -131,15 +131,18 @@ final class Post_Card_Renderer extends Abstract_Renderer {
 			? Style_Resolver::color( array( 'style' => $attributes['style'] ), 'background', null, $kit )
 			: Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit, 'backgroundColor' );
 		$background = null === $color ? '' : sprintf( ';background-color:%s', $color );
+		$box        = Box_Style::css( $attributes['style'], $kit );
 
 		return sprintf(
-			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse%1$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',
+			'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:%7$s%1$s%8$s"><tr><td style="padding:%2$dpx %3$dpx %4$dpx %5$dpx">%6$s</td></tr></table>',
 			$background,
 			$padding['top'],
 			$padding['right'],
 			$padding['bottom'],
 			$padding['left'],
-			$children
+			$children,
+			str_contains( $box, 'border-radius' ) ? 'separate' : 'collapse',
+			'' === $box ? '' : ';' . $box
 		);
 	}
 

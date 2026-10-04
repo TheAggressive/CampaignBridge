@@ -270,7 +270,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 	 * @throws Invalid_Block_Attribute When Core serialization is unsupported.
 	 */
 	private function heading( Block_Node $block ): Block_Node {
-		$attributes = $this->attributes( $block, array( 'content', 'level', 'levelOptions', 'style', 'textColor', 'fontSize', 'fontFamily' ) );
+		$attributes = $this->attributes( $block, array( 'content', 'level', 'levelOptions', 'style', 'textColor', 'backgroundColor', 'fontSize', 'fontFamily' ) );
 		unset( $attributes['levelOptions'] );
 
 		$level = $attributes['level'] ?? 2;
@@ -300,7 +300,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 	private function image( Block_Node $block ): Block_Node {
 		$attributes = $this->attributes(
 			$block,
-			array( 'url', 'alt', 'id', 'sizeSlug', 'linkDestination', 'linkTarget', 'width', 'height', 'aspectRatio', 'isDecorative', 'align', 'lightbox', 'style', 'className' )
+			array( 'url', 'alt', 'id', 'sizeSlug', 'linkDestination', 'linkTarget', 'width', 'height', 'aspectRatio', 'isDecorative', 'align', 'lightbox', 'style', 'borderColor', 'className' )
 		);
 		$this->block_style( $attributes, array( 'default' => 'default' ), 'default' );
 		if ( 'auto' !== ( $attributes['aspectRatio'] ?? 'auto' ) ) {
@@ -326,8 +326,10 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 			'linkUrl'    => 'none' === ( $attributes['linkDestination'] ?? '' ) ? '' : ( $markup['href'] ?? '' ),
 			'align'      => $align,
 		);
-		if ( isset( $attributes['style'] ) ) {
-			$canonical['style'] = $attributes['style'];
+		foreach ( array( 'style', 'borderColor' ) as $key ) {
+			if ( isset( $attributes[ $key ] ) ) {
+				$canonical[ $key ] = $attributes[ $key ];
+			}
 		}
 
 		return $block->with_attributes( $canonical );
@@ -341,7 +343,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 	 * @throws Invalid_Block_Attribute When Core serialization is unsupported.
 	 */
 	private function buttons( Block_Node $block ): Block_Node {
-		$attributes = $this->attributes( $block, array( 'layout' ) );
+		$attributes = $this->attributes( $block, array( 'layout', 'style' ) );
 		$layout     = $attributes['layout'] ?? array();
 		if ( ! is_array( $layout ) ) {
 			throw new Invalid_Block_Attribute( 'layout', 'must be a Core flex layout.' );
@@ -360,7 +362,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 			throw new Invalid_Block_Attribute( 'layout.justifyContent', 'must be left, center, or right in email.' );
 		}
 
-		return $block->with_attributes( array( 'align' => $justify ) );
+		return $block->with_attributes( array( 'align' => $justify ) + array_intersect_key( $attributes, array( 'style' => true ) ) );
 	}
 
 	/**
@@ -373,8 +375,9 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 	private function button( Block_Node $block ): Block_Node {
 		$attributes = $this->attributes(
 			$block,
-			array( 'url', 'text', 'tagName', 'type', 'title', 'linkTarget', 'rel', 'backgroundColor', 'textColor', 'fontFamily', 'style', 'className' )
+			array( 'url', 'text', 'tagName', 'type', 'title', 'linkTarget', 'rel', 'backgroundColor', 'textColor', 'borderColor', 'fontSize', 'fontFamily', 'style', 'className' )
 		);
+		$attributes = $this->font_weight( $attributes );
 		if ( 'a' !== ( $block->attributes()['tagName'] ?? 'a' ) ) {
 			throw new Invalid_Block_Attribute( 'tagName', 'must be a link in email.' );
 		}
@@ -399,7 +402,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 				'primary' 
 			),
 		);
-		foreach ( array( 'backgroundColor', 'textColor', 'fontFamily', 'style' ) as $key ) {
+		foreach ( array( 'backgroundColor', 'textColor', 'borderColor', 'fontSize', 'fontFamily', 'style' ) as $key ) {
 			if ( array_key_exists( $key, $attributes ) ) {
 				$canonical[ $key ] = $attributes[ $key ];
 			}
@@ -416,7 +419,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 	 * @throws Invalid_Block_Attribute When Core serialization is unsupported.
 	 */
 	private function list( Block_Node $block ): Block_Node {
-		$attributes = $this->attributes( $block, array( 'ordered', 'values' ) );
+		$attributes = $this->attributes( $block, array( 'ordered', 'values', 'style' ) );
 		$ordered    = $attributes['ordered'] ?? false;
 		if ( ! is_bool( $ordered ) ) {
 			throw new Invalid_Block_Attribute( 'ordered', 'must be a boolean.' );
@@ -427,7 +430,7 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 			throw new Invalid_Block_Attribute( 'ordered', 'does not match the serialized list element.' );
 		}
 
-		return $block->with_attributes( array( 'ordered' => $ordered ) );
+		return $block->with_attributes( array( 'ordered' => $ordered ) + array_intersect_key( $attributes, array( 'style' => true ) ) );
 	}
 
 	/**
@@ -473,11 +476,16 @@ final class Core_Block_Normalizer implements Authoring_Block_Normalizer {
 		if ( array() === ( $style['color'] ?? null ) ) {
 			unset( $style['color'] );
 		}
+		$margin = array();
+		if ( is_array( $style['spacing'] ?? null ) && array( 'margin' ) === array_keys( $style['spacing'] ) ) {
+			$margin = array( 'spacing' => $style['spacing'] );
+			unset( $style['spacing'] );
+		}
 		if ( array() !== $style ) {
 			throw new Invalid_Block_Attribute( 'style.' . (string) array_key_first( $style ), 'is not supported by the email divider.' );
 		}
 
-		return $block->with_attributes( null === $color ? array() : array( 'color' => $color ) );
+		return $block->with_attributes( ( null === $color ? array() : array( 'color' => $color ) ) + ( array() === $margin ? array() : array( 'style' => $margin ) ) );
 	}
 
 	/**

@@ -77,7 +77,7 @@ final class Core_Social_Block_Normalizer {
 				'iconSize'     => $size_map[ $size ],
 				'openInNewTab' => $open_in_new_tab,
 				'showLabels'   => $show_labels,
-			)
+			) + ( isset( $style['spacing']['margin'] ) ? array( 'style' => array( 'spacing' => array( 'margin' => $style['spacing']['margin'] ) ) ) : array() )
 		);
 	}
 
@@ -125,7 +125,7 @@ final class Core_Social_Block_Normalizer {
 	}
 
 	/**
-	 * Resolve the only supported spacing value.
+	 * Resolve the horizontal gap; a margin is the only other supported spacing.
 	 *
 	 * @param array<string, mixed> $style Core style object.
 	 * @throws Invalid_Block_Attribute When spacing is unsupported.
@@ -136,8 +136,8 @@ final class Core_Social_Block_Normalizer {
 		}
 		if ( array() !== array_diff( array_keys( $style ), array( 'spacing' ) )
 			|| ! is_array( $style['spacing'] ?? null )
-			|| array() !== array_diff( array_keys( $style['spacing'] ), array( 'blockGap' ) ) ) {
-			throw new Invalid_Block_Attribute( 'style', 'supports only a horizontal block gap for email social links.' );
+			|| array() !== array_diff( array_keys( $style['spacing'] ), array( 'blockGap', 'margin' ) ) ) {
+			throw new Invalid_Block_Attribute( 'style', 'supports only a horizontal block gap and a margin for email social links.' );
 		}
 
 		return Style_Resolver::length( $style['spacing']['blockGap'] ?? 8, 'style.spacing.blockGap', 0, 32 );

@@ -275,10 +275,13 @@ final class Editor_Design_Settings {
 		foreach ( array(
 			'core/paragraph' => '[data-type="core/paragraph"]',
 			'core/heading'   => '[data-type="core/heading"]',
-			'core/button'    => '[data-type="core/button"] .wp-block-button__link',
 		) as $block_name => $selector ) {
 			$css .= ':where(' . $selector . '){' . self::declarations( $design->block_style( $block_name ) ) . '}';
 		}
+		// Core's button stylesheet sets its own radius, padding, and size with a
+		// class selector, so the email design needs real specificity to replace
+		// them. Authored values are inline and still win.
+		$css .= '.editor-styles-wrapper [data-type="core/button"] .wp-block-button__link{' . self::declarations( $design->block_style( 'core/button' ) ) . '}';
 
 		$columns = $design->block_style( 'campaignbridge/columns' );
 		$divider = $design->block_style( 'core/separator' );
@@ -335,6 +338,13 @@ final class Editor_Design_Settings {
 		}
 		if ( isset( $spacing['marginBottom'] ) ) {
 			$values[] = 'margin:0 0 ' . $spacing['marginBottom'] . 'px';
+		}
+		if ( is_array( $spacing['padding'] ?? null ) ) {
+			$padding  = $spacing['padding'];
+			$values[] = sprintf( 'padding:%dpx %dpx %dpx %dpx', (int) ( $padding['top'] ?? 0 ), (int) ( $padding['right'] ?? 0 ), (int) ( $padding['bottom'] ?? 0 ), (int) ( $padding['left'] ?? 0 ) );
+		}
+		if ( isset( $style['border']['radius'] ) ) {
+			$values[] = 'border-radius:' . (int) $style['border']['radius'] . 'px';
 		}
 
 		return implode( ';', $values );
