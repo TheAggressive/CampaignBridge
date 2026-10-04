@@ -49,7 +49,7 @@ but it is not yet a complete campaign-management and delivery product.
 | Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained Core/CampaignBridge block grammar; read-only post selection and immutable snapshot inputs | Full campaign/operator UI |
 | Email generation | Deterministic HTML/plain compiler; compiled preview/export; immutable content/design inputs; structured diagnostics; artifact fingerprints; durable immutable campaign snapshots and exact approved-artifact references | Provider handoff and delivery |
 | Providers | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery; idempotent Mailchimp draft handoff; bounded Mailchimp test sends; guarded Mailchimp schedule/unschedule/send; on-demand reconciliation; HTML export boundary | Background reconciliation, reporting |
-| Campaigns | Durable provider-neutral campaigns, snapshots, attempts and audit history; authoritative state machine; canonical create/edit/audience/snapshot/validate/preview/review/approve/revoke/archive/duplicate workflows; optimistic concurrency; stable permission-safe campaign REST contracts | Operator UI and M3 provider operations |
+| Campaigns | Durable provider-neutral campaigns, snapshots, attempts and audit history; authoritative state machine; canonical create/edit/audience/snapshot/validate/preview/review/approve/revoke/archive/duplicate workflows; optimistic concurrency; stable permission-safe campaign REST contracts | Operator UI |
 | Admin              | Settings, Brand Kit, provider connection/verification, audience-selection foundations, template editor lifecycle                                                                                                                                                                                                                                                                   | Full campaign/operator workflow and delivery/recovery surfaces                                  |
 | API                | Editor/content support routes, Brand Kit, compiled preview, template revision restore and core template REST lifecycle                                                                                                                                                                                                                                                             | Campaign/delivery/reconciliation/reporting APIs                                                 |
 | Operations         | Hardened CI, security/accessibility gates, signed/reproducible packaging, runbook foundations                                                                                                                                                                                                                                                                                      | Durable jobs/locks, webhooks, reconciliation monitor, operational metrics and support tooling   |
@@ -156,7 +156,7 @@ and recording a complete local audit history. Provider handoff, delivery and
 reconciliation begin in M3 and reuse `Campaign_Workflow` rather than adding a
 second lifecycle.
 
-### Milestone 3 — Mailchimp end-to-end vertical slice
+### Milestone 3 — Mailchimp end-to-end vertical slice _(complete)_
 
 **Tracking:** #64
 
@@ -164,28 +164,32 @@ second lifecycle.
 campaign through Mailchimp draft creation, testing, scheduling/sending, and
 status reconciliation.
 
-Implementation status:
+Completed slices:
 
-- #76 — Provider capabilities, Mailchimp discovery and personalization mapping
-  are complete.
-- #77 — Idempotent Mailchimp draft/content handoff is complete.
-- #78 — Test delivery is complete.
-
-- #79 — Guarded schedule/send operations are complete; cancel is declared
+- #76 — Provider capabilities, Mailchimp discovery and personalization mapping.
+- #77 — Idempotent Mailchimp draft/content handoff.
+- #78 — Test delivery.
+- #79 — Guarded schedule, unschedule, and immediate send; cancel is declared
   unsupported for Mailchimp.
-- #80 — On-demand reconciliation and ambiguous-outcome recovery are complete.
-- The live sandbox lifecycle run is complete (2026-10-04): one approved
-  campaign became one Mailchimp campaign, went through scheduling,
-  unscheduling, a test send and an immediate send to a one-contact audience,
-  and reconciled to `sent`, with every attempt and transition in the local
-  audit trail. The run found two defects that unit tests could not (a stale
-  `reconciled_at` after a new delivery, and Mailchimp reporting an
-  unscheduled campaign as `paused`); both are fixed, and the sanitized
-  exchanges replay in `tests/Fixtures/Mailchimp/`.
+- #80 — On-demand reconciliation and ambiguous-outcome recovery.
 
 **Exit gate:** one sandbox campaign completes the full lifecycle with one remote
 campaign, a local audit trail and a reconciled terminal state; failure injection
 proves retries/timeouts cannot duplicate a production send.
+
+The exit gate is satisfied by the live sandbox run of 2026-10-04: one approved
+campaign became exactly one Mailchimp campaign, went through scheduling,
+unscheduling, a test send and an immediate send to a one-contact audience, and
+reconciled to `sent`, with every attempt and transition in the local audit
+trail. The run found two defects unit tests could not (a stale `reconciled_at`
+after a new delivery, and Mailchimp reporting an unscheduled campaign as
+`paused`); both are fixed, and the sanitized exchanges replay in
+`tests/Fixtures/Mailchimp/`. Failure injection is covered by the scheduler,
+reconciler, and route suites: a timeout, transport loss, server error, or
+exception after the provider call leaves the campaign `unknown` with no retry,
+blocks every further delivery whatever idempotency key is sent, and settles
+only from provider evidence after the settle window. The operator surface for
+this lifecycle is the REST API; its admin UI is M4.
 
 ### Milestone 4 — Operator experience
 
