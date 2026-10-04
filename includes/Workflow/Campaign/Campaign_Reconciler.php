@@ -44,6 +44,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 2. Evidence only. An attempt is settled as succeeded or failed only from
  *    what the provider reports, never from a timeout. A `pending` attempt
  *    younger than SETTLE_SECONDS may still be in flight and is left alone.
+ *    Evidence that a request took effect settles it at once, but "not
+ *    applied" is accepted only once the attempt is SETTLE_SECONDS old: a
+ *    provider may still be applying a request whose response was lost.
  * 3. A create whose outcome was not confirmed is found by its correlation
  *    title. One match records the draft; none, when the search was complete
  *    and the settle time has passed, proves it was not created. Several
@@ -230,6 +233,19 @@ final class Campaign_Reconciler {
 			$applied = $this->applied( $attempt->operation(), $target );
 			if ( null === $applied ) {
 				return $this->contradiction( $actor, $campaign, $reference, $observed, sprintf( 'The provider reports the campaign as %s, which does not show whether the earlier %s request took effect. Check the provider.', $remote->status(), str_replace( '_', ' ', $attempt->operation() ) ), $unresolved, null );
+			}
+			$age = $this->age( $attempt );
+			if ( ! $applied && $age < self::SETTLE_SECONDS ) {
+				// The provider may still be applying a request that timed out; only time makes "not applied" evidence.
+				return $this->refuse(
+					Campaign_Workflow_Error::RECONCILIATION_REQUIRED,
+					sprintf( 'The provider does not show the %s request yet, but it may still be applying it. Reconcile again in %d seconds.', str_replace( '_', ' ', $attempt->operation() ), self::SETTLE_SECONDS - $age ),
+					$actor,
+					$campaign->id(),
+					$campaign,
+					'failure',
+					$attempt
+				);
 			}
 			$resolved[] = $this->settled(
 				$attempt,
