@@ -171,12 +171,17 @@ Implementation status:
 - #77 — Idempotent Mailchimp draft/content handoff is complete.
 - #78 — Test delivery is complete.
 
-Current actionable slices:
-
 - #79 — Guarded schedule/send operations are complete; cancel is declared
   unsupported for Mailchimp.
 - #80 — On-demand reconciliation and ambiguous-outcome recovery are complete.
-- Remaining: the live sandbox lifecycle run that satisfies the exit gate.
+- The live sandbox lifecycle run is complete (2026-10-04): one approved
+  campaign became one Mailchimp campaign, went through scheduling,
+  unscheduling, a test send and an immediate send to a one-contact audience,
+  and reconciled to `sent`, with every attempt and transition in the local
+  audit trail. The run found two defects that unit tests could not (a stale
+  `reconciled_at` after a new delivery, and Mailchimp reporting an
+  unscheduled campaign as `paused`); both are fixed, and the sanitized
+  exchanges replay in `tests/Fixtures/Mailchimp/`.
 
 **Exit gate:** one sandbox campaign completes the full lifecycle with one remote
 campaign, a local audit trail and a reconciled terminal state; failure injection

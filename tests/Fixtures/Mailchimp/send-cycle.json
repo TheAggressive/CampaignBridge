@@ -1,0 +1,47 @@
+{
+  "source": "Recorded from a live Mailchimp account on 2026-10-04 through CampaignBridge REST routes: send, reconcile, then reconcile again once delivery finished. Campaign and audience IDs are replaced with test placeholders, and PATCH and PUT bodies are dropped because CampaignBridge reads only their status. Note Mailchimp accepts /actions/send with 204, reports sending with an empty send_time, and reports sent with the delivery time as send_time.",
+  "exchanges": [
+    {
+      "method": "GET",
+      "path": "/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts",
+      "status": 200,
+      "body": "{\"type\":\"regular\",\"status\":\"paused\",\"emails_sent\":0,\"send_time\":\"-001-11-30T00:00:00+00:00\",\"recipients\":{\"list_id\":\"abc123\"}}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/3.0/campaigns/mc0042",
+      "status": 200,
+      "body": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/3.0/campaigns/mc0042/content",
+      "status": 200,
+      "body": ""
+    },
+    {
+      "method": "GET",
+      "path": "/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts",
+      "status": 200,
+      "body": "{\"type\":\"regular\",\"status\":\"paused\",\"emails_sent\":0,\"send_time\":\"-001-11-30T00:00:00+00:00\",\"recipients\":{\"list_id\":\"abc123\"}}"
+    },
+    {
+      "method": "POST",
+      "path": "/3.0/campaigns/mc0042/actions/send",
+      "status": 204,
+      "body": ""
+    },
+    {
+      "method": "GET",
+      "path": "/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts",
+      "status": 200,
+      "body": "{\"type\":\"regular\",\"status\":\"sending\",\"emails_sent\":0,\"send_time\":\"\",\"recipients\":{\"list_id\":\"abc123\"}}"
+    },
+    {
+      "method": "GET",
+      "path": "/3.0/campaigns/mc0042?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts",
+      "status": 200,
+      "body": "{\"type\":\"regular\",\"status\":\"sent\",\"emails_sent\":1,\"send_time\":\"2026-10-04T06:06:21+00:00\",\"recipients\":{\"list_id\":\"abc123\"}}"
+    }
+  ]
+}

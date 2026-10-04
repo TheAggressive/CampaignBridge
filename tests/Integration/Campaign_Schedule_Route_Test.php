@@ -272,6 +272,18 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertSame( array(), $this->recorded, 'Every recorded exchange was used, in order.' );
 	}
 
+	public function test_the_recorded_live_mailchimp_send_replays_to_sent(): void {
+		$campaign       = $this->provider_draft_campaign();
+		$fixture        = json_decode( (string) file_get_contents( dirname( __DIR__ ) . '/Fixtures/Mailchimp/send-cycle.json' ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local test fixture.
+		$this->recorded = $fixture['exchanges'];
+		$state          = fn ( WP_REST_Response $response ): array => array( $response->get_status(), $response->get_data()['campaign']['state'] ?? null, $response->get_data()['remote']['observed_state'] ?? null );
+
+		self::assertSame( array( 200, 'sending', 'sending' ), $state( $this->send( $campaign['id'], 5, 'abc123', 'live-send' ) ), 'Mailchimp accepted the paused draft; acceptance is not delivery.' );
+		self::assertSame( array( 200, 'sending', 'sending' ), $state( $this->request( 'POST', "/{$campaign['id']}/reconcile" ) ) );
+		self::assertSame( array( 200, 'sent', 'sent' ), $state( $this->request( 'POST', "/{$campaign['id']}/reconcile" ) ), 'Reconciliation records the terminal state once Mailchimp reports sent.' );
+		self::assertSame( array(), $this->recorded, 'Every recorded exchange was used, in order.' );
+	}
+
 	public function test_an_unconfirmed_schedule_returns_a_conflict_and_leaves_the_campaign_unknown(): void {
 		$campaign             = $this->provider_draft_campaign();
 		$actions              = $this->action_count();
