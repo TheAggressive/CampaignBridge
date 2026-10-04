@@ -28,6 +28,12 @@ Compiled email output is covered twice, deliberately. Golden fixtures in `tests/
 
 These fixtures are regression evidence, not a rendering claim. What they deliberately do not prove is declared as limitations inside the client fixtures, and a limitation with a detection probe fails the suite once it stops applying. [`email-compatibility.md`](email-compatibility.md) documents the matrix and the fixture-update procedure.
 
+## Recorded provider exchanges
+
+Hand-written provider fakes encode what we believe the provider does. `tests/Fixtures/Mailchimp/` holds exchanges recorded from a live Mailchimp account instead, and the integration tests replay them through the REST routes in strict order: every request must match the next recorded method and path, and every recording must be used. The first live run found a defect the fakes hid (Mailchimp reports an unscheduled campaign as `paused`, not `save`), so new provider behavior should be confirmed live and recorded.
+
+Before committing a recording, replace campaign and audience IDs with the test placeholders, drop response bodies CampaignBridge does not read, and confirm it contains no API key, Authorization header, account name, email address, or other subscriber data. Each fixture's `source` field states when and how it was recorded.
+
 ## Failure policy
 
 Risky tests and warnings fail the build. Tests must not accept contradictory outcomes such as success or rate limiting. Before a new security regression test is accepted, deliberately break the protected implementation and confirm the test fails for the named reason.
