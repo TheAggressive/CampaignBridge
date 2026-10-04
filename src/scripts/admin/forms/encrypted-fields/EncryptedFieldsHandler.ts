@@ -114,21 +114,22 @@ export class EncryptedFieldsHandler {
     }
 
     const fieldId = field.dataset.fieldId || '';
+    const credential = field.dataset.credential || '';
 
-    // Security validation
-    if (!fieldId) {
-      this.apiClient.showError('Invalid field configuration');
+    if (!fieldId || !credential) {
+      this.apiClient.showError('Invalid field configuration', field);
       return;
     }
 
     // Clear any existing timeout for this field
     this.stateManager.clearTimeout(fieldId);
+    this.apiClient.clearError(field);
 
     // Show loading state
     this.uiManager.setButtonLoading(button, true);
 
     try {
-      const response = await this.apiClient.decryptField(fieldId);
+      const response = await this.apiClient.decryptField(credential);
 
       if (response.success && response.data?.decrypted) {
         this.handleSuccessfulDecryption(
@@ -146,7 +147,7 @@ export class EncryptedFieldsHandler {
       const message =
         error instanceof Error ? error.message : 'Network error occurred';
       this.logError('Decryption failed', { error: message, fieldId });
-      this.apiClient.showError(message);
+      this.apiClient.showError(message, field);
     } finally {
       this.uiManager.setButtonLoading(button, false);
     }
@@ -287,6 +288,7 @@ export class EncryptedFieldsHandler {
 
     const newValue = elements.editInput.value.trim();
     const fieldId = field.dataset.fieldId;
+    const credential = field.dataset.credential || '';
 
     // Validate input
     const validation = this.validation.validateForSave(
@@ -295,7 +297,7 @@ export class EncryptedFieldsHandler {
     );
     if (!validation.isValid) {
       if (validation.error) {
-        this.apiClient.showError(validation.error);
+        this.apiClient.showError(validation.error, field);
         this.validation.setValidationError(
           elements.editInput,
           validation.error
@@ -309,12 +311,10 @@ export class EncryptedFieldsHandler {
 
     // Show loading state
     this.uiManager.setButtonLoading(button, true);
+    this.apiClient.clearError(field);
 
     try {
-      const response = await this.apiClient.encryptField(
-        fieldId || '',
-        newValue
-      );
+      const response = await this.apiClient.encryptField(credential, newValue);
 
       if (
         response.success &&
@@ -337,7 +337,7 @@ export class EncryptedFieldsHandler {
       const message =
         error instanceof Error ? error.message : 'Network error occurred';
       this.logError('Save failed', { error: message, fieldId });
-      this.apiClient.showError(message);
+      this.apiClient.showError(message, field);
     } finally {
       this.uiManager.setButtonLoading(button, false);
     }

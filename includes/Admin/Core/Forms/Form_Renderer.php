@@ -380,6 +380,7 @@ class Form_Renderer {
 		$form_id = $this->config['form_id'] ?? 'form';
 
 		return array(
+			'key'   => $field_name,
 			'name'  => $form_id . '[' . $field_name . ']',
 			'id'    => $form_id . '_' . $field_name,
 			'value' => $value,

@@ -96,6 +96,8 @@ class Admin_Form_Screens_Test extends Test_Case {
 		$this->assertStringContainsString( 'campaignbridge-encrypted-field', $html );
 		$this->assertMatchesRegularExpression( '/value="•+-us1"/u', $html, 'The saved key is shown masked, not as an empty field.' );
 		$this->assertStringNotContainsString( $key, $html );
+		$this->assertStringNotContainsString( 'cbenc:', $html, 'The stored ciphertext never reaches the page.' );
+		$this->assertStringContainsString( 'data-credential="mailchimp_api_key"', $html, 'Reveal and update name the credential the server allowlists.' );
 	}
 
 	public function test_a_connection_manager_can_disconnect_mailchimp(): void {
