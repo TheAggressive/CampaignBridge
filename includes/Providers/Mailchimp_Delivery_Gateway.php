@@ -20,12 +20,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Calls Mailchimp's schedule and unschedule campaign actions.
+ * Calls Mailchimp's schedule, unschedule, and send campaign actions.
  *
  * Each action is posted once and never retried: Mailchimp has no idempotency
  * key for them, so a lost response is reported as ambiguous. Mailchimp only
  * schedules on the quarter-hour. Response bodies are never read. The
- * immediate send and in-flight cancel actions are never called.
+ * in-flight cancel action is never called.
  */
 final class Mailchimp_Delivery_Gateway implements Provider_Delivery_Gateway {
 	/** Seconds to wait for a delivery action before the outcome is unknown. */
@@ -61,6 +61,10 @@ final class Mailchimp_Delivery_Gateway implements Provider_Delivery_Gateway {
 
 	public function unschedule( array $settings, string $remote_id ): Action_Outcome {
 		return $this->action( $settings, $remote_id, 'unschedule', null );
+	}
+
+	public function send( array $settings, string $remote_id ): Action_Outcome {
+		return $this->action( $settings, $remote_id, 'send', null );
 	}
 
 	/**

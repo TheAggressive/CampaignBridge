@@ -138,10 +138,10 @@ campaign and rolling, so it frees up as the earliest tests age out. A `502
 provider_failed` with `mailchimp_request_rejected` is different: Mailchimp
 refused the addresses or its own account test-email limit was reached.
 
-### Schedule or unschedule returned `reconciliation_required`
+### Schedule, unschedule, or send returned `reconciliation_required`
 
 The provider did not confirm the request, so the campaign may or may not
-send. The campaign is now `unknown`, and CampaignBridge refuses every
+send, or may already have sent. The campaign is now `unknown`, and CampaignBridge refuses every
 further schedule, unschedule, or send for it, whatever key is sent.
 
 1. Do not retry. Call `POST /campaigns/{id}/reconcile`. It reads the

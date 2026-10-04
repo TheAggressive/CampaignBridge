@@ -40,7 +40,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Schedules a confirmed remote draft for delivery, or unschedules it.
+ * Schedules, unschedules, or immediately sends a confirmed remote draft.
  *
  * Protocol:
  *
@@ -65,12 +65,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 6. A repeated idempotency key returns the recorded outcome and never
  *    contacts the provider again.
  * 7. Governance policy applies. With separate delivery on, the person who
- *    approved the campaign cannot schedule it, and an unrecorded approver
- *    fails closed. Unscheduling stops delivery, so it is never blocked.
+ *    approved the campaign cannot schedule or send it, and an unrecorded
+ *    approver fails closed. Unscheduling stops delivery, so it is never
+ *    blocked.
  */
 final class Campaign_Scheduler {
 	/** Observed remote state of a scheduled campaign. */
 	public const OBSERVED_SCHEDULED = 'scheduled';
+
+	/** Observed remote state of a campaign the provider has started sending. */
+	public const OBSERVED_SENDING = 'sending';
 
 	/** Operations that can reach the audience; one unresolved attempt blocks them all. */
 	private const DELIVERY_OPERATIONS = array( Delivery_Operation::SCHEDULE, Delivery_Operation::UNSCHEDULE, Delivery_Operation::SEND );
@@ -104,24 +108,9 @@ final class Campaign_Scheduler {
 		if ( $campaign instanceof Campaign_Delivery_Result ) {
 			return $campaign;
 		}
-		if ( ! $this->policies->current()->allows_delivery_by( $actor->user_id(), $campaign->approved_by_user_id() ) ) {
-			return $this->refuse(
-				$operation,
-				Campaign_Workflow_Error::FORBIDDEN,
-				null === $campaign->approved_by_user_id()
-					? 'Separation of duties is required, but this campaign was approved before approvers were recorded, so it cannot be verified. A manager must recreate and approve the campaign, or turn the policy off to deliver it.'
-					: 'Separation of duties is required: the person who approved this campaign cannot schedule it. Ask another person with delivery authority.',
-				$actor,
-				$campaign_id,
-				$campaign,
-				'denied',
-				null,
-				null,
-				array( 'policy' => 'separate_delivery' )
-			);
-		}
-		if ( null === $campaign->audience_reference() || ! hash_equals( $campaign->audience_reference(), $confirm_audience ) ) {
-			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, 'The confirmed audience does not match the campaign\'s audience. Nothing was scheduled.', $actor, $campaign_id, $campaign );
+		$refused = $this->audience_delivery_refusal( $actor, $campaign, $confirm_audience, $operation );
+		if ( null !== $refused ) {
+			return $refused;
 		}
 		$reference = $this->ready( $actor, $campaign, $expected_version, $idempotency_key, $operation, Campaign_State::PROVIDER_DRAFT, Campaign_Draft_Handoff::OBSERVED_DRAFT );
 		if ( $reference instanceof Campaign_Delivery_Result ) {
@@ -159,6 +148,62 @@ final class Campaign_Scheduler {
 				'scheduled_for' => $time->utc(),
 				'snapshot_id'   => $snapshot->id(),
 				'fingerprint'   => $snapshot->artifact()->fingerprint(),
+			)
+		);
+	}
+
+	/**
+	 * Send the campaign's remote draft to its audience now.
+	 *
+	 * The most irreversible operation, so it uses every protection scheduling
+	 * does: delivery authority, separation of duties, the confirmed audience,
+	 * the single-unresolved-attempt rule, the version claim, and the remote
+	 * draft guard. An accepted send leaves the campaign `sending`; reconcile
+	 * to record `sent`. An unconfirmed send leaves it `unknown`.
+	 *
+	 * @param string               $confirm_audience The audience reference the operator confirmed.
+	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
+	 */
+	public function send( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
+		$operation = Delivery_Operation::SEND;
+		$campaign  = $this->authorized( $actor, $campaign_id, $idempotency_key, $operation );
+		if ( $campaign instanceof Campaign_Delivery_Result ) {
+			return $campaign;
+		}
+		$refused = $this->audience_delivery_refusal( $actor, $campaign, $confirm_audience, $operation );
+		if ( null !== $refused ) {
+			return $refused;
+		}
+		$reference = $this->ready( $actor, $campaign, $expected_version, $idempotency_key, $operation, Campaign_State::PROVIDER_DRAFT, Campaign_Draft_Handoff::OBSERVED_DRAFT );
+		if ( $reference instanceof Campaign_Delivery_Result ) {
+			return $reference;
+		}
+
+		$snapshot = ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
+		if ( $snapshot instanceof Campaign_Workflow_Error ) {
+			return $this->refuse( $operation, $snapshot->code(), $snapshot->message(), $actor, $campaign_id, $campaign );
+		}
+		$content = ( new Campaign_Draft_Content_Builder( $this->tokens, $this->discovery ) )->build( $snapshot, (string) $campaign->audience_reference(), $settings, $reference->remote_id() );
+		if ( $content instanceof Campaign_Workflow_Error ) {
+			return $this->refuse( $operation, $content->code(), $content->message(), $actor, $campaign_id, $campaign );
+		}
+		$drift = ( new Campaign_Remote_Draft_Guard( $this->drafts ) )->reassert( $settings, $reference->remote_id(), $content, true );
+		if ( null !== $drift ) {
+			return $this->refuse( $operation, $drift[0], $drift[1], $actor, $campaign_id, $campaign, 'failure', null, $drift[2] );
+		}
+
+		return $this->perform(
+			$actor,
+			$campaign,
+			$reference,
+			$operation,
+			$idempotency_key,
+			fn (): Action_Outcome => $this->gateway->send( $settings, $reference->remote_id() ),
+			fn ( Campaign $claimed ): Campaign => $claimed->transition_to( Campaign_State::SENDING, $this->clock->now() ),
+			self::OBSERVED_SENDING,
+			array(
+				'snapshot_id' => $snapshot->id(),
+				'fingerprint' => $snapshot->artifact()->fingerprint(),
 			)
 		);
 	}
@@ -208,12 +253,50 @@ final class Campaign_Scheduler {
 		if ( '' === $idempotency_key || 191 < strlen( $idempotency_key ) ) {
 			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, 'A bounded idempotency key is required.', $actor, $campaign_id, $campaign );
 		}
-		$supported = Delivery_Operation::SCHEDULE === $operation ? Provider_Operation::SCHEDULE : Provider_Operation::UNSCHEDULE;
+		$supported = match ( $operation ) {
+			Delivery_Operation::SCHEDULE => Provider_Operation::SCHEDULE,
+			Delivery_Operation::SEND     => Provider_Operation::SEND,
+			default                      => Provider_Operation::UNSCHEDULE,
+		};
 		if ( ! $this->capabilities->supports( $supported ) || $this->gateway->slug() !== $campaign->provider() ) {
 			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, 'The campaign must target a provider that supports this delivery operation.', $actor, $campaign_id, $campaign );
 		}
 
 		return $campaign;
+	}
+
+	/**
+	 * Refuse audience delivery by the approver under separate delivery, or to an unconfirmed audience.
+	 *
+	 * Unscheduling is exempt: it stops delivery rather than starting it.
+	 */
+	private function audience_delivery_refusal( Campaign_Actor $actor, Campaign $campaign, string $confirm_audience, string $operation ): ?Campaign_Delivery_Result {
+		if ( ! $this->policies->current()->allows_delivery_by( $actor->user_id(), $campaign->approved_by_user_id() ) ) {
+			return $this->refuse(
+				$operation,
+				Campaign_Workflow_Error::FORBIDDEN,
+				null === $campaign->approved_by_user_id()
+					? 'Separation of duties is required, but this campaign was approved before approvers were recorded, so it cannot be verified. A manager must recreate and approve the campaign, or turn the policy off to deliver it.'
+					: sprintf( 'Separation of duties is required: the person who approved this campaign cannot %s it. Ask another person with delivery authority.', $operation ),
+				$actor,
+				$campaign->id(),
+				$campaign,
+				'denied',
+				null,
+				null,
+				array( 'policy' => 'separate_delivery' )
+			);
+		}
+		if ( null === $campaign->audience_reference() || ! hash_equals( $campaign->audience_reference(), $confirm_audience ) ) {
+			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_INPUT, sprintf( 'The confirmed audience does not match the campaign\'s audience. Nothing was %s.', self::past( $operation ) ), $actor, $campaign->id(), $campaign );
+		}
+
+		return null;
+	}
+
+	/** Past participle of an operation, for messages. */
+	private static function past( string $operation ): string {
+		return Delivery_Operation::SEND === $operation ? 'sent' : $operation . 'd';
 	}
 
 	/** Replay a recorded key, or check that nothing blocks a new operation from this state. */
@@ -229,7 +312,7 @@ final class Campaign_Scheduler {
 			}
 		}
 		if ( $state !== $campaign->state() || null === $reference || $observed !== $reference->observed_state() ) {
-			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_STATE, sprintf( 'Only a %s campaign can be %sd.', str_replace( '_', ' ', $state ), $operation ), $actor, $campaign->id(), $campaign );
+			return $this->refuse( $operation, Campaign_Workflow_Error::INVALID_STATE, sprintf( 'Only a %s campaign can be %s.', str_replace( '_', ' ', $state ), self::past( $operation ) ), $actor, $campaign->id(), $campaign );
 		}
 		if ( $campaign->version() !== $expected_version ) {
 			return $this->refuse( $operation, Campaign_Workflow_Error::CONFLICT, 'Campaign version is stale.', $actor, $campaign->id(), $campaign );

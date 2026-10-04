@@ -83,7 +83,7 @@ final class Campaign_Reconciler {
 	private const EVIDENCE = array(
 		Remote_Draft_State::DRAFT     => array( Campaign_State::PROVIDER_DRAFT, Campaign_Draft_Handoff::OBSERVED_DRAFT ),
 		Remote_Draft_State::SCHEDULED => array( Campaign_State::SCHEDULED, Campaign_Scheduler::OBSERVED_SCHEDULED ),
-		Remote_Draft_State::SENDING   => array( Campaign_State::SENDING, 'sending' ),
+		Remote_Draft_State::SENDING   => array( Campaign_State::SENDING, Campaign_Scheduler::OBSERVED_SENDING ),
 		Remote_Draft_State::SENT      => array( Campaign_State::SENT, 'sent' ),
 		Remote_Draft_State::CANCELED  => array( Campaign_State::CANCELLED, 'canceled' ),
 	);

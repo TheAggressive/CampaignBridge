@@ -225,14 +225,14 @@ never changes the campaign's state or version. Its protocol:
    unconfirmed draft, it does not block tests with a new key, because a
    duplicate test reaches only named test addresses.
 
-## Scheduling
+## Scheduling and sending
 
-`Campaign_Scheduler` schedules a confirmed remote draft through a
-`Provider_Delivery_Gateway`, or unschedules it. Both require delivery
-authority plus management of the campaign. Its protocol:
+`Campaign_Scheduler` schedules, unschedules, or immediately sends a confirmed
+remote draft through a `Provider_Delivery_Gateway`. All three require
+delivery authority plus management of the campaign. Its protocol:
 
 1. **Check everything first.** Delivery authority, the audience
-   confirmation (schedule only), state, version, the confirmed remote
+   confirmation (schedule and send), state, version, the confirmed remote
    reference, the schedule time (`Schedule_Time`: explicit offset, provider
    interval, at least 10 minutes ahead, within a year), and the approved
    snapshot and envelope, via `Campaign_Snapshot_Verifier` and
@@ -337,5 +337,5 @@ audit log, which is observational and may later be subject to retention.
 
 The #75 REST adapter exposes these operations, plus bounded `get`/`list`
 reads, with schemas, pagination, permission callbacks, rate limits, and one
-error envelope. See [`api.md`](api.md#campaigns). Issue #79 still owns
-immediate send. There is still no complete operator campaign UI.
+error envelope. See [`api.md`](api.md#campaigns). There is still no complete
+operator campaign UI (M4).

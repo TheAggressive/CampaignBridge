@@ -60,6 +60,16 @@ final class Mailchimp_Delivery_Gateway_Test extends WP_UnitTestCase {
 		self::assertFalse( $http->requests[0]['args']['campaignbridge_retry'] );
 	}
 
+	public function test_send_posts_once_without_a_body_or_retry(): void {
+		$http = new Recording_Test_Http_Client( self::reply( 204 ) );
+
+		self::assertSame( Action_Outcome::ACCEPTED, ( new Mailchimp_Delivery_Gateway( $http ) )->send( self::settings(), 'mc0042' )->status() );
+		self::assertCount( 1, $http->requests );
+		self::assertSame( array( 'POST', 'https://us20.api.mailchimp.com/3.0/campaigns/mc0042/actions/send' ), array( $http->requests[0]['method'], $http->requests[0]['url'] ) );
+		self::assertArrayNotHasKey( 'body', $http->requests[0]['args'] );
+		self::assertFalse( $http->requests[0]['args']['campaignbridge_retry'], 'A send must never be retried automatically.' );
+	}
+
 	/** @return array<string, array{array<string, mixed>|\WP_Error, string, string}> */
 	public static function failures(): array {
 		return array(
@@ -81,10 +91,14 @@ final class Mailchimp_Delivery_Gateway_Test extends WP_UnitTestCase {
 	 * @param array<string, mixed>|\WP_Error $response Scripted transport response.
 	 */
 	public function test_failures_keep_their_retryability_classification( array|\WP_Error $response, string $status, string $code ): void {
-		foreach ( array( 'schedule', 'unschedule' ) as $action ) {
+		foreach ( array( 'schedule', 'unschedule', 'send' ) as $action ) {
 			$http    = new Recording_Test_Http_Client( $response );
 			$gateway = new Mailchimp_Delivery_Gateway( $http );
-			$outcome = 'schedule' === $action ? $gateway->schedule( self::settings(), 'mc0042', '2026-10-05T15:00:00Z' ) : $gateway->unschedule( self::settings(), 'mc0042' );
+			$outcome = match ( $action ) {
+				'schedule' => $gateway->schedule( self::settings(), 'mc0042', '2026-10-05T15:00:00Z' ),
+				'send'     => $gateway->send( self::settings(), 'mc0042' ),
+				default    => $gateway->unschedule( self::settings(), 'mc0042' ),
+			};
 
 			self::assertSame( $status, $outcome->status(), $action );
 			self::assertSame( $code, $outcome->error()?->code(), $action );

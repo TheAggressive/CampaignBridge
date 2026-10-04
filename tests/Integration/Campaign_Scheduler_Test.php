@@ -83,6 +83,10 @@ final class Scripted_Delivery_Gateway implements Provider_Delivery_Gateway {
 		return $this->record( 'unschedule', $remote_id, null );
 	}
 
+	public function send( array $settings, string $remote_id ): Action_Outcome {
+		return $this->record( 'send', $remote_id, null );
+	}
+
 	private function record( string $action, string $remote_id, ?string $time ): Action_Outcome {
 		$this->calls[] = array(
 			'action'    => $action,
@@ -487,6 +491,115 @@ final class Campaign_Scheduler_Test extends Test_Case {
 		self::assertStringContainsString( 'may already be sending', (string) $late->error()?->message() );
 		self::assertCount( 1, $this->gateway->calls );
 		self::assertSame( 'scheduled', $this->campaigns->get( $campaign->id() )?->state() );
+	}
+
+	public function test_a_provider_draft_is_sent_once_and_audited(): void {
+		$campaign = $this->provider_draft_campaign();
+		$snapshot = $this->snapshots->get( (string) $campaign->active_snapshot_id() );
+
+		$result = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertSame(
+			array(
+				array(
+					'action'    => 'send',
+					'remote_id' => 'mc0001',
+					'time'      => null,
+				),
+			),
+			$this->gateway->calls
+		);
+		$stored = $this->campaigns->get( $campaign->id() );
+		self::assertSame( array( 'sending', $campaign->version() + 2 ), array( $stored?->state(), $stored?->version() ), 'Accepted is not delivered: reconciliation records sent.' );
+		self::assertSame( Campaign_Scheduler::OBSERVED_SENDING, $this->references->get( $campaign->id(), 'mailchimp' )?->observed_state() );
+		self::assertSame( array( 1, 2 ), array( $this->drafts->syncs, $this->drafts->inspections ), 'The approved draft was re-asserted and verified first.' );
+
+		$attempt = $this->delivery_attempts( $campaign->id() )[0];
+		self::assertSame( array( 'send', 'send-1', 'succeeded' ), array( $attempt->operation(), $attempt->idempotency_key(), $attempt->status() ) );
+		$context = $this->events( $campaign->id(), 'campaign_send' )[0]->context()->to_array();
+		self::assertSame( array( 'mc0001', $snapshot?->artifact()->fingerprint(), 'provider_draft', 'sending' ), array( $context['remote_id'], $context['fingerprint'], $context['from_state'], $context['to_state'] ) );
+	}
+
+	/**
+	 * @dataProvider drifted_drafts
+	 * @param \Closure(Scripted_Draft_Gateway): void $drift How the remote draft changed outside CampaignBridge.
+	 */
+	public function test_a_draft_changed_outside_campaignbridge_is_never_sent( \Closure $drift, string $code ): void {
+		$campaign = $this->provider_draft_campaign();
+		$drift( $this->drafts );
+
+		$refused = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );
+
+		self::assertSame( $code, $refused->error()?->code() );
+		self::assertSame( array(), $this->gateway->calls, 'Nothing was sent.' );
+		self::assertSame( array(), $this->delivery_attempts( $campaign->id() ) );
+	}
+
+	public function test_sending_requires_the_confirmed_audience_and_respects_separate_delivery(): void {
+		$campaign = $this->provider_draft_campaign();
+
+		$wrong = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), 'other-audience', 'send-1', self::settings() );
+		self::assertSame( Campaign_Workflow_Error::INVALID_INPUT, $wrong->error()?->code() );
+		self::assertStringContainsString( 'Nothing was sent', (string) $wrong->error()?->message() );
+
+		$this->policies->policy = Delivery_Policy::from_settings( true, '' );
+		$denied                 = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-2', self::settings() );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $denied->error()?->code() );
+		self::assertStringContainsString( 'cannot send it', (string) $denied->error()?->message() );
+		self::assertSame( array( array(), 0 ), array( $this->gateway->calls, $this->drafts->syncs ) );
+
+		$tester = new Campaign_Actor( 9, true, false, false, true );
+		self::assertSame( Campaign_Workflow_Error::FORBIDDEN, $this->scheduler->send( $tester, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-3', self::settings() )->error()?->code(), 'Test authority is not send authority.' );
+
+		self::assertTrue( $this->scheduler->send( new Campaign_Actor( 8, false, true, true, false ), $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-4', self::settings() )->is_success() );
+		self::assertCount( 1, $this->gateway->calls );
+	}
+
+	public function test_repeats_double_clicks_and_races_never_send_twice(): void {
+		$campaign = $this->provider_draft_campaign();
+		$inner    = null;
+		$racer    = $this->scheduler( new Stale_Attempt_View( $this->attempts ), new Stale_Campaign_View( $this->campaigns, $campaign ) );
+		$raced    = null;
+		$this->gateway->during_call = function () use ( $campaign, $racer, &$inner, &$raced ): void {
+			$inner = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-2', self::settings() );
+			$raced = $racer->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-3', self::settings() );
+		};
+
+		$first = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );
+		self::assertTrue( $first->is_success() );
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $inner?->error()?->code(), 'A double-click waits behind the in-flight send.' );
+		self::assertContains( $raced?->error()?->code(), array( Campaign_Workflow_Error::CONFLICT, Campaign_Workflow_Error::RECONCILIATION_REQUIRED ), 'The version claim stops a request that missed the pending check.' );
+
+		$replay = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );
+		self::assertTrue( $replay->is_idempotent_replay() );
+		self::assertSame( Campaign_Workflow_Error::INVALID_STATE, $this->scheduler->send( $this->sender, $campaign->id(), (int) $first->campaign()?->version(), self::AUDIENCE, 'send-4', self::settings() )->error()?->code(), 'A sending campaign cannot be sent again.' );
+		self::assertCount( 1, $this->gateway->calls );
+	}
+
+	public function test_an_unconfirmed_send_makes_the_campaign_unknown_and_blocks_all_delivery(): void {
+		$campaign                = $this->provider_draft_campaign();
+		$this->gateway->outcomes = array( Action_Outcome::from_error( Provider_Error::timeout( 'mailchimp_connection_timeout', 'Mailchimp request timed out.', 'mailchimp' ) ) );
+
+		$unknown = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $unknown->error()?->code() );
+		self::assertSame( Campaign_State::UNKNOWN, $this->campaigns->get( $campaign->id() )?->state(), 'A timed-out send may have reached the audience.' );
+		$current = (int) $this->campaigns->get( $campaign->id() )?->version();
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $this->scheduler->send( $this->sender, $campaign->id(), $current, self::AUDIENCE, 'send-2', self::settings() )->error()?->code() );
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $this->scheduler->schedule( $this->sender, $campaign->id(), $current, self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() )->error()?->code() );
+		self::assertCount( 1, $this->gateway->calls, 'An unconfirmed send is never retried, whatever key is sent.' );
+	}
+
+	public function test_a_scheduled_campaign_must_be_unscheduled_before_it_is_sent(): void {
+		$campaign  = $this->provider_draft_campaign();
+		$scheduled = $this->scheduler->schedule( $this->sender, $campaign->id(), $campaign->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() )->campaign();
+
+		$refused = $this->scheduler->send( $this->sender, $campaign->id(), (int) $scheduled?->version(), self::AUDIENCE, 'send-1', self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::INVALID_STATE, $refused->error()?->code() );
+		self::assertSame( 'Only a provider draft campaign can be sent.', $refused->error()?->message() );
+		self::assertSame( array( 'schedule' ), array_column( $this->gateway->calls, 'action' ) );
 	}
 
 	public function test_preconditions_are_checked_before_any_provider_call(): void {

@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Schedules and unschedules delivery of an existing remote draft.
+ * Schedules, unschedules, or immediately sends an existing remote draft.
  *
  * Every method is a separate operation that may reach the campaign
  * audience. Adapters receive decrypted settings for one call only, must not
@@ -39,4 +39,11 @@ interface Provider_Delivery_Gateway {
 	 * @param array<string, mixed> $settings Decrypted provider settings.
 	 */
 	public function unschedule( array $settings, string $remote_id ): Action_Outcome;
+
+	/**
+	 * Send the remote draft to its audience now. Irreversible once accepted.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 */
+	public function send( array $settings, string $remote_id ): Action_Outcome;
 }

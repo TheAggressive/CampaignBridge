@@ -174,6 +174,56 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertNotContains( 'POST ' . self::ACTIONS . 'send', array_map( static fn ( array $request ): string => $request['method'] . ' ' . $request['url'], $this->requests ), 'Scheduling never calls the immediate send action.' );
 	}
 
+	public function test_a_provider_draft_is_sent_through_mailchimp_and_reconciled_to_sent(): void {
+		$campaign = $this->provider_draft_campaign();
+		$actions  = $this->action_count();
+
+		$wrong = $this->send( $campaign['id'], 5, 'other-audience', 'rest-send-0' );
+		self::assertSame( 400, $wrong->get_status() );
+		self::assertSame( $actions, $this->action_count(), 'An unconfirmed audience reaches no Mailchimp action.' );
+
+		$sent = $this->send( $campaign['id'], 5, 'abc123', 'rest-send-1' );
+		self::assertSame( 200, $sent->get_status() );
+		$this->assert_schema( Campaign_Rest_Schema::delivery_result(), $sent );
+		self::assertSame( array( 'sending', 'sending' ), array( $sent->get_data()['campaign']['state'], $sent->get_data()['remote']['observed_state'] ) );
+		self::assertSame( 'no-store', $sent->get_headers()['Cache-Control'] );
+		self::assertStringNotContainsString( self::api_key(), (string) wp_json_encode( $sent->get_data() ) );
+		self::assertSame(
+			array(
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'PATCH https://us20.api.mailchimp.com/3.0/campaigns/mc0042',
+				'PUT https://us20.api.mailchimp.com/3.0/campaigns/mc0042/content',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+				'POST ' . self::ACTIONS . 'send',
+			),
+			array_map( static fn ( array $request ): string => $request['method'] . ' ' . $request['url'], array_slice( $this->requests, -5 ) ),
+			'The approved draft is read, re-asserted, and verified before the one send action.'
+		);
+
+		$replay = $this->send( $campaign['id'], 5, 'abc123', 'rest-send-1' );
+		self::assertTrue( $replay->get_data()['idempotent_replay'] );
+		self::assertSame( $actions + 1, $this->action_count(), 'Exactly one send action reached Mailchimp.' );
+
+		$this->remote_status = '{"status":"sent","send_time":"' . self::send_at() . '","recipients":{"list_id":"abc123","segment_opts":{}}}';
+		$reconciled          = $this->request( 'POST', '/' . $campaign['id'] . '/reconcile' );
+		self::assertSame( array( 200, 'sent' ), array( $reconciled->get_status(), $reconciled->get_data()['campaign']['state'] ) );
+		self::assertSame( $actions + 1, $this->action_count() );
+	}
+
+	public function test_an_unconfirmed_send_leaves_the_campaign_unknown_and_is_never_retried(): void {
+		$campaign             = $this->provider_draft_campaign();
+		$actions              = $this->action_count();
+		$this->action_replies = array( array( 503, '' ) );
+
+		$unknown = $this->send( $campaign['id'], 5, 'abc123', 'rest-send-1' );
+		self::assertSame( 409, $unknown->get_status() );
+		self::assertSame( 'campaignbridge_campaign_reconciliation_required', $unknown->get_data()['code'] );
+		self::assertSame( 'unknown', ( new Campaign_Repository() )->get( $campaign['id'] )?->state() );
+
+		self::assertSame( 409, $this->send( $campaign['id'], 7, 'abc123', 'rest-send-2' )->get_status() );
+		self::assertSame( $actions + 1, $this->action_count(), 'A 5xx on send is never retried, whatever key is sent.' );
+	}
+
 	public function test_an_unconfirmed_schedule_returns_a_conflict_and_leaves_the_campaign_unknown(): void {
 		$campaign             = $this->provider_draft_campaign();
 		$actions              = $this->action_count();
@@ -361,6 +411,18 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 	}
 
 	/** Delivery actions sent to Mailchimp, excluding draft reads and re-assertion. */
+	private function send( string $campaign_id, int $version, string $confirm, string $key ): WP_REST_Response {
+		return $this->request(
+			'POST',
+			"/{$campaign_id}/send",
+			array(
+				'expected_version'           => $version,
+				'confirm_audience_reference' => $confirm,
+				'idempotency_key'            => $key,
+			)
+		);
+	}
+
 	private function action_count(): int {
 		return count( array_filter( $this->requests, static fn ( array $request ): bool => str_contains( $request['url'], '/actions/' ) ) );
 	}
