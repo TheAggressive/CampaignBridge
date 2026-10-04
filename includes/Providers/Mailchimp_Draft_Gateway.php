@@ -32,8 +32,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * reported as ambiguous. Re-asserting a draft is an idempotent PATCH of its
  * audience and envelope followed by an idempotent PUT of its content.
  * Inspection is a read-only GET of the status, send time, list, and
- * segment. An unscheduled campaign is reported as `paused`, which is an
- * unsent draft for a regular campaign. Finding drafts is a read-only listing of campaigns created since
+ * segment, plus the type and send count that prove a `paused` campaign (how
+ * Mailchimp reports an unscheduled one) has sent nothing. Finding drafts is a read-only listing of campaigns created since
  * the request, matched on the exact correlation title. No schedule or send
  * endpoint is ever called. Response bodies are read only for
  * those fields and never leave this class.
@@ -141,7 +141,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		}
 
 		$response = $this->http->get(
-			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) ) . '?fields=status,send_time,recipients.list_id,recipients.segment_opts',
+			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) ) . '?fields=type,status,emails_sent,send_time,recipients.list_id,recipients.segment_opts',
 			array(
 				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
 				'timeout'               => self::TIMEOUT,
@@ -161,14 +161,17 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 			return Mailchimp_Errors::unexpected_response();
 		}
 
-		$state = match ( $status ) {
-			// Mailchimp reports an unscheduled regular campaign as paused: unsent, like a saved draft.
-			'save', 'paused' => Remote_Draft_State::DRAFT,
-			'schedule'       => Remote_Draft_State::SCHEDULED,
-			'sending'        => Remote_Draft_State::SENDING,
-			'sent'           => Remote_Draft_State::SENT,
-			'canceled'       => Remote_Draft_State::CANCELED,
-			default          => Remote_Draft_State::OTHER,
+		// Mailchimp reports an unscheduled regular campaign as paused, but it also
+		// pauses campaigns it halts, possibly mid-send. Paused counts as an unsent
+		// draft only for a regular campaign that has sent nothing.
+		$unsent_pause = 'paused' === $status && 'regular' === ( $decoded['type'] ?? null ) && 0 === ( $decoded['emails_sent'] ?? null );
+		$state        = match ( true ) {
+			'save' === $status || $unsent_pause => Remote_Draft_State::DRAFT,
+			'schedule' === $status              => Remote_Draft_State::SCHEDULED,
+			'sending' === $status               => Remote_Draft_State::SENDING,
+			'sent' === $status                  => Remote_Draft_State::SENT,
+			'canceled' === $status              => Remote_Draft_State::CANCELED,
+			default                             => Remote_Draft_State::OTHER,
 		};
 
 		return Remote_Draft_State::create(

@@ -88,6 +88,29 @@ final class Racing_Campaign_Source implements Campaign_Source {
 	}
 }
 
+/** Fails audit writes on demand, as a database error would. */
+final class Failing_Audit_Source implements \CampaignBridge\Domain\Campaign\Audit_Event_Source {
+	public bool $fail = false;
+
+	public function __construct( private readonly \CampaignBridge\Domain\Campaign\Audit_Event_Source $inner ) {}
+
+	public function get( string $id ): ?Audit_Event {
+		return $this->inner->get( $id );
+	}
+
+	public function add( Audit_Event $event ): bool {
+		if ( $this->fail ) {
+			throw new \RuntimeException( 'Audit storage failed.' );
+		}
+
+		return $this->inner->add( $event );
+	}
+
+	public function for_target( string $target_type, string $target_id, int $limit = 100 ): array {
+		return $this->inner->for_target( $target_type, $target_id, $limit );
+	}
+}
+
 /** Proves reconciliation settles outcomes only from provider evidence and never mutates the provider. */
 final class Campaign_Reconciler_Test extends Test_Case {
 	private const AUDIENCE = 'abc123';
@@ -222,6 +245,7 @@ final class Campaign_Reconciler_Test extends Test_Case {
 	public function test_a_timed_out_schedule_the_provider_never_applied_returns_to_draft_and_may_be_retried(): void {
 		$campaign = $this->unknown_after( 'schedule' );
 		$this->provider_reports( Remote_Draft_State::DRAFT );
+		$this->clock->now += Campaign_Reconciler::SETTLE_SECONDS;
 
 		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
 
@@ -234,6 +258,7 @@ final class Campaign_Reconciler_Test extends Test_Case {
 	public function test_a_timed_out_unschedule_follows_whether_the_provider_still_has_it_scheduled(): void {
 		$still = $this->unknown_after( 'unschedule' );
 		$this->provider_reports( Remote_Draft_State::SCHEDULED, self::SEND_AT );
+		$this->clock->now += Campaign_Reconciler::SETTLE_SECONDS;
 		$kept = $this->reconciler->reconcile( $this->sender, $still->id(), self::settings() );
 		self::assertSame( array( Campaign_State::SCHEDULED, 'failed' ), array( $kept->campaign()?->state(), $kept->resolved_attempts()[0]->status() ) );
 
@@ -256,12 +281,31 @@ final class Campaign_Reconciler_Test extends Test_Case {
 	public function test_a_timed_out_send_is_settled_only_by_what_mailchimp_reports( string $remote, string $local, string $attempt ): void {
 		$campaign = $this->unknown_after( 'send' );
 		$this->provider_reports( $remote, Remote_Draft_State::DRAFT === $remote ? null : self::SEND_AT );
-		$mutations = $this->provider_mutations();
+		$mutations         = $this->provider_mutations();
+		$this->clock->now += Campaign_Reconciler::SETTLE_SECONDS;
 
 		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
 
 		self::assertSame( array( $local, $attempt ), array( $result->campaign()?->state(), $result->resolved_attempts()[0]->status() ) );
 		self::assertSame( $mutations, $this->provider_mutations(), 'Reconciling a send never sends.' );
+	}
+
+	public function test_a_timed_out_send_the_provider_does_not_show_yet_is_never_reopened_early(): void {
+		// Review finding: a draft read seconds after a timeout is not proof the send was refused.
+		$campaign = $this->unknown_after( 'send' );
+		$this->provider_reports( Remote_Draft_State::DRAFT );
+
+		$early = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $early->error()?->code() );
+		self::assertStringContainsString( 'may still be applying', (string) $early->error()?->message() );
+		self::assertSame( array( Campaign_State::UNKNOWN, 'unknown' ), array( $this->campaigns->get( $campaign->id() )?->state(), $this->attempts->for_campaign( $campaign->id() )[0]->status() ) );
+		$blocked = $this->scheduler->send( $this->sender, $campaign->id(), (int) $this->campaigns->get( $campaign->id() )?->version(), self::AUDIENCE, 'send-2', self::settings() );
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $blocked->error()?->code() );
+		self::assertCount( 1, $this->gateway->calls, 'No second send while the first may still be in progress.' );
+
+		$this->clock->now += Campaign_Reconciler::SETTLE_SECONDS;
+		self::assertSame( 'failed', $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() )->resolved_attempts()[0]->status() );
 	}
 
 	public function test_a_timed_out_send_that_mailchimp_reports_as_scheduled_stays_unresolved(): void {
@@ -311,6 +355,49 @@ final class Campaign_Reconciler_Test extends Test_Case {
 		$this->clock->now += 7200;
 		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $this->scheduler->send( $this->sender, $campaign->id(), (int) $this->campaigns->get( $campaign->id() )?->version(), self::AUDIENCE, 'send-2', self::settings() )->error()?->code() );
 		self::assertCount( 1, $this->gateway->calls, 'The send is never repeated.' );
+	}
+
+	public function test_an_exception_during_the_provider_call_is_an_unconfirmed_outcome(): void {
+		$campaign                   = $this->provider_draft_campaign();
+		$this->gateway->during_call = static function (): void {
+			throw new \TypeError( 'Transport failed after the request was written.' );
+		};
+
+		$result = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $result->error()?->code() );
+		self::assertSame( array( Campaign_State::UNKNOWN, 'unknown' ), array( $this->campaigns->get( $campaign->id() )?->state(), $this->attempts->for_campaign( $campaign->id() )[0]->status() ), 'It may have reached the audience.' );
+	}
+
+	public function test_a_refusal_whose_audit_fails_still_reports_what_was_stored(): void {
+		$campaign  = $this->provider_draft_campaign();
+		$audits    = new Failing_Audit_Source( $this->audits );
+		$scheduler = new Campaign_Scheduler(
+			$this->campaigns,
+			new Campaign_Snapshot_Repository(),
+			$this->references,
+			$this->attempts,
+			$audits,
+			new Database_Transaction(),
+			new Random_Id_Generator(),
+			$this->clock,
+			$this->gateway,
+			( new Mailchimp_Provider() )->capabilities(),
+			$this->drafts,
+			new Mailchimp_Token_Mapper(),
+			new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock() ),
+			new Fixed_Delivery_Policy()
+		);
+		$this->gateway->outcomes    = array( Action_Outcome::from_error( Provider_Error::from_category( Provider_Error_Category::VALIDATION, 'mailchimp_request_rejected', 'Rejected.', 'mailchimp' ) ) );
+		$this->gateway->during_call = static function () use ( $audits ): void {
+			$audits->fail = true;
+		};
+
+		$result = $scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::PROVIDER_FAILED, $result->error()?->code(), 'The refusal was recorded, so it is reported as one.' );
+		self::assertSame( 'failed', $result->attempt()?->status() );
+		self::assertSame( $this->campaigns->get( $campaign->id() )?->version(), $result->campaign()?->version() );
 	}
 
 	public function test_repeated_reconciliation_settles_nothing_twice_and_never_reaches_the_provider_audience(): void {

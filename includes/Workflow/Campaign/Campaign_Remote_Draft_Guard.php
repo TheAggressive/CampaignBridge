@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * A draft can be edited in the provider after approval, or keep an old
  * audience or envelope after approval was revoked and given again. Before a
- * test or a schedule the guard:
+ * test, schedule, or send the guard:
  *
  * 1. reads the draft and requires it to be unsent;
  * 2. re-asserts the approved audience, envelope, and content with
