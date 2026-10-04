@@ -342,6 +342,21 @@ final class Campaign_Rest_Schema {
 	}
 
 	/** @return array<string, mixed> */
+	public static function reconcile_result(): array {
+		return self::document(
+			'campaignbridge-campaign-reconcile-result',
+			array(
+				'campaign'          => self::campaign(),
+				'remote'            => array_merge( self::remote(), array( 'type' => array( 'object', 'null' ) ) ),
+				'resolved_attempts' => array(
+					'type'  => 'array',
+					'items' => self::attempt(),
+				),
+			)
+		);
+	}
+
+	/** @return array<string, mixed> */
 	public static function test_send_result(): array {
 		return self::document(
 			'campaignbridge-campaign-test-send-result',
@@ -427,7 +442,7 @@ final class Campaign_Rest_Schema {
 		return array(
 			'type'                 => 'object',
 			'additionalProperties' => false,
-			'required'             => array( 'provider', 'remote_id', 'observed_state', 'observed_at' ),
+			'required'             => array( 'provider', 'remote_id', 'observed_state', 'observed_at', 'reconciled_at' ),
 			'properties'           => array(
 				'provider'       => array(
 					'type'    => 'string',
@@ -439,6 +454,7 @@ final class Campaign_Rest_Schema {
 					'pattern' => '^[a-z0-9][a-z0-9_-]{0,31}$',
 				),
 				'observed_at'    => self::timestamp(),
+				'reconciled_at'  => array_merge( self::timestamp(), array( 'type' => array( 'string', 'null' ) ) ),
 			),
 		);
 	}

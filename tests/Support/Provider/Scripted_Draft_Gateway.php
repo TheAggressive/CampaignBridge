@@ -14,6 +14,7 @@ use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Draft_Content;
 use CampaignBridge\Domain\Provider\Draft_Outcome;
 use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
+use CampaignBridge\Domain\Provider\Remote_Draft_Matches;
 use CampaignBridge\Domain\Provider\Remote_Draft_State;
 
 /**
@@ -61,6 +62,15 @@ final class Scripted_Draft_Gateway implements Provider_Draft_Gateway {
 	/** When true, a sync is accepted but leaves the remote audience unchanged. */
 	public bool $sync_ignores_audience = false;
 
+	/** Scheduled or actual send time the provider reports, as UTC. */
+	public ?string $remote_send_time = null;
+
+	/** Result of the next draft search; null means a complete search found nothing. */
+	public Remote_Draft_Matches|Provider_Error|null $found = null;
+
+	/** @var array<int, array{title: string, since: string}> Draft searches, in order. */
+	public array $searches = array();
+
 	public function slug(): string {
 		return 'mailchimp';
 	}
@@ -98,6 +108,15 @@ final class Scripted_Draft_Gateway implements Provider_Draft_Gateway {
 	public function inspect_draft( array $settings, string $remote_id ): Remote_Draft_State|Provider_Error {
 		++$this->inspections;
 
-		return $this->inspect_error ?? Remote_Draft_State::create( $this->remote_status, (string) $this->remote_audience, $this->remote_segmented );
+		return $this->inspect_error ?? Remote_Draft_State::create( $this->remote_status, (string) $this->remote_audience, $this->remote_segmented, $this->remote_send_time );
+	}
+
+	public function find_drafts( array $settings, string $title, string $created_after ): Remote_Draft_Matches|Provider_Error {
+		$this->searches[] = array(
+			'title' => $title,
+			'since' => $created_after,
+		);
+
+		return $this->found ?? Remote_Draft_Matches::create( array(), true );
 	}
 }

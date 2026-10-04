@@ -108,12 +108,17 @@ not create another draft for that campaign until this is resolved, whatever
 idempotency key is sent.
 
 1. Do not retry. Note the `attempt.id` from the error response.
-2. In Mailchimp, look for a draft campaign titled
-   `CampaignBridge <attempt id>`.
-3. If it exists, record its campaign ID for reconciliation. If it does not,
-   the create did not take effect.
-4. Automated reconciliation is tracked in #80. Until it ships, resolving the
-   attempt requires a developer to update the attempt record.
+2. Call `POST /campaigns/{id}/reconcile`. It searches Mailchimp for a draft
+   titled `CampaignBridge <attempt id>`.
+   - Found: the draft is recorded. Repeat `/provider-draft` to finish the
+     handoff; no second draft is created.
+   - Not found: the attempt is settled as `failed` once the search is
+     complete and 5 minutes have passed. Create the draft again with a new
+     key.
+   - "Still in progress" or "absence cannot be confirmed yet": wait and
+     reconcile again.
+   - "Holds N drafts for this request": delete the extra drafts in
+     Mailchimp, keeping one, then reconcile again.
 
 ### Test send returned `reconciliation_required`
 
@@ -139,13 +144,26 @@ The provider did not confirm the request, so the campaign may or may not
 send. The campaign is now `unknown`, and CampaignBridge refuses every
 further schedule, unschedule, or send for it, whatever key is sent.
 
-1. Do not retry. Note the `attempt.id` and the campaign's `scheduled_for`.
-2. In Mailchimp, open the campaign by its `remote.remote_id` and check
-   whether it is scheduled, and for when.
-3. If it is scheduled and should not send, unschedule it in Mailchimp
+1. Do not retry. Call `POST /campaigns/{id}/reconcile`. It reads the
+   campaign in Mailchimp and follows it: scheduled (with Mailchimp's send
+   time), back to `provider_draft`, sending, or sent. The unconfirmed
+   attempt is settled from that evidence and delivery is unblocked.
+2. If the campaign is now `scheduled` and should not send, unschedule it
    before its send time.
-4. Automated reconciliation is tracked in #80. Until it ships, resolving
-   the attempt and the campaign state requires a developer.
+3. If reconciliation still returns `reconciliation_required`, read its
+   message:
+   - "still in progress": wait the stated time and reconcile again.
+   - "no longer has this campaign": it was deleted in Mailchimp. Confirm in
+     Mailchimp's campaign list and reports that nothing was sent.
+   - "status CampaignBridge does not track" (for example paused) or
+     "scheduled but not when": resolve it in Mailchimp, then reconcile
+     again.
+   - "contradicts its local state": the provider disagrees with a settled
+     campaign, such as a sent campaign reported as a draft. Investigate in
+     Mailchimp; CampaignBridge will not follow it.
+4. Audit events for `campaign_reconcile` record what Mailchimp reported and
+   what changed. `unexplained: true` means Mailchimp changed state without a
+   CampaignBridge request, for example a campaign scheduled there directly.
 
 ### Test or schedule refused because the provider draft changed
 
@@ -158,8 +176,8 @@ attempt was recorded.
 
 1. Open the campaign in Mailchimp by its `remote_id`.
 2. If it was scheduled or sent there, it was changed outside CampaignBridge.
-   Unschedule it there if it should not send, and reconcile the campaign
-   (#80).
+   Unschedule it there if it should not send, then reconcile the campaign
+   (`POST /campaigns/{id}/reconcile`).
 3. If a segment was added, remove it, or create a new campaign with the
    intended audience in CampaignBridge.
 4. Retry the request. Any content or settings edited in Mailchimp are

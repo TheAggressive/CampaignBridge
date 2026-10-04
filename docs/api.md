@@ -51,10 +51,11 @@ All routes are under `/campaignbridge/v1`. Every action route is `POST`.
 | `POST` | `/campaigns/{id}/test-send` | `recipients`, `format?`, `idempotency_key` | test delivery | 202 sent, or 200 replay |
 | `POST` | `/campaigns/{id}/schedule` | `expected_version`, `scheduled_for`, `confirm_audience_reference`, `idempotency_key` | scheduler | 200 scheduled or replay |
 | `POST` | `/campaigns/{id}/unschedule` | `expected_version`, `idempotency_key` | scheduler | 200 unscheduled or replay |
+| `POST` | `/campaigns/{id}/reconcile` | — | reconciler | 200 reconciled |
 
-There are no immediate send, cancel, or reconcile campaign routes yet. Those
-belong to M3 (#79–#80) and will be separate contracts. Creating a provider
-draft or sending a test never reaches the audience; only `/schedule` does.
+There are no immediate send or cancel campaign routes yet (#79). Creating a
+provider draft, sending a test, or reconciling never reaches the audience;
+only `/schedule` does.
 
 Validation and preview are `POST` because they compile live template content,
 are rate-limited, and validation writes an audit event. Neither persists
@@ -263,7 +264,7 @@ A success response is `campaignbridge-campaign-provider-draft-result`:
 ```json
 {
   "campaign": { "…": "campaign, now provider_draft, version incremented" },
-  "remote": { "provider": "mailchimp", "remote_id": "mc0042", "observed_state": "draft", "observed_at": "2026-10-01T12:00:00Z" },
+  "remote": { "provider": "mailchimp", "remote_id": "mc0042", "observed_state": "draft", "observed_at": "2026-10-01T12:00:00Z", "reconciled_at": null },
   "attempt": { "id": "attempt-9f2c…", "status": "succeeded", "retryability": "not_retryable" },
   "idempotent_replay": false
 }
@@ -348,7 +349,7 @@ A success response is `campaignbridge-campaign-test-send-result`:
 ```json
 {
   "campaign": { "…": "campaign, unchanged" },
-  "remote": { "provider": "mailchimp", "remote_id": "mc0042", "observed_state": "draft", "observed_at": "2026-10-01T12:00:00Z" },
+  "remote": { "provider": "mailchimp", "remote_id": "mc0042", "observed_state": "draft", "observed_at": "2026-10-01T12:00:00Z", "reconciled_at": null },
   "attempt": { "id": "attempt-4b7e…", "status": "succeeded", "retryability": "not_retryable" },
   "test": { "format": "html", "recipient_count": 1, "snapshot_id": "snapshot-8c1d…", "fingerprint": "sha256:…" },
   "idempotent_replay": false
@@ -443,7 +444,8 @@ Outcomes after the provider is contacted:
 - **Unconfirmed** (timeout, lost connection, 5xx, or an unexpected status):
   `409 reconciliation_required`. The campaign moves to `unknown`, because it
   may or may not send. It is never retried automatically, and every further
-  schedule, unschedule, or send is refused until reconciliation (#80).
+  schedule, unschedule, or send is refused until it is reconciled (see
+  Reconciliation).
 
 `POST /campaigns/{id}/unschedule` returns a `scheduled` campaign to
 `provider_draft` and clears `scheduled_for`. It needs no audience
@@ -456,6 +458,63 @@ unschedule moves the campaign to `unknown`.
 Mailchimp's in-flight cancel (`/actions/cancel-send`) is not used. It requires
 Mailchimp Pro and cannot recall delivered messages, so CampaignBridge does not
 advertise it.
+
+### Reconciliation
+
+`POST /campaigns/{id}/reconcile` settles unconfirmed outcomes and brings the
+campaign in line with what the provider reports. It requires
+`campaignbridge_send_campaigns`, the same authority as scheduling. It only
+reads from the provider: nothing is created, scheduled, sent, or edited
+there, so it takes no `expected_version` or `idempotency_key` and is safe to
+repeat. Test-send attempts are never touched, because a test leaves no
+trace in the campaign's provider state.
+
+What it does depends on what exists:
+
+- **No remote draft, and a draft request was unconfirmed:** the provider is
+  searched for a campaign titled `CampaignBridge <attempt id>`, created since
+  shortly before the attempt. One match is recorded as the campaign's draft
+  (`observed_state` `content_pending`) and the attempt succeeds; repeat
+  `/provider-draft` to re-assert the approved content and finish the
+  handoff. No match settles the attempt as `failed` and `retryable`, but only
+  when the search returned every campaign in that period and at least 300
+  seconds have passed since the request. Several matches, or a search that
+  cannot prove absence, stay unresolved.
+- **A remote draft exists:** the campaign follows the provider's status.
+  `save` → `provider_draft`, `schedule` → `scheduled` with the provider's send
+  time, `sending` → `sending`, `sent` → `sent`, `canceled` → `cancelled`. Each
+  unconfirmed schedule, unschedule, or send is settled by whether that status
+  shows it took effect; one that did not is `failed` and, when the campaign
+  can accept a new request, `retryable`.
+- **Nothing reached the provider:** 200 with nothing changed.
+
+A `pending` attempt younger than 300 seconds may still be in flight, so the
+request is refused with `409 reconciliation_required` and a message saying
+when to retry. Evidence that cannot be followed is also
+`409 reconciliation_required`, with the observation recorded and
+`reconciled_at` cleared so delivery stays blocked: the provider no longer has
+the campaign (`observed_state` `missing`), reports a status CampaignBridge
+does not track such as paused (`other`), reports `scheduled` without a send
+time, or contradicts a settled local state (for example a `sent` campaign
+reported as a draft). A failed provider read is `502 provider_failed` and
+changes nothing. A concurrent change to the campaign is `409 conflict`;
+reconcile again.
+
+Every write claims the campaign version, so `campaign.version` increases.
+Successful reconciliation sets `remote.reconciled_at`. A state change that no
+CampaignBridge request explains, such as a campaign scheduled in Mailchimp
+directly, is followed and audited with `unexplained: true`.
+
+```json
+{
+  "campaign": { "state": "scheduled", "scheduled_for": "2026-10-05T15:00:00Z", "...": "..." },
+  "remote": { "provider": "mailchimp", "remote_id": "mc0042", "observed_state": "scheduled", "observed_at": "2026-10-05T12:10:00Z", "reconciled_at": "2026-10-05T12:10:00Z" },
+  "resolved_attempts": [ { "id": "attempt-…", "status": "succeeded", "retryability": "not_retryable" } ]
+}
+```
+
+Reconciliation is on demand only. Scheduled background checks, provider
+webhooks, and crash recovery belong to M5 (#66).
 
 ### Delivery policies
 
@@ -526,7 +585,7 @@ requests cannot exceed a limit. A refused request returns
 request is refused with `503 rate_limit_unavailable`.
 
 - 10 per window: create, snapshot, validation, preview, duplicate,
-  provider-draft, test-send, schedule, and unschedule. These compile, capture, create records, or
+  provider-draft, test-send, schedule, unschedule, and reconcile. These compile, capture, create records, or
   call the provider. Test sends also have the durable per-campaign quota
   described above.
 - 30 per window: each versioned lifecycle mutation (template, targeting,

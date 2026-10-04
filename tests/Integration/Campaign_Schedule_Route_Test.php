@@ -45,6 +45,9 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 	/** @var array<int, array{0: int, 1: string}> Scripted replies for campaign actions; empty means 204. */
 	private array $action_replies = array();
 
+	/** Body Mailchimp returns when the campaign is read. */
+	private string $remote_status = '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{}}}';
+
 	/** @var callable|null */
 	private $filter = null;
 
@@ -74,7 +77,7 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 			);
 			$reply            = match ( true ) {
 				str_contains( $url, '/actions/' ) => array_shift( $this->action_replies ) ?? array( 204, '' ),
-				str_contains( $url, '/campaigns/mc0042?fields=' ) => array( 200, '{"status":"save","recipients":{"list_id":"abc123","segment_opts":{}}}' ),
+				str_contains( $url, '/campaigns/mc0042?fields=' ) => array( 200, $this->remote_status ),
 				'POST' === $method                => array( 200, '{"id":"mc0042","status":"save"}' ),
 				default                           => array( 200, '{}' ),
 			};
@@ -137,10 +140,10 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertStringNotContainsString( self::api_key(), (string) wp_json_encode( $data ) );
 		self::assertSame(
 			array(
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
 				'PATCH https://us20.api.mailchimp.com/3.0/campaigns/mc0042',
 				'PUT https://us20.api.mailchimp.com/3.0/campaigns/mc0042/content',
-				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,recipients.list_id,recipients.segment_opts',
+				'GET https://us20.api.mailchimp.com/3.0/campaigns/mc0042?fields=status,send_time,recipients.list_id,recipients.segment_opts',
 				'POST ' . self::ACTIONS . 'schedule',
 			),
 			array_map( static fn ( array $request ): string => $request['method'] . ' ' . $request['url'], array_slice( $this->requests, -5 ) ),
@@ -188,6 +191,30 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		$again = $this->schedule( $campaign['id'], 7, self::send_at(), 'abc123', 'rest-schedule-2' );
 		self::assertSame( 'campaignbridge_campaign_reconciliation_required', $again->get_data()['code'] );
 		self::assertSame( $actions + 1, $this->action_count(), 'Exactly one schedule action was sent; a 5xx is never retried.' );
+	}
+
+	public function test_reconciliation_settles_an_unconfirmed_schedule_from_mailchimp_with_reads_only(): void {
+		$campaign             = $this->provider_draft_campaign();
+		$this->action_replies = array( array( 503, '' ) );
+		self::assertSame( 409, $this->schedule( $campaign['id'], 5, self::send_at(), 'abc123', 'rest-schedule-1' )->get_status() );
+		$actions             = $this->action_count();
+		$writes              = count( array_filter( $this->requests, static fn ( array $request ): bool => 'GET' !== $request['method'] ) );
+		$this->remote_status = '{"status":"schedule","send_time":"' . self::send_at() . '","recipients":{"list_id":"abc123","segment_opts":{}}}';
+
+		$reconciled = $this->request( 'POST', '/' . $campaign['id'] . '/reconcile' );
+
+		self::assertSame( 200, $reconciled->get_status() );
+		$this->assert_schema( Campaign_Rest_Schema::reconcile_result(), $reconciled );
+		self::assertSame( array( 'scheduled', self::send_at() ), array( $reconciled->get_data()['campaign']['state'], $reconciled->get_data()['campaign']['scheduled_for'] ) );
+		self::assertSame( 'succeeded', $reconciled->get_data()['resolved_attempts'][0]['status'] );
+		self::assertNotNull( $reconciled->get_data()['remote']['reconciled_at'] );
+		self::assertSame( 'no-store', $reconciled->get_headers()['Cache-Control'] );
+		self::assertSame( $actions, $this->action_count(), 'Reconciliation sends no campaign action.' );
+		self::assertSame( $writes, count( array_filter( $this->requests, static fn ( array $request ): bool => 'GET' !== $request['method'] ) ), 'Reconciliation only reads from Mailchimp.' );
+		self::assertStringNotContainsString( self::api_key(), (string) wp_json_encode( $reconciled->get_data() ) );
+
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'editor' ) ) );
+		self::assertContains( $this->request( 'POST', '/' . $campaign['id'] . '/reconcile' )->get_status(), array( 401, 403 ) );
 	}
 
 	public function test_a_provider_refusal_reports_the_claimed_version_for_a_retry(): void {
