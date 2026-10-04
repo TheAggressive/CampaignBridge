@@ -34,7 +34,7 @@ All routes are under `/campaignbridge/v1`. Every action route is `POST`.
 
 | Method | Route | Body fields | Workflow | Success |
 | --- | --- | --- | --- | --- |
-| `GET` | `/campaigns` | query: `owner_user_id?`, `page` (≥ 1, default 1), `per_page` (1–100, default 20) | `list` | 200 collection |
+| `GET` | `/campaigns` | query: `owner_user_id?`, `state[]?`, `provider?`, `page` (≥ 1, default 1), `per_page` (1–100, default 20) | `list` | 200 collection |
 | `POST` | `/campaigns` | `template_id`, `owner_user_id?`, `provider?`, `audience_reference?` | `create` | 201 campaign |
 | `GET` | `/campaigns/{id}` | — | `get` | 200 campaign |
 | `POST` | `/campaigns/{id}/template` | `expected_version`, `template_id` | `edit_template` | 200 campaign |
@@ -135,8 +135,21 @@ indexed (`owner_user_id, updated_at`), bounded by `per_page`, and ordered
 `updated_at DESC, id ASC`. The response body carries `pagination`
 (`page`, `per_page`, `total`, `total_pages`), and the response sets
 `X-WP-Total` and `X-WP-TotalPages`. A page beyond the last non-empty page
-returns `400 campaignbridge_campaign_invalid_page`. There is no search or
-state filter.
+returns `400 campaignbridge_campaign_invalid_page`.
+
+`state` (one or more lifecycle states) and `provider` (a provider slug, or
+`none` for campaigns without one, such as HTML export) narrow both the items
+and the totals. Unknown states and malformed providers are rejected with 400.
+There is no text search.
+
+### Available actions
+
+Every campaign representation carries `actions`: the actions the current user
+may take on it now, derived from their authority and the campaign state
+machine, so operator screens never restate those rules. Today the list is
+`archive` (when the state can still be archived) and `duplicate` (for users who
+can create campaigns). An offered action can still be refused when it runs, for
+example after a concurrent change; the workflow remains the authority.
 
 ### Idempotent duplication
 
@@ -183,7 +196,8 @@ Campaign (`campaignbridge-campaign-result` wraps it as `{ "campaign": … }`):
     "created_at": "2026-09-29T12:00:00Z",
     "updated_at": "2026-09-29T12:05:00Z",
     "scheduled_for": null,
-    "approved_by_user_id": null
+    "approved_by_user_id": null,
+    "actions": ["archive", "duplicate"]
   }
 }
 ```

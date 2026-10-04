@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace CampaignBridge\REST;
 
 use CampaignBridge\Domain\Campaign\Campaign_State;
+use CampaignBridge\Workflow\Campaign\Campaign_Actions;
 use CampaignBridge\Domain\Provider\Test_Delivery;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -155,6 +156,20 @@ final class Campaign_Rest_Schema {
 				'minimum'     => 1,
 				'maximum'     => self::MAX_PER_PAGE,
 			),
+			'state'         => array(
+				'description' => __( 'Only campaigns in these lifecycle states.', 'campaignbridge' ),
+				'type'        => 'array',
+				'items'       => array(
+					'type' => 'string',
+					'enum' => Campaign_State::all(),
+				),
+				'maxItems'    => count( Campaign_State::all() ),
+			),
+			'provider'      => array(
+				'description' => __( 'Only campaigns for this provider, or "none" for campaigns without one.', 'campaignbridge' ),
+				'type'        => 'string',
+				'pattern'     => self::IDENTIFIER_PATTERN,
+			),
 		);
 	}
 
@@ -163,7 +178,7 @@ final class Campaign_Rest_Schema {
 		return array(
 			'type'                 => 'object',
 			'additionalProperties' => false,
-			'required'             => array( 'id', 'state', 'version', 'owner_user_id', 'template_id', 'provider', 'audience_reference', 'active_snapshot_id', 'created_at', 'updated_at', 'scheduled_for', 'approved_by_user_id' ),
+			'required'             => array( 'id', 'state', 'version', 'owner_user_id', 'template_id', 'provider', 'audience_reference', 'active_snapshot_id', 'created_at', 'updated_at', 'scheduled_for', 'approved_by_user_id', 'actions' ),
 			'properties'           => array(
 				'id'                  => self::field( self::campaign_id() ),
 				'state'               => array(
@@ -191,6 +206,14 @@ final class Campaign_Rest_Schema {
 				'approved_by_user_id' => array(
 					'type'    => array( 'integer', 'null' ),
 					'minimum' => 1,
+				),
+				'actions'             => array(
+					'description' => __( 'Actions the current user may take on the campaign now.', 'campaignbridge' ),
+					'type'        => 'array',
+					'items'       => array(
+						'type' => 'string',
+						'enum' => Campaign_Actions::all(),
+					),
 				),
 			),
 		);

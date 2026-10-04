@@ -12,6 +12,7 @@ namespace CampaignBridge\Workflow\Campaign;
 use CampaignBridge\Domain\Campaign\Audit_Context;
 use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
+use CampaignBridge\Domain\Campaign\Campaign_List_Filter;
 use CampaignBridge\Domain\Campaign\Campaign;
 use CampaignBridge\Domain\Campaign\Campaign_Review_Input_Source;
 use CampaignBridge\Domain\Campaign\Campaign_Snapshot;
@@ -55,7 +56,7 @@ final class Campaign_Workflow {
 	}
 
 	/** Return one bounded, authorized owner collection without in-memory filtering. */
-	public function list( Campaign_Actor $actor, int $owner_user_id, int $limit, int $offset ): Campaign_Workflow_List_Result {
+	public function list( Campaign_Actor $actor, int $owner_user_id, int $limit, int $offset, ?Campaign_List_Filter $filter = null ): Campaign_Workflow_List_Result {
 		if ( 1 > $owner_user_id || 1 > $limit || 100 < $limit || 0 > $offset ) {
 			return Campaign_Workflow_List_Result::failure(
 				new Campaign_Workflow_Error( Campaign_Workflow_Error::INVALID_INPUT, 'Campaign collection input is invalid.' )
@@ -68,8 +69,8 @@ final class Campaign_Workflow {
 		}
 
 		return Campaign_Workflow_List_Result::success(
-			$this->campaigns->for_owner( $owner_user_id, $limit, $offset ),
-			$this->campaigns->count_for_owner( $owner_user_id )
+			$this->campaigns->for_owner( $owner_user_id, $limit, $offset, $filter ),
+			$this->campaigns->count_for_owner( $owner_user_id, $filter )
 		);
 	}
 
