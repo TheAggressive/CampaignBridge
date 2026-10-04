@@ -37,6 +37,14 @@ final class Campaign_Draft_Content_Builder {
 	) {}
 
 	/**
+	 * The remote draft title, which carries the correlation ID so an
+	 * unconfirmed create can be found again.
+	 */
+	public static function title( string $correlation_id ): string {
+		return 'CampaignBridge ' . $correlation_id;
+	}
+
+	/**
 	 * Build provider content from a verified snapshot only.
 	 *
 	 * @param array<string, mixed> $settings Decrypted provider settings.
@@ -77,7 +85,7 @@ final class Campaign_Draft_Content_Builder {
 				$fields['html'],
 				$fields['text'],
 				$snapshot->artifact()->fingerprint(),
-				'CampaignBridge ' . $correlation_id
+				self::title( $correlation_id )
 			);
 		} catch ( \InvalidArgumentException ) {
 			return new Campaign_Workflow_Error( Campaign_Workflow_Error::INVALID_INPUT, 'The approved artifact cannot be sent to this provider.' );

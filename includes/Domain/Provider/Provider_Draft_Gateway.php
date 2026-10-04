@@ -16,8 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Creates, re-asserts, and inspects one remote draft. It never schedules or
- * sends.
+ * Creates, re-asserts, inspects, and finds remote drafts. It never schedules
+ * or sends.
  *
  * Adapters receive decrypted settings for one call only, must not retry a
  * non-idempotent create, and return only normalized outcomes.
@@ -42,4 +42,15 @@ interface Provider_Draft_Gateway {
 	 * @param array<string, mixed> $settings Decrypted provider settings.
 	 */
 	public function inspect_draft( array $settings, string $remote_id ): Remote_Draft_State|Provider_Error;
+
+	/**
+	 * Find remote campaigns titled exactly `$title`, created at or after a time.
+	 *
+	 * Used only to recover a create whose outcome was not confirmed: the draft
+	 * title carries the attempt ID. Read-only.
+	 *
+	 * @param array<string, mixed> $settings      Decrypted provider settings.
+	 * @param string               $created_after UTC timestamp bounding the search.
+	 */
+	public function find_drafts( array $settings, string $title, string $created_after ): Remote_Draft_Matches|Provider_Error;
 }

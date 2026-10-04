@@ -266,6 +266,54 @@ existing campaign is in an affected state, so it needs no data migration.
 Audit events identify the actor, operation, snapshot and fingerprint, remote
 reference, delivery time, states, and normalized result.
 
+## Reconciliation (#80)
+
+`Campaign_Reconciler` settles outcomes the provider never confirmed and makes
+the campaign follow what the provider reports. It requires delivery
+authority (`Campaign_Actor::can_deliver()`).
+
+1. **Read only toward the provider.** It calls only
+   `Provider_Draft_Gateway::inspect_draft()` and `find_drafts()`. Nothing is
+   created, scheduled, sent, or edited remotely, so it is idempotent and safe
+   to repeat; it takes no expected version or idempotency key.
+2. **Evidence, never timeouts.** `create_draft`, `schedule`, `unschedule`,
+   and `send` attempts that are `pending` or `unknown` are settled only from
+   provider evidence. A `pending` attempt younger than
+   `Campaign_Reconciler::SETTLE_SECONDS` (300) may still be in flight and
+   blocks reconciliation until it is older. Test-send attempts are never
+   touched: a test leaves no trace in campaign state.
+3. **Lost creates are found by title.** The draft title carries the attempt
+   ID (`Campaign_Draft_Content_Builder::title()`). One match is recorded as
+   a `content_pending` reference and the attempt succeeds; the next
+   `/provider-draft` request re-asserts the approved content and finishes.
+   No match settles the attempt `failed` and `retryable`, but only after a
+   complete search and the settle time. Several matches, or an incomplete
+   search, stay unresolved.
+4. **Following the provider.** With a reference, the provider status maps
+   to a local state: draft → `provider_draft`, scheduled → `scheduled` with
+   the provider's send time (`Campaign::schedule_for()` also accepts a new
+   time for an already scheduled campaign), sending → `sending`, sent →
+   `sent`, canceled → `cancelled`. Each unresolved delivery attempt is
+   `succeeded` when that state shows it took effect, otherwise `failed`.
+5. **Contradictions are recorded, not resolved.** A missing remote campaign
+   (`missing`), an untracked status such as paused (`other`), a scheduled
+   status without a send time, or a status the local state cannot follow
+   (for example a `sent` campaign reported as a draft) stores the
+   observation with `reconciled_at` cleared, claims the version, audits
+   `unknown`, and returns `reconciliation_required`. Delivery stays blocked
+   because it requires a `draft` or `scheduled` observation.
+6. **Serialized with delivery.** Every write consumes the campaign version in
+   the same transaction as the attempt, reference, and audit writes, so a
+   concurrent delivery request or reconciliation makes it fail with
+   `conflict` and write nothing.
+
+Following evidence added state-machine transitions: `unknown` →
+`scheduled`, `sending`, or `sent`; and `provider_draft` or `scheduled` →
+`sent` when the provider sent without `sending` being observed. A state
+change no CampaignBridge request explains is audited with
+`unexplained: true`. Scheduled background reconciliation and webhooks belong
+to M5 (#66).
+
 ## Delivery policies
 
 `Delivery_Policy` holds the site's opt-in governance rules and
@@ -289,6 +337,5 @@ audit log, which is observational and may later be subject to retention.
 
 The #75 REST adapter exposes these operations, plus bounded `get`/`list`
 reads, with schemas, pagination, permission callbacks, rate limits, and one
-error envelope. See [`api.md`](api.md#campaigns). Issues #79-#80 still own
-immediate send and reconciliation. There is still no complete operator
-campaign UI or end-to-end Mailchimp delivery flow.
+error envelope. See [`api.md`](api.md#campaigns). Issue #79 still owns
+immediate send. There is still no complete operator campaign UI.

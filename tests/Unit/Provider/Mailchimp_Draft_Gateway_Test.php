@@ -16,6 +16,7 @@ use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Draft_Content;
 use CampaignBridge\Domain\Provider\Draft_Outcome;
+use CampaignBridge\Domain\Provider\Remote_Draft_Matches;
 use CampaignBridge\Domain\Provider\Remote_Draft_State;
 use CampaignBridge\Providers\Mailchimp_Draft_Gateway;
 use WP_UnitTestCase;
@@ -253,9 +254,40 @@ final class Mailchimp_Draft_Gateway_Test extends WP_UnitTestCase {
 		self::assertInstanceOf( Remote_Draft_State::class, $state );
 		self::assertSame( array( $status, 'abc123', $segmented ), array( $state->status(), $state->audience_id(), $state->is_segmented() ) );
 		self::assertSame( 'GET', $http->requests[0]['method'] );
-		self::assertSame( 'https://us20.api.mailchimp.com/3.0/campaigns/mc9876?fields=status,recipients.list_id,recipients.segment_opts', $http->requests[0]['url'] );
+		self::assertSame( 'https://us20.api.mailchimp.com/3.0/campaigns/mc9876?fields=status,send_time,recipients.list_id,recipients.segment_opts', $http->requests[0]['url'] );
 		self::assertSame( Remote_Draft_State::DRAFT === $status && ! $segmented, $state->matches( 'abc123' ) );
 		self::assertFalse( $state->matches( 'other-audience' ) );
+	}
+
+	public function test_inspection_normalizes_the_send_time_and_a_canceled_campaign(): void {
+		$scheduled = ( new Mailchimp_Draft_Gateway( new Sequenced_Http_Client( array( self::reply( 200, '{"status":"schedule","send_time":"2026-10-05T17:00:00+02:00","recipients":{"list_id":"abc123"}}' ) ) ) ) )->inspect_draft( self::settings(), 'mc9876' );
+		$draft     = ( new Mailchimp_Draft_Gateway( new Sequenced_Http_Client( array( self::reply( 200, '{"status":"save","send_time":"","recipients":{"list_id":"abc123"}}' ) ) ) ) )->inspect_draft( self::settings(), 'mc9876' );
+		$canceled  = ( new Mailchimp_Draft_Gateway( new Sequenced_Http_Client( array( self::reply( 200, '{"status":"canceled","recipients":{"list_id":"abc123"}}' ) ) ) ) )->inspect_draft( self::settings(), 'mc9876' );
+		$canceling = ( new Mailchimp_Draft_Gateway( new Sequenced_Http_Client( array( self::reply( 200, '{"status":"canceling","recipients":{"list_id":"abc123"}}' ) ) ) ) )->inspect_draft( self::settings(), 'mc9876' );
+
+		self::assertSame( array( Remote_Draft_State::SCHEDULED, '2026-10-05T15:00:00Z' ), array( $scheduled->status(), $scheduled->send_time() ) );
+		self::assertNull( $draft->send_time() );
+		self::assertSame( Remote_Draft_State::CANCELED, $canceled->status() );
+		self::assertSame( Remote_Draft_State::OTHER, $canceling->status(), 'A cancellation still in progress is not yet canceled.' );
+	}
+
+	public function test_finding_drafts_matches_the_exact_title_and_reports_completeness(): void {
+		$body    = '{"total_items":3,"campaigns":[{"id":"mc1","settings":{"title":"CampaignBridge attempt-9"}},{"id":"mc2","settings":{"title":"CampaignBridge attempt-90"}},{"id":"mc3","settings":{"title":"Other"}}]}';
+		$http    = new Sequenced_Http_Client( array( self::reply( 200, $body ) ) );
+		$matches = ( new Mailchimp_Draft_Gateway( $http ) )->find_drafts( self::settings(), 'CampaignBridge attempt-9', '2026-10-05T11:00:00Z' );
+
+		self::assertInstanceOf( Remote_Draft_Matches::class, $matches );
+		self::assertSame( array( 'mc1' ), $matches->remote_ids() );
+		self::assertTrue( $matches->is_complete() );
+		self::assertSame( 'GET', $http->requests[0]['method'] );
+		self::assertStringStartsWith( 'https://us20.api.mailchimp.com/3.0/campaigns?since_create_time=2026-10-05T11%3A00%3A00Z&count=1000', $http->requests[0]['url'] );
+
+		$partial = ( new Mailchimp_Draft_Gateway( new Sequenced_Http_Client( array( self::reply( 200, '{"total_items":1500,"campaigns":[]}' ) ) ) ) )->find_drafts( self::settings(), 'CampaignBridge attempt-9', '2026-10-05T11:00:00Z' );
+		self::assertFalse( $partial->is_complete(), 'An empty page of a larger result proves nothing.' );
+
+		foreach ( array( self::reply( 200, 'not json' ), self::reply( 200, '{"campaigns":[]}' ), self::reply( 500 ) ) as $reply ) {
+			self::assertInstanceOf( Provider_Error::class, ( new Mailchimp_Draft_Gateway( new Sequenced_Http_Client( array( $reply ) ) ) )->find_drafts( self::settings(), 'x', '2026-10-05T11:00:00Z' ) );
+		}
 	}
 
 	public function test_an_unreadable_inspection_fails_closed(): void {

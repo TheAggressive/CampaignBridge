@@ -15,7 +15,7 @@ deliver.
 | Schedule and unschedule | Shipped, guarded |
 | Immediate send | Not implemented; the adapter reports `send` as unsupported (#79) |
 | Cancel | Not implemented (#79) |
-| Remote-state reconciliation and ambiguous-outcome recovery | Not implemented; `unknown` outcomes need manual resolution (#80) |
+| Remote-state reconciliation and ambiguous-outcome recovery | Shipped, on demand and read-only toward the provider; background checks and webhooks are M5 (#66) |
 
 ## Trust boundaries
 
@@ -60,6 +60,7 @@ deliver.
 | Test send used to mail arbitrary addresses | Separate test capability, 1–5 recipients, atomic per-user limits, durable per-campaign quota decided again after the attempt is stored | `Campaign_Test_Delivery_Test`, `Campaign_Routes_Security_Test` |
 | Concurrent requests exceed a security limit | Rate limits are claimed with one conditional database update per fixed window; the limiter fails closed when it cannot count | `Rate_Limit_Repository_Test` |
 | Remote draft drift or tampering (see below) | `Campaign_Remote_Draft_Guard` before every test or schedule | `Campaign_Scheduler_Test`, `Campaign_Draft_Handoff_Test`, `Campaign_Schedule_Route_Test`, `Campaign_Test_Delivery_Test` |
+| Reconciliation guesses an outcome, or reaches the audience | Read-only provider calls; attempts settled only from provider status or a complete correlation-title search; pending attempts younger than 5 minutes left alone; contradictions recorded and refused; every write claims the campaign version | `Campaign_Reconciler_Test`, `Campaign_Schedule_Route_Test` |
 | Duplicate or mistargeted audience delivery | Audience confirmation, version claim before contact, one unresolved delivery attempt blocks all others, no automatic retry | `Campaign_Scheduler_Test`, `Campaign_Schedule_Route_Test` |
 | Test recipients retained as personal data | Recipients used for one call; only counts recorded | `Campaign_Test_Delivery_Test` |
 | Spoofed client IP bypasses throttling | `REMOTE_ADDR` default, trusted filter opt-in | `Rate_Limiter_Test` |
@@ -141,8 +142,13 @@ email preview iframe, and campaign and discovery REST responses send
 - Immediate send and cancel are not implemented. Before immediate send ships
   it must use the same version claim, single-unresolved-attempt rule, remote
   draft guard, and `unknown`-on-ambiguity protocol as scheduling.
-- Reconciliation is manual. An `unknown` schedule or test outcome blocks the
-  affected operation until a developer resolves the attempt; automated
-  reconciliation, durable jobs, provider webhooks, and recovery are tracked in
-  #80 and M5 (#66). Until then, high-volume or multi-operator sending is not
-  considered production-ready.
+- Reconciliation runs only when an operator asks for it. An `unknown`
+  outcome blocks delivery until someone reconciles; nothing checks
+  automatically. A test send's outcome cannot be reconciled from campaign
+  state, so an unconfirmed test stays `unknown` (it does not block). Durable
+  scheduled reconciliation, provider webhooks, and crash recovery are M5
+  (#66). Until then, high-volume or multi-operator sending is not considered
+  production-ready.
+- Mailchimp's `send_time` is trusted as the scheduled delivery time when
+  reconciling a scheduled campaign. This is verified only against recorded
+  responses until the M3 sandbox run.
