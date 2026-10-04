@@ -122,6 +122,28 @@ final class Mailchimp_Token_Mapper_Test extends WP_UnitTestCase {
 		self::assertStringContainsString( '{{cb:subscriber.first_name}}', $compiled->html() );
 	}
 
+	public function test_a_footer_without_a_template_url_carries_mailchimps_unsubscribe_tag(): void {
+		$compiled = Compiler_Factory::create()->compile(
+			parse_blocks( '<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section --><!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph --><!-- /wp:campaignbridge/section --><!-- wp:campaignbridge/compliance-footer {"businessName":"Example Co","address":"1 Example St"} /--><!-- /wp:campaignbridge/container -->' ),
+			new Render_Context(
+				array(
+					'title'    => 'Footer fixture',
+					'language' => 'en',
+				)
+			)
+		);
+		self::assertTrue( $compiled->is_success() );
+
+		$mapping = ( new Mailchimp_Token_Mapper() )->map( Token_Registry::default(), 'abc123', self::fields( array( 'FNAME', 'LNAME' ) ) );
+		$html    = $mapping->translate( $compiled->html(), Token_Registry::default(), new Token_Parser() );
+		$text    = $mapping->translate( $compiled->text(), Token_Registry::default(), new Token_Parser() );
+
+		self::assertTrue( $html->is_complete() );
+		self::assertTrue( $text->is_complete() );
+		self::assertStringContainsString( '<a href="*|UNSUB|*"', $html->content() );
+		self::assertStringContainsString( 'Unsubscribe: *|UNSUB|*', $text->content() );
+	}
+
 	public function test_translation_fails_closed_on_unmapped_or_malformed_tokens(): void {
 		$parser   = new Token_Parser();
 		$registry = Token_Registry::default();

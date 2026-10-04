@@ -39,6 +39,7 @@ final class Native_Style_Support {
 		'campaignbridge/container'         => array( 'color.text', 'color.background', 'spacing.padding', 'spacing.margin' ),
 		'core/separator'                   => array( 'spacing.margin' ),
 		'core/social-links'                => array( 'spacing.margin' ),
+		'campaignbridge/navigation'        => array( 'color.text' ),
 		'campaignbridge/column'            => array( 'color.background', 'spacing.padding', ...Box_Style::BORDER_PATHS ),
 	);
 
