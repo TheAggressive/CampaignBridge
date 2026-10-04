@@ -51,6 +51,7 @@ test('the canvas draws buttons with the email design shape, not Core defaults', 
       buttonPadding: Boolean(type('core/button').spacing?.padding),
       imageRadius: type('core/image').__experimentalBorder?.radius,
       paragraphBorder: type('core/paragraph').__experimentalBorder,
+      navigationColor: type('campaignbridge/navigation').color,
     };
   });
 
@@ -63,6 +64,10 @@ test('the canvas draws buttons with the email design shape, not Core defaults', 
   expect(supports.buttonPadding).toBe(true);
   expect(supports.imageRadius).toBe(true);
   expect(supports.paragraphBorder).toBe(false);
+  expect(supports.navigationColor).toMatchObject({
+    text: true,
+    background: false,
+  });
 
   const links = page
     .frameLocator('iframe[name="editor-canvas"]')

@@ -200,8 +200,10 @@ Only `campaignbridge/post-image` stays custom, because Core cannot bind an
 image's link destination or its intrinsic dimensions.
 
 The unsubscribe destination is never a block attribute. The compliance footer
-reads it from immutable render context metadata, so provider merge syntax stays
-outside the block grammar and outside the renderer.
+reads the template's URL from immutable render context metadata, or uses the
+canonical `{{cb:campaign.unsubscribe_url}}` token when the template sets none,
+so provider merge syntax stays outside the block grammar and outside the
+renderer.
 
 ### Unsupported blocks
 

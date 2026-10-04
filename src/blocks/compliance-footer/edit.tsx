@@ -87,7 +87,7 @@ export default function Edit({
         </div>
         <Notice status='info' isDismissible={false}>
           {__(
-            'The unsubscribe destination comes from this template’s settings, not from this block.',
+            'The link goes to your email provider’s unsubscribe page, or to the Unsubscribe URL in this template’s settings if you set one.',
             'campaignbridge'
           )}
         </Notice>

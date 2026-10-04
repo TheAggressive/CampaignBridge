@@ -12,12 +12,23 @@
   "supports": {
     "html": false,
     "reusable": false,
-    "customClassName": false
+    "customClassName": false,
+    "color": {
+      "text": true,
+      "background": false,
+      "gradients": false,
+      "link": false
+    }
   },
   "attributes": {
     "items": {
       "type": "array",
-      "default": [{ "label": "", "url": "" }]
+      "default": [
+        {
+          "label": "",
+          "url": ""
+        }
+      ]
     }
   },
   "editorScript": "file:./index.js"

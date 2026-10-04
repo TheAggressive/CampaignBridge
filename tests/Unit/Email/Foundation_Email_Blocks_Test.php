@@ -240,14 +240,15 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 		self::assertSame( '', $result->html() );
 	}
 
-	public function test_requires_an_unsubscribe_url_from_template_metadata(): void {
+	public function test_without_a_template_url_the_footer_uses_the_provider_unsubscribe_token(): void {
 		$result = Compiler_Factory::create()->compile(
 			$this->document(),
 			new Render_Context( array( 'title' => 'Foundation fixture' ), array(), array(), 'universal@1' )
 		);
 
-		self::assertFalse( $result->is_success() );
-		self::assertSame( 'compliance.unsubscribe.missing', $result->diagnostics()[0]->code() );
+		self::assertTrue( $result->is_success() );
+		self::assertStringContainsString( '<a href="{{cb:campaign.unsubscribe_url}}"', $result->html() );
+		self::assertStringContainsString( ': {{cb:campaign.unsubscribe_url}}', $result->text() );
 	}
 
 	public function test_rejects_a_non_http_unsubscribe_url(): void {
@@ -265,7 +266,7 @@ final class Foundation_Email_Blocks_Test extends TestCase {
 		);
 
 		self::assertFalse( $result->is_success() );
-		self::assertSame( 'compliance.unsubscribe.missing', $result->diagnostics()[0]->code() );
+		self::assertSame( 'compliance.unsubscribe.invalid', $result->diagnostics()[0]->code() );
 	}
 
 	public function test_keeps_the_unsubscribe_destination_out_of_the_block_source(): void {
