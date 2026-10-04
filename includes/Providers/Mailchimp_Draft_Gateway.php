@@ -17,6 +17,7 @@ use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Draft_Content;
 use CampaignBridge\Domain\Provider\Draft_Outcome;
 use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
+use CampaignBridge\Domain\Provider\Remote_Draft_Matches;
 use CampaignBridge\Domain\Provider\Remote_Draft_State;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -30,13 +31,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * campaign creation, so a lost response may hide a created draft and is
  * reported as ambiguous. Re-asserting a draft is an idempotent PATCH of its
  * audience and envelope followed by an idempotent PUT of its content.
- * Inspection is a read-only GET of the status, list, and segment. No
- * schedule or send endpoint is ever called. Response bodies are read only for
+ * Inspection is a read-only GET of the status, send time, list, and
+ * segment. Finding drafts is a read-only listing of campaigns created since
+ * the request, matched on the exact correlation title. No schedule or send
+ * endpoint is ever called. Response bodies are read only for
  * those fields and never leave this class.
  */
 final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 	/** Seconds to wait for a draft mutation before the outcome is unknown. */
 	private const TIMEOUT = 20;
+
+	/** Most campaigns one recovery search reads; Mailchimp's page maximum. */
+	private const SEARCH_LIMIT = 1000;
 
 	/**
 	 * Injected HTTP transport.
@@ -134,7 +140,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		}
 
 		$response = $this->http->get(
-			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) ) . '?fields=status,recipients.list_id,recipients.segment_opts',
+			Mailchimp_Provider::build_api_url( $api_key, '/campaigns/' . rawurlencode( $remote_id ) ) . '?fields=status,send_time,recipients.list_id,recipients.segment_opts',
 			array(
 				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
 				'timeout'               => self::TIMEOUT,
@@ -160,11 +166,70 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 				'schedule' => Remote_Draft_State::SCHEDULED,
 				'sending'  => Remote_Draft_State::SENDING,
 				'sent'     => Remote_Draft_State::SENT,
+				'canceled' => Remote_Draft_State::CANCELED,
 				default    => Remote_Draft_State::OTHER,
 			},
 			$list_id,
-			self::is_segmented( $recipients['segment_opts'] ?? null )
+			self::is_segmented( $recipients['segment_opts'] ?? null ),
+			self::utc( $decoded['send_time'] ?? null )
 		);
+	}
+
+	public function find_drafts( array $settings, string $title, string $created_after ): Remote_Draft_Matches|Provider_Error {
+		$api_key = $this->api_key( $settings );
+		$since   = self::utc( $created_after );
+		if ( null === $api_key || null === $since ) {
+			return Mailchimp_Errors::for_category( Provider_Error_Category::VALIDATION );
+		}
+
+		$query    = http_build_query(
+			array(
+				'since_create_time' => $since,
+				'count'             => self::SEARCH_LIMIT,
+				'sort_field'        => 'create_time',
+				'sort_dir'          => 'ASC',
+				'fields'            => 'total_items,campaigns.id,campaigns.settings.title',
+			),
+			'',
+			'&',
+			PHP_QUERY_RFC3986
+		);
+		$response = $this->http->get(
+			Mailchimp_Provider::build_api_url( $api_key, '/campaigns' ) . '?' . $query,
+			array(
+				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
+				'timeout'               => self::TIMEOUT,
+				'campaignbridge_origin' => Mailchimp_Provider::origin(),
+			)
+		);
+		$error    = $this->failure( $response );
+		if ( null !== $error ) {
+			return $error;
+		}
+
+		$decoded   = json_decode( is_array( $response ) && is_string( $response['body'] ?? null ) ? $response['body'] : '', true );
+		$campaigns = is_array( $decoded ) ? ( $decoded['campaigns'] ?? null ) : null;
+		$total     = is_array( $decoded ) ? ( $decoded['total_items'] ?? null ) : null;
+		if ( ! is_array( $campaigns ) || ! is_int( $total ) ) {
+			return Mailchimp_Errors::unexpected_response();
+		}
+
+		$matches = array();
+		foreach ( $campaigns as $campaign ) {
+			$campaign_title = is_array( $campaign ) ? ( $campaign['settings']['title'] ?? null ) : null;
+			if ( is_string( $campaign['id'] ?? null ) && $campaign_title === $title ) {
+				$matches[] = $campaign['id'];
+			}
+		}
+
+		return Remote_Draft_Matches::create( $matches, count( $campaigns ) >= $total );
+	}
+
+	/** Normalize a provider timestamp to UTC; null when absent or unreadable. */
+	private static function utc( mixed $time ): ?string {
+		$parsed = is_string( $time ) && '' !== $time ? strtotime( $time ) : false;
+
+		return false === $parsed ? null : gmdate( 'Y-m-d\TH:i:s\Z', $parsed );
 	}
 
 	/** Upload content with an idempotent PUT; null on success. */

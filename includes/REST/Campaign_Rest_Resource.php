@@ -55,7 +55,7 @@ final class Campaign_Rest_Resource {
 	/**
 	 * The normalized remote draft reference; never a provider payload.
 	 *
-	 * @return array<string, string>
+	 * @return array<string, string|null>
 	 */
 	public static function remote( Remote_Campaign_Reference $reference ): array {
 		return array(
@@ -63,6 +63,7 @@ final class Campaign_Rest_Resource {
 			'remote_id'      => $reference->remote_id(),
 			'observed_state' => $reference->observed_state(),
 			'observed_at'    => $reference->observed_at(),
+			'reconciled_at'  => $reference->reconciled_at(),
 		);
 	}
 

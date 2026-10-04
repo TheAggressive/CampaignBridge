@@ -61,7 +61,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 		'unschedule'                 => true,
 		'send'                       => false,
 		'cancel'                     => false,
-		'reconcile'                  => false,
+		'reconcile'                  => true,
 		'reports'                    => false,
 	);
 

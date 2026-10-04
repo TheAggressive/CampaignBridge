@@ -12,6 +12,7 @@ namespace CampaignBridge\REST;
 use CampaignBridge\Core\Campaign_Authorizer;
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Services\Campaign\Campaign_Draft_Handoff_Factory;
+use CampaignBridge\Services\Campaign\Campaign_Reconciler_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Scheduler_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Test_Delivery_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Workflow_Factory;
@@ -153,6 +154,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 			'can_deliver_campaigns'
 		);
 		$this->register_action( '/unschedule', 'unschedule_campaign', array( 'idempotency_key' => Campaign_Rest_Schema::idempotency_key() ), true, 'delivery_result', 'can_deliver_campaigns' );
+		$this->register_action( '/reconcile', 'reconcile_campaign', array(), false, 'reconcile_result', 'can_deliver_campaigns' );
 	}
 
 	/** A useful coarse gate; exact campaign/template authorization remains in the workflow. */
@@ -523,6 +525,53 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 				$this->expected_version( $request ),
 				(string) $request->get_param( 'idempotency_key' ),
 				$settings
+			)
+		);
+	}
+
+	/**
+	 * Settle unconfirmed outcomes and follow what the provider reports.
+	 *
+	 * Read-only toward the provider and idempotent, so it takes neither an
+	 * expected version nor an idempotency key.
+	 */
+	public function reconcile_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$limited = $this->rate_limit( 'campaign_reconcile', self::EXPENSIVE_LIMIT );
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
+		}
+
+		$actor  = $this->actor();
+		$loaded = $this->workflow->get( $actor, $this->campaign_id( $request ) );
+		if ( ! $loaded->is_success() || null === $loaded->campaign() ) {
+			return Campaign_Rest_Errors::from_result( $loaded );
+		}
+		$provider   = $loaded->campaign()->provider();
+		$reconciler = null === $provider ? null : Campaign_Reconciler_Factory::create( $provider );
+		if ( null === $provider || null === $reconciler ) {
+			return new WP_Error(
+				'campaignbridge_campaign_invalid_input',
+				__( 'The campaign must target a provider that supports reconciliation.', 'campaignbridge' ),
+				array( 'status' => Rest_Constants::HTTP_BAD_REQUEST )
+			);
+		}
+
+		$settings = Provider_Discovery_Factory::settings( $provider );
+		$result   = $reconciler->reconcile( $actor, $this->campaign_id( $request ), $settings );
+		unset( $settings );
+
+		$campaign = $result->campaign();
+		if ( ! $result->is_success() || null === $campaign ) {
+			return Campaign_Rest_Errors::from_remote( $result );
+		}
+
+		return $this->no_store(
+			new WP_REST_Response(
+				array(
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'remote'            => null === $result->reference() ? null : Campaign_Rest_Resource::remote( $result->reference() ),
+					'resolved_attempts' => array_map( array( Campaign_Rest_Resource::class, 'attempt' ), $result->resolved_attempts() ),
+				)
 			)
 		);
 	}

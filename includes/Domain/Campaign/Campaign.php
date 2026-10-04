@@ -291,7 +291,10 @@ final class Campaign {
 
 	/** Move a provider draft to `scheduled` for one UTC delivery time. */
 	public function schedule_for( string $scheduled_for, string $updated_at ): self {
-		Campaign_State_Machine::assert_transition( $this->state, Campaign_State::SCHEDULED );
+		// A scheduled campaign may take a new time, such as the one the provider reports.
+		if ( Campaign_State::SCHEDULED !== $this->state ) {
+			Campaign_State_Machine::assert_transition( $this->state, Campaign_State::SCHEDULED );
+		}
 
 		return $this->replacement(
 			Campaign_State::SCHEDULED,

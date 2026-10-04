@@ -87,10 +87,14 @@ final class Campaign_State_Machine_Test extends Test_Case {
 	}
 
 	/**
-	 * Test that unknown state can recover to provider_draft or fail.
+	 * Test that unknown state follows provider evidence, or fails.
 	 */
 	public function test_unknown_state_recovery_paths(): void {
 		$this->assertTrue( Campaign_State_Machine::can_transition( 'unknown', 'provider_draft' ) );
+		$this->assertTrue( Campaign_State_Machine::can_transition( 'unknown', 'scheduled' ) );
+		$this->assertTrue( Campaign_State_Machine::can_transition( 'unknown', 'sending' ) );
+		$this->assertTrue( Campaign_State_Machine::can_transition( 'unknown', 'sent' ) );
+		$this->assertFalse( Campaign_State_Machine::can_transition( 'sent', 'unknown' ), 'A sent campaign never becomes uncertain again.' );
 		$this->assertTrue( Campaign_State_Machine::can_transition( 'unknown', 'failed' ) );
 		$this->assertTrue( Campaign_State_Machine::can_transition( 'unknown', 'cancelled' ) );
 	}
@@ -145,7 +149,7 @@ final class Campaign_State_Machine_Test extends Test_Case {
 		);
 
 		$this->assertSame(
-			array( 'scheduled', 'sending', 'approved', 'cancelled', 'failed', 'unknown' ),
+			array( 'scheduled', 'sending', 'sent', 'approved', 'cancelled', 'failed', 'unknown' ),
 			Campaign_State_Machine::allowed_transitions( 'provider_draft' )
 		);
 
@@ -174,13 +178,13 @@ final class Campaign_State_Machine_Test extends Test_Case {
 			'draft'            => array( 'ready_for_review', 'cancelled', 'failed', 'archived' ),
 			'ready_for_review' => array( 'approved', 'draft', 'cancelled', 'failed', 'archived' ),
 			'approved'         => array( 'provider_draft', 'ready_for_review', 'draft', 'cancelled', 'failed', 'archived' ),
-			'provider_draft'   => array( 'scheduled', 'sending', 'approved', 'cancelled', 'failed', 'unknown' ),
-			'scheduled'        => array( 'sending', 'provider_draft', 'cancelled', 'failed', 'unknown' ),
+			'provider_draft'   => array( 'scheduled', 'sending', 'sent', 'approved', 'cancelled', 'failed', 'unknown' ),
+			'scheduled'        => array( 'sending', 'sent', 'provider_draft', 'cancelled', 'failed', 'unknown' ),
 			'sending'          => array( 'sent', 'failed', 'unknown' ),
 			'sent'             => array(),
 			'failed'           => array( 'provider_draft', 'draft', 'cancelled', 'archived' ),
 			'cancelled'        => array(),
-			'unknown'          => array( 'provider_draft', 'failed', 'cancelled' ),
+			'unknown'          => array( 'provider_draft', 'scheduled', 'sending', 'sent', 'failed', 'cancelled' ),
 			'archived'         => array(),
 		);
 		$this->assertSame( Campaign_State::all(), array_keys( $expected ) );
@@ -194,6 +198,6 @@ final class Campaign_State_Machine_Test extends Test_Case {
 				$legal += $allowed ? 1 : 0;
 			}
 		}
-		$this->assertSame( 36, $legal );
+		$this->assertSame( 41, $legal );
 	}
 }
