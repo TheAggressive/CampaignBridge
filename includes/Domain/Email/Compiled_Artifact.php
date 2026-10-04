@@ -111,9 +111,10 @@ final class Compiled_Artifact {
 
 		if ( 'image' === $asset['type'] ) {
 			self::require_exact_keys( $asset, array( 'type', 'url', 'width', 'height', 'alt' ) );
+			// A null height is an image without an authored height, which email clients scale from the width.
 			if (
 				! is_int( $asset['width'] ) || 1 > $asset['width'] || 4096 < $asset['width']
-				|| ! is_int( $asset['height'] ) || 1 > $asset['height'] || 4096 < $asset['height']
+				|| ( null !== $asset['height'] && ( ! is_int( $asset['height'] ) || 1 > $asset['height'] || 4096 < $asset['height'] ) )
 				|| ! is_string( $asset['alt'] ) || 2048 < strlen( $asset['alt'] )
 			) {
 				throw new \InvalidArgumentException( 'Compiled image asset is invalid.' );
