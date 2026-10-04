@@ -337,6 +337,20 @@ final class Campaign_Routes_Test extends Test_Case {
 		$this->assert_error( 409, 'missing_snapshot', $this->action( $invalid['id'], 'submit', array( 'expected_version' => 1 ) ) );
 	}
 
+	public function test_an_image_without_an_authored_height_snapshots_and_reloads(): void {
+		// The editor's default: a width and "height: auto", so the compiled image has no height.
+		$template = $this->template( '<!-- wp:campaignbridge/container --><!-- wp:campaignbridge/section --><!-- wp:image {"width":"268px","sizeSlug":"large"} --><figure class="wp-block-image size-large is-resized"><img src="https://example.com/hoodie.jpg" alt="Hoodie" style="width:268px"/></figure><!-- /wp:image --><!-- /wp:campaignbridge/section --><!-- /wp:campaignbridge/container -->' );
+		$campaign = $this->create_campaign( null, $template )->get_data()['campaign'];
+
+		$snapshot = $this->action( $campaign['id'], 'snapshot', array( 'expected_version' => 1 ) );
+
+		self::assertSame( 200, $snapshot->get_status() );
+		$stored = ( new Campaign_Snapshot_Repository() )->for_campaign( $campaign['id'] );
+		self::assertCount( 1, $stored );
+		self::assertSame( $snapshot->get_data()['snapshot']['fingerprint'], $stored[0]->artifact()->fingerprint() );
+		self::assertNull( $stored[0]->artifact()->assets()[0]['height'] );
+	}
+
 	public function test_duplicate_is_idempotent_and_matches_direct_workflow_invocation(): void {
 		$source = $this->create_campaign(
 			null,

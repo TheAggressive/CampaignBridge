@@ -114,6 +114,16 @@ final class Campaign_Persistence_Security_Test extends Test_Case {
 			),
 		);
 
+		foreach ( array( 0, 4097, '400' ) as $height ) {
+			$unsafe[] = array(
+				'type'   => 'image',
+				'url'    => 'https://example.org/image.jpg',
+				'width'  => 600,
+				'height' => $height,
+				'alt'    => '',
+			);
+		}
+
 		foreach ( $unsafe as $asset ) {
 			try {
 				Compiled_Artifact::from_array( $base + array( 'assets' => array( $asset ) ) );
@@ -122,6 +132,16 @@ final class Campaign_Persistence_Security_Test extends Test_Case {
 				self::addToAssertionCount( 1 );
 			}
 		}
+
+		// An image without an authored height is a valid compiler output, not an unsafe record.
+		$scaled = array(
+			'type'   => 'image',
+			'url'    => 'https://example.org/image.jpg',
+			'width'  => 268,
+			'height' => null,
+			'alt'    => 'Hoodie',
+		);
+		self::assertSame( array( $scaled ), Compiled_Artifact::from_array( $base + array( 'assets' => array( $scaled ) ) )->assets() );
 	}
 
 	/** Raw bodies, provider payloads, stack traces, and credentials are redacted. */
