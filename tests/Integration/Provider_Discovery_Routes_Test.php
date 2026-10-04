@@ -112,7 +112,8 @@ final class Provider_Discovery_Routes_Test extends Test_Case {
 
 		self::assertSame( 200, $response->get_status() );
 		self::assertTrue( $response->get_data()['operations']['discover_audiences'] );
-		self::assertFalse( $response->get_data()['operations']['send'] );
+		self::assertTrue( $response->get_data()['operations']['send'] );
+		self::assertFalse( $response->get_data()['operations']['cancel'] );
 		self::assertSame( 'campaignbridge_provider_not_found', $this->request( 'GET', '/capabilities', array(), '/campaignbridge/v1/providers/html' )->get_data()['code'] );
 	}
 

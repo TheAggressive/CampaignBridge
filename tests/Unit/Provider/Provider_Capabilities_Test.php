@@ -61,12 +61,13 @@ final class Provider_Capabilities_Test extends WP_UnitTestCase {
 				Provider_Operation::SEND_TEST,
 				Provider_Operation::SCHEDULE,
 				Provider_Operation::UNSCHEDULE,
+				Provider_Operation::SEND,
 				Provider_Operation::RECONCILE,
 			),
 			$capabilities->supported()
 		);
-		// Immediate send, in-flight cancel, and reports are not implemented yet.
-		foreach ( array( 'send', 'cancel', 'reports' ) as $operation ) {
+		// In-flight cancel and reports are not implemented.
+		foreach ( array( 'cancel', 'reports' ) as $operation ) {
 			self::assertFalse( $capabilities->supports( $operation ), $operation );
 		}
 		self::assertSame( $capabilities->to_array(), ( new Mailchimp_Discovery() )->capabilities()->to_array() );

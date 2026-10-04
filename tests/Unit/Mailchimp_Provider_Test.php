@@ -108,10 +108,11 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 		self::assertTrue( $capabilities['discover_merge_fields'] );
 		self::assertTrue( $capabilities['create_draft'] );
 		self::assertTrue( $capabilities['send_test'] );
-		self::assertFalse( $capabilities['send'] );
+		self::assertTrue( $capabilities['send'] );
 		self::assertTrue( $capabilities['schedule'] );
 		self::assertTrue( $capabilities['unschedule'] );
-		self::assertFalse( $capabilities['cancel'] );
+		self::assertTrue( $capabilities['reconcile'] );
+		self::assertFalse( $capabilities['cancel'], 'Mailchimp in-flight cancel is not used.' );
 		self::assertFalse( $capabilities['reports'] );
 	}
 

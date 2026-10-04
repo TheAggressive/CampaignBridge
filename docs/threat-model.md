@@ -13,8 +13,8 @@ deliver.
 | Remote draft handoff from the approved artifact | Shipped, idempotent |
 | Test delivery to 1–5 named addresses | Shipped, guarded |
 | Schedule and unschedule | Shipped, guarded |
-| Immediate send | Not implemented; the adapter reports `send` as unsupported (#79) |
-| Cancel | Not implemented (#79) |
+| Immediate send | Shipped, guarded like scheduling; accepted sends become `sending`, ambiguous ones `unknown` |
+| Cancel | Not supported: Mailchimp's in-flight cancel needs Mailchimp Pro and cannot recall delivered mail |
 | Remote-state reconciliation and ambiguous-outcome recovery | Shipped, on demand and read-only toward the provider; background checks and webhooks are M5 (#66) |
 
 ## Trust boundaries
@@ -139,9 +139,10 @@ email preview iframe, and campaign and discovery REST responses send
 - The outbound origin policy is a destination allowlist for fixed public
   APIs. It does not inspect DNS answers. An integration whose host comes from
   site data needs a separately reviewed boundary.
-- Immediate send and cancel are not implemented. Before immediate send ships
-  it must use the same version claim, single-unresolved-attempt rule, remote
-  draft guard, and `unknown`-on-ambiguity protocol as scheduling.
+- An accepted send cannot be recalled. CampaignBridge does not use
+  Mailchimp's in-flight cancel, so the protections that matter are before
+  the send: confirmed audience, separation of duties when enabled, the
+  remote draft guard, and the version claim.
 - Reconciliation runs only when an operator asks for it. An `unknown`
   outcome blocks delivery until someone reconciles; nothing checks
   automatically. A test send's outcome cannot be reconciled from campaign

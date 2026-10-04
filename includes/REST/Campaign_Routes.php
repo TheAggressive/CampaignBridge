@@ -154,6 +154,17 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 			'can_deliver_campaigns'
 		);
 		$this->register_action( '/unschedule', 'unschedule_campaign', array( 'idempotency_key' => Campaign_Rest_Schema::idempotency_key() ), true, 'delivery_result', 'can_deliver_campaigns' );
+		$this->register_action(
+			'/send',
+			'send_campaign',
+			array(
+				'confirm_audience_reference' => Campaign_Rest_Schema::confirm_audience_reference(),
+				'idempotency_key'            => Campaign_Rest_Schema::idempotency_key(),
+			),
+			true,
+			'delivery_result',
+			'can_deliver_campaigns'
+		);
 		$this->register_action( '/reconcile', 'reconcile_campaign', array(), false, 'reconcile_result', 'can_deliver_campaigns' );
 	}
 
@@ -514,6 +525,27 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * Send the campaign's remote draft to its audience now.
+	 *
+	 * Irreversible. The operator must echo the campaign's audience reference,
+	 * exactly as for scheduling.
+	 */
+	public function send_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		return $this->delivery(
+			$request,
+			'campaign_send',
+			fn ( Campaign_Scheduler $scheduler, Campaign_Actor $actor, array $settings ): Campaign_Delivery_Result => $scheduler->send(
+				$actor,
+				$this->campaign_id( $request ),
+				$this->expected_version( $request ),
+				(string) $request->get_param( 'confirm_audience_reference' ),
+				(string) $request->get_param( 'idempotency_key' ),
+				$settings
+			)
+		);
+	}
+
 	/** Return a scheduled campaign to its provider draft before it sends. */
 	public function unschedule_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->delivery(
@@ -599,7 +631,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		if ( null === $provider || null === $scheduler ) {
 			return new WP_Error(
 				'campaignbridge_campaign_invalid_input',
-				__( 'The campaign must target a provider that supports scheduled delivery.', 'campaignbridge' ),
+				__( 'The campaign must target a provider that supports delivery.', 'campaignbridge' ),
 				array( 'status' => Rest_Constants::HTTP_BAD_REQUEST )
 			);
 		}

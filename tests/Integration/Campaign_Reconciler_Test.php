@@ -243,6 +243,76 @@ final class Campaign_Reconciler_Test extends Test_Case {
 		self::assertSame( array( Campaign_State::PROVIDER_DRAFT, 'succeeded' ), array( $unscheduled->campaign()?->state(), $unscheduled->resolved_attempts()[0]->status() ) );
 	}
 
+	/** @return array<string, array{0: string, 1: string, 2: string}> */
+	public static function send_evidence(): array {
+		return array(
+			'still sending'  => array( Remote_Draft_State::SENDING, Campaign_State::SENDING, 'succeeded' ),
+			'already sent'   => array( Remote_Draft_State::SENT, Campaign_State::SENT, 'succeeded' ),
+			'never accepted' => array( Remote_Draft_State::DRAFT, Campaign_State::PROVIDER_DRAFT, 'failed' ),
+		);
+	}
+
+	/** @dataProvider send_evidence */
+	public function test_a_timed_out_send_is_settled_only_by_what_mailchimp_reports( string $remote, string $local, string $attempt ): void {
+		$campaign = $this->unknown_after( 'send' );
+		$this->provider_reports( $remote, Remote_Draft_State::DRAFT === $remote ? null : self::SEND_AT );
+		$mutations = $this->provider_mutations();
+
+		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+
+		self::assertSame( array( $local, $attempt ), array( $result->campaign()?->state(), $result->resolved_attempts()[0]->status() ) );
+		self::assertSame( $mutations, $this->provider_mutations(), 'Reconciling a send never sends.' );
+	}
+
+	public function test_a_timed_out_send_that_mailchimp_reports_as_scheduled_stays_unresolved(): void {
+		$campaign = $this->unknown_after( 'send' );
+		$this->provider_reports( Remote_Draft_State::SCHEDULED, self::SEND_AT );
+
+		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $result->error()?->code() );
+		self::assertSame( 'unknown', $this->attempts->for_campaign( $campaign->id() )[0]->status() );
+	}
+
+	public function test_delivery_after_a_reconciliation_records_its_new_observation(): void {
+		// Found live: a later observation must not keep an earlier reconciled_at.
+		$campaign = $this->provider_draft_campaign();
+		self::assertNotNull( $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() )->reference()?->reconciled_at() );
+
+		$this->clock->now += 60;
+		$scheduled         = $this->scheduler->schedule( $this->sender, $campaign->id(), (int) $this->campaigns->get( $campaign->id() )?->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() );
+		self::assertTrue( $scheduled->is_success(), (string) $scheduled->error()?->message() );
+		self::assertSame( array( 'scheduled', null ), array( $scheduled->reference()?->observed_state(), $scheduled->reference()?->reconciled_at() ) );
+
+		$this->provider_reports( Remote_Draft_State::SCHEDULED, self::SEND_AT );
+		$this->clock->now += 60;
+		$reconciled        = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+		$this->clock->now += 60;
+		$this->provider_reports( Remote_Draft_State::DRAFT );
+		self::assertTrue( $this->scheduler->unschedule( $this->sender, $campaign->id(), (int) $reconciled->campaign()?->version(), 'unschedule-1', self::settings() )->is_success() );
+
+		$this->clock->now += 60;
+		$this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+		$this->clock->now += 60;
+		self::assertTrue( $this->scheduler->send( $this->sender, $campaign->id(), (int) $this->campaigns->get( $campaign->id() )?->version(), self::AUDIENCE, 'send-1', self::settings() )->is_success() );
+	}
+
+	public function test_a_failure_to_record_an_accepted_delivery_never_escapes_and_requires_reconciliation(): void {
+		$campaign = $this->provider_draft_campaign();
+		// The provider accepts, then recording fails: the clock moves before the attempt's creation.
+		$this->gateway->during_call = function (): void {
+			$this->clock->now -= 3600;
+		};
+
+		$result = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );
+
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $result->error()?->code() );
+		self::assertSame( 'pending', $this->attempts->for_campaign( $campaign->id() )[0]->status(), 'The pending attempt keeps further delivery blocked.' );
+		$this->clock->now += 7200;
+		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $this->scheduler->send( $this->sender, $campaign->id(), (int) $this->campaigns->get( $campaign->id() )?->version(), self::AUDIENCE, 'send-2', self::settings() )->error()?->code() );
+		self::assertCount( 1, $this->gateway->calls, 'The send is never repeated.' );
+	}
+
 	public function test_repeated_reconciliation_settles_nothing_twice_and_never_reaches_the_provider_audience(): void {
 		$campaign = $this->unknown_after( 'schedule' );
 		$this->provider_reports( Remote_Draft_State::SCHEDULED, self::SEND_AT );
@@ -311,7 +381,7 @@ final class Campaign_Reconciler_Test extends Test_Case {
 				},
 				Campaign_Reconciler::OBSERVED_MISSING,
 			),
-			'paused in the provider'   => array(
+			'untracked in the provider' => array(
 				static function ( Scripted_Draft_Gateway $drafts ): void {
 					$drafts->remote_status = Remote_Draft_State::OTHER;
 				},
@@ -458,9 +528,11 @@ final class Campaign_Reconciler_Test extends Test_Case {
 		$this->provider_reports( Remote_Draft_State::DRAFT );
 		$campaign = 'unschedule' === $operation ? $this->scheduled_campaign() : $this->provider_draft_campaign();
 		$this->gateway->outcomes = array( Action_Outcome::from_error( Provider_Error::timeout( 'mailchimp_connection_timeout', 'Timed out.', 'mailchimp' ) ) );
-		$result                  = 'unschedule' === $operation
-			? $this->scheduler->unschedule( $this->sender, $campaign->id(), $campaign->version(), 'unschedule-1', self::settings() )
-			: $this->scheduler->schedule( $this->sender, $campaign->id(), $campaign->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() );
+		$result                  = match ( $operation ) {
+			'unschedule' => $this->scheduler->unschedule( $this->sender, $campaign->id(), $campaign->version(), 'unschedule-1', self::settings() ),
+			'send'       => $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() ),
+			default      => $this->scheduler->schedule( $this->sender, $campaign->id(), $campaign->version(), self::SEND_AT, self::AUDIENCE, 'schedule-1', self::settings() ),
+		};
 		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $result->error()?->code() );
 		self::assertSame( Campaign_State::UNKNOWN, $this->campaigns->get( $campaign->id() )?->state() );
 		$this->drafts->remote_status = Remote_Draft_State::DRAFT;
