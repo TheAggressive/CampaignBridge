@@ -32,6 +32,16 @@ final class Email_Design_Runtime_Test extends TestCase {
 		self::assertSame( 16, $design->global_style()['typography']['fontSize'] );
 		self::assertSame( 24, $design->block_style( 'campaignbridge/columns' )['spacing']['blockGap'] );
 		self::assertSame( 1, $design->block_style( 'core/separator' )['border']['width'] );
+		self::assertSame( 999, $design->block_style( 'core/button' )['border']['radius'] );
+		self::assertSame(
+			array(
+				'top'    => 12,
+				'right'  => 24,
+				'bottom' => 12,
+				'left'   => 24,
+			),
+			$design->block_style( 'core/button' )['spacing']['padding']
+		);
 		self::assertMatchesRegularExpression( '/^sha256:[0-9a-f]{64}$/', $design->fingerprint() );
 		self::assertStringNotContainsString( 'var:preset|', (string) wp_json_encode( $design->to_array() ) );
 	}
@@ -246,6 +256,20 @@ final class Email_Design_Runtime_Test extends TestCase {
 					'color' => '#111111',
 					'style' => 'solid',
 					'width' => '1px',
+				),
+				'design.unsupported_block_style',
+			),
+			array( 'styles.blocks.core/button.border', array( 'radius' => '9999px' ), 'design.unsupported_block_style' ),
+			array( 'styles.blocks.core/button.spacing', array( 'padding' => array( 'top' => '12px' ) ), 'design.unsupported_block_style' ),
+			array(
+				'styles.blocks.core/button.spacing',
+				array(
+					'padding' => array(
+						'top'    => '1em',
+						'right'  => '24px',
+						'bottom' => '12px',
+						'left'   => '24px',
+					),
 				),
 				'design.unsupported_block_style',
 			),

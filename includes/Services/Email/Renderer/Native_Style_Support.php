@@ -25,18 +25,21 @@ final class Native_Style_Support {
 	private const SUPPORTED = array(
 		'campaignbridge/compliance-footer' => array( 'color.text', 'spacing.padding' ),
 		'campaignbridge/post-image'        => array(),
-		'campaignbridge/post-card'         => array( 'color.background', 'spacing.padding' ),
+		'campaignbridge/post-card'         => array( 'color.background', 'spacing.padding', ...Box_Style::BORDER_PATHS ),
 		'core/paragraph'                   => array( 'color.text', 'color.background', 'typography.fontSize', 'typography.fontFamily', 'typography.fontStyle', 'typography.fontWeight', 'typography.lineHeight', 'spacing.padding', 'spacing.margin' ),
-		'core/button'                      => array( 'color.text', 'color.background', 'typography.fontFamily' ),
+		'core/button'                      => array( 'color.text', 'color.background', 'typography.fontFamily', 'typography.fontSize', 'typography.fontStyle', 'typography.fontWeight', 'typography.lineHeight', 'spacing.padding', ...Box_Style::BORDER_PATHS ),
+		'core/buttons'                     => array( 'spacing.margin' ),
 		'campaignbridge/preheader'         => array(),
 		'core/spacer'                      => array(),
-		'core/image'                       => array( 'spacing.margin' ),
+		'core/image'                       => array( 'spacing.margin', ...Box_Style::BORDER_PATHS ),
+		'core/list'                        => array( 'spacing.margin', 'spacing.padding' ),
 		'campaignbridge/columns'           => array( 'spacing.blockGap' ),
-		'campaignbridge/section'           => array( 'color.background', 'spacing.padding', 'spacing.margin' ),
-		'core/heading'                     => array( 'color.text', 'typography.fontSize', 'typography.fontFamily', 'typography.fontStyle', 'typography.fontWeight', 'typography.lineHeight', 'spacing.margin' ),
+		'campaignbridge/section'           => array( 'color.background', 'spacing.padding', 'spacing.margin', ...Box_Style::BORDER_PATHS ),
+		'core/heading'                     => array( 'color.text', 'color.background', 'typography.fontSize', 'typography.fontFamily', 'typography.fontStyle', 'typography.fontWeight', 'typography.lineHeight', 'spacing.margin', 'spacing.padding' ),
 		'campaignbridge/container'         => array( 'color.text', 'color.background', 'spacing.padding', 'spacing.margin' ),
-		'core/separator'                   => array(),
-		'campaignbridge/column'            => array( 'color.background' ),
+		'core/separator'                   => array( 'spacing.margin' ),
+		'core/social-links'                => array( 'spacing.margin' ),
+		'campaignbridge/column'            => array( 'color.background', 'spacing.padding', ...Box_Style::BORDER_PATHS ),
 	);
 
 	/**
@@ -64,6 +67,11 @@ final class Native_Style_Support {
 		if ( isset( $style['typography']['fontFamily'] ) && ! isset( $attributes['fontFamily'] ) ) {
 			$attributes['fontFamily'] = $style['typography']['fontFamily'];
 		}
+		// Core stores a palette border colour as a top-level preset slug.
+		if ( isset( $attributes['borderColor'] ) && is_string( $attributes['borderColor'] ) && '' !== $attributes['borderColor'] && ! isset( $style['border']['color'] ) ) {
+			$style['border']['color'] = 'var:preset|color|' . $attributes['borderColor'];
+		}
+		unset( $attributes['borderColor'] );
 		foreach ( array(
 			'text'       => 'textColor',
 			'background' => 'backgroundColor',
@@ -104,11 +112,11 @@ final class Native_Style_Support {
 			$property = '' === $path ? $key : $path . '.' . $key;
 			if ( in_array( $property, $allowed, true ) ) {
 				if ( is_array( $value ) && in_array( $key, array( 'padding', 'margin' ), true ) ) {
-					foreach ( array_keys( $value ) as $side ) {
-						if ( ! in_array( $side, array( 'top', 'right', 'bottom', 'left' ), true ) ) {
-							throw new Invalid_Block_Attribute( 'style.' . $property . '.' . $side, 'is not a spacing side.' );
-						}
-					}
+					self::validate_keys( $value, Box_Style::SIDES, 'style.' . $property, 'is not a spacing side.' );
+				} elseif ( is_array( $value ) && 'border.radius' === $property ) {
+					self::validate_keys( $value, Box_Style::CORNERS, 'style.' . $property, 'is not a border corner.' );
+				} elseif ( is_array( $value ) && in_array( $key, Box_Style::SIDES, true ) && str_starts_with( $property, 'border.' ) ) {
+					self::validate_keys( $value, array( 'color', 'style', 'width' ), 'style.' . $property, 'is not a border property.' );
 				} elseif ( ! is_scalar( $value ) || is_bool( $value ) ) {
 					throw new Invalid_Block_Attribute( 'style.' . $property, 'must be a portable style value.' );
 				}
@@ -119,6 +127,26 @@ final class Native_Style_Support {
 				throw new Invalid_Block_Attribute( 'style.' . $property, 'is not supported by this email block.' );
 			}
 			self::validate_tree( $value, $allowed, $property );
+		}
+	}
+
+	/**
+	 * Reject unknown keys and non-scalar values inside one native style object.
+	 *
+	 * @param array<mixed, mixed> $values  Style object.
+	 * @param array<int, string>  $known   Accepted keys.
+	 * @param string              $path    Diagnostic path.
+	 * @param string              $message Diagnostic for an unknown key.
+	 * @throws Invalid_Block_Attribute When a key or value is unsupported.
+	 */
+	private static function validate_keys( array $values, array $known, string $path, string $message ): void {
+		foreach ( $values as $key => $value ) {
+			if ( ! in_array( $key, $known, true ) ) {
+				throw new Invalid_Block_Attribute( $path . '.' . $key, $message ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic paths are internal.
+			}
+			if ( ! is_scalar( $value ) || is_bool( $value ) ) {
+				throw new Invalid_Block_Attribute( $path . '.' . $key, 'must be a portable style value.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic paths are internal.
+			}
 		}
 	}
 }

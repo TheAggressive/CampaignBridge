@@ -81,6 +81,9 @@ const UNSUPPORTED_EVERYWHERE: Supports = {
   __experimentalBorder: false,
 };
 
+/** Border controls the compiler renders: colour, corner radius, line style, and width. */
+const BORDER = ['color', 'radius', 'style', 'width'] as const;
+
 /** Per-block email-safe support subsets, mirroring the PHP renderers. */
 const SUPPORTS: Record<string, Record<string, readonly string[]>> = {
   'core/paragraph': {
@@ -99,7 +102,7 @@ const SUPPORTS: Record<string, Record<string, readonly string[]>> = {
     align: [],
   },
   'core/heading': {
-    color: ['text'],
+    color: ['text', 'background'],
     typography: [
       'fontSize',
       'lineHeight',
@@ -108,36 +111,46 @@ const SUPPORTS: Record<string, Record<string, readonly string[]>> = {
       '__experimentalFontStyle',
       '__experimentalFontWeight',
     ],
-    spacing: ['margin'],
+    spacing: ['margin', 'padding'],
     align: [],
   },
   'core/image': {
     color: [],
     spacing: ['margin'],
+    __experimentalBorder: BORDER,
   },
   'core/buttons': {
     color: [],
-    spacing: [],
+    spacing: ['margin'],
     typography: [],
     align: [],
   },
   'core/button': {
     color: ['text', 'background'],
-    typography: ['__experimentalFontFamily'],
-    spacing: [],
+    typography: [
+      'fontSize',
+      'lineHeight',
+      '__experimentalFontFamily',
+      '__experimentalFontStyle',
+      '__experimentalFontWeight',
+    ],
+    spacing: ['padding'],
     dimensions: [],
+    // Outlook draws one outline per button, so the compiler rejects uneven
+    // sides; the control still offers them because Core cannot hide them.
+    __experimentalBorder: BORDER,
   },
-  'core/list': { color: [], spacing: [], typography: [] },
+  'core/list': { color: [], spacing: ['margin', 'padding'], typography: [] },
   'core/list-item': { color: [], spacing: [], typography: [] },
   'core/separator': {
     color: ['background', 'enableContrastChecker'],
-    spacing: [],
+    spacing: ['margin'],
     align: [],
   },
   'core/spacer': { spacing: [] },
   'core/social-links': {
     color: [],
-    spacing: ['blockGap'],
+    spacing: ['blockGap', 'margin'],
   },
   'core/social-link': {},
 };

@@ -42,7 +42,7 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'content', 'level', 'align', 'textColor', 'style', 'fontSize', 'fontFamily', Post_Binding_Support::ATTRIBUTE );
+		return array( 'content', 'level', 'align', 'textColor', 'backgroundColor', 'style', 'fontSize', 'fontFamily', Post_Binding_Support::ATTRIBUTE );
 	}
 
 	/** {@inheritDoc} */
@@ -263,8 +263,21 @@ final class Heading_Renderer extends Abstract_Renderer {
 
 		// Core's Appearance control writes `normal` alongside every weight, so
 		// only a real italic earns a declaration.
-		return 'italic' === Style_Resolver::font_style( $wrapper )
-			? $style . ';font-style:italic'
-			: $style;
+		if ( 'italic' === Style_Resolver::font_style( $wrapper ) ) {
+			$style .= ';font-style:italic';
+		}
+
+		$padding = Box_Style::spacing( $style_tree, 'padding' );
+		if ( 0 < max( $padding ) ) {
+			$style .= ';' . Box_Style::spacing_css( 'padding', $padding );
+		}
+		if ( isset( $style_tree['color']['background'] ) ) {
+			$background = Style_Resolver::color( $wrapper, 'background', null, Renderer_Support::brand_kit( $context ) );
+			if ( null !== $background ) {
+				$style .= ';background-color:' . $background;
+			}
+		}
+
+		return $style;
 	}
 }

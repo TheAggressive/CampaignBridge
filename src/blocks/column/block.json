@@ -18,7 +18,16 @@
       "gradients": false,
       "text": false
     },
-    "customClassName": false
+    "customClassName": false,
+    "spacing": {
+      "padding": true
+    },
+    "__experimentalBorder": {
+      "color": true,
+      "radius": true,
+      "style": true,
+      "width": true
+    }
   },
   "attributes": {
     "width": {

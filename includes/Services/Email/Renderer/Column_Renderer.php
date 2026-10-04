@@ -36,7 +36,7 @@ final class Column_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'width', 'backgroundColor', 'style' );
+		return array( 'width', 'backgroundColor', 'borderColor', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -90,11 +90,19 @@ final class Column_Renderer extends Abstract_Renderer {
 			$right   = $block->path() === ( $binding['lastPath'] ?? '' ) ? 0 : intdiv( $gap, 2 );
 			$spacing = ( $left ? ';padding-left:' . $left . 'px' : '' ) . ( $right ? ';padding-right:' . $right . 'px' : '' );
 		}
-		$width = rtrim( rtrim( number_format( (float) $width, 4, '.', '' ), '0' ), '.' );
-		if ( null !== $attributes['backgroundColor'] ) {
-			$children = sprintf(
-				'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse;background-color:%1$s"><tr><td>%2$s</td></tr></table>',
-				Renderer_Support::resolve_color( $attributes['backgroundColor'], Renderer_Support::brand_kit( $context ), 'backgroundColor' ),
+		$width   = rtrim( rtrim( number_format( (float) $width, 4, '.', '' ), '0' ), '.' );
+		$kit     = Renderer_Support::brand_kit( $context );
+		$box     = Box_Style::css( $attributes['style'], $kit );
+		$padding = Box_Style::spacing( $attributes['style'], 'padding' );
+		if ( null !== $attributes['backgroundColor'] || '' !== $box || 0 < max( $padding ) ) {
+			// A rounded box needs separate borders; collapsed tables ignore the radius.
+			$table_style = 'width:100%;border-collapse:' . ( null === Box_Style::radius( $attributes['style'] ) ? 'collapse' : 'separate' )
+				. ( null === $attributes['backgroundColor'] ? '' : ';background-color:' . Renderer_Support::resolve_color( $attributes['backgroundColor'], $kit, 'backgroundColor' ) )
+				. ( '' === $box ? '' : ';' . $box );
+			$children    = sprintf(
+				'<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="%1$s"><tr><td%2$s>%3$s</td></tr></table>',
+				$table_style,
+				0 < max( $padding ) ? ' style="' . Box_Style::spacing_css( 'padding', $padding ) . '"' : '',
 				$children
 			);
 		}

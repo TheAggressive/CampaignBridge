@@ -137,7 +137,30 @@
     },
     "buttonBlockStyle": {
       "type": "object", "additionalProperties": false, "minProperties": 1,
-      "properties": { "color": { "$ref": "#/$defs/colorStyles" }, "typography": { "$ref": "#/$defs/typographyStyles" } }
+      "properties": {
+        "color": { "$ref": "#/$defs/colorStyles" },
+        "typography": { "$ref": "#/$defs/typographyStyles" },
+        "border": {
+          "type": "object", "additionalProperties": false,
+          "required": ["radius"],
+          "properties": { "radius": { "$ref": "#/$defs/pixelLength" } }
+        },
+        "spacing": {
+          "type": "object", "additionalProperties": false,
+          "required": ["padding"],
+          "properties": { "padding": { "$ref": "#/$defs/boxSpacing" } }
+        }
+      }
+    },
+    "boxSpacing": {
+      "type": "object", "additionalProperties": false,
+      "required": ["top", "right", "bottom", "left"],
+      "properties": {
+        "top": { "$ref": "#/$defs/spacingValue" },
+        "right": { "$ref": "#/$defs/spacingValue" },
+        "bottom": { "$ref": "#/$defs/spacingValue" },
+        "left": { "$ref": "#/$defs/spacingValue" }
+      }
     },
     "rootStyles": {
       "type": "object", "additionalProperties": false,

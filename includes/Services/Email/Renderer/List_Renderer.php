@@ -12,6 +12,7 @@ namespace CampaignBridge\Services\Email\Renderer;
 use CampaignBridge\Domain\Email\Abstract_Renderer;
 use CampaignBridge\Domain\Email\Block_Node;
 use CampaignBridge\Domain\Email\Render_Context;
+use CampaignBridge\Domain\Email\Style_Resolver;
 use CampaignBridge\Services\Email\Email_Block_Contract;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -27,7 +28,7 @@ final class List_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'ordered' );
+		return array( 'ordered', 'style' );
 	}
 
 	/** {@inheritDoc} */
@@ -41,7 +42,14 @@ final class List_Renderer extends Abstract_Renderer {
 	 * @param Block_Node $block Source block.
 	 */
 	public function normalize( Block_Node $block ): Block_Node {
-		return $block->with_attributes( array( 'ordered' => Renderer_Support::boolean_attribute( $block->attributes(), 'ordered', false ) ) );
+		$attributes = Native_Style_Support::attributes( $block );
+
+		return $block->with_attributes(
+			array(
+				'ordered' => Renderer_Support::boolean_attribute( $attributes, 'ordered', false ),
+				'style'   => $attributes['style'],
+			)
+		);
 	}
 
 	/**
@@ -52,9 +60,24 @@ final class List_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
-		$tag = $block->attributes()['ordered'] ? 'ol' : 'ul';
+		$attributes = $block->attributes();
+		$tag        = $attributes['ordered'] ? 'ol' : 'ul';
+		// Unset sides keep the default marker indent.
+		$padding = Style_Resolver::spacing(
+			array( 'style' => $attributes['style'] ),
+			'padding',
+			array(
+				'top'    => 0,
+				'right'  => 0,
+				'bottom' => 0,
+				'left'   => 24,
+			)
+		);
+		$padding = 0 === $padding['top'] && 0 === $padding['right'] && 0 === $padding['bottom']
+			? sprintf( 'padding:0 0 0 %dpx', $padding['left'] )
+			: Box_Style::spacing_css( 'padding', $padding );
 
-		return sprintf( '<%1$s style="margin:0;padding:0 0 0 24px">%2$s</%1$s>', $tag, $children );
+		return Box_Style::with_margin( sprintf( '<%1$s style="margin:0;%2$s">%3$s</%1$s>', $tag, $padding, $children ), $attributes['style'] );
 	}
 
 	/**

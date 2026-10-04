@@ -185,8 +185,8 @@
     },
     {
       "id": "border-radius-limited-to-vml",
-      "detail": "Rounded button corners exist only inside the VML fallback; the CSS border-radius on the non-MSO table is ignored by Word.",
-      "degrades_to": "Buttons are rounded through VML arcsize rather than CSS."
+      "detail": "Rounded button corners exist only inside the VML fallback; the CSS border-radius on the non-MSO table is ignored by Word. VML draws one radius per button, so per-corner radii use the largest corner. Rounded images, sections, columns, and post cards have no VML fallback.",
+      "degrades_to": "Buttons are rounded through VML arcsize rather than CSS; other rounded boxes and images render with square corners."
     },
     {
       "id": "outlook-com-and-mac-not-covered",

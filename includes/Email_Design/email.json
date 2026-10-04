@@ -99,7 +99,9 @@
           "background": "var:preset|color|brand",
           "text": "var:preset|color|on-brand"
         },
-        "typography": { "fontFamily": "var:preset|font-family|arial" }
+        "typography": { "fontFamily": "var:preset|font-family|arial", "fontSize": "16px", "fontWeight": 700, "lineHeight": 1.25 },
+        "border": { "radius": "999px" },
+        "spacing": { "padding": { "top": "12px", "right": "24px", "bottom": "12px", "left": "24px" } }
       },
       "campaignbridge/columns": {
         "spacing": { "blockGap": "var:preset|spacing|50" }

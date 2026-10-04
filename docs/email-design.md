@@ -20,7 +20,13 @@ V1 defines:
 - block defaults for the currently declared heading, text, button, columns,
   divider, and spacer surfaces. Post titles, excerpts, post bodies, and
   call-to-action buttons are bound Core blocks, so they inherit the
-  `core/heading`, `core/paragraph`, and `core/button` defaults.
+  `core/heading`, `core/paragraph`, and `core/button` defaults;
+- a default button shape: `core/button` may set a corner radius
+  (`border.radius`, up to 999px) and four-sided `spacing.padding`. The packaged
+  design uses a pill (`999px`) with 12px by 24px padding. The editor canvas and
+  the compiler read the same values, so a theme that prefers square buttons sets
+  `"border": { "radius": "0px" }` in its `campaignbridge/email.json`, and
+  individual buttons can still override it.
 
 Custom color, font-size, and spacing creation is disabled in the v1 editor.
 Existing explicit raw values remain a compiler compatibility concern and do not

@@ -180,7 +180,7 @@ final class Core_Block_Normalization_Test extends TestCase {
 			'level 5 is outside email grammar' => array( '<!-- wp:heading {"level":5} --><h5 class="wp-block-heading">x</h5><!-- /wp:heading -->', 'block.attribute.invalid' ),
 			'level and markup disagree'        => array( '<!-- wp:heading {"level":3} --><h2 class="wp-block-heading">x</h2><!-- /wp:heading -->', 'block.attribute.invalid' ),
 			'non-integer level'                => array( '<!-- wp:heading {"level":"2"} --><h2 class="wp-block-heading">x</h2><!-- /wp:heading -->', 'block.attribute.invalid' ),
-			'background colour'                => array( '<!-- wp:heading {"backgroundColor":"brand"} --><h2 class="wp-block-heading has-brand-background-color has-background">x</h2><!-- /wp:heading -->', 'block.attribute.invalid' ),
+			'border'                           => array( '<!-- wp:heading {"style":{"border":{"width":"1px"}}} --><h2 class="wp-block-heading" style="border-width:1px">x</h2><!-- /wp:heading -->', 'block.attribute.invalid' ),
 			'unsafe markup'                    => array( '<!-- wp:heading --><h2 class="wp-block-heading"><span style="color:red">x</span></h2><!-- /wp:heading -->', 'heading.content.invalid' ),
 			'empty'                            => array( '<!-- wp:heading --><h2 class="wp-block-heading"></h2><!-- /wp:heading -->', 'heading.content.empty' ),
 		);
@@ -265,7 +265,7 @@ final class Core_Block_Normalization_Test extends TestCase {
 
 		self::assertTrue( $result->is_success(), $this->diagnostics( $result ) );
 		self::assertSame( 2, substr_count( $result->html(), '<td align="right"><!--[if mso]><v:roundrect' ) );
-		self::assertStringContainsString( 'href="https://example.com/a" style="height:44px;v-text-anchor:middle;width:200px"', $result->html() );
+		self::assertStringContainsString( 'href="https://example.com/a" style="height:44px;v-text-anchor:middle;width:96px" arcsize="50%"', $result->html() );
 		self::assertStringContainsString( 'border:2px solid #123456', $result->html() );
 		self::assertSame( "First: https://example.com/a\nSecond: https://example.com/b\n", $result->text() );
 	}
@@ -299,9 +299,14 @@ final class Core_Block_Normalization_Test extends TestCase {
 			'empty label'         => array( $button( '', '<a class="wp-block-button__link wp-element-button" href="https://example.com"></a>' ), 'button.label.empty' ),
 			'button element'      => array( $button( ' {"tagName":"button"}', '<button type="button" class="wp-block-button__link wp-element-button">Go</button>' ), 'block.attribute.invalid' ),
 			'gradient'            => array( $button( ' {"gradient":"vivid"}', '<a class="wp-block-button__link has-vivid-gradient-background wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
-			'font size'           => array( $button( ' {"fontSize":"large"}', '<a class="wp-block-button__link has-large-font-size wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
+			'unknown font size'   => array( $button( ' {"fontSize":"gigantic"}', '<a class="wp-block-button__link has-gigantic-font-size wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
 			'custom width'        => array( $button( ' {"style":{"dimensions":{"width":"50%"}}}', '<a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
-			'border radius'       => array( $button( ' {"style":{"border":{"radius":"20px"}}}', '<a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
+			'oversized radius'    => array( $button( ' {"style":{"border":{"radius":"1200px"}}}', '<a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
+			'unknown corner'      => array( $button( ' {"style":{"border":{"radius":{"middle":"4px"}}}}', '<a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
+			'double border'       => array( $button( ' {"style":{"border":{"width":"2px","style":"double"}}}', '<a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
+			'thick border'        => array( $button( ' {"style":{"border":{"width":"12px"}}}', '<a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
+			'uneven border'       => array( $button( ' {"style":{"border":{"top":{"width":"2px","color":"#000000"},"bottom":{"width":"4px","color":"#000000"}}}}', '<a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a>' ), 'button.border.sides' ),
+			'theme border colour' => array( $button( ' {"borderColor":"accent-3","style":{"border":{"width":"2px"}}}', '<a class="wp-block-button__link has-border-color has-accent-3-border-color wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
 			'unknown style'       => array( $button( ' {"className":"is-style-neon"}', '<a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a>' ), 'block.attribute.invalid' ),
 			'unsafe label'        => array( $button( '', '<a class="wp-block-button__link wp-element-button" href="https://example.com"><img src="x" onerror="y"></a>' ), 'block.attribute.invalid' ),
 			'space-between group' => array( '<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"space-between"}} --><div class="wp-block-buttons"><!-- wp:button --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="https://example.com">Go</a></div><!-- /wp:button --></div><!-- /wp:buttons -->', 'block.attribute.invalid' ),
@@ -381,7 +386,8 @@ final class Core_Block_Normalization_Test extends TestCase {
 		return array(
 			'dots style'     => array( '<!-- wp:separator {"className":"is-style-dots"} --><hr class="wp-block-separator is-style-dots"/><!-- /wp:separator -->' ),
 			'unknown colour' => array( '<!-- wp:separator {"backgroundColor":"neon"} --><hr class="wp-block-separator has-neon-background-color has-background"/><!-- /wp:separator -->' ),
-			'margin'         => array( '<!-- wp:separator {"style":{"spacing":{"margin":{"top":"8px"}}}} --><hr class="wp-block-separator" style="margin-top:8px"/><!-- /wp:separator -->' ),
+			'padding'        => array( '<!-- wp:separator {"style":{"spacing":{"padding":{"top":"8px"}}}} --><hr class="wp-block-separator" style="padding-top:8px"/><!-- /wp:separator -->' ),
+			'margin and gap' => array( '<!-- wp:separator {"style":{"spacing":{"margin":{"top":"8px"},"blockGap":"8px"}}} --><hr class="wp-block-separator" style="margin-top:8px"/><!-- /wp:separator -->' ),
 			'border'         => array( '<!-- wp:separator {"style":{"border":{"width":"3px"}}} --><hr class="wp-block-separator"/><!-- /wp:separator -->' ),
 		);
 	}

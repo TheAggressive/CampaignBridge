@@ -21,7 +21,13 @@
       "padding": true,
       "margin": true
     },
-    "customClassName": false
+    "customClassName": false,
+    "__experimentalBorder": {
+      "color": true,
+      "radius": true,
+      "style": true,
+      "width": true
+    }
   },
   "attributes": {},
   "editorScript": "file:./index.js"

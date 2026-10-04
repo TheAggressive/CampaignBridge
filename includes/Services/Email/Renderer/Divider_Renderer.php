@@ -27,7 +27,7 @@ final class Divider_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'color', 'thickness', 'variant' );
+		return array( 'color', 'thickness', 'variant', 'style' );
 	}
 
 	/**
@@ -46,6 +46,7 @@ final class Divider_Renderer extends Abstract_Renderer {
 				'color'     => Renderer_Support::string_attribute( $attributes, 'color', '#dddddd' ),
 				'thickness' => Style_Resolver::length( $attributes['thickness'] ?? 1, 'thickness', 0, 8 ),
 				'style'     => Renderer_Support::choice_attribute( $attributes, 'variant', 'solid', array( 'solid', 'dashed', 'dotted', 'none' ) ),
+				'margin'    => Box_Style::spacing( $attributes['style'], 'margin' ),
 			)
 		);
 	}
@@ -61,12 +62,14 @@ final class Divider_Renderer extends Abstract_Renderer {
 		$attributes = $block->attributes();
 		$color      = Renderer_Support::resolve_color( $attributes['color'], Renderer_Support::brand_kit( $context ), 'color' );
 
-		return sprintf(
+		$html = sprintf(
 			'<table role="presentation" width="100%%" align="center" cellpadding="0" cellspacing="0" border="0" style="width:100%%;border-collapse:collapse"><tr><td style="border-top:%1$dpx %2$s %3$s;font-size:0;line-height:0">&nbsp;</td></tr></table>',
 			$attributes['thickness'],
 			$attributes['style'],
 			$color
 		);
+
+		return Box_Style::with_margin( $html, array( 'spacing' => array( 'margin' => $attributes['margin'] ) ) );
 	}
 
 	/**

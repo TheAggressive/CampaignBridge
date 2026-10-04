@@ -23,6 +23,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Renders one Core button as a validated bulletproof call to action aligned by its `core/buttons` group. */
 final class Button_Renderer extends Abstract_Renderer {
+	/** Label size when neither the author nor the design chose one. */
+	private const FONT_SIZE = 16;
+
+	/** Padding when neither the author nor the design chose one. */
+	private const PADDING = array(
+		'top'    => 12,
+		'right'  => 24,
+		'bottom' => 12,
+		'left'   => 24,
+	);
+
 	/** {@inheritDoc} */
 	public function block_name(): string {
 		return 'core/button';
@@ -30,7 +41,7 @@ final class Button_Renderer extends Abstract_Renderer {
 
 	/** {@inheritDoc} */
 	public function attribute_names(): array {
-		return array( 'label', 'url', 'style', 'backgroundColor', 'textColor', 'fontFamily', 'variant', Post_Binding_Support::ATTRIBUTE );
+		return array( 'label', 'url', 'style', 'backgroundColor', 'textColor', 'borderColor', 'fontSize', 'fontFamily', 'variant', Post_Binding_Support::ATTRIBUTE );
 	}
 
 	/** {@inheritDoc} */
@@ -78,10 +89,12 @@ final class Button_Renderer extends Abstract_Renderer {
 			array(
 				'label'           => trim( Renderer_Support::string_attribute( $attributes, 'label', 'Learn more' ) ),
 				'url'             => trim( Renderer_Support::string_attribute( $attributes, 'url', '' ) ),
-				'style'           => Renderer_Support::choice_attribute( $attributes, 'variant', 'primary', $styles ),
+				'variant'         => Renderer_Support::choice_attribute( $attributes, 'variant', 'primary', $styles ),
 				'backgroundColor' => (string) Renderer_Support::string_attribute( $attributes, 'backgroundColor', '' ),
 				'textColor'       => (string) Renderer_Support::string_attribute( $attributes, 'textColor', '' ),
 				'fontFamily'      => Renderer_Support::string_attribute( $attributes, 'fontFamily', '' ),
+				'fontSize'        => Renderer_Support::integer_attribute( $attributes, 'fontSize', self::FONT_SIZE, 10, 72 ),
+				'style'           => is_array( $attributes['style'] ?? null ) ? $attributes['style'] : array(),
 			) + Post_Binding_Support::carry( $block )
 		);
 	}
@@ -111,6 +124,11 @@ final class Button_Renderer extends Abstract_Renderer {
 			return array( Compile_Diagnostic::error( 'button.url.invalid', $block->path(), 'Email buttons require an absolute URL.' ) );
 		}
 
+		$borders = Box_Style::borders( $attributes['style'], $this->brand_kit( $context ) );
+		if ( array() !== $borders && ! Box_Style::is_uniform( $borders ) ) {
+			return array( Compile_Diagnostic::error( 'button.border.sides', $block->path(), 'Email buttons need the same border on every side, because Outlook draws one outline for the whole button.' ) );
+		}
+
 		return array();
 	}
 
@@ -125,7 +143,7 @@ final class Button_Renderer extends Abstract_Renderer {
 		$attributes = $block->attributes();
 		$background = $this->resolve_background( $block, $context );
 		$text       = $this->resolve_text( $block, $context );
-		$variant    = $attributes['style'];
+		$variant    = $attributes['variant'];
 		$align      = $context->binding( 'button_align' )['align'] ?? 'left';
 
 		// Outline and ghost variants are monochromatic: the chosen background
@@ -143,9 +161,48 @@ final class Button_Renderer extends Abstract_Renderer {
 			$background,
 			$text,
 			$align,
-			200,
 			$variant,
-			$font_family
+			$font_family,
+			$this->box( $attributes, $variant, $background, $text, $context )
+		);
+	}
+
+	/**
+	 * Resolve the button's padding, border, corner radius, and type.
+	 *
+	 * The outline variant draws Core's 2px outline in the button colour unless
+	 * a border was authored. A border without a colour uses the label colour.
+	 *
+	 * @param array<string, mixed> $attributes Normalized attributes.
+	 * @param string               $variant    Button style variant.
+	 * @param string               $background Resolved button colour.
+	 * @param string               $text       Resolved label colour.
+	 * @param Render_Context       $context    Immutable scoped context.
+	 * @return array{padding: array<string, int>, radius: array{topLeft: int, topRight: int, bottomRight: int, bottomLeft: int}|null, border: array{width: int, style: string, color: string}|null, font_size: int, line_height: int, font_weight: int, italic: bool}
+	 */
+	private function box( array $attributes, string $variant, string $background, string $text, Render_Context $context ): array {
+		$style   = $attributes['style'];
+		$wrapper = array( 'style' => $style );
+		$borders = Box_Style::borders( $style, $this->brand_kit( $context ) );
+		$border  = $borders['top'] ?? null;
+		if ( null !== $border ) {
+			$border['color'] = $border['color'] ?? $text;
+		} elseif ( 'outline' === $variant ) {
+			$border = array(
+				'width' => 2,
+				'style' => 'solid',
+				'color' => $background,
+			);
+		}
+
+		return array(
+			'padding'     => Style_Resolver::spacing( $wrapper, 'padding', self::PADDING ),
+			'radius'      => Box_Style::radius( $style ),
+			'border'      => $border,
+			'font_size'   => $attributes['fontSize'],
+			'line_height' => (int) round( $attributes['fontSize'] * Style_Resolver::line_height( $wrapper, 1.25 ) ),
+			'font_weight' => Style_Resolver::font_weight( $wrapper, 700 ),
+			'italic'      => 'italic' === Style_Resolver::font_style( $wrapper ),
 		);
 	}
 

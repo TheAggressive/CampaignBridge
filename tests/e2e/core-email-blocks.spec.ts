@@ -110,7 +110,7 @@ test('templates author with constrained WordPress Core blocks', async ({
   expect(editor.paragraphAnchor).toBe(false);
   expect(editor.paragraphLetterSpacing).toBe(false);
   expect(editor.nestedList).toBe(false);
-  expect(editor.headingBackground).toBe(false);
+  expect(editor.headingBackground).toBe(true);
   expect(editor.headingLevels).toEqual([1, 2, 3, 4]);
   expect(editor.separatorStyles).not.toContain('dots');
   expect(editor.buttonStyles).toEqual(
