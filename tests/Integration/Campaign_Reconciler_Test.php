@@ -381,7 +381,7 @@ final class Campaign_Reconciler_Test extends Test_Case {
 				},
 				Campaign_Reconciler::OBSERVED_MISSING,
 			),
-			'paused in the provider'   => array(
+			'untracked in the provider' => array(
 				static function ( Scripted_Draft_Gateway $drafts ): void {
 					$drafts->remote_status = Remote_Draft_State::OTHER;
 				},

@@ -242,7 +242,8 @@ final class Mailchimp_Draft_Gateway_Test extends WP_UnitTestCase {
 			'unreadable segment'  => array( '{"status":"save","recipients":{"list_id":"abc123","segment_opts":"all"}}', Remote_Draft_State::DRAFT, true ),
 			'scheduled elsewhere' => array( '{"status":"schedule","recipients":{"list_id":"abc123"}}', Remote_Draft_State::SCHEDULED, false ),
 			'sent elsewhere'      => array( '{"status":"sent","recipients":{"list_id":"abc123"}}', Remote_Draft_State::SENT, false ),
-			'paused'              => array( '{"status":"paused","recipients":{"list_id":"abc123"}}', Remote_Draft_State::OTHER, false ),
+			// Mailchimp reports an unscheduled regular campaign as paused (observed live).
+			'paused'              => array( '{"status":"paused","recipients":{"list_id":"abc123"}}', Remote_Draft_State::DRAFT, false ),
 		);
 	}
 
@@ -269,6 +270,11 @@ final class Mailchimp_Draft_Gateway_Test extends WP_UnitTestCase {
 		self::assertNull( $draft->send_time() );
 		self::assertSame( Remote_Draft_State::CANCELED, $canceled->status() );
 		self::assertSame( Remote_Draft_State::OTHER, $canceling->status(), 'A cancellation still in progress is not yet canceled.' );
+
+		// Recorded from the live Mailchimp run: an unscheduled campaign.
+		$unscheduled = ( new Mailchimp_Draft_Gateway( new Sequenced_Http_Client( array( self::reply( 200, '{"status":"paused","send_time":"-001-11-30T00:00:00+00:00","recipients":{"list_id":"abc123"}}' ) ) ) ) )->inspect_draft( self::settings(), 'mc9876' );
+		self::assertSame( array( Remote_Draft_State::DRAFT, null ), array( $unscheduled->status(), $unscheduled->send_time() ) );
+		self::assertTrue( $unscheduled->matches( 'abc123' ), 'An unscheduled campaign can be re-asserted and delivered again.' );
 	}
 
 	public function test_finding_drafts_matches_the_exact_title_and_reports_completeness(): void {

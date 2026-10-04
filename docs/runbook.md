@@ -155,7 +155,7 @@ further schedule, unschedule, or send for it, whatever key is sent.
    - "still in progress": wait the stated time and reconcile again.
    - "no longer has this campaign": it was deleted in Mailchimp. Confirm in
      Mailchimp's campaign list and reports that nothing was sent.
-   - "status CampaignBridge does not track" (for example paused) or
+   - "status CampaignBridge does not track" (for example a cancellation in progress) or
      "scheduled but not when": resolve it in Mailchimp, then reconcile
      again.
    - "contradicts its local state": the provider disagrees with a settled

@@ -296,7 +296,7 @@ authority (`Campaign_Actor::can_deliver()`).
    `sent`, canceled → `cancelled`. Each unresolved delivery attempt is
    `succeeded` when that state shows it took effect, otherwise `failed`.
 5. **Contradictions are recorded, not resolved.** A missing remote campaign
-   (`missing`), an untracked status such as paused (`other`), a scheduled
+   (`missing`), an untracked status such as `canceling` (`other`), a scheduled
    status without a send time, or a status the local state cannot follow
    (for example a `sent` campaign reported as a draft) stores the
    observation with `reconciled_at` cleared, claims the version, audits

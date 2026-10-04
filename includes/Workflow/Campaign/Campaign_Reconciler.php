@@ -221,7 +221,7 @@ final class Campaign_Reconciler {
 
 		$evidence = self::EVIDENCE[ $remote->status() ] ?? null;
 		if ( null === $evidence ) {
-			return $this->contradiction( $actor, $campaign, $reference, self::OBSERVED_OTHER, 'The provider reports a status CampaignBridge does not track, such as paused. Resolve it in the provider, then reconcile again.', $unresolved, null );
+			return $this->contradiction( $actor, $campaign, $reference, self::OBSERVED_OTHER, 'The provider reports a status CampaignBridge does not track, such as a cancellation in progress or an archived campaign. Resolve it in the provider, then reconcile again.', $unresolved, null );
 		}
 		list( $target, $observed ) = $evidence;
 

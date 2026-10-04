@@ -512,7 +512,8 @@ What it does depends on what exists:
   seconds have passed since the request. Several matches, or a search that
   cannot prove absence, stay unresolved.
 - **A remote draft exists:** the campaign follows the provider's status.
-  `save` → `provider_draft`, `schedule` → `scheduled` with the provider's send
+  `save`, or `paused` (how Mailchimp reports an unscheduled campaign) →
+  `provider_draft`, `schedule` → `scheduled` with the provider's send
   time, `sending` → `sending`, `sent` → `sent`, `canceled` → `cancelled`. Each
   unconfirmed schedule, unschedule, or send is settled by whether that status
   shows it took effect; one that did not is `failed` and, when the campaign
@@ -525,7 +526,7 @@ when to retry. Evidence that cannot be followed is also
 `409 reconciliation_required`, with the observation recorded and
 `reconciled_at` cleared so delivery stays blocked: the provider no longer has
 the campaign (`observed_state` `missing`), reports a status CampaignBridge
-does not track such as paused (`other`), reports `scheduled` without a send
+does not track such as `canceling` (`other`), reports `scheduled` without a send
 time, or contradicts a settled local state (for example a `sent` campaign
 reported as a draft). A failed provider read is `502 provider_failed` and
 changes nothing. A concurrent change to the campaign is `409 conflict`;
