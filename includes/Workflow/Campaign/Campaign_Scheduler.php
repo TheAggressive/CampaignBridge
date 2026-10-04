@@ -352,11 +352,30 @@ final class Campaign_Scheduler {
 
 		$outcome = $call();
 
-		return match ( $outcome->status() ) {
-			Action_Outcome::ACCEPTED => $this->accepted( $actor, $claimed, $reference, $attempt, $operation, $finish, $observed, $context ),
-			Action_Outcome::FAILED   => $this->definite_failure( $actor, $claimed, $reference, $attempt, $operation, $context, $outcome->error() ),
-			default                  => $this->ambiguous( $actor, $claimed, $reference, $attempt, $operation, $context, $outcome->error() ),
-		};
+		// Once the provider has been contacted, nothing may escape: a failure to
+		// record the outcome keeps the pending attempt and requires reconciliation.
+		try {
+			return match ( $outcome->status() ) {
+				Action_Outcome::ACCEPTED => $this->accepted( $actor, $claimed, $reference, $attempt, $operation, $finish, $observed, $context ),
+				Action_Outcome::FAILED   => $this->definite_failure( $actor, $claimed, $reference, $attempt, $operation, $context, $outcome->error() ),
+				default                  => $this->ambiguous( $actor, $claimed, $reference, $attempt, $operation, $context, $outcome->error() ),
+			};
+		} catch ( \Throwable ) {
+			try {
+				$this->audit( $actor, $operation, $claimed, 'unknown', $this->context( $claimed, $claimed, $reference, $attempt, $context, $outcome->error() ) );
+			} catch ( \Throwable ) {
+				// The pending attempt alone still blocks further delivery.
+				unset( $context );
+			}
+
+			return Campaign_Delivery_Result::failure(
+				new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The %s request reached the provider, but its outcome could not be recorded. Reconcile before any further delivery request.', $operation ) ),
+				$claimed,
+				$reference,
+				$attempt,
+				$outcome->error()
+			);
+		}
 	}
 
 	/**
@@ -495,6 +514,7 @@ final class Campaign_Scheduler {
 		);
 	}
 
+	/** A new observation has not been reconciled yet, so it clears `reconciled_at`. */
 	private function observe( Remote_Campaign_Reference $reference, string $state ): Remote_Campaign_Reference {
 		return Remote_Campaign_Reference::from_array(
 			array_merge(
@@ -502,6 +522,7 @@ final class Campaign_Scheduler {
 				array(
 					'observed_state' => $state,
 					'observed_at'    => $this->clock->now(),
+					'reconciled_at'  => null,
 				)
 			)
 		);
