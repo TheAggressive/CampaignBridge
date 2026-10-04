@@ -7,6 +7,19 @@
 3. Confirm outbound HTTPS and DNS access to `<dc>.api.mailchimp.com`.
 4. Rotate the provider credential if disclosure is suspected. Do not rotate the local encryption key as a substitute for rotating the provider key.
 
+## Disconnecting Mailchimp
+
+**Settings → Providers → Disconnect** removes the stored API key and
+connection details from this site and switches delivery back to HTML Email.
+It requires `campaignbridge_manage_connections`.
+
+- It does not revoke the key. If the key may be compromised, also delete it
+  in Mailchimp (**Profile → Extras → API keys**).
+- Campaigns Mailchimp already holds are untouched. A scheduled campaign
+  still sends, and CampaignBridge cannot unschedule or reconcile it until a
+  key for the same account is saved again. Unschedule anything that should
+  not send first.
+
 ## Encryption key configuration
 
 By default the credential encryption key is generated and stored in WordPress

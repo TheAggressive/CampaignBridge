@@ -1,6 +1,17 @@
 import domReady from '@wordpress/dom-ready';
 
 domReady(() => {
+  // Destructive actions confirm first; the server still checks the nonce and capability.
+  document
+    .querySelectorAll<HTMLFormElement>('form[data-confirm]')
+    .forEach(form => {
+      form.addEventListener('submit', event => {
+        if (!window.confirm(form.dataset.confirm ?? '')) {
+          event.preventDefault();
+        }
+      });
+    });
+
   const provider = document.querySelector<HTMLSelectElement>(
     '[name="providers[provider]"]'
   );
