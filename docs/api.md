@@ -37,6 +37,8 @@ All routes are under `/campaignbridge/v1`. Every action route is `POST`.
 | `GET` | `/campaigns` | query: `owner_user_id?`, `page` (≥ 1, default 1), `per_page` (1–100, default 20) | `list` | 200 collection |
 | `POST` | `/campaigns` | `template_id`, `owner_user_id?`, `provider?`, `audience_reference?` | `create` | 201 campaign |
 | `GET` | `/campaigns/{id}` | — | `get` | 200 campaign |
+| `GET` | `/campaigns/{id}/history` | query: `page` (≥ 1, default 1), `per_page` (1–100, default 50) | history | 200 history collection |
+| `GET` | `/campaigns/{id}/attempts` | query: `page` (≥ 1, default 1), `per_page` (1–100, default 50) | history | 200 attempt collection |
 | `POST` | `/campaigns/{id}/template` | `expected_version`, `template_id` | `edit_template` | 200 campaign |
 | `POST` | `/campaigns/{id}/targeting` | `expected_version`, `provider`, `audience_reference` (both keys required; each may be `null`) | `select_audience` | 200 campaign |
 | `POST` | `/campaigns/{id}/snapshot` | `expected_version` | `snapshot` | 200 snapshot result |
@@ -552,6 +554,35 @@ directly, is followed and audited with `unexplained: true`.
 
 Reconciliation is on demand only. Scheduled background checks, provider
 webhooks, and crash recovery belong to M5 (#66).
+
+### History and delivery attempts
+
+`GET /campaigns/{id}/history` pages the campaign's audit events and
+`GET /campaigns/{id}/attempts` its delivery attempts, newest first
+(`created_at DESC, id ASC`). Both authorize exactly like `GET /campaigns/{id}`,
+through `Campaign_Workflow::get()`: the same 403 or 404, the same denial audit,
+and no items. They paginate like the campaign collection (`pagination`,
+`X-WP-Total`, `X-WP-TotalPages`, and `400 campaignbridge_campaign_invalid_page`
+beyond the last page) and send `Cache-Control: no-store`. Nothing is written.
+
+```json
+{
+  "items": [
+    { "id": "audit-…", "action": "campaign_send", "result": "success",
+      "actor": { "id": 1, "name": "Avery Admin" },
+      "context": { "attempt_id": "attempt-…", "attempt_status": "succeeded", "from_state": "provider_draft", "to_state": "sending", "provider": "mailchimp", "remote_id": "f49a413ed9" },
+      "created_at": "2026-10-04T06:06:21Z" }
+  ],
+  "pagination": { "page": 1, "per_page": 50, "total": 29, "total_pages": 1 }
+}
+```
+
+An attempt item carries `id`, `operation`, `status`, `retryability`,
+`has_idempotency_key`, `remote_correlation`, `created_at`, and `updated_at`.
+The idempotency key itself is never returned. History exposes only what the
+audit log already holds in redacted form: no credentials, provider payloads,
+recipient addresses, or test-send recipients. `actor.name` is the user's
+display name, or `null` when the user no longer exists.
 
 ### Delivery policies
 

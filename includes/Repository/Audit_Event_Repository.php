@@ -58,7 +58,7 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 	}
 
 	/** @return array<int, Audit_Event> */
-	public function for_target( string $target_type, string $target_id, int $limit = 100 ): array {
+	public function for_target( string $target_type, string $target_id, int $limit = 100, int $offset = 0 ): array {
 		if ( ! Schema_Manager::is_current() ) {
 			return array();
 		}
@@ -67,10 +67,11 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 		$limit  = max( 1, min( 100, $limit ) );
 		$rows   = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded audit listing.
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE target_type = %s AND target_id = %s ORDER BY created_at DESC, id ASC LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
+				"SELECT * FROM {$table} WHERE target_type = %s AND target_id = %s ORDER BY created_at DESC, id ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
 				$target_type,
 				$target_id,
-				$limit
+				$limit,
+				max( 0, $offset )
 			),
 			ARRAY_A
 		);
@@ -82,6 +83,21 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 			}
 		}
 		return $events;
+	}
+
+	public function count_for_target( string $target_type, string $target_id ): int {
+		if ( ! Schema_Manager::is_current() ) {
+			return 0;
+		}
+		global $wpdb;
+		$table = Schema_Manager::table( 'audit_events' );
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Indexed audit count.
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table} WHERE target_type = %s AND target_id = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
+				$target_type,
+				$target_id
+			)
+		);
 	}
 
 	/** @param array<string, mixed> $row Database row. */

@@ -21,5 +21,8 @@ interface Audit_Event_Source {
 	public function add( Audit_Event $event ): bool;
 
 	/** @return array<int, Audit_Event> */
-	public function for_target( string $target_type, string $target_id, int $limit = 100 ): array;
+	public function for_target( string $target_type, string $target_id, int $limit = 100, int $offset = 0 ): array;
+
+	/** Number of events recorded for one target. */
+	public function count_for_target( string $target_type, string $target_id ): int;
 }
