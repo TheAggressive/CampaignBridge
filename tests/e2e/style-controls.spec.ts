@@ -70,7 +70,7 @@ test('the canvas draws buttons with the email design shape, not Core defaults', 
   await expect(links).toHaveCount(2);
   const shape = (index: number) =>
     links.nth(index).evaluate(element => {
-      const style = getComputedStyle(element);
+      const style = globalThis.getComputedStyle(element);
       return {
         radius: style.borderTopLeftRadius,
         padding: `${style.paddingTop} ${style.paddingLeft}`,
