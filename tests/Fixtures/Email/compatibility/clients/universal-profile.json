@@ -5,6 +5,14 @@
   "proves": "The universal@1 artifact carries no active or unsupported content, every link is an absolute HTTP(S) destination, and every image carries the dimensions and alternative text the profile promises.",
   "expectations": [
     {
+      "id": "list-items-carry-design-typography",
+      "because": "List text otherwise falls back to each client's default face, commonly a serif in Outlook, while paragraphs use the email design.",
+      "scenarios": ["universal-newsletter"],
+      "rule": "style_property_required",
+      "select": "li",
+      "property": "font-family"
+    },
+    {
       "id": "no-script",
       "because": "No supported email client executes JavaScript, and a script element is a delivery and security risk.",
       "rule": "element_forbidden",
@@ -143,17 +151,6 @@
     }
   ],
   "limitations": [
-    {
-      "id": "list-text-inherits-client-defaults",
-      "detail": "core/list and core/list-item emit no inline font-family, font-size, line-height, or colour, so list text falls back to each client's default face instead of the resolved email design.",
-      "degrades_to": "Lists render in the client default font (commonly a serif face in Outlook) while headings and paragraphs render in the brand face.",
-      "detect": {
-        "scenarios": ["universal-newsletter"],
-        "rule": "style_property_forbidden",
-        "select": "li",
-        "property": "font-family"
-      }
-    },
     {
       "id": "image-blocking-is-not-simulated",
       "detail": "These fixtures assert the markup that image-blocking clients rely on. They do not render the blocked state.",
