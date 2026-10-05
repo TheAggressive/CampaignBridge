@@ -133,6 +133,7 @@ class Routes extends Abstract_Rest_Controller {
 		self::$preview_routes->register();
 
 		self::$campaign_routes->register();
+		( new Campaign_History_Routes() )->register();
 
 		self::$provider_discovery_routes->register();
 	}

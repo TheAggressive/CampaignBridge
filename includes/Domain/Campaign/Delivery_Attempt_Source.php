@@ -26,5 +26,8 @@ interface Delivery_Attempt_Source {
 	public function update_result( Delivery_Attempt $attempt ): bool;
 
 	/** @return array<int, Delivery_Attempt> */
-	public function for_campaign( string $campaign_id, int $limit = 50 ): array;
+	public function for_campaign( string $campaign_id, int $limit = 50, int $offset = 0 ): array;
+
+	/** Number of attempts recorded for one campaign. */
+	public function count_for_campaign( string $campaign_id ): int;
 }
