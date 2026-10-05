@@ -1,11 +1,16 @@
 import apiFetch from '@wordpress/api-fetch';
 import type {
+  ApiFailure,
   AudienceLookup,
   AudienceOption,
   Campaign,
   CampaignCollection,
   CampaignQuery,
+  Diagnostic,
+  ReviewedSnapshot,
+  Snapshot,
   TemplateOption,
+  Validation,
 } from './types';
 
 const NAMESPACE = '/campaignbridge/v1';
@@ -163,4 +168,86 @@ export function decodeTitle(rendered: string): string {
   element.innerHTML = rendered;
 
   return element.value.trim();
+}
+
+function campaignPath(id: string, suffix = ''): string {
+  return `${NAMESPACE}/campaigns/${encodeURIComponent(id)}${suffix}`;
+}
+
+export async function getCampaign(id: string): Promise<Campaign> {
+  const response = await apiFetch<{ campaign: Campaign }>({
+    path: campaignPath(id),
+  });
+
+  return response.campaign;
+}
+
+/** The stored artifact the campaign was reviewed with, never live content. */
+export function getReviewedSnapshot(id: string): Promise<ReviewedSnapshot> {
+  return apiFetch<ReviewedSnapshot>({
+    path: campaignPath(id, '/reviewed-snapshot'),
+  });
+}
+
+/** Freeze the template's current content into a new snapshot. */
+export function takeSnapshot(
+  campaign: Campaign
+): Promise<{ campaign: Campaign; snapshot: Snapshot; validation: Validation }> {
+  return apiFetch({
+    path: campaignPath(campaign.id, '/snapshot'),
+    method: 'POST',
+    data: { expected_version: campaign.version },
+  });
+}
+
+/** Check the template's current content without changing the campaign. */
+export async function checkCampaign(campaign: Campaign): Promise<Validation> {
+  const response = await apiFetch<{ validation: Validation }>({
+    path: campaignPath(campaign.id, '/validation'),
+    method: 'POST',
+  });
+
+  return response.validation;
+}
+
+export type ReviewTransition = 'submit' | 'approve' | 'revoke-approval';
+
+/** Submit, approve, or revoke approval at the campaign's current version. */
+export async function transitionCampaign(
+  campaign: Campaign,
+  transition: ReviewTransition
+): Promise<Campaign> {
+  const response = await apiFetch<{ campaign: Campaign }>({
+    path: campaignPath(campaign.id, `/${transition}`),
+    method: 'POST',
+    data: { expected_version: campaign.version },
+  });
+
+  return response.campaign;
+}
+
+/** Read the stable code, message, diagnostics, and current version of a REST error. */
+export function apiFailure(caught: unknown, fallback: string): ApiFailure {
+  const error = (
+    typeof caught === 'object' && caught !== null ? caught : {}
+  ) as {
+    code?: unknown;
+    message?: unknown;
+    data?: { diagnostics?: unknown; current_version?: unknown };
+  };
+
+  return {
+    code: typeof error.code === 'string' ? error.code : 'unknown',
+    message:
+      typeof error.message === 'string' && error.message.trim()
+        ? error.message
+        : fallback,
+    diagnostics: Array.isArray(error.data?.diagnostics)
+      ? (error.data.diagnostics as Diagnostic[])
+      : [],
+    currentVersion:
+      typeof error.data?.current_version === 'number'
+        ? error.data.current_version
+        : null,
+  };
 }

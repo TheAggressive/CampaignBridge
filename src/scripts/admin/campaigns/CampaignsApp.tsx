@@ -25,7 +25,7 @@ import {
 } from './api';
 import { CreateCampaignModal } from './CreateCampaignModal';
 import { providerLabel, stateLabels } from './labels';
-import { viewToQuery } from './view';
+import { campaignUrl, viewToQuery } from './view';
 import type {
   Campaign,
   CampaignCollection,
@@ -140,6 +140,16 @@ export function CampaignsApp({
             __('Template #%d', 'campaignbridge'),
             item.template_id
           ),
+        render: ({ item }) => (
+          <a href={campaignUrl(config.screenUrl, item.id)}>
+            {templateTitles.get(item.template_id) ??
+              sprintf(
+                /* translators: %d: template ID. */
+                __('Template #%d', 'campaignbridge'),
+                item.template_id
+              )}
+          </a>
+        ),
       },
       {
         id: 'state',
@@ -211,6 +221,7 @@ export function CampaignsApp({
   }, [
     config.canManageAll,
     config.providers,
+    config.screenUrl,
     labels,
     owners,
     providerNames,
@@ -337,11 +348,10 @@ export function CampaignsApp({
         <CreateCampaignModal
           config={config}
           onClose={() => setCreating(false)}
-          onCreated={() => {
-            setCreating(false);
-            setNotice(__('Campaign created.', 'campaignbridge'));
-            setView(current => ({ ...current, page: 1 }));
-            load();
+          onCreated={campaign => {
+            globalThis.location.assign(
+              campaignUrl(config.screenUrl, campaign.id)
+            );
           }}
         />
       )}

@@ -2,15 +2,18 @@
 /**
  * Campaigns screen: list, filter, and create campaigns.
  *
- * The screen is a React application over the campaign REST contracts. It
- * receives only what it cannot ask the API for: the current user's authority,
- * the template REST base, and which providers are connected.
+ * The screen is a React application over the campaign REST contracts: the
+ * campaign list, and one campaign's review page when `campaign` is in the URL.
+ * It receives only what it cannot ask the API for: the current user's
+ * authority, admin URLs, the template REST base, which providers are
+ * connected, and whether delivery requires a second person.
  *
  * @package CampaignBridge\Admin\Screens
  */
 
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
+use CampaignBridge\Repository\Delivery_Policy_Repository;
 use CampaignBridge\Repository\Provider_Connection_Repository;
 
 global $screen;
@@ -28,6 +31,9 @@ if ( $screen ) {
 			'canManageAll'      => current_user_can( Capabilities::MANAGE ),
 			'templatesRestBase' => $campaignbridge_template_type && $campaignbridge_template_type->rest_base ? $campaignbridge_template_type->rest_base : Post_Type_Email_Template::POST_TYPE,
 			'newTemplateUrl'    => admin_url( 'post-new.php?post_type=' . Post_Type_Email_Template::POST_TYPE ),
+			'editTemplateUrl'   => admin_url( 'post.php?action=edit&post=' ),
+			'screenUrl'         => admin_url( 'admin.php?page=campaignbridge-campaigns' ),
+			'separateDelivery'  => ( new Delivery_Policy_Repository() )->current()->requires_separate_delivery(),
 			'providersUrl'      => admin_url( 'admin.php?page=campaignbridge-settings&tab=providers' ),
 			'providers'         => array(
 				array(

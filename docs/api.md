@@ -42,6 +42,7 @@ All routes are under `/campaignbridge/v1`. Every action route is `POST`.
 | `POST` | `/campaigns/{id}/template` | `expected_version`, `template_id` | `edit_template` | 200 campaign |
 | `POST` | `/campaigns/{id}/targeting` | `expected_version`, `provider`, `audience_reference` (both keys required; each may be `null`) | `select_audience` | 200 campaign |
 | `POST` | `/campaigns/{id}/snapshot` | `expected_version` | `snapshot` | 200 snapshot result |
+| `GET` | `/campaigns/{id}/reviewed-snapshot` | — | `reviewed_snapshot` | 200 reviewed snapshot |
 | `POST` | `/campaigns/{id}/validation` | — | `validate` | 200 validation result |
 | `POST` | `/campaigns/{id}/preview` | — | `preview` | 200 preview result |
 | `POST` | `/campaigns/{id}/submit` | `expected_version` | `submit_for_review` | 200 campaign |
@@ -148,10 +149,44 @@ There is no text search.
 
 Every campaign representation carries `actions`: the actions the current user
 may take on it now, derived from their authority and the campaign state
-machine, so operator screens never restate those rules. Today the list is
-`archive` (when the state can still be archived) and `duplicate` (for users who
-can create campaigns). An offered action can still be refused when it runs, for
-example after a concurrent change; the workflow remains the authority.
+machine, so operator screens never restate those rules:
+
+| Action | Offered when |
+| --- | --- |
+| `edit`, `snapshot` | the campaign is `draft`, `ready_for_review`, or `approved` |
+| `submit` | `draft` with an active snapshot |
+| `approve` | `ready_for_review` and the user may approve campaigns |
+| `revoke_approval` | `approved` |
+| `archive` | the state can still move to `archived` |
+| `duplicate` | the user can create campaigns |
+
+All of them also require that the user may manage the campaign. An offered
+action can still be refused when it runs, for example after a concurrent
+change; the workflow remains the authority.
+
+### Reviewed snapshot
+
+`GET /campaigns/{id}/reviewed-snapshot` returns the campaign, its active
+snapshot, and that snapshot's stored artifact. `POST /preview` compiles the
+template's live content, which can change after review; this route returns
+exactly what was reviewed, and only after the workflow recompiles the frozen
+inputs and confirms they still reproduce the stored fingerprint. A campaign
+without a snapshot returns `409 campaignbridge_campaign_missing_snapshot`; a
+snapshot that no longer reproduces its artifact returns
+`400 campaignbridge_campaign_validation_failed`. Authorization matches
+`GET /campaigns/{id}`, and nothing is written.
+
+```json
+{
+  "campaign": { "…": "campaign" },
+  "snapshot": { "id": "snapshot-…", "revision": 1, "fingerprint": "sha256:…", "created_at": "…", "envelope": { "…": "…" } },
+  "artifact": { "html": "…", "text": "…", "fingerprint": "sha256:…", "compiler_version": "…", "profile_version": "…", "sample": { "html": "…", "text": "…" } }
+}
+```
+
+`artifact.html` and `text` keep canonical `{{cb:…}}` tokens. `sample` shows
+the same synthetic values as previews, or is `null` when the artifact has no
+provider-resolved tokens.
 
 ### Idempotent duplication
 

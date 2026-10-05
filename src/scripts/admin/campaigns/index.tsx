@@ -1,6 +1,8 @@
 import domReady from '@wordpress/dom-ready';
 import { createRoot } from '@wordpress/element';
+import { CampaignDetail } from './CampaignDetail';
 import { CampaignsApp } from './CampaignsApp';
+import { campaignFromUrl } from './view';
 
 domReady(() => {
   const root = document.getElementById('campaignbridge-campaigns-root');
@@ -9,6 +11,13 @@ domReady(() => {
     return;
   }
 
+  const campaign = campaignFromUrl(globalThis.location.search);
   root.replaceChildren();
-  createRoot(root).render(<CampaignsApp config={config} />);
+  createRoot(root).render(
+    campaign ? (
+      <CampaignDetail id={campaign} config={config} />
+    ) : (
+      <CampaignsApp config={config} />
+    )
+  );
 });

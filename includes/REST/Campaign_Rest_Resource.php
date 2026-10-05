@@ -158,6 +158,31 @@ final class Campaign_Rest_Resource {
 		);
 	}
 
+	/**
+	 * The stored artifact of a reviewed snapshot, with the synthetic personalization sample.
+	 *
+	 * @param Campaign_Snapshot $snapshot Integrity-checked snapshot.
+	 * @return array<string, mixed>
+	 */
+	public static function artifact( Campaign_Snapshot $snapshot ): array {
+		$artifact = $snapshot->artifact();
+		$preview  = Token_Preview::default();
+
+		return array(
+			'html'             => $artifact->html(),
+			'text'             => $artifact->text(),
+			'fingerprint'      => $artifact->fingerprint(),
+			'compiler_version' => $artifact->compiler_version(),
+			'profile_version'  => $artifact->profile_version(),
+			'sample'           => $preview->applies_to( $artifact->html() . $artifact->text() )
+				? array(
+					'html' => $preview->html( $artifact->html() ),
+					'text' => $preview->text( $artifact->text() ),
+				)
+				: null,
+		);
+	}
+
 	/** @return array<int, array<string, string>> */
 	public static function diagnostics( Compile_Result $result ): array {
 		return array_map(
