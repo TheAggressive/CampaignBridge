@@ -107,7 +107,7 @@ final class Email_Style_Controls_Test extends TestCase {
 	public function test_lists_take_margin_and_padding(): void {
 		$html = $this->html( '<!-- wp:list {"style":{"spacing":{"margin":{"top":"16px"},"padding":{"left":"32px"}}}} --><ul class="wp-block-list" style="margin-top:16px;padding-left:32px"><!-- wp:list-item --><li>One</li><!-- /wp:list-item --></ul><!-- /wp:list -->' );
 
-		self::assertStringContainsString( '<td style="padding:16px 0px 0px 0px"><ul style="margin:0;padding:0 0 0 32px">', $html );
+		self::assertStringContainsString( '<td style="padding:16px 0px 0px 0px"><ul style="margin:0;padding:0 0 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111111">', $html );
 	}
 
 	public function test_separators_social_icons_and_button_groups_take_a_margin(): void {

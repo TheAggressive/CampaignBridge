@@ -74,7 +74,9 @@ final class List_Item_Renderer extends Abstract_Renderer {
 	 * @param Render_Context $context  Immutable scoped context.
 	 */
 	public function render_html( Block_Node $block, string $children, Render_Context $context ): string {
-		return '<li style="margin:0 0 8px 0">' . (string) Renderer_Support::rich_text( $block->attributes()['content'] ) . '</li>';
+		$typography = (string) ( $context->binding( 'list_text' )['css'] ?? '' );
+
+		return '<li style="margin:0 0 8px 0' . ( '' === $typography ? '' : ';' . $typography ) . '">' . (string) Renderer_Support::rich_text( $block->attributes()['content'] ) . '</li>';
 	}
 
 	/**

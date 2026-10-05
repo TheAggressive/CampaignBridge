@@ -105,8 +105,10 @@ Navigation is now an explicit CampaignBridge email block with one to five
 author-entered HTTPS links. It uses a horizontal presentation table, with a
 media-query stacked layout at widths of 480px or less. Clients that discard
 media queries retain the bounded horizontal row and readable link text. The
-plain-text artifact lists each label and URL on its own line. It never reads a
-WordPress menu during compilation.
+plain-text artifact lists each label and URL on its own line. Links use the
+block's native text colour, from the email palette or a custom value, and
+otherwise the Brand Kit text colour, so they stay readable on a dark section.
+It never reads a WordPress menu during compilation.
 
 Video is an explicit CampaignBridge email block because Core Video persists
 playback markup and Core Image cannot carry a separate play action. Authors
@@ -263,6 +265,14 @@ and does not provide the frozen email asset contract.
 `campaignbridge/post-image`, and `campaignbridge/compliance-footer` stay custom:
 they own the email document structure, compliance, or snapshot-bound post
 content that Core blocks do not model.
+
+The compliance footer's unsubscribe link is never a block attribute. When the
+template sets an Unsubscribe URL, the footer links to it; it must be an
+absolute HTTP(S) URL, or the compiler reports `compliance.unsubscribe.invalid`.
+When the template sets none, the footer links to the canonical
+`{{cb:campaign.unsubscribe_url}}` token, which each provider translates at
+handoff (Mailchimp to `*|UNSUB|*`) and HTML export keeps canonical. Mailchimp
+requires its own unsubscribe tag, so Mailchimp templates leave the URL empty.
 
 `campaignbridge/post-title`, `campaignbridge/post-excerpt`,
 `campaignbridge/post-button`, and `campaignbridge/post-link` were removed in
@@ -494,7 +504,8 @@ still accepts only literal HTTP(S) URLs.
 
 Every other string attribute rejects `{{cb:` syntax with
 `token.context.unsupported`. This covers image URL/alt/link, post blocks, and
-the compliance footer. Token failures produce one diagnostic per code per
+the compliance footer's authored text; the footer's unsubscribe link is
+supplied by the renderer, not authored. Token failures produce one diagnostic per code per
 attribute at `<block path>.attrs.<attribute>`, and messages never echo token
 IDs or values: `token.unknown`, `token.malformed`, `token.nested`,
 `token.limit_exceeded`, `token.unresolved`, `token.url.invalid`,
