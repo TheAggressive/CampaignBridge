@@ -11,6 +11,8 @@ namespace CampaignBridge\REST;
 
 use CampaignBridge\Core\Campaign_Authorizer;
 use CampaignBridge\Core\Capabilities;
+use CampaignBridge\Domain\Campaign\Campaign;
+use CampaignBridge\Domain\Campaign\Campaign_List_Filter;
 use CampaignBridge\Services\Campaign\Campaign_Draft_Handoff_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Reconciler_Factory;
 use CampaignBridge\Services\Campaign\Campaign_Scheduler_Factory;
@@ -194,7 +196,8 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		$owner_id = $request->has_param( 'owner_user_id' ) ? (int) $request->get_param( 'owner_user_id' ) : $actor->user_id();
 		$page     = (int) $request->get_param( 'page' );
 		$per_page = (int) $request->get_param( 'per_page' );
-		$result   = $this->workflow->list( $actor, $owner_id, $per_page, ( $page - 1 ) * $per_page );
+		$filter   = new Campaign_List_Filter( array_values( (array) ( $request->get_param( 'state' ) ?? array() ) ), $this->nullable_string( $request, 'provider' ) );
+		$result   = $this->workflow->list( $actor, $owner_id, $per_page, ( $page - 1 ) * $per_page, $filter );
 		if ( ! $result->is_success() ) {
 			return Campaign_Rest_Errors::from_error( $result->error() );
 		}
@@ -211,7 +214,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 
 		$response = new WP_REST_Response(
 			array(
-				'items'      => array_map( array( Campaign_Rest_Resource::class, 'campaign' ), $result->campaigns() ),
+				'items'      => array_map( static fn ( Campaign $campaign ): array => Campaign_Rest_Resource::campaign( $campaign, $actor ), $result->campaigns() ),
 				'pagination' => array(
 					'page'        => $page,
 					'per_page'    => $per_page,
@@ -315,7 +318,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return $this->no_store(
 			new WP_REST_Response(
 				array(
-					'campaign'   => Campaign_Rest_Resource::campaign( $campaign ),
+					'campaign'   => Campaign_Rest_Resource::campaign( $campaign, $this->actor() ),
 					'snapshot'   => Campaign_Rest_Resource::snapshot( $snapshot ),
 					'validation' => Campaign_Rest_Resource::validation( $compiled ),
 				)
@@ -378,7 +381,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return $this->no_store(
 			new WP_REST_Response(
 				array(
-					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign, $this->actor() ),
 					'idempotent_replay' => $result->is_idempotent_replay(),
 				),
 				$result->is_idempotent_replay() ? 200 : Rest_Constants::HTTP_CREATED
@@ -433,7 +436,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return $this->no_store(
 			new WP_REST_Response(
 				array(
-					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign, $this->actor() ),
 					'remote'            => Campaign_Rest_Resource::remote( $reference ),
 					'attempt'           => null === $result->attempt() ? null : Campaign_Rest_Resource::attempt( $result->attempt() ),
 					'idempotent_replay' => $result->is_idempotent_replay(),
@@ -492,7 +495,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return $this->no_store(
 			new WP_REST_Response(
 				array(
-					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign, $this->actor() ),
 					'remote'            => null === $result->reference() ? null : Campaign_Rest_Resource::remote( $result->reference() ),
 					'attempt'           => Campaign_Rest_Resource::attempt( $attempt ),
 					'test'              => Campaign_Rest_Resource::test( $result ),
@@ -600,7 +603,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return $this->no_store(
 			new WP_REST_Response(
 				array(
-					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign, $this->actor() ),
 					'remote'            => null === $result->reference() ? null : Campaign_Rest_Resource::remote( $result->reference() ),
 					'resolved_attempts' => array_map( array( Campaign_Rest_Resource::class, 'attempt' ), $result->resolved_attempts() ),
 				)
@@ -649,7 +652,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return $this->no_store(
 			new WP_REST_Response(
 				array(
-					'campaign'          => Campaign_Rest_Resource::campaign( $campaign ),
+					'campaign'          => Campaign_Rest_Resource::campaign( $campaign, $this->actor() ),
 					'remote'            => Campaign_Rest_Resource::remote( $reference ),
 					'attempt'           => null === $result->attempt() ? null : Campaign_Rest_Resource::attempt( $result->attempt() ),
 					'idempotent_replay' => $result->is_idempotent_replay(),
@@ -715,7 +718,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return $this->no_store(
 			new WP_REST_Response(
 				array(
-					'campaign'                           => Campaign_Rest_Resource::campaign( $campaign ),
+					'campaign'                           => Campaign_Rest_Resource::campaign( $campaign, $this->actor() ),
 					$validate ? 'validation' : 'preview' => $validate
 						? Campaign_Rest_Resource::validation( $compiled )
 						: Campaign_Rest_Resource::preview( $compiled ),
@@ -743,7 +746,7 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		}
 
 		return $this->no_store(
-			new WP_REST_Response( array( 'campaign' => Campaign_Rest_Resource::campaign( $campaign ) ), $status )
+			new WP_REST_Response( array( 'campaign' => Campaign_Rest_Resource::campaign( $campaign, $this->actor() ) ), $status )
 		);
 	}
 

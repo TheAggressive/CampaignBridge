@@ -387,10 +387,10 @@ final class Campaign_Routes_Test extends Test_Case {
 		$actor    = ( new Campaign_Authorizer() )->actor( $this->admin_id );
 		$direct   = $workflow->duplicate( $actor, $source['id'], 'rest-duplicate-1' );
 		self::assertTrue( $direct->is_idempotent_replay() );
-		self::assertSame( $duplicate, Campaign_Rest_Resource::campaign( $direct->campaign() ) );
+		self::assertSame( $duplicate, Campaign_Rest_Resource::campaign( $direct->campaign(), $actor ) );
 		self::assertSame(
 			$this->request( 'GET', self::COLLECTION . '/' . $source['id'] )->get_data()['campaign'],
-			Campaign_Rest_Resource::campaign( $workflow->get( $actor, $source['id'] )->campaign() )
+			Campaign_Rest_Resource::campaign( $workflow->get( $actor, $source['id'] )->campaign(), $actor )
 		);
 
 		$version = ( new Campaign_Repository() )->get( $source['id'] )?->version();

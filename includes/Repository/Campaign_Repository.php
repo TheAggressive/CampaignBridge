@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace CampaignBridge\Repository;
 
 use CampaignBridge\Domain\Campaign\Campaign;
+use CampaignBridge\Domain\Campaign\Campaign_List_Filter;
 use CampaignBridge\Domain\Campaign\Campaign_Source;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -106,21 +107,20 @@ final class Campaign_Repository implements Campaign_Source {
 	}
 
 	/** @return array<int, Campaign> */
-	public function for_owner( int $owner_user_id, int $limit = 50, int $offset = 0 ): array {
+	public function for_owner( int $owner_user_id, int $limit = 50, int $offset = 0, ?Campaign_List_Filter $filter = null ): array {
 		if ( ! Schema_Manager::is_current() || 1 > $owner_user_id ) {
 			return array();
 		}
 
 		global $wpdb;
-		$table  = Schema_Manager::table( 'campaigns' );
-		$limit  = max( 1, min( 100, $limit ) );
-		$offset = max( 0, $offset );
-		$rows   = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded repository listing.
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE owner_user_id = %d ORDER BY updated_at DESC, id ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table comes from the Schema_Manager allowlist.
-				$owner_user_id,
-				$limit,
-				$offset
+		$table                  = Schema_Manager::table( 'campaigns' );
+		$limit                  = max( 1, min( 100, $limit ) );
+		$offset                 = max( 0, $offset );
+		list( $where, $values ) = self::owner_filter( $owner_user_id, $filter );
+		$rows                   = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded repository listing.
+			$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- owner_filter() returns one value per placeholder in its clause.
+				"SELECT * FROM {$table} WHERE {$where} ORDER BY updated_at DESC, id ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table comes from the Schema_Manager allowlist; the clause holds only placeholders.
+				...array_merge( $values, array( $limit, $offset ) )
 			),
 			ARRAY_A
 		);
@@ -128,18 +128,47 @@ final class Campaign_Repository implements Campaign_Source {
 		return $this->hydrate_many( is_array( $rows ) ? $rows : array() );
 	}
 
-	public function count_for_owner( int $owner_user_id ): int {
+	public function count_for_owner( int $owner_user_id, ?Campaign_List_Filter $filter = null ): int {
 		if ( ! Schema_Manager::is_current() || 1 > $owner_user_id ) {
 			return 0;
 		}
 
 		global $wpdb;
-		$table = Schema_Manager::table( 'campaigns' );
-		$count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Indexed owner count for REST pagination.
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE owner_user_id = %d", $owner_user_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table comes from the Schema_Manager allowlist.
+		$table                  = Schema_Manager::table( 'campaigns' );
+		list( $where, $values ) = self::owner_filter( $owner_user_id, $filter );
+		$count                  = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Indexed owner count for REST pagination.
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE {$where}", ...$values ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Table comes from the Schema_Manager allowlist; owner_filter() returns one value per placeholder in its clause.
 		);
 
 		return max( 0, (int) $count );
+	}
+
+	/**
+	 * WHERE clause and values for one owner's filtered collection.
+	 *
+	 * The clause contains only fixed SQL and placeholders; every value is bound.
+	 *
+	 * @param int                       $owner_user_id Owner.
+	 * @param Campaign_List_Filter|null $filter        Optional narrowing.
+	 * @return array{0: string, 1: array<int, int|string>}
+	 */
+	private static function owner_filter( int $owner_user_id, ?Campaign_List_Filter $filter ): array {
+		$where  = 'owner_user_id = %d';
+		$values = array( $owner_user_id );
+		$states = null === $filter ? array() : $filter->states();
+		if ( array() !== $states ) {
+			$where .= ' AND state IN (' . implode( ', ', array_fill( 0, count( $states ), '%s' ) ) . ')';
+			$values = array_merge( $values, $states );
+		}
+		$provider = $filter?->provider();
+		if ( Campaign_List_Filter::NO_PROVIDER === $provider ) {
+			$where .= ' AND provider IS NULL';
+		} elseif ( null !== $provider ) {
+			$where   .= ' AND provider = %s';
+			$values[] = $provider;
+		}
+
+		return array( $where, $values );
 	}
 
 	private static function database_time( ?string $timestamp ): ?string {

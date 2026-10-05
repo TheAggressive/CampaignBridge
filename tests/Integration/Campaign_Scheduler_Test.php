@@ -151,12 +151,12 @@ final class Stale_Campaign_View implements Campaign_Source {
 		return $this->inner->compare_and_swap( $replacement, $expected_version );
 	}
 
-	public function for_owner( int $owner_user_id, int $limit = 50, int $offset = 0 ): array {
-		return $this->inner->for_owner( $owner_user_id, $limit, $offset );
+	public function for_owner( int $owner_user_id, int $limit = 50, int $offset = 0, ?\CampaignBridge\Domain\Campaign\Campaign_List_Filter $filter = null ): array {
+		return $this->inner->for_owner( $owner_user_id, $limit, $offset, $filter );
 	}
 
-	public function count_for_owner( int $owner_user_id ): int {
-		return $this->inner->count_for_owner( $owner_user_id );
+	public function count_for_owner( int $owner_user_id, ?\CampaignBridge\Domain\Campaign\Campaign_List_Filter $filter = null ): int {
+		return $this->inner->count_for_owner( $owner_user_id, $filter );
 	}
 }
 

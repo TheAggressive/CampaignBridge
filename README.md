@@ -15,8 +15,9 @@ content before it reaches a provider.
 > their stable REST contracts are present, along with Mailchimp discovery,
 > idempotent creation of a Mailchimp draft from an approved campaign, test
 > sends of that draft, guarded scheduling, unscheduling, and immediate sending,
-> and on-demand reconciliation of uncertain outcomes. A complete campaign
-> operator UI, background reconciliation, and reporting remain roadmap work. See
+> and on-demand reconciliation of uncertain outcomes. A Campaigns screen lists
+> and creates campaigns; the rest of the operator UI, background
+> reconciliation, and reporting remain roadmap work. See
 > [ROADMAP.md](ROADMAP.md) for the product contract and delivery plan.
 
 ## What is available now
@@ -36,6 +37,10 @@ content before it reaches a provider.
   revoke/archive/duplicate workflows with optimistic concurrency and
   WordPress-native template object authorization. HTML-export-only campaigns can
   reach local approval without selecting a provider or audience.
+- A Campaigns admin screen to list campaigns with state, delivery, and owner
+  filters, create a campaign from a published template with a provider and
+  audience, and archive or duplicate campaigns where permitted. Review,
+  approval, and delivery screens are M4 roadmap work.
 - Stable, capability-protected campaign REST contracts over those workflows,
   with schemas, pagination, optimistic versions, idempotent duplication, rate
   limits, and one documented error envelope (see [docs/api.md](docs/api.md)).

@@ -1,0 +1,101 @@
+@import '@wordpress/dataviews/build-style/style.css';
+
+.campaignbridge-campaigns {
+  display: grid;
+  gap: 16px;
+  padding-top: 16px;
+
+  &__app {
+    display: grid;
+    gap: 16px;
+  }
+
+  &__toolbar {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__app .components-notice {
+    margin: 0;
+  }
+
+  &__state {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f0f0f1;
+    color: #1e1e1e;
+    font-size: 12px;
+    line-height: 18px;
+    white-space: nowrap;
+  }
+
+  &__state--approved,
+  &__state--provider_draft,
+  &__state--scheduled {
+    background: #e7f1fb;
+    color: #0a4b78;
+  }
+
+  &__state--sending,
+  &__state--sent {
+    background: #e6f4ea;
+    color: #1e5631;
+  }
+
+  &__state--failed,
+  &__state--unknown {
+    background: #fcf0f1;
+    color: #8a2424;
+  }
+
+  &__empty {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    padding: 24px;
+  }
+}
+
+.campaignbridge-campaigns__modal {
+  max-width: 560px;
+}
+
+.campaignbridge-campaigns__form,
+.campaignbridge-campaigns__confirm {
+  display: grid;
+  gap: 16px;
+}
+
+.campaignbridge-campaigns__audience {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+
+  > * {
+    width: 100%;
+  }
+
+  > .components-button {
+    width: auto;
+  }
+}
+
+.campaignbridge-campaigns__inline-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.campaignbridge-campaigns__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campaignbridge-campaigns * {
+    transition: none !important;
+  }
+}

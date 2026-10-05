@@ -210,6 +210,25 @@ class Admin_Screens_Test extends Test_Case {
 	/**
 	 * Test that screen assets are delegated to a dedicated loader.
 	 */
+	public function test_campaigns_screen_requires_the_campaign_capability(): void {
+		global $menu, $submenu;
+		$menu    = array();
+		$submenu = array();
+
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+		( new \CampaignBridge\Admin\Admin_Menu_Manager() )->init();
+		( new \CampaignBridge\Admin\Core\Screen_Registry( \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/', 'campaignbridge' ) )->init();
+		do_action( 'admin_menu' );
+
+		$entries = array_column( $submenu['campaignbridge'] ?? array(), 1, 2 );
+		$this->assertArrayHasKey( 'campaignbridge-campaigns', $entries, 'The Campaigns screen is registered.' );
+		$this->assertSame( \CampaignBridge\Core\Capabilities::CREATE_CAMPAIGNS, $entries['campaignbridge-campaigns'] );
+		$this->assertSame( 'campaignbridge-campaigns', array_values( array_column( $submenu['campaignbridge'], 2 ) )[0], 'Campaigns is the first CampaignBridge screen.' );
+
+		$editor = $this->create_test_user( array( 'role' => 'editor' ) );
+		$this->assertFalse( user_can( $editor, \CampaignBridge\Core\Capabilities::CREATE_CAMPAIGNS ), 'Users without the campaign capability cannot open the screen.' );
+	}
+
 	public function test_screen_asset_loader_enqueues_configured_assets(): void {
 		global $screen;
 
