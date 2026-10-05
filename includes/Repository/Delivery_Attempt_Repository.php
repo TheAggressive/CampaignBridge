@@ -112,7 +112,7 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 	}
 
 	/** @return array<int, Delivery_Attempt> */
-	public function for_campaign( string $campaign_id, int $limit = 50 ): array {
+	public function for_campaign( string $campaign_id, int $limit = 50, int $offset = 0 ): array {
 		if ( ! Schema_Manager::is_current() ) {
 			return array();
 		}
@@ -121,9 +121,10 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 		$limit   = max( 1, min( 100, $limit ) );
 		$rows    = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded repository listing.
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE campaign_id = %s ORDER BY created_at DESC, id ASC LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
+				"SELECT * FROM {$table} WHERE campaign_id = %s ORDER BY created_at DESC, id ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
 				$campaign_id,
-				$limit
+				$limit,
+				max( 0, $offset )
 			),
 			ARRAY_A
 		);
@@ -135,6 +136,20 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 			}
 		}
 		return $records;
+	}
+
+	public function count_for_campaign( string $campaign_id ): int {
+		if ( ! Schema_Manager::is_current() ) {
+			return 0;
+		}
+		global $wpdb;
+		$table = Schema_Manager::table( 'delivery_attempts' );
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Indexed attempt count.
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table} WHERE campaign_id = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
+				$campaign_id
+			)
+		);
 	}
 
 	/** @param array<string, mixed> $row Database row. */

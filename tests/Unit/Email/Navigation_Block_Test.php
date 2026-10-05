@@ -67,7 +67,14 @@ final class Navigation_Block_Test extends TestCase {
 
 	/** The documented item and label maxima remain valid. */
 	public function test_accepts_exact_bounds(): void {
-		$items  = array_fill( 0, Navigation_Renderer::MAX_ITEMS, array( 'label' => str_repeat( 'a', Navigation_Renderer::MAX_LABEL_LENGTH ), 'url' => 'https://example.com' ) );
+		$items  = array_fill(
+			0,
+			Navigation_Renderer::MAX_ITEMS,
+			array(
+				'label' => str_repeat( 'a', Navigation_Renderer::MAX_LABEL_LENGTH ),
+				'url'   => 'https://example.com',
+			) 
+		);
 		$result = Compiler_Factory::create()->compile( $this->document( $items ), $this->context() );
 		self::assertTrue( $result->is_success() );
 		self::assertSame( Navigation_Renderer::MAX_ITEMS, substr_count( $result->html(), 'class="cb-nav-item"' ) );
@@ -134,7 +141,12 @@ final class Navigation_Block_Test extends TestCase {
 				'.attrs.items.0.url',
 			),
 			'userinfo'      => array(
-				array( array( 'label' => 'Home', 'url' => 'https://private-token@example.com' ) ),
+				array(
+					array(
+						'label' => 'Home',
+						'url'   => 'https://private-token@example.com',
+					),
+				),
 				'.attrs.items.0.url',
 			),
 			'javascript'    => array(
@@ -168,18 +180,42 @@ final class Navigation_Block_Test extends TestCase {
 	}
 
 	/** Unknown attributes and invalid nesting never silently disappear. */
+	public function test_links_take_a_custom_or_palette_text_colour(): void {
+		$items  = array(
+			array(
+				'label' => 'Shop',
+				'url'   => 'https://example.com/shop',
+			),
+		);
+		$custom = $this->document( $items );
+		$custom[0]['innerBlocks'][0]['innerBlocks'][0]['attrs']['style'] = array( 'color' => array( 'text' => '#fafafa' ) );
+		$palette = $this->document( $items );
+		$palette[0]['innerBlocks'][0]['innerBlocks'][0]['attrs']['textColor'] = 'brand';
+
+		$custom_html  = Compiler_Factory::create()->compile( $custom, $this->context() )->html();
+		$palette_html = Compiler_Factory::create()->compile( $palette, $this->context() )->html();
+
+		self::assertStringContainsString( '<a href="https://example.com/shop" style="color:#fafafa;', $custom_html );
+		self::assertStringContainsString( '<a href="https://example.com/shop" style="color:#1a6dcc;', $palette_html );
+	}
+
 	public function test_rejects_unknown_attributes_and_children(): void {
-		$items                        = array(
+		$items                           = array(
 			array(
 				'label' => 'Home',
 				'url'   => 'https://example.com',
 			),
 		);
-		$document                     = $this->document( $items );
-		$navigation                   = &$document[0]['innerBlocks'][0]['innerBlocks'][0];
-		$navigation['attrs']['style'] = array( 'color' => array( 'text' => '#ff0000' ) );
-		$result                       = Compiler_Factory::create()->compile( $document, $this->context() );
+		$document                        = $this->document( $items );
+		$navigation                      = &$document[0]['innerBlocks'][0]['innerBlocks'][0];
+		$navigation['attrs']['fontSize'] = 'large';
+		$result                          = Compiler_Factory::create()->compile( $document, $this->context() );
 		self::assertSame( 'block.attributes.unsupported', $result->diagnostics()[0]->code() );
+
+		unset( $navigation['attrs']['fontSize'] );
+		$navigation['attrs']['style'] = array( 'color' => array( 'background' => '#000000' ) );
+		$result                       = Compiler_Factory::create()->compile( $document, $this->context() );
+		self::assertSame( 'block.attribute.invalid', $result->diagnostics()[0]->code(), 'Only a text colour is supported.' );
 
 		unset( $navigation['attrs']['style'] );
 		$navigation['innerBlocks'][] = array(

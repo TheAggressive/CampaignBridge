@@ -60,8 +60,12 @@ final class Failing_Workflow_Audits implements Audit_Event_Source {
 		return false;
 	}
 
-	public function for_target( string $target_type, string $target_id, int $limit = 100 ): array {
+	public function for_target( string $target_type, string $target_id, int $limit = 100, int $offset = 0 ): array {
 		return array();
+	}
+
+	public function count_for_target( string $target_type, string $target_id ): int {
+		return 0;
 	}
 }
 

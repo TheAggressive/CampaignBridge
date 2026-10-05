@@ -97,14 +97,13 @@ The merged PR/closed issues provide the implementation history. Do not copy ever
 Issue number is not execution order. M1 #62 with its action issues #69–#72,
 M2 #63 with its action issues #73–#75, M3 provider discovery #76, the M3
 Mailchimp draft handoff #77, M3 test delivery #78, guarded schedule/send #79,
-and reconciliation #80 are complete, and the M3 live sandbox run is done. The
-remaining order is:
+and reconciliation #80 are complete, and M3 #64 is closed. The remaining order
+is:
 
-1. Close M3 — #64.
-2. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
-3. Durable jobs/recovery — #66.
-4. Governance/reporting — #67.
-5. GA closeout — #68.
+1. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
+2. Durable jobs/recovery — #66.
+3. Governance/reporting — #67.
+4. GA closeout — #68.
 
 Cross-cutting work does not need to wait for the numbered milestone when its dependency is already satisfied. Security, accessibility, i18n, performance, package verification, and documentation travel with every relevant PR.
 
@@ -119,7 +118,7 @@ Cross-cutting work does not need to wait for the numbered milestone when its dep
   controller internals.
 - Provider/audience abilities may build on the completed M3 #76 discovery
   contracts.
-- Delivery abilities wait for M3 delivery workflows; broad automation/MCP exposure of production send also waits for M5 recovery semantics.
+- Delivery abilities may build on the completed M3 delivery workflows; broad automation/MCP exposure of production send still waits for M5 recovery semantics.
 - Reporting abilities wait for M6 metric/governance semantics.
 
 Do not let an adapter become the reason to invent a product workflow early.

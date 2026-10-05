@@ -106,8 +106,12 @@ final class Failing_Audit_Source implements \CampaignBridge\Domain\Campaign\Audi
 		return $this->inner->add( $event );
 	}
 
-	public function for_target( string $target_type, string $target_id, int $limit = 100 ): array {
-		return $this->inner->for_target( $target_type, $target_id, $limit );
+	public function for_target( string $target_type, string $target_id, int $limit = 100, int $offset = 0 ): array {
+		return $this->inner->for_target( $target_type, $target_id, $limit, $offset );
+	}
+
+	public function count_for_target( string $target_type, string $target_id ): int {
+		return $this->inner->count_for_target( $target_type, $target_id );
 	}
 }
 

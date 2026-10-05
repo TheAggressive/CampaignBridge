@@ -123,8 +123,12 @@ final class Stale_Attempt_View implements Delivery_Attempt_Source {
 		return $this->inner->update_result( $attempt );
 	}
 
-	public function for_campaign( string $campaign_id, int $limit = 50 ): array {
+	public function for_campaign( string $campaign_id, int $limit = 50, int $offset = 0 ): array {
 		return array();
+	}
+
+	public function count_for_campaign( string $campaign_id ): int {
+		return 0;
 	}
 }
 

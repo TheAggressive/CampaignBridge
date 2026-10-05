@@ -92,12 +92,9 @@ matches. **If the compiler stops producing the limitation, the suite fails and
 the stale limitation must be removed or restated.** Limitations cannot rot into
 inaccurate documentation.
 
-Two limitations currently record real gaps in CampaignBridge's own output rather
-than client behavior:
+Two limitations currently record Gmail behavior that still needs client
+rendering evidence:
 
-- `universal-profile / list-text-inherits-client-defaults` — `core/list` and
-  `core/list-item` emit no inline typography, so list text falls back to the
-  client default face while headings and paragraphs use the resolved design.
 - `gmail / body-style-gap-unverified` — the column-gap media query is emitted as
   a `<style>` element inside a table cell. Whether Gmail applies it in each
   viewing path needs client rendering evidence; the vertical gap may be absent.
@@ -105,9 +102,10 @@ than client behavior:
   emitted as a `<style>` element in the message body. Whether Gmail applies it
   in each viewing path needs client rendering evidence; links may stay in a row.
 
-These are recorded rather than silently accepted. The list typography gap needs
-a compiler change and golden-fixture review. The Gmail gaps need direct client
-rendering evidence or a change that moves the rules into the head.
+These are recorded rather than silently accepted. The Gmail gaps need direct
+client rendering evidence or a change that moves the rules into the head. Lists
+and list items carry the design's body typography inline, which the
+`list-items-carry-design-typography` expectation keeps in place.
 
 ## What this matrix does not prove
 
