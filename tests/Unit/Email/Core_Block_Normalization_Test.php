@@ -329,8 +329,8 @@ final class Core_Block_Normalization_Test extends TestCase {
 
 		self::assertTrue( $result->is_success(), $this->diagnostics( $result ) );
 		self::assertStringContainsString(
-			'<ul style="margin:0;padding:0 0 0 24px"><li style="margin:0 0 8px 0">Alpha <a href="https://example.com/a" style="color:inherit;text-decoration:underline">link</a></li><li style="margin:0 0 8px 0"><em>Beta</em><br>continued</li></ul>'
-			. '<ol style="margin:0;padding:0 0 0 24px"><li style="margin:0 0 8px 0">One</li><li style="margin:0 0 8px 0">Two</li></ol>',
+			'<ul style="margin:0;padding:0 0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111111"><li style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111111">Alpha <a href="https://example.com/a" style="color:inherit;text-decoration:underline">link</a></li><li style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111111"><em>Beta</em><br>continued</li></ul>'
+			. '<ol style="margin:0;padding:0 0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111111"><li style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111111">One</li><li style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111111">Two</li></ol>',
 			$result->html()
 		);
 		self::assertSame( "- Alpha link (https://example.com/a)\n- Beta continued\n1. One\n2. Two\n", $result->text() );
