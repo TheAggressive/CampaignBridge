@@ -45,6 +45,19 @@ test('operators create a campaign from a template and archive it from the list',
     await page.reload();
     await page.getByRole('button', { name: 'New campaign' }).click();
     const dialog = page.getByRole('dialog', { name: 'New campaign' });
+    // Bundled DataViews keeps its own id counter; every label must still
+    // point at exactly one control, including when the list has pages.
+    await dialog.getByLabel('Email template').waitFor();
+    expect(
+      await page.evaluate(() => {
+        const ids = [
+          ...globalThis.document.querySelectorAll(
+            '[id^="inspector-"], [id^="campaignbridge-"]'
+          ),
+        ].map(element => element.id);
+        return ids.filter((id, index) => ids.indexOf(id) !== index);
+      })
+    ).toEqual([]);
     await dialog.getByLabel('Email template').selectOption({ label: title });
     await dialog.getByLabel('Delivery').selectOption({ value: '' });
     await dialog.getByRole('button', { name: 'Create campaign' }).click();

@@ -19,6 +19,12 @@ export type CampaignAction =
   | 'submit'
   | 'approve'
   | 'revoke_approval'
+  | 'create_provider_draft'
+  | 'test_send'
+  | 'schedule'
+  | 'unschedule'
+  | 'send'
+  | 'reconcile'
   | 'archive'
   | 'duplicate';
 

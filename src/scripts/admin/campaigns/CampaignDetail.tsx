@@ -17,6 +17,7 @@ import {
   transitionCampaign,
   type ReviewTransition,
 } from './api';
+import { DeliveryPanel } from './DeliveryPanel';
 import { Diagnostics } from './Diagnostics';
 import { providerLabel, stateLabels } from './labels';
 import { ReviewPreview } from './ReviewPreview';
@@ -406,6 +407,12 @@ export function CampaignDetail({
         )}
       </section>
 
+      <DeliveryPanel
+        campaign={campaign}
+        config={config}
+        onChange={updated => setCampaign(updated)}
+      />
+
       {confirmRefresh && (
         <Modal
           title={__('Refresh from template?', 'campaignbridge')}
@@ -471,10 +478,15 @@ function ReviewGuidance({
         )
       : __('Waiting for someone who can approve campaigns.', 'campaignbridge');
   } else if (campaign.state === 'approved') {
-    text = __(
-      'Approved. Delivery happens from the next step.',
-      'campaignbridge'
-    );
+    text = campaign.provider
+      ? __(
+          'Approved. Create the provider draft below to test and deliver it.',
+          'campaignbridge'
+        )
+      : __(
+          'Approved. Export the reviewed HTML from the preview to send it yourself.',
+          'campaignbridge'
+        );
   }
 
   if (!text) {
