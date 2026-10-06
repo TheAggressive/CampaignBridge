@@ -28,6 +28,7 @@ final class Campaign_History_Route_Test extends Test_Case {
 
 	private int $admin_id;
 	private string $campaign_id;
+	private int $template_id;
 
 	public function setUp(): void {
 		parent::setUp();
@@ -48,7 +49,7 @@ final class Campaign_History_Route_Test extends Test_Case {
 			)
 		);
 		wp_set_current_user( $this->admin_id );
-		$template          = $this->factory->post->create(
+		$this->template_id = $this->factory->post->create(
 			array(
 				'post_type'    => Post_Type_Email_Template::POST_TYPE,
 				'post_status'  => 'publish',
@@ -57,7 +58,7 @@ final class Campaign_History_Route_Test extends Test_Case {
 				'post_author'  => $this->admin_id,
 			)
 		);
-		$this->campaign_id = $this->request( 'POST', self::COLLECTION, array( 'template_id' => $template ) )->get_data()['campaign']['id'];
+		$this->campaign_id = $this->request( 'POST', self::COLLECTION, array( 'template_id' => $this->template_id ) )->get_data()['campaign']['id'];
 	}
 
 	public function test_history_is_paged_newest_first_with_actor_names(): void {
@@ -165,6 +166,49 @@ final class Campaign_History_Route_Test extends Test_Case {
 		self::assertSame( 403, $this->request( 'GET', $this->route( '/history' ) )->get_status(), 'Users without campaign capabilities are refused before the workflow.' );
 		wp_set_current_user( 0 );
 		self::assertSame( 401, $this->request( 'GET', $this->route( '/attempts' ) )->get_status() );
+	}
+
+	public function test_remote_reference_is_null_before_handoff_and_read_like_the_campaign(): void {
+		$targeted = $this->request(
+			'POST',
+			self::COLLECTION,
+			array(
+				'template_id'        => $this->template_id,
+				'provider'           => 'provider-one',
+				'audience_reference' => 'list-1',
+			)
+		)->get_data()['campaign'];
+
+		$before = $this->request( 'GET', self::COLLECTION . '/' . $targeted['id'] . '/remote' );
+		self::assertSame( 200, $before->get_status() );
+		self::assertNull( $before->get_data()['remote'] );
+		$this->assert_schema( \CampaignBridge\REST\Campaign_Rest_Schema::remote_view_result(), $before );
+
+		self::assertTrue(
+			( new \CampaignBridge\Repository\Remote_Campaign_Reference_Repository() )->add(
+				\CampaignBridge\Domain\Campaign\Remote_Campaign_Reference::from_array(
+					array(
+						'schema_version' => \CampaignBridge\Domain\Campaign\Remote_Campaign_Reference::SCHEMA_VERSION,
+						'campaign_id'    => $targeted['id'],
+						'provider'       => 'provider-one',
+						'remote_id'      => 'remote-42',
+						'observed_state' => 'draft',
+						'cursor'         => null,
+						'observed_at'    => '2030-01-01T00:00:00Z',
+						'reconciled_at'  => null,
+					)
+				)
+			)
+		);
+		$after = $this->request( 'GET', self::COLLECTION . '/' . $targeted['id'] . '/remote' );
+		$this->assert_schema( \CampaignBridge\REST\Campaign_Rest_Schema::remote_view_result(), $after );
+		self::assertSame( 'remote-42', $after->get_data()['remote']['remote_id'] );
+		self::assertSame( 'draft', $after->get_data()['remote']['observed_state'] );
+
+		$author = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		get_userdata( $author )->add_cap( Capabilities::CREATE_CAMPAIGNS );
+		wp_set_current_user( $author );
+		self::assertSame( 403, $this->request( 'GET', self::COLLECTION . '/' . $targeted['id'] . '/remote' )->get_status() );
 	}
 
 	public function test_both_routes_publish_their_schemas(): void {
