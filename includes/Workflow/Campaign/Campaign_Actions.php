@@ -26,8 +26,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * authority. Actions not listed here are not offered yet.
  */
 final class Campaign_Actions {
-	public const ARCHIVE   = 'archive';
-	public const DUPLICATE = 'duplicate';
+	public const EDIT            = 'edit';
+	public const SNAPSHOT        = 'snapshot';
+	public const SUBMIT          = 'submit';
+	public const APPROVE         = 'approve';
+	public const REVOKE_APPROVAL = 'revoke_approval';
+	public const ARCHIVE         = 'archive';
+	public const DUPLICATE       = 'duplicate';
 
 	/**
 	 * Actions available to the actor on the campaign, in a stable order.
@@ -41,8 +46,23 @@ final class Campaign_Actions {
 			return array();
 		}
 
+		$state   = $campaign->state();
 		$actions = array();
-		if ( Campaign_State_Machine::can_transition( $campaign->state(), Campaign_State::ARCHIVED ) ) {
+		// Template, targeting, and snapshot changes are allowed while local review is still open.
+		if ( Campaign_State_Machine::is_editable( $state ) ) {
+			$actions[] = self::EDIT;
+			$actions[] = self::SNAPSHOT;
+		}
+		if ( Campaign_State::DRAFT === $state && null !== $campaign->active_snapshot_id() ) {
+			$actions[] = self::SUBMIT;
+		}
+		if ( Campaign_State::READY_FOR_REVIEW === $state && $actor->can_approve( $campaign ) ) {
+			$actions[] = self::APPROVE;
+		}
+		if ( Campaign_State::APPROVED === $state ) {
+			$actions[] = self::REVOKE_APPROVAL;
+		}
+		if ( Campaign_State_Machine::can_transition( $state, Campaign_State::ARCHIVED ) ) {
 			$actions[] = self::ARCHIVE;
 		}
 		if ( $actor->can_create() ) {
@@ -58,6 +78,6 @@ final class Campaign_Actions {
 	 * @return array<int, string>
 	 */
 	public static function all(): array {
-		return array( self::ARCHIVE, self::DUPLICATE );
+		return array( self::EDIT, self::SNAPSHOT, self::SUBMIT, self::APPROVE, self::REVOKE_APPROVAL, self::ARCHIVE, self::DUPLICATE );
 	}
 }

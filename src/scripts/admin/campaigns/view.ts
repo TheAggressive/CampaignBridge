@@ -27,3 +27,17 @@ export function viewToQuery(view: View): CampaignQuery {
           : null,
   };
 }
+
+const CAMPAIGN_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+
+/** The campaign named by the screen URL, when it is a valid identifier. */
+export function campaignFromUrl(search: string): string | null {
+  const id = new URLSearchParams(search).get('campaign');
+
+  return id !== null && CAMPAIGN_ID.test(id) ? id : null;
+}
+
+/** The review page URL for one campaign. */
+export function campaignUrl(screenUrl: string, id: string): string {
+  return `${screenUrl}&campaign=${encodeURIComponent(id)}`;
+}

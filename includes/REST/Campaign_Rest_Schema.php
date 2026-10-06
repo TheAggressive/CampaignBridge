@@ -259,29 +259,75 @@ final class Campaign_Rest_Schema {
 			'campaignbridge-campaign-snapshot-result',
 			array(
 				'campaign'   => self::campaign(),
-				'snapshot'   => array(
+				'snapshot'   => self::snapshot_object(),
+				'validation' => self::validation(),
+			)
+		);
+	}
+
+	/**
+	 * The campaign's active snapshot and its stored, integrity-checked artifact.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function reviewed_snapshot_result(): array {
+		return self::document(
+			'campaignbridge-campaign-reviewed-snapshot',
+			array(
+				'campaign' => self::campaign(),
+				'snapshot' => self::snapshot_object(),
+				'artifact' => array(
 					'type'                 => 'object',
 					'additionalProperties' => false,
-					'required'             => array( 'id', 'revision', 'fingerprint', 'created_at', 'envelope' ),
+					'required'             => array( 'html', 'text', 'fingerprint', 'compiler_version', 'profile_version', 'sample' ),
 					'properties'           => array(
-						'envelope'    => self::envelope(),
-						'id'          => array(
-							'type'    => 'string',
-							'pattern' => self::IDENTIFIER_PATTERN,
-						),
-						'revision'    => array(
-							'type'    => 'integer',
-							'minimum' => 1,
-						),
-						'fingerprint' => array(
+						'html'             => array( 'type' => 'string' ),
+						'text'             => array( 'type' => 'string' ),
+						'fingerprint'      => array(
 							'type'    => 'string',
 							'pattern' => '^sha256:[0-9a-f]{64}$',
 						),
-						'created_at'  => self::timestamp(),
+						'compiler_version' => array( 'type' => 'string' ),
+						'profile_version'  => array( 'type' => 'string' ),
+						'sample'           => array(
+							'type'       => array( 'object', 'null' ),
+							'properties' => array(
+								'html' => array( 'type' => 'string' ),
+								'text' => array( 'type' => 'string' ),
+							),
+						),
 					),
 				),
-				'validation' => self::validation(),
 			)
+		);
+	}
+
+	/**
+	 * One immutable snapshot's identity and frozen envelope.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private static function snapshot_object(): array {
+		return array(
+			'type'                 => 'object',
+			'additionalProperties' => false,
+			'required'             => array( 'id', 'revision', 'fingerprint', 'created_at', 'envelope' ),
+			'properties'           => array(
+				'envelope'    => self::envelope(),
+				'id'          => array(
+					'type'    => 'string',
+					'pattern' => self::IDENTIFIER_PATTERN,
+				),
+				'revision'    => array(
+					'type'    => 'integer',
+					'minimum' => 1,
+				),
+				'fingerprint' => array(
+					'type'    => 'string',
+					'pattern' => '^sha256:[0-9a-f]{64}$',
+				),
+				'created_at'  => self::timestamp(),
+			),
 		);
 	}
 

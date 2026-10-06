@@ -49,8 +49,11 @@ test('operators create a campaign from a template and archive it from the list',
     await dialog.getByLabel('Delivery').selectOption({ value: '' });
     await dialog.getByRole('button', { name: 'Create campaign' }).click();
 
-    await expect(screen.getByText('Campaign created.')).toBeVisible();
+    // A new campaign opens on its review page; the list links back to it.
+    await expect(page).toHaveURL(/&campaign=campaign-/);
+    await screen.getByRole('link', { name: 'All campaigns' }).click();
     const row = page.getByRole('row').filter({ hasText: title });
+    await expect(row.getByRole('link', { name: title })).toBeVisible();
     await expect(row).toHaveCount(1);
     await expect(row).toContainText('Draft');
     await expect(row).toContainText('HTML export');

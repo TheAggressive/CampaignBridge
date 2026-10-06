@@ -39,8 +39,11 @@ content before it reaches a provider.
   reach local approval without selecting a provider or audience.
 - A Campaigns admin screen to list campaigns with state, delivery, and owner
   filters, create a campaign from a published template with a provider and
-  audience, and archive or duplicate campaigns where permitted. Review,
-  approval, and delivery screens are M4 roadmap work.
+  audience, and archive or duplicate campaigns where permitted. Each campaign
+  has a review page showing the frozen subject, sender, and email exactly as
+  reviewed (desktop and phone, with sample personalization), template checks
+  with their block paths, and prepare, submit, approve, and revoke actions.
+  Delivery screens are M4 roadmap work.
 - Stable, capability-protected campaign REST contracts over those workflows,
   with schemas, pagination, optimistic versions, idempotent duplication, rate
   limits, and one documented error envelope (see [docs/api.md](docs/api.md)).

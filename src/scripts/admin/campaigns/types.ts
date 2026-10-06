@@ -13,7 +13,70 @@ export type CampaignState =
   | 'archived';
 
 /** Actions the server says the current user may take; see Campaign_Actions. */
-export type CampaignAction = 'archive' | 'duplicate';
+export type CampaignAction =
+  | 'edit'
+  | 'snapshot'
+  | 'submit'
+  | 'approve'
+  | 'revoke_approval'
+  | 'archive'
+  | 'duplicate';
+
+/** A compiler diagnostic with the block path it refers to. */
+export interface Diagnostic {
+  severity: 'error' | 'warning';
+  code: string;
+  path: string;
+  message: string;
+}
+
+/** Subject, preview text, and sender frozen with a snapshot. */
+export interface Envelope {
+  subject: string;
+  preview_text: string;
+  from_name: string;
+  from_email: string;
+  complete: boolean;
+  problems: string[];
+}
+
+export interface Snapshot {
+  id: string;
+  revision: number;
+  fingerprint: string;
+  created_at: string;
+  envelope: Envelope | null;
+}
+
+/** The stored artifact of the active snapshot, as reviewed. */
+export interface ReviewedArtifact {
+  html: string;
+  text: string;
+  fingerprint: string;
+  compiler_version: string;
+  profile_version: string;
+  sample: { html: string; text: string } | null;
+}
+
+export interface ReviewedSnapshot {
+  campaign: Campaign;
+  snapshot: Snapshot;
+  artifact: ReviewedArtifact;
+}
+
+export interface Validation {
+  valid: boolean;
+  diagnostics: Diagnostic[];
+  fingerprint: string | null;
+}
+
+/** The parts of a REST error envelope the screen acts on. */
+export interface ApiFailure {
+  code: string;
+  message: string;
+  diagnostics: Diagnostic[];
+  currentVersion: number | null;
+}
 
 /** A campaign as published by Campaign_Rest_Resource. */
 export interface Campaign {
@@ -85,6 +148,9 @@ export interface CampaignsConfig {
   canManageAll: boolean;
   templatesRestBase: string;
   newTemplateUrl: string;
+  editTemplateUrl: string;
+  screenUrl: string;
+  separateDelivery: boolean;
   providersUrl: string;
   providers: ProviderOption[];
 }

@@ -94,9 +94,9 @@ final class Campaign_List_Route_Test extends Test_Case {
 		$this->assert_schema( Campaign_Rest_Schema::collection(), $list );
 		$actions = array_column( $list->get_data()['items'], 'actions', 'id' );
 
-		self::assertSame( array( 'archive', 'duplicate' ), $actions[ $draft['id'] ] );
-		self::assertSame( array( 'duplicate' ), $actions[ $archived['id'] ], 'An archived campaign cannot be archived again.' );
-		self::assertSame( array( 'archive', 'duplicate' ), $draft['actions'], 'Single-campaign responses carry the same actions.' );
+		self::assertSame( array( 'edit', 'snapshot', 'archive', 'duplicate' ), $actions[ $draft['id'] ] );
+		self::assertSame( array( 'duplicate' ), $actions[ $archived['id'] ], 'An archived campaign cannot be changed or archived again.' );
+		self::assertSame( array( 'edit', 'snapshot', 'archive', 'duplicate' ), $draft['actions'], 'Single-campaign responses carry the same actions.' );
 	}
 
 	/**

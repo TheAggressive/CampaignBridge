@@ -55,6 +55,28 @@ final class Campaign_Workflow {
 		return Campaign_Workflow_Result::success( $loaded );
 	}
 
+	/**
+	 * The campaign's active snapshot, after proving it still reproduces its reviewed artifact.
+	 *
+	 * Read-only: authorized like get(), and refused with MISSING_SNAPSHOT or
+	 * VALIDATION_FAILED instead of showing an artifact that was not reviewed.
+	 *
+	 * @param Campaign_Actor $actor       Reader.
+	 * @param string         $campaign_id Campaign ID.
+	 */
+	public function reviewed_snapshot( Campaign_Actor $actor, string $campaign_id ): Campaign_Workflow_Result {
+		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_read' );
+		if ( $loaded instanceof Campaign_Workflow_Result ) {
+			return $loaded;
+		}
+		$snapshot = $this->verified_snapshot( $loaded );
+		if ( $snapshot instanceof Campaign_Workflow_Error ) {
+			return Campaign_Workflow_Result::failure( $snapshot, $loaded );
+		}
+
+		return Campaign_Workflow_Result::success( $loaded, $snapshot );
+	}
+
 	/** Return one bounded, authorized owner collection without in-memory filtering. */
 	public function list( Campaign_Actor $actor, int $owner_user_id, int $limit, int $offset, ?Campaign_List_Filter $filter = null ): Campaign_Workflow_List_Result {
 		if ( 1 > $owner_user_id || 1 > $limit || 100 < $limit || 0 > $offset ) {
