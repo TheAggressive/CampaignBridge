@@ -294,6 +294,22 @@ final class Campaign_Reconciler_Test extends Test_Case {
 		self::assertSame( $mutations, $this->provider_mutations(), 'Reconciling a send never sends.' );
 	}
 
+	public function test_a_reconciliation_served_by_a_clock_behind_the_recorded_attempt_still_settles(): void {
+		$campaign = $this->unknown_after( 'send' );
+		$this->provider_reports( Remote_Draft_State::SENDING );
+		// Another web server recorded the attempt with a clock a moment ahead of this one.
+		$this->clock->now -= 2;
+
+		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+
+		self::assertTrue( $result->is_success() );
+		self::assertSame( 'sending', $result->campaign()?->state() );
+		$settled = $result->resolved_attempts()[0];
+		self::assertSame( 'succeeded', $settled->status() );
+		self::assertGreaterThanOrEqual( $settled->created_at(), $settled->updated_at() );
+		self::assertGreaterThanOrEqual( $campaign->updated_at(), (string) $result->campaign()?->updated_at(), 'A new version is never stamped before the one it replaces.' );
+	}
+
 	public function test_a_timed_out_send_the_provider_does_not_show_yet_is_never_reopened_early(): void {
 		// Review finding: a draft read seconds after a timeout is not proof the send was refused.
 		$campaign = $this->unknown_after( 'send' );
@@ -347,9 +363,11 @@ final class Campaign_Reconciler_Test extends Test_Case {
 
 	public function test_a_failure_to_record_an_accepted_delivery_never_escapes_and_requires_reconciliation(): void {
 		$campaign = $this->provider_draft_campaign();
-		// The provider accepts, then recording fails: the clock moves before the attempt's creation.
-		$this->gateway->during_call = function (): void {
-			$this->clock->now -= 3600;
+		// The provider accepts, then recording fails: another writer changes the campaign meanwhile.
+		$this->gateway->during_call = function () use ( $campaign ): void {
+			$current = $this->campaigns->get( $campaign->id() );
+			self::assertNotNull( $current );
+			self::assertTrue( $this->campaigns->compare_and_swap( $current->claim( $this->clock->now() ), $current->version() ) );
 		};
 
 		$result = $this->scheduler->send( $this->sender, $campaign->id(), $campaign->version(), self::AUDIENCE, 'send-1', self::settings() );

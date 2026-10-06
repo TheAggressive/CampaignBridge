@@ -50,6 +50,15 @@ final class Campaign_Approval_Test extends WP_UnitTestCase {
 		Campaign::from_array( $data );
 	}
 
+	public function test_a_new_version_is_never_stamped_before_the_one_it_replaces(): void {
+		$approved = self::in_review()->approve_by( 9, '2026-10-05T12:01:00Z' );
+		// A request served by a machine whose clock is a moment behind.
+		$behind = $approved->transition_to( Campaign_State::PROVIDER_DRAFT, '2026-10-05T12:00:58Z' );
+
+		self::assertSame( '2026-10-05T12:01:00Z', $behind->updated_at() );
+		self::assertSame( $approved->version() + 1, $behind->version() );
+	}
+
 	public function test_only_a_campaign_in_review_can_be_approved(): void {
 		$this->expectException( \InvalidArgumentException::class );
 		Campaign::create( 'campaign-one', 7, 42, null, null, '2026-10-05T12:00:00Z' )->approve_by( 9, '2026-10-05T12:01:00Z' );

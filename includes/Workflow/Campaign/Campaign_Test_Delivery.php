@@ -325,7 +325,8 @@ final class Campaign_Test_Delivery {
 				'retryability'       => $retryability,
 				'remote_correlation' => $correlation,
 				'created_at'         => $created_at ?? $now,
-				'updated_at'         => $now,
+				// A later request may run on a machine whose clock is a moment behind.
+				'updated_at'         => null === $created_at ? $now : max( $now, $created_at ),
 			)
 		);
 	}
