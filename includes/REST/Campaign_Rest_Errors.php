@@ -70,6 +70,12 @@ final class Campaign_Rest_Errors {
 		if ( null !== $result->attempt() ) {
 			$data['attempt'] = Campaign_Rest_Resource::attempt( $result->attempt() );
 		}
+		if ( null !== $error->reason() ) {
+			$data['reason'] = $error->reason();
+		}
+		if ( null !== $error->retry_after() ) {
+			$data['retry_after'] = $error->retry_after();
+		}
 		$provider = $result->provider_error();
 		if ( null !== $provider ) {
 			$data['provider_error'] = array(

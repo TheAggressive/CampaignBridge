@@ -17,10 +17,12 @@ import {
   ensureMergeFields,
   getRemote,
   reconcileCampaign,
+  reconcileGuidance,
   scheduleCampaign,
   scheduleTime,
   sendCampaign,
   sendTest,
+  since,
   unscheduleCampaign,
   type DeliveryResult,
   type RemoteReference,
@@ -54,11 +56,26 @@ export function DeliveryPanel({
   const [dialog, setDialog] = useState<Dialog>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
+  const [waitUntil, setWaitUntil] = useState<number | null>(null);
+  const [waiting, setWaiting] = useState(0);
   const [draftKey, setDraftKey] = useState(() => newIdempotencyKey('draft'));
 
   const provider = config.providers.find(
     option => option.slug === campaign.provider
   );
+
+  // Count down a "still in progress" wait, then allow reconciling again.
+  useEffect(() => {
+    if (waitUntil === null) return;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((waitUntil - Date.now()) / 1000));
+      setWaiting(left);
+      if (left === 0) setWaitUntil(null);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [waitUntil]);
 
   useEffect(() => {
     getRemote(campaign)
@@ -154,15 +171,20 @@ export function DeliveryPanel({
           __('Reconciled with what the provider reports.', 'campaignbridge')
         )
       )
-      .catch(caught =>
-        setMessage({
-          status: 'warning',
-          text: apiFailure(
+      .catch(caught => {
+        const guidance = reconcileGuidance(
+          apiFailure(
             caught,
             __('The campaign could not be reconciled.', 'campaignbridge')
-          ).message,
-        })
-      )
+          )
+        );
+        setMessage({ status: guidance.status, text: guidance.text });
+        if (guidance.retryAfter !== null) {
+          setWaitUntil(Date.now() + guidance.retryAfter * 1000);
+        }
+        // A refusal can record what the provider reported; show it.
+        refresh();
+      })
       .finally(() => setBusy(null));
   };
 
@@ -215,10 +237,16 @@ export function DeliveryPanel({
               variant='tertiary'
               onClick={reconcile}
               isBusy={busy === 'reconcile'}
-              disabled={busy !== null}
+              disabled={busy !== null || waiting > 0}
               accessibleWhenDisabled
             >
-              {__('Reconcile', 'campaignbridge')}
+              {waiting > 0
+                ? sprintf(
+                    /* translators: %s: remaining wait as minutes:seconds. */
+                    __('Reconcile in %s', 'campaignbridge'),
+                    `${Math.floor(waiting / 60)}:${String(waiting % 60).padStart(2, '0')}`
+                  )
+                : __('Reconcile', 'campaignbridge')}
             </Button>
           )}
         </div>
@@ -248,6 +276,29 @@ export function DeliveryPanel({
                 )
               : __('Not created yet', 'campaignbridge')}
         </dd>
+        {remote && (
+          <>
+            <dt>{__('Last checked', 'campaignbridge')}</dt>
+            <dd>
+              <time dateTime={remote.observed_at}>
+                {since(remote.observed_at, new Date())}
+              </time>
+            </dd>
+            <dt>{__('Confirmed with Mailchimp', 'campaignbridge')}</dt>
+            <dd>
+              {remote.reconciled_at ? (
+                <time dateTime={remote.reconciled_at}>
+                  {since(remote.reconciled_at, new Date())}
+                </time>
+              ) : (
+                __(
+                  'Not since the last change. Reconcile to read what Mailchimp reports now.',
+                  'campaignbridge'
+                )
+              )}
+            </dd>
+          </>
+        )}
         {campaign.scheduled_for && (
           <>
             <dt>{__('Scheduled for', 'campaignbridge')}</dt>

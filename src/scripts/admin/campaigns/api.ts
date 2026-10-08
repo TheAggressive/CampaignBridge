@@ -233,7 +233,12 @@ export function apiFailure(caught: unknown, fallback: string): ApiFailure {
   ) as {
     code?: unknown;
     message?: unknown;
-    data?: { diagnostics?: unknown; current_version?: unknown };
+    data?: {
+      diagnostics?: unknown;
+      current_version?: unknown;
+      reason?: unknown;
+      retry_after?: unknown;
+    };
   };
 
   return {
@@ -248,6 +253,11 @@ export function apiFailure(caught: unknown, fallback: string): ApiFailure {
     currentVersion:
       typeof error.data?.current_version === 'number'
         ? error.data.current_version
+        : null,
+    reason: typeof error.data?.reason === 'string' ? error.data.reason : null,
+    retryAfter:
+      typeof error.data?.retry_after === 'number'
+        ? error.data.retry_after
         : null,
   };
 }

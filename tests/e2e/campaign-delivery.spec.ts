@@ -42,22 +42,15 @@ const control = (page: Page, data: Record<string, unknown>) =>
     data,
   });
 
-test('operators hand off, test, schedule, and send without duplicate delivery', async ({
-  page,
-}) => {
-  await page.goto(CAMPAIGNS_PATH);
-  test.skip(
-    !(await simulated(page)),
-    'Runs only against the test-only simulated Mailchimp, never a real account.'
-  );
-  await control(page, { reset: true, connect: true });
-
-  const title = `E2E delivery ${Date.now()}`;
+/** An approved Mailchimp campaign, ready for handoff, and its template. */
+async function approvedCampaign(
+  page: Page
+): Promise<{ id: string; templateId: number }> {
   const template = await api<{ id: number }>(page, {
     path: '/wp/v2/cb_templates',
     method: 'POST',
     data: {
-      title,
+      title: `E2E delivery ${Date.now()}`,
       status: 'publish',
       content: CONTENT,
       meta: {
@@ -67,42 +60,67 @@ test('operators hand off, test, schedule, and send without duplicate delivery', 
       },
     },
   });
+  const audiencesPath =
+    '/campaignbridge/v1/providers/mailchimp/discovery/audiences';
+  let audiences = await api<{ items: Array<{ id: string }> }>(page, {
+    path: audiencesPath,
+  });
+  if (!audiences.items.length) {
+    audiences = await api(page, {
+      path: `${audiencesPath}/refresh`,
+      method: 'POST',
+    });
+  }
+  const created = await api<{ campaign: { id: string; version: number } }>(
+    page,
+    {
+      path: '/campaignbridge/v1/campaigns',
+      method: 'POST',
+      data: {
+        template_id: template.id,
+        provider: 'mailchimp',
+        audience_reference: audiences.items[0].id,
+      },
+    }
+  );
+  let version = created.campaign.version;
+  for (const step of ['snapshot', 'submit', 'approve']) {
+    const result = await api<{ campaign: { version: number } }>(page, {
+      path: `/campaignbridge/v1/campaigns/${created.campaign.id}/${step}`,
+      method: 'POST',
+      data: { expected_version: version },
+    });
+    version = result.campaign.version;
+  }
+
+  return { id: created.campaign.id, templateId: template.id };
+}
+
+/** Skip unless the simulator is installed, then reset it. */
+async function simulatedOnly(page: Page): Promise<void> {
+  await page.goto(CAMPAIGNS_PATH);
+  test.skip(
+    !(await simulated(page)),
+    'Runs only against the test-only simulated Mailchimp, never a real account.'
+  );
+  await control(page, { reset: true, connect: true });
+}
+
+async function cleanUp(page: Page, templateId: number): Promise<void> {
+  await control(page, { reset: true, fail: '' });
+  await api(page, {
+    path: `/wp/v2/cb_templates/${templateId}?force=true`,
+    method: 'DELETE',
+  });
+}
+
+test('operators hand off, test, schedule, and send without duplicate delivery', async ({
+  page,
+}) => {
+  await simulatedOnly(page);
+  const { id, templateId } = await approvedCampaign(page);
 
   try {
-    const audiencesPath =
-      '/campaignbridge/v1/providers/mailchimp/discovery/audiences';
-    let audiences = await api<{ items: Array<{ id: string }> }>(page, {
-      path: audiencesPath,
-    });
-    if (!audiences.items.length) {
-      audiences = await api(page, {
-        path: `${audiencesPath}/refresh`,
-        method: 'POST',
-      });
-    }
-    const created = await api<{ campaign: { id: string; version: number } }>(
-      page,
-      {
-        path: '/campaignbridge/v1/campaigns',
-        method: 'POST',
-        data: {
-          template_id: template.id,
-          provider: 'mailchimp',
-          audience_reference: audiences.items[0].id,
-        },
-      }
-    );
-    const id = created.campaign.id;
-    let version = created.campaign.version;
-    for (const step of ['snapshot', 'submit', 'approve']) {
-      const result = await api<{ campaign: { version: number } }>(page, {
-        path: `/campaignbridge/v1/campaigns/${id}/${step}`,
-        method: 'POST',
-        data: { expected_version: version },
-      });
-      version = result.campaign.version;
-    }
-
     await page.goto(`${CAMPAIGNS_PATH}&campaign=${id}`);
     const delivery = page.locator('.campaignbridge-campaigns__delivery');
 
@@ -162,6 +180,17 @@ test('operators hand off, test, schedule, and send without duplicate delivery', 
     }
     expect((await control(page, {})).calls.send).toBe(1);
 
+    // The history records the unconfirmed send as such.
+    const timeline = page.locator('.campaignbridge-campaigns__timeline');
+    await expect(
+      timeline
+        .locator('.campaignbridge-campaigns__event--unknown')
+        .filter({ hasText: 'Sent to the provider' })
+    ).toHaveCount(1);
+    await expect(
+      timeline.getByRole('row').filter({ hasText: 'Send' }).first()
+    ).toContainText('Not confirmed');
+
     // Mailchimp reports the send in progress, then finished.
     await delivery.getByRole('button', { name: 'Reconcile' }).click();
     await expect(
@@ -175,11 +204,57 @@ test('operators hand off, test, schedule, and send without duplicate delivery', 
       page.locator('.campaignbridge-campaigns__detail-header')
     ).toContainText('Sent');
     expect((await control(page, {})).calls.send).toBe(1);
+
+    // The settled attempt and the reconciliation are both on record, and
+    // the test recipient's address is not.
+    await expect(
+      timeline.getByRole('row').filter({ hasText: 'Send' }).first()
+    ).toContainText('Succeeded');
+    await expect(
+      timeline.getByText('Reconciled with the provider').first()
+    ).toBeVisible();
+    await expect(page.getByText('qa@example.test')).toHaveCount(0);
   } finally {
-    await control(page, { reset: true, fail: '' });
-    await api(page, {
-      path: `/wp/v2/cb_templates/${template.id}?force=true`,
-      method: 'DELETE',
-    });
+    await cleanUp(page, templateId);
+  }
+});
+
+test('a campaign deleted in Mailchimp stays unresolved with recovery steps', async ({
+  page,
+}) => {
+  await simulatedOnly(page);
+  const { id, templateId } = await approvedCampaign(page);
+
+  try {
+    await page.goto(`${CAMPAIGNS_PATH}&campaign=${id}`);
+    const delivery = page.locator('.campaignbridge-campaigns__delivery');
+    await delivery
+      .getByRole('button', { name: 'Create Mailchimp draft' })
+      .click();
+    await expect(
+      delivery.getByText('The Mailchimp draft is ready.')
+    ).toBeVisible();
+    const remoteId = (await control(page, {})) as unknown as {
+      campaigns: Record<string, unknown>;
+    };
+
+    // Someone deletes the campaign in Mailchimp.
+    await control(page, { forget: Object.keys(remoteId.campaigns)[0] });
+    await delivery.getByRole('button', { name: 'Reconcile' }).click();
+
+    await expect(
+      delivery.getByText(/Mailchimp no longer has this campaign/)
+    ).toBeVisible();
+    await expect(
+      page.locator('.campaignbridge-campaigns__detail-header')
+    ).toContainText('In provider');
+    await expect(delivery.getByText(/\(missing\)/)).toBeVisible();
+    await expect(
+      page
+        .locator('.campaignbridge-campaigns__event--unknown')
+        .filter({ hasText: 'Reconciled with the provider' })
+    ).toHaveCount(1);
+  } finally {
+    await cleanUp(page, templateId);
   }
 });

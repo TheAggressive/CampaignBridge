@@ -45,7 +45,9 @@ content before it reaches a provider.
   with their block paths, and prepare, submit, approve, and revoke actions.
   Approved Mailchimp campaigns are handed off, tested, scheduled, unscheduled,
   sent, and reconciled from the same page, with confirmations that restate
-  the audience and cannot deliver twice.
+  the audience and cannot deliver twice. The page also shows the campaign's
+  full history and delivery attempts, the Mailchimp state with when it was
+  last confirmed, and the next step when reconciliation cannot settle it.
 - Stable, capability-protected campaign REST contracts over those workflows,
   with schemas, pagination, optimistic versions, idempotent duplication, rate
   limits, and one documented error envelope (see [docs/api.md](docs/api.md)).

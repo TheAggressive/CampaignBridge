@@ -1,5 +1,5 @@
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import type { ApiFailure, Campaign } from './types';
 
 const NAMESPACE = '/campaignbridge/v1';
@@ -231,4 +231,78 @@ export function deliveryOutcome(
   }
 
   return { status: 'error', message: failure.message, retry: true };
+}
+
+/**
+ * The next step after a reconciliation that could not settle the campaign,
+ * from its stable reason. Unknown reasons fall back to the server message.
+ */
+export function reconcileGuidance(failure: ApiFailure): {
+  status: 'warning' | 'error';
+  text: string;
+  retryAfter: number | null;
+} {
+  const guidance: Record<string, string> = {
+    in_progress: __(
+      'Mailchimp may still be applying the last request, so its answer is not final yet. Reconcile again when the wait is over; nothing else needs doing.',
+      'campaignbridge'
+    ),
+    missing: __(
+      'Mailchimp no longer has this campaign; it may have been deleted there. Check Mailchimp’s campaign list and reports to confirm what was sent. CampaignBridge changes nothing locally and keeps delivery blocked.',
+      'campaignbridge'
+    ),
+    untracked: __(
+      'Mailchimp reports a status CampaignBridge does not track, such as a cancellation in progress or an archived campaign. Resolve it in Mailchimp, then reconcile again.',
+      'campaignbridge'
+    ),
+    inconclusive: __(
+      'Mailchimp’s current status does not show whether the last request took effect. Check the campaign in Mailchimp before doing anything else here.',
+      'campaignbridge'
+    ),
+    contradiction: __(
+      'Mailchimp disagrees with what CampaignBridge recorded for this campaign. CampaignBridge will not follow it automatically. Investigate in Mailchimp; the history below shows what CampaignBridge did.',
+      'campaignbridge'
+    ),
+    duplicate_drafts: __(
+      'Mailchimp holds more than one draft for this campaign. Delete the extra drafts in Mailchimp, keep one, then reconcile again.',
+      'campaignbridge'
+    ),
+  };
+  const text = failure.reason ? guidance[failure.reason] : undefined;
+
+  return {
+    status: failure.reason === 'in_progress' ? 'warning' : 'error',
+    text: text ?? failure.message,
+    retryAfter: failure.reason === 'in_progress' ? failure.retryAfter : null,
+  };
+}
+
+/** How long ago an ISO time was, in words. */
+export function since(iso: string, now: Date): string {
+  const minutes = Math.max(
+    0,
+    Math.round((now.getTime() - new Date(iso).getTime()) / 60_000)
+  );
+  if (minutes < 1) return __('just now', 'campaignbridge');
+  if (minutes < 60) {
+    return sprintf(
+      /* translators: %d: minutes. */
+      _n('%d minute ago', '%d minutes ago', minutes, 'campaignbridge'),
+      minutes
+    );
+  }
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) {
+    return sprintf(
+      /* translators: %d: hours. */
+      _n('%d hour ago', '%d hours ago', hours, 'campaignbridge'),
+      hours
+    );
+  }
+  const days = Math.round(hours / 24);
+  return sprintf(
+    /* translators: %d: days. */
+    _n('%d day ago', '%d days ago', days, 'campaignbridge'),
+    days
+  );
 }

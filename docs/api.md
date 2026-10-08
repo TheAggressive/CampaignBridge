@@ -602,10 +602,25 @@ reported as a draft). A failed provider read is `502 provider_failed` and
 changes nothing. A concurrent change to the campaign is `409 conflict`;
 reconcile again.
 
+Every `reconciliation_required` refusal from `/reconcile` carries a stable
+`data.reason`, so a client can show the right next step without reading the
+message:
+
+| `reason` | Meaning | Next step |
+| --- | --- | --- |
+| `in_progress` | An earlier request may still be applying; `data.retry_after` gives the seconds until its outcome can be judged, when known | Reconcile again after the wait |
+| `missing` | The provider no longer has the campaign | Confirm in the provider what was sent |
+| `untracked` | The provider reports a status CampaignBridge does not track | Resolve it in the provider, then reconcile |
+| `inconclusive` | The provider status cannot show whether the earlier request took effect | Check the provider |
+| `contradiction` | The provider disagrees with the campaign's settled local state | Investigate; CampaignBridge will not follow it |
+| `duplicate_drafts` | The provider holds more than one draft for one request | Delete the extras, keep one, reconcile |
+
 Every write claims the campaign version, so `campaign.version` increases.
 Successful reconciliation sets `remote.reconciled_at`. A state change that no
 CampaignBridge request explains, such as a campaign scheduled in Mailchimp
-directly, is followed and audited with `unexplained: true`.
+directly, is followed and audited with `unexplained: true`. A scheduled
+campaign starting or finishing its send, and a send finishing, follow from a
+request that already succeeded and are not unexplained.
 
 ```json
 {

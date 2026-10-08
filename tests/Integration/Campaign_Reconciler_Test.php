@@ -445,6 +445,8 @@ final class Campaign_Reconciler_Test extends Test_Case {
 		$early = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
 		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $early->error()?->code() );
 		self::assertStringContainsString( 'still in progress', (string) $early->error()?->message() );
+		self::assertSame( Campaign_Workflow_Error::REASON_IN_PROGRESS, $early->error()?->reason() );
+		self::assertSame( Campaign_Reconciler::SETTLE_SECONDS, $early->error()?->retry_after() );
 		self::assertSame( 0, $this->drafts->inspections, 'An in-flight request is not judged by an early observation.' );
 
 		$this->clock->now += Campaign_Reconciler::SETTLE_SECONDS;
@@ -469,6 +471,19 @@ final class Campaign_Reconciler_Test extends Test_Case {
 
 		self::assertSame( $local, $result->campaign()?->state() );
 		self::assertSame( $remote, $result->reference()?->observed_state() );
+		self::assertFalse( $this->events( $campaign->id() )[0]->context()->to_array()['unexplained'], 'A scheduled send firing is expected, not a change made outside CampaignBridge.' );
+	}
+
+	public function test_an_accepted_send_finishing_is_not_unexplained(): void {
+		$campaign = $this->scheduled_campaign();
+		$this->provider_reports( Remote_Draft_State::SENDING, self::SEND_AT );
+		$this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+		$this->provider_reports( Remote_Draft_State::SENT, self::SEND_AT );
+
+		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+
+		self::assertSame( Campaign_State::SENT, $result->campaign()?->state() );
+		self::assertFalse( $this->events( $campaign->id() )[0]->context()->to_array()['unexplained'] );
 	}
 
 	public function test_a_campaign_scheduled_outside_campaignbridge_is_recorded_as_unexplained(): void {
@@ -489,12 +504,14 @@ final class Campaign_Reconciler_Test extends Test_Case {
 					$drafts->inspect_error = Provider_Error::from_category( Provider_Error_Category::NOT_FOUND, 'mailchimp_not_found', 'Not found.', 'mailchimp' );
 				},
 				Campaign_Reconciler::OBSERVED_MISSING,
+				Campaign_Workflow_Error::REASON_MISSING,
 			),
 			'untracked in the provider' => array(
 				static function ( Scripted_Draft_Gateway $drafts ): void {
 					$drafts->remote_status = Remote_Draft_State::OTHER;
 				},
 				Campaign_Reconciler::OBSERVED_OTHER,
+				Campaign_Workflow_Error::REASON_UNTRACKED,
 			),
 			'scheduled with no time'   => array(
 				static function ( Scripted_Draft_Gateway $drafts ): void {
@@ -502,6 +519,7 @@ final class Campaign_Reconciler_Test extends Test_Case {
 					$drafts->remote_send_time = null;
 				},
 				'scheduled',
+				Campaign_Workflow_Error::REASON_CONTRADICTION,
 			),
 		);
 	}
@@ -510,13 +528,14 @@ final class Campaign_Reconciler_Test extends Test_Case {
 	 * @dataProvider unresolvable
 	 * @param \Closure(Scripted_Draft_Gateway): void $provider Provider state to report.
 	 */
-	public function test_evidence_that_cannot_be_followed_stays_visibly_unresolved( \Closure $provider, string $observed ): void {
+	public function test_evidence_that_cannot_be_followed_stays_visibly_unresolved( \Closure $provider, string $observed, string $reason ): void {
 		$campaign = $this->unknown_after( 'schedule' );
 		$provider( $this->drafts );
 
 		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
 
 		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $result->error()?->code() );
+		self::assertSame( $reason, $result->error()?->reason(), 'Screens explain the refusal from its stable reason.' );
 		self::assertSame( Campaign_State::UNKNOWN, $this->campaigns->get( $campaign->id() )?->state() );
 		self::assertSame( 'unknown', $this->attempts->for_campaign( $campaign->id() )[0]->status(), 'Nothing is settled without evidence.' );
 		$reference = $this->references->get( $campaign->id(), 'mailchimp' );
@@ -533,6 +552,7 @@ final class Campaign_Reconciler_Test extends Test_Case {
 		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
 
 		self::assertSame( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $result->error()?->code() );
+		self::assertSame( Campaign_Workflow_Error::REASON_CONTRADICTION, $result->error()?->reason() );
 		self::assertSame( Campaign_State::SENT, $this->campaigns->get( $campaign->id() )?->state() );
 	}
 

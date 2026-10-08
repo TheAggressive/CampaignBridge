@@ -11,6 +11,7 @@ namespace CampaignBridge\REST;
 
 use CampaignBridge\Domain\Campaign\Campaign_State;
 use CampaignBridge\Workflow\Campaign\Campaign_Actions;
+use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
 use CampaignBridge\Domain\Provider\Test_Delivery;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -505,6 +506,14 @@ final class Campaign_Rest_Schema {
 						'diagnostics'     => self::diagnostics(),
 						'remote'          => self::remote(),
 						'attempt'         => self::attempt(),
+						'reason'          => array(
+							'type' => 'string',
+							'enum' => Campaign_Workflow_Error::reasons(),
+						),
+						'retry_after'     => array(
+							'type'    => 'integer',
+							'minimum' => 0,
+						),
 						'provider_error'  => array(
 							'type'                 => 'object',
 							'additionalProperties' => false,
