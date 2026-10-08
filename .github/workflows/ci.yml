@@ -331,6 +331,10 @@ jobs:
           ln -s "${GITHUB_WORKSPACE}" "${wp_dir}/wp-content/plugins/campaignbridge"
           php "${wp_cli}" --path="${wp_dir}" plugin activate campaignbridge
 
+          # Test-only simulated Mailchimp: delivery specs never reach a real account.
+          mkdir -p "${wp_dir}/wp-content/mu-plugins"
+          cp tests/e2e/mu-plugins/campaignbridge-e2e-mailchimp.php "${wp_dir}/wp-content/mu-plugins/"
+
       - name: Start WordPress web server
         run: |
           php -S 127.0.0.1:8889 -t "${RUNNER_TEMP}/wordpress" \

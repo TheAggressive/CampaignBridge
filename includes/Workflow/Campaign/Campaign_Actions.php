@@ -12,6 +12,7 @@ namespace CampaignBridge\Workflow\Campaign;
 use CampaignBridge\Domain\Campaign\Campaign;
 use CampaignBridge\Domain\Campaign\Campaign_State;
 use CampaignBridge\Domain\Campaign\Campaign_State_Machine;
+use CampaignBridge\Domain\Campaign\Delivery_Policy;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -31,17 +32,31 @@ final class Campaign_Actions {
 	public const SUBMIT          = 'submit';
 	public const APPROVE         = 'approve';
 	public const REVOKE_APPROVAL = 'revoke_approval';
+	public const PROVIDER_DRAFT  = 'create_provider_draft';
+	public const TEST_SEND       = 'test_send';
+	public const SCHEDULE        = 'schedule';
+	public const UNSCHEDULE      = 'unschedule';
+	public const SEND            = 'send';
+	public const RECONCILE       = 'reconcile';
 	public const ARCHIVE         = 'archive';
 	public const DUPLICATE       = 'duplicate';
+
+	/** States in which the provider may hold a campaign whose outcome can be read back. */
+	private const RECONCILABLE = array( Campaign_State::PROVIDER_DRAFT, Campaign_State::SCHEDULED, Campaign_State::SENDING, Campaign_State::UNKNOWN );
 
 	/**
 	 * Actions available to the actor on the campaign, in a stable order.
 	 *
-	 * @param Campaign_Actor $actor    Reader.
-	 * @param Campaign       $campaign Campaign as read.
+	 * Delivery actions also follow the site's separation-of-duties policy, so
+	 * the approver of a campaign is not offered schedule or send when the
+	 * policy requires a second person.
+	 *
+	 * @param Campaign_Actor       $actor    Reader.
+	 * @param Campaign             $campaign Campaign as read.
+	 * @param Delivery_Policy|null $policy   Site delivery policy; null applies none.
 	 * @return array<int, string>
 	 */
-	public static function for( Campaign_Actor $actor, Campaign $campaign ): array {
+	public static function for( Campaign_Actor $actor, Campaign $campaign, ?Delivery_Policy $policy = null ): array {
 		if ( ! $actor->can_manage( $campaign ) ) {
 			return array();
 		}
@@ -62,6 +77,7 @@ final class Campaign_Actions {
 		if ( Campaign_State::APPROVED === $state ) {
 			$actions[] = self::REVOKE_APPROVAL;
 		}
+		array_push( $actions, ...self::delivery( $actor, $campaign, $policy ) );
 		if ( Campaign_State_Machine::can_transition( $state, Campaign_State::ARCHIVED ) ) {
 			$actions[] = self::ARCHIVE;
 		}
@@ -73,11 +89,48 @@ final class Campaign_Actions {
 	}
 
 	/**
+	 * Provider handoff, test, delivery, and reconciliation actions.
+	 *
+	 * @param Campaign_Actor       $actor    Reader.
+	 * @param Campaign             $campaign Campaign as read.
+	 * @param Delivery_Policy|null $policy   Site delivery policy.
+	 * @return array<int, string>
+	 */
+	private static function delivery( Campaign_Actor $actor, Campaign $campaign, ?Delivery_Policy $policy ): array {
+		if ( null === $campaign->provider() || null === $campaign->audience_reference() ) {
+			return array();
+		}
+
+		$state       = $campaign->state();
+		$can_deliver = $actor->can_deliver( $campaign );
+		$independent = null === $policy || $policy->allows_delivery_by( $actor->user_id(), $campaign->approved_by_user_id() );
+		$actions     = array();
+		if ( Campaign_State::APPROVED === $state && $actor->can_approve( $campaign ) ) {
+			$actions[] = self::PROVIDER_DRAFT;
+		}
+		if ( Campaign_State::PROVIDER_DRAFT === $state && $actor->can_test( $campaign ) ) {
+			$actions[] = self::TEST_SEND;
+		}
+		if ( Campaign_State::PROVIDER_DRAFT === $state && $can_deliver && $independent ) {
+			$actions[] = self::SCHEDULE;
+			$actions[] = self::SEND;
+		}
+		if ( Campaign_State::SCHEDULED === $state && $can_deliver ) {
+			$actions[] = self::UNSCHEDULE;
+		}
+		if ( in_array( $state, self::RECONCILABLE, true ) && $can_deliver ) {
+			$actions[] = self::RECONCILE;
+		}
+
+		return $actions;
+	}
+
+	/**
 	 * Every action name the contract can return.
 	 *
 	 * @return array<int, string>
 	 */
 	public static function all(): array {
-		return array( self::EDIT, self::SNAPSHOT, self::SUBMIT, self::APPROVE, self::REVOKE_APPROVAL, self::ARCHIVE, self::DUPLICATE );
+		return array( self::EDIT, self::SNAPSHOT, self::SUBMIT, self::APPROVE, self::REVOKE_APPROVAL, self::PROVIDER_DRAFT, self::TEST_SEND, self::SCHEDULE, self::UNSCHEDULE, self::SEND, self::RECONCILE, self::ARCHIVE, self::DUPLICATE );
 	}
 }

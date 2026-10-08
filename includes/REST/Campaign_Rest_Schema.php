@@ -303,6 +303,21 @@ final class Campaign_Rest_Schema {
 	}
 
 	/**
+	 * A campaign and its provider reference, which is null before handoff.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function remote_view_result(): array {
+		return self::document(
+			'campaignbridge-campaign-remote',
+			array(
+				'campaign' => self::campaign(),
+				'remote'   => array_merge( self::remote(), array( 'type' => array( 'object', 'null' ) ) ),
+			)
+		);
+	}
+
+	/**
 	 * One immutable snapshot's identity and frozen envelope.
 	 *
 	 * @return array<string, mixed>

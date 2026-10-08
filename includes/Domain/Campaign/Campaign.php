@@ -349,7 +349,9 @@ final class Campaign {
 				'audience_reference'  => $audience_reference,
 				'active_snapshot_id'  => $active_snapshot_id,
 				'created_at'          => $this->created_at,
-				'updated_at'          => $updated_at,
+				// Requests can be served by machines whose clocks disagree by a
+				// moment; a new version is never stamped before the one it replaces.
+				'updated_at'          => max( $updated_at, $this->updated_at ),
 				'scheduled_for'       => $scheduled_for,
 				'approved_by_user_id' => self::retains_approval( $state ) ? ( $approved_by_user_id ?? $this->approved_by_user_id ) : null,
 			)

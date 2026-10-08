@@ -60,8 +60,22 @@ final class Campaign_History_Routes {
 		$this->authorizer = $authorizer ?? new Campaign_Authorizer();
 	}
 
-	/** Register the history and attempt routes. */
+	/** Register the history, attempt, and remote reference routes. */
 	public function register(): void {
+		\register_rest_route(
+			Rest_Constants::API_NAMESPACE,
+			self::ITEM . '/remote',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_remote' ),
+					'permission_callback' => array( Campaign_Routes::class, 'can_access_campaigns' ),
+					'args'                => array( 'id' => Campaign_Rest_Schema::campaign_id() ),
+				),
+				'schema' => array( Campaign_Rest_Schema::class, 'remote_view_result' ),
+			)
+		);
+
 		foreach ( array(
 			'/history'  => array( 'get_history', 'history' ),
 			'/attempts' => array( 'get_attempts', 'attempts' ),
@@ -80,6 +94,31 @@ final class Campaign_History_Routes {
 				)
 			);
 		}
+	}
+
+	/**
+	 * The campaign and its provider reference, which is null before handoff.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 */
+	public function get_remote( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$actor = $this->authorizer->actor( get_current_user_id() );
+		$view  = $this->history->remote( $actor, (string) $request->get_param( 'id' ) );
+		$read  = $view->campaign();
+		if ( ! $view->is_success() || null === $read ) {
+			return Campaign_Rest_Errors::from_error( $view->error() );
+		}
+
+		$reference = $view->reference();
+		$response  = new WP_REST_Response(
+			array(
+				'campaign' => Campaign_Rest_Resource::campaign( $read, $actor ),
+				'remote'   => null === $reference ? null : Campaign_Rest_Resource::remote( $reference ),
+			)
+		);
+		$response->header( 'Cache-Control', 'no-store' );
+
+		return $response;
 	}
 
 	/**

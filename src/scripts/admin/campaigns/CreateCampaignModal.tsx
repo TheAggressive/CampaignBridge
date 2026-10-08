@@ -7,7 +7,7 @@ import {
   Spinner,
 } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { requestErrorMessage } from '../brand-kit/errors';
 import { createCampaign, listTemplates, lookupAudiences } from './api';
 import type {
@@ -163,6 +163,7 @@ export function CreateCampaignModal({
         )}
         {templates && templates.length > 0 && (
           <SelectControl
+            id='campaignbridge-new-campaign-template'
             label={__('Email template', 'campaignbridge')}
             help={__(
               'The campaign uses this template’s current content when it is reviewed.',
@@ -189,6 +190,7 @@ export function CreateCampaignModal({
         )}
 
         <SelectControl
+          id='campaignbridge-new-campaign-delivery'
           label={__('Delivery', 'campaignbridge')}
           value={provider}
           onChange={setProvider}
@@ -236,6 +238,7 @@ export function CreateCampaignModal({
             )}
             {audiences && audiences.items.length > 0 && (
               <SelectControl
+                id='campaignbridge-new-campaign-audience'
                 label={__('Audience', 'campaignbridge')}
                 value={audience}
                 onChange={setAudience}
@@ -246,7 +249,12 @@ export function CreateCampaignModal({
                       ? item.name
                       : sprintf(
                           /* translators: 1: audience name, 2: contact count. */
-                          __('%1$s (%2$d contacts)', 'campaignbridge'),
+                          _n(
+                            '%1$s (%2$d contact)',
+                            '%1$s (%2$d contacts)',
+                            item.member_count,
+                            'campaignbridge'
+                          ),
                           item.name,
                           item.member_count
                         ),

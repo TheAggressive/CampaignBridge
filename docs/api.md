@@ -43,6 +43,7 @@ All routes are under `/campaignbridge/v1`. Every action route is `POST`.
 | `POST` | `/campaigns/{id}/targeting` | `expected_version`, `provider`, `audience_reference` (both keys required; each may be `null`) | `select_audience` | 200 campaign |
 | `POST` | `/campaigns/{id}/snapshot` | `expected_version` | `snapshot` | 200 snapshot result |
 | `GET` | `/campaigns/{id}/reviewed-snapshot` | — | `reviewed_snapshot` | 200 reviewed snapshot |
+| `GET` | `/campaigns/{id}/remote` | — | history | 200 campaign and provider reference |
 | `POST` | `/campaigns/{id}/validation` | — | `validate` | 200 validation result |
 | `POST` | `/campaigns/{id}/preview` | — | `preview` | 200 preview result |
 | `POST` | `/campaigns/{id}/submit` | `expected_version` | `submit_for_review` | 200 campaign |
@@ -157,6 +158,11 @@ machine, so operator screens never restate those rules:
 | `submit` | `draft` with an active snapshot |
 | `approve` | `ready_for_review` and the user may approve campaigns |
 | `revoke_approval` | `approved` |
+| `create_provider_draft` | `approved`, with a provider and audience, and the user may approve |
+| `test_send` | `provider_draft` and the user may send tests |
+| `schedule`, `send` | `provider_draft`, the user may deliver, and, under separation of duties, is not the recorded approver |
+| `unschedule` | `scheduled` and the user may deliver |
+| `reconcile` | `provider_draft`, `scheduled`, `sending`, or `unknown`, and the user may deliver |
 | `archive` | the state can still move to `archived` |
 | `duplicate` | the user can create campaigns |
 
@@ -187,6 +193,14 @@ snapshot that no longer reproduces its artifact returns
 `artifact.html` and `text` keep canonical `{{cb:…}}` tokens. `sample` shows
 the same synthetic values as previews, or is `null` when the artifact has no
 provider-resolved tokens.
+
+### Remote reference
+
+`GET /campaigns/{id}/remote` returns `{ "campaign": …, "remote": … }`, where
+`remote` is the provider reference in the same shape as delivery results, or
+`null` before the provider draft exists. It authorizes like
+`GET /campaigns/{id}`, reads only stored state, and never contacts the
+provider; use `/reconcile` to read the provider.
 
 ### Idempotent duplication
 

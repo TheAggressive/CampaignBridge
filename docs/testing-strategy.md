@@ -34,6 +34,27 @@ Hand-written provider fakes encode what we believe the provider does. `tests/Fix
 
 Before committing a recording, replace campaign and audience IDs with the test placeholders, drop response bodies CampaignBridge does not read, and confirm it contains no API key, Authorization header, account name, email address, or other subscriber data. Each fixture's `source` field states when and how it was recorded.
 
+## Simulated Mailchimp for browser tests
+
+Delivery browser tests must never reach a real Mailchimp account, including
+the account a developer connected to their local site. They run against
+`tests/e2e/mu-plugins/campaignbridge-e2e-mailchimp.php`, a test-only
+must-use plugin that answers every request to `*.api.mailchimp.com` through
+`pre_http_request`, so nothing leaves the site. It keeps simulated campaigns
+in an option, so draft, test, schedule, unschedule, send, and status reads
+behave like a real account across requests, and it counts provider actions so
+a spec can prove a double click reached the provider once. Its
+`campaignbridge-e2e/v1/mailchimp` route (administrators only) resets the
+simulation, seeds a fake connection on a site without one, and makes the next
+action apply but answer with a 503, the ambiguous outcome CampaignBridge must
+never retry.
+
+CI copies it into the disposable E2E site. It is not in the release package.
+Locally, delivery specs skip unless it is installed; install it into the
+Studio site's `wp-content/mu-plugins/` only for the run and remove it
+afterwards, because while it is present no Mailchimp request from that site
+reaches Mailchimp.
+
 ## Failure policy
 
 Risky tests and warnings fail the build. Tests must not accept contradictory outcomes such as success or rate limiting. Before a new security regression test is accepted, deliberately break the protected implementation and confirm the test fails for the named reason.

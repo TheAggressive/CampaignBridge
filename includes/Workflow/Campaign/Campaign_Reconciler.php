@@ -471,7 +471,9 @@ final class Campaign_Reconciler {
 					'status'             => $status,
 					'retryability'       => $retryability,
 					'remote_correlation' => $correlation,
-					'updated_at'         => $this->clock->now(),
+					// Reconciliation runs in a later request, possibly on a machine
+					// whose clock is a moment behind the one that recorded the attempt.
+					'updated_at'         => max( $this->clock->now(), $attempt->updated_at() ),
 				)
 			)
 		);

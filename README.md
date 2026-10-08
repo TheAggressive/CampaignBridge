@@ -43,7 +43,9 @@ content before it reaches a provider.
   has a review page showing the frozen subject, sender, and email exactly as
   reviewed (desktop and phone, with sample personalization), template checks
   with their block paths, and prepare, submit, approve, and revoke actions.
-  Delivery screens are M4 roadmap work.
+  Approved Mailchimp campaigns are handed off, tested, scheduled, unscheduled,
+  sent, and reconciled from the same page, with confirmations that restate
+  the audience and cannot deliver twice.
 - Stable, capability-protected campaign REST contracts over those workflows,
   with schemas, pagination, optimistic versions, idempotent duplication, rate
   limits, and one documented error envelope (see [docs/api.md](docs/api.md)).

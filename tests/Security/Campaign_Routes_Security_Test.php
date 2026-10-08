@@ -81,7 +81,7 @@ final class Campaign_Routes_Security_Test extends Test_Case {
 				++$guarded;
 			}
 		}
-		self::assertSame( 22, $guarded );
+		self::assertSame( 23, $guarded );
 
 		$campaign = $this->create_campaign()['id'];
 		wp_set_current_user( 0 );

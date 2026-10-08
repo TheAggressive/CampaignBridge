@@ -11,6 +11,7 @@ namespace CampaignBridge\Workflow\Campaign;
 
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
 use CampaignBridge\Domain\Campaign\Delivery_Attempt_Source;
+use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference_Source;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -30,15 +31,35 @@ final class Campaign_History {
 	/**
 	 * Build the history service.
 	 *
-	 * @param Campaign_Workflow       $workflow Authorizes campaign reads.
-	 * @param Audit_Event_Source      $audits   Audit events.
-	 * @param Delivery_Attempt_Source $attempts Delivery attempts.
+	 * @param Campaign_Workflow                $workflow Authorizes campaign reads.
+	 * @param Audit_Event_Source               $audits   Audit events.
+	 * @param Delivery_Attempt_Source          $attempts Delivery attempts.
+	 * @param Remote_Campaign_Reference_Source $remotes  Provider references.
 	 */
 	public function __construct(
 		private readonly Campaign_Workflow $workflow,
 		private readonly Audit_Event_Source $audits,
-		private readonly Delivery_Attempt_Source $attempts
+		private readonly Delivery_Attempt_Source $attempts,
+		private readonly Remote_Campaign_Reference_Source $remotes
 	) {}
+
+	/**
+	 * The campaign's provider reference, read like the campaign itself.
+	 *
+	 * @param Campaign_Actor $actor       Reader.
+	 * @param string         $campaign_id Campaign ID.
+	 */
+	public function remote( Campaign_Actor $actor, string $campaign_id ): Campaign_Remote_View {
+		$read     = $this->workflow->get( $actor, $campaign_id );
+		$campaign = $read->campaign();
+		$error    = $read->error();
+		if ( ! $read->is_success() || null === $campaign ) {
+			return Campaign_Remote_View::failure( $error ?? new Campaign_Workflow_Error( Campaign_Workflow_Error::NOT_FOUND, 'Campaign was not found.' ) );
+		}
+		$provider = $campaign->provider();
+
+		return Campaign_Remote_View::success( $campaign, null === $provider ? null : $this->remotes->get( $campaign_id, $provider ) );
+	}
 
 	/**
 	 * One page of the campaign's audit events.
