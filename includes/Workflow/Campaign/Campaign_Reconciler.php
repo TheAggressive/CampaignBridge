@@ -131,7 +131,10 @@ final class Campaign_Reconciler {
 					$campaign_id,
 					$campaign,
 					'failure',
-					$attempt
+					$attempt,
+					null,
+					Campaign_Workflow_Error::REASON_IN_PROGRESS,
+					self::SETTLE_SECONDS - $age
 				);
 			}
 		}
@@ -164,7 +167,7 @@ final class Campaign_Reconciler {
 
 		$remote_ids = $found->remote_ids();
 		if ( 1 < count( $remote_ids ) ) {
-			return $this->refuse( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The provider holds %d drafts for this request. Delete all but one in the provider, then reconcile again.', count( $remote_ids ) ), $actor, $campaign->id(), $campaign, 'unknown', $attempt );
+			return $this->refuse( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The provider holds %d drafts for this request. Delete all but one in the provider, then reconcile again.', count( $remote_ids ) ), $actor, $campaign->id(), $campaign, 'unknown', $attempt, null, Campaign_Workflow_Error::REASON_DUPLICATE_DRAFTS );
 		}
 
 		if ( 1 === count( $remote_ids ) ) {
@@ -194,7 +197,7 @@ final class Campaign_Reconciler {
 		}
 
 		if ( ! $found->is_complete() || $this->age( $attempt ) < self::SETTLE_SECONDS ) {
-			return $this->refuse( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'The draft has not been found, but its absence cannot be confirmed yet. Reconcile again later.', $actor, $campaign->id(), $campaign, 'unknown', $attempt );
+			return $this->refuse( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'The draft has not been found, but its absence cannot be confirmed yet. Reconcile again later.', $actor, $campaign->id(), $campaign, 'unknown', $attempt, null, Campaign_Workflow_Error::REASON_IN_PROGRESS );
 		}
 
 		$failed  = $this->settled( $attempt, Delivery_Attempt_Status::FAILED, Retryability::RETRYABLE, null );
@@ -218,13 +221,13 @@ final class Campaign_Reconciler {
 		$remote = $this->drafts->inspect_draft( $settings, $reference->remote_id() );
 		if ( $remote instanceof Provider_Error ) {
 			return Provider_Error_Category::NOT_FOUND === $remote->category()
-				? $this->contradiction( $actor, $campaign, $reference, self::OBSERVED_MISSING, 'The provider no longer has this campaign; it may have been deleted there. Nothing was changed locally. Check the provider before any further delivery.', $unresolved, $remote )
+				? $this->contradiction( $actor, $campaign, $reference, self::OBSERVED_MISSING, 'The provider no longer has this campaign; it may have been deleted there. Nothing was changed locally. Check the provider before any further delivery.', $unresolved, $remote, Campaign_Workflow_Error::REASON_MISSING )
 				: $this->refuse( Campaign_Workflow_Error::PROVIDER_FAILED, 'The provider status could not be read. Nothing changed.', $actor, $campaign->id(), $campaign, 'failure', $unresolved[0] ?? null, $remote );
 		}
 
 		$evidence = self::EVIDENCE[ $remote->status() ] ?? null;
 		if ( null === $evidence ) {
-			return $this->contradiction( $actor, $campaign, $reference, self::OBSERVED_OTHER, 'The provider reports a status CampaignBridge does not track, such as a cancellation in progress or an archived campaign. Resolve it in the provider, then reconcile again.', $unresolved, null );
+			return $this->contradiction( $actor, $campaign, $reference, self::OBSERVED_OTHER, 'The provider reports a status CampaignBridge does not track, such as a cancellation in progress or an archived campaign. Resolve it in the provider, then reconcile again.', $unresolved, null, Campaign_Workflow_Error::REASON_UNTRACKED );
 		}
 		list( $target, $observed ) = $evidence;
 
@@ -232,7 +235,7 @@ final class Campaign_Reconciler {
 		foreach ( $unresolved as $attempt ) {
 			$applied = $this->applied( $attempt->operation(), $target );
 			if ( null === $applied ) {
-				return $this->contradiction( $actor, $campaign, $reference, $observed, sprintf( 'The provider reports the campaign as %s, which does not show whether the earlier %s request took effect. Check the provider.', $remote->status(), str_replace( '_', ' ', $attempt->operation() ) ), $unresolved, null );
+				return $this->contradiction( $actor, $campaign, $reference, $observed, sprintf( 'The provider reports the campaign as %s, which does not show whether the earlier %s request took effect. Check the provider.', $remote->status(), str_replace( '_', ' ', $attempt->operation() ) ), $unresolved, null, Campaign_Workflow_Error::REASON_INCONCLUSIVE );
 			}
 			$age = $this->age( $attempt );
 			if ( ! $applied && $age < self::SETTLE_SECONDS ) {
@@ -244,7 +247,10 @@ final class Campaign_Reconciler {
 					$campaign->id(),
 					$campaign,
 					'failure',
-					$attempt
+					$attempt,
+					null,
+					Campaign_Workflow_Error::REASON_IN_PROGRESS,
+					self::SETTLE_SECONDS - $age
 				);
 			}
 			$resolved[] = $this->settled(
@@ -257,7 +263,7 @@ final class Campaign_Reconciler {
 
 		$after = $this->follow( $campaign, $target, $remote->send_time() );
 		if ( is_string( $after ) ) {
-			return $this->contradiction( $actor, $campaign, $reference, $observed, $after, $unresolved, null );
+			return $this->contradiction( $actor, $campaign, $reference, $observed, $after, $unresolved, null, Campaign_Workflow_Error::REASON_CONTRADICTION );
 		}
 		if ( ! in_array( $campaign->state(), self::DELIVERY_STATES, true ) && Campaign_State::PROVIDER_DRAFT === $target ) {
 			// The draft handoff has not finished; keep its content observation for it.
@@ -342,7 +348,7 @@ final class Campaign_Reconciler {
 	 *
 	 * @param array<int, Delivery_Attempt> $unresolved Attempts that remain unresolved.
 	 */
-	private function contradiction( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, string $observed, string $message, array $unresolved, ?Provider_Error $error ): Campaign_Reconcile_Result {
+	private function contradiction( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, string $observed, string $message, array $unresolved, ?Provider_Error $error, string $reason ): Campaign_Reconcile_Result {
 		$observation = $this->observation( $reference, $observed, false );
 		$claimed     = $campaign->claim( $this->clock->now() );
 		$written     = $this->transaction->run(
@@ -367,7 +373,7 @@ final class Campaign_Reconciler {
 			return $this->refuse( Campaign_Workflow_Error::CONFLICT, 'The campaign changed while it was being reconciled. Reconcile again.', $actor, $campaign->id(), $this->campaigns->get( $campaign->id() ) ?? $campaign );
 		}
 
-		return Campaign_Reconcile_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $message ), $claimed, $observation, $unresolved[0] ?? null, $error );
+		return Campaign_Reconcile_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, $message, $reason ), $claimed, $observation, $unresolved[0] ?? null, $error );
 	}
 
 	/**
@@ -402,7 +408,7 @@ final class Campaign_Reconciler {
 		);
 	}
 
-	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null ): Campaign_Reconcile_Result {
+	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null, ?string $reason = null, ?int $retry_after = null ): Campaign_Reconcile_Result {
 		try {
 			$this->audits->add(
 				$this->event(
@@ -421,7 +427,7 @@ final class Campaign_Reconciler {
 			unset( $result );
 		}
 
-		return Campaign_Reconcile_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null === $campaign ? null : $this->references->get( $campaign->id(), $this->drafts->slug() ), $attempt, $error );
+		return Campaign_Reconcile_Result::failure( new Campaign_Workflow_Error( $code, $message, $reason, $retry_after ), $campaign, null === $campaign ? null : $this->references->get( $campaign->id(), $this->drafts->slug() ), $attempt, $error );
 	}
 
 	/**

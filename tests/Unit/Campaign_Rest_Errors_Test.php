@@ -32,6 +32,36 @@ final class Campaign_Rest_Errors_Test extends WP_UnitTestCase {
 		self::assertSame( 'Safe message.', $error->get_error_message() );
 	}
 
+	public function test_reconciliation_refusals_carry_their_stable_reason_and_retry_delay(): void {
+		$campaign = Campaign::create( 'campaign-one', 7, 42, 'mailchimp', 'list-1', '2026-09-28T12:00:00Z' );
+		$error    = Campaign_Rest_Errors::from_remote(
+			\CampaignBridge\Workflow\Campaign\Campaign_Reconcile_Result::failure(
+				new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'Still in progress.', Campaign_Workflow_Error::REASON_IN_PROGRESS, 240 ),
+				$campaign,
+				null,
+				null,
+				null
+			)
+		);
+
+		self::assertSame( 'in_progress', $error->get_error_data()['reason'] );
+		self::assertSame( 240, $error->get_error_data()['retry_after'] );
+		$valid = rest_validate_value_from_schema(
+			array(
+				'code'    => $error->get_error_code(),
+				'message' => $error->get_error_message(),
+				'data'    => $error->get_error_data(),
+			),
+			Campaign_Rest_Schema::error()
+		);
+		self::assertTrue( true === $valid, is_wp_error( $valid ) ? $valid->get_error_message() : '' );
+	}
+
+	public function test_an_unrecognized_reason_is_refused(): void {
+		$this->expectException( \InvalidArgumentException::class );
+		new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'Message.', 'made_up' );
+	}
+
 	public function test_envelope_exposes_only_documented_safe_details(): void {
 		$campaign = Campaign::create( 'campaign-one', 7, 42, null, null, '2026-09-28T12:00:00Z' );
 

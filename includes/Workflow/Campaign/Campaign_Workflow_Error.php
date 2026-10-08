@@ -35,13 +35,57 @@ final class Campaign_Workflow_Error {
 	/** A durable per-campaign operation quota is exhausted. */
 	public const RATE_LIMITED = 'rate_limited';
 
+	/** Reconciliation reasons: why a reconcile could not settle the campaign. */
+	public const REASON_IN_PROGRESS      = 'in_progress';
+	public const REASON_MISSING          = 'missing';
+	public const REASON_UNTRACKED        = 'untracked';
+	public const REASON_INCONCLUSIVE     = 'inconclusive';
+	public const REASON_CONTRADICTION    = 'contradiction';
+	public const REASON_DUPLICATE_DRAFTS = 'duplicate_drafts';
+
+	private const REASONS = array( self::REASON_IN_PROGRESS, self::REASON_MISSING, self::REASON_UNTRACKED, self::REASON_INCONCLUSIVE, self::REASON_CONTRADICTION, self::REASON_DUPLICATE_DRAFTS );
+
+	/**
+	 * Build an error.
+	 *
+	 * @param string      $code        Stable error code.
+	 * @param string      $message     Operator-safe message.
+	 * @param string|null $reason      Stable reconciliation reason, when the code is reconciliation_required.
+	 * @param int|null    $retry_after Seconds until reconciling again can settle it, when known.
+	 * @throws \InvalidArgumentException When the code, message, reason, or delay is not recognized.
+	 */
 	public function __construct(
 		private readonly string $code,
-		private readonly string $message
+		private readonly string $message,
+		private readonly ?string $reason = null,
+		private readonly ?int $retry_after = null
 	) {
-		if ( ! in_array( $code, self::codes(), true ) || '' === $message || 512 < strlen( $message ) ) {
+		if (
+			! in_array( $code, self::codes(), true ) || '' === $message || 512 < strlen( $message )
+			|| ( null !== $reason && ! in_array( $reason, self::REASONS, true ) )
+			|| ( null !== $retry_after && 0 > $retry_after )
+		) {
 			throw new \InvalidArgumentException( 'Campaign workflow error is invalid.' );
 		}
+	}
+
+	/**
+	 * Every reconciliation reason the contract can report.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function reasons(): array {
+		return self::REASONS;
+	}
+
+	/** Why reconciliation could not settle the campaign, when this is such a refusal. */
+	public function reason(): ?string {
+		return $this->reason;
+	}
+
+	/** Seconds until reconciling again can settle it, when known. */
+	public function retry_after(): ?int {
+		return $this->retry_after;
 	}
 
 	public function code(): string {
