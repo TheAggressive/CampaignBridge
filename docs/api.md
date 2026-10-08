@@ -638,8 +638,10 @@ webhooks, and crash recovery belong to M5 (#66).
 ### History and delivery attempts
 
 `GET /campaigns/{id}/history` pages the campaign's audit events and
-`GET /campaigns/{id}/attempts` its delivery attempts, newest first
-(`created_at DESC, id ASC`). Both authorize exactly like `GET /campaigns/{id}`,
+`GET /campaigns/{id}/attempts` its delivery attempts, newest first. History
+is ordered `created_at DESC, sequence_number DESC`, so events recorded in the
+same second keep the order they were written; attempts are ordered
+`created_at DESC, id ASC`. Both authorize exactly like `GET /campaigns/{id}`,
 through `Campaign_Workflow::get()`: the same 403 or 404, the same denial audit,
 and no items. They paginate like the campaign collection (`pagination`,
 `X-WP-Total`, `X-WP-TotalPages`, and `400 campaignbridge_campaign_invalid_page`

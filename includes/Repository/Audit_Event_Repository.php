@@ -67,7 +67,7 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 		$limit  = max( 1, min( 100, $limit ) );
 		$rows   = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded audit listing.
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE target_type = %s AND target_id = %s ORDER BY created_at DESC, id ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
+				"SELECT * FROM {$table} WHERE target_type = %s AND target_id = %s ORDER BY created_at DESC, sequence_number DESC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
 				$target_type,
 				$target_id,
 				$limit,

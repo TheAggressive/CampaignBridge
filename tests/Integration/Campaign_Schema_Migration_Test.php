@@ -138,6 +138,62 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 		self::assertSame( array( 'approved', null ), array( $campaign?->state(), $campaign?->approved_by_user_id() ) );
 	}
 
+	/** Version 5 audit events gain a unique insertion sequence; re-running changes nothing. */
+	public function test_upgrade_from_version_five_numbers_existing_audit_events(): void {
+		global $wpdb;
+		self::assertTrue( Schema_Manager::migrate() );
+		$table = Schema_Manager::table( 'audit_events' );
+		$wpdb->query( "ALTER TABLE {$table} DROP INDEX sequence_number, DROP COLUMN sequence_number" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Recreates the version-5 shape.
+		self::assertNotContains( 'sequence_number', $wpdb->get_col( "DESCRIBE {$table}", 0 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+		foreach ( array( 'legacy-c', 'legacy-a', 'legacy-b' ) as $id ) {
+			$wpdb->insert(
+				$table,
+				array(
+					'id'           => $id,
+					'data_version' => 1,
+					'action'       => 'campaign_create',
+					'target_type'  => 'campaign',
+					'target_id'    => 'legacy-campaign',
+					'result'       => 'success',
+					'context_json' => '{}',
+					'created_at'   => '2026-01-01 00:00:00',
+				)
+			);
+		}
+		Storage::update_option( Schema_Manager::OPTION, 5 );
+		self::assertFalse( Schema_Manager::is_current() );
+
+		self::assertTrue( Schema_Manager::migrate() );
+		self::assertSame( Schema_Manager::SCHEMA_VERSION, Storage::get_option( Schema_Manager::OPTION ) );
+		$numbers = $wpdb->get_col( "SELECT sequence_number FROM {$table} ORDER BY id" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+		self::assertCount( 3, $numbers );
+		self::assertCount( 3, array_unique( $numbers ), 'Every existing event gets its own number.' );
+		self::assertNotContains( '0', $numbers );
+
+		self::assertTrue( Schema_Manager::migrate(), 'A repeated run is a no-op.' );
+		self::assertSame( $numbers, $wpdb->get_col( "SELECT sequence_number FROM {$table} ORDER BY id" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+
+		// Interrupted after the column was added but before the version was stamped.
+		Storage::update_option( Schema_Manager::OPTION, 5 );
+		self::assertTrue( Schema_Manager::migrate() );
+		self::assertSame( $numbers, $wpdb->get_col( "SELECT sequence_number FROM {$table} ORDER BY id" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+
+		$wpdb->insert(
+			$table,
+			array(
+				'id'           => 'after-upgrade',
+				'data_version' => 1,
+				'action'       => 'campaign_snapshot',
+				'target_type'  => 'campaign',
+				'target_id'    => 'legacy-campaign',
+				'result'       => 'success',
+				'context_json' => '{}',
+				'created_at'   => '2026-01-01 00:00:00',
+			)
+		);
+		self::assertGreaterThan( max( array_map( 'intval', $numbers ) ), (int) $wpdb->get_var( "SELECT sequence_number FROM {$table} WHERE id = 'after-upgrade'" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table and literal fixture.
+	}
+
 	/** Product read paths and identity rules have their documented indexes. */
 	public function test_expected_query_indexes_exist(): void {
 		global $wpdb;
@@ -147,7 +203,7 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 			'campaign_snapshots' => array( 'PRIMARY', 'campaign_revision' ),
 			'remote_campaigns'   => array( 'PRIMARY', 'provider_remote' ),
 			'delivery_attempts'  => array( 'PRIMARY', 'campaign_idempotency', 'campaign_created' ),
-			'audit_events'       => array( 'PRIMARY', 'target_created' ),
+			'audit_events'       => array( 'PRIMARY', 'target_created', 'sequence_number' ),
 		);
 
 		foreach ( $expected as $suffix => $indexes ) {

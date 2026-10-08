@@ -229,3 +229,20 @@ attempt was recorded.
 ## Rollback
 
 Reinstall the last known-good ZIP. Restore data only when a versioned migration changed persisted state. Credential schema migrations are idempotent and key rotation retains previous decrypt keys, so normal code rollback does not require ciphertext rollback. A credential re-encrypted under `CAMPAIGNBRIDGE_ENCRYPTION_KEY` cannot be read by a release that predates external key support; roll back the key first (see above) before installing such a release.
+
+### Rolling back across database schema 6
+
+Schema 6 adds `sequence_number`, an auto-increment insertion order, to
+`{prefix}campaignbridge_audit_events` so campaign history keeps write order
+within one second. No existing value changes. A release built for schema 5
+sees version 6 as newer than it knows and refuses campaign storage rather
+than guess. Because version 5 code never reads the new column and its inserts
+still number themselves, it is safe to lower the stamped version after
+reinstalling that release:
+
+```bash
+wp option update campaignbridge_database_schema 5
+```
+
+Upgrading again later re-runs the migration, which finds the column already
+present and only re-stamps version 6.
