@@ -79,6 +79,16 @@ final class Campaign_Reconciler {
 	/** Operations whose outcome the provider's campaign state can prove. Test sends cannot be observed. */
 	private const RECONCILABLE = array( Delivery_Operation::CREATE_DRAFT, Delivery_Operation::SCHEDULE, Delivery_Operation::UNSCHEDULE, Delivery_Operation::SEND );
 
+	/**
+	 * Provider progress that follows from a request that already succeeded: a
+	 * scheduled campaign starting or finishing its send, and a send finishing.
+	 * These are expected, not changes made outside CampaignBridge.
+	 */
+	private const PROGRESSIONS = array(
+		Campaign_State::SCHEDULED => array( Campaign_State::SENDING, Campaign_State::SENT ),
+		Campaign_State::SENDING   => array( Campaign_State::SENT ),
+	);
+
 	/** Local states that follow the provider's delivery lifecycle. */
 	private const DELIVERY_STATES = array( Campaign_State::PROVIDER_DRAFT, Campaign_State::SCHEDULED, Campaign_State::SENDING, Campaign_State::UNKNOWN );
 
@@ -271,7 +281,9 @@ final class Campaign_Reconciler {
 		}
 
 		$observation = $this->observation( $reference, $observed, true );
-		$unexplained = $after->state() !== $campaign->state() && array() === array_filter( $resolved, static fn ( Delivery_Attempt $attempt ): bool => Delivery_Attempt_Status::SUCCEEDED === $attempt->status() );
+		$unexplained = $after->state() !== $campaign->state()
+			&& ! in_array( $after->state(), self::PROGRESSIONS[ $campaign->state() ] ?? array(), true )
+			&& array() === array_filter( $resolved, static fn ( Delivery_Attempt $attempt ): bool => Delivery_Attempt_Status::SUCCEEDED === $attempt->status() );
 		$written     = $this->transaction->run(
 			function () use ( $resolved, $observation, $after, $campaign, $actor, $remote, $unexplained ): bool {
 				foreach ( $resolved as $attempt ) {

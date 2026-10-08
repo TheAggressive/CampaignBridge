@@ -144,14 +144,17 @@ The provider did not confirm the request, so the campaign may or may not
 send, or may already have sent. The campaign is now `unknown`, and CampaignBridge refuses every
 further schedule, unschedule, or send for it, whatever key is sent.
 
-1. Do not retry. Call `POST /campaigns/{id}/reconcile`. It reads the
+1. Do not retry. Open the campaign in **CampaignBridge → Campaigns** and use
+   **Reconcile** in its Delivery panel (or call
+   `POST /campaigns/{id}/reconcile`). It reads the
    campaign in Mailchimp and follows it: scheduled (with Mailchimp's send
    time), back to `provider_draft`, sending, or sent. The unconfirmed
    attempt is settled from that evidence and delivery is unblocked.
 2. If the campaign is now `scheduled` and should not send, unschedule it
    before its send time.
-3. If reconciliation still returns `reconciliation_required`, read its
-   message:
+3. If reconciliation still returns `reconciliation_required`, the Delivery
+   panel shows the next step for its `reason` (and counts down an
+   `in_progress` wait before Reconcile is offered again). By message:
    - "still in progress": wait the stated time and reconcile again.
    - "no longer has this campaign": it was deleted in Mailchimp. Confirm in
      Mailchimp's campaign list and reports that nothing was sent.
@@ -162,7 +165,9 @@ further schedule, unschedule, or send for it, whatever key is sent.
      campaign, such as a sent campaign reported as a draft. Investigate in
      Mailchimp; CampaignBridge will not follow it.
 4. Audit events for `campaign_reconcile` record what Mailchimp reported and
-   what changed. `unexplained: true` means Mailchimp changed state without a
+   what changed; the campaign's History section shows them with the
+   delivery attempts. `unexplained: true` ("Changed in the provider without
+   a CampaignBridge request") means Mailchimp changed state without a
    CampaignBridge request, for example a campaign scheduled there directly.
 
 ### Test or schedule refused because the provider draft changed

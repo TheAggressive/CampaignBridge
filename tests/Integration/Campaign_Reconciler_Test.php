@@ -471,6 +471,19 @@ final class Campaign_Reconciler_Test extends Test_Case {
 
 		self::assertSame( $local, $result->campaign()?->state() );
 		self::assertSame( $remote, $result->reference()?->observed_state() );
+		self::assertFalse( $this->events( $campaign->id() )[0]->context()->to_array()['unexplained'], 'A scheduled send firing is expected, not a change made outside CampaignBridge.' );
+	}
+
+	public function test_an_accepted_send_finishing_is_not_unexplained(): void {
+		$campaign = $this->scheduled_campaign();
+		$this->provider_reports( Remote_Draft_State::SENDING, self::SEND_AT );
+		$this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+		$this->provider_reports( Remote_Draft_State::SENT, self::SEND_AT );
+
+		$result = $this->reconciler->reconcile( $this->sender, $campaign->id(), self::settings() );
+
+		self::assertSame( Campaign_State::SENT, $result->campaign()?->state() );
+		self::assertFalse( $this->events( $campaign->id() )[0]->context()->to_array()['unexplained'] );
 	}
 
 	public function test_a_campaign_scheduled_outside_campaignbridge_is_recorded_as_unexplained(): void {

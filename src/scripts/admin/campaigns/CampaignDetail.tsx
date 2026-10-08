@@ -17,6 +17,7 @@ import {
   transitionCampaign,
   type ReviewTransition,
 } from './api';
+import { CampaignTimeline } from './CampaignTimeline';
 import { DeliveryPanel } from './DeliveryPanel';
 import { Diagnostics } from './Diagnostics';
 import { providerLabel, stateLabels } from './labels';
@@ -412,6 +413,8 @@ export function CampaignDetail({
         config={config}
         onChange={updated => setCampaign(updated)}
       />
+
+      <CampaignTimeline campaign={campaign} />
 
       {confirmRefresh && (
         <Modal

@@ -82,6 +82,10 @@ export interface ApiFailure {
   message: string;
   diagnostics: Diagnostic[];
   currentVersion: number | null;
+  /** Why a reconciliation could not settle the campaign, when it says. */
+  reason: string | null;
+  /** Seconds until reconciling again can settle it, when known. */
+  retryAfter: number | null;
 }
 
 /** A campaign as published by Campaign_Rest_Resource. */

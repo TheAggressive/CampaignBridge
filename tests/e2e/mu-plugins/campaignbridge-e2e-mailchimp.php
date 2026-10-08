@@ -230,7 +230,7 @@ final class CampaignBridge_E2E_Mailchimp {
 	}
 
 	/**
-	 * Set the next failing action, reset the simulation, or seed a connection.
+	 * Set the next failing action, delete a campaign, reset the simulation, or seed a connection.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 */
@@ -238,6 +238,11 @@ final class CampaignBridge_E2E_Mailchimp {
 		$state = self::state();
 		if ( true === $request->get_param( 'reset' ) ) {
 			$state = self::fresh();
+		}
+		// Delete a campaign "in Mailchimp", outside CampaignBridge.
+		$forget = $request->get_param( 'forget' );
+		if ( is_string( $forget ) ) {
+			unset( $state['campaigns'][ $forget ] );
 		}
 		$fail = $request->get_param( 'fail' );
 		if ( is_string( $fail ) && in_array( $fail, array( '', 'test', 'schedule', 'unschedule', 'send' ), true ) ) {
