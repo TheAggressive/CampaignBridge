@@ -24,6 +24,7 @@ import {
   withQuery,
 } from './api';
 import { CreateCampaignModal } from './CreateCampaignModal';
+import { OnboardingChecklist } from './OnboardingChecklist';
 import { providerLabel, stateLabels } from './labels';
 import { campaignUrl, viewToQuery } from './view';
 import type {
@@ -292,6 +293,10 @@ export function CampaignsApp({
 
   return (
     <div className='campaignbridge-campaigns__app'>
+      <OnboardingChecklist
+        initial={config.onboarding}
+        onCreateCampaign={() => setCreating(true)}
+      />
       <div className='campaignbridge-campaigns__toolbar'>
         <Button variant='primary' onClick={() => setCreating(true)}>
           {__('New campaign', 'campaignbridge')}

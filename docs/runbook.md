@@ -1,5 +1,21 @@
 # Operations runbook
 
+## Checking site health
+
+**CampaignBridge → Status → CampaignBridge Health** reads stored state only:
+whether the database tables are current, whether Mailchimp is connected and
+when the connection was last verified, whether a default audience is chosen,
+the number of published templates, and campaign counts by state. When any
+campaign needs reconciliation, a warning links to the Campaigns screen; open
+each such campaign and reconcile it before acting on it (see **Duplicate or
+uncertain remote campaign** below).
+
+Viewing **Settings → Providers** checks the stored Mailchimp key with
+Mailchimp's read-only ping (at most once every five minutes per key) and
+records the answer: verified, or refused by Mailchimp. A timeout or network
+failure proves nothing, so the previous result stands. "Not checked yet" in
+Status means nobody has opened the Providers tab since the key was saved.
+
 ## Provider authentication failures
 
 1. Confirm the configured API key has the expected Mailchimp data-center suffix.
