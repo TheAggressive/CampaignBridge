@@ -1,3 +1,5 @@
+import type { OnboardingState } from './onboarding';
+
 /** Campaign states, mirroring Campaign_State::all(). */
 export type CampaignState =
   | 'draft'
@@ -163,6 +165,7 @@ export interface CampaignsConfig {
   separateDelivery: boolean;
   providersUrl: string;
   providers: ProviderOption[];
+  onboarding: OnboardingState;
 }
 
 declare global {

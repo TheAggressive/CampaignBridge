@@ -6,11 +6,13 @@
  * campaign list, and one campaign's review page when `campaign` is in the URL.
  * It receives only what it cannot ask the API for: the current user's
  * authority, admin URLs, the template REST base, which providers are
- * connected, and whether delivery requires a second person.
+ * connected, whether delivery requires a second person, and the current
+ * user's onboarding checklist.
  *
  * @package CampaignBridge\Admin\Screens
  */
 
+use CampaignBridge\Admin\Onboarding_Checklist;
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\Repository\Delivery_Policy_Repository;
@@ -43,6 +45,7 @@ if ( $screen ) {
 					'audience'  => null === $campaignbridge_mailchimp ? '' : $campaignbridge_mailchimp->audience_id(),
 				),
 			),
+			'onboarding'        => Onboarding_Checklist::for_user( get_current_user_id() ),
 		)
 	);
 }

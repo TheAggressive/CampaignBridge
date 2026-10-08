@@ -277,8 +277,7 @@ class Admin_Screens_Test extends Test_Case {
 
 		$this->assertIsArray( $status_data, 'Status controller should return data array' );
 		$this->assertArrayHasKey( 'system_info', $status_data, 'Should include system info' );
-		$this->assertArrayHasKey( 'integrations', $status_data, 'Should include integrations' );
-		$this->assertArrayHasKey( 'stats', $status_data, 'Should include stats' );
+		$this->assertArrayHasKey( 'health', $status_data, 'Should include CampaignBridge health' );
 
 		// Verify system info contains real data
 		$this->assertEquals( PHP_VERSION, $status_data['system_info']['php_version'], 'Should contain real PHP version' );

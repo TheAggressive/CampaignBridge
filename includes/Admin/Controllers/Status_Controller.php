@@ -33,9 +33,8 @@ class Status_Controller {
 		// Initialize - load data needed by status screen.
 		$this->load_system_info();
 		$this->load_plugin_info();
-		$this->load_integrations_info();
+		$this->load_health_info();
 		$this->load_encryption_info();
-		$this->load_stats_info();
 	}
 
 	/**
@@ -88,26 +87,29 @@ class Status_Controller {
 	}
 
 	/**
-	 * Load integrations information
+	 * Load CampaignBridge health from stored state.
+	 *
+	 * Every figure is read from the site: the provider connection, published
+	 * templates, campaign states, and the schema. Nothing is assumed or fixed.
 	 *
 	 * @return void
 	 */
-	private function load_integrations_info(): void {
-		$cb_repo           = new \CampaignBridge\Repository\Provider_Connection_Repository();
-		$cb_conn           = $cb_repo->get( 'mailchimp' );
-		$mailchimp_api_key = $cb_conn ? $cb_conn->api_key() : '';
+	private function load_health_info(): void {
+		$connection = ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' );
+		$templates  = wp_count_posts( \CampaignBridge\Post_Types\Post_Type_Email_Template::POST_TYPE );
+		$schema     = \CampaignBridge\Repository\Schema_Manager::is_current();
+		$counts     = $schema ? ( new \CampaignBridge\Repository\Campaign_Repository() )->state_counts() : array();
 
-		$this->data['integrations'] = array(
-			'mailchimp' => array(
-				'active'     => class_exists( 'CampaignBridge\\Providers\\Mailchimp_Provider' ),
-				'configured' => '' !== $mailchimp_api_key,
-				'version'    => '1.0.0',
-			),
-			'html'      => array(
-				'active'     => class_exists( 'CampaignBridge\\Providers\\Html_Provider' ),
-				'configured' => true, // HTML export always works.
-				'version'    => '1.0.0',
-			),
+		$this->data['health'] = array(
+			'schema_current'      => $schema,
+			'provider_connected'  => null !== $connection,
+			'provider_verified'   => null !== $connection && $connection->is_verified(),
+			'last_verified_at'    => null === $connection ? null : $connection->last_verified_at(),
+			'default_audience'    => null !== $connection && '' !== $connection->audience_id(),
+			'published_templates' => (int) ( $templates->publish ?? 0 ),
+			'campaign_states'     => $counts,
+			'campaign_total'      => array_sum( $counts ),
+			'unknown_campaigns'   => $counts[ \CampaignBridge\Domain\Campaign\Campaign_State::UNKNOWN ] ?? 0,
 		);
 	}
 
@@ -126,22 +128,6 @@ class Status_Controller {
 		$this->data['encryption'] = array(
 			'source'     => $keyring->is_valid() ? $keyring->source() : 'invalid',
 			'credential' => null === $connection ? 'none' : \CampaignBridge\Core\Encryption::key_status( $connection->api_key(), $keyring ),
-		);
-	}
-
-	/**
-	 * Load statistics information
-	 *
-	 * @return void
-	 */
-	private function load_stats_info(): void {
-		$this->data['stats'] = array(
-			'total_users'       => count_users()['total_users'],
-			'total_posts'       => wp_count_posts()->publish ?? 0,
-			'total_pages'       => wp_count_posts( 'page' )->publish ?? 0,
-			'plugin_version'    => \CampaignBridge_Plugin::VERSION,
-			'php_version'       => PHP_VERSION,
-			'wordpress_version' => get_bloginfo( 'version' ),
 		);
 	}
 }

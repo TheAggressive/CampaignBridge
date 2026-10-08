@@ -12,6 +12,8 @@
 
 namespace CampaignBridge\Admin\Controllers;
 
+use CampaignBridge\Domain\Campaign\Connection_Result;
+
 use CampaignBridge\Domain\Email\Brand_Kit;
 use CampaignBridge\Domain\Email\Theme_Brand_Mapper;
 use CampaignBridge\Core\Capabilities;
@@ -275,8 +277,37 @@ class Settings_Controller {
 				'checked_at' => $checked_at,
 			);
 
+		self::record_verification( $stored_key, $result );
 		Storage::set_transient( $cache_key, $connection, 5 * MINUTE_IN_SECONDS );
 		return $connection;
+	}
+
+	/**
+	 * Store what Mailchimp's answer proved about the stored credential.
+	 *
+	 * Only a definite answer is recorded: success, or Mailchimp refusing the
+	 * credential. A timeout or network failure proves nothing, so the previous
+	 * verification state stands. The record is written only while the same
+	 * credential is still stored, so a concurrent key change is never marked
+	 * verified.
+	 *
+	 * @param string            $checked_key Encrypted credential that was checked.
+	 * @param Connection_Result $result      Verification outcome.
+	 * @return void
+	 */
+	private static function record_verification( string $checked_key, Connection_Result $result ): void {
+		$category = $result->error()?->category();
+		if ( ! $result->is_success() && ! in_array( $category, array( Provider_Error_Category::AUTHENTICATION, Provider_Error_Category::AUTHORIZATION ), true ) ) {
+			return;
+		}
+
+		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$current    = $repository->get( 'mailchimp' );
+		if ( null === $current || $current->api_key() !== $checked_key ) {
+			return;
+		}
+
+		$repository->save( $current->with_verification( $result->is_success(), gmdate( 'Y-m-d\TH:i:s\Z' ), $current->account_details() ) );
 	}
 
 	/**

@@ -16,6 +16,23 @@ if ( ! isset( $screen ) ) {
 $system_info = $screen ? $screen->get( 'system_info', array() ) : array();
 $plugin_info = $screen ? $screen->get( 'plugin_info', array() ) : array();
 $encryption  = $screen ? $screen->get( 'encryption', array() ) : array();
+$health      = $screen ? $screen->get( 'health', array() ) : array();
+
+$campaignbridge_yes_no      = static fn ( $value ): string => true === $value ? __( 'Yes', 'campaignbridge' ) : __( 'No', 'campaignbridge' );
+$campaignbridge_state_names = array(
+	'draft'            => __( 'Draft', 'campaignbridge' ),
+	'ready_for_review' => __( 'Ready for review', 'campaignbridge' ),
+	'approved'         => __( 'Approved', 'campaignbridge' ),
+	'provider_draft'   => __( 'In provider', 'campaignbridge' ),
+	'scheduled'        => __( 'Scheduled', 'campaignbridge' ),
+	'sending'          => __( 'Sending', 'campaignbridge' ),
+	'sent'             => __( 'Sent', 'campaignbridge' ),
+	'failed'           => __( 'Failed', 'campaignbridge' ),
+	'cancelled'        => __( 'Cancelled', 'campaignbridge' ),
+	'unknown'          => __( 'Needs reconciliation', 'campaignbridge' ),
+	'archived'         => __( 'Archived', 'campaignbridge' ),
+);
+$campaignbridge_verified_at = is_string( $health['last_verified_at'] ?? null ) ? strtotime( $health['last_verified_at'] ) : false;
 
 $key_sources       = array(
 	'external' => __( 'Defined outside the database (CAMPAIGNBRIDGE_ENCRYPTION_KEY)', 'campaignbridge' ),
@@ -36,6 +53,87 @@ if ( $screen ) {
 
 <div class="campaignbridge-status">
 	<div class="campaignbridge-status__content">
+		<!-- CampaignBridge Health Section -->
+		<div class="cb-admin-card campaignbridge-status__section campaignbridge-status__health">
+			<div class="cb-admin-card__header campaignbridge-status__section-header">
+				<h2><?php esc_html_e( 'CampaignBridge Health', 'campaignbridge' ); ?></h2>
+			</div>
+
+			<?php if ( 0 < (int) ( $health['unknown_campaigns'] ?? 0 ) ) : ?>
+				<div class="notice notice-warning inline">
+					<p>
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %d: number of campaigns whose provider outcome is unconfirmed. */
+								_n( '%d campaign needs reconciliation: the provider did not confirm a request. Open it and reconcile before doing anything else with it.', '%d campaigns need reconciliation: the provider did not confirm a request. Open each one and reconcile before doing anything else with it.', (int) $health['unknown_campaigns'], 'campaignbridge' ),
+								(int) $health['unknown_campaigns']
+							)
+						);
+						?>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge-campaigns' ) ); ?>"><?php esc_html_e( 'Go to Campaigns', 'campaignbridge' ); ?></a>
+					</p>
+				</div>
+			<?php endif; ?>
+
+			<div class="campaignbridge-status__info-grid">
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Database tables:', 'campaignbridge' ); ?></strong>
+					<span><?php echo esc_html( true === ( $health['schema_current'] ?? null ) ? __( 'Up to date', 'campaignbridge' ) : __( 'Not installed or out of date. Deactivate and reactivate CampaignBridge.', 'campaignbridge' ) ); ?></span>
+				</div>
+
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Mailchimp connected:', 'campaignbridge' ); ?></strong>
+					<span><?php echo esc_html( $campaignbridge_yes_no( $health['provider_connected'] ?? null ) ); ?></span>
+				</div>
+
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Mailchimp connection verified:', 'campaignbridge' ); ?></strong>
+					<span>
+						<?php
+						if ( true !== ( $health['provider_connected'] ?? null ) ) {
+							esc_html_e( 'No connection', 'campaignbridge' );
+						} elseif ( false === $campaignbridge_verified_at ) {
+							esc_html_e( 'Not checked yet. Open Settings → Providers to check the connection.', 'campaignbridge' );
+						} else {
+							echo esc_html(
+								sprintf(
+									/* translators: %s: how long ago the connection was last checked, such as "3 hours". */
+									true === ( $health['provider_verified'] ?? null ) ? __( 'Yes, checked %s ago', 'campaignbridge' ) : __( 'No: Mailchimp refused the stored API key %s ago', 'campaignbridge' ),
+									human_time_diff( $campaignbridge_verified_at )
+								)
+							);
+						}
+						?>
+					</span>
+				</div>
+
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Default audience chosen:', 'campaignbridge' ); ?></strong>
+					<span><?php echo esc_html( $campaignbridge_yes_no( $health['default_audience'] ?? null ) ); ?></span>
+				</div>
+
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Published templates:', 'campaignbridge' ); ?></strong>
+					<span><?php echo esc_html( number_format_i18n( (int) ( $health['published_templates'] ?? 0 ) ) ); ?></span>
+				</div>
+
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Campaigns:', 'campaignbridge' ); ?></strong>
+					<span><?php echo esc_html( number_format_i18n( (int) ( $health['campaign_total'] ?? 0 ) ) ); ?></span>
+				</div>
+
+				<?php foreach ( $campaignbridge_state_names as $campaignbridge_state => $campaignbridge_state_name ) : ?>
+					<?php if ( isset( $health['campaign_states'][ $campaignbridge_state ] ) ) : ?>
+						<div class="campaignbridge-status__info-item">
+							<strong><?php echo esc_html( $campaignbridge_state_name ); ?>:</strong>
+							<span><?php echo esc_html( number_format_i18n( (int) $health['campaign_states'][ $campaignbridge_state ] ) ); ?></span>
+						</div>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</div>
+		</div>
+
 		<!-- System Information Section -->
 		<div class="cb-admin-card campaignbridge-status__section">
 			<div class="cb-admin-card__header campaignbridge-status__section-header">

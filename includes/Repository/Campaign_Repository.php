@@ -12,6 +12,7 @@ namespace CampaignBridge\Repository;
 
 use CampaignBridge\Domain\Campaign\Campaign;
 use CampaignBridge\Domain\Campaign\Campaign_List_Filter;
+use CampaignBridge\Domain\Campaign\Campaign_State;
 use CampaignBridge\Domain\Campaign\Campaign_Source;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -126,6 +127,31 @@ final class Campaign_Repository implements Campaign_Source {
 		);
 
 		return $this->hydrate_many( is_array( $rows ) ? $rows : array() );
+	}
+
+	/**
+	 * Number of campaigns in each lifecycle state, across all owners.
+	 *
+	 * For site health reporting only; it reveals counts, never campaigns.
+	 *
+	 * @return array<string, int> Count keyed by state; states with none are omitted.
+	 */
+	public function state_counts(): array {
+		if ( ! Schema_Manager::is_current() ) {
+			return array();
+		}
+
+		global $wpdb;
+		$table  = Schema_Manager::table( 'campaigns' );
+		$rows   = $wpdb->get_results( "SELECT state, COUNT(*) AS total FROM {$table} GROUP BY state", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table and no input; bounded by the closed state vocabulary.
+		$counts = array();
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			if ( is_string( $row['state'] ?? null ) && Campaign_State::is_valid( $row['state'] ) ) {
+				$counts[ $row['state'] ] = (int) $row['total'];
+			}
+		}
+
+		return $counts;
 	}
 
 	public function count_for_owner( int $owner_user_id, ?Campaign_List_Filter $filter = null ): int {
