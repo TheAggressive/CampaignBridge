@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Owns restartable, forward-safe database migrations for campaign storage and request counters. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 5;
+	public const SCHEMA_VERSION = 6;
 	public const OPTION         = 'database_schema';
 
 	private static ?bool $tables_ready = null;
@@ -54,6 +54,9 @@ final class Schema_Manager {
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		if ( ! self::add_audit_sequence() ) {
+			return false;
+		}
 		\dbDelta( self::schema_statements() );
 		if ( ! self::tables_exist() ) {
 			return false;
@@ -117,6 +120,28 @@ final class Schema_Manager {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Give existing audit events an insertion sequence before dbDelta runs.
+	 *
+	 * WordPress dbDelta() adds columns and indexes in separate statements, and MySQL
+	 * refuses an AUTO_INCREMENT column that is not yet a key, so the column
+	 * and its key are added together here. Existing rows are numbered in the
+	 * order the database reads them: their order within one second was never
+	 * recorded. A missing table is left for dbDelta to create.
+	 */
+	private static function add_audit_sequence(): bool {
+		global $wpdb;
+		$table      = self::table( 'audit_events' );
+		$suppressed = $wpdb->suppress_errors();
+		$columns    = $wpdb->get_col( "DESCRIBE {$table}", 0 ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Table comes from the Schema_Manager allowlist.
+		$wpdb->suppress_errors( $suppressed );
+		if ( ! is_array( $columns ) || array() === $columns || in_array( 'sequence_number', $columns, true ) ) {
+			return true;
+		}
+
+		return false !== $wpdb->query( "ALTER TABLE {$table} ADD COLUMN sequence_number bigint unsigned NOT NULL AUTO_INCREMENT, ADD UNIQUE KEY sequence_number (sequence_number)" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Versioned migration of an allowlisted table.
 	}
 
 	/** @return array<int, string> */
@@ -196,7 +221,9 @@ final class Schema_Manager {
 				result varchar(16) NOT NULL,
 				context_json text NOT NULL,
 				created_at datetime NOT NULL,
+				sequence_number bigint unsigned NOT NULL AUTO_INCREMENT,
 				PRIMARY KEY  (id),
+				UNIQUE KEY sequence_number (sequence_number),
 				KEY target_created (target_type, target_id, created_at)
 			) {$collate};",
 			'CREATE TABLE ' . self::table( 'rate_limits' ) . " (

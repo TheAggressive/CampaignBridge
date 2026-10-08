@@ -168,6 +168,29 @@ final class Campaign_Operation_Repository_Test extends Test_Case {
 		self::assertCount( 2, $repository->for_target( 'campaign', 'campaign-one', 2 ) );
 	}
 
+	/** Events written in the same second read back newest write first, whatever their IDs. */
+	public function test_same_second_audit_events_keep_their_write_order(): void {
+		$repository = new Audit_Event_Repository();
+		$written    = array( 'audit-z-created', 'audit-m-snapshot', 'audit-a-submitted', 'audit-q-approved' );
+		foreach ( $written as $id ) {
+			self::assertTrue( $repository->add( $this->audit_event( $id, array( 'safe' => true ) ) ) );
+		}
+
+		$ids = static fn ( array $events ): array => array_map( static fn ( Audit_Event $event ): string => $event->id(), $events );
+
+		self::assertSame( array_reverse( $written ), $ids( $repository->for_target( 'campaign', 'campaign-one' ) ) );
+		self::assertSame( array( 'audit-a-submitted', 'audit-m-snapshot' ), $ids( $repository->for_target( 'campaign', 'campaign-one', 2, 1 ) ), 'Pages split the same order.' );
+	}
+
+	/** A later second still sorts first, even when it was written earlier. */
+	public function test_audit_time_orders_before_write_order(): void {
+		$repository = new Audit_Event_Repository();
+		self::assertTrue( $repository->add( $this->audit_event( 'audit-later', array( 'safe' => true ), '2026-01-01T00:00:01Z' ) ) );
+		self::assertTrue( $repository->add( $this->audit_event( 'audit-earlier', array( 'safe' => true ) ) ) );
+
+		self::assertSame( 'audit-later', $repository->for_target( 'campaign', 'campaign-one' )[0]->id() );
+	}
+
 	/** Malformed/future structured rows fail closed and remain untouched. */
 	public function test_malformed_repository_rows_return_null(): void {
 		global $wpdb;
@@ -222,7 +245,7 @@ final class Campaign_Operation_Repository_Test extends Test_Case {
 	}
 
 	/** Create one append-only audit fixture. */
-	private function audit_event( string $id, array $context ): Audit_Event {
+	private function audit_event( string $id, array $context, string $created_at = '2026-01-01T00:00:00Z' ): Audit_Event {
 		return Audit_Event::from_array(
 			array(
 				'schema_version' => 1,
@@ -233,7 +256,7 @@ final class Campaign_Operation_Repository_Test extends Test_Case {
 				'target_id'      => 'campaign-one',
 				'result'         => 'success',
 				'context'        => $context,
-				'created_at'     => '2026-01-01T00:00:00Z',
+				'created_at'     => $created_at,
 			)
 		);
 	}

@@ -17,7 +17,7 @@ REST endpoints, jobs, and provider mutations remain outside this layer.
 | `{prefix}campaignbridge_campaign_snapshots` | Insert-only frozen M1 review input and its exact successful artifact | Primary `id`; unique `campaign_revision (campaign_id, revision)` prevents in-place refresh replacement and supports revision history |
 | `{prefix}campaignbridge_remote_campaigns` | Normalized local/provider/remote identity and observed state | Primary `(campaign_id, provider)` permits one mapping per local campaign/provider; unique `provider_remote (provider, remote_id)` supports reverse lookup without duplicates |
 | `{prefix}campaignbridge_delivery_attempts` | Keyed attempt identity and normalized result for provider mutations | Primary `id`; unique `campaign_idempotency (campaign_id, operation, idempotency_key)` prevents duplicate keyed attempts; `campaign_created (campaign_id, created_at)` supports bounded history |
-| `{prefix}campaignbridge_audit_events` | Append-only, minimized operator/security history | Primary `id`; `target_created (target_type, target_id, created_at)` supports bounded target history |
+| `{prefix}campaignbridge_audit_events` | Append-only, minimized operator/security history | Primary `id`; `target_created (target_type, target_id, created_at)` supports bounded target history; unique auto-increment `sequence_number` (schema 6) orders events written in the same second |
 | `{prefix}campaignbridge_rate_limits` | Fixed-window request counters for `Rate_Limiter`; holds only a hashed scope, a count, and an expiry | Primary `limit_key` arbitrates concurrent window creation; `expires_at` supports purging ended windows |
 
 Relationships are logical rather than database foreign keys because WordPress
