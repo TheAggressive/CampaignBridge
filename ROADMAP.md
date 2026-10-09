@@ -46,12 +46,12 @@ but it is not yet a complete campaign-management and delivery product.
 
 | Area               | Shipped today                                                                                                                                                                                                                                                                                                                                                                      | Remaining product boundary                                                                      |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained Core/CampaignBridge block grammar; read-only post selection and immutable snapshot inputs | Full campaign/operator UI |
+| Template authoring | Native WordPress block editor; draft/save/publish; autosave; native revisions; allowlisted duplication; constrained Core/CampaignBridge block grammar; read-only post selection and immutable snapshot inputs | Reusable sections and patterns |
 | Email generation | Deterministic HTML/plain compiler; compiled preview/export; immutable content/design inputs; structured diagnostics; artifact fingerprints; durable immutable campaign snapshots and exact approved-artifact references | Provider handoff and delivery |
 | Providers | Canonical encrypted connection repository; truthful Mailchimp verification; normalized connection/provider errors; Mailchimp discovery; idempotent Mailchimp draft handoff; bounded Mailchimp test sends; guarded Mailchimp schedule/unschedule/send; on-demand reconciliation; HTML export boundary | Background reconciliation, reporting |
-| Campaigns | Durable provider-neutral campaigns, snapshots, attempts and audit history; authoritative state machine; canonical create/edit/audience/snapshot/validate/preview/review/approve/revoke/archive/duplicate workflows; optimistic concurrency; stable permission-safe campaign REST contracts | Operator UI |
-| Admin              | Settings, Brand Kit, provider connection/verification, audience-selection foundations, template editor lifecycle                                                                                                                                                                                                                                                                   | Full campaign/operator workflow and delivery/recovery surfaces                                  |
-| API                | Editor/content support routes, Brand Kit, compiled preview, template revision restore and core template REST lifecycle                                                                                                                                                                                                                                                             | Campaign/delivery/reconciliation/reporting APIs                                                 |
+| Campaigns | Durable provider-neutral campaigns, snapshots, attempts and audit history; authoritative state machine; canonical create/edit/audience/snapshot/validate/preview/review/approve/revoke/archive/duplicate workflows; optimistic concurrency; stable permission-safe campaign REST contracts; operator screens for the whole lifecycle | Durable background jobs |
+| Admin | Settings, Brand Kit, provider connection/verification, campaign list and creation, onboarding checklist, review/approval, provider handoff and guarded delivery confirmations, campaign timeline and reconciliation recovery, truthful status | Reporting and compliance surfaces |
+| API | Editor/content support routes, Brand Kit, compiled preview, template revision restore and core template REST lifecycle; campaign, delivery, reconciliation, history, and onboarding APIs | Reporting APIs |
 | Operations         | Hardened CI, security/accessibility gates, signed/reproducible packaging, runbook foundations                                                                                                                                                                                                                                                                                      | Durable jobs/locks, webhooks, reconciliation monitor, operational metrics and support tooling   |
 
 The README is intentionally conservative: only shipped capabilities belong in
@@ -191,7 +191,7 @@ blocks every further delivery whatever idempotency key is sent, and settles
 only from provider evidence after the settle window. The operator surface for
 this lifecycle is the REST API; its admin UI is M4.
 
-### Milestone 4 — Operator experience
+### Milestone 4 — Operator experience _(complete)_
 
 **Tracking:** #65
 
@@ -199,12 +199,51 @@ this lifecycle is the REST API; its admin UI is M4.
 approve, deliver, and troubleshoot campaigns without using raw APIs for normal
 operations.
 
-Decompose this milestone into action issues as the M2/M3 workflows stabilize;
-do not create UI tickets that need to invent missing business rules.
+Completed slices:
+
+- #156 — Read-only campaign history and delivery attempts REST contract.
+- #150 — Campaigns list and create screen.
+- #151 — Campaign review, preflight, preview, and approval screen.
+- #152 — Provider handoff, test send, and guarded delivery confirmations.
+- #153 — Campaign timeline, remote state, and reconciliation recovery.
+- #154 — First-run onboarding checklist and truthful status.
+- #164 — Deterministic campaign history order within the same second.
+- #155 — Exit-gate journey, role matrix, and accessible states.
 
 **Exit gate:** browser E2E covers onboarding through provider draft creation and
 the guarded schedule/send confirmation path, with role-appropriate data/actions
 and complete accessible failure/empty/loading/stale states.
+
+The exit gate is satisfied by three browser specs that run in CI against a
+test-only simulated Mailchimp, so no real email is sent:
+
+- `m4-journey.spec.ts`: a new operator follows the onboarding checklist,
+  publishes a template in the block editor, creates a Mailchimp campaign from
+  the checklist, prepares, submits, and approves it, creates the Mailchimp
+  draft, sends a test, schedules through the audience-naming confirmation,
+  unschedules, sends now through the same confirmation, and reconciles to
+  `sent`. Exactly one request of each kind reaches the provider, and the
+  history records every step.
+- `role-matrix.spec.ts`: with separation of duties on, an author, manager,
+  approver, deliverer, and a user without CampaignBridge capabilities each see
+  only their own data, menus, buttons, and published actions, and the outsider
+  is refused the screen and the REST collection.
+- `campaign-states.spec.ts`: axe finds no serious WCAG 2.1 AA violation in the
+  empty, loading, offline (with retry), review, stale (version conflict), and
+  permission-denied states; a keyboard-only operator creates and prepares a
+  campaign; nothing animates under reduced motion; and a pseudo-locale shows
+  every campaign screen string passing through translation, including a real
+  translation delivered through WordPress script translations.
+
+The role matrix found three defects: a template author who was not a
+WordPress editor was refused the template editor, and the CampaignBridge menu
+required the management capability for every screen beneath it; screens
+offered template steps (edit, snapshot, submit, approve, duplicate) the
+workflow would refuse without template access; and users without template
+access saw the menu's own title repeated as a submenu entry. Building every
+screen controller on each admin request also checked the Mailchimp key from
+unrelated pages; controllers are now built only for their own screen. All are
+fixed with regression tests.
 
 ### Milestone 5 — Durable scheduling and operational reliability
 

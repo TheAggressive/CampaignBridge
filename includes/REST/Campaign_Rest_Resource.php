@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\REST;
 
+use CampaignBridge\Core\Campaign_Authorizer;
 use CampaignBridge\Domain\Campaign\Campaign;
 use CampaignBridge\Services\Campaign\Delivery_Policy_Reader;
 use CampaignBridge\Workflow\Campaign\Campaign_Actions;
@@ -41,7 +42,12 @@ final class Campaign_Rest_Resource {
 			'updated_at'          => $campaign->updated_at(),
 			'scheduled_for'       => $campaign->scheduled_for(),
 			'approved_by_user_id' => $campaign->approved_by_user_id(),
-			'actions'             => Campaign_Actions::for( $actor, $campaign, Delivery_Policy_Reader::current() ),
+			'actions'             => Campaign_Actions::for(
+				$actor,
+				$campaign,
+				Delivery_Policy_Reader::current(),
+				( new Campaign_Authorizer() )->can_use_template( $actor, $campaign->template_id() )
+			),
 		);
 	}
 

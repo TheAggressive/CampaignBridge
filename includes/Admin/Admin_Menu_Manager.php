@@ -11,6 +11,7 @@
 namespace CampaignBridge\Admin;
 
 use CampaignBridge\Core\Capabilities;
+use CampaignBridge\Post_Types\Post_Type_Email_Template;
 
 /**
  * Admin Menu Manager Class
@@ -36,7 +37,32 @@ class Admin_Menu_Manager {
 	 */
 	public function init(): void {
 		\add_action( 'admin_menu', array( $this, 'add_parent_menu' ), 9 );
-		\add_action( 'admin_menu', array( $this, 'remove_parent_from_submenu' ), 10 );
+		// After every screen registers: WordPress copies the parent into the
+		// submenu when the first entry the user may see is added, which for a
+		// user without template access happens after priority 10.
+		\add_action( 'admin_menu', array( $this, 'remove_parent_from_submenu' ), PHP_INT_MAX );
+		\add_action( 'admin_menu', array( $this, 'add_new_template_submenu' ), 11 );
+	}
+
+	/**
+	 * Give the new-template screen its own entry under CampaignBridge.
+	 *
+	 * WordPress adds no "Add New" item for a post type shown under another
+	 * plugin's menu, so it authorizes post-new.php against Posts → Add New
+	 * instead, which needs edit_posts. A template author who holds only the
+	 * template capability was then refused the editor. Registering the
+	 * screen here makes WordPress check the template capability.
+	 *
+	 * @return void
+	 */
+	public function add_new_template_submenu(): void {
+		\add_submenu_page(
+			self::MENU_SLUG,
+			__( 'Add Email Template', 'campaignbridge' ),
+			__( 'Add Email Template', 'campaignbridge' ),
+			Capabilities::EDIT_TEMPLATES,
+			'post-new.php?post_type=' . Post_Type_Email_Template::POST_TYPE
+		);
 	}
 
 	/**
@@ -48,12 +74,33 @@ class Admin_Menu_Manager {
 		add_menu_page(
 			__( 'CampaignBridge', 'campaignbridge' ),
 			__( 'CampaignBridge', 'campaignbridge' ),
-			Capabilities::MANAGE,
+			self::parent_capability(),
 			self::MENU_SLUG,
 			array( $this, 'redirect_to_first_submenu' ),
 			Brand_Assets::menu_icon(),
 			30
 		);
+	}
+
+	/**
+	 * The capability that shows the CampaignBridge menu to the current user.
+	 *
+	 * WordPress authorizes a screen whose own entry it cannot match, such as
+	 * a post type's list or editor, against the top-level menu. Requiring the
+	 * management capability there refused template authors and campaign
+	 * authors their own screens, so the menu uses the first CampaignBridge
+	 * capability the user holds. Each screen still requires its own.
+	 *
+	 * @return string
+	 */
+	private static function parent_capability(): string {
+		foreach ( array( Capabilities::MANAGE, Capabilities::CREATE_CAMPAIGNS, Capabilities::EDIT_TEMPLATES ) as $capability ) {
+			if ( \current_user_can( $capability ) ) {
+				return $capability;
+			}
+		}
+
+		return Capabilities::MANAGE;
 	}
 
 	/**

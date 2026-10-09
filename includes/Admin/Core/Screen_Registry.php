@@ -157,11 +157,17 @@ class Screen_Registry {
 	private function register_screen( string $screen_name, string $slug, array $config, string $type ): void {
 		$full_slug = $this->parent_slug . '-' . $slug;
 
-		// Initialize controller if found.
-		$controller = null;
-		if ( $config['controller'] && class_exists( $config['controller'] ) ) {
-			$controller = new $config['controller']();
-		}
+		// Build the controller only when its own screen loads. Controllers read
+		// stored state and may contact providers, so constructing every one on
+		// each admin request would do that work on unrelated pages.
+		$controller_class = $config['controller'] && class_exists( $config['controller'] ) ? $config['controller'] : null;
+		$instance         = null;
+		$controller       = static function () use ( $controller_class, &$instance ) {
+			if ( null === $instance && null !== $controller_class ) {
+				$instance = new $controller_class();
+			}
+			return $instance;
+		};
 
 		// Register WordPress submenu page.
 		$hook = \add_submenu_page(
@@ -170,7 +176,7 @@ class Screen_Registry {
 			$config['menu_title'],
 			$config['capability'],
 			$full_slug,
-			fn() => $this->render_screen( $screen_name, $type, $controller, $config ),
+			fn() => $this->render_screen( $screen_name, $type, $controller(), $config ),
 			$config['position'] ?? null
 		);
 
@@ -180,7 +186,7 @@ class Screen_Registry {
 		\add_action(
 			"load-{$hook}",
 			function () use ( $controller ) {
-				$this->prepare_screen_request( $controller );
+				$this->prepare_screen_request( $controller() );
 			}
 		);
 

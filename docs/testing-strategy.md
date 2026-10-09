@@ -49,11 +49,36 @@ simulation, seeds a fake connection on a site without one, and makes the next
 action apply but answer with a 503, the ambiguous outcome CampaignBridge must
 never retry.
 
-CI copies it into the disposable E2E site. It is not in the release package.
-Locally, delivery specs skip unless it is installed; install it into the
-Studio site's `wp-content/mu-plugins/` only for the run and remove it
-afterwards, because while it is present no Mailchimp request from that site
-reaches Mailchimp.
+The one exception is the read-only connection check (`/ping`): it is answered
+only for the simulator's own fake key. A development site's real key gets
+Mailchimp's real answer, because CampaignBridge records that answer as the
+connection's verification and a simulated success must never mark a real key
+verified.
+
+## Test operators and pseudo-locale
+
+`tests/e2e/mu-plugins/campaignbridge-e2e-operators.php` is a second test-only
+must-use plugin. Its `campaignbridge-e2e/v1/operators` route (administrators
+only) creates a throwaway subscriber holding exactly the requested
+CampaignBridge capabilities, with a random password, and deletes only accounts
+it created. The role matrix and the onboarding journey sign in as these
+accounts in their own browser contexts. Adding `campaignbridge_e2e_pseudo=1`
+to an admin URL wraps every `campaignbridge` string in `⟦…⟧` through the
+`@wordpress/i18n` filters and serves one real translation for the Campaigns
+script through `pre_load_script_translations`, so a spec can prove that every
+visible string is translatable and that script translations reach the screen.
+
+| Spec | Proves |
+| --- | --- |
+| `m4-journey.spec.ts` | Onboarding through template, campaign, review, approval, provider draft, test, guarded schedule and send, and reconciliation, in the UI |
+| `role-matrix.spec.ts` | Author, manager, approver, deliverer, and outsider each see only their data, menus, buttons, and published actions |
+| `campaign-states.spec.ts` | Accessible empty, loading, offline, stale, and denied states; keyboard-only creation; reduced motion; translatable strings |
+
+CI copies both plugins into the disposable E2E site. Neither is in the release
+package. Locally, delivery, journey, matrix, and state specs skip unless they
+are installed; install them into the Studio site's `wp-content/mu-plugins/`
+only for the run and remove them afterwards, because while the simulator is
+present no other Mailchimp request from that site reaches Mailchimp.
 
 ## Failure policy
 
