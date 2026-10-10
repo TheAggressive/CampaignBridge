@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
 // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Direct access is confined to this repository implementation.
 /**
  * Normalized remote campaign reference repository.
@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Enforces one local/provider and one provider/remote identity mapping. */
 final class Remote_Campaign_Reference_Repository implements Remote_Campaign_Reference_Source {
+	/**
+	 * {@inheritDoc}
+	 */
 	public function get( string $campaign_id, string $provider ): ?Remote_Campaign_Reference {
 		if ( ! Schema_Manager::is_current() ) {
 			return null;
@@ -37,6 +40,9 @@ final class Remote_Campaign_Reference_Repository implements Remote_Campaign_Refe
 		return is_array( $row ) ? $this->hydrate( $row ) : null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function find_remote( string $provider, string $remote_id ): ?Remote_Campaign_Reference {
 		if ( ! Schema_Manager::is_current() ) {
 			return null;
@@ -55,6 +61,9 @@ final class Remote_Campaign_Reference_Repository implements Remote_Campaign_Refe
 		return is_array( $row ) ? $this->hydrate( $row ) : null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function add( Remote_Campaign_Reference $reference ): bool {
 		if ( ! Schema_Manager::is_current() || ! Database_Values::campaign_exists( $reference->campaign_id() ) ) {
 			return false;
@@ -80,6 +89,9 @@ final class Remote_Campaign_Reference_Repository implements Remote_Campaign_Refe
 		return false !== $inserted;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function update_observation( Remote_Campaign_Reference $reference ): bool {
 		if ( ! Schema_Manager::is_current() ) {
 			return false;
@@ -113,7 +125,11 @@ final class Remote_Campaign_Reference_Repository implements Remote_Campaign_Refe
 		return 1 === $updated;
 	}
 
-	/** @param array<string, mixed> $row Database row. */
+	/**
+	 * Rebuild a reference from a database row, or null when the row is malformed.
+	 *
+	 * @param array<string, mixed> $row Database row.
+	 */
 	private function hydrate( array $row ): ?Remote_Campaign_Reference {
 		try {
 			return Remote_Campaign_Reference::from_array(

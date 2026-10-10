@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Production test-delivery composition.
  *
@@ -31,7 +31,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Builds test delivery for a provider that supports test sends. */
 final class Campaign_Test_Delivery_Factory {
-	/** The test delivery for one provider, or null when it cannot send tests. */
+	/**
+	 * The test delivery for one provider, or null when it cannot send tests.
+	 *
+	 * @param string $provider Provider slug.
+	 */
 	public static function create( string $provider ): ?Campaign_Test_Delivery {
 		$discovery = Provider_Discovery_Factory::service( $provider );
 		if ( 'mailchimp' !== $provider || null === $discovery ) {

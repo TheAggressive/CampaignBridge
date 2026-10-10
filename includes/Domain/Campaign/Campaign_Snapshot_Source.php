@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed persistence ports use explicit signatures and focused contract comments.
+<?php
 /**
  * Durable campaign snapshot persistence port.
  *
@@ -15,11 +15,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Stores immutable review inputs and exact compiled artifacts. */
 interface Campaign_Snapshot_Source {
+	/**
+	 * One snapshot by ID.
+	 *
+	 * @param string $id Record ID.
+	 */
 	public function get( string $id ): ?Campaign_Snapshot;
 
-	/** Insert only; an existing identity or campaign revision is never replaced. */
+	/**
+	 * Insert only; an existing identity or campaign revision is never replaced.
+	 *
+	 * @param Campaign_Snapshot $snapshot The campaign snapshot.
+	 */
 	public function add( Campaign_Snapshot $snapshot ): bool;
 
-	/** @return array<int, Campaign_Snapshot> */
+	/**
+	 * A campaign's snapshots, newest revision first.
+	 *
+	 * @param string $campaign_id Campaign ID.
+	 * @param int    $limit       Maximum number of records.
+	 * @return array<int, Campaign_Snapshot>
+	 */
 	public function for_campaign( string $campaign_id, int $limit = 50 ): array;
 }

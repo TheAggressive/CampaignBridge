@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * Live campaign review-input source.
  *
@@ -17,9 +17,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Resolves live WordPress inputs once, before the workflow freezes them. */
 interface Campaign_Review_Input_Source {
-	/** Capture the campaign's current template, design, and referenced content. */
+	/**
+	 * Capture the campaign's current template, design, and referenced content.
+	 *
+	 * @param Campaign $campaign The campaign as read.
+	 * @param int      $revision Snapshot revision number.
+	 */
 	public function capture( Campaign $campaign, int $revision ): ?Review_Input;
 
-	/** Capture the review input and authored envelope from one template read. */
+	/**
+	 * Capture the review input and authored envelope from one template read.
+	 *
+	 * @param Campaign $campaign The campaign as read.
+	 * @param int      $revision Snapshot revision number.
+	 */
 	public function capture_for_snapshot( Campaign $campaign, int $revision ): ?Campaign_Review_Capture;
 }

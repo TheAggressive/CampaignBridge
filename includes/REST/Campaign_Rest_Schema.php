@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * Stable Campaign REST argument and response schemas.
  *
@@ -33,7 +33,11 @@ final class Campaign_Rest_Schema {
 
 	public const MAX_PER_PAGE = 100;
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for a campaign ID in the route.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function campaign_id(): array {
 		return array(
 			'description' => __( 'Opaque campaign identifier.', 'campaignbridge' ),
@@ -43,22 +47,38 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for an email template post ID.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function template_id(): array {
 		return self::positive_integer( __( 'Email template post ID.', 'campaignbridge' ) );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for the campaign owner on create.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function owner_user_id(): array {
 		return self::positive_integer( __( 'Campaign owner user ID. Defaults to the current user.', 'campaignbridge' ), false );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for the version the client last read.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function expected_version(): array {
 		return self::positive_integer( __( 'Campaign version the client last read. Stale versions are refused with 409.', 'campaignbridge' ) );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for an optional provider reference.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function provider(): array {
 		return array(
 			'description' => __( 'Optional opaque provider reference. Null clears it.', 'campaignbridge' ),
@@ -69,7 +89,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for an optional audience reference.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function audience_reference(): array {
 		return array(
 			'description' => __( 'Optional opaque audience reference. Null clears it.', 'campaignbridge' ),
@@ -79,7 +103,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for a client-generated retry key.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function idempotency_key(): array {
 		return array(
 			'description' => __( 'Client-generated retry key. Replaying the same key returns the original duplicate.', 'campaignbridge' ),
@@ -91,7 +119,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for test-send recipients.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function test_recipients(): array {
 		return array(
 			'description' => __( 'Addresses that receive this test only. They are never stored.', 'campaignbridge' ),
@@ -107,7 +139,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for a scheduled delivery time.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function scheduled_for(): array {
 		return array(
 			'description' => __( 'Delivery time as an RFC 3339 date-time with an explicit offset, on the provider\'s scheduling interval.', 'campaignbridge' ),
@@ -118,7 +154,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for the audience reference repeated as confirmation.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function confirm_audience_reference(): array {
 		return array(
 			'description' => __( 'The campaign\'s audience reference, repeated to confirm who will receive it.', 'campaignbridge' ),
@@ -129,7 +169,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for the part of the draft a test sends.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function test_format(): array {
 		return array(
 			'description' => __( 'Which part of the draft to test.', 'campaignbridge' ),
@@ -139,7 +183,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, array<string, mixed>> */
+	/**
+	 * Argument schemas for the campaign collection: owner, page, size, and filters.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
 	public static function collection_args(): array {
 		return array(
 			'owner_user_id' => self::positive_integer( __( 'Owner whose campaigns are listed. Defaults to the current user.', 'campaignbridge' ), false ),
@@ -174,7 +222,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for one campaign representation.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function campaign(): array {
 		return array(
 			'type'                 => 'object',
@@ -220,12 +272,20 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for a single campaign.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function campaign_result(): array {
 		return self::document( 'campaignbridge-campaign-result', array( 'campaign' => self::campaign() ) );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for a page of campaigns.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function collection(): array {
 		$count = array(
 			'type'    => 'integer',
@@ -254,7 +314,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for a new snapshot and its validation.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function snapshot_result(): array {
 		return self::document(
 			'campaignbridge-campaign-snapshot-result',
@@ -347,7 +411,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for validating a campaign's live template.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function validation_result(): array {
 		return self::document(
 			'campaignbridge-campaign-validation-result',
@@ -358,7 +426,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for previewing a campaign's live template.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function preview_result(): array {
 		return self::document(
 			'campaignbridge-campaign-preview-result',
@@ -392,7 +464,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for a duplicated campaign.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function duplicate_result(): array {
 		return self::document(
 			'campaignbridge-campaign-duplicate-result',
@@ -403,17 +479,30 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for creating the provider draft.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function provider_draft_result(): array {
 		return self::remote_result( 'campaignbridge-campaign-provider-draft-result' );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for schedule, unschedule, and send.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function delivery_result(): array {
 		return self::remote_result( 'campaignbridge-campaign-delivery-result' );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema shared by operations that change the provider campaign.
+	 *
+	 * @param string $title Schema title.
+	 * @return array<string, mixed>
+	 */
 	private static function remote_result( string $title ): array {
 		return self::document(
 			$title,
@@ -426,7 +515,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for reconciliation.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function reconcile_result(): array {
 		return self::document(
 			'campaignbridge-campaign-reconcile-result',
@@ -441,7 +534,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Response schema for a test send.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public static function test_send_result(): array {
 		return self::document(
 			'campaignbridge-campaign-test-send-result',
@@ -530,7 +627,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Schema for the normalized remote campaign reference.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function remote(): array {
 		return array(
 			'type'                 => 'object',
@@ -552,7 +653,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Schema for one delivery attempt.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function attempt(): array {
 		return array(
 			'type'                 => 'object',
@@ -604,7 +709,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Schema for a compiler validation outcome.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function validation(): array {
 		return array(
 			'type'                 => 'object',
@@ -623,7 +732,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Schema for compiler diagnostics.
+	 *
+	 * @return array<string, mixed>
+	 */
 	private static function diagnostics(): array {
 		return array(
 			'type'  => 'array',
@@ -645,6 +758,9 @@ final class Campaign_Rest_Schema {
 	}
 
 	/**
+	 * Wrap properties in a closed top-level JSON schema document.
+	 *
+	 * @param string                              $title      Schema title.
 	 * @param array<string, array<string, mixed>> $properties Top-level fields.
 	 * @return array<string, mixed>
 	 */
@@ -659,7 +775,13 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Argument schema for a positive integer.
+	 *
+	 * @param string $description Field description.
+	 * @param bool   $required    Whether the value is required.
+	 * @return array<string, mixed>
+	 */
 	private static function positive_integer( string $description, bool $required = true ): array {
 		return array(
 			'description' => $description,
@@ -669,7 +791,11 @@ final class Campaign_Rest_Schema {
 		);
 	}
 
-	/** @return array<string, string> */
+	/**
+	 * Schema for an RFC 3339 timestamp.
+	 *
+	 * @return array<string, string>
+	 */
 	private static function timestamp(): array {
 		return array(
 			'type'   => 'string',

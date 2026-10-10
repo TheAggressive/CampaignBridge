@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signatures and the class contract document these methods.
+<?php
 /**
  * Runs due background jobs.
  *
@@ -35,7 +35,11 @@ final class Job_Runner {
 	private const BACKOFF_BASE = 60;
 	private const BACKOFF_CAP  = 3600;
 
-	/** @var array<string, Job_Handler> */
+	/**
+	 * Registered handlers by the job type they run.
+	 *
+	 * @var array<string, Job_Handler>
+	 */
 	private array $handlers = array();
 
 	/**
@@ -45,7 +49,14 @@ final class Job_Runner {
 	 */
 	private readonly string $owner;
 
-	/** @param array<int, Job_Handler> $handlers Handlers by the type they run. */
+	/**
+	 * Build the job runner.
+	 *
+	 * @param Job_Source              $jobs     Job storage.
+	 * @param array<int, Job_Handler> $handlers Handlers by the type they run.
+	 * @param Campaign_Clock          $clock    Source of the current time.
+	 * @param string|null             $owner    Lease or lock owner identity.
+	 */
 	public function __construct(
 		private readonly Job_Source $jobs,
 		array $handlers,
@@ -61,6 +72,7 @@ final class Job_Runner {
 	/**
 	 * Run up to `$limit` due jobs.
 	 *
+	 * @param int $limit Maximum number of records.
 	 * @return array{claimed: int, succeeded: int, retried: int, failed: int, dead: int}
 	 */
 	public function run( int $limit ): array {
@@ -83,7 +95,12 @@ final class Job_Runner {
 		return $report;
 	}
 
-	/** @return 'succeeded'|'retried'|'failed'|'dead'|null The recorded result, or null when the lease was lost. */
+	/**
+	 * Run one claimed job and record its outcome.
+	 *
+	 * @param Job_Claim $claim The claimed job.
+	 * @return 'succeeded'|'retried'|'failed'|'dead'|null The recorded result, or null when the lease was lost.
+	 */
 	private function run_one( Job_Claim $claim ): ?string {
 		$job     = $claim->job;
 		$handler = $this->handlers[ $job->type() ] ?? null;
@@ -131,7 +148,14 @@ final class Job_Runner {
 		return $this->jobs->retry( $job->id(), $this->owner, Job_Time::after( $now, $delay ), (string) $outcome->error, $now ) ? 'retried' : null;
 	}
 
-	/** @return 'failed'|'dead'|null */
+	/**
+	 * End a held job as failed or dead.
+	 *
+	 * @param Job    $job   The job.
+	 * @param string $state Job state.
+	 * @param string $error Stable error code.
+	 * @return 'failed'|'dead'|null
+	 */
 	private function end( Job $job, string $state, string $error ): ?string {
 		if ( ! $this->jobs->finish( $job->id(), $this->owner, $state, $error, $this->clock->now() ) ) {
 			return null;
@@ -140,6 +164,12 @@ final class Job_Runner {
 		return Job_State::FAILED === $state ? 'failed' : 'dead';
 	}
 
+	/**
+	 * Tell the handler its job was abandoned, never letting the hook keep the job claimed.
+	 *
+	 * @param Job_Handler $handler The job's handler.
+	 * @param Job         $job     The job.
+	 */
 	private function abandon( Job_Handler $handler, Job $job ): void {
 		try {
 			$handler->abandoned( $job );
@@ -147,7 +177,11 @@ final class Job_Runner {
 		}
 	}
 
-	/** Seconds before retry `$attempts`: 1, 2, 4 … minutes, capped at an hour. */
+	/**
+	 * Seconds before retry `$attempts`: 1, 2, 4 … minutes, capped at an hour.
+	 *
+	 * @param int $attempts Delivery attempt storage.
+	 */
 	public static function backoff( int $attempts ): int {
 		return min( self::BACKOFF_CAP, self::BACKOFF_BASE * ( 2 ** max( 0, $attempts - 1 ) ) );
 	}

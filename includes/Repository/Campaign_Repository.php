@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
 // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Direct access is confined to this repository implementation.
 /**
  * Durable campaign repository.
@@ -21,6 +21,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Persists provider-neutral campaigns with optimistic concurrency. */
 final class Campaign_Repository implements Campaign_Source {
+	/**
+	 * {@inheritDoc}
+	 */
 	public function get( string $id ): ?Campaign {
 		if ( ! Schema_Manager::is_current() ) {
 			return null;
@@ -36,6 +39,9 @@ final class Campaign_Repository implements Campaign_Source {
 		return is_array( $row ) ? $this->hydrate( $row ) : null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function add( Campaign $campaign ): bool {
 		if ( ! Schema_Manager::is_current() ) {
 			return false;
@@ -70,6 +76,9 @@ final class Campaign_Repository implements Campaign_Source {
 		return false !== $inserted;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function compare_and_swap( Campaign $replacement, int $expected_version ): bool {
 		if ( ! Schema_Manager::is_current() || $replacement->version() !== $expected_version + 1 ) {
 			return false;
@@ -107,7 +116,11 @@ final class Campaign_Repository implements Campaign_Source {
 		return 1 === $updated;
 	}
 
-	/** @return array<int, Campaign> */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<int, Campaign>
+	 */
 	public function for_owner( int $owner_user_id, int $limit = 50, int $offset = 0, ?Campaign_List_Filter $filter = null ): array {
 		if ( ! Schema_Manager::is_current() || 1 > $owner_user_id ) {
 			return array();
@@ -154,6 +167,9 @@ final class Campaign_Repository implements Campaign_Source {
 		return $counts;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function count_for_owner( int $owner_user_id, ?Campaign_List_Filter $filter = null ): int {
 		if ( ! Schema_Manager::is_current() || 1 > $owner_user_id ) {
 			return 0;
@@ -197,11 +213,20 @@ final class Campaign_Repository implements Campaign_Source {
 		return array( $where, $values );
 	}
 
+	/**
+	 * A canonical timestamp in database form, or null.
+	 *
+	 * @param string|null $timestamp UTC timestamp.
+	 */
 	private static function database_time( ?string $timestamp ): ?string {
 		return null === $timestamp ? null : Database_Values::to_database_time( $timestamp );
 	}
 
-	/** @param array<string, mixed> $row Database row. */
+	/**
+	 * Rebuild a campaign from a database row, or null when the row is malformed.
+	 *
+	 * @param array<string, mixed> $row Database row.
+	 */
 	private function hydrate( array $row ): ?Campaign {
 		try {
 			return Campaign::from_array(
@@ -227,6 +252,8 @@ final class Campaign_Repository implements Campaign_Source {
 	}
 
 	/**
+	 * Rebuild every well-formed campaign in the rows.
+	 *
 	 * @param array<int, array<string, mixed>> $rows Database rows.
 	 * @return array<int, Campaign>
 	 */

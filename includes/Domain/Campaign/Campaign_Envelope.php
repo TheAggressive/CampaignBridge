@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Frozen campaign envelope.
  *
@@ -44,6 +43,14 @@ final class Campaign_Envelope {
 	public const PROBLEM_SENDER_NAME_LONG    = 'sender_name_too_long';
 	public const PROBLEM_SENDER_EMAIL        = 'sender_email_invalid';
 
+	/**
+	 * Build the campaign envelope.
+	 *
+	 * @param string $subject      Subject line.
+	 * @param string $preview_text Preview text.
+	 * @param string $from_name    Sender name.
+	 * @param string $from_email   Sender address.
+	 */
 	private function __construct(
 		private readonly string $subject,
 		private readonly string $preview_text,
@@ -51,7 +58,14 @@ final class Campaign_Envelope {
 		private readonly string $from_email
 	) {}
 
-	/** Capture authored values as single-line text without judging completeness. */
+	/**
+	 * Capture authored values as single-line text without judging completeness.
+	 *
+	 * @param mixed $subject      Subject line.
+	 * @param mixed $preview_text Preview text.
+	 * @param mixed $from_name    Sender name.
+	 * @param mixed $from_email   Sender address.
+	 */
 	public static function capture( mixed $subject, mixed $preview_text, mixed $from_name, mixed $from_email ): self {
 		return new self(
 			self::line( $subject, 'Subject' ),
@@ -61,25 +75,41 @@ final class Campaign_Envelope {
 		);
 	}
 
-	/** @param array<string, mixed> $data Stored envelope. */
+	/**
+	 * Rebuild an envelope from its stored values.
+	 *
+	 * @param array<string, mixed> $data Stored envelope.
+	 */
 	public static function from_array( array $data ): self {
 		Record_Validation::known_keys( $data, array( 'subject', 'preview_text', 'from_name', 'from_email' ) );
 
 		return self::capture( $data['subject'] ?? null, $data['preview_text'] ?? null, $data['from_name'] ?? null, $data['from_email'] ?? null );
 	}
 
+	/**
+	 * The envelope's subject.
+	 */
 	public function subject(): string {
 		return $this->subject;
 	}
 
+	/**
+	 * The envelope's preview text.
+	 */
 	public function preview_text(): string {
 		return $this->preview_text;
 	}
 
+	/**
+	 * The envelope's from name.
+	 */
 	public function from_name(): string {
 		return $this->from_name;
 	}
 
+	/**
+	 * The envelope's from email.
+	 */
 	public function from_email(): string {
 		return $this->from_email;
 	}
@@ -90,6 +120,8 @@ final class Campaign_Envelope {
 	 * Subject and preview text may contain canonical tokens, which must parse
 	 * against the registry. Sender fields are literal.
 	 *
+	 * @param Token_Registry|null $registry The personalization token registry.
+	 * @param Token_Parser|null   $parser   Template parser.
 	 * @return array<int, string>
 	 */
 	public function problems( ?Token_Registry $registry = null, ?Token_Parser $parser = null ): array {
@@ -123,7 +155,11 @@ final class Campaign_Envelope {
 		return $problems;
 	}
 
-	/** @return array{subject: string, preview_text: string, from_name: string, from_email: string} */
+	/**
+	 * The envelope's stored values.
+	 *
+	 * @return array{subject: string, preview_text: string, from_name: string, from_email: string}
+	 */
 	public function to_array(): array {
 		return array(
 			'subject'      => $this->subject,
@@ -133,7 +169,13 @@ final class Campaign_Envelope {
 		);
 	}
 
-	/** Normalize one authored value to bounded single-line text. */
+	/**
+	 * Normalize one authored value to bounded single-line text.
+	 *
+	 * @param mixed  $value Value to validate.
+	 * @param string $label Field name for error messages.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	private static function line( mixed $value, string $label ): string {
 		if ( null === $value ) {
 			return '';

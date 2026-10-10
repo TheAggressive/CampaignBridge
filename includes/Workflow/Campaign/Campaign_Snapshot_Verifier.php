@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signature is the contract.
+<?php
 /**
  * Verifies a campaign's selected snapshot.
  *
@@ -26,8 +26,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * WordPress content is never read.
  */
 final class Campaign_Snapshot_Verifier {
+	/**
+	 * Build the campaign snapshot verifier.
+	 *
+	 * @param Campaign_Snapshot_Source $snapshots Snapshot storage.
+	 */
 	public function __construct( private readonly Campaign_Snapshot_Source $snapshots ) {}
 
+	/**
+	 * The campaign's active snapshot, if it is intact and belongs to the campaign.
+	 *
+	 * @param Campaign $campaign The campaign as read.
+	 */
 	public function verify( Campaign $campaign ): Campaign_Snapshot|Campaign_Workflow_Error {
 		if ( null === $campaign->active_snapshot_id() ) {
 			return new Campaign_Workflow_Error( Campaign_Workflow_Error::MISSING_SNAPSHOT, 'Campaign has no selected immutable snapshot.' );

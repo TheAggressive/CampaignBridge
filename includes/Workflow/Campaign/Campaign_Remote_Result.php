@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signatures are the contract.
+<?php
 /**
  * Shared shape of remote campaign operation results.
  *
@@ -24,15 +24,33 @@ if ( ! defined( 'ABSPATH' ) ) {
  * provider error.
  */
 interface Campaign_Remote_Result {
+	/**
+	 * Whether the remote operation completed.
+	 */
 	public function is_success(): bool;
 
+	/**
+	 * The campaign after the operation, when it was read.
+	 */
 	public function campaign(): ?Campaign;
 
+	/**
+	 * The campaign's remote reference, when one exists.
+	 */
 	public function reference(): ?Remote_Campaign_Reference;
 
+	/**
+	 * The delivery attempt the operation recorded, when there is one.
+	 */
 	public function attempt(): ?Delivery_Attempt;
 
+	/**
+	 * Why the operation was refused or failed.
+	 */
 	public function error(): ?Campaign_Workflow_Error;
 
+	/**
+	 * The normalized provider error behind a failure, when there is one.
+	 */
 	public function provider_error(): ?Provider_Error;
 }

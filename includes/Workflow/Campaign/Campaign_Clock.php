@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Campaign workflow clock.
  *
@@ -14,5 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 interface Campaign_Clock {
+	/**
+	 * The current time as a canonical UTC timestamp.
+	 */
 	public function now(): string;
 }

@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Public operation names and typed signatures form the application contract.
+<?php
 /**
  * Test delivery of an approved campaign's remote draft.
  *
@@ -79,6 +79,24 @@ final class Campaign_Test_Delivery {
 
 	private const ACTION = 'campaign_test_send';
 
+	/**
+	 * Build the campaign test delivery.
+	 *
+	 * @param Campaign_Source                  $campaigns    Campaign storage.
+	 * @param Campaign_Snapshot_Source         $snapshots    Snapshot storage.
+	 * @param Remote_Campaign_Reference_Source $references   Remote reference storage.
+	 * @param Delivery_Attempt_Source          $attempts     Delivery attempt storage.
+	 * @param Audit_Event_Source               $audits       Audit event storage.
+	 * @param Campaign_Id_Generator            $ids          Identifier generator.
+	 * @param Campaign_Clock                   $clock        Source of the current time.
+	 * @param Provider_Test_Gateway            $gateway      Provider delivery gateway.
+	 * @param Provider_Capabilities            $capabilities What the provider supports.
+	 * @param Provider_Draft_Gateway           $drafts       Provider draft gateway.
+	 * @param Provider_Token_Mapper            $tokens       Personalization token mapper.
+	 * @param Provider_Discovery_Service       $discovery    Provider discovery service.
+	 * @param Delivery_Policy_Source           $policies     Delivery policy source.
+	 * @param Lock_Manager|null                $locks        Lock manager; null runs without locking.
+	 */
 	public function __construct(
 		private readonly Campaign_Source $campaigns,
 		private readonly Campaign_Snapshot_Source $snapshots,
@@ -99,8 +117,12 @@ final class Campaign_Test_Delivery {
 	/**
 	 * Send, or replay, one test of the campaign's remote draft.
 	 *
-	 * @param array<mixed>         $recipients Candidate test addresses; used for this call only.
-	 * @param array<string, mixed> $settings   Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor           Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id     Campaign ID.
+	 * @param array<mixed>         $recipients      Candidate test addresses; used for this call only.
+	 * @param string               $format          Which part of the draft to test.
+	 * @param string               $idempotency_key Client retry key; the same key replays the first outcome.
+	 * @param array<string, mixed> $settings        Decrypted provider settings for this call only.
 	 */
 	public function send_test( Campaign_Actor $actor, string $campaign_id, array $recipients, string $format, string $idempotency_key, array $settings ): Campaign_Test_Result {
 		if ( null === $this->locks ) {
@@ -118,8 +140,12 @@ final class Campaign_Test_Delivery {
 	/**
 	 * The operation itself, run while the campaign lock is held.
 	 *
-	 * @param array<mixed>         $recipients Candidate test addresses; used for this call only.
-	 * @param array<string, mixed> $settings   Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor           Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id     Campaign ID.
+	 * @param array<mixed>         $recipients      Candidate test addresses; used for this call only.
+	 * @param string               $format          Which part of the draft to test.
+	 * @param string               $idempotency_key Client retry key; the same key replays the first outcome.
+	 * @param array<string, mixed> $settings        Decrypted provider settings for this call only.
 	 */
 	private function send_test_unlocked( Campaign_Actor $actor, string $campaign_id, array $recipients, string $format, string $idempotency_key, array $settings ): Campaign_Test_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
@@ -205,7 +231,14 @@ final class Campaign_Test_Delivery {
 		};
 	}
 
-	/** Report the recorded outcome of a repeated key; nothing is sent. */
+	/**
+	 * Report the recorded outcome of a repeated key; nothing is sent.
+	 *
+	 * @param Campaign_Actor                 $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                       $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference The campaign's remote reference.
+	 * @param Delivery_Attempt               $recorded  The attempt recorded for this idempotency key.
+	 */
 	private function replay( Campaign_Actor $actor, Campaign $campaign, ?Remote_Campaign_Reference $reference, Delivery_Attempt $recorded ): Campaign_Test_Result {
 		return match ( $recorded->status() ) {
 			Delivery_Attempt_Status::SUCCEEDED => Campaign_Test_Result::replay( $campaign, $reference, $recorded ),
@@ -219,6 +252,7 @@ final class Campaign_Test_Delivery {
 	 *
 	 * Reads stored attempts, which concurrent requests change between calls.
 	 *
+	 * @param string $campaign_id Campaign ID.
 	 * @phpstan-impure
 	 */
 	private function recent_tests( string $campaign_id ): int {
@@ -232,6 +266,16 @@ final class Campaign_Test_Delivery {
 		);
 	}
 
+	/**
+	 * Record a test the provider accepted.
+	 *
+	 * @param Campaign_Actor            $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                  $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference $reference The campaign's remote reference.
+	 * @param Delivery_Attempt          $attempt   The delivery attempt.
+	 * @param Campaign_Snapshot         $snapshot  The campaign snapshot.
+	 * @param Test_Delivery             $delivery  The test delivery request.
+	 */
 	private function sent( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, Campaign_Snapshot $snapshot, Test_Delivery $delivery ): Campaign_Test_Result {
 		$succeeded = $this->settled( $attempt, Delivery_Attempt_Status::SUCCEEDED, Retryability::NOT_RETRYABLE );
 		if ( ! $this->attempts->update_result( $succeeded ) ) {
@@ -244,6 +288,17 @@ final class Campaign_Test_Delivery {
 		return Campaign_Test_Result::sent( $campaign, $reference, $succeeded, $snapshot, $delivery );
 	}
 
+	/**
+	 * Record a test the provider definitely refused.
+	 *
+	 * @param Campaign_Actor            $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                  $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference $reference The campaign's remote reference.
+	 * @param Delivery_Attempt          $attempt   The delivery attempt.
+	 * @param Campaign_Snapshot         $snapshot  The campaign snapshot.
+	 * @param Test_Delivery             $delivery  The test delivery request.
+	 * @param Provider_Error|null       $error     Normalized provider error, when there is one.
+	 */
 	private function definite_failure( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, Campaign_Snapshot $snapshot, Test_Delivery $delivery, ?Provider_Error $error ): Campaign_Test_Result {
 		$failed = $this->settled( $attempt, Delivery_Attempt_Status::FAILED, null !== $error && $error->is_retryable() ? Retryability::RETRYABLE : Retryability::NOT_RETRYABLE );
 		$stored = $this->attempts->update_result( $failed );
@@ -252,6 +307,17 @@ final class Campaign_Test_Delivery {
 		return Campaign_Test_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::PROVIDER_FAILED, 'The provider refused the test. No test was sent.' ), $campaign, $reference, $stored ? $failed : $attempt, $error );
 	}
 
+	/**
+	 * Record a test the provider did not confirm.
+	 *
+	 * @param Campaign_Actor            $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                  $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference $reference The campaign's remote reference.
+	 * @param Delivery_Attempt          $attempt   The delivery attempt.
+	 * @param Campaign_Snapshot         $snapshot  The campaign snapshot.
+	 * @param Test_Delivery             $delivery  The test delivery request.
+	 * @param Provider_Error|null       $error     Normalized provider error, when there is one.
+	 */
 	private function ambiguous( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, Campaign_Snapshot $snapshot, Test_Delivery $delivery, ?Provider_Error $error ): Campaign_Test_Result {
 		$unknown = $this->settled( $attempt, Delivery_Attempt_Status::UNKNOWN, Retryability::UNKNOWN );
 		$stored  = $this->attempts->update_result( $unknown );
@@ -266,6 +332,18 @@ final class Campaign_Test_Delivery {
 		);
 	}
 
+	/**
+	 * Audit a refused test and return it.
+	 *
+	 * @param string                $code        Stable error code.
+	 * @param string                $message     Operator-safe message.
+	 * @param Campaign_Actor        $actor       Who is acting, with their resolved campaign authority.
+	 * @param string                $campaign_id Campaign ID.
+	 * @param Campaign|null         $campaign    The campaign as read.
+	 * @param string                $result      Audit result: success, failure, denied, or unknown.
+	 * @param Delivery_Attempt|null $attempt     The delivery attempt.
+	 * @param Provider_Error|null   $error       Normalized provider error, when there is one.
+	 */
 	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null ): Campaign_Test_Result {
 		try {
 			$this->audits->add(
@@ -287,7 +365,18 @@ final class Campaign_Test_Delivery {
 		return Campaign_Test_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null, $attempt, $error );
 	}
 
-	/** Record the tested artifact and request size; never the recipients. */
+	/**
+	 * Record the tested artifact and request size; never the recipients.
+	 *
+	 * @param Campaign_Actor            $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                  $campaign  The campaign as read.
+	 * @param string                    $result    Audit result: success, failure, denied, or unknown.
+	 * @param Remote_Campaign_Reference $reference The campaign's remote reference.
+	 * @param Delivery_Attempt          $attempt   The delivery attempt.
+	 * @param Campaign_Snapshot         $snapshot  The campaign snapshot.
+	 * @param Test_Delivery             $delivery  The test delivery request.
+	 * @param Provider_Error|null       $error     Normalized provider error, when there is one.
+	 */
 	private function audit( Campaign_Actor $actor, Campaign $campaign, string $result, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, Campaign_Snapshot $snapshot, Test_Delivery $delivery, ?Provider_Error $error ): void {
 		$this->audits->add(
 			$this->event(
@@ -311,7 +400,14 @@ final class Campaign_Test_Delivery {
 		);
 	}
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Build one test audit event.
+	 *
+	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id Campaign ID.
+	 * @param string               $result      Audit result: success, failure, denied, or unknown.
+	 * @param array<string, mixed> $context     Safe audit context.
+	 */
 	private function event( Campaign_Actor $actor, string $campaign_id, string $result, array $context ): Audit_Event {
 		return Audit_Event::from_array(
 			array(
@@ -328,10 +424,28 @@ final class Campaign_Test_Delivery {
 		);
 	}
 
+	/**
+	 * The attempt with its settled status and retryability.
+	 *
+	 * @param Delivery_Attempt $attempt      The delivery attempt.
+	 * @param string           $status       Attempt status.
+	 * @param string           $retryability Whether a new attempt may be made.
+	 */
 	private function settled( Delivery_Attempt $attempt, string $status, string $retryability ): Delivery_Attempt {
 		return $this->attempt( $attempt->id(), $attempt->campaign_id(), (string) $attempt->idempotency_key(), $status, $retryability, $attempt->remote_correlation(), $attempt->created_at() );
 	}
 
+	/**
+	 * Build one test attempt record.
+	 *
+	 * @param string      $id           Record ID.
+	 * @param string      $campaign_id  Campaign ID.
+	 * @param string      $key          Idempotency key.
+	 * @param string      $status       Attempt status.
+	 * @param string      $retryability Whether a new attempt may be made.
+	 * @param string|null $correlation  The provider's correlation ID, when known.
+	 * @param string|null $created_at   UTC timestamp of creation, or null for now.
+	 */
 	private function attempt( string $id, string $campaign_id, string $key, string $status, string $retryability, ?string $correlation, ?string $created_at ): Delivery_Attempt {
 		$now = $this->clock->now();
 

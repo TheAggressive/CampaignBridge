@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
+<?php
 /**
  * Normalized outcome of one non-idempotent remote action.
  *
@@ -30,24 +30,43 @@ final class Action_Outcome {
 	public const FAILED    = 'failed';
 	public const AMBIGUOUS = 'ambiguous';
 
+	/**
+	 * Build the action outcome.
+	 *
+	 * @param string              $status Outcome kind.
+	 * @param Provider_Error|null $error  Normalized provider error, when there is one.
+	 */
 	private function __construct(
 		private readonly string $status,
 		private readonly ?Provider_Error $error
 	) {}
 
+	/**
+	 * The provider accepted the action.
+	 */
 	public static function accepted(): self {
 		return new self( self::ACCEPTED, null );
 	}
 
-	/** Classify a failed action by what the error proves. */
+	/**
+	 * Classify a failed action by what the error proves.
+	 *
+	 * @param Provider_Error $error Normalized provider error.
+	 */
 	public static function from_error( Provider_Error $error ): self {
 		return new self( Provider_Error_Category::may_have_applied( $error->category() ) ? self::AMBIGUOUS : self::FAILED, $error );
 	}
 
+	/**
+	 * The outcome's status.
+	 */
 	public function status(): string {
 		return $this->status;
 	}
 
+	/**
+	 * The outcome's error.
+	 */
 	public function error(): ?Provider_Error {
 		return $this->error;
 	}

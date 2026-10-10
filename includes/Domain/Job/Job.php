@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable persistence values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * One unit of durable background work.
  *
@@ -30,7 +29,25 @@ final class Job {
 	private const MAX_PAYLOAD_BYTES = 2048;
 	private const SECRET_KEY        = '/key|secret|token|password|authorization|credential/i';
 
-	/** @param array<string, string|int|bool|null> $payload */
+	/**
+	 * Build the job.
+	 *
+	 * @param string                              $id               Record ID.
+	 * @param string                              $type             Job type: a lowercase identifier.
+	 * @param string                              $target_type      Kind of record the event is about.
+	 * @param string                              $target_id        ID of the record the event is about.
+	 * @param string|null                         $dedupe_key       Key held by one active job for the same work.
+	 * @param array<string, string|int|bool|null> $payload          What the handler needs; never credentials.
+	 * @param string                              $state            Job state.
+	 * @param int                                 $attempts         Delivery attempt storage.
+	 * @param int                                 $max_attempts     Maximum number of runs.
+	 * @param string                              $run_after        Earliest UTC time the job may run.
+	 * @param string|null                         $lease_owner      Lease owner, or null.
+	 * @param string|null                         $lease_expires_at Lease expiry, or null.
+	 * @param string|null                         $last_error       Last error code, or null.
+	 * @param string                              $created_at       UTC timestamp of creation, or null for now.
+	 * @param string                              $updated_at       UTC timestamp of this change.
+	 */
 	private function __construct(
 		private readonly string $id,
 		private readonly string $type,
@@ -52,7 +69,15 @@ final class Job {
 	/**
 	 * A new queued job.
 	 *
-	 * @param array<string, string|int|bool|null> $payload What the handler needs.
+	 * @param string                              $id           Record ID.
+	 * @param string                              $type         Job type: a lowercase identifier.
+	 * @param string                              $target_type  Kind of record the event is about.
+	 * @param string                              $target_id    ID of the record the event is about.
+	 * @param array<string, string|int|bool|null> $payload      What the handler needs.
+	 * @param int                                 $max_attempts Maximum number of runs.
+	 * @param string                              $run_after    Earliest UTC time the job may run.
+	 * @param string                              $now          Current UTC timestamp.
+	 * @param string|null                         $dedupe_key   Key held by one active job for the same work.
 	 */
 	public static function create(
 		string $id,
@@ -87,7 +112,12 @@ final class Job {
 		);
 	}
 
-	/** @param array<string, mixed> $data Persisted values. */
+	/**
+	 * Rebuild a job from its stored values.
+	 *
+	 * @param array<string, mixed> $data Persisted values.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function from_array( array $data ): self {
 		Record_Validation::known_keys(
 			$data,
@@ -156,7 +186,9 @@ final class Job {
 	/**
 	 * Validate a flat, bounded, credential-free payload.
 	 *
+	 * @param mixed $value Value to validate.
 	 * @return array<string, string|int|bool|null>
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	private static function valid_payload( mixed $value ): array {
 		if ( ! is_array( $value ) || ( array() !== $value && array_is_list( $value ) ) || count( $value ) > self::MAX_PAYLOAD_KEYS ) {
@@ -181,7 +213,11 @@ final class Job {
 		return $value;
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The job's stored values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'schema_version'   => self::SCHEMA_VERSION,
@@ -203,63 +239,109 @@ final class Job {
 		);
 	}
 
+	/**
+	 * The job's ID.
+	 */
 	public function id(): string {
 		return $this->id;
 	}
 
+	/**
+	 * The job's type.
+	 */
 	public function type(): string {
 		return $this->type;
 	}
 
+	/**
+	 * The job's target type.
+	 */
 	public function target_type(): string {
 		return $this->target_type;
 	}
 
+	/**
+	 * The job's target ID.
+	 */
 	public function target_id(): string {
 		return $this->target_id;
 	}
 
+	/**
+	 * The job's dedupe key.
+	 */
 	public function dedupe_key(): ?string {
 		return $this->dedupe_key;
 	}
 
-	/** @return array<string, string|int|bool|null> */
+	/**
+	 * The job's payload.
+	 *
+	 * @return array<string, string|int|bool|null>
+	 */
 	public function payload(): array {
 		return $this->payload;
 	}
 
+	/**
+	 * The job's state.
+	 */
 	public function state(): string {
 		return $this->state;
 	}
 
+	/**
+	 * The job's attempts.
+	 */
 	public function attempts(): int {
 		return $this->attempts;
 	}
 
+	/**
+	 * The job's max attempts.
+	 */
 	public function max_attempts(): int {
 		return $this->max_attempts;
 	}
 
+	/**
+	 * The job's run after.
+	 */
 	public function run_after(): string {
 		return $this->run_after;
 	}
 
+	/**
+	 * The job's lease owner.
+	 */
 	public function lease_owner(): ?string {
 		return $this->lease_owner;
 	}
 
+	/**
+	 * The job's lease expires at.
+	 */
 	public function lease_expires_at(): ?string {
 		return $this->lease_expires_at;
 	}
 
+	/**
+	 * The job's last error.
+	 */
 	public function last_error(): ?string {
 		return $this->last_error;
 	}
 
+	/**
+	 * The job's created at.
+	 */
 	public function created_at(): string {
 		return $this->created_at;
 	}
 
+	/**
+	 * The job's updated at.
+	 */
 	public function updated_at(): string {
 		return $this->updated_at;
 	}

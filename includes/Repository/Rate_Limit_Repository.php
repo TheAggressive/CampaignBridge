@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,CampaignBridge.Standard.Sniffs.Database -- Typed private helpers document themselves; this class is the authorized custom-table boundary for request counters.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database -- Typed private helpers document themselves; this class is the authorized custom-table boundary for request counters.
 // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Direct access is confined to this repository implementation.
 /**
  * Atomic fixed-window request counters.
@@ -77,6 +77,9 @@ final class Rate_Limit_Repository {
 	/**
 	 * Admit one request against an existing row.
 	 *
+	 * @param string $table   Allowlisted table name.
+	 * @param string $key     Hashed window key.
+	 * @param int    $maximum Maximum length in bytes.
 	 * @return bool|null True when admitted, false when no row admitted it, null on a database error.
 	 */
 	private function increment( string $table, string $key, int $maximum ): ?bool {
@@ -95,7 +98,12 @@ final class Rate_Limit_Repository {
 		return 1 === (int) $updated;
 	}
 
-	/** Remove windows that have ended; runs only when a new window opens. */
+	/**
+	 * Remove windows that have ended; runs only when a new window opens.
+	 *
+	 * @param string $table Allowlisted table name.
+	 * @param int    $now   Current UTC timestamp.
+	 */
 	private function purge_expired( string $table, int $now ): void {
 		global $wpdb;
 		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded expiry cleanup by indexed column.

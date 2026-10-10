@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed port signatures document repository operations.
+<?php
 /**
  * Delivery policy settings repository.
  *
@@ -28,6 +28,9 @@ final class Delivery_Policy_Repository implements Delivery_Policy_Source {
 	public const SEPARATE_DELIVERY = 'campaignbridge_policy_separate_delivery';
 	public const TEST_DOMAINS      = 'campaignbridge_policy_test_recipient_domains';
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function current(): Delivery_Policy {
 		$domains = Storage::get_option( self::TEST_DOMAINS, '' );
 

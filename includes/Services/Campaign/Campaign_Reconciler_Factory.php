@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Production campaign reconciliation composition.
  *
@@ -27,6 +27,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Builds the reconciler for a provider, or null when it has no reconciliation adapter. */
 final class Campaign_Reconciler_Factory {
+	/**
+	 * The reconciler for one provider, or null when it cannot reconcile.
+	 *
+	 * @param string $provider Provider slug.
+	 */
 	public static function create( string $provider ): ?Campaign_Reconciler {
 		if ( 'mailchimp' !== $provider ) {
 			return null;

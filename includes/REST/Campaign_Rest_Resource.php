@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * Stable Campaign REST resource mapping.
  *
@@ -26,7 +26,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Maps typed application values to intentionally bounded transport DTOs. */
 final class Campaign_Rest_Resource {
-	/** @return array<string, mixed> */
+	/**
+	 * A campaign as the REST API publishes it, with the actions the reader may take now.
+	 *
+	 * @param Campaign       $campaign The campaign as read.
+	 * @param Campaign_Actor $actor    Who is acting, with their resolved campaign authority.
+	 * @return array<string, mixed>
+	 */
 	public static function campaign( Campaign $campaign, Campaign_Actor $actor ): array {
 		return array(
 			'id'                  => $campaign->id(),
@@ -45,7 +51,12 @@ final class Campaign_Rest_Resource {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * A campaign snapshot as the REST API publishes it.
+	 *
+	 * @param Campaign_Snapshot $snapshot The campaign snapshot.
+	 * @return array<string, mixed>
+	 */
 	public static function snapshot( Campaign_Snapshot $snapshot ): array {
 		return array(
 			'id'          => $snapshot->id(),
@@ -59,6 +70,7 @@ final class Campaign_Rest_Resource {
 	/**
 	 * The normalized remote draft reference; never a provider payload.
 	 *
+	 * @param Remote_Campaign_Reference $reference The campaign's remote reference.
 	 * @return array<string, string|null>
 	 */
 	public static function remote( Remote_Campaign_Reference $reference ): array {
@@ -74,6 +86,7 @@ final class Campaign_Rest_Resource {
 	/**
 	 * The delivery attempt identity and its known outcome.
 	 *
+	 * @param Delivery_Attempt $attempt The delivery attempt.
 	 * @return array<string, string>
 	 */
 	public static function attempt( Delivery_Attempt $attempt ): array {
@@ -85,9 +98,9 @@ final class Campaign_Rest_Resource {
 	}
 
 	/**
-	 * What a new test send tested; never its recipients. Null on replay,
-	 * because test requests are not stored.
+	 * What a new test send tested; never its recipients. Null on replay, because test requests are not stored.
 	 *
+	 * @param Campaign_Test_Result $result Test outcome.
 	 * @return array<string, mixed>|null
 	 */
 	public static function test( Campaign_Test_Result $result ): ?array {
@@ -108,6 +121,7 @@ final class Campaign_Rest_Resource {
 	/**
 	 * The reviewed envelope and what a provider handoff would refuse.
 	 *
+	 * @param Campaign_Snapshot $snapshot The campaign snapshot.
 	 * @return array<string, mixed>|null Null for a pre-envelope snapshot.
 	 */
 	private static function envelope( Campaign_Snapshot $snapshot ): ?array {
@@ -129,6 +143,7 @@ final class Campaign_Rest_Resource {
 	/**
 	 * Validation outcome shared by the snapshot and validation routes.
 	 *
+	 * @param Compile_Result $result Compiler output.
 	 * @return array<string, mixed>
 	 */
 	public static function validation( Compile_Result $result ): array {
@@ -144,6 +159,7 @@ final class Campaign_Rest_Resource {
 	/**
 	 * The canonical artifact representation established by POST /preview.
 	 *
+	 * @param Compile_Result $result Compiler output.
 	 * @return array<string, mixed>
 	 */
 	public static function preview( Compile_Result $result ): array {
@@ -184,7 +200,12 @@ final class Campaign_Rest_Resource {
 		);
 	}
 
-	/** @return array<int, array<string, string>> */
+	/**
+	 * Compiler diagnostics as plain arrays.
+	 *
+	 * @param Compile_Result $result Compiler output.
+	 * @return array<int, array<string, string>>
+	 */
 	public static function diagnostics( Compile_Result $result ): array {
 		return array_map(
 			static fn ( $diagnostic ): array => $diagnostic->to_array(),
@@ -192,7 +213,12 @@ final class Campaign_Rest_Resource {
 		);
 	}
 
-	/** @return array{html: string, text: string}|null */
+	/**
+	 * The sample-personalized HTML and text, when the artifact has provider-resolved tokens.
+	 *
+	 * @param Compile_Result $result Compiler output.
+	 * @return array{html: string, text: string}|null
+	 */
 	private static function sample( Compile_Result $result ): ?array {
 		$preview = Token_Preview::default();
 		if ( ! $result->is_success() || ! $preview->applies_to( $result->html() . $result->text() ) ) {

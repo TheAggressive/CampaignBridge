@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable persistence values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Immutable durable campaign snapshot.
  *
@@ -31,6 +30,17 @@ final class Campaign_Snapshot {
 	/** The pre-envelope schema version that remains readable. */
 	public const LEGACY_SCHEMA_VERSION = 1;
 
+	/**
+	 * Build the campaign snapshot.
+	 *
+	 * @param string                 $id           Record ID.
+	 * @param string                 $campaign_id  Campaign ID.
+	 * @param int                    $revision     Snapshot revision number.
+	 * @param Review_Input           $review_input Frozen review input.
+	 * @param Compiled_Artifact      $artifact     Compiled artifact.
+	 * @param string                 $created_at   UTC timestamp of creation, or null for now.
+	 * @param Campaign_Envelope|null $envelope     Subject, preview text, and sender.
+	 */
 	private function __construct(
 		private readonly string $id,
 		private readonly string $campaign_id,
@@ -41,7 +51,12 @@ final class Campaign_Snapshot {
 		private readonly ?Campaign_Envelope $envelope
 	) {}
 
-	/** @param array<string, mixed> $data Persisted values. */
+	/**
+	 * Rebuild a snapshot from its stored values.
+	 *
+	 * @param array<string, mixed> $data Persisted values.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function from_array( array $data ): self {
 		Record_Validation::known_keys(
 			$data,
@@ -84,26 +99,44 @@ final class Campaign_Snapshot {
 		);
 	}
 
+	/**
+	 * The snapshot's ID.
+	 */
 	public function id(): string {
 		return $this->id;
 	}
 
+	/**
+	 * The snapshot's campaign ID.
+	 */
 	public function campaign_id(): string {
 		return $this->campaign_id;
 	}
 
+	/**
+	 * The snapshot's revision.
+	 */
 	public function revision(): int {
 		return $this->revision;
 	}
 
+	/**
+	 * The snapshot's review input.
+	 */
 	public function review_input(): Review_Input {
 		return $this->review_input;
 	}
 
+	/**
+	 * The snapshot's artifact.
+	 */
 	public function artifact(): Compiled_Artifact {
 		return $this->artifact;
 	}
 
+	/**
+	 * The snapshot's created at.
+	 */
 	public function created_at(): string {
 		return $this->created_at;
 	}
@@ -113,7 +146,11 @@ final class Campaign_Snapshot {
 		return $this->envelope;
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The snapshot's stored values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		$data = array(
 			'schema_version' => null === $this->envelope ? self::LEGACY_SCHEMA_VERSION : self::SCHEMA_VERSION,

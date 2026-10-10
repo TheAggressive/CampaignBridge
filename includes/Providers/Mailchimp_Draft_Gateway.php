@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Port method contracts are documented by Provider_Draft_Gateway.
+<?php
 /**
  * Mailchimp remote draft adapter.
  *
@@ -52,14 +52,25 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 	 */
 	private readonly Http_Client_Interface $http;
 
+	/**
+	 * Build the mailchimp draft gateway.
+	 *
+	 * @param Http_Client_Interface|null $http HTTP client.
+	 */
 	public function __construct( ?Http_Client_Interface $http = null ) {
 		$this->http = $http ?? new Http_Client_Instance();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function slug(): string {
 		return 'mailchimp';
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function create_draft( array $settings, Draft_Content $content ): Draft_Outcome {
 		$api_key = $this->api_key( $settings );
 		if ( null === $api_key ) {
@@ -104,6 +115,9 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		return null === $error ? Draft_Outcome::created( $remote_id ) : Draft_Outcome::content_pending( $remote_id, $error );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function sync_draft( array $settings, string $remote_id, Draft_Content $content ): Action_Outcome {
 		$api_key = $this->api_key( $settings );
 		if ( null === $api_key ) {
@@ -134,6 +148,9 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		return null === $error ? Action_Outcome::accepted() : Action_Outcome::from_error( $error );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function inspect_draft( array $settings, string $remote_id ): Remote_Draft_State|Provider_Error {
 		$api_key = $this->api_key( $settings );
 		if ( null === $api_key ) {
@@ -183,6 +200,9 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function find_drafts( array $settings, string $title, string $created_after ): Remote_Draft_Matches|Provider_Error {
 		$api_key = $this->api_key( $settings );
 		$since   = self::utc( $created_after );
@@ -233,14 +253,24 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		return Remote_Draft_Matches::create( $matches, count( $campaigns ) >= $total );
 	}
 
-	/** Normalize a provider timestamp to UTC; null when absent, unreadable, or a placeholder before 2000. */
+	/**
+	 * Normalize a provider timestamp to UTC; null when absent, unreadable, or a placeholder before 2000.
+	 *
+	 * @param mixed $time Provider time value.
+	 */
 	private static function utc( mixed $time ): ?string {
 		$parsed = is_string( $time ) && '' !== $time ? strtotime( $time ) : false;
 
 		return false === $parsed || $parsed < 946684800 ? null : gmdate( 'Y-m-d\TH:i:s\Z', $parsed );
 	}
 
-	/** Upload content with an idempotent PUT; null on success. */
+	/**
+	 * Upload content with an idempotent PUT; null on success.
+	 *
+	 * @param string        $api_key   The provider API key; used for this call only.
+	 * @param string        $remote_id The provider's campaign ID.
+	 * @param Draft_Content $content   The draft content.
+	 */
 	private function upload( #[\SensitiveParameter] string $api_key, string $remote_id, Draft_Content $content ): ?Provider_Error {
 		return $this->failure(
 			$this->http->put(
@@ -275,6 +305,8 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 	 * Whether any segment narrows or replaces the whole-list audience.
 	 *
 	 * Unreadable segment data counts as segmented, so it fails closed.
+	 *
+	 * @param mixed $options Mailchimp's segment options for the draft.
 	 */
 	private static function is_segmented( mixed $options ): bool {
 		if ( null === $options || array() === $options ) {
@@ -293,7 +325,9 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 	/**
 	 * Build an authenticated JSON request.
 	 *
-	 * @param array<string, mixed> $body JSON body.
+	 * @param string               $api_key   The provider API key; used for this call only.
+	 * @param array<string, mixed> $body      JSON body.
+	 * @param bool                 $may_retry Whether the request may be retried.
 	 * @return array<string, mixed>
 	 */
 	private function json_request( #[\SensitiveParameter] string $api_key, array $body, bool $may_retry ): array {
@@ -309,7 +343,11 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		);
 	}
 
-	/** @param array<string, mixed> $settings Decrypted settings. */
+	/**
+	 * The API key from the settings, when it is well formed.
+	 *
+	 * @param array<string, mixed> $settings Decrypted settings.
+	 */
 	private function api_key( array $settings ): ?string {
 		$api_key = $settings['api_key'] ?? null;
 

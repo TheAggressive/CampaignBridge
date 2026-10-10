@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signatures and the class contract document these methods.
+<?php
 /**
  * Timestamp arithmetic for jobs.
  *
@@ -15,6 +15,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Adds seconds to canonical UTC timestamps. */
 final class Job_Time {
+	/**
+	 * A canonical UTC timestamp a number of seconds after another.
+	 *
+	 * @param string $timestamp UTC timestamp.
+	 * @param int    $seconds   Seconds to add.
+	 */
 	public static function after( string $timestamp, int $seconds ): string {
 		return gmdate( 'Y-m-d\TH:i:s\Z', (int) strtotime( $timestamp ) + $seconds );
 	}

@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable persistence values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Provider-neutral delivery mutation attempt.
  *
@@ -18,6 +17,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Delivery_Attempt {
 	public const SCHEMA_VERSION = 1;
 
+	/**
+	 * Build the delivery attempt.
+	 *
+	 * @param string      $id                 Record ID.
+	 * @param string      $campaign_id        Campaign ID.
+	 * @param string      $operation          Delivery operation.
+	 * @param string|null $idempotency_key    Client retry key; the same key replays the first outcome.
+	 * @param string      $status             Attempt status.
+	 * @param string      $retryability       Whether a new attempt may be made.
+	 * @param string|null $remote_correlation The provider's correlation ID, when known.
+	 * @param string      $created_at         UTC timestamp of creation, or null for now.
+	 * @param string      $updated_at         UTC timestamp of this change.
+	 */
 	private function __construct(
 		private readonly string $id,
 		private readonly string $campaign_id,
@@ -30,7 +42,12 @@ final class Delivery_Attempt {
 		private readonly string $updated_at
 	) {}
 
-	/** @param array<string, mixed> $data Persisted values. */
+	/**
+	 * Rebuild a delivery attempt from its stored values.
+	 *
+	 * @param array<string, mixed> $data Persisted values.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function from_array( array $data ): self {
 		Record_Validation::known_keys(
 			$data,
@@ -92,43 +109,74 @@ final class Delivery_Attempt {
 		);
 	}
 
+	/**
+	 * The attempt's ID.
+	 */
 	public function id(): string {
 		return $this->id;
 	}
 
+	/**
+	 * The attempt's campaign ID.
+	 */
 	public function campaign_id(): string {
 		return $this->campaign_id;
 	}
 
+	/**
+	 * The attempt's operation.
+	 */
 	public function operation(): string {
 		return $this->operation;
 	}
 
+	/**
+	 * The attempt's idempotency key.
+	 */
 	public function idempotency_key(): ?string {
 		return $this->idempotency_key;
 	}
 
+	/**
+	 * The attempt's status.
+	 */
 	public function status(): string {
 		return $this->status;
 	}
 
+	/**
+	 * The attempt's retryability.
+	 */
 	public function retryability(): string {
 		return $this->retryability;
 	}
 
+	/**
+	 * The attempt's remote correlation.
+	 */
 	public function remote_correlation(): ?string {
 		return $this->remote_correlation;
 	}
 
+	/**
+	 * The attempt's created at.
+	 */
 	public function created_at(): string {
 		return $this->created_at;
 	}
 
+	/**
+	 * The attempt's updated at.
+	 */
 	public function updated_at(): string {
 		return $this->updated_at;
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The attempt's stored values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'schema_version'     => self::SCHEMA_VERSION,

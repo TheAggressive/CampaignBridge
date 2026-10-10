@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Canonical token to provider representation mapping.
  *
@@ -38,8 +37,13 @@ final class Token_Mapping {
 	public const REASON_UNSUPPORTED = 'unsupported';
 
 	/**
-	 * @param array<string, string> $mapped      Token ID => provider representation.
-	 * @param array<string, string> $unsupported Token ID => reason code.
+	 * Build the token mapping.
+	 *
+	 * @param string                $provider        Provider slug.
+	 * @param string                $scope           Discovery scope: empty, or an audience ID.
+	 * @param array<string, string> $mapped          Token ID => provider representation.
+	 * @param array<string, string> $unsupported     Token ID => reason code.
+	 * @param string|null           $literal_pattern Pattern matching literal provider merge syntax, when the provider has one.
 	 */
 	private function __construct(
 		private readonly string $provider,
@@ -50,8 +54,15 @@ final class Token_Mapping {
 	) {}
 
 	/**
-	 * @param array<string, string> $mapped      Token ID => provider representation.
-	 * @param array<string, string> $unsupported Token ID => reason code.
+	 * Validate a provider token mapping.
+	 *
+	 * @param string                $provider        Provider slug.
+	 * @param string                $scope           Discovery scope: empty, or an audience ID.
+	 * @param array<string, string> $mapped          Token ID => provider representation.
+	 * @param array<string, string> $unsupported     Token ID => reason code.
+	 * @param Token_Registry        $registry        The personalization token registry.
+	 * @param string|null           $literal_pattern Pattern matching literal provider merge syntax, when the provider has one.
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	public static function create( string $provider, string $scope, array $mapped, array $unsupported, Token_Registry $registry, ?string $literal_pattern = null ): self {
 		if ( null !== $literal_pattern && false === @preg_match( $literal_pattern, '' ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Validates an adapter-supplied pattern without emitting a warning.
@@ -81,6 +92,9 @@ final class Token_Mapping {
 		return new self( $provider, $scope, $mapped, $unsupported, $literal_pattern );
 	}
 
+	/**
+	 * The mapping's provider.
+	 */
 	public function provider(): string {
 		return $this->provider;
 	}
@@ -90,11 +104,20 @@ final class Token_Mapping {
 		return $this->scope;
 	}
 
+	/**
+	 * The provider syntax for one token, when it is mapped.
+	 *
+	 * @param string $token_id Token ID.
+	 */
 	public function representation( string $token_id ): ?string {
 		return $this->mapped[ $token_id ] ?? null;
 	}
 
-	/** @return array<string, string> Token ID => reason code. */
+	/**
+	 * The mapping's unsupported.
+	 *
+	 * @return array<string, string> Token ID => reason code.
+	 */
 	public function unsupported(): array {
 		return $this->unsupported;
 	}
@@ -106,6 +129,10 @@ final class Token_Mapping {
 	 * any token without a provider representation, makes the translation
 	 * incomplete. CampaignBridge-owned tokens must already be resolved by the
 	 * compiler, so one left in the content is reported as unmapped.
+	 *
+	 * @param string         $content  The draft content.
+	 * @param Token_Registry $registry The personalization token registry.
+	 * @param Token_Parser   $parser   Template parser.
 	 */
 	public function translate( string $content, Token_Registry $registry, Token_Parser $parser ): Token_Translation {
 		if ( null !== $this->literal_pattern && 1 === preg_match( $this->literal_pattern, $content ) ) {
@@ -136,7 +163,11 @@ final class Token_Mapping {
 		return new Token_Translation( strtr( $content, $replacements ), array_values( $unmapped ), array() );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The mapping's values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'provider'    => $this->provider,
@@ -146,6 +177,12 @@ final class Token_Mapping {
 		);
 	}
 
+	/**
+	 * Whether the ID names a token the provider resolves.
+	 *
+	 * @param Token_Registry $registry The personalization token registry.
+	 * @param mixed          $id       Token ID.
+	 */
 	private static function provider_token( Token_Registry $registry, mixed $id ): bool {
 		$definition = is_string( $id ) ? $registry->get( $id ) : null;
 

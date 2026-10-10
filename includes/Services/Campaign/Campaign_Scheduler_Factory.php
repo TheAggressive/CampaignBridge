@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Production scheduler composition.
  *
@@ -32,7 +32,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Builds the scheduler for a provider that supports scheduled delivery. */
 final class Campaign_Scheduler_Factory {
-	/** The scheduler for one provider, or null when it cannot schedule. */
+	/**
+	 * The scheduler for one provider, or null when it cannot schedule.
+	 *
+	 * @param string $provider Provider slug.
+	 */
 	public static function create( string $provider ): ?Campaign_Scheduler {
 		$discovery = Provider_Discovery_Factory::service( $provider );
 		if ( 'mailchimp' !== $provider || null === $discovery ) {
