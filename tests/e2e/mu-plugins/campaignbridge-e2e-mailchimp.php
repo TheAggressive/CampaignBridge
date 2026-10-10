@@ -21,6 +21,11 @@ final class CampaignBridge_E2E_Mailchimp {
 	private const STATE   = 'campaignbridge_e2e_mailchimp';
 	private const AUDIENCE = 'e2e-list';
 
+	/** The simulator's own fake key, built at runtime so it is never a key-shaped literal. */
+	private static function api_key(): string {
+		return str_repeat( '0', 32 ) . '-us1';
+	}
+
 	/** Hook the HTTP interceptor and the test control route. */
 	public static function register(): void {
 		add_filter( 'pre_http_request', array( self::class, 'intercept' ), 1, 3 );
@@ -43,6 +48,13 @@ final class CampaignBridge_E2E_Mailchimp {
 
 		$method = strtoupper( (string) ( $args['method'] ?? 'GET' ) );
 		$path   = (string) wp_parse_url( (string) $url, PHP_URL_PATH );
+
+		// A connection check records whether the stored key works. Only the
+		// simulator's own key may be answered here; a development site's real
+		// key gets Mailchimp's real, read-only answer, never a fake success.
+		if ( '/3.0/ping' === $path && 'Bearer ' . self::api_key() !== ( $args['headers']['Authorization'] ?? '' ) ) {
+			return $preempt;
+		}
 		$body   = json_decode( is_string( $args['body'] ?? null ) ? $args['body'] : '', true );
 
 		return self::respond( $method, preg_replace( '#^/3\.0#', '', $path ) ?? $path, is_array( $body ) ? $body : array() );
@@ -252,18 +264,21 @@ final class CampaignBridge_E2E_Mailchimp {
 
 		// A disposable site has no connection; a development site keeps its own.
 		$repository = new \CampaignBridge\Repository\Provider_Connection_Repository();
+		$created    = false;
 		if ( true === $request->get_param( 'connect' ) && null === $repository->get( 'mailchimp' ) ) {
+			$created = true;
 			$repository->save(
 				\CampaignBridge\Domain\Campaign\Provider_Connection::create(
 					'mailchimp',
-					\CampaignBridge\Core\Encryption::encrypt( str_repeat( '0', 32 ) . '-us1' ),
+					\CampaignBridge\Core\Encryption::encrypt( self::api_key() ),
 					self::AUDIENCE
 				)
 			);
 			update_option( 'campaignbridge_provider', 'mailchimp' );
 		}
 
-		return rest_ensure_response( $state );
+		// Whether the stored connection is the simulator's own, so only then may a test verify it.
+		return rest_ensure_response( $state + array( 'created_connection' => $created ) );
 	}
 
 	/** @return array{campaigns: array<string, array<string, mixed>>, fail: string, calls: array<string, int>} */

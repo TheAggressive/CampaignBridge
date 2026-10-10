@@ -15,9 +15,11 @@ content before it reaches a provider.
 > their stable REST contracts are present, along with Mailchimp discovery,
 > idempotent creation of a Mailchimp draft from an approved campaign, test
 > sends of that draft, guarded scheduling, unscheduling, and immediate sending,
-> and on-demand reconciliation of uncertain outcomes. A Campaigns screen lists
-> and creates campaigns; the rest of the operator UI, background
-> reconciliation, and reporting remain roadmap work. See
+> and on-demand reconciliation of uncertain outcomes. Operators run that whole
+> lifecycle from WordPress admin: a first-run checklist, the Campaigns list,
+> review and approval, guarded delivery confirmations, and a campaign timeline
+> with reconciliation recovery. Background reconciliation and reporting remain
+> roadmap work. See
 > [ROADMAP.md](ROADMAP.md) for the product contract and delivery plan.
 
 ## What is available now
@@ -59,11 +61,12 @@ content before it reaches a provider.
   delivery, and an allowlist of test-recipient domains.
 
 CampaignBridge can create one Mailchimp draft from an approved campaign, send
-tests of that draft to up to five named addresses, and schedule or unschedule
-its delivery through its REST API. It does not yet provide a complete campaign
-operator UI, and it does not send immediately, cancel an in-flight send,
-reconcile, or report on provider campaigns. A draft whose creation could not be confirmed must currently be
-resolved manually (see [docs/runbook.md](docs/runbook.md)).
+tests of that draft to up to five named addresses, schedule, unschedule, or
+send it now, and reconcile an outcome Mailchimp did not confirm, from the
+campaign's page in WordPress admin or through its REST API. It does not cancel
+an in-flight send, reconcile in the background, or report on provider
+campaigns. A campaign whose outcome reconciliation cannot settle must be
+resolved in Mailchimp (see [docs/runbook.md](docs/runbook.md)).
 
 ## Current workflow
 
