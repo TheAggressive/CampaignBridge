@@ -121,6 +121,7 @@ final class Campaign_Rest_Errors {
 			Campaign_Workflow_Error::MISSING_SNAPSHOT,
 			Campaign_Workflow_Error::APPROVAL_NOT_ALLOWED,
 			Campaign_Workflow_Error::IDEMPOTENCY_CONFLICT,
+			Campaign_Workflow_Error::LOCKED,
 			Campaign_Workflow_Error::RECONCILIATION_REQUIRED => Rest_Constants::HTTP_CONFLICT,
 			Campaign_Workflow_Error::PROVIDER_FAILED => Rest_Constants::HTTP_BAD_GATEWAY,
 			Campaign_Workflow_Error::RATE_LIMITED => Rest_Constants::HTTP_TOO_MANY_REQUESTS,

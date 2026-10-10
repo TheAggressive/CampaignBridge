@@ -227,6 +227,40 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 		self::assertSame( '0', (string) $wpdb->get_var( "SELECT COUNT(*) FROM {$jobs}" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
 	}
 
+	/** Version 7 gains the locks table; jobs already queued are kept. */
+	public function test_upgrade_from_version_seven_adds_the_locks_table(): void {
+		global $wpdb;
+		self::assertTrue( Schema_Manager::migrate() );
+		$locks = Schema_Manager::table( 'locks' );
+		$jobs  = Schema_Manager::table( 'jobs' );
+		$wpdb->query( "DROP TABLE {$locks}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Recreates the version-7 shape.
+		$wpdb->insert(
+			$jobs,
+			array(
+				'id'           => 'job-legacy',
+				'data_version' => 1,
+				'job_type'     => 'reconcile_campaign',
+				'target_type'  => 'campaign',
+				'target_id'    => 'campaign-one',
+				'payload_json' => '{}',
+				'state'        => 'queued',
+				'attempts'     => 0,
+				'max_attempts' => 5,
+				'run_after'    => '2026-01-01 00:00:00',
+				'created_at'   => '2026-01-01 00:00:00',
+				'updated_at'   => '2026-01-01 00:00:00',
+			)
+		);
+		Storage::update_option( Schema_Manager::OPTION, 7 );
+		self::assertFalse( Schema_Manager::is_current() );
+
+		self::assertTrue( Schema_Manager::migrate() );
+		self::assertTrue( Schema_Manager::migrate(), 'A repeated run is a no-op.' );
+		self::assertSame( Schema_Manager::SCHEMA_VERSION, Storage::get_option( Schema_Manager::OPTION ) );
+		self::assertTrue( $this->table_exists( $locks ) );
+		self::assertSame( 'queued', ( new \CampaignBridge\Repository\Job_Repository() )->get( 'job-legacy' )?->state() );
+	}
+
 	/** Product read paths and identity rules have their documented indexes. */
 	public function test_expected_query_indexes_exist(): void {
 		global $wpdb;
@@ -238,6 +272,7 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 			'delivery_attempts'  => array( 'PRIMARY', 'campaign_idempotency', 'campaign_created' ),
 			'audit_events'       => array( 'PRIMARY', 'target_created', 'sequence_number' ),
 			'jobs'               => array( 'PRIMARY', 'dedupe_key', 'state_run', 'state_lease', 'target' ),
+			'locks'              => array( 'PRIMARY', 'expires_at' ),
 		);
 
 		foreach ( $expected as $suffix => $indexes ) {

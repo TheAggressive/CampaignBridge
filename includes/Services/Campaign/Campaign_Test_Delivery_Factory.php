@@ -23,6 +23,7 @@ use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 use CampaignBridge\Workflow\Campaign\Campaign_Test_Delivery;
 use CampaignBridge\Workflow\Campaign\Random_Id_Generator;
 use CampaignBridge\Workflow\Campaign\System_Clock;
+use CampaignBridge\Services\Lock\Lock_Factory;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -50,7 +51,8 @@ final class Campaign_Test_Delivery_Factory {
 			new Mailchimp_Draft_Gateway(),
 			new Mailchimp_Token_Mapper(),
 			$discovery,
-			new Delivery_Policy_Repository()
+			new Delivery_Policy_Repository(),
+			Lock_Factory::manager()
 		);
 	}
 }

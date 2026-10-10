@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Workflow\Campaign;
 
+use CampaignBridge\Workflow\Lock\Lock_Manager;
 use CampaignBridge\Domain\Campaign\Audit_Context;
 use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
@@ -91,7 +92,8 @@ final class Campaign_Test_Delivery {
 		private readonly Provider_Draft_Gateway $drafts,
 		private readonly Provider_Token_Mapper $tokens,
 		private readonly Provider_Discovery_Service $discovery,
-		private readonly Delivery_Policy_Source $policies
+		private readonly Delivery_Policy_Source $policies,
+		private readonly ?Lock_Manager $locks = null
 	) {}
 
 	/**
@@ -101,6 +103,25 @@ final class Campaign_Test_Delivery {
 	 * @param array<string, mixed> $settings   Decrypted provider settings for this call only.
 	 */
 	public function send_test( Campaign_Actor $actor, string $campaign_id, array $recipients, string $format, string $idempotency_key, array $settings ): Campaign_Test_Result {
+		if ( null === $this->locks ) {
+			return $this->send_test_unlocked( $actor, $campaign_id, $recipients, $format, $idempotency_key, $settings );
+		}
+
+		return $this->locks->campaign(
+			$campaign_id,
+			Delivery_Operation::TEST_SEND,
+			fn (): Campaign_Test_Result => $this->send_test_unlocked( $actor, $campaign_id, $recipients, $format, $idempotency_key, $settings ),
+			fn ( Campaign_Workflow_Error $locked ): Campaign_Test_Result => Campaign_Test_Result::failure( $locked )
+		);
+	}
+
+	/**
+	 * The operation itself, run while the campaign lock is held.
+	 *
+	 * @param array<mixed>         $recipients Candidate test addresses; used for this call only.
+	 * @param array<string, mixed> $settings   Decrypted provider settings for this call only.
+	 */
+	private function send_test_unlocked( Campaign_Actor $actor, string $campaign_id, array $recipients, string $format, string $idempotency_key, array $settings ): Campaign_Test_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
 		if ( null === $campaign ) {
 			return $this->refuse( Campaign_Workflow_Error::NOT_FOUND, 'Campaign was not found.', $actor, $campaign_id );

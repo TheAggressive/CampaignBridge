@@ -19,6 +19,8 @@ use CampaignBridge\Domain\Provider\Provider_Capabilities;
 use CampaignBridge\Domain\Provider\Provider_Discovery;
 use CampaignBridge\Domain\Provider\Provider_Discovery_Source;
 use CampaignBridge\Workflow\Campaign\Campaign_Clock;
+use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
+use CampaignBridge\Workflow\Lock\Lock_Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -38,7 +40,8 @@ final class Provider_Discovery_Service {
 	public function __construct(
 		private readonly Provider_Discovery $provider,
 		private readonly Provider_Discovery_Source $cache,
-		private readonly Campaign_Clock $clock
+		private readonly Campaign_Clock $clock,
+		private readonly ?Lock_Manager $locks = null
 	) {}
 
 	public function capabilities(): Provider_Capabilities {
@@ -80,6 +83,35 @@ final class Provider_Discovery_Service {
 			return Discovery_Lookup::failed( $this->not_configured() );
 		}
 
+		if ( null === $this->locks ) {
+			return $this->fetch( $kind, $settings, $scope, $account );
+		}
+
+		// One refresh per account and list at a time: a second request gets the
+		// cached list with a retryable refusal instead of a second provider call.
+		return $this->locks->remote(
+			$this->provider->slug(),
+			$account,
+			'discover_' . $kind . "\0" . $scope,
+			fn (): Discovery_Lookup => $this->fetch( $kind, $settings, $scope, $account ),
+			fn ( Campaign_Workflow_Error $locked ): Discovery_Lookup => Discovery_Lookup::failed(
+				Provider_Error::from_category(
+					Provider_Error_Category::RATE_LIMITED,
+					$this->provider->slug() . '_refresh_in_progress',
+					'Another refresh of this list is in progress. Try again shortly.',
+					$this->provider->slug()
+				),
+				$this->cache->get( $account, $this->provider->slug(), $kind, $scope )
+			)
+		);
+	}
+
+	/**
+	 * Fetch one list from the provider and replace the cached copy.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 */
+	private function fetch( string $kind, array $settings, string $scope, string $account ): Discovery_Lookup {
 		$previous = $this->cache->get( $account, $this->provider->slug(), $kind, $scope );
 		$batch    = match ( $kind ) {
 			Discovery_Kind::AUDIENCES    => $this->provider->discover_audiences( $settings ),

@@ -15,6 +15,7 @@ use CampaignBridge\Repository\Provider_Connection_Repository;
 use CampaignBridge\Repository\Provider_Discovery_Repository;
 use CampaignBridge\Workflow\Campaign\System_Clock;
 use CampaignBridge\Workflow\Provider\Provider_Discovery_Service;
+use CampaignBridge\Services\Lock\Lock_Factory;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -33,7 +34,7 @@ final class Provider_Discovery_Factory {
 	/** The discovery service for one provider, or null when it has none. */
 	public static function service( string $provider ): ?Provider_Discovery_Service {
 		return match ( $provider ) {
-			'mailchimp' => new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock() ),
+			'mailchimp' => new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock(), Lock_Factory::manager() ),
 			default     => null,
 		};
 	}

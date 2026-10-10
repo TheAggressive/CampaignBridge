@@ -70,6 +70,10 @@ export function actionLabel(action: string): string {
     campaign_reconcile: __('Reconciled with the provider', 'campaignbridge'),
     campaign_archive: __('Archived', 'campaignbridge'),
     campaign_read: __('Viewed', 'campaignbridge'),
+    campaign_lock_takeover: __(
+      'Recovered an interrupted operation',
+      'campaignbridge'
+    ),
   };
 
   return labels[action] ?? action.replace(/^campaign_/, '').replace(/_/g, ' ');
@@ -172,6 +176,18 @@ export function eventDetails(event: HistoryEvent): string[] {
       __(
         'Changed in the provider without a CampaignBridge request',
         'campaignbridge'
+      )
+    );
+  }
+  if (
+    event.action === 'campaign_lock_takeover' &&
+    typeof context.interrupted_operation === 'string'
+  ) {
+    details.push(
+      sprintf(
+        /* translators: %s: the operation that stopped, such as "send". */
+        __('Interrupted: %s', 'campaignbridge'),
+        context.interrupted_operation.replace(/_/g, ' ')
       )
     );
   }
