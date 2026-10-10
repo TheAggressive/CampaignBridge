@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Owns restartable, forward-safe database migrations for campaign storage and request counters. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 6;
+	public const SCHEMA_VERSION = 7;
 	public const OPTION         = 'database_schema';
 
 	private static ?bool $tables_ready = null;
@@ -30,6 +30,7 @@ final class Schema_Manager {
 		'delivery_attempts',
 		'audit_events',
 		'rate_limits',
+		'jobs',
 	);
 
 	/** Run an upgrade only when the installed schema is older. */
@@ -232,6 +233,29 @@ final class Schema_Manager {
 				expires_at bigint unsigned NOT NULL,
 				PRIMARY KEY  (limit_key),
 				KEY expires_at (expires_at)
+			) {$collate};",
+			'CREATE TABLE ' . self::table( 'jobs' ) . " (
+				id varchar(64) NOT NULL,
+				data_version smallint unsigned NOT NULL DEFAULT 1,
+				job_type varchar(64) NOT NULL,
+				target_type varchar(64) NOT NULL,
+				target_id varchar(64) NOT NULL,
+				dedupe_key varchar(191) NULL,
+				payload_json text NOT NULL,
+				state varchar(16) NOT NULL,
+				attempts smallint unsigned NOT NULL DEFAULT 0,
+				max_attempts smallint unsigned NOT NULL,
+				run_after datetime NOT NULL,
+				lease_owner varchar(64) NULL,
+				lease_expires_at datetime NULL,
+				last_error varchar(64) NULL,
+				created_at datetime NOT NULL,
+				updated_at datetime NOT NULL,
+				PRIMARY KEY  (id),
+				UNIQUE KEY dedupe_key (dedupe_key),
+				KEY state_run (state, run_after),
+				KEY state_lease (state, lease_expires_at),
+				KEY target (target_type, target_id)
 			) {$collate};",
 		);
 	}
