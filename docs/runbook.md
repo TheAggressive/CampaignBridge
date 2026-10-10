@@ -16,6 +16,18 @@ records the answer: verified, or refused by Mailchimp. A timeout or network
 failure proves nothing, so the previous result stands. "Not checked yet" in
 Status means nobody has opened the Providers tab since the key was saved.
 
+## Background jobs not running
+
+**Status → CampaignBridge Health** warns when background jobs are overdue,
+when a worker stopped while holding a job, or when the job tick is not
+scheduled. CampaignBridge runs jobs on a one-minute WP-Cron tick, and WP-Cron
+runs only when the site receives visits or a system cron requests
+`wp-cron.php`. On a site with `DISABLE_WP_CRON`, add a system cron that calls
+`wp cron event run --due-now` (or requests `wp-cron.php`) every minute. A job
+whose worker stopped is taken over automatically after its two-minute lease;
+work that is not safe to repeat is never run again and is handed to
+reconciliation instead.
+
 ## Provider authentication failures
 
 1. Confirm the configured API key has the expected Mailchimp data-center suffix.
@@ -246,3 +258,11 @@ wp option update campaignbridge_database_schema 5
 
 Upgrading again later re-runs the migration, which finds the column already
 present and only re-stamps version 6.
+
+### Rolling back across database schema 7
+
+Schema 7 adds the `{prefix}campaignbridge_jobs` table and changes no existing
+data. A release built for schema 6 never reads it, so after reinstalling that
+release lower the stamped version with
+`wp option update campaignbridge_database_schema 6`. Queued jobs stay in the
+table and run again once the newer release is reinstalled.

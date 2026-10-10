@@ -110,7 +110,33 @@ class Status_Controller {
 			'campaign_states'     => $counts,
 			'campaign_total'      => array_sum( $counts ),
 			'unknown_campaigns'   => $counts[ \CampaignBridge\Domain\Campaign\Campaign_State::UNKNOWN ] ?? 0,
+			'jobs'                => $this->job_health( $schema ),
 		);
+	}
+
+	/**
+	 * Background job counts and work that should have run but has not.
+	 *
+	 * A job is overdue once it has waited five ticks past its run time.
+	 *
+	 * @param bool $schema Whether the schema is current.
+	 * @return array{counts: array<string, int>, overdue: int, expired_leases: int, oldest_overdue: string|null, scheduled: bool}
+	 */
+	private function job_health( bool $schema ): array {
+		$jobs    = new \CampaignBridge\Repository\Job_Repository();
+		$now     = ( new \CampaignBridge\Workflow\Campaign\System_Clock() )->now();
+		$stalled = $schema
+			? $jobs->stalled( \CampaignBridge\Workflow\Job\Job_Time::after( $now, -5 * MINUTE_IN_SECONDS ), $now )
+			: array(
+				'overdue'        => 0,
+				'expired_leases' => 0,
+				'oldest_overdue' => null,
+			);
+
+		return array(
+			'counts'    => $schema ? $jobs->counts_by_state() : array(),
+			'scheduled' => false !== wp_next_scheduled( \CampaignBridge\Cron\Job_Dispatcher::HOOK ),
+		) + $stalled;
 	}
 
 	/**

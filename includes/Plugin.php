@@ -13,6 +13,7 @@ namespace CampaignBridge;
 use CampaignBridge\Admin\Native_Editor;
 use CampaignBridge\Blocks\Blocks;
 use CampaignBridge\Core\Capabilities;
+use CampaignBridge\Cron\Job_Dispatcher;
 use CampaignBridge\Notices;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
 use CampaignBridge\Repository\Schema_Manager;
@@ -34,6 +35,8 @@ class Plugin {
 		\CampaignBridge\Admin\Admin::get_instance();
 		\add_action( 'admin_init', array( Capabilities::class, 'ensure_registered' ), 5 );
 		\add_action( 'admin_init', array( Schema_Manager::class, 'maybe_migrate' ), 4 );
+
+		Job_Dispatcher::register();
 
 		RestRoutes::init();
 		\add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );

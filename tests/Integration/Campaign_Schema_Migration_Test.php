@@ -194,6 +194,39 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 		self::assertGreaterThan( max( array_map( 'intval', $numbers ) ), (int) $wpdb->get_var( "SELECT sequence_number FROM {$table} WHERE id = 'after-upgrade'" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table and literal fixture.
 	}
 
+	/** Version 6 gains the jobs table without touching existing campaign data. */
+	public function test_upgrade_from_version_six_adds_the_jobs_table(): void {
+		global $wpdb;
+		self::assertTrue( Schema_Manager::migrate() );
+		$jobs      = Schema_Manager::table( 'jobs' );
+		$campaigns = Schema_Manager::table( 'campaigns' );
+		$wpdb->query( "DROP TABLE {$jobs}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Recreates the version-6 shape.
+		$wpdb->insert(
+			$campaigns,
+			array(
+				'id'            => 'legacy-scheduled',
+				'data_version'  => 1,
+				'state'         => 'scheduled',
+				'version'       => 6,
+				'owner_user_id' => 7,
+				'template_id'   => 42,
+				'created_at'    => '2026-01-01 00:00:00',
+				'updated_at'    => '2026-01-02 00:00:00',
+				'scheduled_for' => '2026-02-01 00:00:00',
+			)
+		);
+		Storage::update_option( Schema_Manager::OPTION, 6 );
+		self::assertFalse( Schema_Manager::is_current() );
+
+		self::assertTrue( Schema_Manager::migrate() );
+		self::assertSame( Schema_Manager::SCHEMA_VERSION, Storage::get_option( Schema_Manager::OPTION ) );
+		self::assertTrue( $this->table_exists( $jobs ) );
+		self::assertSame( 'scheduled', ( new Campaign_Repository() )->get( 'legacy-scheduled' )?->state() );
+
+		self::assertTrue( Schema_Manager::migrate(), 'A repeated run is a no-op.' );
+		self::assertSame( '0', (string) $wpdb->get_var( "SELECT COUNT(*) FROM {$jobs}" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+	}
+
 	/** Product read paths and identity rules have their documented indexes. */
 	public function test_expected_query_indexes_exist(): void {
 		global $wpdb;
@@ -204,6 +237,7 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 			'remote_campaigns'   => array( 'PRIMARY', 'provider_remote' ),
 			'delivery_attempts'  => array( 'PRIMARY', 'campaign_idempotency', 'campaign_created' ),
 			'audit_events'       => array( 'PRIMARY', 'target_created', 'sequence_number' ),
+			'jobs'               => array( 'PRIMARY', 'dedupe_key', 'state_run', 'state_lease', 'target' ),
 		);
 
 		foreach ( $expected as $suffix => $indexes ) {

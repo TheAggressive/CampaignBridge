@@ -280,6 +280,11 @@ class CampaignBridge_Plugin {
 	 * @return void
 	 */
 	public static function deactivate(): void {
+		// Stop background job ticks; queued jobs stay stored for reactivation.
+		if ( class_exists( \CampaignBridge\Cron\Job_Dispatcher::class ) ) {
+			\CampaignBridge\Cron\Job_Dispatcher::unschedule();
+		}
+
 		// Log deactivation (debug only).
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( __( 'CampaignBridge plugin deactivated.', 'campaignbridge' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log,CampaignBridge.Sniffs.DirectLogging.DirectLoggingFunction -- Plugin lifecycle logging before Error_Handler is available.
