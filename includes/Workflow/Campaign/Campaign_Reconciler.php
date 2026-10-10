@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Workflow\Campaign;
 
+use CampaignBridge\Workflow\Lock\Lock_Manager;
 use CampaignBridge\Domain\Campaign\Audit_Context;
 use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
@@ -110,7 +111,8 @@ final class Campaign_Reconciler {
 		private readonly Campaign_Id_Generator $ids,
 		private readonly Campaign_Clock $clock,
 		private readonly Provider_Draft_Gateway $drafts,
-		private readonly Provider_Capabilities $capabilities
+		private readonly Provider_Capabilities $capabilities,
+		private readonly ?Lock_Manager $locks = null
 	) {}
 
 	/**
@@ -119,6 +121,24 @@ final class Campaign_Reconciler {
 	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
 	 */
 	public function reconcile( Campaign_Actor $actor, string $campaign_id, array $settings ): Campaign_Reconcile_Result {
+		if ( null === $this->locks ) {
+			return $this->reconcile_unlocked( $actor, $campaign_id, $settings );
+		}
+
+		return $this->locks->campaign(
+			$campaign_id,
+			Delivery_Operation::RECONCILE,
+			fn (): Campaign_Reconcile_Result => $this->reconcile_unlocked( $actor, $campaign_id, $settings ),
+			fn ( Campaign_Workflow_Error $locked ): Campaign_Reconcile_Result => Campaign_Reconcile_Result::failure( $locked )
+		);
+	}
+
+	/**
+	 * The operation itself, run while the campaign lock is held.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 */
+	private function reconcile_unlocked( Campaign_Actor $actor, string $campaign_id, array $settings ): Campaign_Reconcile_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
 		if ( null === $campaign ) {
 			return $this->refuse( Campaign_Workflow_Error::NOT_FOUND, 'Campaign was not found.', $actor, $campaign_id );

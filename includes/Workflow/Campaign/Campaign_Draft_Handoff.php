@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Workflow\Campaign;
 
+use CampaignBridge\Workflow\Lock\Lock_Manager;
 use CampaignBridge\Domain\Campaign\Audit_Context;
 use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
@@ -81,7 +82,8 @@ final class Campaign_Draft_Handoff {
 		private readonly Provider_Draft_Gateway $gateway,
 		private readonly Provider_Capabilities $capabilities,
 		private readonly Provider_Token_Mapper $tokens,
-		private readonly Provider_Discovery_Service $discovery
+		private readonly Provider_Discovery_Service $discovery,
+		private readonly ?Lock_Manager $locks = null
 	) {}
 
 	/**
@@ -90,6 +92,24 @@ final class Campaign_Draft_Handoff {
 	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
 	 */
 	public function create_draft( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Draft_Result {
+		if ( null === $this->locks ) {
+			return $this->create_draft_unlocked( $actor, $campaign_id, $expected_version, $idempotency_key, $settings );
+		}
+
+		return $this->locks->campaign(
+			$campaign_id,
+			Delivery_Operation::CREATE_DRAFT,
+			fn (): Campaign_Draft_Result => $this->create_draft_unlocked( $actor, $campaign_id, $expected_version, $idempotency_key, $settings ),
+			fn ( Campaign_Workflow_Error $locked ): Campaign_Draft_Result => Campaign_Draft_Result::failure( $locked )
+		);
+	}
+
+	/**
+	 * The operation itself, run while the campaign lock is held.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 */
+	private function create_draft_unlocked( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Draft_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
 		if ( null === $campaign ) {
 			return $this->refuse( Campaign_Workflow_Error::NOT_FOUND, 'Campaign was not found.', $actor, $campaign_id );

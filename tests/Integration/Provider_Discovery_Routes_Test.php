@@ -202,6 +202,29 @@ final class Provider_Discovery_Routes_Test extends Test_Case {
 		self::assertSame( 200, $this->request( 'GET', '/discovery/audiences' )->get_status(), 'Cache reads are not rate limited.' );
 	}
 
+	public function test_a_refresh_already_running_answers_from_the_cache_without_a_second_call(): void {
+		$path = '/discovery/audiences/refresh';
+		self::assertSame( 200, $this->request( 'POST', $path )->get_status() );
+		$calls = count( $this->requests );
+
+		$account = hash( 'sha256', 'mailchimp' . "\0" . self::api_key() );
+		$second  = \CampaignBridge\Services\Lock\Lock_Factory::manager()->remote(
+			'mailchimp',
+			$account,
+			'discover_audiences' . "\0",
+			fn (): WP_REST_Response => $this->request( 'POST', $path ),
+			static fn (): WP_REST_Response => new WP_REST_Response( null, 500 )
+		);
+
+		// The cached list comes back with a retryable refusal instead of a second call.
+		self::assertSame( 200, $second->get_status() );
+		self::assertSame( 'mailchimp_refresh_in_progress', $second->get_data()['error']['code'] ?? null );
+		self::assertTrue( $second->get_data()['error']['retryable'] ?? null );
+		self::assertSame( array( 'abc123' ), array_column( $second->get_data()['items'], 'id' ) );
+		self::assertSame( $calls, count( $this->requests ), 'The overlapping refresh made no Mailchimp call.' );
+		self::assertSame( 200, $this->request( 'POST', $path )->get_status(), 'The next refresh runs once the first is done.' );
+	}
+
 	public function test_settings_screen_shares_the_discovery_cache(): void {
 		$method = new \ReflectionMethod( Settings_Controller::class, 'get_mailchimp_audiences' );
 		$screen = new Settings_Controller();

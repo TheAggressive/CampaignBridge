@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Workflow\Campaign;
 
+use CampaignBridge\Workflow\Lock\Lock_Manager;
 use CampaignBridge\Domain\Campaign\Audit_Context;
 use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
@@ -95,7 +96,8 @@ final class Campaign_Scheduler {
 		private readonly Provider_Draft_Gateway $drafts,
 		private readonly Provider_Token_Mapper $tokens,
 		private readonly Provider_Discovery_Service $discovery,
-		private readonly Delivery_Policy_Source $policies
+		private readonly Delivery_Policy_Source $policies,
+		private readonly ?Lock_Manager $locks = null
 	) {}
 
 	/**
@@ -105,6 +107,24 @@ final class Campaign_Scheduler {
 	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	public function schedule( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $scheduled_for, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
+		if ( null === $this->locks ) {
+			return $this->schedule_unlocked( $actor, $campaign_id, $expected_version, $scheduled_for, $confirm_audience, $idempotency_key, $settings );
+		}
+
+		return $this->locks->campaign(
+			$campaign_id,
+			Delivery_Operation::SCHEDULE,
+			fn (): Campaign_Delivery_Result => $this->schedule_unlocked( $actor, $campaign_id, $expected_version, $scheduled_for, $confirm_audience, $idempotency_key, $settings ),
+			fn ( Campaign_Workflow_Error $locked ): Campaign_Delivery_Result => Campaign_Delivery_Result::failure( $locked )
+		);
+	}
+
+	/**
+	 * The operation itself, run while the campaign lock is held.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 */
+	private function schedule_unlocked( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $scheduled_for, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
 		$time     = null;
 		$prepared = $this->prepare_audience_delivery(
 			$actor,
@@ -158,6 +178,24 @@ final class Campaign_Scheduler {
 	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	public function send( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
+		if ( null === $this->locks ) {
+			return $this->send_unlocked( $actor, $campaign_id, $expected_version, $confirm_audience, $idempotency_key, $settings );
+		}
+
+		return $this->locks->campaign(
+			$campaign_id,
+			Delivery_Operation::SEND,
+			fn (): Campaign_Delivery_Result => $this->send_unlocked( $actor, $campaign_id, $expected_version, $confirm_audience, $idempotency_key, $settings ),
+			fn ( Campaign_Workflow_Error $locked ): Campaign_Delivery_Result => Campaign_Delivery_Result::failure( $locked )
+		);
+	}
+
+	/**
+	 * The operation itself, run while the campaign lock is held.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 */
+	private function send_unlocked( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
 		$prepared = $this->prepare_audience_delivery( $actor, $campaign_id, $expected_version, $confirm_audience, $idempotency_key, Delivery_Operation::SEND, $settings, null );
 		if ( $prepared instanceof Campaign_Delivery_Result ) {
 			return $prepared;
@@ -231,6 +269,24 @@ final class Campaign_Scheduler {
 	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
 	 */
 	public function unschedule( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
+		if ( null === $this->locks ) {
+			return $this->unschedule_unlocked( $actor, $campaign_id, $expected_version, $idempotency_key, $settings );
+		}
+
+		return $this->locks->campaign(
+			$campaign_id,
+			Delivery_Operation::UNSCHEDULE,
+			fn (): Campaign_Delivery_Result => $this->unschedule_unlocked( $actor, $campaign_id, $expected_version, $idempotency_key, $settings ),
+			fn ( Campaign_Workflow_Error $locked ): Campaign_Delivery_Result => Campaign_Delivery_Result::failure( $locked )
+		);
+	}
+
+	/**
+	 * The operation itself, run while the campaign lock is held.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 */
+	private function unschedule_unlocked( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
 		$operation = Delivery_Operation::UNSCHEDULE;
 		$campaign  = $this->authorized( $actor, $campaign_id, $idempotency_key, $operation );
 		if ( $campaign instanceof Campaign_Delivery_Result ) {
