@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable persistence values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Append-only audit event.
  *
@@ -19,6 +18,18 @@ final class Audit_Event {
 	public const SCHEMA_VERSION = 1;
 	private const RESULTS       = array( 'success', 'failure', 'denied', 'unknown' );
 
+	/**
+	 * Build the audit event.
+	 *
+	 * @param string        $id            Record ID.
+	 * @param int|null      $actor_user_id Acting user's ID, or null for the system.
+	 * @param string        $action        Audit action name.
+	 * @param string        $target_type   Kind of record the event is about.
+	 * @param string        $target_id     ID of the record the event is about.
+	 * @param string        $result        Audit result: success, failure, denied, or unknown.
+	 * @param Audit_Context $context       Bounded audit context.
+	 * @param string        $created_at    UTC timestamp of creation, or null for now.
+	 */
 	private function __construct(
 		private readonly string $id,
 		private readonly ?int $actor_user_id,
@@ -30,7 +41,12 @@ final class Audit_Event {
 		private readonly string $created_at
 	) {}
 
-	/** @param array<string, mixed> $data Persisted values. */
+	/**
+	 * Rebuild an audit event from its stored values.
+	 *
+	 * @param array<string, mixed> $data Persisted values.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function from_array( array $data ): self {
 		Record_Validation::known_keys(
 			$data,
@@ -65,39 +81,67 @@ final class Audit_Event {
 		);
 	}
 
+	/**
+	 * The event's ID.
+	 */
 	public function id(): string {
 		return $this->id;
 	}
 
+	/**
+	 * The event's actor user ID.
+	 */
 	public function actor_user_id(): ?int {
 		return $this->actor_user_id;
 	}
 
+	/**
+	 * The event's action.
+	 */
 	public function action(): string {
 		return $this->action;
 	}
 
+	/**
+	 * The event's target type.
+	 */
 	public function target_type(): string {
 		return $this->target_type;
 	}
 
+	/**
+	 * The event's target ID.
+	 */
 	public function target_id(): string {
 		return $this->target_id;
 	}
 
+	/**
+	 * The event's result.
+	 */
 	public function result(): string {
 		return $this->result;
 	}
 
+	/**
+	 * The event's context.
+	 */
 	public function context(): Audit_Context {
 		return $this->context;
 	}
 
+	/**
+	 * The event's created at.
+	 */
 	public function created_at(): string {
 		return $this->created_at;
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The event's stored values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'schema_version' => self::SCHEMA_VERSION,

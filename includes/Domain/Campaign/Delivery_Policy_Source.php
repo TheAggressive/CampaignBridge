@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed port signatures are the contract.
+<?php
 /**
  * Delivery policy port.
  *
@@ -15,5 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Supplies the site's current delivery governance policy. */
 interface Delivery_Policy_Source {
+	/**
+	 * The site's delivery policy now.
+	 */
 	public function current(): Delivery_Policy;
 }

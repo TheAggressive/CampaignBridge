@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed port signatures are the contract.
+<?php
 /**
  * Remote test-delivery port.
  *
@@ -21,8 +21,17 @@ if ( ! defined( 'ABSPATH' ) ) {
  * must not retry the send, and return only normalized outcomes.
  */
 interface Provider_Test_Gateway {
+	/**
+	 * The provider this gateway talks to.
+	 */
 	public function slug(): string;
 
-	/** @param array<string, mixed> $settings Decrypted provider settings. */
+	/**
+	 * Send one test of the draft.
+	 *
+	 * @param array<string, mixed> $settings  Decrypted provider settings.
+	 * @param string               $remote_id The provider's campaign ID.
+	 * @param Test_Delivery        $delivery  The test delivery request.
+	 */
 	public function send_test( array $settings, string $remote_id, Test_Delivery $delivery ): Action_Outcome;
 }

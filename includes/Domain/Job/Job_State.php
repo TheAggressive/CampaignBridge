@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signatures and the class contract document these methods.
+<?php
 /**
  * Background job lifecycle states.
  *
@@ -28,12 +28,20 @@ final class Job_State {
 	public const FAILED    = 'failed';
 	public const DEAD      = 'dead';
 
-	/** @return array<int, string> */
+	/**
+	 * Every job state.
+	 *
+	 * @return array<int, string>
+	 */
 	public static function all(): array {
 		return array( self::QUEUED, self::CLAIMED, self::SUCCEEDED, self::FAILED, self::DEAD );
 	}
 
-	/** Whether a job in this state can still run. */
+	/**
+	 * Whether a job in this state can still run.
+	 *
+	 * @param string $state Job state.
+	 */
 	public static function is_active( string $state ): bool {
 		return self::QUEUED === $state || self::CLAIMED === $state;
 	}

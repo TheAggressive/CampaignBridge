@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Timestamped discovery result.
  *
@@ -26,6 +25,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Discovery_Result {
 	public const SCHEMA_VERSION = 1;
 
+	/**
+	 * Build the discovery result.
+	 *
+	 * @param string          $provider   Provider slug.
+	 * @param string          $scope      Discovery scope: empty, or an audience ID.
+	 * @param Discovery_Batch $batch      Discovered items of one kind.
+	 * @param string          $fetched_at UTC time the list was fetched.
+	 */
 	private function __construct(
 		private readonly string $provider,
 		private readonly string $scope,
@@ -33,6 +40,15 @@ final class Discovery_Result {
 		private readonly string $fetched_at
 	) {}
 
+	/**
+	 * A discovered list for one provider and scope.
+	 *
+	 * @param string          $provider   Provider slug.
+	 * @param string          $scope      Discovery scope: empty, or an audience ID.
+	 * @param Discovery_Batch $batch      Discovered items of one kind.
+	 * @param string          $fetched_at UTC time the list was fetched.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function create( string $provider, string $scope, Discovery_Batch $batch, string $fetched_at ): self {
 		if ( 1 !== preg_match( '/^[a-z0-9][a-z0-9_-]{0,63}$/', $provider ) ) {
 			throw new \InvalidArgumentException( 'Provider slug is invalid.' );
@@ -45,7 +61,12 @@ final class Discovery_Result {
 		return new self( $provider, $scope, $batch, Record_Validation::timestamp( $fetched_at, 'Discovery time' ) );
 	}
 
-	/** @param array<string, mixed> $data Stored result. */
+	/**
+	 * Rebuild a discovered list from its cached values.
+	 *
+	 * @param array<string, mixed> $data Stored result.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function from_array( array $data ): self {
 		if ( self::SCHEMA_VERSION !== ( $data['schema_version'] ?? null ) ) {
 			throw new \InvalidArgumentException( 'Unsupported discovery schema version.' );
@@ -72,10 +93,16 @@ final class Discovery_Result {
 		);
 	}
 
+	/**
+	 * The result's provider.
+	 */
 	public function provider(): string {
 		return $this->provider;
 	}
 
+	/**
+	 * What the list contains.
+	 */
 	public function kind(): string {
 		return $this->batch->kind();
 	}
@@ -85,20 +112,34 @@ final class Discovery_Result {
 		return $this->scope;
 	}
 
-	/** @return array<int, Discovered_Item> */
+	/**
+	 * The discovered items.
+	 *
+	 * @return array<int, Discovered_Item>
+	 */
 	public function items(): array {
 		return $this->batch->items();
 	}
 
+	/**
+	 * Whether the provider returned every item.
+	 */
 	public function is_complete(): bool {
 		return $this->batch->is_complete();
 	}
 
+	/**
+	 * The result's fetched at.
+	 */
 	public function fetched_at(): string {
 		return $this->fetched_at;
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The list's cached values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'schema_version' => self::SCHEMA_VERSION,

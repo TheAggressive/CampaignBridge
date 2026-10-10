@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Normalized audience segment or tag.
  *
@@ -21,6 +20,14 @@ final class Discovered_Segment implements Discovered_Item {
 	public const KIND_SEGMENT = 'segment';
 	public const KIND_TAG     = 'tag';
 
+	/**
+	 * Build the discovered segment.
+	 *
+	 * @param string   $id           Provider ID.
+	 * @param string   $name         Display name.
+	 * @param string   $kind         Segment or tag.
+	 * @param int|null $member_count Number of contacts, when known.
+	 */
 	private function __construct(
 		private readonly string $id,
 		private readonly string $name,
@@ -28,6 +35,15 @@ final class Discovered_Segment implements Discovered_Item {
 		private readonly ?int $member_count
 	) {}
 
+	/**
+	 * Validate one segment or tag from provider values.
+	 *
+	 * @param mixed $id           Provider ID.
+	 * @param mixed $name         Display name.
+	 * @param mixed $kind         Segment or tag.
+	 * @param mixed $member_count Number of contacts, when known.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function create( mixed $id, mixed $name, mixed $kind, mixed $member_count = null ): self {
 		if ( ! in_array( $kind, array( self::KIND_SEGMENT, self::KIND_TAG ), true ) ) {
 			throw new \InvalidArgumentException( 'Segment kind must be segment or tag.' );
@@ -41,28 +57,48 @@ final class Discovered_Segment implements Discovered_Item {
 		);
 	}
 
-	/** @param array<string, mixed> $data Stored segment. */
+	/**
+	 * Rebuild a segment from its cached values.
+	 *
+	 * @param array<string, mixed> $data Stored segment.
+	 */
 	public static function from_array( array $data ): self {
 		return self::create( $data['id'] ?? null, $data['name'] ?? null, $data['kind'] ?? null, $data['member_count'] ?? null );
 	}
 
+	/**
+	 * The segment's ID.
+	 */
 	public function id(): string {
 		return $this->id;
 	}
 
+	/**
+	 * The segment's name.
+	 */
 	public function name(): string {
 		return $this->name;
 	}
 
+	/**
+	 * The segment's kind.
+	 */
 	public function kind(): string {
 		return $this->kind;
 	}
 
+	/**
+	 * The segment's member count.
+	 */
 	public function member_count(): ?int {
 		return $this->member_count;
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'id'           => $this->id,

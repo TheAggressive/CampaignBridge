@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signatures and the class contract document these methods.
+<?php
 /**
  * Hold a lock around one piece of work.
  *
@@ -41,6 +41,14 @@ final class Lock_Manager {
 	 */
 	private readonly string $owner;
 
+	/**
+	 * Build the lock manager.
+	 *
+	 * @param Lock_Source        $locks  Lock manager; null runs without locking.
+	 * @param Audit_Event_Source $audits Audit event storage.
+	 * @param Campaign_Clock     $clock  Source of the current time.
+	 * @param string|null        $owner  Lease or lock owner identity.
+	 */
 	public function __construct(
 		private readonly Lock_Source $locks,
 		private readonly Audit_Event_Source $audits,
@@ -54,8 +62,10 @@ final class Lock_Manager {
 	 * Run `$work` while holding the campaign's lock.
 	 *
 	 * @template T
-	 * @param callable(): T                       $work Work that may contact the provider.
-	 * @param callable(Campaign_Workflow_Error): T $busy Builds the refusal when the lock is held.
+	 * @param string                               $campaign_id Campaign ID.
+	 * @param string                               $purpose     What the lock holder is doing.
+	 * @param callable(): T                        $work        Work that may contact the provider.
+	 * @param callable(Campaign_Workflow_Error): T $busy        Builds the refusal when the lock is held.
 	 * @return T
 	 */
 	public function campaign( string $campaign_id, string $purpose, callable $work, callable $busy ): mixed {
@@ -66,8 +76,11 @@ final class Lock_Manager {
 	 * Run `$work` while holding the lock for one provider operation on one account.
 	 *
 	 * @template T
-	 * @param callable(): T                       $work Work that contacts the provider.
-	 * @param callable(Campaign_Workflow_Error): T $busy Builds the refusal when the lock is held.
+	 * @param string                               $provider  Provider slug.
+	 * @param string                               $account   Stable key for the provider account.
+	 * @param string                               $operation Provider operation, with its scope.
+	 * @param callable(): T                        $work      Work that contacts the provider.
+	 * @param callable(Campaign_Workflow_Error): T $busy      Builds the refusal when the lock is held.
 	 * @return T
 	 */
 	public function remote( string $provider, string $account, string $operation, callable $work, callable $busy ): mixed {
@@ -77,9 +90,15 @@ final class Lock_Manager {
 	}
 
 	/**
+	 * Run work while holding one named lock.
+	 *
 	 * @template T
-	 * @param callable(): T                       $work
-	 * @param callable(Campaign_Workflow_Error): T $busy
+	 * @param string                               $name        Lock name.
+	 * @param string                               $target_type Kind of record the event is about.
+	 * @param string                               $target_id   ID of the record the event is about.
+	 * @param string                               $purpose     What the lock holder is doing.
+	 * @param callable(): T                        $work        Work to run while the lock is held.
+	 * @param callable(Campaign_Workflow_Error): T $busy        Builds the refusal when the lock is held elsewhere.
 	 * @return T
 	 */
 	private function hold( string $name, string $target_type, string $target_id, string $purpose, callable $work, callable $busy ): mixed {
@@ -108,6 +127,15 @@ final class Lock_Manager {
 		}
 	}
 
+	/**
+	 * Record that a lock left by a stopped process was taken over.
+	 *
+	 * @param string $target_type Kind of record the event is about.
+	 * @param string $target_id   ID of the record the event is about.
+	 * @param string $purpose     What the lock holder is doing.
+	 * @param string $interrupted What the stopped holder had been doing.
+	 * @param string $now         Current UTC timestamp.
+	 */
 	private function audit_takeover( string $target_type, string $target_id, string $purpose, string $interrupted, string $now ): void {
 		try {
 			$this->audits->add(

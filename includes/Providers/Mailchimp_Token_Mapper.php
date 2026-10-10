@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Port method contract is documented by Provider_Token_Mapper.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- A mismatched discovery result fails closed.
+<?php
 /**
  * Mailchimp merge-tag mapping for canonical tokens.
  *
@@ -47,6 +46,11 @@ final class Mailchimp_Token_Mapper implements Provider_Token_Mapper {
 	/** Mailchimp merge-tag syntax, which must never appear in canonical content. */
 	public const LITERAL_SYNTAX = '/\*\|[^|]*\|\*/';
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @throws \InvalidArgumentException When the merge fields are not Mailchimp's for this audience.
+	 */
 	public function map( Token_Registry $registry, string $audience_id, ?Discovery_Result $merge_fields ): Token_Mapping {
 		if (
 			null !== $merge_fields

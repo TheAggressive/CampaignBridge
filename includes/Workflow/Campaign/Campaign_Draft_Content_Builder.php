@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signature is the contract.
+<?php
 /**
  * Provider draft content from an approved snapshot.
  *
@@ -31,14 +31,21 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The stored artifact is never altered.
  */
 final class Campaign_Draft_Content_Builder {
+	/**
+	 * Build the campaign draft content builder.
+	 *
+	 * @param Provider_Token_Mapper      $tokens    Personalization token mapper.
+	 * @param Provider_Discovery_Service $discovery Provider discovery service.
+	 */
 	public function __construct(
 		private readonly Provider_Token_Mapper $tokens,
 		private readonly Provider_Discovery_Service $discovery
 	) {}
 
 	/**
-	 * The remote draft title, which carries the correlation ID so an
-	 * unconfirmed create can be found again.
+	 * The remote draft title, which carries the correlation ID so an unconfirmed create can be found again.
+	 *
+	 * @param string $correlation_id The provider's correlation ID, when known.
 	 */
 	public static function title( string $correlation_id ): string {
 		return 'CampaignBridge ' . $correlation_id;
@@ -47,7 +54,10 @@ final class Campaign_Draft_Content_Builder {
 	/**
 	 * Build provider content from a verified snapshot only.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param Campaign_Snapshot    $snapshot       The campaign snapshot.
+	 * @param string               $audience       Audience reference the draft targets.
+	 * @param array<string, mixed> $settings       Decrypted provider settings.
+	 * @param string               $correlation_id The provider's correlation ID, when known.
 	 */
 	public function build( Campaign_Snapshot $snapshot, string $audience, array $settings, string $correlation_id ): Draft_Content|Campaign_Workflow_Error {
 		$envelope = $snapshot->envelope();
@@ -92,7 +102,14 @@ final class Campaign_Draft_Content_Builder {
 		}
 	}
 
-	/** @param array<int, string> $unmapped Canonical tokens without a provider representation. */
+	/**
+	 * Explain why the approved content cannot be translated for the provider.
+	 *
+	 * @param string             $field    Envelope field name.
+	 * @param bool               $literal  Whether literal provider syntax is present.
+	 * @param array<int, string> $unmapped Canonical tokens without a provider representation.
+	 * @param Token_Mapping      $mapping  Provider token mapping.
+	 */
 	private function translation_problem( string $field, bool $literal, array $unmapped, Token_Mapping $mapping ): string {
 		if ( $literal ) {
 			return sprintf( 'The approved %s contains literal provider merge syntax, which the provider would evaluate. Remove it, snapshot, and approve again.', $field );

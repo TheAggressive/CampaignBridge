@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Normalized observation of one remote draft.
  *
@@ -30,6 +29,14 @@ final class Remote_Draft_State {
 	public const CANCELED  = 'canceled';
 	public const OTHER     = 'other';
 
+	/**
+	 * Build the remote draft state.
+	 *
+	 * @param string      $status      Draft status as the provider reports it.
+	 * @param string      $audience_id The provider's audience ID.
+	 * @param bool        $segmented   Whether the draft targets a segment.
+	 * @param string|null $send_time   Scheduled or sent time, when there is one.
+	 */
 	private function __construct(
 		private readonly string $status,
 		private readonly string $audience_id,
@@ -37,7 +44,15 @@ final class Remote_Draft_State {
 		private readonly ?string $send_time
 	) {}
 
-	/** @param string|null $send_time Scheduled or actual send time as UTC `Y-m-d\TH:i:s\Z`, when known. */
+	/**
+	 * Validate what the provider reports about a draft.
+	 *
+	 * @param string      $status      Draft status as the provider reports it.
+	 * @param string      $audience_id The provider's audience ID.
+	 * @param bool        $segmented   Whether the draft targets a segment.
+	 * @param string|null $send_time   Scheduled or actual send time as UTC `Y-m-d\TH:i:s\Z`, when known.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function create( string $status, string $audience_id, bool $segmented, ?string $send_time = null ): self {
 		if ( ! in_array( $status, array( self::DRAFT, self::SCHEDULED, self::SENDING, self::SENT, self::CANCELED, self::OTHER ), true ) ) {
 			throw new \InvalidArgumentException( 'Remote draft status is invalid.' );
@@ -49,14 +64,23 @@ final class Remote_Draft_State {
 		return new self( $status, $audience_id, $segmented, $send_time );
 	}
 
+	/**
+	 * The state's status.
+	 */
 	public function status(): string {
 		return $this->status;
 	}
 
+	/**
+	 * The state's audience ID.
+	 */
 	public function audience_id(): string {
 		return $this->audience_id;
 	}
 
+	/**
+	 * Whether the state is segmented.
+	 */
 	public function is_segmented(): bool {
 		return $this->segmented;
 	}
@@ -66,7 +90,11 @@ final class Remote_Draft_State {
 		return $this->send_time;
 	}
 
-	/** Whether the remote draft targets exactly the approved audience and is still unsent. */
+	/**
+	 * Whether the remote draft targets exactly the approved audience and is still unsent.
+	 *
+	 * @param string $audience_id The provider's audience ID.
+	 */
 	public function matches( string $audience_id ): bool {
 		return self::DRAFT === $this->status && ! $this->segmented && hash_equals( $audience_id, $this->audience_id );
 	}

@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signatures and the class contract document these methods.
+<?php
 /**
  * Enqueue background work.
  *
@@ -27,6 +27,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Job_Queue {
 	public const DEFAULT_ATTEMPTS = 5;
 
+	/**
+	 * Build the job queue.
+	 *
+	 * @param Job_Source     $jobs  Job storage.
+	 * @param Campaign_Clock $clock Source of the current time.
+	 */
 	public function __construct(
 		private readonly Job_Source $jobs,
 		private readonly Campaign_Clock $clock
@@ -35,7 +41,12 @@ final class Job_Queue {
 	/**
 	 * Queue one job, or return the active job already queued for the same work.
 	 *
-	 * @param array<string, string|int|bool|null> $payload What the handler needs; never credentials.
+	 * @param string                              $type          Job type: a lowercase identifier.
+	 * @param string                              $target_type   Kind of record the event is about.
+	 * @param string                              $target_id     ID of the record the event is about.
+	 * @param array<string, string|int|bool|null> $payload       What the handler needs; never credentials.
+	 * @param int                                 $delay_seconds Seconds to wait, or null for the default backoff.
+	 * @param int                                 $max_attempts  Maximum number of runs.
 	 */
 	public function enqueue( string $type, string $target_type, string $target_id, array $payload = array(), int $delay_seconds = 0, int $max_attempts = self::DEFAULT_ATTEMPTS ): ?Job {
 		$dedupe = $type . ':' . $target_type . ':' . $target_id;

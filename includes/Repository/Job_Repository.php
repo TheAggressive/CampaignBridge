@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,CampaignBridge.Standard.Sniffs.Database -- Port methods are documented by Job_Source; this class is the authorized custom-table boundary for jobs.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database -- Port methods are documented by Job_Source; this class is the authorized custom-table boundary for jobs.
 // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Repository-owned persistence boundary.
 /**
  * Durable job storage.
@@ -29,6 +29,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * work cannot be queued twice but can be queued again once it has finished.
  */
 final class Job_Repository implements Job_Source {
+	/**
+	 * {@inheritDoc}
+	 */
 	public function add( Job $job ): bool {
 		if ( ! Schema_Manager::is_current() ) {
 			return false;
@@ -59,14 +62,23 @@ final class Job_Repository implements Job_Source {
 		return 1 === $inserted;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function get( string $id ): ?Job {
 		return $this->one( 'id', $id );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function find_active( string $dedupe_key ): ?Job {
 		return $this->one( 'dedupe_key', $dedupe_key );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function claim( string $owner, string $now, string $lease_until, int $limit ): array {
 		if ( ! Schema_Manager::is_current() || $limit < 1 ) {
 			return array();
@@ -99,6 +111,9 @@ final class Job_Repository implements Job_Source {
 		return array_values( array_filter( $claims ) );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function heartbeat( string $id, string $owner, string $lease_until, string $now ): bool {
 		return $this->transition(
 			$id,
@@ -108,6 +123,9 @@ final class Job_Repository implements Job_Source {
 		);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function succeed( string $id, string $owner, string $now ): bool {
 		return $this->transition(
 			$id,
@@ -117,6 +135,9 @@ final class Job_Repository implements Job_Source {
 		);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function retry( string $id, string $owner, string $run_after, string $error, string $now ): bool {
 		return $this->transition(
 			$id,
@@ -126,6 +147,9 @@ final class Job_Repository implements Job_Source {
 		);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function finish( string $id, string $owner, string $state, string $error, string $now ): bool {
 		if ( ! in_array( $state, array( Job_State::FAILED, Job_State::DEAD ), true ) ) {
 			return false;
@@ -139,6 +163,9 @@ final class Job_Repository implements Job_Source {
 		);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function counts_by_state(): array {
 		if ( ! Schema_Manager::is_current() ) {
 			return array();
@@ -156,6 +183,9 @@ final class Job_Repository implements Job_Source {
 		return $counts;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function stalled( string $overdue_before, string $now ): array {
 		$none = array(
 			'overdue'        => 0,
@@ -189,6 +219,9 @@ final class Job_Repository implements Job_Source {
 		);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function purge_succeeded( string $before, int $limit ): int {
 		if ( ! Schema_Manager::is_current() || $limit < 1 ) {
 			return 0;
@@ -220,6 +253,10 @@ final class Job_Repository implements Job_Source {
 	/**
 	 * IDs matching a predicate, in order, at most `$limit`.
 	 *
+	 * @param string $predicate SQL predicate with one placeholder for the current time.
+	 * @param string $now_db    Current time in database form.
+	 * @param string $order     Order column.
+	 * @param int    $limit     Maximum number of records.
 	 * @return array<int, string>
 	 */
 	private function candidates( string $predicate, string $now_db, string $order, int $limit ): array {
@@ -235,7 +272,16 @@ final class Job_Repository implements Job_Source {
 		return array_map( 'strval', is_array( $ids ) ? $ids : array() );
 	}
 
-	/** Claim one row while the predicate that selected it still holds. */
+	/**
+	 * Claim one row while the predicate that selected it still holds.
+	 *
+	 * @param string $id            Record ID.
+	 * @param string $predicate     SQL predicate with one placeholder for the current time.
+	 * @param string $now_db        Current time in database form.
+	 * @param string $owner         Lease or lock owner identity.
+	 * @param string $lease_db      Lease expiry in database form.
+	 * @param bool   $count_attempt Whether this claim counts an attempt.
+	 */
 	private function take( string $id, string $predicate, string $now_db, string $owner, string $lease_db, bool $count_attempt ): bool {
 		global $wpdb;
 		$table    = Schema_Manager::table( 'jobs' );
@@ -254,6 +300,13 @@ final class Job_Repository implements Job_Source {
 		return 1 === (int) $updated;
 	}
 
+	/**
+	 * The claim for a job just taken.
+	 *
+	 * @param string $id         Record ID.
+	 * @param bool   $taken_over Whether a stopped worker held the job.
+	 * @param bool   $exhausted  Whether that worker used the last attempt.
+	 */
 	private function claimed( string $id, bool $taken_over, bool $exhausted ): ?Job_Claim {
 		$job = $this->get( $id );
 
@@ -263,6 +316,9 @@ final class Job_Repository implements Job_Source {
 	/**
 	 * Apply one update to a job the owner still holds.
 	 *
+	 * @param string             $id     Record ID.
+	 * @param string             $owner  Lease or lock owner identity.
+	 * @param string             $set    SQL SET clause with its own placeholders.
 	 * @param array<int, string> $values Values for the placeholders in `$set`.
 	 */
 	private function transition( string $id, string $owner, string $set, array $values ): bool {
@@ -281,6 +337,12 @@ final class Job_Repository implements Job_Source {
 		return 1 === (int) $updated;
 	}
 
+	/**
+	 * One job by an indexed column.
+	 *
+	 * @param string $column Indexed column.
+	 * @param string $value  Value of the indexed column.
+	 */
 	private function one( string $column, string $value ): ?Job {
 		if ( ! Schema_Manager::is_current() ) {
 			return null;
@@ -295,7 +357,11 @@ final class Job_Repository implements Job_Source {
 		return is_array( $row ) ? $this->hydrate( $row ) : null;
 	}
 
-	/** @param array<string, mixed> $row Database row. */
+	/**
+	 * Rebuild a job from a database row, or null when the row is malformed.
+	 *
+	 * @param array<string, mixed> $row Database row.
+	 */
 	private function hydrate( array $row ): ?Job {
 		try {
 			$payload = Database_Values::decode_json( $row['payload_json'] ?? null );
@@ -320,7 +386,7 @@ final class Job_Repository implements Job_Source {
 					'updated_at'       => Database_Values::from_database_time( $row['updated_at'] ?? null ),
 				)
 			);
-		} catch ( \InvalidArgumentException | \JsonException ) {
+		} catch ( \InvalidArgumentException ) {
 			return null;
 		}
 	}

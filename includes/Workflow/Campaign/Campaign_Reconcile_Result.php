@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed accessors form the result contract.
+<?php
 /**
  * Result of reconciling a campaign with its provider.
  *
@@ -25,7 +25,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * callers can show what remains unresolved.
  */
 final class Campaign_Reconcile_Result implements Campaign_Remote_Result {
-	/** @param array<int, Delivery_Attempt> $resolved Attempts settled from provider evidence. */
+	/**
+	 * Build the campaign reconcile result.
+	 *
+	 * @param Campaign|null                  $campaign       The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference      The campaign's remote reference.
+	 * @param array<int, Delivery_Attempt>   $resolved       Attempts settled from provider evidence.
+	 * @param Delivery_Attempt|null          $attempt        The delivery attempt.
+	 * @param Campaign_Workflow_Error|null   $error          Why the operation was refused or failed, when it was.
+	 * @param Provider_Error|null            $provider_error The normalized provider error, when there is one.
+	 */
 	private function __construct(
 		private readonly ?Campaign $campaign,
 		private readonly ?Remote_Campaign_Reference $reference,
@@ -35,11 +44,26 @@ final class Campaign_Reconcile_Result implements Campaign_Remote_Result {
 		private readonly ?Provider_Error $provider_error
 	) {}
 
-	/** @param array<int, Delivery_Attempt> $resolved Attempts settled from provider evidence. */
+	/**
+	 * A reconciliation that settled the campaign.
+	 *
+	 * @param Campaign                       $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference The campaign's remote reference.
+	 * @param array<int, Delivery_Attempt>   $resolved  Attempts settled from provider evidence.
+	 */
 	public static function success( Campaign $campaign, ?Remote_Campaign_Reference $reference, array $resolved ): self {
 		return new self( $campaign, $reference, $resolved, null, null, null );
 	}
 
+	/**
+	 * A reconciliation that could not settle the campaign.
+	 *
+	 * @param Campaign_Workflow_Error        $error          Why the operation was refused or failed.
+	 * @param Campaign|null                  $campaign       The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference      The campaign's remote reference.
+	 * @param Delivery_Attempt|null          $attempt        The delivery attempt.
+	 * @param Provider_Error|null            $provider_error The normalized provider error, when there is one.
+	 */
 	public static function failure(
 		Campaign_Workflow_Error $error,
 		?Campaign $campaign = null,
@@ -50,19 +74,32 @@ final class Campaign_Reconcile_Result implements Campaign_Remote_Result {
 		return new self( $campaign, $reference, array(), $attempt, $error, $provider_error );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function is_success(): bool {
 		return null === $this->error;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function campaign(): ?Campaign {
 		return $this->campaign;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function reference(): ?Remote_Campaign_Reference {
 		return $this->reference;
 	}
 
-	/** @return array<int, Delivery_Attempt> */
+	/**
+	 * The result's resolved.
+	 *
+	 * @return array<int, Delivery_Attempt>
+	 */
 	public function resolved_attempts(): array {
 		return $this->resolved;
 	}
@@ -72,10 +109,16 @@ final class Campaign_Reconcile_Result implements Campaign_Remote_Result {
 		return $this->attempt;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function error(): ?Campaign_Workflow_Error {
 		return $this->error;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function provider_error(): ?Provider_Error {
 		return $this->provider_error;
 	}

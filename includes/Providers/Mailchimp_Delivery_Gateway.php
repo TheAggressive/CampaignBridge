@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Port method contracts are documented by Provider_Delivery_Gateway.
+<?php
 /**
  * Mailchimp schedule and unschedule adapter.
  *
@@ -38,18 +38,32 @@ final class Mailchimp_Delivery_Gateway implements Provider_Delivery_Gateway {
 	 */
 	private readonly Http_Client_Interface $http;
 
+	/**
+	 * Build the mailchimp delivery gateway.
+	 *
+	 * @param Http_Client_Interface|null $http HTTP client.
+	 */
 	public function __construct( ?Http_Client_Interface $http = null ) {
 		$this->http = $http ?? new Http_Client_Instance();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function slug(): string {
 		return 'mailchimp';
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function schedule_interval_minutes(): int {
 		return 15;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function schedule( array $settings, string $remote_id, string $scheduled_for ): Action_Outcome {
 		$time = strtotime( $scheduled_for );
 		if ( false === $time ) {
@@ -59,10 +73,16 @@ final class Mailchimp_Delivery_Gateway implements Provider_Delivery_Gateway {
 		return $this->action( $settings, $remote_id, 'schedule', array( 'schedule_time' => gmdate( 'Y-m-d\TH:i:sP', $time ) ) );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function unschedule( array $settings, string $remote_id ): Action_Outcome {
 		return $this->action( $settings, $remote_id, 'unschedule', null );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function send( array $settings, string $remote_id ): Action_Outcome {
 		return $this->action( $settings, $remote_id, 'send', null );
 	}
@@ -70,8 +90,10 @@ final class Mailchimp_Delivery_Gateway implements Provider_Delivery_Gateway {
 	/**
 	 * Post one campaign action without retry.
 	 *
-	 * @param array<string, mixed>      $settings Decrypted provider settings.
-	 * @param array<string, mixed>|null $body     JSON body, or null for none.
+	 * @param array<string, mixed>      $settings  Decrypted provider settings.
+	 * @param string                    $remote_id The provider's campaign ID.
+	 * @param string                    $action    Mailchimp campaign action name.
+	 * @param array<string, mixed>|null $body      JSON body, or null for none.
 	 */
 	private function action( array $settings, string $remote_id, string $action, ?array $body ): Action_Outcome {
 		$api_key = $settings['api_key'] ?? null;

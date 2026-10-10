@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * UTC system clock.
  *
@@ -15,6 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Supplies canonical UTC timestamps. */
 final class System_Clock implements Campaign_Clock {
+	/**
+	 * {@inheritDoc}
+	 */
 	public function now(): string {
 		return gmdate( 'Y-m-d\TH:i:s\Z' );
 	}

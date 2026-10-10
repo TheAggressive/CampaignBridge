@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Port methods are documented by Lock_Source.
-// phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Repository-owned persistence boundary.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Repository-owned persistence boundary.
 /**
  * Expiring named locks.
  *
@@ -27,6 +26,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * has since taken.
  */
 final class Lock_Repository implements Lock_Source {
+	/**
+	 * {@inheritDoc}
+	 */
 	public function acquire( string $name, string $owner, string $purpose, string $until, string $now ): Lock_Acquisition {
 		if ( ! Schema_Manager::is_current() ) {
 			return new Lock_Acquisition( false );
@@ -80,6 +82,9 @@ final class Lock_Repository implements Lock_Source {
 		return new Lock_Acquisition( false, null, null === $expires ? null : Database_Values::from_database_time( $expires ) );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function release( string $name, string $owner ): bool {
 		if ( ! Schema_Manager::is_current() ) {
 			return false;

@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Squiz.Commenting.FunctionCommentThrowTag
+<?php
 /**
  * Campaign state transition validation.
  *
@@ -48,12 +48,21 @@ final class Campaign_State_Machine {
 		Campaign_State::ARCHIVED         => array(),
 	);
 
-	/** Whether local authoring metadata may be changed in this state. */
+	/**
+	 * Whether local authoring metadata may be changed in this state.
+	 *
+	 * @param string $state Campaign lifecycle state.
+	 */
 	public static function is_editable( string $state ): bool {
 		return in_array( $state, array( Campaign_State::DRAFT, Campaign_State::READY_FOR_REVIEW, Campaign_State::APPROVED ), true );
 	}
 
-	/** State after changing the template and invalidating the selected artifact. */
+	/**
+	 * State after changing the template and invalidating the selected artifact.
+	 *
+	 * @param string $state Campaign lifecycle state.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function after_artifact_invalidation( string $state ): string {
 		if ( ! self::is_editable( $state ) ) {
 			throw new \InvalidArgumentException( 'Campaign is not editable in its current state.' );
@@ -62,7 +71,12 @@ final class Campaign_State_Machine {
 		return Campaign_State::DRAFT;
 	}
 
-	/** State after a material change that revokes approval but preserves the snapshot. */
+	/**
+	 * State after a material change that revokes approval but preserves the snapshot.
+	 *
+	 * @param string $state Campaign lifecycle state.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function after_approval_invalidation( string $state ): string {
 		if ( ! self::is_editable( $state ) ) {
 			throw new \InvalidArgumentException( 'Campaign is not editable in its current state.' );

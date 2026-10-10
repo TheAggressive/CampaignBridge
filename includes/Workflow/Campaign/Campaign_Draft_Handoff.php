@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Public operation names and typed signatures form the application contract.
+<?php
 /**
  * Idempotent remote draft handoff for approved campaigns.
  *
@@ -70,6 +70,23 @@ final class Campaign_Draft_Handoff {
 
 	private const ACTION = 'campaign_provider_draft';
 
+	/**
+	 * Build the campaign draft handoff.
+	 *
+	 * @param Campaign_Source                  $campaigns    Campaign storage.
+	 * @param Campaign_Snapshot_Source         $snapshots    Snapshot storage.
+	 * @param Remote_Campaign_Reference_Source $references   Remote reference storage.
+	 * @param Delivery_Attempt_Source          $attempts     Delivery attempt storage.
+	 * @param Audit_Event_Source               $audits       Audit event storage.
+	 * @param Campaign_Transaction             $transaction  Runs writes atomically.
+	 * @param Campaign_Id_Generator            $ids          Identifier generator.
+	 * @param Campaign_Clock                   $clock        Source of the current time.
+	 * @param Provider_Draft_Gateway           $gateway      Provider delivery gateway.
+	 * @param Provider_Capabilities            $capabilities What the provider supports.
+	 * @param Provider_Token_Mapper            $tokens       Personalization token mapper.
+	 * @param Provider_Discovery_Service       $discovery    Provider discovery service.
+	 * @param Lock_Manager|null                $locks        Lock manager; null runs without locking.
+	 */
 	public function __construct(
 		private readonly Campaign_Source $campaigns,
 		private readonly Campaign_Snapshot_Source $snapshots,
@@ -89,7 +106,11 @@ final class Campaign_Draft_Handoff {
 	/**
 	 * Create, resume, or replay the remote draft for an approved campaign.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id      Campaign ID.
+	 * @param int                  $expected_version The version the caller last read.
+	 * @param string               $idempotency_key  Client retry key; the same key replays the first outcome.
+	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	public function create_draft( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Draft_Result {
 		if ( null === $this->locks ) {
@@ -107,7 +128,11 @@ final class Campaign_Draft_Handoff {
 	/**
 	 * The operation itself, run while the campaign lock is held.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id      Campaign ID.
+	 * @param int                  $expected_version The version the caller last read.
+	 * @param string               $idempotency_key  Client retry key; the same key replays the first outcome.
+	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	private function create_draft_unlocked( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Draft_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
@@ -177,7 +202,10 @@ final class Campaign_Draft_Handoff {
 	/**
 	 * Build provider content from the verified, approved snapshot only.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param Campaign             $campaign       The campaign as read.
+	 * @param string               $audience       Audience reference the draft targets.
+	 * @param array<string, mixed> $settings       Decrypted provider settings.
+	 * @param string               $correlation_id The provider's correlation ID, when known.
 	 */
 	private function content( Campaign $campaign, string $audience, array $settings, string $correlation_id ): Draft_Content|Campaign_Workflow_Error {
 		$snapshot = ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
@@ -190,6 +218,8 @@ final class Campaign_Draft_Handoff {
 	/**
 	 * Refuse a new create while an earlier one is unresolved or already settled for this key.
 	 *
+	 * @param string $campaign_id     Campaign ID.
+	 * @param string $idempotency_key Client retry key; the same key replays the first outcome.
 	 * @return array{0: string, 1: string, 2: Delivery_Attempt}|null
 	 */
 	private function unresolved_attempt( string $campaign_id, string $idempotency_key ): ?array {
@@ -212,7 +242,16 @@ final class Campaign_Draft_Handoff {
 			: array( Campaign_Workflow_Error::PROVIDER_FAILED, 'This idempotency key belongs to a draft request that failed. Use a new key to try again.', $same_key );
 	}
 
-	/** Record the created draft and move the campaign to provider_draft. */
+	/**
+	 * Record the created draft and move the campaign to provider_draft.
+	 *
+	 * @param Campaign_Actor                 $actor            Who is acting, with their resolved campaign authority.
+	 * @param Campaign                       $campaign         The campaign as read.
+	 * @param int                            $expected_version The version the caller last read.
+	 * @param string                         $remote_id        The provider's campaign ID.
+	 * @param Delivery_Attempt|null          $attempt          The delivery attempt.
+	 * @param Remote_Campaign_Reference|null $existing         The existing remote reference, when there is one.
+	 */
 	private function finalize( Campaign_Actor $actor, Campaign $campaign, int $expected_version, string $remote_id, ?Delivery_Attempt $attempt, ?Remote_Campaign_Reference $existing ): Campaign_Draft_Result {
 		$reference = $this->reference( $campaign->id(), $remote_id, self::OBSERVED_DRAFT );
 		$succeeded = null === $attempt ? null : $this->attempt( $attempt->id(), $campaign->id(), (string) $attempt->idempotency_key(), Delivery_Attempt_Status::SUCCEEDED, Retryability::NOT_RETRYABLE, $remote_id, $attempt->created_at() );
@@ -241,6 +280,15 @@ final class Campaign_Draft_Handoff {
 			: Campaign_Draft_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, 'The provider draft was created but could not be recorded. Reconcile before creating another draft.' ), $current, null, $attempt );
 	}
 
+	/**
+	 * Record a draft whose content upload failed, so the next attempt resumes it.
+	 *
+	 * @param Campaign_Actor      $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign            $campaign  The campaign as read.
+	 * @param Delivery_Attempt    $attempt   The delivery attempt.
+	 * @param string              $remote_id The provider's campaign ID.
+	 * @param Provider_Error|null $error     Normalized provider error, when there is one.
+	 */
 	private function content_pending( Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, string $remote_id, ?Provider_Error $error ): Campaign_Draft_Result {
 		$reference = $this->reference( $campaign->id(), $remote_id, self::OBSERVED_CONTENT_PENDING );
 		$failed    = $this->attempt( $attempt->id(), $campaign->id(), (string) $attempt->idempotency_key(), Delivery_Attempt_Status::FAILED, Retryability::RETRYABLE, $remote_id, $attempt->created_at() );
@@ -254,6 +302,14 @@ final class Campaign_Draft_Handoff {
 		return $this->provider_failure( $actor, $campaign, $reference, $failed, $error, 'The provider draft was created but its content could not be uploaded. Repeat the request to resume.' );
 	}
 
+	/**
+	 * Record a draft creation the provider definitely refused.
+	 *
+	 * @param Campaign_Actor      $actor    Who is acting, with their resolved campaign authority.
+	 * @param Campaign            $campaign The campaign as read.
+	 * @param Delivery_Attempt    $attempt  The delivery attempt.
+	 * @param Provider_Error|null $error    Normalized provider error, when there is one.
+	 */
 	private function definite_failure( Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, ?Provider_Error $error ): Campaign_Draft_Result {
 		$failed = $this->attempt(
 			$attempt->id(),
@@ -274,6 +330,14 @@ final class Campaign_Draft_Handoff {
 		return $this->provider_failure( $actor, $campaign, null, $failed, $error, 'The provider refused the draft. No draft was created.' );
 	}
 
+	/**
+	 * Record a draft creation the provider did not confirm, so it must be reconciled.
+	 *
+	 * @param Campaign_Actor      $actor    Who is acting, with their resolved campaign authority.
+	 * @param Campaign            $campaign The campaign as read.
+	 * @param Delivery_Attempt    $attempt  The delivery attempt.
+	 * @param Provider_Error|null $error    Normalized provider error, when there is one.
+	 */
 	private function ambiguous( Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, ?Provider_Error $error ): Campaign_Draft_Result {
 		$unknown = $this->attempt( $attempt->id(), $campaign->id(), (string) $attempt->idempotency_key(), Delivery_Attempt_Status::UNKNOWN, Retryability::UNKNOWN, null, $attempt->created_at() );
 		$stored  = $this->attempts->update_result( $unknown );
@@ -288,12 +352,33 @@ final class Campaign_Draft_Handoff {
 		);
 	}
 
+	/**
+	 * Audit a provider failure and return it as a refusal.
+	 *
+	 * @param Campaign_Actor                 $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                       $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference The campaign's remote reference.
+	 * @param Delivery_Attempt|null          $attempt   The delivery attempt.
+	 * @param Provider_Error|null            $error     Normalized provider error, when there is one.
+	 * @param string                         $message   Operator-safe message.
+	 */
 	private function provider_failure( Campaign_Actor $actor, Campaign $campaign, ?Remote_Campaign_Reference $reference, ?Delivery_Attempt $attempt, ?Provider_Error $error, string $message ): Campaign_Draft_Result {
 		$this->audit( $actor, $campaign, 'failure', $error, $attempt );
 
 		return Campaign_Draft_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::PROVIDER_FAILED, $message ), $campaign, $reference, $attempt, $error );
 	}
 
+	/**
+	 * Audit a refusal and return it.
+	 *
+	 * @param string                $code        Stable error code.
+	 * @param string                $message     Operator-safe message.
+	 * @param Campaign_Actor        $actor       Who is acting, with their resolved campaign authority.
+	 * @param string                $campaign_id Campaign ID.
+	 * @param Campaign|null         $campaign    The campaign as read.
+	 * @param string                $result      Audit result: success, failure, denied, or unknown.
+	 * @param Delivery_Attempt|null $attempt     The delivery attempt.
+	 */
 	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null ): Campaign_Draft_Result {
 		try {
 			$this->audits->add( $this->event( $actor, $campaign_id, $result, array( 'error_code' => $code ) ) );
@@ -305,6 +390,15 @@ final class Campaign_Draft_Handoff {
 		return Campaign_Draft_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null, $attempt );
 	}
 
+	/**
+	 * Append the handoff's audit event.
+	 *
+	 * @param Campaign_Actor        $actor    Who is acting, with their resolved campaign authority.
+	 * @param Campaign              $campaign The campaign as read.
+	 * @param string                $result   Audit result: success, failure, denied, or unknown.
+	 * @param Provider_Error|null   $error    Normalized provider error, when there is one.
+	 * @param Delivery_Attempt|null $attempt  The delivery attempt.
+	 */
 	private function audit( Campaign_Actor $actor, Campaign $campaign, string $result, ?Provider_Error $error, ?Delivery_Attempt $attempt ): void {
 		$this->audits->add(
 			$this->event(
@@ -321,7 +415,15 @@ final class Campaign_Draft_Handoff {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * Audit context describing a completed handoff.
+	 *
+	 * @param Campaign              $before    The campaign before the change.
+	 * @param Campaign              $after     The campaign after the change.
+	 * @param string                $remote_id The provider's campaign ID.
+	 * @param Delivery_Attempt|null $attempt   The delivery attempt.
+	 * @return array<string, mixed>
+	 */
 	private function audit_context( Campaign $before, Campaign $after, string $remote_id, ?Delivery_Attempt $attempt ): array {
 		return array(
 			'provider'    => $this->gateway->slug(),
@@ -333,7 +435,14 @@ final class Campaign_Draft_Handoff {
 		);
 	}
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Build one handoff audit event.
+	 *
+	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id Campaign ID.
+	 * @param string               $result      Audit result: success, failure, denied, or unknown.
+	 * @param array<string, mixed> $context     Safe audit context.
+	 */
 	private function event( Campaign_Actor $actor, string $campaign_id, string $result, array $context ): Audit_Event {
 		return Audit_Event::from_array(
 			array(
@@ -350,6 +459,13 @@ final class Campaign_Draft_Handoff {
 		);
 	}
 
+	/**
+	 * Build the campaign's remote reference in one observed state.
+	 *
+	 * @param string $campaign_id Campaign ID.
+	 * @param string $remote_id   The provider's campaign ID.
+	 * @param string $state       Observed remote state.
+	 */
 	private function reference( string $campaign_id, string $remote_id, string $state ): Remote_Campaign_Reference {
 		return Remote_Campaign_Reference::from_array(
 			array(
@@ -365,6 +481,17 @@ final class Campaign_Draft_Handoff {
 		);
 	}
 
+	/**
+	 * Build one draft-creation attempt record.
+	 *
+	 * @param string      $id           Record ID.
+	 * @param string      $campaign_id  Campaign ID.
+	 * @param string      $key          Idempotency key.
+	 * @param string      $status       Attempt status.
+	 * @param string      $retryability Whether a new attempt may be made.
+	 * @param string|null $correlation  The provider's correlation ID, when known.
+	 * @param string|null $created_at   UTC timestamp of creation, or null for now.
+	 */
 	private function attempt( string $id, string $campaign_id, string $key, string $status, string $retryability, ?string $correlation, ?string $created_at ): Delivery_Attempt {
 		$now = $this->clock->now();
 

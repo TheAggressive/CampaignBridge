@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Port methods are documented by their contract below.
+<?php
 /**
  * Expiring named lock storage port.
  *
@@ -20,7 +20,22 @@ if ( ! defined( 'ABSPATH' ) ) {
  * passed may be taken over, and only its current owner can release it.
  */
 interface Lock_Source {
+	/**
+	 * Acquire a named lock, or take it over once it has expired.
+	 *
+	 * @param string $name    Lock name.
+	 * @param string $owner   Lease or lock owner identity.
+	 * @param string $purpose What the lock holder is doing.
+	 * @param string $until   UTC time the lock expires.
+	 * @param string $now     Current UTC timestamp.
+	 */
 	public function acquire( string $name, string $owner, string $purpose, string $until, string $now ): Lock_Acquisition;
 
+	/**
+	 * Release a lock the owner holds.
+	 *
+	 * @param string $name  Lock name.
+	 * @param string $owner Lease or lock owner identity.
+	 */
 	public function release( string $name, string $owner ): bool;
 }

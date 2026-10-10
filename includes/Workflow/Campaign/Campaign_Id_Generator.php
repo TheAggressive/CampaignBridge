@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Campaign workflow identifier generator.
  *
@@ -14,5 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 interface Campaign_Id_Generator {
+	/**
+	 * A new random identifier with the given prefix.
+	 *
+	 * @param string $prefix Identifier prefix.
+	 */
 	public function generate( string $prefix ): string;
 }

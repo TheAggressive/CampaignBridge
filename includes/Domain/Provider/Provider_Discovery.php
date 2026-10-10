@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed ports and values use explicit signatures and class-level documentation.
+<?php
 /**
  * Provider discovery adapter port.
  *
@@ -23,24 +23,43 @@ if ( ! defined( 'ABSPATH' ) ) {
  * persist credentials, or return provider payloads.
  */
 interface Provider_Discovery {
+	/**
+	 * The provider this adapter talks to.
+	 */
 	public function slug(): string;
 
+	/**
+	 * What the provider supports.
+	 */
 	public function capabilities(): Provider_Capabilities;
 
 	/**
-	 * Non-reversible identity of the connected account, used to partition
-	 * cached references, or null when the settings cannot identify one.
+	 * Non-reversible identity of the connected account, used to partition cached references, or null when the settings cannot identify one.
 	 *
 	 * @param array<string, mixed> $settings Decrypted provider settings.
 	 */
 	public function account_key( array $settings ): ?string;
 
-	/** @param array<string, mixed> $settings Decrypted provider settings. */
+	/**
+	 * The account's audiences.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 */
 	public function discover_audiences( array $settings ): Discovery_Batch|Provider_Error;
 
-	/** @param array<string, mixed> $settings Decrypted provider settings. */
+	/**
+	 * One audience's merge fields.
+	 *
+	 * @param array<string, mixed> $settings    Decrypted provider settings.
+	 * @param string               $audience_id The provider's audience ID.
+	 */
 	public function discover_merge_fields( array $settings, string $audience_id ): Discovery_Batch|Provider_Error;
 
-	/** @param array<string, mixed> $settings Decrypted provider settings. */
+	/**
+	 * One audience's segments and tags.
+	 *
+	 * @param array<string, mixed> $settings    Decrypted provider settings.
+	 * @param string               $audience_id The provider's audience ID.
+	 */
 	public function discover_segments( array $settings, string $audience_id ): Discovery_Batch|Provider_Error;
 }

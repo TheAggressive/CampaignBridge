@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Outcome of translating canonical tokens for one provider.
  *
@@ -23,8 +22,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Token_Translation {
 	/**
-	 * @param array<int, string> $unmapped    Canonical token IDs left untranslated.
-	 * @param array<int, string> $parse_codes Parser error codes.
+	 * Build the token translation.
+	 *
+	 * @param string             $content          The draft content.
+	 * @param array<int, string> $unmapped         Canonical token IDs left untranslated.
+	 * @param array<int, string> $parse_codes      Parser error codes.
+	 * @param bool               $literal_conflict Whether literal provider syntax remains.
 	 */
 	public function __construct(
 		private readonly string $content,
@@ -33,16 +36,27 @@ final class Token_Translation {
 		private readonly bool $literal_conflict = false
 	) {}
 
+	/**
+	 * The translation's content.
+	 */
 	public function content(): string {
 		return $this->content;
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * The translation's unmapped.
+	 *
+	 * @return array<int, string>
+	 */
 	public function unmapped(): array {
 		return $this->unmapped;
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * The translation's parse codes.
+	 *
+	 * @return array<int, string>
+	 */
 	public function parse_errors(): array {
 		return $this->parse_codes;
 	}
@@ -55,6 +69,9 @@ final class Token_Translation {
 		return $this->literal_conflict;
 	}
 
+	/**
+	 * Whether every token translated and no literal provider syntax remains.
+	 */
 	public function is_complete(): bool {
 		return array() === $this->unmapped && array() === $this->parse_codes && ! $this->literal_conflict;
 	}

@@ -1,4 +1,4 @@
-<?php // phpcs:disable Generic.Commenting.DocComment.MissingShort -- Stable vocabulary is documented by the enclosing type and constant names.
+<?php
 /**
  * Provider-neutral remote mutation operation names.
  *
@@ -24,7 +24,11 @@ final class Delivery_Operation {
 	public const CANCEL       = 'cancel';
 	public const RECONCILE    = 'reconcile';
 
-	/** @return array<int, string> */
+	/**
+	 * Every delivery operation.
+	 *
+	 * @return array<int, string>
+	 */
 	public static function all(): array {
 		return array(
 			self::CREATE_DRAFT,

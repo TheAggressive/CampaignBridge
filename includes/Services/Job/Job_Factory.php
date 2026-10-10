@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signatures and the class contract document these methods.
+<?php
 /**
  * Production job composition.
  *
@@ -26,10 +26,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * touching the job repository directly.
  */
 final class Job_Factory {
+	/**
+	 * The job queue with production storage.
+	 */
 	public static function queue(): Job_Queue {
 		return new Job_Queue( new Job_Repository(), new System_Clock() );
 	}
 
+	/**
+	 * The job runner with production storage and handlers.
+	 */
 	public static function runner(): Job_Runner {
 		return new Job_Runner( new Job_Repository(), self::handlers(), new System_Clock() );
 	}

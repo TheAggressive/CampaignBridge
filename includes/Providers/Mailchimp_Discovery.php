@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Port method contracts are documented by Provider_Discovery.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Invalid audience IDs fail closed before any request.
+<?php
 /**
  * Mailchimp reference discovery adapter.
  *
@@ -48,24 +47,41 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 	 */
 	private readonly Http_Client_Interface $http;
 
+	/**
+	 * Build the mailchimp discovery.
+	 *
+	 * @param Http_Client_Interface|null $http HTTP client.
+	 */
 	public function __construct( ?Http_Client_Interface $http = null ) {
 		$this->http = $http ?? new Http_Client_Instance();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function slug(): string {
 		return self::SLUG;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function capabilities(): Provider_Capabilities {
 		return Provider_Capabilities::from_flags( self::SLUG, Mailchimp_Provider::CAPABILITIES );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function account_key( array $settings ): ?string {
 		$api_key = $this->api_key( $settings );
 
 		return null === $api_key ? null : hash( 'sha256', self::SLUG . "\0" . $api_key );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function discover_audiences( array $settings ): Discovery_Batch|Provider_Error {
 		return $this->collect(
 			$settings,
@@ -86,6 +102,9 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 		);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function discover_merge_fields( array $settings, string $audience_id ): Discovery_Batch|Provider_Error {
 		return $this->collect(
 			$settings,
@@ -96,6 +115,9 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 		);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function discover_segments( array $settings, string $audience_id ): Discovery_Batch|Provider_Error {
 		return $this->collect(
 			$settings,
@@ -114,8 +136,13 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 	/**
 	 * Fetch one bounded collection and normalize each entry.
 	 *
-	 * @param array<string, mixed>                       $settings  Decrypted settings.
-	 * @param callable(array<string, mixed>): Discovered_Item $normalize Entry normalizer.
+	 * @param array<string, mixed> $settings   Decrypted settings.
+	 * @param string               $endpoint   API path.
+	 * @param string               $collection Response key that holds the items.
+	 * @param string               $kind       Discovery kind.
+	 * @param callable             $normalize  Builds one item from a provider record.
+	 * @phpstan-param callable(array<string, mixed>): Discovered_Item $normalize
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	private function collect( array $settings, string $endpoint, string $collection, string $kind, callable $normalize ): Discovery_Batch|Provider_Error {
 		$api_key = $this->api_key( $settings );
@@ -168,7 +195,8 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 	/**
 	 * Build a bounded query that requests only the kept fields.
 	 *
-	 * @param array<int, string> $fields Fields relative to the collection.
+	 * @param string             $collection Response key that holds the items.
+	 * @param array<int, string> $fields     Fields relative to the collection.
 	 */
 	private function fields_query( string $collection, array $fields ): string {
 		$requested   = array_map( static fn ( string $field ): string => $collection . '.' . $field, $fields );
@@ -186,12 +214,20 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 		);
 	}
 
-	/** Mailchimp tags are static segments; saved and fuzzy segments are conditions. */
+	/**
+	 * Mailchimp tags are static segments; saved and fuzzy segments are conditions.
+	 *
+	 * @param mixed $type Mailchimp segment type.
+	 */
 	private static function segment_kind( mixed $type ): string {
 		return 'static' === $type ? Discovered_Segment::KIND_TAG : Discovered_Segment::KIND_SEGMENT;
 	}
 
-	/** @param array<string, mixed> $settings Decrypted settings. */
+	/**
+	 * The API key from the settings, when it is well formed.
+	 *
+	 * @param array<string, mixed> $settings Decrypted settings.
+	 */
 	private function api_key( array $settings ): ?string {
 		$api_key = $settings['api_key'] ?? null;
 

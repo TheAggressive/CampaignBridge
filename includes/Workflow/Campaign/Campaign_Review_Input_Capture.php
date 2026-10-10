@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Live campaign review-input capture coordinator.
  *
@@ -24,16 +24,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Coordinates live data sources once, before immutable persistence. */
 final class Campaign_Review_Input_Capture implements Campaign_Review_Input_Source {
+	/**
+	 * Build the campaign review input capture.
+	 *
+	 * @param Campaign_Template_Input_Source $templates  Template input storage.
+	 * @param Post_Snapshot_Source           $posts      Post snapshot storage.
+	 * @param Brand_Kit_Source               $brand_kits Brand Kit storage.
+	 */
 	public function __construct(
 		private readonly Campaign_Template_Input_Source $templates,
 		private readonly Post_Snapshot_Source $posts,
 		private readonly Brand_Kit_Source $brand_kits
 	) {}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function capture( Campaign $campaign, int $revision ): ?Review_Input {
 		return $this->capture_for_snapshot( $campaign, $revision )?->review_input();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function capture_for_snapshot( Campaign $campaign, int $revision ): ?Campaign_Review_Capture {
 		if ( 1 > $revision ) {
 			return null;

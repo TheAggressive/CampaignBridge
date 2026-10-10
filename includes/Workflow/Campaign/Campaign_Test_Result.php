@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Outcome of a campaign test send.
  *
@@ -28,6 +28,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * recipients are never stored.
  */
 final class Campaign_Test_Result implements Campaign_Remote_Result {
+	/**
+	 * Build the campaign test result.
+	 *
+	 * @param Campaign|null                  $campaign       The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference      The campaign's remote reference.
+	 * @param Delivery_Attempt|null          $attempt        The delivery attempt.
+	 * @param Campaign_Snapshot|null         $snapshot       The campaign snapshot.
+	 * @param Test_Delivery|null             $delivery       The test delivery request.
+	 * @param Campaign_Workflow_Error|null   $error          Why the operation was refused or failed, when it was.
+	 * @param Provider_Error|null            $provider_error The normalized provider error, when there is one.
+	 * @param bool                           $replay         Whether this answers a repeated idempotency key.
+	 */
 	private function __construct(
 		private readonly ?Campaign $campaign,
 		private readonly ?Remote_Campaign_Reference $reference,
@@ -39,14 +51,39 @@ final class Campaign_Test_Result implements Campaign_Remote_Result {
 		private readonly bool $replay
 	) {}
 
+	/**
+	 * A test the provider accepted.
+	 *
+	 * @param Campaign                  $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference $reference The campaign's remote reference.
+	 * @param Delivery_Attempt          $attempt   The delivery attempt.
+	 * @param Campaign_Snapshot         $snapshot  The campaign snapshot.
+	 * @param Test_Delivery             $delivery  The test delivery request.
+	 */
 	public static function sent( Campaign $campaign, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, Campaign_Snapshot $snapshot, Test_Delivery $delivery ): self {
 		return new self( $campaign, $reference, $attempt, $snapshot, $delivery, null, null, false );
 	}
 
+	/**
+	 * A repeated test request answered from its original attempt.
+	 *
+	 * @param Campaign                       $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference The campaign's remote reference.
+	 * @param Delivery_Attempt               $attempt   The delivery attempt.
+	 */
 	public static function replay( Campaign $campaign, ?Remote_Campaign_Reference $reference, Delivery_Attempt $attempt ): self {
 		return new self( $campaign, $reference, $attempt, null, null, null, null, true );
 	}
 
+	/**
+	 * A test that was refused or failed.
+	 *
+	 * @param Campaign_Workflow_Error        $error          Why the operation was refused or failed.
+	 * @param Campaign|null                  $campaign       The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference      The campaign's remote reference.
+	 * @param Delivery_Attempt|null          $attempt        The delivery attempt.
+	 * @param Provider_Error|null            $provider_error The normalized provider error, when there is one.
+	 */
 	public static function failure(
 		Campaign_Workflow_Error $error,
 		?Campaign $campaign = null,
@@ -57,18 +94,30 @@ final class Campaign_Test_Result implements Campaign_Remote_Result {
 		return new self( $campaign, $reference, $attempt, null, null, $error, $provider_error, false );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function is_success(): bool {
 		return null === $this->error;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function campaign(): ?Campaign {
 		return $this->campaign;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function reference(): ?Remote_Campaign_Reference {
 		return $this->reference;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function attempt(): ?Delivery_Attempt {
 		return $this->attempt;
 	}
@@ -83,10 +132,16 @@ final class Campaign_Test_Result implements Campaign_Remote_Result {
 		return $this->delivery;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function error(): ?Campaign_Workflow_Error {
 		return $this->error;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function provider_error(): ?Provider_Error {
 		return $this->provider_error;
 	}
