@@ -266,3 +266,18 @@ data. A release built for schema 6 never reads it, so after reinstalling that
 release lower the stamped version with
 `wp option update campaignbridge_database_schema 6`. Queued jobs stay in the
 table and run again once the newer release is reinstalled.
+
+### Rolling back across database schema 8
+
+Schema 8 adds the `{prefix}campaignbridge_locks` table and changes no existing
+data. After reinstalling a schema-7 release, run
+`wp option update campaignbridge_database_schema 7`. Locks are short-lived, so
+the table needs no cleanup.
+
+## "Another request is already working on this"
+
+A delivery or reconcile request answered `409 locked` found the campaign held
+by another request or background job. Nothing was done or sent. Wait the
+`retry_after` seconds (at most five minutes) and try again. A lock left by a
+process that stopped expires on its own; the campaign history then shows
+"Recovered an interrupted operation".

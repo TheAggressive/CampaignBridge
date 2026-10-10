@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Owns restartable, forward-safe database migrations for campaign storage and request counters. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 7;
+	public const SCHEMA_VERSION = 8;
 	public const OPTION         = 'database_schema';
 
 	private static ?bool $tables_ready = null;
@@ -31,6 +31,7 @@ final class Schema_Manager {
 		'audit_events',
 		'rate_limits',
 		'jobs',
+		'locks',
 	);
 
 	/** Run an upgrade only when the installed schema is older. */
@@ -256,6 +257,15 @@ final class Schema_Manager {
 				KEY state_run (state, run_after),
 				KEY state_lease (state, lease_expires_at),
 				KEY target (target_type, target_id)
+			) {$collate};",
+			'CREATE TABLE ' . self::table( 'locks' ) . " (
+				lock_name varchar(191) NOT NULL,
+				owner varchar(64) NOT NULL,
+				purpose varchar(64) NOT NULL,
+				acquired_at datetime NOT NULL,
+				expires_at datetime NOT NULL,
+				PRIMARY KEY  (lock_name),
+				KEY expires_at (expires_at)
 			) {$collate};",
 		);
 	}

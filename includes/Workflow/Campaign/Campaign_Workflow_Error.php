@@ -35,6 +35,9 @@ final class Campaign_Workflow_Error {
 	/** A durable per-campaign operation quota is exhausted. */
 	public const RATE_LIMITED = 'rate_limited';
 
+	/** Another request or background job holds the campaign; nothing was done. */
+	public const LOCKED = 'locked';
+
 	/** Reconciliation reasons: why a reconcile could not settle the campaign. */
 	public const REASON_IN_PROGRESS      = 'in_progress';
 	public const REASON_MISSING          = 'missing';
@@ -112,6 +115,7 @@ final class Campaign_Workflow_Error {
 			self::RECONCILIATION_REQUIRED,
 			self::PROVIDER_FAILED,
 			self::RATE_LIMITED,
+			self::LOCKED,
 		);
 	}
 }

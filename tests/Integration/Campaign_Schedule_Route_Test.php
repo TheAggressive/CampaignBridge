@@ -21,6 +21,7 @@ use CampaignBridge\Providers\Mailchimp_Discovery;
 use CampaignBridge\Repository\Campaign_Repository;
 use CampaignBridge\Repository\Provider_Connection_Repository;
 use CampaignBridge\Repository\Provider_Discovery_Repository;
+use CampaignBridge\Repository\Lock_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\REST\Campaign_Rest_Schema;
 use CampaignBridge\REST\Routes;
@@ -340,6 +341,43 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertSame( 'provider_draft', ( new Campaign_Repository() )->get( $campaign['id'] )?->state() );
 
 		self::assertSame( 200, $this->schedule( $campaign['id'], 6, self::send_at(), 'abc123', 'rest-schedule-2' )->get_status() );
+	}
+
+	public function test_a_campaign_held_by_another_worker_is_refused_before_any_provider_call(): void {
+		$campaign = $this->provider_draft_campaign();
+		$before   = count( $this->requests );
+		$locks    = new Lock_Repository();
+		$name     = 'campaign:' . $campaign['id'];
+		// A background reconcile holds the campaign.
+		self::assertTrue( $locks->acquire( $name, 'worker-background', 'reconcile', gmdate( 'Y-m-d\TH:i:s\Z', time() + 300 ), gmdate( 'Y-m-d\TH:i:s\Z' ) )->acquired );
+
+		$refused = array(
+			$this->send( $campaign['id'], 5, 'abc123', 'locked-send' ),
+			$this->schedule( $campaign['id'], 5, self::send_at(), 'abc123', 'locked-schedule' ),
+			$this->request(
+				'POST',
+				"/{$campaign['id']}/test-send",
+				array(
+					'recipients'      => array( 'qa@example.com' ),
+					'format'          => 'html',
+					'idempotency_key' => 'locked-test',
+				)
+			),
+			$this->request( 'POST', "/{$campaign['id']}/reconcile" ),
+		);
+		foreach ( $refused as $response ) {
+			self::assertSame( 409, $response->get_status() );
+			self::assertSame( 'campaignbridge_campaign_locked', $response->get_data()['code'] );
+			self::assertGreaterThan( 0, $response->get_data()['data']['retry_after'] );
+			self::assertLessThanOrEqual( 300, $response->get_data()['data']['retry_after'] );
+		}
+		self::assertSame( $before, count( $this->requests ), 'No request reached Mailchimp while the campaign was held.' );
+
+		self::assertTrue( $locks->release( $name, 'worker-background' ) );
+		$actions = $this->action_count();
+		self::assertSame( 200, $this->send( $campaign['id'], 5, 'abc123', 'locked-send' )->get_status() );
+		self::assertSame( $actions + 1, $this->action_count() );
+		self::assertFalse( $locks->release( $name, 'worker-background' ), 'The send released its own lock when done.' );
 	}
 
 	public function test_invalid_requests_fail_before_any_provider_call(): void {

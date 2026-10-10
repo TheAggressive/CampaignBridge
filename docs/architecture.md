@@ -48,6 +48,21 @@ runs and the job ends `dead`, so an irreversible effect is never repeated.
 Payloads are small scalar maps and refuse credential-like keys; stored errors
 are stable codes, never messages or provider responses.
 
+## Locks
+
+`Workflow/Lock/Lock_Manager` serializes work across requests and background
+workers with expiring named locks (`Domain/Lock/Lock_Source`, implemented by
+`Repository/Lock_Repository`). Draft handoff, test send, schedule, unschedule,
+send, and reconciliation hold the campaign's lock for the whole operation,
+provider calls included; a discovery refresh holds a lock for its account and
+list. A caller that finds the lock held does nothing and gets `locked` with
+the seconds until it expires. A lock left by a process that stopped expires
+after five minutes; the next caller takes it over and the takeover is audited
+(`campaign_lock_takeover`, `provider_lock_takeover`). Only the holder can
+release a lock, so a process that ran past its expiry cannot free a lock
+someone else now holds. The workflows accept the manager as an optional
+constructor dependency; production factories always supply it.
+
 ## Composition root
 
 `campaignbridge.php` validates the runtime and hands off to `CampaignBridge\Plugin`. `Plugin` owns initialization order. Service registration must not cause behavior; hooks and migrations begin only during explicit initialization.

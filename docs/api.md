@@ -701,8 +701,11 @@ Errors use the WordPress REST envelope:
 
 `data` always contains `status`. It adds `current_version` for `conflict`,
 and for `provider_failed` and `reconciliation_required` from remote
-operations, and `diagnostics` only for compiler failures. Messages are fixed
-workflow strings. They never contain SQL, exception traces, class names, raw
+operations, and `diagnostics` only for compiler failures. `locked` adds `retry_after`, the
+seconds until the lock expires: another request or background job is
+handing off, testing, scheduling, sending, or reconciling the same campaign,
+and nothing was done or sent to the provider. Retrying after that wait is
+safe. Messages are fixed workflow strings. They never contain SQL, exception traces, class names, raw
 persistence errors, credentials, or provider payloads. `Campaign_Rest_Errors`
 is the single mapping:
 
@@ -718,6 +721,7 @@ is the single mapping:
 | `approval_not_allowed` | 409 | `campaignbridge_campaign_approval_not_allowed` |
 | `idempotency_conflict` | 409 | `campaignbridge_campaign_idempotency_conflict` |
 | `reconciliation_required` | 409 | `campaignbridge_campaign_reconciliation_required` |
+| `locked` | 409 | `campaignbridge_campaign_locked` |
 | `provider_failed` | 502 | `campaignbridge_campaign_provider_failed` |
 | `rate_limited` | 429 | `campaignbridge_campaign_rate_limited` |
 | `persistence_failed` (and any unmapped code) | 500 | `campaignbridge_campaign_persistence_failed` |

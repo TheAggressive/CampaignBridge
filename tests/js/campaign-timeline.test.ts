@@ -77,6 +77,21 @@ describe('campaign timeline and recovery', () => {
     expect(details.join(' ')).not.toContain('sha256');
   });
 
+  it('explains a recovered lock with the operation that stopped', () => {
+    const event = {
+      id: 'audit-1',
+      action: 'campaign_lock_takeover',
+      result: 'success',
+      actor: { id: null, name: null },
+      context: { operation: 'reconcile', interrupted_operation: 'send' },
+      created_at: '2030-01-01T00:00:00Z',
+    };
+    expect(actionLabel(event.action)).toBe(
+      'Recovered an interrupted operation'
+    );
+    expect(eventDetails(event)).toEqual(['Interrupted: send']);
+  });
+
   it('describes how long ago something was checked', () => {
     const now = new Date('2030-01-01T12:00:00Z');
     expect(since('2030-01-01T11:59:40Z', now)).toBe('just now');
