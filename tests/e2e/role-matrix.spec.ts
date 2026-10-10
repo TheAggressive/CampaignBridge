@@ -23,10 +23,13 @@ test.use({ actionTimeout: 20_000 });
 async function setSeparateDelivery(page: Page, on: boolean): Promise<void> {
   await page.goto(POLICIES_PATH);
   const toggle = page.getByLabel(SEPARATE_DELIVERY);
-  if ((await toggle.isChecked()) === on) return;
-  await toggle.setChecked(on);
-  await page.getByRole('button', { name: 'Save policies' }).click();
-  await expect(page.getByText('Delivery policies saved.')).toBeVisible();
+  if ((await toggle.isChecked()) !== on) {
+    await toggle.setChecked(on);
+    await page.getByRole('button', { name: 'Save policies' }).click();
+    await expect(page.getByText('Delivery policies saved.')).toBeVisible();
+  }
+  // Later API calls run through wp.apiFetch, which the Campaigns screen loads.
+  await page.goto(CAMPAIGNS_PATH);
 }
 
 /** The actions the server publishes for one campaign to the signed-in user. */
@@ -252,8 +255,9 @@ test('each operator role sees only its own data and actions', async ({
           credentials: 'same-origin',
         })
         .then(response => response.text());
+      // rest_route works with plain and pretty permalinks alike.
       return globalThis
-        .fetch('/wp-json/campaignbridge/v1/campaigns', {
+        .fetch('/?rest_route=/campaignbridge/v1/campaigns', {
           credentials: 'same-origin',
           headers: { 'X-WP-Nonce': nonce },
         })
