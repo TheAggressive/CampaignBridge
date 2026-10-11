@@ -41,6 +41,9 @@ final class Campaign_Actions {
 	public const ARCHIVE         = 'archive';
 	public const DUPLICATE       = 'duplicate';
 
+	/** Actions the workflow refuses without edit access to the campaign's template. */
+	private const TEMPLATE_ACTIONS = array( self::EDIT, self::SNAPSHOT, self::SUBMIT, self::APPROVE, self::DUPLICATE );
+
 	/** States in which the provider may hold a campaign whose outcome can be read back. */
 	private const RECONCILABLE = array( Campaign_State::PROVIDER_DRAFT, Campaign_State::SCHEDULED, Campaign_State::SENDING, Campaign_State::UNKNOWN );
 
@@ -49,16 +52,21 @@ final class Campaign_Actions {
 	 *
 	 * Delivery actions also follow the site's separation-of-duties policy, so
 	 * the approver of a campaign is not offered schedule or send when the
-	 * policy requires a second person.
+	 * policy requires a second person. Actions that read the template are
+	 * offered only to an actor the workflow lets use that template.
 	 *
-	 * @param Campaign_Actor       $actor    Reader.
-	 * @param Campaign             $campaign Campaign as read.
-	 * @param Delivery_Policy|null $policy   Site delivery policy; null applies none.
+	 * @param Campaign_Actor       $actor           Reader.
+	 * @param Campaign             $campaign        Campaign as read.
+	 * @param Delivery_Policy|null $policy          Site delivery policy; null applies none.
+	 * @param bool                 $template_access Whether the actor may use the campaign's template.
 	 * @return array<int, string>
 	 */
-	public static function for( Campaign_Actor $actor, Campaign $campaign, ?Delivery_Policy $policy = null ): array {
+	public static function for( Campaign_Actor $actor, Campaign $campaign, ?Delivery_Policy $policy = null, bool $template_access = true ): array {
 		if ( ! $actor->can_manage( $campaign ) ) {
 			return array();
+		}
+		if ( ! $template_access ) {
+			return array_values( array_diff( self::for( $actor, $campaign, $policy ), self::TEMPLATE_ACTIONS ) );
 		}
 
 		$state   = $campaign->state();

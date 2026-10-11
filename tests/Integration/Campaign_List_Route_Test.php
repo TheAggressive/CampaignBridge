@@ -110,6 +110,20 @@ final class Campaign_List_Route_Test extends Test_Case {
 		return $response->get_data()['campaign'];
 	}
 
+	public function test_actions_leave_out_template_steps_for_users_without_template_access(): void {
+		$campaign = $this->create();
+		self::assertContains( 'snapshot', $campaign['actions'] );
+
+		$manager = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		get_userdata( $manager )->add_cap( \CampaignBridge\Core\Capabilities::MANAGE );
+		wp_set_current_user( $manager );
+		$actions = $this->request( 'GET', self::COLLECTION . "/{$campaign['id']}" )->get_data()['campaign']['actions'];
+
+		self::assertSame( array(), array_values( array_intersect( $actions, array( 'edit', 'snapshot', 'submit', 'approve', 'duplicate' ) ) ) );
+		self::assertContains( 'archive', $actions );
+		self::assertSame( 403, $this->request( 'POST', self::COLLECTION . "/{$campaign['id']}/snapshot", array( 'expected_version' => 1 ) )->get_status(), 'The workflow refuses what is not offered.' );
+	}
+
 	/** @return array<int, string> */
 	private function ids( WP_REST_Response $response ): array {
 		self::assertSame( 200, $response->get_status() );

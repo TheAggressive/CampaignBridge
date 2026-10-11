@@ -41,6 +41,21 @@ final class Campaign_Actions_Test extends WP_UnitTestCase {
 		return new Campaign_Actor( $user_id, true, true, true, true );
 	}
 
+	/** The workflow refuses template steps without template access, so they are not offered. */
+	public function test_template_steps_need_template_access(): void {
+		$review = Campaign_Actions::for( self::manager(), self::campaign( 'ready_for_review' ), null, false );
+		self::assertNotContains( 'approve', $review );
+		self::assertNotContains( 'duplicate', $review );
+		self::assertContains( 'archive', $review );
+
+		$draft = Campaign_Actions::for( self::manager(), self::campaign( 'draft' ), null, false );
+		self::assertSame( array(), array_values( array_intersect( $draft, array( 'edit', 'snapshot', 'submit' ) ) ) );
+
+		// Delivery reads only the frozen snapshot, so it stays available.
+		self::assertContains( 'schedule', Campaign_Actions::for( self::manager(), self::campaign( 'provider_draft' ), null, false ) );
+		self::assertContains( 'approve', Campaign_Actions::for( self::manager(), self::campaign( 'ready_for_review' ) ) );
+	}
+
 	public function test_an_approved_provider_campaign_offers_the_draft_handoff(): void {
 		$actions = Campaign_Actions::for( self::manager(), self::campaign( 'approved' ) );
 

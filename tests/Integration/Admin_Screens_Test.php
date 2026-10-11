@@ -229,6 +229,86 @@ class Admin_Screens_Test extends Test_Case {
 		$this->assertFalse( user_can( $editor, \CampaignBridge\Core\Capabilities::CREATE_CAMPAIGNS ), 'Users without the campaign capability cannot open the screen.' );
 	}
 
+	/**
+	 * Registering the admin menu does no screen work; only opening a screen does.
+	 *
+	 * The settings controller checks the Mailchimp key, so building it on every
+	 * admin request pinged Mailchimp from unrelated pages.
+	 */
+	public function test_registering_screens_contacts_no_provider(): void {
+		global $menu, $submenu;
+		$menu     = array();
+		$submenu  = array();
+		$requests = array();
+		$record   = static function ( $preempt, $args, $url ) use ( &$requests ) {
+			$requests[] = $url;
+			return array(
+				'headers'  => array(),
+				'body'     => '{}',
+				'response' => array( 'code' => 200, 'message' => '' ),
+				'cookies'  => array(),
+				'filename' => null,
+			);
+		};
+		add_filter( 'pre_http_request', $record, 10, 3 );
+		( new \CampaignBridge\Repository\Provider_Connection_Repository() )->save(
+			\CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', \CampaignBridge\Core\Encryption::encrypt( str_repeat( 'beef', 8 ) . '-us3' ) )
+		);
+		wp_set_current_user( $this->create_test_user( array( 'role' => 'administrator' ) ) );
+
+		try {
+			( new \CampaignBridge\Admin\Admin_Menu_Manager() )->init();
+			( new \CampaignBridge\Admin\Core\Screen_Registry( \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/', 'campaignbridge' ) )->init();
+			do_action( 'admin_menu' );
+			$this->assertSame( array(), $requests, 'Registering screens must not contact Mailchimp.' );
+
+			do_action( 'load-' . get_plugin_page_hookname( 'campaignbridge-settings', 'campaignbridge' ) );
+			$this->assertNotEmpty( $requests, 'Opening Settings checks the stored connection.' );
+		} finally {
+			remove_filter( 'pre_http_request', $record, 10 );
+			( new \CampaignBridge\Repository\Provider_Connection_Repository() )->delete( 'mailchimp' );
+		}
+	}
+
+	/**
+	 * A template author who is not a WordPress editor can open the template editor.
+	 *
+	 * WordPress adds no "Add New" entry for a post type under another plugin's
+	 * menu and then authorizes post-new.php against Posts, which needs edit_posts.
+	 */
+	public function test_template_authors_can_open_the_new_template_screen(): void {
+		// wp-admin/menu.php runs at global scope in WordPress; every global it writes is shared here.
+		global $menu, $submenu, $pagenow, $typenow, $plugin_page, $_wp_menu_nopriv, $_wp_submenu_nopriv, $_wp_real_parent_file, $admin_page_hooks, $_registered_pages, $_parent_pages;
+		$author = $this->create_test_user( array( 'role' => 'subscriber' ) );
+		get_userdata( $author )->add_cap( \CampaignBridge\Core\Capabilities::EDIT_TEMPLATES );
+		wp_set_current_user( $author );
+		$this->assertFalse( current_user_can( 'edit_posts' ) );
+
+		$menu               = array();
+		$submenu            = array();
+		$_wp_menu_nopriv    = array();
+		$_wp_submenu_nopriv = array();
+		$pagenow            = 'post-new.php';
+		$typenow            = \CampaignBridge\Post_Types\Post_Type_Email_Template::POST_TYPE;
+		$plugin_page        = null;
+		$_GET['post_type']  = $typenow;
+		set_current_screen( 'cb_templates' );
+		( new \CampaignBridge\Admin\Admin_Menu_Manager() )->init();
+		( new \CampaignBridge\Admin\Core\Screen_Registry( \CampaignBridge_Plugin::path() . 'includes/Admin/Screens/', 'campaignbridge' ) )->init();
+
+		try {
+			require ABSPATH . 'wp-admin/menu.php';
+
+			$this->assertTrue( user_can_access_admin_page(), 'The template capability opens the new-template screen.' );
+			$entries = array_column( $submenu['campaignbridge'] ?? array(), 1, 2 );
+			$this->assertSame( \CampaignBridge\Core\Capabilities::EDIT_TEMPLATES, $entries[ 'post-new.php?post_type=' . $typenow ] ?? null );
+		} finally {
+			unset( $_GET['post_type'] );
+			$pagenow = null;
+			$typenow = null;
+		}
+	}
+
 	public function test_screen_asset_loader_enqueues_configured_assets(): void {
 		global $screen;
 
