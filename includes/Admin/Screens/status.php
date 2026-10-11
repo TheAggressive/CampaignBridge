@@ -32,6 +32,8 @@ $campaignbridge_state_names = array(
 	'unknown'          => __( 'Needs reconciliation', 'campaignbridge' ),
 	'archived'         => __( 'Archived', 'campaignbridge' ),
 );
+$campaignbridge_jobs        = is_array( $health['jobs'] ?? null ) ? $health['jobs'] : array();
+$campaignbridge_job_counts  = is_array( $campaignbridge_jobs['counts'] ?? null ) ? $campaignbridge_jobs['counts'] : array();
 $campaignbridge_verified_at = is_string( $health['last_verified_at'] ?? null ) ? strtotime( $health['last_verified_at'] ) : false;
 
 $key_sources       = array(
@@ -73,6 +75,12 @@ if ( $screen ) {
 						?>
 						<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge-campaigns' ) ); ?>"><?php esc_html_e( 'Go to Campaigns', 'campaignbridge' ); ?></a>
 					</p>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( 0 < (int) ( $campaignbridge_jobs['overdue'] ?? 0 ) || 0 < (int) ( $campaignbridge_jobs['expired_leases'] ?? 0 ) || false === ( $campaignbridge_jobs['scheduled'] ?? true ) ) : ?>
+				<div class="notice notice-warning inline">
+					<p><?php esc_html_e( 'Background jobs are not running on time. WP-Cron runs only when the site receives visits or a system cron calls wp-cron.php; if WP-Cron is disabled, set up a system cron that calls it every minute.', 'campaignbridge' ); ?></p>
 				</div>
 			<?php endif; ?>
 
@@ -131,6 +139,21 @@ if ( $screen ) {
 						</div>
 					<?php endif; ?>
 				<?php endforeach; ?>
+
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Background jobs waiting:', 'campaignbridge' ); ?></strong>
+					<span><?php echo esc_html( number_format_i18n( (int) ( $campaignbridge_job_counts['queued'] ?? 0 ) + (int) ( $campaignbridge_job_counts['claimed'] ?? 0 ) ) ); ?></span>
+				</div>
+
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Background jobs that stopped:', 'campaignbridge' ); ?></strong>
+					<span><?php echo esc_html( number_format_i18n( (int) ( $campaignbridge_job_counts['failed'] ?? 0 ) + (int) ( $campaignbridge_job_counts['dead'] ?? 0 ) ) ); ?></span>
+				</div>
+
+				<div class="campaignbridge-status__info-item">
+					<strong><?php esc_html_e( 'Overdue background jobs:', 'campaignbridge' ); ?></strong>
+					<span><?php echo esc_html( number_format_i18n( (int) ( $campaignbridge_jobs['overdue'] ?? 0 ) + (int) ( $campaignbridge_jobs['expired_leases'] ?? 0 ) ) ); ?></span>
+				</div>
 			</div>
 		</div>
 

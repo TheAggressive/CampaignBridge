@@ -7,7 +7,7 @@ CampaignBridge is moving toward four enforceable layers:
 | Domain | Email composition rules and provider-neutral value objects | Pure PHP only |
 | Repository | WordPress options, metadata, posts, cache, and campaign custom-table persistence | Domain ports and WordPress data APIs |
 | Workflow | Credential migration, campaign creation, reconciliation, and sending | Domain and application services |
-| Delivery | Admin screens, REST controllers, blocks, and provider adapters | Workflow and query interfaces |
+| Delivery | Admin screens, REST controllers, WP-Cron dispatch, blocks, and provider adapters | Workflow and query interfaces |
 
 The desired dependency direction is Delivery → Workflow → Domain ← Repository.
 Repository implements Domain ports consumed through dependency injection; it
@@ -17,7 +17,7 @@ stored WordPress input and Workflow behavior, Repository returns a typed Domain
 value and a Workflow coordinator performs the application-level composition.
 New direct WordPress data access outside Repository/Core Storage is prohibited.
 
-The M2 campaign storage ports, five site-local tables, migration policy, and
+The M2 campaign storage ports, site-local tables, migration policy, and
 data-minimization rules are documented in
 [`campaign-persistence.md`](campaign-persistence.md). The canonical
 provider-neutral application operations, state/concurrency rules, authorization
@@ -28,6 +28,25 @@ workflow layer. The repository boundary check rejects campaign REST files that
 import repositories or providers. Future Abilities, CLI, and UI adapters must
 call the same workflow layer rather than repositories or REST controller
 internals.
+
+## Background jobs
+
+Durable background work lives in `{prefix}campaignbridge_jobs` behind the
+`Job_Source` port (`Domain/Job`, implemented by `Repository/Job_Repository`).
+Producers enqueue through `Workflow/Job/Job_Queue`; `Workflow/Job/Job_Runner`
+claims a bounded batch under a lease and runs each job through the
+`Job_Handler` for its type. `Cron/Job_Dispatcher` is the delivery adapter: a
+one-minute WP-Cron tick that calls the runner through
+`Services/Job/Job_Factory`, which also lists the registered handlers.
+
+The database arbitrates every claim and transition with a conditional update,
+so two workers cannot hold one job, and a worker whose lease expired can no
+longer finish it. A handler declares whether it is retry-safe. A job taken
+over from a stopped worker, or whose not-retry-safe handler threw, runs again
+only if its handler is retry-safe; otherwise the handler's `abandoned()` hook
+runs and the job ends `dead`, so an irreversible effect is never repeated.
+Payloads are small scalar maps and refuse credential-like keys; stored errors
+are stable codes, never messages or provider responses.
 
 ## Composition root
 

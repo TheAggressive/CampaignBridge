@@ -178,6 +178,25 @@ final class Onboarding_Checklist_Test extends Test_Case {
 		self::assertSame( 0, $health['unknown_campaigns'] );
 	}
 
+	public function test_status_health_reports_stalled_background_jobs(): void {
+		global $wpdb;
+		$wpdb->query( 'DELETE FROM ' . Schema_Manager::table( 'jobs' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Allowlisted test table.
+		$jobs = new \CampaignBridge\Repository\Job_Repository();
+		$ago  = gmdate( 'Y-m-d\TH:i:s\Z', time() - HOUR_IN_SECONDS );
+		self::assertTrue( $jobs->add( \CampaignBridge\Domain\Job\Job::create( 'job-first', 'scripted', 'campaign', 'campaign-one', array(), 3, $ago, $ago ) ) );
+		self::assertTrue( $jobs->add( \CampaignBridge\Domain\Job\Job::create( 'job-second', 'scripted', 'campaign', 'campaign-two', array(), 1, $ago, $ago ) ) );
+		// The first is claimed by a worker that stops; the second stays queued past its run time.
+		$jobs->claim( 'worker-a', $ago, $ago, 1 );
+
+		$health = ( new Status_Controller() )->get_data()['health']['jobs'];
+
+		self::assertSame( 1, $health['overdue'] );
+		self::assertSame( 1, $health['expired_leases'] );
+		self::assertSame( $ago, $health['oldest_overdue'] );
+		self::assertSame( 1, $health['counts']['queued'] ?? null );
+		self::assertSame( 1, $health['counts']['claimed'] ?? null );
+	}
+
 	public function test_status_has_no_fixed_or_placeholder_figures(): void {
 		$data = ( new Status_Controller() )->get_data();
 
