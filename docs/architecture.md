@@ -71,6 +71,21 @@ constructor dependency; production factories always supply it.
 
 Provider adapters receive already-validated, decrypted settings for the duration of one operation. They must not persist credentials, render raw provider errors, or retry non-idempotent mutations. Provider-specific identifiers and response shapes stay inside the adapter.
 
+`Domain/Provider/Provider_Retry_Policy` decides which provider requests may be
+repeated, and adapters take their HTTP retry flag from it rather than choosing
+per call. Reads, discovery, connection checks, reconciliation, and an exact
+update of an unsent draft are repeatable: `Http_Client` retries a transient
+failure, a 5xx, or a 429 up to twice, waiting out a `Retry-After` of up to five
+seconds (seconds or an HTTP date) and otherwise backing off with jitter. A
+longer requested wait is not held open; it travels on the normalized
+`Provider_Error` as `retry_after`, for the caller or a background job to honour.
+Draft creation is attempted once; a new attempt goes through the campaign's
+idempotency key, which first looks for a draft an unconfirmed attempt may have
+created. Test, schedule, unschedule, send, and cancel are attempted exactly
+once: a refusal is reported, and an ambiguous outcome makes the campaign
+`unknown` until reconciliation reads what the provider did. Operations the
+policy does not list are never repeated.
+
 ## Build boundary
 
 Authored frontend code lives under `src/`; generated assets live under `dist/`. Every build deletes `dist/` first so removed source cannot survive as a stale production asset. The release ZIP is constructed from an allowlist and verified independently.

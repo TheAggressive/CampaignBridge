@@ -45,6 +45,13 @@ class Http_Client {
 	public const UNTRUSTED_ORIGIN = 'campaignbridge_untrusted_origin';
 
 	/**
+	 * Replacement for waiting between attempts; null waits for real.
+	 *
+	 * @var \Closure|null
+	 */
+	private static ?\Closure $sleeper = null;
+
+	/**
 	 * Metrics storage for performance tracking.
 	 *
 	 * @var array<string, mixed>
@@ -214,10 +221,17 @@ class Http_Client {
 				}
 
 				$status_code = wp_remote_retrieve_response_code( $response );
-				if ( $may_retry && $status_code >= 500 && $attempts <= self::MAX_RETRIES ) {
-					// Retry on server errors.
+				$retry_after = self::retry_after( $response, $status_code );
+				// A rate limit or server error may be retried, but only for a
+				// repeatable request, and only when the provider's requested
+				// wait fits in this request; a longer wait is reported instead.
+				if ( $may_retry && ( 429 === $status_code || $status_code >= 500 ) && $attempts <= self::MAX_RETRIES && ( null === $retry_after || $retry_after <= self::MAX_RETRY_DELAY ) ) {
 					++self::$metrics['requests_retry'];
-					self::exponential_backoff_delay( $attempts );
+					if ( null === $retry_after ) {
+						self::exponential_backoff_delay( $attempts );
+					} else {
+						self::pause( (float) $retry_after );
+					}
 					self::log_retry( $method, $url, $attempts, "HTTP {$status_code}" );
 					continue;
 				}
@@ -231,6 +245,7 @@ class Http_Client {
 					'body'        => wp_remote_retrieve_body( $response ),
 					'headers'     => wp_remote_retrieve_headers( $response ),
 					'status_code' => $status_code,
+					'retry_after' => $retry_after,
 					'response'    => $response,
 				);
 
@@ -307,7 +322,62 @@ class Http_Client {
 		$jitter = $delay * 0.1 * ( wp_rand( 0, 20 ) - 10 ) / 10; // ±10% jitter.
 		$delay  = max( 0.1, $delay + $jitter ); // Minimum 100ms delay.
 
-		usleep( (int) ( $delay * 1000000 ) ); // Convert to microseconds.
+		self::pause( $delay );
+	}
+
+	/**
+	 * The wait a 429 or 503 response asks for, in whole seconds.
+	 *
+	 * Accepts both forms of Retry-After: a number of seconds or an HTTP date.
+	 *
+	 * @param array<string, mixed>|\WP_Error $response    The raw WordPress HTTP response.
+	 * @param int|string                     $status_code The response status.
+	 * @return int|null Seconds to wait, or null when the response gives none.
+	 */
+	private static function retry_after( $response, $status_code ): ?int {
+		if ( ! in_array( (int) $status_code, array( 429, 503 ), true ) ) {
+			return null;
+		}
+		$header = wp_remote_retrieve_header( $response, 'retry-after' );
+		$value  = is_array( $header ) ? (string) reset( $header ) : trim( (string) $header );
+		if ( '' === $value ) {
+			return null;
+		}
+		if ( ctype_digit( $value ) ) {
+			return (int) $value;
+		}
+		$when = strtotime( $value );
+
+		return false === $when ? null : max( 0, $when - time() );
+	}
+
+	/**
+	 * Wait between attempts.
+	 *
+	 * @param float $seconds Seconds to wait.
+	 * @return void
+	 */
+	private static function pause( float $seconds ): void {
+		if ( null !== self::$sleeper ) {
+			( self::$sleeper )( $seconds );
+			return;
+		}
+		usleep( (int) ( $seconds * 1000000 ) ); // Convert to microseconds.
+	}
+
+	/**
+	 * Replace the wait between attempts, so retry timing can be asserted without waiting.
+	 *
+	 * For tests only; null restores real waiting.
+	 *
+	 * @internal
+	 *
+	 * @param \Closure|null $sleeper Receives the seconds each wait would take.
+	 * @phpstan-param (\Closure(float): void)|null $sleeper
+	 * @return void
+	 */
+	public static function use_sleeper( ?\Closure $sleeper ): void {
+		self::$sleeper = $sleeper;
 	}
 
 	/**

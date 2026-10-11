@@ -616,9 +616,14 @@ final class Campaign_Rest_Schema {
 							'additionalProperties' => false,
 							'required'             => array( 'code', 'category', 'retryable' ),
 							'properties'           => array(
-								'code'      => array( 'type' => 'string' ),
-								'category'  => array( 'type' => 'string' ),
-								'retryable' => array( 'type' => 'boolean' ),
+								'code'        => array( 'type' => 'string' ),
+								'category'    => array( 'type' => 'string' ),
+								'retryable'   => array( 'type' => 'boolean' ),
+								'retry_after' => array(
+									'description' => __( 'Seconds the provider asked callers to wait before trying again.', 'campaignbridge' ),
+									'type'        => 'integer',
+									'minimum'     => 0,
+								),
 							),
 						),
 					),

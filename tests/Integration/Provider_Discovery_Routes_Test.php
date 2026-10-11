@@ -32,6 +32,9 @@ final class Provider_Discovery_Routes_Test extends Test_Case {
 	/** @var array{0: int, 1: string} Scripted Mailchimp status and body. */
 	private array $reply;
 
+	/** @var array<int, array{0: int, 1: string, 2?: array<string, string>}> Replies to use first, in order, with optional headers. */
+	private array $replies = array();
+
 	/** @var callable|null */
 	private $filter = null;
 
@@ -68,11 +71,13 @@ final class Provider_Discovery_Routes_Test extends Test_Case {
 			$this->requests[] = $url;
 			self::assertSame( 'Bearer ' . self::api_key(), $args['headers']['Authorization'] ?? null );
 
+			$reply = array_shift( $this->replies ) ?? $this->reply;
+
 			return array(
-				'headers'  => array(),
-				'body'     => $this->reply[1],
+				'headers'  => $reply[2] ?? array(),
+				'body'     => $reply[1],
 				'response' => array(
-					'code'    => $this->reply[0],
+					'code'    => $reply[0],
 					'message' => '',
 				),
 				'cookies'  => array(),
@@ -89,6 +94,7 @@ final class Provider_Discovery_Routes_Test extends Test_Case {
 
 	public function tearDown(): void {
 		remove_filter( 'pre_http_request', $this->filter );
+		\CampaignBridge\Core\Http_Client::use_sleeper( null );
 		( new Provider_Connection_Repository() )->delete( 'mailchimp' );
 		parent::tearDown();
 	}
@@ -223,6 +229,48 @@ final class Provider_Discovery_Routes_Test extends Test_Case {
 		self::assertSame( array( 'abc123' ), array_column( $second->get_data()['items'], 'id' ) );
 		self::assertSame( $calls, count( $this->requests ), 'The overlapping refresh made no Mailchimp call.' );
 		self::assertSame( 200, $this->request( 'POST', $path )->get_status(), 'The next refresh runs once the first is done.' );
+	}
+
+	public function test_discovery_waits_out_a_short_rate_limit_and_reports_a_long_one(): void {
+		$waits = array();
+		\CampaignBridge\Core\Http_Client::use_sleeper(
+			static function ( float $seconds ) use ( &$waits ): void {
+				$waits[] = $seconds;
+			}
+		);
+		$path = '/discovery/audiences/refresh';
+
+		$this->replies = array( array( 429, '{}', array( 'retry-after' => '2' ) ) );
+		$retried       = $this->request( 'POST', $path );
+		self::assertSame( 200, $retried->get_status() );
+		self::assertSame( array( 'abc123' ), array_column( $retried->get_data()['items'], 'id' ) );
+		self::assertCount( 2, $this->requests, 'A list read is repeatable, so the rate limit is waited out and retried.' );
+		self::assertSame( array( 2.0 ), $waits, 'The wait is exactly what Mailchimp asked for.' );
+
+		// Two minutes is too long to hold a request open: the wait is reported instead.
+		$this->replies = array( array( 429, '{}', array( 'retry-after' => '120' ) ) );
+		$limited       = $this->request( 'POST', '/discovery/merge_fields/refresh', array( 'audience' => 'abc123' ) );
+		self::assertSame( 429, $limited->get_status() );
+		self::assertSame( 120, $limited->get_data()['data']['retry_after'] );
+		self::assertCount( 3, $this->requests );
+		self::assertCount( 1, $waits );
+	}
+
+	public function test_discovery_retries_server_errors_a_bounded_number_of_times(): void {
+		$waits = array();
+		\CampaignBridge\Core\Http_Client::use_sleeper(
+			static function ( float $seconds ) use ( &$waits ): void {
+				$waits[] = $seconds;
+			}
+		);
+		$this->reply = array( 503, '{}' );
+
+		$response = $this->request( 'POST', '/discovery/audiences/refresh' );
+
+		self::assertSame( 502, $response->get_status() );
+		self::assertCount( 3, $this->requests, 'One attempt and two retries.' );
+		self::assertCount( 2, $waits );
+		self::assertLessThan( $waits[1], $waits[0], 'Backoff grows between retries.' );
 	}
 
 	public function test_settings_screen_shares_the_discovery_cache(): void {

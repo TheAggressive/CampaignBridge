@@ -56,6 +56,18 @@ final class Mailchimp_Errors {
 	}
 
 	/**
+	 * Normalize a non-success response, keeping the wait a 429 or 503 asked for.
+	 *
+	 * @param array<string, mixed> $response Response from the HTTP client.
+	 */
+	public static function from_response( array $response ): Provider_Error {
+		$status      = $response['status_code'] ?? 0;
+		$retry_after = $response['retry_after'] ?? null;
+
+		return self::from_status( is_int( $status ) ? $status : 0 )->with_retry_after( is_int( $retry_after ) ? $retry_after : null );
+	}
+
+	/**
 	 * Normalize a 400 refusal of a valid, authenticated campaign action.
 	 *
 	 * Mailchimp answers rejected test addresses, exhausted test-email quotas,

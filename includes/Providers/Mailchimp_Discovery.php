@@ -23,6 +23,7 @@ use CampaignBridge\Domain\Provider\Discovery_Values;
 use CampaignBridge\Domain\Provider\Provider_Capabilities;
 use CampaignBridge\Domain\Provider\Provider_Discovery;
 use CampaignBridge\Domain\Provider\Sender_Identity;
+use CampaignBridge\Domain\Provider\Provider_Retry_Policy;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -154,6 +155,7 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 			Mailchimp_Provider::build_api_url( $api_key, $endpoint ),
 			array(
 				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
+				'campaignbridge_retry'  => Provider_Retry_Policy::may_replay( Discovery_Kind::operation( $kind ) ),
 				'campaignbridge_origin' => Mailchimp_Provider::origin(),
 			)
 		);
@@ -162,7 +164,7 @@ final class Mailchimp_Discovery implements Provider_Discovery {
 		}
 		$status = $response['status_code'] ?? 0;
 		if ( ! is_int( $status ) || 200 !== $status ) {
-			return Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 );
+			return Mailchimp_Errors::from_response( $response );
 		}
 
 		$decoded = json_decode( is_string( $response['body'] ?? null ) ? $response['body'] : '', true );

@@ -119,6 +119,8 @@ class Mailchimp_Provider extends Abstract_Provider {
 			self::build_api_url( $api_key, self::ENDPOINT_PING ),
 			array(
 				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
+				// Repeatable, but checked while a settings page loads: one attempt keeps the page
+				// responsive, and the next view checks again.
 				'campaignbridge_retry'  => false,
 				'campaignbridge_origin' => self::origin(),
 			)
@@ -127,7 +129,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 			return Connection_Result::failure( Mailchimp_Errors::from_transport( $response ) );
 		}
 		if ( 200 !== ( $response['status_code'] ?? 0 ) ) {
-			return Connection_Result::failure( Mailchimp_Errors::from_status( (int) ( $response['status_code'] ?? 0 ) ) );
+			return Connection_Result::failure( Mailchimp_Errors::from_response( $response ) );
 		}
 
 		return Connection_Result::success(

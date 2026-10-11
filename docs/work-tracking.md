@@ -97,13 +97,14 @@ The merged PR/closed issues provide the implementation history. Do not copy ever
 Issue number is not execution order. M1 #62 with its action issues #69–#72,
 M2 #63 with its action issues #73–#75, M3 provider discovery #76, the M3
 Mailchimp draft handoff #77, M3 test delivery #78, guarded schedule/send #79,
-and reconciliation #80 are complete, and M3 #64 is closed. The remaining order
-is:
+and reconciliation #80 are complete, and M3 #64 is closed. The M4 operator
+experience #65 is complete and closed. The remaining order is:
 
-1. Complete the operator experience — #65, incrementally as M2/M3 services stabilize.
-2. Durable jobs/recovery — #66.
-3. Governance/reporting — #67.
-4. GA closeout — #68.
+1. Durable jobs/recovery — #66: job store #168, locks #169, and retry policy
+   #170, then background reconciliation #171, webhooks #172, WP-CLI #173, Site
+   Health #174, and the exit gate #175.
+2. Governance/reporting — #67.
+3. GA closeout — #68.
 
 Cross-cutting work does not need to wait for the numbered milestone when its dependency is already satisfied. Security, accessibility, i18n, performance, package verification, and documentation travel with every relevant PR.
 

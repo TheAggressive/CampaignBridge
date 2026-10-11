@@ -15,6 +15,8 @@ use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Provider\Provider_Test_Gateway;
 use CampaignBridge\Domain\Provider\Test_Delivery;
 use CampaignBridge\Domain\Provider\Action_Outcome;
+use CampaignBridge\Domain\Provider\Provider_Operation;
+use CampaignBridge\Domain\Provider\Provider_Retry_Policy;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -84,7 +86,7 @@ final class Mailchimp_Test_Gateway implements Provider_Test_Gateway {
 					)
 				),
 				'timeout'               => self::TIMEOUT,
-				'campaignbridge_retry'  => false,
+				'campaignbridge_retry'  => Provider_Retry_Policy::may_replay( Provider_Operation::SEND_TEST ),
 				'campaignbridge_origin' => Mailchimp_Provider::origin(),
 			)
 		);
@@ -96,6 +98,6 @@ final class Mailchimp_Test_Gateway implements Provider_Test_Gateway {
 			return Action_Outcome::accepted();
 		}
 
-		return Action_Outcome::from_error( 400 === $status ? Mailchimp_Errors::request_rejected() : Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 ) );
+		return Action_Outcome::from_error( 400 === $status ? Mailchimp_Errors::request_rejected() : Mailchimp_Errors::from_response( $response ) );
 	}
 }

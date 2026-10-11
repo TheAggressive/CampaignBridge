@@ -275,6 +275,17 @@ data. After reinstalling a schema-7 release, run
 `wp option update campaignbridge_database_schema 7`. Locks are short-lived, so
 the table needs no cleanup.
 
+## Mailchimp rate limits and outages
+
+CampaignBridge never repeats a request that reaches recipients or changes
+delivery. A test, schedule, unschedule, or send that Mailchimp refuses with
+429 is reported with `provider_error.retry_after`, the seconds Mailchimp asked
+callers to wait; nothing was sent, and trying again after that wait is safe. A
+5xx or timeout on one of those requests may have been applied, so the
+campaign becomes `unknown`: reconcile it before doing anything else. Reads and
+discovery retry on their own, waiting out short rate limits; when Mailchimp
+asks for a longer wait, the list refresh answers 429 with `retry_after`.
+
 ## "Another request is already working on this"
 
 A delivery or reconcile request answered `409 locked` found the campaign held

@@ -88,6 +88,9 @@ final class Campaign_Rest_Errors {
 				'category'  => $provider->category(),
 				'retryable' => $provider->is_retryable(),
 			);
+			if ( null !== $provider->retry_after() ) {
+				$data['provider_error']['retry_after'] = $provider->retry_after();
+			}
 		}
 
 		return new WP_Error( 'campaignbridge_campaign_' . $error->code(), $error->message(), $data );

@@ -11,6 +11,7 @@ namespace CampaignBridge\Tests\Integration;
 
 use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Core\Encryption;
+use CampaignBridge\Core\Http_Client;
 use CampaignBridge\Domain\Campaign\Provider_Connection;
 use CampaignBridge\Domain\Provider\Discovered_Merge_Field;
 use CampaignBridge\Domain\Provider\Discovery_Batch;
@@ -43,7 +44,7 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 	/** @var array<int, array{method: string, url: string, body: string}> Mailchimp requests. */
 	private array $requests = array();
 
-	/** @var array<int, array{0: int, 1: string}> Scripted replies for campaign actions; empty means 204. */
+	/** @var array<int, array{0: int, 1: string, 2?: array<string, string>}> Scripted replies for campaign actions, with optional headers; empty means 204. */
 	private array $action_replies = array();
 
 	/** @var array<int, array{method: string, path: string, status: int, body: string}>|null Recorded Mailchimp exchanges to replay in order. */
@@ -103,7 +104,7 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 			};
 
 			return array(
-				'headers'  => array(),
+				'headers'  => $reply[2] ?? array(),
 				'body'     => $reply[1],
 				'response' => array(
 					'code'    => $reply[0],
@@ -132,6 +133,7 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 	public function tearDown(): void {
 		global $wpdb;
 		remove_filter( 'pre_http_request', $this->filter );
+		Http_Client::use_sleeper( null );
 		foreach ( $this->template_ids as $template_id ) {
 			wp_delete_post( $template_id, true );
 		}
@@ -378,6 +380,47 @@ final class Campaign_Schedule_Route_Test extends Test_Case {
 		self::assertSame( 200, $this->send( $campaign['id'], 5, 'abc123', 'locked-send' )->get_status() );
 		self::assertSame( $actions + 1, $this->action_count() );
 		self::assertFalse( $locks->release( $name, 'worker-background' ), 'The send released its own lock when done.' );
+	}
+
+	public function test_rate_limits_and_outages_on_delivery_are_attempted_exactly_once(): void {
+		$campaign = $this->provider_draft_campaign();
+		$waits    = array();
+		Http_Client::use_sleeper(
+			static function ( float $seconds ) use ( &$waits ): void {
+				$waits[] = $seconds;
+			}
+		);
+		$actions = $this->action_count();
+
+		// A rate limit is a definite refusal: nothing changes, and the wait is reported, not waited out.
+		$this->action_replies = array( array( 429, '{}', array( 'retry-after' => '30' ) ) );
+		$limited              = $this->schedule( $campaign['id'], 5, self::send_at(), 'abc123', 'limited-schedule' );
+		self::assertSame( 502, $limited->get_status() );
+		self::assertSame( 'rate_limited', $limited->get_data()['data']['provider_error']['category'] );
+		self::assertSame( 30, $limited->get_data()['data']['provider_error']['retry_after'] );
+		self::assertSame( $actions + 1, $this->action_count(), 'The schedule reached Mailchimp once.' );
+
+		$this->action_replies = array( array( 429, '{}', array( 'retry-after' => '1' ) ) );
+		$test                 = $this->request(
+			'POST',
+			"/{$campaign['id']}/test-send",
+			array(
+				'recipients'      => array( 'qa@example.com' ),
+				'format'          => 'html',
+				'idempotency_key' => 'limited-test',
+			)
+		);
+		self::assertSame( 1, $test->get_data()['data']['provider_error']['retry_after'] ?? null );
+		self::assertSame( $actions + 2, $this->action_count(), 'Even a short wait does not replay a test.' );
+
+		// A server error may have applied the send: it is not retried, and the campaign becomes unknown.
+		$this->action_replies = array( array( 503, '{}', array( 'retry-after' => '1' ) ) );
+		$version              = $this->request( 'GET', '/' . $campaign['id'] )->get_data()['campaign']['version'];
+		$sent                 = $this->send( $campaign['id'], $version, 'abc123', 'outage-send' );
+		self::assertSame( 409, $sent->get_status() );
+		self::assertSame( 'campaignbridge_campaign_reconciliation_required', $sent->get_data()['code'] );
+		self::assertSame( $actions + 3, $this->action_count(), 'The send reached Mailchimp once.' );
+		self::assertSame( array(), $waits, 'No delivery request waited to try again.' );
 	}
 
 	public function test_invalid_requests_fail_before_any_provider_call(): void {
