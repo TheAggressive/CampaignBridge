@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Production provider discovery composition.
  *
@@ -15,6 +15,7 @@ use CampaignBridge\Repository\Provider_Connection_Repository;
 use CampaignBridge\Repository\Provider_Discovery_Repository;
 use CampaignBridge\Workflow\Campaign\System_Clock;
 use CampaignBridge\Workflow\Provider\Provider_Discovery_Service;
+use CampaignBridge\Services\Lock\Lock_Factory;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -30,10 +31,14 @@ final class Provider_Discovery_Factory {
 	/** Providers with a discovery adapter. */
 	public const PROVIDERS = array( 'mailchimp' );
 
-	/** The discovery service for one provider, or null when it has none. */
+	/**
+	 * The discovery service for one provider, or null when it has none.
+	 *
+	 * @param string $provider Provider slug.
+	 */
 	public static function service( string $provider ): ?Provider_Discovery_Service {
 		return match ( $provider ) {
-			'mailchimp' => new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock() ),
+			'mailchimp' => new Provider_Discovery_Service( new Mailchimp_Discovery(), new Provider_Discovery_Repository(), new System_Clock(), Lock_Factory::manager() ),
 			default     => null,
 		};
 	}
@@ -45,6 +50,7 @@ final class Provider_Discovery_Factory {
 	 * then reports the provider as not configured. Callers must not persist,
 	 * log, or return the result.
 	 *
+	 * @param string $provider Provider slug.
 	 * @return array<string, string>
 	 */
 	public static function settings( string $provider ): array {

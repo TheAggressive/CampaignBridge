@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,Squiz.Commenting.VariableComment.Missing -- Typed immutable persistence values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Bounded and redacted audit context.
  *
@@ -22,15 +21,25 @@ final class Audit_Context {
 	private const MAX_STRING_BYTES = 512;
 	private const REDACTED         = '[redacted]';
 
+	/**
+	 * Values normalized so far, counted against MAX_ENTRIES.
+	 *
+	 * @var int
+	 */
 	private int $entries = 0;
 
-	/** @param array<string, mixed> $values Safe normalized values. */
+	/**
+	 * Build the audit context.
+	 *
+	 * @param array<string, mixed> $values Safe normalized values.
+	 */
 	private function __construct( private readonly array $values ) {}
 
 	/**
 	 * Create bounded context, replacing sensitive values with a marker.
 	 *
 	 * @param array<string, mixed> $values Candidate context.
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	public static function from_array( array $values ): self {
 		$normalizer = new self( array() );
@@ -43,14 +52,22 @@ final class Audit_Context {
 		return new self( $normalized );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The context's values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return $this->values;
 	}
 
 	/**
+	 * Normalize one level of context, redacting sensitive values and enforcing the bounds.
+	 *
 	 * @param array<string, mixed> $values Candidate map.
+	 * @param int                  $depth  Current nesting depth.
 	 * @return array<string, mixed>
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	private function normalize_map( array $values, int $depth ): array {
 		if ( $depth > self::MAX_DEPTH || array_is_list( $values ) ) {
@@ -92,6 +109,11 @@ final class Audit_Context {
 		return $normalized;
 	}
 
+	/**
+	 * Whether a context key names a secret or personal data.
+	 *
+	 * @param string $key Context key.
+	 */
 	private function is_sensitive( string $key ): bool {
 		$key = strtolower( $key );
 		foreach ( array( 'authorization', 'credential', 'password', 'secret', 'token', 'api_key', 'subscriber', 'recipient', 'email', 'phone', 'first_name', 'last_name', 'address', 'request_body', 'response_body', 'raw_request', 'raw_response', 'provider_payload', 'stack_trace', 'exception' ) as $fragment ) {

@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Public operation names and typed signatures form the application contract.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Caller contract violations fail closed.
+<?php
 /**
  * Provider reference discovery with explicit refresh.
  *
@@ -19,6 +18,8 @@ use CampaignBridge\Domain\Provider\Provider_Capabilities;
 use CampaignBridge\Domain\Provider\Provider_Discovery;
 use CampaignBridge\Domain\Provider\Provider_Discovery_Source;
 use CampaignBridge\Workflow\Campaign\Campaign_Clock;
+use CampaignBridge\Workflow\Campaign\Campaign_Workflow_Error;
+use CampaignBridge\Workflow\Lock\Lock_Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -35,12 +36,24 @@ final class Provider_Discovery_Service {
 	/** How long a discovered list is treated as current, in seconds. */
 	public const FRESH_SECONDS = 900;
 
+	/**
+	 * Build the provider discovery service.
+	 *
+	 * @param Provider_Discovery        $provider Provider slug.
+	 * @param Provider_Discovery_Source $cache    Discovery cache.
+	 * @param Campaign_Clock            $clock    Source of the current time.
+	 * @param Lock_Manager|null         $locks    Lock manager; null runs without locking.
+	 */
 	public function __construct(
 		private readonly Provider_Discovery $provider,
 		private readonly Provider_Discovery_Source $cache,
-		private readonly Campaign_Clock $clock
+		private readonly Campaign_Clock $clock,
+		private readonly ?Lock_Manager $locks = null
 	) {}
 
+	/**
+	 * What the provider supports.
+	 */
 	public function capabilities(): Provider_Capabilities {
 		return $this->provider->capabilities();
 	}
@@ -48,7 +61,9 @@ final class Provider_Discovery_Service {
 	/**
 	 * Read the cached list without contacting the provider.
 	 *
+	 * @param string               $kind     Discovery kind.
 	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param string               $scope    Discovery scope: empty, or an audience ID.
 	 */
 	public function cached( string $kind, array $settings, string $scope = '' ): Discovery_Lookup {
 		$this->assert_request( $kind, $scope );
@@ -68,7 +83,9 @@ final class Provider_Discovery_Service {
 	/**
 	 * Fetch the list from the provider and replace the cached copy.
 	 *
+	 * @param string               $kind     Discovery kind.
 	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param string               $scope    Discovery scope: empty, or an audience ID.
 	 */
 	public function refresh( string $kind, array $settings, string $scope = '' ): Discovery_Lookup {
 		$this->assert_request( $kind, $scope );
@@ -80,6 +97,38 @@ final class Provider_Discovery_Service {
 			return Discovery_Lookup::failed( $this->not_configured() );
 		}
 
+		if ( null === $this->locks ) {
+			return $this->fetch( $kind, $settings, $scope, $account );
+		}
+
+		// One refresh per account and list at a time: a second request gets the
+		// cached list with a retryable refusal instead of a second provider call.
+		return $this->locks->remote(
+			$this->provider->slug(),
+			$account,
+			'discover_' . $kind . "\0" . $scope,
+			fn (): Discovery_Lookup => $this->fetch( $kind, $settings, $scope, $account ),
+			fn ( Campaign_Workflow_Error $locked ): Discovery_Lookup => Discovery_Lookup::failed(
+				Provider_Error::from_category(
+					Provider_Error_Category::RATE_LIMITED,
+					$this->provider->slug() . '_refresh_in_progress',
+					'Another refresh of this list is in progress. Try again shortly.',
+					$this->provider->slug()
+				),
+				$this->cache->get( $account, $this->provider->slug(), $kind, $scope )
+			)
+		);
+	}
+
+	/**
+	 * Fetch one list from the provider and replace the cached copy.
+	 *
+	 * @param string               $kind     Discovery kind.
+	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param string               $scope    Discovery scope: empty, or an audience ID.
+	 * @param string               $account  Stable key for the provider account.
+	 */
+	private function fetch( string $kind, array $settings, string $scope, string $account ): Discovery_Lookup {
 		$previous = $this->cache->get( $account, $this->provider->slug(), $kind, $scope );
 		$batch    = match ( $kind ) {
 			Discovery_Kind::AUDIENCES    => $this->provider->discover_audiences( $settings ),
@@ -97,6 +146,13 @@ final class Provider_Discovery_Service {
 		return Discovery_Lookup::fresh( $result );
 	}
 
+	/**
+	 * Reject an unknown kind, or a scope that does not match its kind.
+	 *
+	 * @param string $kind  Discovery kind.
+	 * @param string $scope Discovery scope: empty, or an audience ID.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	private function assert_request( string $kind, string $scope ): void {
 		if ( ! Discovery_Kind::is_valid( $kind ) ) {
 			throw new \InvalidArgumentException( 'Unknown discovery kind.' );
@@ -106,6 +162,11 @@ final class Provider_Discovery_Service {
 		}
 	}
 
+	/**
+	 * Whether a cached list is older than its freshness window.
+	 *
+	 * @param Discovery_Result $result The discovered list.
+	 */
 	private function is_stale( Discovery_Result $result ): bool {
 		$fetched = strtotime( $result->fetched_at() );
 		$now     = strtotime( $this->clock->now() );
@@ -113,6 +174,9 @@ final class Provider_Discovery_Service {
 		return false === $fetched || false === $now || self::FRESH_SECONDS <= $now - $fetched;
 	}
 
+	/**
+	 * The error for a provider with no usable connection.
+	 */
 	private function not_configured(): Provider_Error {
 		return Provider_Error::from_category(
 			Provider_Error_Category::VALIDATION,

@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * Thin REST adapter for canonical campaign workflows.
  *
@@ -64,6 +64,12 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	 */
 	private Campaign_Authorizer $authorizer;
 
+	/**
+	 * Build the campaign routes.
+	 *
+	 * @param Campaign_Workflow|null   $workflow   The campaign workflow.
+	 * @param Campaign_Authorizer|null $authorizer Resolves campaign authority.
+	 */
 	public function __construct(
 		?Campaign_Workflow $workflow = null,
 		?Campaign_Authorizer $authorizer = null
@@ -72,6 +78,9 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		$this->authorizer = $authorizer ?? new Campaign_Authorizer();
 	}
 
+	/**
+	 * Register every campaign route with its permission check and argument schema.
+	 */
 	public function register(): void {
 		\register_rest_route(
 			Rest_Constants::API_NAMESPACE,
@@ -191,6 +200,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return self::can_access_campaigns() && current_user_can( Capabilities::TEST_CAMPAIGNS );
 	}
 
+	/**
+	 * GET /campaigns: one owner's campaigns, filtered and paged.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function list_campaigns( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$actor    = $this->actor();
 		$owner_id = $request->has_param( 'owner_user_id' ) ? (int) $request->get_param( 'owner_user_id' ) : $actor->user_id();
@@ -228,10 +242,20 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		return $this->no_store( $response );
 	}
 
+	/**
+	 * GET /campaigns/{id}: one campaign.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function get_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->campaign_response( $this->workflow->get( $this->actor(), $this->campaign_id( $request ) ) );
 	}
 
+	/**
+	 * POST /campaigns: create a campaign from a template.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function create_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$limited = $this->rate_limit( 'campaign_create', self::EXPENSIVE_LIMIT );
 		if ( is_wp_error( $limited ) ) {
@@ -252,6 +276,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * PUT /campaigns/{id}/template: point the campaign at another template.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function update_template( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->versioned(
 			$request,
@@ -266,8 +295,9 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	}
 
 	/**
-	 * Targeting is replaced as one pair. Both keys are required, but null is a
-	 * meaningful value (clear), which WordPress `required` would treat as missing.
+	 * Targeting is replaced as one pair. Both keys are required, but null is a meaningful value (clear), which WordPress `required` would treat as missing.
+	 *
+	 * @param WP_REST_Request $request The REST request.
 	 */
 	public function update_targeting( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$missing = array_values(
@@ -301,6 +331,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * POST /campaigns/{id}/snapshot: freeze the template for review.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function snapshot_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$limited = $this->rate_limit( 'campaign_snapshot', self::EXPENSIVE_LIMIT );
 		if ( is_wp_error( $limited ) ) {
@@ -326,14 +361,29 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * POST /campaigns/{id}/validation: check the live template without changing the campaign.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function validate_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->compile_response( $request, true );
 	}
 
+	/**
+	 * POST /campaigns/{id}/preview: compile the live template without changing the campaign.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function preview_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->compile_response( $request, false );
 	}
 
+	/**
+	 * POST /campaigns/{id}/submit: submit the snapshot for review.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function submit_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->versioned(
 			$request,
@@ -342,6 +392,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * POST /campaigns/{id}/approve: approve the reviewed snapshot.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function approve_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->versioned(
 			$request,
@@ -350,6 +405,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * POST /campaigns/{id}/revoke-approval: return an approved campaign to review.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function revoke_approval( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->versioned(
 			$request,
@@ -358,6 +418,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * POST /campaigns/{id}/archive: archive the campaign.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function archive_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->versioned(
 			$request,
@@ -366,6 +431,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * POST /campaigns/{id}/duplicate: copy the campaign as a new draft.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function duplicate_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$limited = $this->rate_limit( 'campaign_duplicate', self::EXPENSIVE_LIMIT );
 		if ( is_wp_error( $limited ) ) {
@@ -395,6 +465,8 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	 * The provider comes from the campaign's own targeting. Credentials are
 	 * decrypted for this one call and never returned. This never schedules or
 	 * sends.
+	 *
+	 * @param WP_REST_Request $request The REST request.
 	 */
 	public function create_provider_draft( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$limited = $this->rate_limit( 'campaign_provider_draft', self::EXPENSIVE_LIMIT );
@@ -452,6 +524,8 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	 * The provider comes from the campaign's own targeting. Credentials and
 	 * recipients are used for this one call and never returned or stored.
 	 * The campaign's state and version never change.
+	 *
+	 * @param WP_REST_Request $request The REST request.
 	 */
 	public function send_test( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$limited = $this->rate_limit( 'campaign_test_send', self::EXPENSIVE_LIMIT );
@@ -511,6 +585,8 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	 *
 	 * The operator must echo the campaign's audience reference, so a stale
 	 * screen or a mistargeted call cannot schedule the wrong audience.
+	 *
+	 * @param WP_REST_Request $request The REST request.
 	 */
 	public function schedule_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->delivery(
@@ -533,6 +609,8 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	 *
 	 * Irreversible. The operator must echo the campaign's audience reference,
 	 * exactly as for scheduling.
+	 *
+	 * @param WP_REST_Request $request The REST request.
 	 */
 	public function send_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->delivery(
@@ -549,7 +627,11 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
-	/** Return a scheduled campaign to its provider draft before it sends. */
+	/**
+	 * Return a scheduled campaign to its provider draft before it sends.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function unschedule_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->delivery(
 			$request,
@@ -569,6 +651,8 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	 *
 	 * Read-only toward the provider and idempotent, so it takes neither an
 	 * expected version nor an idempotency key.
+	 *
+	 * @param WP_REST_Request $request The REST request.
 	 */
 	public function reconcile_campaign( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$limited = $this->rate_limit( 'campaign_reconcile', self::EXPENSIVE_LIMIT );
@@ -616,6 +700,8 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	 *
 	 * Credentials are decrypted for this one call and never returned.
 	 *
+	 * @param WP_REST_Request                                                                              $request   The REST request.
+	 * @param string                                                                                       $rate_key  Rate-limit scope for the operation.
 	 * @param callable(Campaign_Scheduler, Campaign_Actor, array<string, mixed>): Campaign_Delivery_Result $operation Workflow call.
 	 */
 	private function delivery( WP_REST_Request $request, string $rate_key, callable $operation ): WP_REST_Response|WP_Error {
@@ -664,7 +750,12 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	/**
 	 * Register one POST action on a campaign item.
 	 *
-	 * @param array<string, array<string, mixed>> $args Additional route fields.
+	 * @param string                              $suffix     Table suffix.
+	 * @param string                              $callback   Name of the method that handles the route.
+	 * @param array<string, array<string, mixed>> $args       Additional route fields.
+	 * @param bool                                $versioned  Whether the request is versioned.
+	 * @param string                              $schema     JSON schema.
+	 * @param string                              $permission Permission callback.
 	 */
 	private function register_action(
 		string $suffix,
@@ -695,8 +786,10 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 	}
 
 	/**
-	 * Validation diagnostics are the requested resource on compile routes, so
-	 * they return 200 like POST /preview; every other failure uses the shared map.
+	 * Validation diagnostics are the requested resource on compile routes, so they return 200 like POST /preview; every other failure uses the shared map.
+	 *
+	 * @param WP_REST_Request $request  The REST request.
+	 * @param bool            $validate Whether to validate instead of preview.
 	 */
 	private function compile_response( WP_REST_Request $request, bool $validate ): WP_REST_Response|WP_Error {
 		$limited = $this->rate_limit( $validate ? 'campaign_validation' : 'campaign_preview', self::EXPENSIVE_LIMIT );
@@ -727,7 +820,13 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
-	/** @param callable(Campaign_Actor, string, int): Campaign_Workflow_Result $operation Workflow call. */
+	/**
+	 * Run a rate-limited, versioned workflow mutation and shape its response.
+	 *
+	 * @param WP_REST_Request                                                 $request   The REST request.
+	 * @param string                                                          $rate_key  Rate-limit scope for the operation.
+	 * @param callable(Campaign_Actor, string, int): Campaign_Workflow_Result $operation Workflow call.
+	 */
 	private function versioned( WP_REST_Request $request, string $rate_key, callable $operation ): WP_REST_Response|WP_Error {
 		$limited = $this->rate_limit( $rate_key, self::MUTATION_LIMIT );
 		if ( is_wp_error( $limited ) ) {
@@ -739,6 +838,12 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * Shape a workflow result as a campaign response or its REST error.
+	 *
+	 * @param Campaign_Workflow_Result $result Workflow outcome.
+	 * @param int                      $status HTTP status for a successful response.
+	 */
 	private function campaign_response( Campaign_Workflow_Result $result, int $status = 200 ): WP_REST_Response|WP_Error {
 		$campaign = $result->campaign();
 		if ( ! $result->is_success() || null === $campaign ) {
@@ -750,18 +855,37 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * The current user's campaign authority.
+	 */
 	private function actor(): Campaign_Actor {
 		return $this->authorizer->actor( get_current_user_id() );
 	}
 
+	/**
+	 * The campaign ID from the route.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	private function campaign_id( WP_REST_Request $request ): string {
 		return (string) $request->get_param( 'id' );
 	}
 
+	/**
+	 * The version the client last read.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	private function expected_version( WP_REST_Request $request ): int {
 		return (int) $request->get_param( 'expected_version' );
 	}
 
+	/**
+	 * Apply the per-user request limit for one operation.
+	 *
+	 * @param string $key     Rate-limit scope for the operation.
+	 * @param int    $maximum Maximum length in bytes.
+	 */
 	private function rate_limit( string $key, int $maximum ): bool|WP_Error {
 		return Rate_Limiter::check_rate_limit_authenticated(
 			$key,
@@ -771,12 +895,22 @@ final class Campaign_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
-	/** Versioned state must never be served from an intermediary cache. */
+	/**
+	 * Versioned state must never be served from an intermediary cache.
+	 *
+	 * @param WP_REST_Response $response The response to mark.
+	 */
 	private function no_store( WP_REST_Response $response ): WP_REST_Response {
 		$response->header( 'Cache-Control', 'no-store' );
 		return $response;
 	}
 
+	/**
+	 * A request string, or null when it is absent or empty.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 * @param string          $key     Request parameter name.
+	 */
 	private function nullable_string( WP_REST_Request $request, string $key ): ?string {
 		$value = $request->get_param( $key );
 		return is_string( $value ) && '' !== $value ? $value : null;

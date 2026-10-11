@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * Stable provider-neutral campaign workflow error.
  *
@@ -34,6 +34,9 @@ final class Campaign_Workflow_Error {
 
 	/** A durable per-campaign operation quota is exhausted. */
 	public const RATE_LIMITED = 'rate_limited';
+
+	/** Another request or background job holds the campaign; nothing was done. */
+	public const LOCKED = 'locked';
 
 	/** Reconciliation reasons: why a reconcile could not settle the campaign. */
 	public const REASON_IN_PROGRESS      = 'in_progress';
@@ -88,15 +91,25 @@ final class Campaign_Workflow_Error {
 		return $this->retry_after;
 	}
 
+	/**
+	 * The error's code.
+	 */
 	public function code(): string {
 		return $this->code;
 	}
 
+	/**
+	 * The error's message.
+	 */
 	public function message(): string {
 		return $this->message;
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * Every stable workflow error code.
+	 *
+	 * @return array<int, string>
+	 */
 	private static function codes(): array {
 		return array(
 			self::NOT_FOUND,
@@ -112,6 +125,7 @@ final class Campaign_Workflow_Error {
 			self::RECONCILIATION_REQUIRED,
 			self::PROVIDER_FAILED,
 			self::RATE_LIMITED,
+			self::LOCKED,
 		);
 	}
 }

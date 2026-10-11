@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
 // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Direct access is confined to this repository implementation.
 /**
  * Durable immutable campaign snapshot repository.
@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Stores exact M1 inputs/artifacts with insert-only revision identities. */
 final class Campaign_Snapshot_Repository implements Campaign_Snapshot_Source {
+	/**
+	 * {@inheritDoc}
+	 */
 	public function get( string $id ): ?Campaign_Snapshot {
 		if ( ! Schema_Manager::is_current() ) {
 			return null;
@@ -32,6 +35,9 @@ final class Campaign_Snapshot_Repository implements Campaign_Snapshot_Source {
 		return is_array( $row ) ? $this->hydrate( $row ) : null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function add( Campaign_Snapshot $snapshot ): bool {
 		if ( ! Schema_Manager::is_current() || ! Database_Values::campaign_exists( $snapshot->campaign_id() ) ) {
 			return false;
@@ -64,7 +70,11 @@ final class Campaign_Snapshot_Repository implements Campaign_Snapshot_Source {
 		return false !== $inserted;
 	}
 
-	/** @return array<int, Campaign_Snapshot> */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<int, Campaign_Snapshot>
+	 */
 	public function for_campaign( string $campaign_id, int $limit = 50 ): array {
 		if ( ! Schema_Manager::is_current() ) {
 			return array();
@@ -91,7 +101,11 @@ final class Campaign_Snapshot_Repository implements Campaign_Snapshot_Source {
 		return $records;
 	}
 
-	/** @param array<string, mixed> $row Database row. */
+	/**
+	 * Rebuild a snapshot from a database row, or null when the row is malformed.
+	 *
+	 * @param array<string, mixed> $row Database row.
+	 */
 	private function hydrate( array $row ): ?Campaign_Snapshot {
 		try {
 			$review = Database_Values::decode_json( $row['review_input'] ?? null );
@@ -119,7 +133,7 @@ final class Campaign_Snapshot_Repository implements Campaign_Snapshot_Source {
 			}
 
 			return Campaign_Snapshot::from_array( $data );
-		} catch ( \InvalidArgumentException | \JsonException ) {
+		} catch ( \InvalidArgumentException ) {
 			return null;
 		}
 	}

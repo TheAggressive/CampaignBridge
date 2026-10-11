@@ -1,5 +1,5 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,Squiz.Commenting.VariableComment.Missing,CampaignBridge.Standard.Sniffs.Database -- Migration methods are narrowly scoped; this class owns the authorized custom-table schema boundary.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag,CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Allowlist failures are explicit; schema inspection is repository-owned.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database -- Migration methods are narrowly scoped; this class owns the authorized custom-table schema boundary.
+// phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Allowlist failures are explicit; schema inspection is repository-owned.
 /**
  * Campaign lifecycle custom-table schema.
  *
@@ -18,9 +18,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Owns restartable, forward-safe database migrations for campaign storage and request counters. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 7;
+	public const SCHEMA_VERSION = 8;
 	public const OPTION         = 'database_schema';
 
+	/**
+	 * Whether every table exists, cached per request; null until checked.
+	 *
+	 * @var bool|null
+	 */
 	private static ?bool $tables_ready = null;
 
 	private const TABLES = array(
@@ -31,6 +36,7 @@ final class Schema_Manager {
 		'audit_events',
 		'rate_limits',
 		'jobs',
+		'locks',
 	);
 
 	/** Run an upgrade only when the installed schema is older. */
@@ -79,7 +85,12 @@ final class Schema_Manager {
 		return self::$tables_ready;
 	}
 
-	/** Resolve one allowlisted site-local table name. */
+	/**
+	 * Resolve one allowlisted site-local table name.
+	 *
+	 * @param string $suffix Table suffix.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function table( string $suffix ): string {
 		if ( ! in_array( $suffix, self::TABLES, true ) ) {
 			throw new \InvalidArgumentException( 'Unknown CampaignBridge table.' );
@@ -89,7 +100,11 @@ final class Schema_Manager {
 		return $wpdb->prefix . 'campaignbridge_' . $suffix;
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * The site-local names of every table.
+	 *
+	 * @return array<int, string>
+	 */
 	public static function table_names(): array {
 		return array_map( array( self::class, 'table' ), self::TABLES );
 	}
@@ -145,7 +160,11 @@ final class Schema_Manager {
 		return false !== $wpdb->query( "ALTER TABLE {$table} ADD COLUMN sequence_number bigint unsigned NOT NULL AUTO_INCREMENT, ADD UNIQUE KEY sequence_number (sequence_number)" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Versioned migration of an allowlisted table.
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * The full idempotent schema for dbDelta.
+	 *
+	 * @return array<int, string>
+	 */
 	private static function schema_statements(): array {
 		global $wpdb;
 		$collate = $wpdb->get_charset_collate();
@@ -256,6 +275,15 @@ final class Schema_Manager {
 				KEY state_run (state, run_after),
 				KEY state_lease (state, lease_expires_at),
 				KEY target (target_type, target_id)
+			) {$collate};",
+			'CREATE TABLE ' . self::table( 'locks' ) . " (
+				lock_name varchar(191) NOT NULL,
+				owner varchar(64) NOT NULL,
+				purpose varchar(64) NOT NULL,
+				acquired_at datetime NOT NULL,
+				expires_at datetime NOT NULL,
+				PRIMARY KEY  (lock_name),
+				KEY expires_at (expires_at)
 			) {$collate};",
 		);
 	}

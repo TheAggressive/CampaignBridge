@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Live template data required to capture a campaign review input.
  *
@@ -20,7 +20,10 @@ final class Campaign_Template_Input {
 	/**
 	 * Creates a typed live template input.
 	 *
-	 * @param array<string, mixed> $metadata Canonical document metadata.
+	 * @param string               $content      The draft content.
+	 * @param array<string, mixed> $metadata     Canonical document metadata.
+	 * @param Design_Font_Registry $design_fonts Unsaved design fonts.
+	 * @param Campaign_Envelope    $envelope     Subject, preview text, and sender.
 	 */
 	public function __construct(
 		private readonly string $content,
@@ -29,6 +32,9 @@ final class Campaign_Template_Input {
 		private readonly Campaign_Envelope $envelope
 	) {}
 
+	/**
+	 * The input's content.
+	 */
 	public function content(): string {
 		return $this->content;
 	}
@@ -42,6 +48,9 @@ final class Campaign_Template_Input {
 		return $this->metadata;
 	}
 
+	/**
+	 * The input's design fonts.
+	 */
 	public function design_fonts(): Design_Font_Registry {
 		return $this->design_fonts;
 	}

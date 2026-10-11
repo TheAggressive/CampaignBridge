@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
+<?php
 /**
  * Truthful provider capability advertisement.
  *
@@ -62,6 +62,9 @@ final class Provider_Capabilities {
 		return new self( $provider, array_values( array_intersect( Provider_Operation::all(), $supported ) ) );
 	}
 
+	/**
+	 * The capabilities's provider.
+	 */
 	public function provider(): string {
 		return $this->provider;
 	}

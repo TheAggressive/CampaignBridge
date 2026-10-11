@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Production scheduler composition.
  *
@@ -24,6 +24,7 @@ use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 use CampaignBridge\Workflow\Campaign\Campaign_Scheduler;
 use CampaignBridge\Workflow\Campaign\Random_Id_Generator;
 use CampaignBridge\Workflow\Campaign\System_Clock;
+use CampaignBridge\Services\Lock\Lock_Factory;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -31,7 +32,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Builds the scheduler for a provider that supports scheduled delivery. */
 final class Campaign_Scheduler_Factory {
-	/** The scheduler for one provider, or null when it cannot schedule. */
+	/**
+	 * The scheduler for one provider, or null when it cannot schedule.
+	 *
+	 * @param string $provider Provider slug.
+	 */
 	public static function create( string $provider ): ?Campaign_Scheduler {
 		$discovery = Provider_Discovery_Factory::service( $provider );
 		if ( 'mailchimp' !== $provider || null === $discovery ) {
@@ -52,7 +57,8 @@ final class Campaign_Scheduler_Factory {
 			new Mailchimp_Draft_Gateway(),
 			new Mailchimp_Token_Mapper(),
 			$discovery,
-			new Delivery_Policy_Repository()
+			new Delivery_Policy_Repository(),
+			Lock_Factory::manager()
 		);
 	}
 }

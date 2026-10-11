@@ -1,4 +1,4 @@
-<?php // phpcs:disable Generic.Commenting.DocComment.MissingShort -- Stable vocabulary is documented by the enclosing type and constant names.
+<?php
 /**
  * Delivery attempt retryability classification.
  *
@@ -19,7 +19,11 @@ final class Retryability {
 	public const RETRYABLE     = 'retryable';
 	public const NOT_RETRYABLE = 'not_retryable';
 
-	/** @return array<int, string> */
+	/**
+	 * Every retryability value.
+	 *
+	 * @return array<int, string>
+	 */
 	public static function all(): array {
 		return array( self::UNKNOWN, self::RETRYABLE, self::NOT_RETRYABLE );
 	}

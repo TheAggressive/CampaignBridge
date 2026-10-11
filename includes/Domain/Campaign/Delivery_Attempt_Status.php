@@ -1,4 +1,4 @@
-<?php // phpcs:disable Generic.Commenting.DocComment.MissingShort -- Stable vocabulary is documented by the enclosing type and constant names.
+<?php
 /**
  * Delivery attempt result states.
  *
@@ -20,7 +20,11 @@ final class Delivery_Attempt_Status {
 	public const FAILED    = 'failed';
 	public const UNKNOWN   = 'unknown';
 
-	/** @return array<int, string> */
+	/**
+	 * Every attempt status.
+	 *
+	 * @return array<int, string>
+	 */
 	public static function all(): array {
 		return array( self::PENDING, self::SUCCEEDED, self::FAILED, self::UNKNOWN );
 	}

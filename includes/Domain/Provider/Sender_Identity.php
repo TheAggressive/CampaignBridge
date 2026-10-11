@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Normalized sender identity.
  *
@@ -21,11 +20,24 @@ if ( ! defined( 'ABSPATH' ) ) {
  * data. Only the display name and address are kept.
  */
 final class Sender_Identity {
+	/**
+	 * Build the sender identity.
+	 *
+	 * @param string $from_name  Sender name.
+	 * @param string $from_email Sender address.
+	 */
 	private function __construct(
 		private readonly string $from_name,
 		private readonly string $from_email
 	) {}
 
+	/**
+	 * Validate one sender name and address.
+	 *
+	 * @param mixed $from_name  Sender name.
+	 * @param mixed $from_email Sender address.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function create( mixed $from_name, mixed $from_email ): self {
 		$email = is_string( $from_email ) ? trim( $from_email ) : '';
 		if ( 254 < strlen( $email ) || false === filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
@@ -35,20 +47,34 @@ final class Sender_Identity {
 		return new self( Discovery_Values::label( $from_name, 'Sender name' ), strtolower( $email ) );
 	}
 
-	/** @param array<string, mixed> $data Stored sender. */
+	/**
+	 * Rebuild a sender from its cached values.
+	 *
+	 * @param array<string, mixed> $data Stored sender.
+	 */
 	public static function from_array( array $data ): self {
 		return self::create( $data['from_name'] ?? null, $data['from_email'] ?? null );
 	}
 
+	/**
+	 * The identity's from name.
+	 */
 	public function from_name(): string {
 		return $this->from_name;
 	}
 
+	/**
+	 * The identity's from email.
+	 */
 	public function from_email(): string {
 		return $this->from_email;
 	}
 
-	/** @return array{from_name: string, from_email: string} */
+	/**
+	 * The sender's cached values.
+	 *
+	 * @return array{from_name: string, from_email: string}
+	 */
 	public function to_array(): array {
 		return array(
 			'from_name'  => $this->from_name,

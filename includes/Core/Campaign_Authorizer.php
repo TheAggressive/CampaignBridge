@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * WordPress capability adapter for campaign workflows.
  *
@@ -19,6 +19,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Resolves granular WordPress capabilities before entering the workflow layer. */
 final class Campaign_Authorizer implements Campaign_Template_Authority {
+	/**
+	 * Resolve a user's campaign authority from their WordPress capabilities.
+	 *
+	 * @param int $user_id User ID.
+	 */
 	public function actor( int $user_id ): Campaign_Actor {
 		return new Campaign_Actor(
 			$user_id,
@@ -29,6 +34,12 @@ final class Campaign_Authorizer implements Campaign_Template_Authority {
 		);
 	}
 
+	/**
+	 * Whether the actor may edit the email template.
+	 *
+	 * @param Campaign_Actor $actor       Who is acting, with their resolved campaign authority.
+	 * @param int            $template_id Email template post ID.
+	 */
 	public function can_use_template( Campaign_Actor $actor, int $template_id ): bool {
 		$template = get_post( $template_id );
 

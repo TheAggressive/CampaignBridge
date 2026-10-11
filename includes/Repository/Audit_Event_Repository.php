@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
 // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Direct access is confined to this repository implementation.
 /**
  * Append-only audit event repository.
@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Persists only bounded context already normalized by the domain. */
 final class Audit_Event_Repository implements Audit_Event_Source {
+	/**
+	 * {@inheritDoc}
+	 */
 	public function get( string $id ): ?Audit_Event {
 		if ( ! Schema_Manager::is_current() ) {
 			return null;
@@ -32,6 +35,9 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 		return is_array( $row ) ? $this->hydrate( $row ) : null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function add( Audit_Event $event ): bool {
 		if ( ! Schema_Manager::is_current() ) {
 			return false;
@@ -57,7 +63,11 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 		return false !== $inserted;
 	}
 
-	/** @return array<int, Audit_Event> */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<int, Audit_Event>
+	 */
 	public function for_target( string $target_type, string $target_id, int $limit = 100, int $offset = 0 ): array {
 		if ( ! Schema_Manager::is_current() ) {
 			return array();
@@ -85,6 +95,9 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 		return $events;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function count_for_target( string $target_type, string $target_id ): int {
 		if ( ! Schema_Manager::is_current() ) {
 			return 0;
@@ -100,7 +113,11 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 		);
 	}
 
-	/** @param array<string, mixed> $row Database row. */
+	/**
+	 * Rebuild an event from a database row, or null when the row is malformed.
+	 *
+	 * @param array<string, mixed> $row Database row.
+	 */
 	private function hydrate( array $row ): ?Audit_Event {
 		try {
 			return Audit_Event::from_array(
@@ -116,7 +133,7 @@ final class Audit_Event_Repository implements Audit_Event_Source {
 					'created_at'     => Database_Values::from_database_time( $row['created_at'] ?? null ),
 				)
 			);
-		} catch ( \InvalidArgumentException | \JsonException ) {
+		} catch ( \InvalidArgumentException ) {
 			return null;
 		}
 	}

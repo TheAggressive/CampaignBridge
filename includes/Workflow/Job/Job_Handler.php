@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Interface methods are documented by the contract below.
+<?php
 /**
  * Work for one job type.
  *
@@ -26,14 +26,28 @@ if ( ! defined( 'ABSPATH' ) ) {
  * uncertain outcome to reconciliation or an operator.
  */
 interface Job_Handler {
-	/** The job type this handler runs; a lowercase identifier. */
+	/**
+	 * The job type this handler runs; a lowercase identifier.
+	 */
 	public function type(): string;
 
+	/**
+	 * Whether running the job again after it stopped part way is safe.
+	 */
 	public function retry_safe(): bool;
 
-	/** Do the work. Long work should call `$lease->heartbeat()` and stop when it returns false. */
+	/**
+	 * Do the work. Long work should call `$lease->heartbeat()` and stop when it returns false.
+	 *
+	 * @param Job       $job   The job.
+	 * @param Job_Lease $lease The worker's hold on the job.
+	 */
 	public function handle( Job $job, Job_Lease $lease ): Job_Outcome;
 
-	/** The job's worker stopped and the job will not run again. Must not contact a provider. */
+	/**
+	 * The job's worker stopped and the job will not run again. Must not contact a provider.
+	 *
+	 * @param Job $job The job.
+	 */
 	public function abandoned( Job $job ): void;
 }

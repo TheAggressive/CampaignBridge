@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
+<?php
 /**
  * Site delivery governance policy.
  *
@@ -27,12 +27,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Delivery_Policy {
 	private const DOMAIN_PATTERN = '/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/';
 
-	/** @param array<int, string>|null $test_domains Allowed test domains; null means unrestricted. */
+	/**
+	 * Build the delivery policy.
+	 *
+	 * @param bool                    $separate_delivery Whether the approver may not deliver.
+	 * @param array<int, string>|null $test_domains      Allowed test domains; null means unrestricted.
+	 */
 	private function __construct(
 		private readonly bool $separate_delivery,
 		private readonly ?array $test_domains
 	) {}
 
+	/**
+	 * A policy with no separation of duties and no test-recipient restriction.
+	 */
 	public static function unrestricted(): self {
 		return new self( false, null );
 	}
@@ -40,7 +48,8 @@ final class Delivery_Policy {
 	/**
 	 * Build the policy from stored settings.
 	 *
-	 * @param string $test_domains Domains separated by commas, spaces, or lines; empty means unrestricted.
+	 * @param bool   $separate_delivery Whether the approver may not deliver.
+	 * @param string $test_domains      Domains separated by commas, spaces, or lines; empty means unrestricted.
 	 */
 	public static function from_settings( bool $separate_delivery, string $test_domains ): self {
 		$entries = preg_split( '/[\s,;]+/', strtolower( trim( $test_domains ) ), -1, PREG_SPLIT_NO_EMPTY );
@@ -59,6 +68,9 @@ final class Delivery_Policy {
 		return new self( $separate_delivery, array_values( $domains ) );
 	}
 
+	/**
+	 * Whether the policy is separate delivery.
+	 */
 	public function requires_separate_delivery(): bool {
 		return $this->separate_delivery;
 	}
@@ -68,17 +80,28 @@ final class Delivery_Policy {
 	 *
 	 * An unrecorded approver cannot be shown to be independent, so it fails
 	 * closed while the policy is on.
+	 *
+	 * @param int      $user_id     User ID.
+	 * @param int|null $approved_by Approver's user ID.
 	 */
 	public function allows_delivery_by( int $user_id, ?int $approved_by ): bool {
 		return ! $this->separate_delivery || ( null !== $approved_by && $approved_by !== $user_id );
 	}
 
-	/** @return array<int, string>|null Allowed test domains, or null when unrestricted. */
+	/**
+	 * The policy's test domains.
+	 *
+	 * @return array<int, string>|null Allowed test domains, or null when unrestricted.
+	 */
 	public function test_domains(): ?array {
 		return $this->test_domains;
 	}
 
-	/** Whether a normalized address may receive a test. */
+	/**
+	 * Whether a normalized address may receive a test.
+	 *
+	 * @param string $address Email address.
+	 */
 	public function allows_test_recipient( string $address ): bool {
 		if ( null === $this->test_domains ) {
 			return true;

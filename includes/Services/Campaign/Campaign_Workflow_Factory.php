@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Production campaign workflow composition.
  *
@@ -28,6 +28,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Builds the one production application service used by future adapters. */
 final class Campaign_Workflow_Factory {
+	/**
+	 * The campaign workflow with production storage.
+	 */
 	public static function create(): Campaign_Workflow {
 		$authorizer = new Campaign_Authorizer();
 

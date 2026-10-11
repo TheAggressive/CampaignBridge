@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable persistence values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Provider-neutral durable campaign record.
  *
@@ -28,6 +27,22 @@ final class Campaign {
 		Campaign_State::UNKNOWN,
 	);
 
+	/**
+	 * Build the campaign.
+	 *
+	 * @param string      $id                  Record ID.
+	 * @param string      $state               Campaign lifecycle state.
+	 * @param int         $version             Campaign version.
+	 * @param int         $owner_user_id       Campaign owner's user ID.
+	 * @param int         $template_id         Email template post ID.
+	 * @param string|null $provider            Provider slug.
+	 * @param string|null $audience_reference  Audience reference, or null.
+	 * @param string|null $active_snapshot_id  Active snapshot ID, or null.
+	 * @param string      $created_at          UTC timestamp of creation, or null for now.
+	 * @param string      $updated_at          UTC timestamp of this change.
+	 * @param string|null $scheduled_for       Delivery time.
+	 * @param int|null    $approved_by_user_id Approver's user ID, or null.
+	 */
 	private function __construct(
 		private readonly string $id,
 		private readonly string $state,
@@ -43,7 +58,16 @@ final class Campaign {
 		private readonly ?int $approved_by_user_id
 	) {}
 
-	/** Create a new draft campaign. */
+	/**
+	 * Create a new draft campaign.
+	 *
+	 * @param string      $id                 Record ID.
+	 * @param int         $owner_user_id      Campaign owner's user ID.
+	 * @param int         $template_id        Email template post ID.
+	 * @param string|null $provider           Provider slug.
+	 * @param string|null $audience_reference Audience reference, or null.
+	 * @param string      $created_at         UTC timestamp of creation, or null for now.
+	 */
 	public static function create(
 		string $id,
 		int $owner_user_id,
@@ -73,6 +97,7 @@ final class Campaign {
 	 * Restore a strictly versioned campaign representation.
 	 *
 	 * @param array<string, mixed> $data Persisted values.
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	public static function from_array( array $data ): self {
 		Record_Validation::known_keys(
@@ -160,42 +185,72 @@ final class Campaign {
 		);
 	}
 
+	/**
+	 * The campaign's ID.
+	 */
 	public function id(): string {
 		return $this->id;
 	}
 
+	/**
+	 * The campaign's state.
+	 */
 	public function state(): string {
 		return $this->state;
 	}
 
+	/**
+	 * The campaign's version.
+	 */
 	public function version(): int {
 		return $this->version;
 	}
 
+	/**
+	 * The campaign's owner user ID.
+	 */
 	public function owner_user_id(): int {
 		return $this->owner_user_id;
 	}
 
+	/**
+	 * The campaign's template ID.
+	 */
 	public function template_id(): int {
 		return $this->template_id;
 	}
 
+	/**
+	 * The campaign's provider.
+	 */
 	public function provider(): ?string {
 		return $this->provider;
 	}
 
+	/**
+	 * The campaign's audience reference.
+	 */
 	public function audience_reference(): ?string {
 		return $this->audience_reference;
 	}
 
+	/**
+	 * The campaign's active snapshot ID.
+	 */
 	public function active_snapshot_id(): ?string {
 		return $this->active_snapshot_id;
 	}
 
+	/**
+	 * The campaign's created at.
+	 */
 	public function created_at(): string {
 		return $this->created_at;
 	}
 
+	/**
+	 * The campaign's updated at.
+	 */
 	public function updated_at(): string {
 		return $this->updated_at;
 	}
@@ -210,7 +265,13 @@ final class Campaign {
 		return $this->scheduled_for;
 	}
 
-	/** Change the selected template and invalidate any previously frozen artifact. */
+	/**
+	 * Change the selected template and invalidate any previously frozen artifact.
+	 *
+	 * @param int    $template_id Email template post ID.
+	 * @param string $updated_at  UTC timestamp of this change.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public function edit_template( int $template_id, string $updated_at ): self {
 		if ( 1 > $template_id ) {
 			throw new \InvalidArgumentException( 'Campaign template identifier must be positive.' );
@@ -226,7 +287,13 @@ final class Campaign {
 		);
 	}
 
-	/** Select normalized provider/audience references without provider traffic or PII. */
+	/**
+	 * Select normalized provider/audience references without provider traffic or PII.
+	 *
+	 * @param string|null $provider           Provider slug.
+	 * @param string|null $audience_reference Audience reference, or null.
+	 * @param string      $updated_at         UTC timestamp of this change.
+	 */
 	public function select_audience( ?string $provider, ?string $audience_reference, string $updated_at ): self {
 		return $this->replacement(
 			Campaign_State_Machine::after_approval_invalidation( $this->state ),
@@ -238,7 +305,12 @@ final class Campaign {
 		);
 	}
 
-	/** Select one immutable snapshot, revoking approval when it replaces an approved artifact. */
+	/**
+	 * Select one immutable snapshot, revoking approval when it replaces an approved artifact.
+	 *
+	 * @param string $snapshot_id Snapshot ID.
+	 * @param string $updated_at  UTC timestamp of this change.
+	 */
 	public function select_snapshot( string $snapshot_id, string $updated_at ): self {
 		return $this->replacement(
 			Campaign_State_Machine::after_approval_invalidation( $this->state ),
@@ -255,6 +327,9 @@ final class Campaign {
 	 *
 	 * A delivery time survives into states that follow scheduling and is
 	 * cleared when the campaign returns to an unscheduled state.
+	 *
+	 * @param string $state      Campaign lifecycle state.
+	 * @param string $updated_at UTC timestamp of this change.
 	 */
 	public function transition_to( string $state, string $updated_at ): self {
 		Campaign_State_Machine::assert_transition( $this->state, $state );
@@ -270,7 +345,13 @@ final class Campaign {
 		);
 	}
 
-	/** Approve the reviewed campaign and record who approved it. */
+	/**
+	 * Approve the reviewed campaign and record who approved it.
+	 *
+	 * @param int    $user_id    User ID.
+	 * @param string $updated_at UTC timestamp of this change.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public function approve_by( int $user_id, string $updated_at ): self {
 		Campaign_State_Machine::assert_transition( $this->state, Campaign_State::APPROVED );
 		if ( 1 > $user_id ) {
@@ -289,7 +370,12 @@ final class Campaign {
 		);
 	}
 
-	/** Move a provider draft to `scheduled` for one UTC delivery time. */
+	/**
+	 * Move a provider draft to `scheduled` for one UTC delivery time.
+	 *
+	 * @param string $scheduled_for Delivery time.
+	 * @param string $updated_at    UTC timestamp of this change.
+	 */
 	public function schedule_for( string $scheduled_for, string $updated_at ): self {
 		// A scheduled campaign may take a new time, such as the one the provider reports.
 		if ( Campaign_State::SCHEDULED !== $this->state ) {
@@ -313,6 +399,8 @@ final class Campaign {
 	 * A remote delivery operation claims the campaign before contacting the
 	 * provider, so concurrent requests holding the same expected version are
 	 * refused instead of reaching the provider twice.
+	 *
+	 * @param string $updated_at UTC timestamp of this change.
 	 */
 	public function claim( string $updated_at ): self {
 		return $this->replacement(
@@ -326,7 +414,18 @@ final class Campaign {
 		);
 	}
 
-	/** Build the next immutable version after validating the complete record. */
+	/**
+	 * Build the next immutable version after validating the complete record.
+	 *
+	 * @param string      $state               Campaign lifecycle state.
+	 * @param int         $template_id         Email template post ID.
+	 * @param string|null $provider            Provider slug.
+	 * @param string|null $audience_reference  Audience reference, or null.
+	 * @param string|null $active_snapshot_id  Active snapshot ID, or null.
+	 * @param string      $updated_at          UTC timestamp of this change.
+	 * @param string|null $scheduled_for       Delivery time.
+	 * @param int|null    $approved_by_user_id Approver's user ID, or null.
+	 */
 	private function replacement(
 		string $state,
 		int $template_id,
@@ -363,12 +462,18 @@ final class Campaign {
 	 *
 	 * Returning to draft or review invalidates approval, so it also clears
 	 * the recorded approver.
+	 *
+	 * @param string $state Campaign lifecycle state.
 	 */
 	private static function retains_approval( string $state ): bool {
 		return ! in_array( $state, array( Campaign_State::DRAFT, Campaign_State::READY_FOR_REVIEW ), true );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The campaign's stored values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'schema_version'      => self::SCHEMA_VERSION,

@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Production campaign reconciliation composition.
  *
@@ -19,6 +19,7 @@ use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Workflow\Campaign\Campaign_Reconciler;
 use CampaignBridge\Workflow\Campaign\Random_Id_Generator;
 use CampaignBridge\Workflow\Campaign\System_Clock;
+use CampaignBridge\Services\Lock\Lock_Factory;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -26,6 +27,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Builds the reconciler for a provider, or null when it has no reconciliation adapter. */
 final class Campaign_Reconciler_Factory {
+	/**
+	 * The reconciler for one provider, or null when it cannot reconcile.
+	 *
+	 * @param string $provider Provider slug.
+	 */
 	public static function create( string $provider ): ?Campaign_Reconciler {
 		if ( 'mailchimp' !== $provider ) {
 			return null;
@@ -40,7 +46,8 @@ final class Campaign_Reconciler_Factory {
 			new Random_Id_Generator(),
 			new System_Clock(),
 			new Mailchimp_Draft_Gateway(),
-			( new Mailchimp_Provider() )->capabilities()
+			( new Mailchimp_Provider() )->capabilities(),
+			Lock_Factory::manager()
 		);
 	}
 }

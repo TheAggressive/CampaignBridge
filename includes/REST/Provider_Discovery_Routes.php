@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * Provider capability and discovery REST adapter.
  *
@@ -40,6 +40,9 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 	/** Per-user remote refreshes per window. */
 	private const REFRESH_LIMIT = 10;
 
+	/**
+	 * Register the capability, cached-list, and refresh routes.
+	 */
 	public function register(): void {
 		$provider = array(
 			'provider' => array(
@@ -112,6 +115,11 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 			);
 	}
 
+	/**
+	 * GET /providers/{provider}/capabilities: what the provider supports.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function get_capabilities( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$service = $this->service( $request );
 		if ( $service instanceof WP_Error ) {
@@ -128,10 +136,20 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * GET /providers/{provider}/discovery/{kind}: the cached list, without contacting the provider.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function get_cached( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		return $this->lookup( $request, false );
 	}
 
+	/**
+	 * POST /providers/{provider}/discovery/{kind}/refresh: fetch the list from the provider.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	public function refresh( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$limited = Rate_Limiter::check_rate_limit_authenticated(
 			'provider_discovery_refresh',
@@ -146,6 +164,12 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 		return $this->lookup( $request, true );
 	}
 
+	/**
+	 * Read or refresh one list and shape the response.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 * @param bool            $refresh Whether to fetch from the provider instead of the cache.
+	 */
 	private function lookup( WP_REST_Request $request, bool $refresh ): WP_REST_Response|WP_Error {
 		$service = $this->service( $request );
 		if ( $service instanceof WP_Error ) {
@@ -184,7 +208,15 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 		return $this->no_store( new WP_REST_Response( self::representation( $provider, $kind, $scope, $result ) ) );
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * A discovery lookup as the REST API publishes it.
+	 *
+	 * @param string           $provider Provider slug.
+	 * @param string           $kind     Discovery kind.
+	 * @param string           $scope    Discovery scope: empty, or an audience ID.
+	 * @param Discovery_Lookup $lookup   Discovery lookup.
+	 * @return array<string, mixed>
+	 */
 	private static function representation( string $provider, string $kind, string $scope, Discovery_Lookup $lookup ): array {
 		$result = $lookup->result();
 		$error  = $lookup->error();
@@ -208,6 +240,11 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
+	/**
+	 * The discovery service for the requested provider, or a 404.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 */
 	private function service( WP_REST_Request $request ): Provider_Discovery_Service|WP_Error {
 		$service = Provider_Discovery_Factory::service( (string) $request->get_param( 'provider' ) );
 
@@ -218,7 +255,11 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 		);
 	}
 
-	/** A failed upstream call is a gateway failure, not a client error. */
+	/**
+	 * A failed upstream call is a gateway failure, not a client error.
+	 *
+	 * @param Provider_Error $error Normalized provider error.
+	 */
 	private static function status( Provider_Error $error ): int {
 		return match ( $error->category() ) {
 			Provider_Error_Category::VALIDATION   => Rest_Constants::HTTP_CONFLICT,
@@ -227,6 +268,11 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 		};
 	}
 
+	/**
+	 * Mark a response as not cacheable.
+	 *
+	 * @param WP_REST_Response $response The response to mark.
+	 */
 	private function no_store( WP_REST_Response $response ): WP_REST_Response {
 		$response->header( 'Cache-Control', 'no-store' );
 

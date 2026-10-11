@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Normalized outcome of one remote draft mutation.
  *
@@ -33,35 +32,66 @@ final class Draft_Outcome {
 	public const FAILED          = 'failed';
 	public const AMBIGUOUS       = 'ambiguous';
 
+	/**
+	 * Build the draft outcome.
+	 *
+	 * @param string              $status    Outcome kind.
+	 * @param string|null         $remote_id The provider's campaign ID.
+	 * @param Provider_Error|null $error     Normalized provider error, when there is one.
+	 */
 	private function __construct(
 		private readonly string $status,
 		private readonly ?string $remote_id,
 		private readonly ?Provider_Error $error
 	) {}
 
+	/**
+	 * The provider created the draft and its content.
+	 *
+	 * @param string $remote_id The provider's campaign ID.
+	 */
 	public static function created( string $remote_id ): self {
 		return new self( self::CREATED, Discovery_Values::remote_id( $remote_id, 'Remote draft ID' ), null );
 	}
 
+	/**
+	 * The provider created the draft but not its content.
+	 *
+	 * @param string         $remote_id The provider's campaign ID.
+	 * @param Provider_Error $error     Normalized provider error.
+	 */
 	public static function content_pending( string $remote_id, Provider_Error $error ): self {
 		return new self( self::CONTENT_PENDING, Discovery_Values::remote_id( $remote_id, 'Remote draft ID' ), $error );
 	}
 
-	/** Classify a failed create by what the error proves. */
+	/**
+	 * Classify a failed create by what the error proves.
+	 *
+	 * @param Provider_Error $error Normalized provider error.
+	 */
 	public static function from_create_error( Provider_Error $error ): self {
 		$ambiguous = Provider_Error_Category::may_have_applied( $error->category() );
 
 		return new self( $ambiguous ? self::AMBIGUOUS : self::FAILED, null, $error );
 	}
 
+	/**
+	 * The outcome's status.
+	 */
 	public function status(): string {
 		return $this->status;
 	}
 
+	/**
+	 * The outcome's remote ID.
+	 */
 	public function remote_id(): ?string {
 		return $this->remote_id;
 	}
 
+	/**
+	 * The outcome's error.
+	 */
 	public function error(): ?Provider_Error {
 		return $this->error;
 	}

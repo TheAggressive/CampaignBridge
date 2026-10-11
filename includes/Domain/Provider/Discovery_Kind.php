@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Discovery kinds and their operations.
  *
@@ -25,16 +24,30 @@ final class Discovery_Kind {
 	public const MERGE_FIELDS = 'merge_fields';
 	public const SEGMENTS     = 'segments';
 
-	/** @return array<int, string> */
+	/**
+	 * Every discovery kind.
+	 *
+	 * @return array<int, string>
+	 */
 	public static function all(): array {
 		return array( self::AUDIENCES, self::MERGE_FIELDS, self::SEGMENTS );
 	}
 
+	/**
+	 * Whether the kind is known.
+	 *
+	 * @param string $kind Discovery kind.
+	 */
 	public static function is_valid( string $kind ): bool {
 		return in_array( $kind, self::all(), true );
 	}
 
-	/** The capability that must be advertised before this kind is discovered. */
+	/**
+	 * The capability that must be advertised before this kind is discovered.
+	 *
+	 * @param string $kind Discovery kind.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function operation( string $kind ): string {
 		return match ( $kind ) {
 			self::AUDIENCES    => Provider_Operation::DISCOVER_AUDIENCES,
@@ -44,7 +57,11 @@ final class Discovery_Kind {
 		};
 	}
 
-	/** Whether this kind is scoped to one audience rather than the account. */
+	/**
+	 * Whether this kind is scoped to one audience rather than the account.
+	 *
+	 * @param string $kind Discovery kind.
+	 */
 	public static function is_audience_scoped( string $kind ): bool {
 		self::operation( $kind );
 
@@ -54,7 +71,9 @@ final class Discovery_Kind {
 	/**
 	 * Hydrate one stored item of this kind.
 	 *
+	 * @param string               $kind Discovery kind.
 	 * @param array<string, mixed> $data Stored item.
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	public static function item( string $kind, array $data ): Discovered_Item {
 		return match ( $kind ) {
@@ -65,7 +84,12 @@ final class Discovery_Kind {
 		};
 	}
 
-	/** Whether an item value belongs to this kind. */
+	/**
+	 * Whether an item value belongs to this kind.
+	 *
+	 * @param string          $kind Discovery kind.
+	 * @param Discovered_Item $item Discovered item.
+	 */
 	public static function accepts( string $kind, Discovered_Item $item ): bool {
 		return match ( $kind ) {
 			self::AUDIENCES    => $item instanceof Discovered_Audience,
