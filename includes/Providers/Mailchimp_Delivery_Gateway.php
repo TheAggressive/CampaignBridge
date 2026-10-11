@@ -14,6 +14,7 @@ use CampaignBridge\Core\Http_Client_Interface;
 use CampaignBridge\Domain\Campaign\Provider_Error_Category;
 use CampaignBridge\Domain\Provider\Action_Outcome;
 use CampaignBridge\Domain\Provider\Provider_Delivery_Gateway;
+use CampaignBridge\Domain\Provider\Provider_Retry_Policy;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -104,7 +105,8 @@ final class Mailchimp_Delivery_Gateway implements Provider_Delivery_Gateway {
 		$request = array(
 			'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
 			'timeout'               => self::TIMEOUT,
-			'campaignbridge_retry'  => false,
+			// Schedule, unschedule, and send reach recipients: attempted once, never replayed.
+			'campaignbridge_retry'  => Provider_Retry_Policy::may_replay( $action ),
 			'campaignbridge_origin' => Mailchimp_Provider::origin(),
 		);
 		if ( null !== $body ) {
@@ -124,6 +126,6 @@ final class Mailchimp_Delivery_Gateway implements Provider_Delivery_Gateway {
 			return Action_Outcome::accepted();
 		}
 
-		return Action_Outcome::from_error( 400 === $status ? Mailchimp_Errors::request_rejected() : Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 ) );
+		return Action_Outcome::from_error( 400 === $status ? Mailchimp_Errors::request_rejected() : Mailchimp_Errors::from_response( $response ) );
 	}
 }

@@ -50,23 +50,35 @@ final class Job_Runner {
 	private readonly string $owner;
 
 	/**
+	 * Spreads retries of jobs that failed together, so they do not all run again at once.
+	 *
+	 * @var \Closure
+	 * @phpstan-var \Closure(int): int
+	 */
+	private readonly \Closure $jitter;
+
+	/**
 	 * Build the job runner.
 	 *
 	 * @param Job_Source              $jobs     Job storage.
 	 * @param array<int, Job_Handler> $handlers Handlers by the type they run.
 	 * @param Campaign_Clock          $clock    Source of the current time.
 	 * @param string|null             $owner    Lease or lock owner identity.
+	 * @param \Closure|null           $jitter   Extra seconds added to a backoff; null adds up to 10% at random.
+	 * @phpstan-param (\Closure(int): int)|null $jitter
 	 */
 	public function __construct(
 		private readonly Job_Source $jobs,
 		array $handlers,
 		private readonly Campaign_Clock $clock,
-		?string $owner = null
+		?string $owner = null,
+		?\Closure $jitter = null
 	) {
 		foreach ( $handlers as $handler ) {
 			$this->handlers[ $handler->type() ] = $handler;
 		}
-		$this->owner = $owner ?? 'worker-' . bin2hex( random_bytes( 8 ) );
+		$this->owner  = $owner ?? 'worker-' . bin2hex( random_bytes( 8 ) );
+		$this->jitter = $jitter ?? static fn ( int $delay ): int => random_int( 0, intdiv( $delay, 10 ) );
 	}
 
 	/**
@@ -142,8 +154,10 @@ final class Job_Runner {
 			return $this->end( $job, Job_State::DEAD, (string) $outcome->error );
 		}
 
-		$now   = $this->clock->now();
-		$delay = $outcome->delay_seconds ?? self::backoff( $job->attempts() );
+		$now = $this->clock->now();
+		// A provider's requested wait is honoured as given; the runner's own backoff is spread.
+		$backoff = self::backoff( $job->attempts() );
+		$delay   = $outcome->delay_seconds ?? $backoff + ( $this->jitter )( $backoff );
 
 		return $this->jobs->retry( $job->id(), $this->owner, Job_Time::after( $now, $delay ), (string) $outcome->error, $now ) ? 'retried' : null;
 	}
@@ -180,7 +194,7 @@ final class Job_Runner {
 	/**
 	 * Seconds before retry `$attempts`: 1, 2, 4 … minutes, capped at an hour.
 	 *
-	 * @param int $attempts Delivery attempt storage.
+	 * @param int $attempts Attempts the job has used.
 	 */
 	public static function backoff( int $attempts ): int {
 		return min( self::BACKOFF_CAP, self::BACKOFF_BASE * ( 2 ** max( 0, $attempts - 1 ) ) );

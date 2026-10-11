@@ -367,7 +367,9 @@ Outcomes after the provider is contacted:
   with `data.remote`. The draft's identity is kept.
 
 Error `data` may include `remote`, `attempt` (`id`, `status`,
-`retryability`), and `provider_error` (`code`, `category`, `retryable`), so a
+`retryability`), and `provider_error` (`code`, `category`, `retryable`, and
+`retry_after` when the provider asked callers to wait, such as a 429's
+`Retry-After`), so a
 client knows what already exists. Raw provider error bodies and credentials
 are never returned.
 

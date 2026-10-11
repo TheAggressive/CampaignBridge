@@ -197,10 +197,14 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 			return new WP_Error(
 				$error->code(),
 				$error->message(),
-				array(
-					'status'    => self::status( $error ),
-					'category'  => $error->category(),
-					'retryable' => $error->is_retryable(),
+				array_filter(
+					array(
+						'status'      => self::status( $error ),
+						'category'    => $error->category(),
+						'retryable'   => $error->is_retryable(),
+						'retry_after' => $error->retry_after(),
+					),
+					static fn ( mixed $value ): bool => null !== $value
 				)
 			);
 		}
@@ -232,10 +236,11 @@ final class Provider_Discovery_Routes extends Abstract_Rest_Controller {
 			'complete'   => $result?->is_complete(),
 			'items'      => null === $result ? array() : array_map( static fn ( Discovered_Item $item ): array => $item->to_array(), $result->items() ),
 			'error'      => null === $error ? null : array(
-				'code'      => $error->code(),
-				'category'  => $error->category(),
-				'message'   => $error->message(),
-				'retryable' => $error->is_retryable(),
+				'code'        => $error->code(),
+				'category'    => $error->category(),
+				'message'     => $error->message(),
+				'retryable'   => $error->is_retryable(),
+				'retry_after' => $error->retry_after(),
 			),
 		);
 	}

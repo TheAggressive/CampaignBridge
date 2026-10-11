@@ -19,6 +19,8 @@ use CampaignBridge\Domain\Provider\Draft_Outcome;
 use CampaignBridge\Domain\Provider\Provider_Draft_Gateway;
 use CampaignBridge\Domain\Provider\Remote_Draft_Matches;
 use CampaignBridge\Domain\Provider\Remote_Draft_State;
+use CampaignBridge\Domain\Provider\Provider_Operation;
+use CampaignBridge\Domain\Provider\Provider_Retry_Policy;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -92,7 +94,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 						'reply_to'     => $content->reply_to(),
 					),
 				),
-				false
+				Provider_Retry_Policy::may_replay( Provider_Operation::CREATE_DRAFT )
 			)
 		);
 		if ( is_wp_error( $response ) ) {
@@ -100,7 +102,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		}
 		$status = $response['status_code'] ?? 0;
 		if ( ! is_int( $status ) || 200 !== $status ) {
-			return Draft_Outcome::from_create_error( Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 ) );
+			return Draft_Outcome::from_create_error( Mailchimp_Errors::from_response( $response ) );
 		}
 
 		$decoded   = json_decode( is_string( $response['body'] ?? null ) ? $response['body'] : '', true );
@@ -137,7 +139,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 						'reply_to'     => $content->reply_to(),
 					),
 				),
-				true
+				Provider_Retry_Policy::may_replay( Provider_Retry_Policy::DRAFT_UPDATE )
 			)
 		);
 		$error    = $this->failure( $response );
@@ -162,6 +164,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 			array(
 				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
 				'timeout'               => self::TIMEOUT,
+				'campaignbridge_retry'  => Provider_Retry_Policy::may_replay( Provider_Retry_Policy::DRAFT_UPDATE ),
 				'campaignbridge_origin' => Mailchimp_Provider::origin(),
 			)
 		);
@@ -227,6 +230,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 			array(
 				'headers'               => array( 'Authorization' => 'Bearer ' . $api_key ),
 				'timeout'               => self::TIMEOUT,
+				'campaignbridge_retry'  => Provider_Retry_Policy::may_replay( Provider_Retry_Policy::DRAFT_UPDATE ),
 				'campaignbridge_origin' => Mailchimp_Provider::origin(),
 			)
 		);
@@ -281,7 +285,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 						'html'       => $content->html(),
 						'plain_text' => $content->text(),
 					),
-					true
+					Provider_Retry_Policy::may_replay( Provider_Retry_Policy::DRAFT_UPDATE )
 				)
 			)
 		);
@@ -298,7 +302,7 @@ final class Mailchimp_Draft_Gateway implements Provider_Draft_Gateway {
 		}
 		$status = $response['status_code'] ?? 0;
 
-		return is_int( $status ) && 200 === $status ? null : Mailchimp_Errors::from_status( is_int( $status ) ? $status : 0 );
+		return is_int( $status ) && 200 === $status ? null : Mailchimp_Errors::from_response( $response );
 	}
 
 	/**

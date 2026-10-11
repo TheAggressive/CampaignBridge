@@ -175,6 +175,22 @@ final class Job_Queue_Test extends Test_Case {
 		self::assertSame( array( Job_State::DEAD, 'provider_down', 3 ), array( $stored?->state(), $stored?->last_error(), $stored?->attempts() ) );
 	}
 
+	public function test_backoff_is_spread_by_jitter_but_a_provider_wait_is_used_as_given(): void {
+		$job             = $this->queue_job();
+		$handler         = new Scripted_Job_Handler( true );
+		$handler->script = array( Job_Outcome::retry( 'provider_busy' ) );
+		( new Job_Runner( $this->jobs, array( $handler ), $this->clock, 'worker-test' ) )->run( 10 );
+
+		$delay = strtotime( (string) $this->jobs->get( $job->id() )?->run_after() ) - $this->clock->now;
+		self::assertGreaterThanOrEqual( 60, $delay );
+		self::assertLessThanOrEqual( 66, $delay, 'Jitter adds at most a tenth of the backoff.' );
+
+		$this->clock->now += 3600;
+		$handler->script   = array( Job_Outcome::retry( 'mailchimp_rate_limited', 45 ) );
+		( new Job_Runner( $this->jobs, array( $handler ), $this->clock, 'worker-test', static fn (): int => 999 ) )->run( 10 );
+		self::assertSame( Job_Time::after( $this->clock->now(), 45 ), $this->jobs->get( $job->id() )?->run_after(), 'The provider asked for 45 seconds; no jitter is added.' );
+	}
+
 	public function test_a_retry_safe_handler_that_throws_is_retried_without_storing_the_message(): void {
 		$job             = $this->queue_job();
 		$handler         = new Scripted_Job_Handler( true );
@@ -292,7 +308,7 @@ final class Job_Queue_Test extends Test_Case {
 	}
 
 	private function runner( Job_Handler $handler ): Job_Runner {
-		return new Job_Runner( $this->jobs, array( $handler ), $this->clock, 'worker-test' );
+		return new Job_Runner( $this->jobs, array( $handler ), $this->clock, 'worker-test', static fn (): int => 0 );
 	}
 
 	/**

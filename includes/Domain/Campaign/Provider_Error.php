@@ -23,18 +23,20 @@ final class Provider_Error {
 	/**
 	 * Create a provider error value.
 	 *
-	 * @param string $category    Normalized error category.
-	 * @param string $code        Stable machine code.
-	 * @param string $message     Safe operator message.
-	 * @param string $provider    Provider slug.
-	 * @param bool   $retryable   Whether the error is retryable.
+	 * @param string   $category    Normalized error category.
+	 * @param string   $code        Stable machine code.
+	 * @param string   $message     Safe operator message.
+	 * @param string   $provider    Provider slug.
+	 * @param bool     $retryable   Whether the error is retryable.
+	 * @param int|null $retry_after Seconds the provider asked callers to wait, when it said.
 	 */
 	private function __construct(
 		private readonly string $category,
 		private readonly string $code,
 		private readonly string $message,
 		private readonly string $provider,
-		private readonly bool $retryable
+		private readonly bool $retryable,
+		private readonly ?int $retry_after = null
 	) {}
 
 	/**
@@ -81,6 +83,20 @@ final class Provider_Error {
 		return new self( Provider_Error_Category::AUTHENTICATION, $code, $message, $provider, false );
 	}
 
+	/**
+	 * The same error with the wait the provider asked for, such as a 429's Retry-After.
+	 *
+	 * @param int|null $seconds Seconds to wait; null when the provider gave none.
+	 */
+	public function with_retry_after( ?int $seconds ): self {
+		return new self( $this->category, $this->code, $this->message, $this->provider, $this->retryable, null === $seconds ? null : max( 0, $seconds ) );
+	}
+
+	/** Seconds the provider asked callers to wait before trying again, when it said. */
+	public function retry_after(): ?int {
+		return $this->retry_after;
+	}
+
 	/** Determine whether the error is retryable. */
 	public function is_retryable(): bool {
 		return $this->retryable;
@@ -109,15 +125,16 @@ final class Provider_Error {
 	/**
 	 * Serialize the error for APIs and logs.
 	 *
-	 * @return array{category: string, code: string, message: string, provider: string, retryable: bool}
+	 * @return array{category: string, code: string, message: string, provider: string, retryable: bool, retry_after: int|null}
 	 */
 	public function to_array(): array {
 		return array(
-			'category'  => $this->category,
-			'code'      => $this->code,
-			'message'   => $this->message,
-			'provider'  => $this->provider,
-			'retryable' => $this->retryable,
+			'category'    => $this->category,
+			'code'        => $this->code,
+			'message'     => $this->message,
+			'provider'    => $this->provider,
+			'retryable'   => $this->retryable,
+			'retry_after' => $this->retry_after,
 		);
 	}
 }

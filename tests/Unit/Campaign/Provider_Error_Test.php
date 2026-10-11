@@ -92,7 +92,21 @@ final class Provider_Error_Test extends Test_Case {
 		$this->assertSame( 'Connection timed out', $array['message'] );
 		$this->assertSame( 'mailchimp', $array['provider'] );
 		$this->assertTrue( $array['retryable'] );
-		$this->assertCount( 5, $array );
+		$this->assertNull( $array['retry_after'] );
+		$this->assertCount( 6, $array );
+	}
+
+	/**
+	 * The wait a provider asked for travels with the error, never negative.
+	 */
+	public function test_retry_after_is_carried_and_bounded(): void {
+		$error = Provider_Error::from_category( 'rate_limited', 'mailchimp_rate_limited', 'Slow down.', 'mailchimp' );
+
+		$this->assertNull( $error->retry_after() );
+		$this->assertSame( 30, $error->with_retry_after( 30 )->retry_after() );
+		$this->assertSame( 0, $error->with_retry_after( -5 )->retry_after() );
+		$this->assertSame( 'rate_limited', $error->with_retry_after( 30 )->category() );
+		$this->assertNull( $error->with_retry_after( 30 )->with_retry_after( null )->retry_after() );
 	}
 
 	/**

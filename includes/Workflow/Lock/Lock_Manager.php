@@ -44,7 +44,7 @@ final class Lock_Manager {
 	/**
 	 * Build the lock manager.
 	 *
-	 * @param Lock_Source        $locks  Lock manager; null runs without locking.
+	 * @param Lock_Source        $locks  Lock storage.
 	 * @param Audit_Event_Source $audits Audit event storage.
 	 * @param Campaign_Clock     $clock  Source of the current time.
 	 * @param string|null        $owner  Lease or lock owner identity.

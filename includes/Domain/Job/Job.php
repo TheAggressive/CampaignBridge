@@ -39,7 +39,7 @@ final class Job {
 	 * @param string|null                         $dedupe_key       Key held by one active job for the same work.
 	 * @param array<string, string|int|bool|null> $payload          What the handler needs; never credentials.
 	 * @param string                              $state            Job state.
-	 * @param int                                 $attempts         Delivery attempt storage.
+	 * @param int                                 $attempts         Attempts used so far.
 	 * @param int                                 $max_attempts     Maximum number of runs.
 	 * @param string                              $run_after        Earliest UTC time the job may run.
 	 * @param string|null                         $lease_owner      Lease owner, or null.
