@@ -1,4 +1,4 @@
-<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database,Squiz.Commenting.FunctionComment,WordPress.DB.DirectDatabaseQuery -- Authorized transaction infrastructure boundary.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database,WordPress.DB.DirectDatabaseQuery -- Authorized transaction infrastructure boundary.
 // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess
 /**
  * WordPress database transaction boundary for campaign workflows.
@@ -18,7 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Coordinates repository writes on the current transactional database engine. */
 final class Database_Transaction implements Campaign_Transaction {
-	/** {@inheritDoc} */
+	/**
+	 * {@inheritDoc}
+	 */
 	public function run( callable $operation ): bool {
 		global $wpdb;
 

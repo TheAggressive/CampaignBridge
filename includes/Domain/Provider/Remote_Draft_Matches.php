@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * Remote drafts found by their correlation title.
  *
@@ -21,13 +21,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * search proves nothing.
  */
 final class Remote_Draft_Matches {
-	/** @param array<int, string> $remote_ids Matching provider campaign IDs. */
+	/**
+	 * Build the remote draft matches.
+	 *
+	 * @param array<int, string> $remote_ids Matching provider campaign IDs.
+	 * @param bool               $complete   Whether the provider returned every item.
+	 */
 	private function __construct( private readonly array $remote_ids, private readonly bool $complete ) {}
 
 	/**
 	 * Create a validated result.
 	 *
 	 * @param array<int, string> $remote_ids Matching provider campaign IDs.
+	 * @param bool               $complete   Whether the provider returned every item.
 	 * @throws \InvalidArgumentException When an ID is not a bounded string.
 	 */
 	public static function create( array $remote_ids, bool $complete ): self {
@@ -40,11 +46,18 @@ final class Remote_Draft_Matches {
 		return new self( array_values( array_unique( $remote_ids ) ), $complete );
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * The matches's remote IDs.
+	 *
+	 * @return array<int, string>
+	 */
 	public function remote_ids(): array {
 		return $this->remote_ids;
 	}
 
+	/**
+	 * Whether the matches is complete.
+	 */
 	public function is_complete(): bool {
 		return $this->complete;
 	}

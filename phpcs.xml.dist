@@ -74,6 +74,13 @@
     </properties>
   </rule>
 
+  <!-- An implementation documented with {@inheritDoc} inherits its contract from the interface. -->
+  <rule ref="Squiz.Commenting.FunctionComment">
+    <properties>
+      <property name="skipIfInheritdoc" value="true"/>
+    </properties>
+  </rule>
+
   <!-- Allow WP_REST_Request type hints in REST API methods -->
   <rule ref="Squiz.Commenting.FunctionComment.IncorrectTypeHint">
     <exclude-pattern>includes/REST/*.php</exclude-pattern>

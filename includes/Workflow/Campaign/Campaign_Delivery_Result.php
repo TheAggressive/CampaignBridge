@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Outcome of a remote delivery operation.
  *
@@ -25,6 +25,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * partial or ambiguous outcome, callers need to know what already exists.
  */
 final class Campaign_Delivery_Result implements Campaign_Remote_Result {
+	/**
+	 * Build the campaign delivery result.
+	 *
+	 * @param Campaign|null                  $campaign       The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference      The campaign's remote reference.
+	 * @param Delivery_Attempt|null          $attempt        The delivery attempt.
+	 * @param Campaign_Workflow_Error|null   $error          Why the operation was refused or failed, when it was.
+	 * @param Provider_Error|null            $provider_error The normalized provider error, when there is one.
+	 * @param bool                           $replay         Whether this answers a repeated idempotency key.
+	 */
 	private function __construct(
 		private readonly ?Campaign $campaign,
 		private readonly ?Remote_Campaign_Reference $reference,
@@ -34,10 +44,27 @@ final class Campaign_Delivery_Result implements Campaign_Remote_Result {
 		private readonly bool $replay
 	) {}
 
+	/**
+	 * A delivery operation that completed, or replayed an earlier completion.
+	 *
+	 * @param Campaign                  $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference $reference The campaign's remote reference.
+	 * @param Delivery_Attempt|null     $attempt   The delivery attempt.
+	 * @param bool                      $replay    Whether this answers a repeated idempotency key.
+	 */
 	public static function success( Campaign $campaign, Remote_Campaign_Reference $reference, ?Delivery_Attempt $attempt, bool $replay ): self {
 		return new self( $campaign, $reference, $attempt, null, null, $replay );
 	}
 
+	/**
+	 * A delivery operation that was refused or failed.
+	 *
+	 * @param Campaign_Workflow_Error        $error          Why the operation was refused or failed.
+	 * @param Campaign|null                  $campaign       The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference      The campaign's remote reference.
+	 * @param Delivery_Attempt|null          $attempt        The delivery attempt.
+	 * @param Provider_Error|null            $provider_error The normalized provider error, when there is one.
+	 */
 	public static function failure(
 		Campaign_Workflow_Error $error,
 		?Campaign $campaign = null,
@@ -48,22 +75,37 @@ final class Campaign_Delivery_Result implements Campaign_Remote_Result {
 		return new self( $campaign, $reference, $attempt, $error, $provider_error, false );
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function is_success(): bool {
 		return null === $this->error;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function campaign(): ?Campaign {
 		return $this->campaign;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function reference(): ?Remote_Campaign_Reference {
 		return $this->reference;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function attempt(): ?Delivery_Attempt {
 		return $this->attempt;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function error(): ?Campaign_Workflow_Error {
 		return $this->error;
 	}

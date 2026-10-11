@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort
+<?php
 /**
  * Stable Campaign workflow-to-HTTP error mapping.
  *
@@ -20,7 +20,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Centralizes public campaign error codes, statuses, and safe details. */
 final class Campaign_Rest_Errors {
-	/** Convert a failed workflow result into the standard WordPress REST error envelope. */
+	/**
+	 * Convert a failed workflow result into the standard WordPress REST error envelope.
+	 *
+	 * @param Campaign_Workflow_Result $result Workflow outcome.
+	 */
 	public static function from_result( Campaign_Workflow_Result $result ): WP_Error {
 		$error = $result->error();
 		if ( null === $error ) {
@@ -43,8 +47,7 @@ final class Campaign_Rest_Errors {
 	}
 
 	/**
-	 * Convert a failed remote operation (draft handoff, test send, schedule)
-	 * into the same public envelope.
+	 * Convert a failed remote operation (draft handoff, test send, schedule) into the same public envelope.
 	 *
 	 * After a partial or ambiguous provider outcome the envelope also reports
 	 * what already exists: the remote reference and the attempt, plus the
@@ -52,6 +55,8 @@ final class Campaign_Rest_Errors {
 	 * reports `current_version`, because a delivery claim consumed one. Raw
 	 * provider detail is never included, and a denial never reveals the
 	 * version.
+	 *
+	 * @param Campaign_Remote_Result $result Outcome of a remote operation.
 	 */
 	public static function from_remote( Campaign_Remote_Result $result ): WP_Error {
 		$error = $result->error();
@@ -88,7 +93,11 @@ final class Campaign_Rest_Errors {
 		return new WP_Error( 'campaignbridge_campaign_' . $error->code(), $error->message(), $data );
 	}
 
-	/** Convert a collection failure into the same public envelope. */
+	/**
+	 * Convert a collection failure into the same public envelope.
+	 *
+	 * @param Campaign_Workflow_Error|null $error Why the operation was refused or failed, when it was.
+	 */
 	public static function from_error( ?Campaign_Workflow_Error $error ): WP_Error {
 		if ( null === $error ) {
 			return self::unexpected();
@@ -101,6 +110,9 @@ final class Campaign_Rest_Errors {
 		);
 	}
 
+	/**
+	 * The generic error for a failure that carries no workflow error.
+	 */
 	private static function unexpected(): WP_Error {
 		return new WP_Error(
 			'campaignbridge_campaign_persistence_failed',
@@ -109,7 +121,11 @@ final class Campaign_Rest_Errors {
 		);
 	}
 
-	/** The one documented workflow-code-to-HTTP-status contract (docs/api.md). */
+	/**
+	 * The one documented workflow-code-to-HTTP-status contract (docs/api.md).
+	 *
+	 * @param Campaign_Workflow_Error $error Why the operation was refused or failed.
+	 */
 	private static function status( Campaign_Workflow_Error $error ): int {
 		return match ( $error->code() ) {
 			Campaign_Workflow_Error::INVALID_INPUT,

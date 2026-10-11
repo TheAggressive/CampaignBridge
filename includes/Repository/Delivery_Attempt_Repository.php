@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort,CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
+<?php // phpcs:disable CampaignBridge.Standard.Sniffs.Database -- Typed port signatures document repository operations; this class is the authorized custom-table boundary.
 // phpcs:disable CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.DirectWpdbManipulation,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectWpdbPropertyAccess,CampaignBridge.Standard.Sniffs.Database.DirectDatabaseQuery.DirectDatabaseMethod -- Direct access is confined to this repository implementation.
 /**
  * Durable delivery attempt repository.
@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Persists idempotency identities and known/unknown remote outcomes. */
 final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
+	/**
+	 * {@inheritDoc}
+	 */
 	public function get( string $id ): ?Delivery_Attempt {
 		if ( ! Schema_Manager::is_current() ) {
 			return null;
@@ -32,6 +35,9 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 		return is_array( $row ) ? $this->hydrate( $row ) : null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function find_idempotency( string $campaign_id, string $operation, string $idempotency_key ): ?Delivery_Attempt {
 		if ( ! Schema_Manager::is_current() || '' === $idempotency_key ) {
 			return null;
@@ -50,6 +56,9 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 		return is_array( $row ) ? $this->hydrate( $row ) : null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function add( Delivery_Attempt $attempt ): bool {
 		if ( ! Schema_Manager::is_current() || ! Database_Values::campaign_exists( $attempt->campaign_id() ) ) {
 			return false;
@@ -76,6 +85,9 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 		return false !== $inserted;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function update_result( Delivery_Attempt $attempt ): bool {
 		if ( ! Schema_Manager::is_current() ) {
 			return false;
@@ -111,7 +123,11 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 		return 1 === $updated;
 	}
 
-	/** @return array<int, Delivery_Attempt> */
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @return array<int, Delivery_Attempt>
+	 */
 	public function for_campaign( string $campaign_id, int $limit = 50, int $offset = 0 ): array {
 		if ( ! Schema_Manager::is_current() ) {
 			return array();
@@ -138,6 +154,9 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 		return $records;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function count_for_campaign( string $campaign_id ): int {
 		if ( ! Schema_Manager::is_current() ) {
 			return 0;
@@ -152,7 +171,11 @@ final class Delivery_Attempt_Repository implements Delivery_Attempt_Source {
 		);
 	}
 
-	/** @param array<string, mixed> $row Database row. */
+	/**
+	 * Rebuild an attempt from a database row, or null when the row is malformed.
+	 *
+	 * @param array<string, mixed> $row Database row.
+	 */
 	private function hydrate( array $row ): ?Delivery_Attempt {
 		try {
 			return Delivery_Attempt::from_array(

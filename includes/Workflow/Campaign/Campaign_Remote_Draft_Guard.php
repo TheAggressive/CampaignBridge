@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed signature is the contract.
+<?php
 /**
  * Re-asserts an approved remote draft before anything is delivered from it.
  *
@@ -36,12 +36,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * audience, so a refusal leaves nothing to reconcile.
  */
 final class Campaign_Remote_Draft_Guard {
+	/**
+	 * Build the campaign remote draft guard.
+	 *
+	 * @param Provider_Draft_Gateway $drafts Provider draft gateway.
+	 */
 	public function __construct( private readonly Provider_Draft_Gateway $drafts ) {}
 
 	/**
 	 * Re-assert the approved draft and prove what the provider holds.
 	 *
 	 * @param array<string, mixed> $settings       Decrypted provider settings.
+	 * @param string               $remote_id      The provider's campaign ID.
+	 * @param Draft_Content        $content        The draft content.
 	 * @param bool                 $whole_audience Whether the operation reaches the campaign audience.
 	 * @return array{0: string, 1: string, 2: Provider_Error|null}|null Refusal, or null when the draft matches.
 	 */

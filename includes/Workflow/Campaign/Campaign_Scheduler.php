@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Public operation names and typed signatures form the application contract.
+<?php
 /**
  * Guarded scheduling of approved campaign drafts.
  *
@@ -82,6 +82,25 @@ final class Campaign_Scheduler {
 	/** Operations that can reach the audience; one unresolved attempt blocks them all. */
 	private const DELIVERY_OPERATIONS = array( Delivery_Operation::SCHEDULE, Delivery_Operation::UNSCHEDULE, Delivery_Operation::SEND );
 
+	/**
+	 * Build the campaign scheduler.
+	 *
+	 * @param Campaign_Source                  $campaigns    Campaign storage.
+	 * @param Campaign_Snapshot_Source         $snapshots    Snapshot storage.
+	 * @param Remote_Campaign_Reference_Source $references   Remote reference storage.
+	 * @param Delivery_Attempt_Source          $attempts     Delivery attempt storage.
+	 * @param Audit_Event_Source               $audits       Audit event storage.
+	 * @param Campaign_Transaction             $transaction  Runs writes atomically.
+	 * @param Campaign_Id_Generator            $ids          Identifier generator.
+	 * @param Campaign_Clock                   $clock        Source of the current time.
+	 * @param Provider_Delivery_Gateway        $gateway      Provider delivery gateway.
+	 * @param Provider_Capabilities            $capabilities What the provider supports.
+	 * @param Provider_Draft_Gateway           $drafts       Provider draft gateway.
+	 * @param Provider_Token_Mapper            $tokens       Personalization token mapper.
+	 * @param Provider_Discovery_Service       $discovery    Provider discovery service.
+	 * @param Delivery_Policy_Source           $policies     Delivery policy source.
+	 * @param Lock_Manager|null                $locks        Lock manager; null runs without locking.
+	 */
 	public function __construct(
 		private readonly Campaign_Source $campaigns,
 		private readonly Campaign_Snapshot_Source $snapshots,
@@ -103,7 +122,12 @@ final class Campaign_Scheduler {
 	/**
 	 * Schedule the campaign's remote draft to send to its audience.
 	 *
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id      Campaign ID.
+	 * @param int                  $expected_version The version the caller last read.
+	 * @param string               $scheduled_for    Delivery time.
 	 * @param string               $confirm_audience The audience reference the operator confirmed.
+	 * @param string               $idempotency_key  Client retry key; the same key replays the first outcome.
 	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	public function schedule( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $scheduled_for, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
@@ -122,7 +146,13 @@ final class Campaign_Scheduler {
 	/**
 	 * The operation itself, run while the campaign lock is held.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id      Campaign ID.
+	 * @param int                  $expected_version The version the caller last read.
+	 * @param string               $scheduled_for    Delivery time.
+	 * @param string               $confirm_audience Audience reference the operator confirmed.
+	 * @param string               $idempotency_key  Client retry key; the same key replays the first outcome.
+	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	private function schedule_unlocked( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $scheduled_for, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
 		$time     = null;
@@ -174,7 +204,11 @@ final class Campaign_Scheduler {
 	 * the campaign `sending`; reconcile to record `sent`. An unconfirmed send
 	 * leaves it `unknown`.
 	 *
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id      Campaign ID.
+	 * @param int                  $expected_version The version the caller last read.
 	 * @param string               $confirm_audience The audience reference the operator confirmed.
+	 * @param string               $idempotency_key  Client retry key; the same key replays the first outcome.
 	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	public function send( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
@@ -193,7 +227,12 @@ final class Campaign_Scheduler {
 	/**
 	 * The operation itself, run while the campaign lock is held.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id      Campaign ID.
+	 * @param int                  $expected_version The version the caller last read.
+	 * @param string               $confirm_audience Audience reference the operator confirmed.
+	 * @param string               $idempotency_key  Client retry key; the same key replays the first outcome.
+	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	private function send_unlocked( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $confirm_audience, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
 		$prepared = $this->prepare_audience_delivery( $actor, $campaign_id, $expected_version, $confirm_audience, $idempotency_key, Delivery_Operation::SEND, $settings, null );
@@ -226,8 +265,14 @@ final class Campaign_Scheduler {
 	 * operation's own precheck, the verified snapshot and translatable content,
 	 * and finally the remote draft guard, the only step that writes remotely.
 	 *
-	 * @param array<string, mixed>        $settings Decrypted provider settings.
-	 * @param (callable(): ?string)|null  $precheck Operation-specific check; returns a refusal message.
+	 * @param Campaign_Actor             $actor            Who is acting, with their resolved campaign authority.
+	 * @param string                     $campaign_id      Campaign ID.
+	 * @param int                        $expected_version The version the caller last read.
+	 * @param string                     $confirm_audience Audience reference the operator confirmed.
+	 * @param string                     $idempotency_key  Client retry key; the same key replays the first outcome.
+	 * @param string                     $operation        Delivery operation.
+	 * @param array<string, mixed>       $settings         Decrypted provider settings.
+	 * @param (callable(): ?string)|null $precheck         Operation-specific check; returns a refusal message.
 	 * @return array{0: Campaign, 1: Remote_Campaign_Reference, 2: Campaign_Snapshot}|Campaign_Delivery_Result
 	 */
 	private function prepare_audience_delivery( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $confirm_audience, string $idempotency_key, string $operation, array $settings, ?callable $precheck ): array|Campaign_Delivery_Result {
@@ -266,7 +311,11 @@ final class Campaign_Scheduler {
 	/**
 	 * Return a scheduled campaign to its unscheduled provider draft.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id      Campaign ID.
+	 * @param int                  $expected_version The version the caller last read.
+	 * @param string               $idempotency_key  Client retry key; the same key replays the first outcome.
+	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	public function unschedule( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
 		if ( null === $this->locks ) {
@@ -284,7 +333,11 @@ final class Campaign_Scheduler {
 	/**
 	 * The operation itself, run while the campaign lock is held.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id      Campaign ID.
+	 * @param int                  $expected_version The version the caller last read.
+	 * @param string               $idempotency_key  Client retry key; the same key replays the first outcome.
+	 * @param array<string, mixed> $settings         Decrypted provider settings for this call only.
 	 */
 	private function unschedule_unlocked( Campaign_Actor $actor, string $campaign_id, int $expected_version, string $idempotency_key, array $settings ): Campaign_Delivery_Result {
 		$operation = Delivery_Operation::UNSCHEDULE;
@@ -314,7 +367,14 @@ final class Campaign_Scheduler {
 		);
 	}
 
-	/** Load the campaign and check authority, the key, and provider support. */
+	/**
+	 * Load the campaign and check authority, the key, and provider support.
+	 *
+	 * @param Campaign_Actor $actor           Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id     Campaign ID.
+	 * @param string         $idempotency_key Client retry key; the same key replays the first outcome.
+	 * @param string         $operation       Delivery operation.
+	 */
 	private function authorized( Campaign_Actor $actor, string $campaign_id, string $idempotency_key, string $operation ): Campaign|Campaign_Delivery_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
 		if ( null === $campaign ) {
@@ -344,6 +404,11 @@ final class Campaign_Scheduler {
 	 * Refuse audience delivery by the approver under separate delivery, or to an unconfirmed audience.
 	 *
 	 * Unscheduling is exempt: it stops delivery rather than starting it.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param Campaign       $campaign         The campaign as read.
+	 * @param string         $confirm_audience Audience reference the operator confirmed.
+	 * @param string         $operation        Delivery operation.
 	 */
 	private function audience_delivery_refusal( Campaign_Actor $actor, Campaign $campaign, string $confirm_audience, string $operation ): ?Campaign_Delivery_Result {
 		if ( ! $this->policies->current()->allows_delivery_by( $actor->user_id(), $campaign->approved_by_user_id() ) ) {
@@ -369,12 +434,26 @@ final class Campaign_Scheduler {
 		return null;
 	}
 
-	/** Past participle of an operation, for messages. */
+	/**
+	 * Past participle of an operation, for messages.
+	 *
+	 * @param string $operation Delivery operation.
+	 */
 	private static function past( string $operation ): string {
 		return Delivery_Operation::SEND === $operation ? 'sent' : $operation . 'd';
 	}
 
-	/** Replay a recorded key, or check that nothing blocks a new operation from this state. */
+	/**
+	 * Replay a recorded key, or check that nothing blocks a new operation from this state.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param Campaign       $campaign         The campaign as read.
+	 * @param int            $expected_version The version the caller last read.
+	 * @param string         $idempotency_key  Client retry key; the same key replays the first outcome.
+	 * @param string         $operation        Delivery operation.
+	 * @param string         $state            State the campaign must be in.
+	 * @param string         $observed         State the provider reported.
+	 */
 	private function ready( Campaign_Actor $actor, Campaign $campaign, int $expected_version, string $idempotency_key, string $operation, string $state, string $observed ): Remote_Campaign_Reference|Campaign_Delivery_Result {
 		$reference = $this->references->get( $campaign->id(), $this->gateway->slug() );
 		$recorded  = $this->attempts->find_idempotency( $campaign->id(), $operation, $idempotency_key );
@@ -396,6 +475,15 @@ final class Campaign_Scheduler {
 		return $reference;
 	}
 
+	/**
+	 * Answer a repeated idempotency key with the original outcome.
+	 *
+	 * @param Campaign_Actor                 $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                       $campaign  The campaign as read.
+	 * @param Remote_Campaign_Reference|null $reference The campaign's remote reference.
+	 * @param Delivery_Attempt               $recorded  The attempt recorded for this idempotency key.
+	 * @param string                         $operation Delivery operation.
+	 */
 	private function replay( Campaign_Actor $actor, Campaign $campaign, ?Remote_Campaign_Reference $reference, Delivery_Attempt $recorded, string $operation ): Campaign_Delivery_Result {
 		if ( Delivery_Attempt_Status::SUCCEEDED === $recorded->status() && null !== $reference ) {
 			return Campaign_Delivery_Result::success( $campaign, $reference, $recorded, true );
@@ -409,9 +497,15 @@ final class Campaign_Scheduler {
 	/**
 	 * Claim the campaign, contact the provider once, and record what is known.
 	 *
-	 * @param callable(): Action_Outcome     $call    The one provider call.
-	 * @param callable(Campaign): Campaign   $finish  The campaign after an accepted call.
-	 * @param array<string, string|null>     $context Operation-specific audit context.
+	 * @param Campaign_Actor               $actor           Who is acting, with their resolved campaign authority.
+	 * @param Campaign                     $campaign        The campaign as read.
+	 * @param Remote_Campaign_Reference    $reference       The campaign's remote reference.
+	 * @param string                       $operation       Delivery operation.
+	 * @param string                       $idempotency_key Client retry key; the same key replays the first outcome.
+	 * @param callable(): Action_Outcome   $call            The one provider call.
+	 * @param callable(Campaign): Campaign $finish          The campaign after an accepted call.
+	 * @param string                       $observed        State the provider reported.
+	 * @param array<string, string|null>   $context         Operation-specific audit context.
 	 */
 	private function perform( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, string $operation, string $idempotency_key, callable $call, callable $finish, string $observed, array $context ): Campaign_Delivery_Result {
 		$claimed = $campaign->claim( $this->clock->now() );
@@ -448,7 +542,13 @@ final class Campaign_Scheduler {
 	/**
 	 * Report what was stored when recording an outcome failed part-way.
 	 *
-	 * @param array<string, string|null> $context Operation-specific audit context.
+	 * @param Campaign_Actor             $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                   $claimed   The campaign as claimed by its version update.
+	 * @param Remote_Campaign_Reference  $reference The campaign's remote reference.
+	 * @param Delivery_Attempt           $attempt   The delivery attempt.
+	 * @param string                     $operation Delivery operation.
+	 * @param array<string, string|null> $context   Operation-specific audit context.
+	 * @param Provider_Error|null        $error     Normalized provider error, when there is one.
 	 */
 	private function unrecorded( Campaign_Actor $actor, Campaign $claimed, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, string $operation, array $context, ?Provider_Error $error ): Campaign_Delivery_Result {
 		$current = $claimed;
@@ -468,8 +568,16 @@ final class Campaign_Scheduler {
 	}
 
 	/**
-	 * @param callable(Campaign): Campaign $finish  The campaign after an accepted call.
-	 * @param array<string, string|null>   $context Operation-specific audit context.
+	 * Record an operation the provider accepted.
+	 *
+	 * @param Campaign_Actor               $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                     $claimed   The campaign as claimed by its version update.
+	 * @param Remote_Campaign_Reference    $reference The campaign's remote reference.
+	 * @param Delivery_Attempt             $attempt   The delivery attempt.
+	 * @param string                       $operation Delivery operation.
+	 * @param callable(Campaign): Campaign $finish    The campaign after an accepted call.
+	 * @param string                       $observed  State the provider reported.
+	 * @param array<string, string|null>   $context   Operation-specific audit context.
 	 */
 	private function accepted( Campaign_Actor $actor, Campaign $claimed, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, string $operation, callable $finish, string $observed, array $context ): Campaign_Delivery_Result {
 		$after       = $finish( $claimed );
@@ -497,7 +605,17 @@ final class Campaign_Scheduler {
 		);
 	}
 
-	/** @param array<string, string|null> $context Operation-specific audit context. */
+	/**
+	 * Record an operation the provider definitely refused.
+	 *
+	 * @param Campaign_Actor             $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                   $claimed   The campaign as claimed by its version update.
+	 * @param Remote_Campaign_Reference  $reference The campaign's remote reference.
+	 * @param Delivery_Attempt           $attempt   The delivery attempt.
+	 * @param string                     $operation Delivery operation.
+	 * @param array<string, string|null> $context   Operation-specific audit context.
+	 * @param Provider_Error|null        $error     Normalized provider error, when there is one.
+	 */
 	private function definite_failure( Campaign_Actor $actor, Campaign $claimed, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, string $operation, array $context, ?Provider_Error $error ): Campaign_Delivery_Result {
 		$failed = $this->settled( $attempt, Delivery_Attempt_Status::FAILED, null !== $error && $error->is_retryable() ? Retryability::RETRYABLE : Retryability::NOT_RETRYABLE );
 		if ( ! $this->attempts->update_result( $failed ) ) {
@@ -511,7 +629,17 @@ final class Campaign_Scheduler {
 		return Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::PROVIDER_FAILED, sprintf( 'The provider refused the %s request. Nothing changed.', $operation ) ), $claimed, $reference, $failed, $error );
 	}
 
-	/** @param array<string, string|null> $context Operation-specific audit context. */
+	/**
+	 * Record an operation the provider did not confirm; the campaign becomes unknown.
+	 *
+	 * @param Campaign_Actor             $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign                   $claimed   The campaign as claimed by its version update.
+	 * @param Remote_Campaign_Reference  $reference The campaign's remote reference.
+	 * @param Delivery_Attempt           $attempt   The delivery attempt.
+	 * @param string                     $operation Delivery operation.
+	 * @param array<string, string|null> $context   Operation-specific audit context.
+	 * @param Provider_Error|null        $error     Normalized provider error, when there is one.
+	 */
 	private function ambiguous( Campaign_Actor $actor, Campaign $claimed, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, string $operation, array $context, ?Provider_Error $error ): Campaign_Delivery_Result {
 		$unknown = $this->settled( $attempt, Delivery_Attempt_Status::UNKNOWN, Retryability::UNKNOWN );
 		$after   = $claimed->transition_to( Campaign_State::UNKNOWN, $this->clock->now() );
@@ -534,7 +662,20 @@ final class Campaign_Scheduler {
 		);
 	}
 
-	/** @param array<string, string> $context Additional safe audit context. */
+	/**
+	 * Audit a refused delivery operation and return it.
+	 *
+	 * @param string                $operation   Delivery operation.
+	 * @param string                $code        Stable error code.
+	 * @param string                $message     Operator-safe message.
+	 * @param Campaign_Actor        $actor       Who is acting, with their resolved campaign authority.
+	 * @param string                $campaign_id Campaign ID.
+	 * @param Campaign|null         $campaign    The campaign as read.
+	 * @param string                $result      Audit result: success, failure, denied, or unknown.
+	 * @param Delivery_Attempt|null $attempt     The delivery attempt.
+	 * @param Provider_Error|null   $error       Normalized provider error, when there is one.
+	 * @param array<string, string> $context     Additional safe audit context.
+	 */
 	private function refuse( string $operation, string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null, array $context = array() ): Campaign_Delivery_Result {
 		try {
 			$this->audits->add(
@@ -560,7 +701,15 @@ final class Campaign_Scheduler {
 		return Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign, null, $attempt, $error );
 	}
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Append a delivery audit event.
+	 *
+	 * @param Campaign_Actor       $actor     Who is acting, with their resolved campaign authority.
+	 * @param string               $operation Delivery operation.
+	 * @param Campaign             $campaign  The campaign as read.
+	 * @param string               $result    Audit result: success, failure, denied, or unknown.
+	 * @param array<string, mixed> $context   Safe audit context.
+	 */
 	private function audit( Campaign_Actor $actor, string $operation, Campaign $campaign, string $result, array $context ): void {
 		$this->audits->add( $this->event( $actor, $operation, $campaign->id(), $result, $context ) );
 	}
@@ -568,7 +717,12 @@ final class Campaign_Scheduler {
 	/**
 	 * Identify the actor's operation, artifact, remote reference, and normalized result.
 	 *
-	 * @param array<string, string|null> $extra Operation-specific context.
+	 * @param Campaign                   $before    The campaign before the change.
+	 * @param Campaign                   $after     The campaign after the change.
+	 * @param Remote_Campaign_Reference  $reference The campaign's remote reference.
+	 * @param Delivery_Attempt           $attempt   The delivery attempt.
+	 * @param array<string, string|null> $extra     Operation-specific context.
+	 * @param Provider_Error|null        $error     Normalized provider error, when there is one.
 	 * @return array<string, mixed>
 	 */
 	private function context( Campaign $before, Campaign $after, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, array $extra, ?Provider_Error $error ): array {
@@ -587,7 +741,15 @@ final class Campaign_Scheduler {
 		);
 	}
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Build one delivery audit event.
+	 *
+	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
+	 * @param string               $operation   Delivery operation.
+	 * @param string               $campaign_id Campaign ID.
+	 * @param string               $result      Audit result: success, failure, denied, or unknown.
+	 * @param array<string, mixed> $context     Safe audit context.
+	 */
 	private function event( Campaign_Actor $actor, string $operation, string $campaign_id, string $result, array $context ): Audit_Event {
 		return Audit_Event::from_array(
 			array(
@@ -604,7 +766,12 @@ final class Campaign_Scheduler {
 		);
 	}
 
-	/** A new observation has not been reconciled yet, so it clears `reconciled_at`. */
+	/**
+	 * A new observation has not been reconciled yet, so it clears `reconciled_at`.
+	 *
+	 * @param Remote_Campaign_Reference $reference The campaign's remote reference.
+	 * @param string                    $state     Observed remote state.
+	 */
 	private function observe( Remote_Campaign_Reference $reference, string $state ): Remote_Campaign_Reference {
 		return Remote_Campaign_Reference::from_array(
 			array_merge(
@@ -618,10 +785,29 @@ final class Campaign_Scheduler {
 		);
 	}
 
+	/**
+	 * The attempt with its settled status and retryability.
+	 *
+	 * @param Delivery_Attempt $attempt      The delivery attempt.
+	 * @param string           $status       Attempt status.
+	 * @param string           $retryability Whether a new attempt may be made.
+	 */
 	private function settled( Delivery_Attempt $attempt, string $status, string $retryability ): Delivery_Attempt {
 		return $this->attempt( $attempt->id(), $attempt->campaign_id(), $attempt->operation(), (string) $attempt->idempotency_key(), $status, $retryability, $attempt->remote_correlation(), $attempt->created_at() );
 	}
 
+	/**
+	 * Build one delivery attempt record.
+	 *
+	 * @param string      $id           Record ID.
+	 * @param string      $campaign_id  Campaign ID.
+	 * @param string      $operation    Delivery operation.
+	 * @param string      $key          Idempotency key.
+	 * @param string      $status       Attempt status.
+	 * @param string      $retryability Whether a new attempt may be made.
+	 * @param string|null $correlation  The provider's correlation ID, when known.
+	 * @param string|null $created_at   UTC timestamp of creation, or null for now.
+	 */
 	private function attempt( string $id, string $campaign_id, string $operation, string $key, string $status, string $retryability, ?string $correlation, ?string $created_at ): Delivery_Attempt {
 		$now = $this->clock->now();
 

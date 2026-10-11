@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * WordPress campaign template input reader.
  *
@@ -22,6 +22,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Reads live template content and design metadata without compiling it. */
 final class Campaign_Template_Input_Repository implements Campaign_Template_Input_Source {
+	/**
+	 * The template's content and settings, when it is an email template.
+	 *
+	 * @param int $template_id Email template post ID.
+	 */
 	public function get( int $template_id ): ?Campaign_Template_Input {
 		$template = get_post( $template_id );
 		if ( ! $template instanceof \WP_Post || Post_Type_Email_Template::POST_TYPE !== $template->post_type ) {
@@ -54,7 +59,12 @@ final class Campaign_Template_Input_Repository implements Campaign_Template_Inpu
 		);
 	}
 
-	/** One string meta value, or '' when absent or not a string. */
+	/**
+	 * One string meta value, or '' when absent or not a string.
+	 *
+	 * @param int    $template_id Email template post ID.
+	 * @param string $key         Template meta key.
+	 */
 	private static function meta_string( int $template_id, string $key ): string {
 		$value = Storage::get_post_meta( $template_id, $key, true );
 

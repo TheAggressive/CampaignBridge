@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable persistence values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Provider-neutral remote campaign identity.
  *
@@ -18,6 +17,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Remote_Campaign_Reference {
 	public const SCHEMA_VERSION = 1;
 
+	/**
+	 * Build the remote campaign reference.
+	 *
+	 * @param string      $campaign_id    Campaign ID.
+	 * @param string      $provider       Provider slug.
+	 * @param string      $remote_id      The provider's campaign ID.
+	 * @param string      $observed_state State the provider reported.
+	 * @param string|null $cursor         Provider pagination cursor, when there is one.
+	 * @param string      $observed_at    UTC time of the observation.
+	 * @param string|null $reconciled_at  UTC time of the last reconciliation, or null.
+	 */
 	private function __construct(
 		private readonly string $campaign_id,
 		private readonly string $provider,
@@ -28,7 +38,12 @@ final class Remote_Campaign_Reference {
 		private readonly ?string $reconciled_at
 	) {}
 
-	/** @param array<string, mixed> $data Persisted values. */
+	/**
+	 * Rebuild a remote reference from its stored values.
+	 *
+	 * @param array<string, mixed> $data Persisted values.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function from_array( array $data ): self {
 		Record_Validation::known_keys(
 			$data,
@@ -67,35 +82,60 @@ final class Remote_Campaign_Reference {
 		);
 	}
 
+	/**
+	 * The reference's campaign ID.
+	 */
 	public function campaign_id(): string {
 		return $this->campaign_id;
 	}
 
+	/**
+	 * The reference's provider.
+	 */
 	public function provider(): string {
 		return $this->provider;
 	}
 
+	/**
+	 * The reference's remote ID.
+	 */
 	public function remote_id(): string {
 		return $this->remote_id;
 	}
 
+	/**
+	 * The reference's observed state.
+	 */
 	public function observed_state(): string {
 		return $this->observed_state;
 	}
 
+	/**
+	 * The reference's cursor.
+	 */
 	public function cursor(): ?string {
 		return $this->cursor;
 	}
 
+	/**
+	 * The reference's observed at.
+	 */
 	public function observed_at(): string {
 		return $this->observed_at;
 	}
 
+	/**
+	 * The reference's reconciled at.
+	 */
 	public function reconciled_at(): ?string {
 		return $this->reconciled_at;
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The reference's stored values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'schema_version' => self::SCHEMA_VERSION,

@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment
+<?php
 /**
  * Production draft handoff composition.
  *
@@ -30,7 +30,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Builds the draft handoff for a provider that supports remote drafts. */
 final class Campaign_Draft_Handoff_Factory {
-	/** The handoff for one provider, or null when it cannot create drafts. */
+	/**
+	 * The handoff for one provider, or null when it cannot create drafts.
+	 *
+	 * @param string $provider Provider slug.
+	 */
 	public static function create( string $provider ): ?Campaign_Draft_Handoff {
 		$discovery = Provider_Discovery_Factory::service( $provider );
 		if ( 'mailchimp' !== $provider || null === $discovery ) {

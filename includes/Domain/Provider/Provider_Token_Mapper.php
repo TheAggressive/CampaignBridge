@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed port signature is the contract.
+<?php
 /**
  * Provider token mapping port.
  *
@@ -23,5 +23,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * than assumed to exist.
  */
 interface Provider_Token_Mapper {
+	/**
+	 * Map CampaignBridge personalization tokens to the provider's merge syntax.
+	 *
+	 * @param Token_Registry        $registry     The personalization token registry.
+	 * @param string                $audience_id  The provider's audience ID.
+	 * @param Discovery_Result|null $merge_fields The audience's cached merge fields, when known.
+	 */
 	public function map( Token_Registry $registry, string $audience_id, ?Discovery_Result $merge_fields ): Token_Mapping;
 }

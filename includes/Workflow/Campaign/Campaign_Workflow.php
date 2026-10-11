@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Public workflow names and typed signatures form the application contract.
+<?php
 /**
  * Canonical provider-neutral campaign application workflow.
  *
@@ -34,6 +34,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * It has no HTTP, UI, CLI, provider, or global-current-user dependency.
  */
 final class Campaign_Workflow {
+	/**
+	 * Build the campaign workflow.
+	 *
+	 * @param Campaign_Source              $campaigns          Campaign storage.
+	 * @param Campaign_Snapshot_Source     $snapshots          Snapshot storage.
+	 * @param Audit_Event_Source           $audits             Audit event storage.
+	 * @param Campaign_Review_Input_Source $review_inputs      Review input capture.
+	 * @param Campaign_Template_Authority  $template_authority Decides template access.
+	 * @param Campaign_Transaction         $transaction        Runs writes atomically.
+	 * @param Campaign_Id_Generator        $ids                Identifier generator.
+	 * @param Campaign_Clock               $clock              Source of the current time.
+	 */
 	public function __construct(
 		private readonly Campaign_Source $campaigns,
 		private readonly Campaign_Snapshot_Source $snapshots,
@@ -45,7 +57,12 @@ final class Campaign_Workflow {
 		private readonly Campaign_Clock $clock
 	) {}
 
-	/** Load one campaign through the same object-authorization boundary as mutations. */
+	/**
+	 * Load one campaign through the same object-authorization boundary as mutations.
+	 *
+	 * @param Campaign_Actor $actor       Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id Campaign ID.
+	 */
 	public function get( Campaign_Actor $actor, string $campaign_id ): Campaign_Workflow_Result {
 		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_read' );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
@@ -77,7 +94,15 @@ final class Campaign_Workflow {
 		return Campaign_Workflow_Result::success( $loaded, $snapshot );
 	}
 
-	/** Return one bounded, authorized owner collection without in-memory filtering. */
+	/**
+	 * Return one bounded, authorized owner collection without in-memory filtering.
+	 *
+	 * @param Campaign_Actor            $actor         Who is acting, with their resolved campaign authority.
+	 * @param int                       $owner_user_id Campaign owner's user ID.
+	 * @param int                       $limit         Maximum number of records.
+	 * @param int                       $offset        Number of records to skip.
+	 * @param Campaign_List_Filter|null $filter        Optional list filter.
+	 */
 	public function list( Campaign_Actor $actor, int $owner_user_id, int $limit, int $offset, ?Campaign_List_Filter $filter = null ): Campaign_Workflow_List_Result {
 		if ( 1 > $owner_user_id || 1 > $limit || 100 < $limit || 0 > $offset ) {
 			return Campaign_Workflow_List_Result::failure(
@@ -96,6 +121,15 @@ final class Campaign_Workflow {
 		);
 	}
 
+	/**
+	 * Create a draft campaign from a template.
+	 *
+	 * @param Campaign_Actor $actor              Who is acting, with their resolved campaign authority.
+	 * @param int            $owner_user_id      Campaign owner's user ID.
+	 * @param int            $template_id        Email template post ID.
+	 * @param string|null    $provider           Provider slug.
+	 * @param string|null    $audience_reference Audience reference, or null.
+	 */
 	public function create(
 		Campaign_Actor $actor,
 		int $owner_user_id,
@@ -129,6 +163,14 @@ final class Campaign_Workflow {
 		return Campaign_Workflow_Result::success( $campaign );
 	}
 
+	/**
+	 * Point the campaign at another template.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id      Campaign ID.
+	 * @param int            $expected_version The version the caller last read.
+	 * @param int            $template_id      Email template post ID.
+	 */
 	public function edit_template( Campaign_Actor $actor, string $campaign_id, int $expected_version, int $template_id ): Campaign_Workflow_Result {
 		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_edit' );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
@@ -152,6 +194,15 @@ final class Campaign_Workflow {
 		return $this->persist_mutation( $actor, 'campaign_edit', $loaded, $replacement, $expected_version, array( 'snapshot_invalidated' => null !== $loaded->active_snapshot_id() ) );
 	}
 
+	/**
+	 * Choose the campaign's provider and audience.
+	 *
+	 * @param Campaign_Actor $actor              Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id        Campaign ID.
+	 * @param int            $expected_version   The version the caller last read.
+	 * @param string|null    $provider           Provider slug.
+	 * @param string|null    $audience_reference Audience reference, or null.
+	 */
 	public function select_audience(
 		Campaign_Actor $actor,
 		string $campaign_id,
@@ -186,6 +237,13 @@ final class Campaign_Workflow {
 		);
 	}
 
+	/**
+	 * Freeze the template's current content into a new snapshot for review.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id      Campaign ID.
+	 * @param int            $expected_version The version the caller last read.
+	 */
 	public function snapshot( Campaign_Actor $actor, string $campaign_id, int $expected_version ): Campaign_Workflow_Result {
 		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_snapshot' );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
@@ -257,14 +315,33 @@ final class Campaign_Workflow {
 		return Campaign_Workflow_Result::success( $replacement, $snapshot, $compiled );
 	}
 
+	/**
+	 * Check the live template without changing the campaign.
+	 *
+	 * @param Campaign_Actor $actor       Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id Campaign ID.
+	 */
 	public function validate( Campaign_Actor $actor, string $campaign_id ): Campaign_Workflow_Result {
 		return $this->compile_live( $actor, $campaign_id, 'campaign_validate', true );
 	}
 
+	/**
+	 * Compile the live template without changing the campaign.
+	 *
+	 * @param Campaign_Actor $actor       Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id Campaign ID.
+	 */
 	public function preview( Campaign_Actor $actor, string $campaign_id ): Campaign_Workflow_Result {
 		return $this->compile_live( $actor, $campaign_id, 'campaign_preview', false );
 	}
 
+	/**
+	 * Submit the snapshot for approval.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id      Campaign ID.
+	 * @param int            $expected_version The version the caller last read.
+	 */
 	public function submit_for_review( Campaign_Actor $actor, string $campaign_id, int $expected_version ): Campaign_Workflow_Result {
 		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_submit_review' );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
@@ -300,6 +377,13 @@ final class Campaign_Workflow {
 		);
 	}
 
+	/**
+	 * Approve the reviewed snapshot.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id      Campaign ID.
+	 * @param int            $expected_version The version the caller last read.
+	 */
 	public function approve( Campaign_Actor $actor, string $campaign_id, int $expected_version ): Campaign_Workflow_Result {
 		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_approve', true );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
@@ -337,14 +421,35 @@ final class Campaign_Workflow {
 		);
 	}
 
+	/**
+	 * Return an approved campaign to review.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id      Campaign ID.
+	 * @param int            $expected_version The version the caller last read.
+	 */
 	public function revoke_approval( Campaign_Actor $actor, string $campaign_id, int $expected_version ): Campaign_Workflow_Result {
 		return $this->transition( $actor, $campaign_id, $expected_version, Campaign_State::READY_FOR_REVIEW, 'campaign_revoke_approval' );
 	}
 
+	/**
+	 * Archive the campaign.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id      Campaign ID.
+	 * @param int            $expected_version The version the caller last read.
+	 */
 	public function archive( Campaign_Actor $actor, string $campaign_id, int $expected_version ): Campaign_Workflow_Result {
 		return $this->transition( $actor, $campaign_id, $expected_version, Campaign_State::ARCHIVED, 'campaign_archive' );
 	}
 
+	/**
+	 * Copy the campaign as a new draft, once per idempotency key.
+	 *
+	 * @param Campaign_Actor $actor           Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id     Campaign ID.
+	 * @param string         $idempotency_key Client retry key; the same key replays the first outcome.
+	 */
 	public function duplicate( Campaign_Actor $actor, string $campaign_id, string $idempotency_key ): Campaign_Workflow_Result {
 		$loaded = $this->authorized( $actor, $campaign_id, 'campaign_duplicate' );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
@@ -391,6 +496,14 @@ final class Campaign_Workflow {
 		return Campaign_Workflow_Result::success( $duplicate );
 	}
 
+	/**
+	 * Compile the campaign's live template, optionally auditing the check.
+	 *
+	 * @param Campaign_Actor $actor       Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id Campaign ID.
+	 * @param string         $action      Audit action name.
+	 * @param bool           $audit       Whether to audit the check.
+	 */
 	private function compile_live( Campaign_Actor $actor, string $campaign_id, string $action, bool $audit ): Campaign_Workflow_Result {
 		$loaded = $this->authorized( $actor, $campaign_id, $action );
 		if ( $loaded instanceof Campaign_Workflow_Result ) {
@@ -426,6 +539,15 @@ final class Campaign_Workflow {
 		return Campaign_Workflow_Result::success( $loaded, null, $compiled );
 	}
 
+	/**
+	 * Move the campaign to another state through the state machine.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id      Campaign ID.
+	 * @param int            $expected_version The version the caller last read.
+	 * @param string         $state            Campaign lifecycle state.
+	 * @param string         $action           Audit action name.
+	 */
 	private function transition(
 		Campaign_Actor $actor,
 		string $campaign_id,
@@ -449,12 +571,26 @@ final class Campaign_Workflow {
 		return $this->persist_mutation( $actor, $action, $loaded, $replacement, $expected_version );
 	}
 
+	/**
+	 * The campaign's active snapshot, if it is intact.
+	 *
+	 * @param Campaign $campaign The campaign as read.
+	 */
 	private function verified_snapshot( Campaign $campaign ): Campaign_Snapshot|Campaign_Workflow_Error {
 		return ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
 	}
 
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Store a campaign change and its audit event together, under the version claim.
+	 *
+	 * @param Campaign_Actor       $actor            Who is acting, with their resolved campaign authority.
+	 * @param string               $action           Audit action name.
+	 * @param Campaign             $before           The campaign before the change.
+	 * @param Campaign             $after            The campaign after the change.
+	 * @param int                  $expected_version The version the caller last read.
+	 * @param array<string, mixed> $context          Safe audit context.
+	 */
 	private function persist_mutation(
 		Campaign_Actor $actor,
 		string $action,
@@ -483,6 +619,14 @@ final class Campaign_Workflow {
 		return Campaign_Workflow_Result::success( $after );
 	}
 
+	/**
+	 * Load the campaign and check that the actor may perform the action.
+	 *
+	 * @param Campaign_Actor $actor       Who is acting, with their resolved campaign authority.
+	 * @param string         $campaign_id Campaign ID.
+	 * @param string         $action      Audit action name.
+	 * @param bool           $approval    Whether this is an approval.
+	 */
 	private function authorized( Campaign_Actor $actor, string $campaign_id, string $action, bool $approval = false ): Campaign|Campaign_Workflow_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
 		if ( null === $campaign ) {
@@ -496,6 +640,15 @@ final class Campaign_Workflow {
 		return $campaign;
 	}
 
+	/**
+	 * Refuse the action when the actor may not use the template.
+	 *
+	 * @param Campaign_Actor $actor       Who is acting, with their resolved campaign authority.
+	 * @param int            $template_id Email template post ID.
+	 * @param string         $action      Audit action name.
+	 * @param string         $target_id   ID of the record the event is about.
+	 * @param Campaign|null  $campaign    The campaign as read.
+	 */
 	private function authorize_template(
 		Campaign_Actor $actor,
 		int $template_id,
@@ -519,6 +672,14 @@ final class Campaign_Workflow {
 		);
 	}
 
+	/**
+	 * Refuse a stale version.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $action           Audit action name.
+	 * @param Campaign       $campaign         The campaign as read.
+	 * @param int            $expected_version The version the caller last read.
+	 */
 	private function conflict( Campaign_Actor $actor, string $action, Campaign $campaign, int $expected_version ): Campaign_Workflow_Result {
 		return $this->failure(
 			Campaign_Workflow_Error::CONFLICT,
@@ -534,6 +695,14 @@ final class Campaign_Workflow {
 		);
 	}
 
+	/**
+	 * Explain a failed write: a concurrent change, or a persistence failure.
+	 *
+	 * @param Campaign_Actor $actor            Who is acting, with their resolved campaign authority.
+	 * @param string         $action           Audit action name.
+	 * @param Campaign       $before           The campaign before the change.
+	 * @param int            $expected_version The version the caller last read.
+	 */
 	private function write_failure( Campaign_Actor $actor, string $action, Campaign $before, int $expected_version ): Campaign_Workflow_Result {
 		$current = $this->campaigns->get( $before->id() );
 		if ( null !== $current && $current->version() !== $expected_version ) {
@@ -543,7 +712,18 @@ final class Campaign_Workflow {
 		return $this->failure( Campaign_Workflow_Error::PERSISTENCE_FAILED, 'Campaign mutation could not be persisted.', $actor, $action, $before->id(), $current ?? $before );
 	}
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Audit a failure and return it.
+	 *
+	 * @param string               $code      Stable error code.
+	 * @param string               $message   Operator-safe message.
+	 * @param Campaign_Actor       $actor     Who is acting, with their resolved campaign authority.
+	 * @param string               $action    Audit action name.
+	 * @param string               $target_id ID of the record the event is about.
+	 * @param Campaign|null        $campaign  The campaign as read.
+	 * @param array<string, mixed> $context   Safe audit context.
+	 * @param string               $result    Audit result: success, failure, denied, or unknown.
+	 */
 	private function failure(
 		string $code,
 		string $message,
@@ -558,7 +738,16 @@ final class Campaign_Workflow {
 		return Campaign_Workflow_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign );
 	}
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Append a failure audit event.
+	 *
+	 * @param Campaign_Actor       $actor     Who is acting, with their resolved campaign authority.
+	 * @param string               $action    Audit action name.
+	 * @param string               $target_id ID of the record the event is about.
+	 * @param string               $code      Stable error code.
+	 * @param array<string, mixed> $context   Safe audit context.
+	 * @param string               $result    Audit result: success, failure, denied, or unknown.
+	 */
 	private function audit_failure(
 		Campaign_Actor $actor,
 		string $action,
@@ -575,7 +764,15 @@ final class Campaign_Workflow {
 		}
 	}
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Build one workflow audit event.
+	 *
+	 * @param Campaign_Actor       $actor     Who is acting, with their resolved campaign authority.
+	 * @param string               $action    Audit action name.
+	 * @param string               $target_id ID of the record the event is about.
+	 * @param string               $result    Audit result: success, failure, denied, or unknown.
+	 * @param array<string, mixed> $context   Safe audit context.
+	 */
 	private function event( Campaign_Actor $actor, string $action, string $target_id, string $result, array $context ): Audit_Event {
 		return Audit_Event::from_array(
 			array(
@@ -592,15 +789,33 @@ final class Campaign_Workflow {
 		);
 	}
 
+	/**
+	 * The next snapshot revision number for the campaign.
+	 *
+	 * @param string $campaign_id Campaign ID.
+	 */
 	private function next_revision( string $campaign_id ): int {
 		$latest = $this->snapshots->for_campaign( $campaign_id, 1 );
 		return isset( $latest[0] ) ? $latest[0]->revision() + 1 : 1;
 	}
 
+	/**
+	 * The stable ID of the duplicate made with one idempotency key.
+	 *
+	 * @param string $campaign_id Campaign ID.
+	 * @param string $key         Idempotency key.
+	 */
 	private function duplicate_id( string $campaign_id, string $key ): string {
 		return 'duplicate-' . substr( hash( 'sha256', $campaign_id . "\0" . $key ), 0, 40 );
 	}
 
+	/**
+	 * Answer a repeated duplicate request with the campaign it created.
+	 *
+	 * @param Campaign_Actor $actor     Who is acting, with their resolved campaign authority.
+	 * @param Campaign       $source    The campaign being copied.
+	 * @param Campaign       $duplicate The duplicate campaign.
+	 */
 	private function duplicate_replay( Campaign_Actor $actor, Campaign $source, Campaign $duplicate ): Campaign_Workflow_Result {
 		if (
 			Campaign_State::DRAFT !== $duplicate->state()

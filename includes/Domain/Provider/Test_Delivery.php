@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Bounded test-delivery request.
  *
@@ -31,7 +30,12 @@ final class Test_Delivery {
 	/** RFC 5321 path limit. */
 	private const MAX_ADDRESS_BYTES = 254;
 
-	/** @param array<int, string> $recipients Normalized, unique addresses. */
+	/**
+	 * Build the test delivery.
+	 *
+	 * @param array<int, string> $recipients Normalized, unique addresses.
+	 * @param string             $format     Which part of the draft to test.
+	 */
 	private function __construct(
 		private readonly array $recipients,
 		private readonly string $format
@@ -41,6 +45,8 @@ final class Test_Delivery {
 	 * Validate and normalize a test request.
 	 *
 	 * @param array<mixed> $recipients Candidate addresses.
+	 * @param string       $format     Which part of the draft to test.
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	public static function create( array $recipients, string $format ): self {
 		if ( ! in_array( $format, array( self::FORMAT_HTML, self::FORMAT_TEXT ), true ) ) {
@@ -65,15 +71,25 @@ final class Test_Delivery {
 		return new self( array_values( $normalized ), $format );
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * The delivery's recipients.
+	 *
+	 * @return array<int, string>
+	 */
 	public function recipients(): array {
 		return $this->recipients;
 	}
 
+	/**
+	 * How many addresses the test goes to.
+	 */
 	public function recipient_count(): int {
 		return count( $this->recipients );
 	}
 
+	/**
+	 * The delivery's format.
+	 */
 	public function format(): string {
 		return $this->format;
 	}

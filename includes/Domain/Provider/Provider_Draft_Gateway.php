@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed port signatures are the contract.
+<?php
 /**
  * Remote draft mutation port.
  *
@@ -23,23 +23,33 @@ if ( ! defined( 'ABSPATH' ) ) {
  * non-idempotent create, and return only normalized outcomes.
  */
 interface Provider_Draft_Gateway {
+	/**
+	 * The provider this gateway talks to.
+	 */
 	public function slug(): string;
 
-	/** @param array<string, mixed> $settings Decrypted provider settings. */
+	/**
+	 * Create one draft campaign with its content.
+	 *
+	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param Draft_Content        $content  The draft content.
+	 */
 	public function create_draft( array $settings, Draft_Content $content ): Draft_Outcome;
 
 	/**
-	 * Overwrite an existing draft's audience, envelope, and content with the
-	 * approved values. Idempotent by contract, so a failure is safe to repeat.
+	 * Overwrite an existing draft's audience, envelope, and content with the approved values. Idempotent by contract, so a failure is safe to repeat.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param array<string, mixed> $settings  Decrypted provider settings.
+	 * @param string               $remote_id The provider's campaign ID.
+	 * @param Draft_Content        $content   The draft content.
 	 */
 	public function sync_draft( array $settings, string $remote_id, Draft_Content $content ): Action_Outcome;
 
 	/**
 	 * Read what the provider holds for a draft, without changing it.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param array<string, mixed> $settings  Decrypted provider settings.
+	 * @param string               $remote_id The provider's campaign ID.
 	 */
 	public function inspect_draft( array $settings, string $remote_id ): Remote_Draft_State|Provider_Error;
 
@@ -50,6 +60,7 @@ interface Provider_Draft_Gateway {
 	 * title carries the attempt ID. Read-only.
 	 *
 	 * @param array<string, mixed> $settings      Decrypted provider settings.
+	 * @param string               $title         Draft title to match.
 	 * @param string               $created_after UTC timestamp bounding the search.
 	 */
 	public function find_drafts( array $settings, string $title, string $created_after ): Remote_Draft_Matches|Provider_Error;

@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable artifact accessors are documented by the enclosing contract.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this artifact contract.
+<?php
 /**
  * Durable successful compiler artifact.
  *
@@ -22,7 +21,16 @@ final class Compiled_Artifact {
 	private const MAX_ASSETS     = 100;
 	private const MAX_ASSET_JSON = 65536;
 
-	/** @param array<int, array<string, mixed>> $assets Bounded canonical asset records. */
+	/**
+	 * Build the compiled artifact.
+	 *
+	 * @param string                           $html             HTML content.
+	 * @param string                           $text             Plain-text content.
+	 * @param array<int, array<string, mixed>> $assets           Bounded canonical asset records.
+	 * @param string                           $fingerprint      Artifact fingerprint.
+	 * @param string                           $compiler_version Compiler version.
+	 * @param string                           $profile_version  Compatibility profile version.
+	 */
 	private function __construct(
 		private readonly string $html,
 		private readonly string $text,
@@ -32,7 +40,12 @@ final class Compiled_Artifact {
 		private readonly string $profile_version
 	) {}
 
-	/** Capture a successful canonical compiler result. */
+	/**
+	 * Capture a successful canonical compiler result.
+	 *
+	 * @param Compile_Result $result Compiler output.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function from_result( Compile_Result $result ): self {
 		if ( ! $result->is_success() || '' === $result->html() ) {
 			throw new \InvalidArgumentException( 'Only successful compiler results can be persisted as artifacts.' );
@@ -51,7 +64,12 @@ final class Compiled_Artifact {
 		);
 	}
 
-	/** @param array<string, mixed> $data Persisted artifact. */
+	/**
+	 * Rebuild an artifact from its stored values.
+	 *
+	 * @param array<string, mixed> $data Persisted artifact.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function from_array( array $data ): self {
 		$allowed = array( 'schema_version', 'html', 'text', 'assets', 'fingerprint', 'compiler_version', 'profile_version' );
 		foreach ( array_keys( $data ) as $key ) {
@@ -103,6 +121,7 @@ final class Compiled_Artifact {
 	 *
 	 * @param mixed $asset Untrusted decoded asset.
 	 * @return array<string, mixed>
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	private static function validate_asset( mixed $asset ): array {
 		if ( ! is_array( $asset ) || array_is_list( $asset ) || ! is_string( $asset['type'] ?? null ) ) {
@@ -138,8 +157,11 @@ final class Compiled_Artifact {
 	}
 
 	/**
+	 * Reject an asset record whose keys are not exactly the expected ones.
+	 *
 	 * @param array<string, mixed> $asset    Asset record.
 	 * @param array<int, string>   $expected Exact field names.
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	private static function require_exact_keys( array $asset, array $expected ): void {
 		$keys = array_keys( $asset );
@@ -150,7 +172,12 @@ final class Compiled_Artifact {
 		}
 	}
 
-	/** Validate a bounded public HTTP(S) asset URL without embedded credentials. */
+	/**
+	 * Validate a bounded public HTTP(S) asset URL without embedded credentials.
+	 *
+	 * @param mixed $url Asset URL.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	private static function validate_asset_url( mixed $url ): void {
 		if ( ! is_string( $url ) || '' === $url || 2048 < strlen( $url ) || false === filter_var( $url, FILTER_VALIDATE_URL ) ) {
 			throw new \InvalidArgumentException( 'Compiled asset URL is invalid.' );
@@ -162,32 +189,55 @@ final class Compiled_Artifact {
 		}
 	}
 
+	/**
+	 * The artifact's HTML.
+	 */
 	public function html(): string {
 		return $this->html;
 	}
 
+	/**
+	 * The artifact's text.
+	 */
 	public function text(): string {
 		return $this->text;
 	}
 
-	/** @return array<int, array<string, mixed>> */
+	/**
+	 * The artifact's assets.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
 	public function assets(): array {
 		return $this->assets;
 	}
 
+	/**
+	 * The artifact's fingerprint.
+	 */
 	public function fingerprint(): string {
 		return $this->fingerprint;
 	}
 
+	/**
+	 * The artifact's compiler version.
+	 */
 	public function compiler_version(): string {
 		return $this->compiler_version;
 	}
 
+	/**
+	 * The artifact's profile version.
+	 */
 	public function profile_version(): string {
 		return $this->profile_version;
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * The artifact's stored values.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function to_array(): array {
 		return array(
 			'schema_version'   => self::SCHEMA_VERSION,

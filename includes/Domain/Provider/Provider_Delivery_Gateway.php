@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed port signatures are the contract.
+<?php
 /**
  * Remote delivery mutation port.
  *
@@ -21,29 +21,38 @@ if ( ! defined( 'ABSPATH' ) ) {
  * retry, and return only normalized outcomes.
  */
 interface Provider_Delivery_Gateway {
+	/**
+	 * The provider this gateway talks to.
+	 */
 	public function slug(): string;
 
-	/** Minutes between the delivery times the provider accepts; 1 means any minute. */
+	/**
+	 * Minutes between the delivery times the provider accepts; 1 means any minute.
+	 */
 	public function schedule_interval_minutes(): int;
 
 	/**
 	 * Schedule the remote draft to send to its audience at one UTC time.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param array<string, mixed> $settings      Decrypted provider settings.
+	 * @param string               $remote_id     The provider's campaign ID.
+	 * @param string               $scheduled_for Delivery time.
 	 */
 	public function schedule( array $settings, string $remote_id, string $scheduled_for ): Action_Outcome;
 
 	/**
 	 * Return a scheduled remote campaign to an unscheduled draft before it sends.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param array<string, mixed> $settings  Decrypted provider settings.
+	 * @param string               $remote_id The provider's campaign ID.
 	 */
 	public function unschedule( array $settings, string $remote_id ): Action_Outcome;
 
 	/**
 	 * Send the remote draft to its audience now. Irreversible once accepted.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings.
+	 * @param array<string, mixed> $settings  Decrypted provider settings.
+	 * @param string               $remote_id The provider's campaign ID.
 	 */
 	public function send( array $settings, string $remote_id ): Action_Outcome;
 }

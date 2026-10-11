@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Shared fail-closed validators use explicit signatures.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Validation exceptions are part of this value contract.
+<?php
 /**
  * Shared validation for discovered provider references.
  *
@@ -24,7 +23,13 @@ final class Discovery_Values {
 	/** Maximum characters for any display label. */
 	public const MAX_LABEL_LENGTH = 255;
 
-	/** Opaque remote identifier, e.g. a Mailchimp list or segment ID. */
+	/**
+	 * Opaque remote identifier, e.g. a Mailchimp list or segment ID.
+	 *
+	 * @param mixed  $value Value to validate.
+	 * @param string $label Field name for error messages.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function remote_id( mixed $value, string $label ): string {
 		if ( is_int( $value ) && 0 <= $value ) {
 			$value = (string) $value;
@@ -36,7 +41,13 @@ final class Discovery_Values {
 		return $value;
 	}
 
-	/** Single-line display text without control characters. */
+	/**
+	 * Single-line display text without control characters.
+	 *
+	 * @param mixed  $value Value to validate.
+	 * @param string $label Field name for error messages.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function label( mixed $value, string $label ): string {
 		if ( ! is_string( $value ) ) {
 			throw new \InvalidArgumentException( $label . ' must be a string.' );
@@ -50,7 +61,13 @@ final class Discovery_Values {
 		return $clean;
 	}
 
-	/** Non-negative aggregate count, or null when the provider omits it. */
+	/**
+	 * Non-negative aggregate count, or null when the provider omits it.
+	 *
+	 * @param mixed  $value Value to validate.
+	 * @param string $label Field name for error messages.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function count( mixed $value, string $label ): ?int {
 		if ( null === $value ) {
 			return null;
@@ -62,7 +79,11 @@ final class Discovery_Values {
 		return $value;
 	}
 
-	/** Scope of a discovery: '' for account-wide or one audience ID. */
+	/**
+	 * Scope of a discovery: '' for account-wide or one audience ID.
+	 *
+	 * @param mixed $value Value to validate.
+	 */
 	public static function scope( mixed $value ): string {
 		return '' === $value ? '' : self::remote_id( $value, 'Discovery scope' );
 	}

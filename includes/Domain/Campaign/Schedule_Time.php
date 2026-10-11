@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Validated campaign delivery time.
  *
@@ -31,6 +30,11 @@ final class Schedule_Time {
 
 	private const PATTERN = '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/';
 
+	/**
+	 * Build the schedule time.
+	 *
+	 * @param string $utc UTC timestamp.
+	 */
 	private function __construct( private readonly string $utc ) {}
 
 	/**
@@ -39,6 +43,7 @@ final class Schedule_Time {
 	 * @param string $requested        ISO 8601 date-time with an explicit offset.
 	 * @param string $now              Current canonical UTC timestamp.
 	 * @param int    $interval_minutes Provider scheduling interval; 1 means any minute.
+	 * @throws \InvalidArgumentException When a value is invalid.
 	 */
 	public static function parse( string $requested, string $now, int $interval_minutes ): self {
 		if ( 1 !== preg_match( self::PATTERN, $requested ) ) {

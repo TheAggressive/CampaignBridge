@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Port implementation signatures are documented by Provider_Discovery_Source.
+<?php
 /**
  * Transient-backed discovered reference cache.
  *
@@ -29,6 +29,9 @@ final class Provider_Discovery_Repository implements Provider_Discovery_Source {
 	/** Maximum time a discovery result is retained, in seconds. */
 	public const RETENTION_SECONDS = DAY_IN_SECONDS;
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function get( string $account, string $provider, string $kind, string $scope ): ?Discovery_Result {
 		$key = self::key( $account, $provider, $kind, $scope );
 		if ( null === $key ) {
@@ -48,12 +51,23 @@ final class Provider_Discovery_Repository implements Provider_Discovery_Source {
 		return $result->provider() === $provider && $result->kind() === $kind && $result->scope() === $scope ? $result : null;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function save( string $account, Discovery_Result $result ): bool {
 		$key = self::key( $account, $result->provider(), $result->kind(), $result->scope() );
 
 		return null !== $key && Storage::set_transient( $key, $result->to_array(), self::RETENTION_SECONDS );
 	}
 
+	/**
+	 * The storage key for one cached list.
+	 *
+	 * @param string $account  Stable key for the provider account.
+	 * @param string $provider Provider slug.
+	 * @param string $kind     Discovery kind.
+	 * @param string $scope    Discovery scope: empty, or an audience ID.
+	 */
 	private static function key( string $account, string $provider, string $kind, string $scope ): ?string {
 		if ( '' === $account || 128 < strlen( $account ) ) {
 			return null;

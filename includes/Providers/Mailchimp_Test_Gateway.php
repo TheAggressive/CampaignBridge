@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Port method contracts are documented by Provider_Test_Gateway.
+<?php
 /**
  * Mailchimp test-delivery adapter.
  *
@@ -45,14 +45,25 @@ final class Mailchimp_Test_Gateway implements Provider_Test_Gateway {
 	 */
 	private readonly Http_Client_Interface $http;
 
+	/**
+	 * Build the mailchimp test gateway.
+	 *
+	 * @param Http_Client_Interface|null $http HTTP client.
+	 */
 	public function __construct( ?Http_Client_Interface $http = null ) {
 		$this->http = $http ?? new Http_Client_Instance();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function slug(): string {
 		return 'mailchimp';
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public function send_test( array $settings, string $remote_id, Test_Delivery $delivery ): Action_Outcome {
 		$api_key = $settings['api_key'] ?? null;
 		if ( ! is_string( $api_key ) || ! ( new Mailchimp_Provider() )->is_valid_api_key( $api_key ) ) {

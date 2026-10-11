@@ -1,4 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Public operation names and typed signatures form the application contract.
+<?php
 /**
  * Reconcile a campaign with what its provider reports.
  *
@@ -102,6 +102,20 @@ final class Campaign_Reconciler {
 		Remote_Draft_State::CANCELED  => array( Campaign_State::CANCELLED, 'canceled' ),
 	);
 
+	/**
+	 * Build the campaign reconciler.
+	 *
+	 * @param Campaign_Source                  $campaigns    Campaign storage.
+	 * @param Remote_Campaign_Reference_Source $references   Remote reference storage.
+	 * @param Delivery_Attempt_Source          $attempts     Delivery attempt storage.
+	 * @param Audit_Event_Source               $audits       Audit event storage.
+	 * @param Campaign_Transaction             $transaction  Runs writes atomically.
+	 * @param Campaign_Id_Generator            $ids          Identifier generator.
+	 * @param Campaign_Clock                   $clock        Source of the current time.
+	 * @param Provider_Draft_Gateway           $drafts       Provider draft gateway.
+	 * @param Provider_Capabilities            $capabilities What the provider supports.
+	 * @param Lock_Manager|null                $locks        Lock manager; null runs without locking.
+	 */
 	public function __construct(
 		private readonly Campaign_Source $campaigns,
 		private readonly Remote_Campaign_Reference_Source $references,
@@ -118,7 +132,9 @@ final class Campaign_Reconciler {
 	/**
 	 * Reconcile one campaign with its provider.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id Campaign ID.
+	 * @param array<string, mixed> $settings    Decrypted provider settings for this call only.
 	 */
 	public function reconcile( Campaign_Actor $actor, string $campaign_id, array $settings ): Campaign_Reconcile_Result {
 		if ( null === $this->locks ) {
@@ -136,7 +152,9 @@ final class Campaign_Reconciler {
 	/**
 	 * The operation itself, run while the campaign lock is held.
 	 *
-	 * @param array<string, mixed> $settings Decrypted provider settings for this call only.
+	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id Campaign ID.
+	 * @param array<string, mixed> $settings    Decrypted provider settings for this call only.
 	 */
 	private function reconcile_unlocked( Campaign_Actor $actor, string $campaign_id, array $settings ): Campaign_Reconcile_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
@@ -186,6 +204,9 @@ final class Campaign_Reconciler {
 	/**
 	 * Find the draft an unconfirmed create may have made, by its correlation title.
 	 *
+	 * @param Campaign_Actor       $actor    Who is acting, with their resolved campaign authority.
+	 * @param Campaign             $campaign The campaign as read.
+	 * @param Delivery_Attempt     $attempt  The delivery attempt.
 	 * @param array<string, mixed> $settings Decrypted provider settings.
 	 */
 	private function recover_draft( Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, array $settings ): Campaign_Reconcile_Result {
@@ -244,6 +265,9 @@ final class Campaign_Reconciler {
 	/**
 	 * Move the campaign and its unresolved attempts to what the provider reports.
 	 *
+	 * @param Campaign_Actor               $actor      Who is acting, with their resolved campaign authority.
+	 * @param Campaign                     $campaign   The campaign as read.
+	 * @param Remote_Campaign_Reference    $reference  The campaign's remote reference.
 	 * @param array<int, Delivery_Attempt> $unresolved Settled-eligible attempts.
 	 * @param array<string, mixed>         $settings   Decrypted provider settings.
 	 */
@@ -326,6 +350,8 @@ final class Campaign_Reconciler {
 	/**
 	 * The campaign after following the provider, or why it cannot follow.
 	 *
+	 * @param Campaign    $campaign  The campaign as read.
+	 * @param string      $target    Local state the campaign moves to.
 	 * @param string|null $send_time Provider send time, required for a scheduled campaign.
 	 */
 	private function follow( Campaign $campaign, string $target, ?string $send_time ): Campaign|string {
@@ -353,7 +379,8 @@ final class Campaign_Reconciler {
 	/**
 	 * Whether the provider's state shows an operation took effect; null when it cannot tell.
 	 *
-	 * @param string $target Local state the provider's status maps to.
+	 * @param string $operation Delivery operation.
+	 * @param string $target    Local state the provider's status maps to.
 	 */
 	private function applied( string $operation, string $target ): ?bool {
 		return match ( $operation ) {
@@ -378,7 +405,14 @@ final class Campaign_Reconciler {
 	 * The observation is stored with the campaign version claimed, so delivery
 	 * that requires a draft or scheduled observation stays blocked.
 	 *
+	 * @param Campaign_Actor               $actor      Who is acting, with their resolved campaign authority.
+	 * @param Campaign                     $campaign   The campaign as read.
+	 * @param Remote_Campaign_Reference    $reference  The campaign's remote reference.
+	 * @param string                       $observed   State the provider reported.
+	 * @param string                       $message    Operator-safe message.
 	 * @param array<int, Delivery_Attempt> $unresolved Attempts that remain unresolved.
+	 * @param Provider_Error|null          $error      Normalized provider error, when there is one.
+	 * @param string                       $reason     Why reconciliation could not settle the campaign.
 	 */
 	private function contradiction( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, string $observed, string $message, array $unresolved, ?Provider_Error $error, string $reason ): Campaign_Reconcile_Result {
 		$observation = $this->observation( $reference, $observed, false );
@@ -411,6 +445,7 @@ final class Campaign_Reconciler {
 	/**
 	 * Pending or unknown attempts whose outcome provider state can prove.
 	 *
+	 * @param string $campaign_id Campaign ID.
 	 * @return array<int, Delivery_Attempt>
 	 */
 	private function unresolved( string $campaign_id ): array {
@@ -423,10 +458,22 @@ final class Campaign_Reconciler {
 		);
 	}
 
+	/**
+	 * Seconds since the attempt was recorded.
+	 *
+	 * @param Delivery_Attempt $attempt The delivery attempt.
+	 */
 	private function age( Delivery_Attempt $attempt ): int {
 		return max( 0, (int) strtotime( $this->clock->now() ) - (int) strtotime( $attempt->created_at() ) );
 	}
 
+	/**
+	 * The reference updated with what the provider now reports.
+	 *
+	 * @param Remote_Campaign_Reference $reference  The campaign's remote reference.
+	 * @param string                    $observed   State the provider reported.
+	 * @param bool                      $reconciled Whether this observation settles reconciliation.
+	 */
 	private function observation( Remote_Campaign_Reference $reference, string $observed, bool $reconciled ): Remote_Campaign_Reference {
 		return Remote_Campaign_Reference::from_array(
 			array_merge(
@@ -440,6 +487,20 @@ final class Campaign_Reconciler {
 		);
 	}
 
+	/**
+	 * Audit a reconciliation that could not settle the campaign and return it.
+	 *
+	 * @param string                $code        Stable error code.
+	 * @param string                $message     Operator-safe message.
+	 * @param Campaign_Actor        $actor       Who is acting, with their resolved campaign authority.
+	 * @param string                $campaign_id Campaign ID.
+	 * @param Campaign|null         $campaign    The campaign as read.
+	 * @param string                $result      Audit result: success, failure, denied, or unknown.
+	 * @param Delivery_Attempt|null $attempt     The delivery attempt.
+	 * @param Provider_Error|null   $error       Normalized provider error, when there is one.
+	 * @param string|null           $reason      Why reconciliation could not settle the campaign.
+	 * @param int|null              $retry_after Seconds until reconciling again can settle it.
+	 */
 	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null, ?string $reason = null, ?int $retry_after = null ): Campaign_Reconcile_Result {
 		try {
 			$this->audits->add(
@@ -465,7 +526,12 @@ final class Campaign_Reconciler {
 	/**
 	 * Provenance of a reconciliation: what the provider reported and what changed.
 	 *
-	 * @param array<int, Delivery_Attempt> $resolved Attempts settled by this reconciliation.
+	 * @param Campaign                     $before        The campaign before the change.
+	 * @param Campaign                     $after         The campaign after the change.
+	 * @param string|null                  $remote_id     The provider's campaign ID.
+	 * @param string                       $remote_status Status the provider reported.
+	 * @param array<int, Delivery_Attempt> $resolved      Attempts settled by this reconciliation.
+	 * @param bool                         $unexplained   Whether the change has no CampaignBridge request behind it.
 	 * @return array<string, mixed>
 	 */
 	private function context( Campaign $before, Campaign $after, ?string $remote_id, string $remote_status, array $resolved, bool $unexplained ): array {
@@ -484,7 +550,14 @@ final class Campaign_Reconciler {
 		);
 	}
 
-	/** @param array<string, mixed> $context Safe audit context. */
+	/**
+	 * Build one reconciliation audit event.
+	 *
+	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
+	 * @param string               $campaign_id Campaign ID.
+	 * @param string               $result      Audit result: success, failure, denied, or unknown.
+	 * @param array<string, mixed> $context     Safe audit context.
+	 */
 	private function event( Campaign_Actor $actor, string $campaign_id, string $result, array $context ): Audit_Event {
 		return Audit_Event::from_array(
 			array(
@@ -501,6 +574,14 @@ final class Campaign_Reconciler {
 		);
 	}
 
+	/**
+	 * The attempt with its settled status and retryability.
+	 *
+	 * @param Delivery_Attempt $attempt      The delivery attempt.
+	 * @param string           $status       Attempt status.
+	 * @param string           $retryability Whether a new attempt may be made.
+	 * @param string|null      $correlation  The provider's correlation ID, when known.
+	 */
 	private function settled( Delivery_Attempt $attempt, string $status, string $retryability, ?string $correlation ): Delivery_Attempt {
 		return Delivery_Attempt::from_array(
 			array_merge(

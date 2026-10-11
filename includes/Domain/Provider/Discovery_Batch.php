@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Items returned by one provider discovery call.
  *
@@ -24,14 +23,27 @@ final class Discovery_Batch {
 	/** Maximum items kept from one discovery. */
 	public const MAX_ITEMS = 1000;
 
-	/** @param array<int, Discovered_Item> $items Normalized items. */
+	/**
+	 * Build the discovery batch.
+	 *
+	 * @param string                      $kind     Discovery kind.
+	 * @param array<int, Discovered_Item> $items    Normalized items.
+	 * @param bool                        $complete Whether the provider returned every item.
+	 */
 	private function __construct(
 		private readonly string $kind,
 		private readonly array $items,
 		private readonly bool $complete
 	) {}
 
-	/** @param array<int, Discovered_Item> $items Normalized items. */
+	/**
+	 * A bounded batch of items of one kind.
+	 *
+	 * @param string                      $kind     Discovery kind.
+	 * @param array<int, Discovered_Item> $items    Normalized items.
+	 * @param bool                        $complete Whether the provider returned every item.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function create( string $kind, array $items, bool $complete ): self {
 		Discovery_Kind::operation( $kind );
 		if ( self::MAX_ITEMS < count( $items ) ) {
@@ -46,15 +58,25 @@ final class Discovery_Batch {
 		return new self( $kind, array_values( $items ), $complete );
 	}
 
+	/**
+	 * The batch's kind.
+	 */
 	public function kind(): string {
 		return $this->kind;
 	}
 
-	/** @return array<int, Discovered_Item> */
+	/**
+	 * The batch's items.
+	 *
+	 * @return array<int, Discovered_Item>
+	 */
 	public function items(): array {
 		return $this->items;
 	}
 
+	/**
+	 * Whether the batch is complete.
+	 */
 	public function is_complete(): bool {
 		return $this->complete;
 	}

@@ -1,5 +1,4 @@
-<?php // phpcs:disable Squiz.Commenting.FunctionComment,Generic.Commenting.DocComment.MissingShort -- Typed immutable values use explicit signatures and class-level invariant documentation.
-// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag -- Fail-closed validation exceptions are part of this value contract.
+<?php
 /**
  * Provider-neutral remote draft request.
  *
@@ -25,6 +24,19 @@ final class Draft_Content {
 	/** Upper bound on uploaded HTML, in bytes. */
 	public const MAX_HTML_BYTES = 2097152;
 
+	/**
+	 * Build the draft content.
+	 *
+	 * @param string $audience_id  The provider's audience ID.
+	 * @param string $subject      Subject line.
+	 * @param string $preview_text Preview text.
+	 * @param string $from_name    Sender name.
+	 * @param string $reply_to     Reply-to address.
+	 * @param string $html         HTML content.
+	 * @param string $text         Plain-text content.
+	 * @param string $fingerprint  Artifact fingerprint.
+	 * @param string $correlation  The provider's correlation ID, when known.
+	 */
 	private function __construct(
 		private readonly string $audience_id,
 		private readonly string $subject,
@@ -37,6 +49,20 @@ final class Draft_Content {
 		private readonly string $correlation
 	) {}
 
+	/**
+	 * Everything the provider needs to create or update a draft.
+	 *
+	 * @param string $audience_id  The provider's audience ID.
+	 * @param string $subject      Subject line.
+	 * @param string $preview_text Preview text.
+	 * @param string $from_name    Sender name.
+	 * @param string $reply_to     Reply-to address.
+	 * @param string $html         HTML content.
+	 * @param string $text         Plain-text content.
+	 * @param string $fingerprint  Artifact fingerprint.
+	 * @param string $correlation  The provider's correlation ID, when known.
+	 * @throws \InvalidArgumentException When a value is invalid.
+	 */
 	public static function create(
 		string $audience_id,
 		string $subject,
@@ -67,30 +93,51 @@ final class Draft_Content {
 		return new self( Discovery_Values::remote_id( $audience_id, 'Audience ID' ), $subject, $preview_text, $from_name, strtolower( $reply_to ), $html, $text, $fingerprint, $correlation );
 	}
 
+	/**
+	 * The content's audience ID.
+	 */
 	public function audience_id(): string {
 		return $this->audience_id;
 	}
 
+	/**
+	 * The content's subject.
+	 */
 	public function subject(): string {
 		return $this->subject;
 	}
 
+	/**
+	 * The content's preview text.
+	 */
 	public function preview_text(): string {
 		return $this->preview_text;
 	}
 
+	/**
+	 * The content's from name.
+	 */
 	public function from_name(): string {
 		return $this->from_name;
 	}
 
+	/**
+	 * The content's reply to.
+	 */
 	public function reply_to(): string {
 		return $this->reply_to;
 	}
 
+	/**
+	 * The content's HTML.
+	 */
 	public function html(): string {
 		return $this->html;
 	}
 
+	/**
+	 * The content's text.
+	 */
 	public function text(): string {
 		return $this->text;
 	}
@@ -100,6 +147,9 @@ final class Draft_Content {
 		return $this->fingerprint;
 	}
 
+	/**
+	 * The content's correlation.
+	 */
 	public function correlation(): string {
 		return $this->correlation;
 	}
