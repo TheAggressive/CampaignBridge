@@ -10,11 +10,12 @@ campaign needs reconciliation, a warning links to the Campaigns screen; open
 each such campaign and reconcile it before acting on it (see **Duplicate or
 uncertain remote campaign** below).
 
-Viewing **Settings → Providers** checks the stored Mailchimp key with
-Mailchimp's read-only ping (at most once every five minutes per key) and
-records the answer: verified, or refused by Mailchimp. A timeout or network
-failure proves nothing, so the previous result stands. "Not checked yet" in
-Status means nobody has opened the Providers tab since the key was saved.
+Opening any **Settings** tab as a user who can manage connections checks the
+stored Mailchimp key with Mailchimp's read-only ping (at most once every five
+minutes per key) and records the answer: verified, or refused by Mailchimp. A
+timeout or network failure proves nothing, so the previous result stands.
+Other admin screens never contact Mailchimp. "Not checked yet" in Status means
+nobody has opened Settings since the key was saved.
 
 ## Provider authentication failures
 
