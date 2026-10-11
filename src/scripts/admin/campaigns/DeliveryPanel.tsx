@@ -24,6 +24,8 @@ import {
   sendTest,
   since,
   unscheduleCampaign,
+  watchSummary,
+  type ReconcileWatch,
   type DeliveryResult,
   type RemoteReference,
 } from './delivery';
@@ -52,6 +54,7 @@ export function DeliveryPanel({
   const [remote, setRemote] = useState<RemoteReference | null | undefined>(
     undefined
   );
+  const [watch, setWatch] = useState<ReconcileWatch | null>(null);
   const [audience, setAudience] = useState<AudienceOption | null>(null);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -79,7 +82,10 @@ export function DeliveryPanel({
 
   useEffect(() => {
     getRemote(campaign)
-      .then(result => setRemote(result.remote))
+      .then(result => {
+        setRemote(result.remote);
+        setWatch(result.watch ?? null);
+      })
       .catch(() => setRemote(null));
   }, [campaign.id, campaign.version]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -157,6 +163,7 @@ export function DeliveryPanel({
       .then(result => {
         onChange(result.campaign);
         setRemote(result.remote);
+        setWatch(result.watch ?? null);
       })
       .catch(() => undefined);
   };
@@ -259,6 +266,19 @@ export function DeliveryPanel({
           </Notice>
         )}
       </div>
+
+      {(() => {
+        const summary = watchSummary(watch, new Date());
+        return summary ? (
+          <Notice
+            status={summary.status}
+            isDismissible={false}
+            className='campaignbridge-campaigns__watch'
+          >
+            {summary.text}
+          </Notice>
+        ) : null;
+      })()}
 
       <dl className='campaignbridge-campaigns__envelope'>
         <dt>{__('Audience', 'campaignbridge')}</dt>

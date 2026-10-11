@@ -24,11 +24,13 @@ final class Campaign_Remote_View {
 	 * @param Campaign|null                  $campaign  Campaign as read.
 	 * @param Remote_Campaign_Reference|null $reference Provider reference, when one exists.
 	 * @param Campaign_Workflow_Error|null   $error     Refusal.
+	 * @param Reconcile_Watch|null           $watch     Whether automatic checks are watching it.
 	 */
 	private function __construct(
 		private readonly ?Campaign $campaign,
 		private readonly ?Remote_Campaign_Reference $reference,
-		private readonly ?Campaign_Workflow_Error $error
+		private readonly ?Campaign_Workflow_Error $error,
+		private readonly ?Reconcile_Watch $watch = null
 	) {}
 
 	/**
@@ -36,9 +38,10 @@ final class Campaign_Remote_View {
 	 *
 	 * @param Campaign                       $campaign  Campaign as read.
 	 * @param Remote_Campaign_Reference|null $reference Provider reference.
+	 * @param Reconcile_Watch|null           $watch     Whether automatic checks are watching it, when known.
 	 */
-	public static function success( Campaign $campaign, ?Remote_Campaign_Reference $reference ): self {
-		return new self( $campaign, $reference, null );
+	public static function success( Campaign $campaign, ?Remote_Campaign_Reference $reference, ?Reconcile_Watch $watch = null ): self {
+		return new self( $campaign, $reference, null, $watch );
 	}
 
 	/**
@@ -68,5 +71,12 @@ final class Campaign_Remote_View {
 	/** Refusal, when the read was withheld. */
 	public function error(): ?Campaign_Workflow_Error {
 		return $this->error;
+	}
+
+	/**
+	 * Whether automatic checks are watching the campaign, when that is known.
+	 */
+	public function watch(): ?Reconcile_Watch {
+		return $this->watch;
 	}
 }

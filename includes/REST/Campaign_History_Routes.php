@@ -114,6 +114,7 @@ final class Campaign_History_Routes {
 			array(
 				'campaign' => Campaign_Rest_Resource::campaign( $read, $actor ),
 				'remote'   => null === $reference ? null : Campaign_Rest_Resource::remote( $reference ),
+				'watch'    => $view->watch()?->to_array(),
 			)
 		);
 		$response->header( 'Cache-Control', 'no-store' );

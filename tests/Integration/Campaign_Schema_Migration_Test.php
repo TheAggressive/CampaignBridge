@@ -261,12 +261,39 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 		self::assertSame( 'queued', ( new \CampaignBridge\Repository\Job_Repository() )->get( 'job-legacy' )?->state() );
 	}
 
+	/** Version 8 gains the campaign state index; existing campaigns are untouched. */
+	public function test_upgrade_from_version_eight_adds_the_campaign_state_index(): void {
+		global $wpdb;
+		self::assertTrue( Schema_Manager::migrate() );
+		$campaigns = Schema_Manager::table( 'campaigns' );
+		$wpdb->query( "ALTER TABLE {$campaigns} DROP INDEX state_updated" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Recreates the version-8 shape.
+		$wpdb->insert(
+			$campaigns,
+			array(
+				'id'            => 'legacy-sending',
+				'data_version'  => 1,
+				'state'         => 'sending',
+				'version'       => 6,
+				'owner_user_id' => 7,
+				'template_id'   => 42,
+				'created_at'    => '2026-01-01 00:00:00',
+				'updated_at'    => '2026-01-02 00:00:00',
+			)
+		);
+		Storage::update_option( Schema_Manager::OPTION, 8 );
+
+		self::assertTrue( Schema_Manager::migrate() );
+		self::assertTrue( Schema_Manager::migrate(), 'A repeated run is a no-op.' );
+		self::assertContains( 'state_updated', $wpdb->get_col( "SHOW INDEX FROM {$campaigns}", 2 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted test table.
+		self::assertSame( array( 'legacy-sending' ), array_map( static fn ( $campaign ): string => $campaign->id(), ( new Campaign_Repository() )->watched( array( 'sending' ), 10 ) ) );
+	}
+
 	/** Product read paths and identity rules have their documented indexes. */
 	public function test_expected_query_indexes_exist(): void {
 		global $wpdb;
 		self::assertTrue( Schema_Manager::migrate() );
 		$expected = array(
-			'campaigns'          => array( 'PRIMARY', 'owner_updated' ),
+			'campaigns'          => array( 'PRIMARY', 'owner_updated', 'state_updated' ),
 			'campaign_snapshots' => array( 'PRIMARY', 'campaign_revision' ),
 			'remote_campaigns'   => array( 'PRIMARY', 'provider_remote' ),
 			'delivery_attempts'  => array( 'PRIMARY', 'campaign_idempotency', 'campaign_created' ),

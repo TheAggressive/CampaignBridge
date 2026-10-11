@@ -9,7 +9,13 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Services\Job;
 
+use CampaignBridge\Repository\Campaign_Repository;
 use CampaignBridge\Repository\Job_Repository;
+use CampaignBridge\Services\Campaign\Campaign_Reconciler_Factory;
+use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
+use CampaignBridge\Workflow\Campaign\Campaign_Reconcile_Job;
+use CampaignBridge\Workflow\Campaign\Campaign_Reconciler;
+use CampaignBridge\Workflow\Campaign\Reconciliation_Sweep;
 use CampaignBridge\Workflow\Campaign\System_Clock;
 use CampaignBridge\Workflow\Job\Job_Handler;
 use CampaignBridge\Workflow\Job\Job_Queue;
@@ -46,6 +52,17 @@ final class Job_Factory {
 	 * @return array<int, Job_Handler>
 	 */
 	public static function handlers(): array {
-		return array();
+		$jobs  = new Job_Repository();
+		$clock = new System_Clock();
+
+		return array(
+			new Campaign_Reconcile_Job(
+				new Campaign_Repository(),
+				static fn ( string $provider ): ?Campaign_Reconciler => Campaign_Reconciler_Factory::create( $provider ),
+				static fn ( string $provider ): array => Provider_Discovery_Factory::settings( $provider ),
+				$clock
+			),
+			new Reconciliation_Sweep( new Campaign_Repository(), $jobs, new Job_Queue( $jobs, $clock ), $clock ),
+		);
 	}
 }

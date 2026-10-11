@@ -13,9 +13,18 @@ export interface RemoteReference {
   reconciled_at: string | null;
 }
 
+/** Whether CampaignBridge checks the provider automatically for this campaign. */
+export interface ReconcileWatch {
+  state: 'watching' | 'stopped' | 'idle';
+  next_check_at: string | null;
+  reason: string | null;
+  since: string | null;
+}
+
 export interface DeliveryResult {
   campaign: Campaign;
   remote: RemoteReference | null;
+  watch?: ReconcileWatch | null;
   idempotent_replay?: boolean;
 }
 
@@ -305,4 +314,71 @@ export function since(iso: string, now: Date): string {
     _n('%d day ago', '%d days ago', days, 'campaignbridge'),
     days
   );
+}
+
+/** How long until an ISO time, in words; a time already passed is "any moment now". */
+export function until(iso: string, now: Date): string {
+  const minutes = Math.round(
+    (new Date(iso).getTime() - now.getTime()) / 60_000
+  );
+  if (minutes < 1) return __('any moment now', 'campaignbridge');
+  if (minutes < 60) {
+    return sprintf(
+      /* translators: %d: minutes. */
+      _n('in %d minute', 'in %d minutes', minutes, 'campaignbridge'),
+      minutes
+    );
+  }
+  const hours = Math.round(minutes / 60);
+  return sprintf(
+    /* translators: %d: hours. */
+    _n('in %d hour', 'in %d hours', hours, 'campaignbridge'),
+    hours
+  );
+}
+
+/**
+ * What the operator should know about automatic checks, or null when there
+ * is nothing to say. A stopped watch reuses the reconcile guidance for its
+ * reason, so the next step reads the same as after a manual reconcile.
+ */
+export function watchSummary(
+  watch: ReconcileWatch | null | undefined,
+  now: Date
+): { status: 'info' | 'warning'; text: string } | null {
+  if (!watch || watch.state === 'idle') return null;
+  if (watch.state === 'watching') {
+    return {
+      status: 'info',
+      text: watch.next_check_at
+        ? sprintf(
+            /* translators: %s: when the next check runs, such as "in 5 minutes". */
+            __(
+              'CampaignBridge checks Mailchimp automatically. Next check %s.',
+              'campaignbridge'
+            ),
+            until(watch.next_check_at, now)
+          )
+        : __(
+            'CampaignBridge checks Mailchimp automatically.',
+            'campaignbridge'
+          ),
+    };
+  }
+  const guidance = reconcileGuidance({
+    code: 'campaignbridge_campaign_reconciliation_required',
+    message: __(
+      'Mailchimp could not be read automatically. Reconcile to try again.',
+      'campaignbridge'
+    ),
+    diagnostics: [],
+    currentVersion: null,
+    reason: watch.reason,
+    retryAfter: null,
+  });
+
+  return {
+    status: 'warning',
+    text: `${__('Automatic checks stopped.', 'campaignbridge')} ${guidance.text}`,
+  };
 }

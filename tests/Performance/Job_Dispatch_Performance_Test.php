@@ -21,10 +21,13 @@ final class Job_Dispatch_Performance_Test extends Test_Case {
 		self::assertTrue( Schema_Manager::migrate() );
 		global $wpdb;
 		$wpdb->query( 'DELETE FROM ' . Schema_Manager::table( 'jobs' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Allowlisted test table.
+		// The first tick queues the recurring reconciliation sweep; steady state is measured after it.
+		Job_Dispatcher::run_batch();
 	}
 
 	public function test_an_idle_tick_is_a_handful_of_queries(): void {
-		self::assertLessThanOrEqual( 5, $this->queries_for_tick() );
+		// The sweep check, the claim selects, and the purge.
+		self::assertLessThanOrEqual( 6, $this->queries_for_tick() );
 	}
 
 	public function test_a_busy_tick_is_bounded_by_the_batch_not_the_queue(): void {
@@ -35,8 +38,8 @@ final class Job_Dispatch_Performance_Test extends Test_Case {
 
 		$queries = $this->queries_for_tick();
 
-		// Claim selects, then per job one claim, one read, and one transition.
-		self::assertLessThanOrEqual( 5 + 3 * Job_Dispatcher::BATCH, $queries );
+		// The sweep check and claim selects, then per job one claim, one read, and one transition.
+		self::assertLessThanOrEqual( 6 + 3 * Job_Dispatcher::BATCH, $queries );
 	}
 
 	private function queries_for_tick(): int {

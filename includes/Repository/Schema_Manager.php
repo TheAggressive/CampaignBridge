@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Owns restartable, forward-safe database migrations for campaign storage and request counters. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 8;
+	public const SCHEMA_VERSION = 9;
 	public const OPTION         = 'database_schema';
 
 	/**
@@ -185,7 +185,8 @@ final class Schema_Manager {
 				scheduled_for datetime NULL,
 				approved_by_user_id bigint unsigned NULL,
 				PRIMARY KEY  (id),
-				KEY owner_updated (owner_user_id, updated_at)
+				KEY owner_updated (owner_user_id, updated_at),
+				KEY state_updated (state, updated_at)
 			) {$collate};",
 			'CREATE TABLE ' . self::table( 'campaign_snapshots' ) . " (
 				id varchar(64) NOT NULL,

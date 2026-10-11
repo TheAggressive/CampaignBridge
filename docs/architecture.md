@@ -48,6 +48,21 @@ runs and the job ends `dead`, so an irreversible effect is never repeated.
 Payloads are small scalar maps and refuse credential-like keys; stored errors
 are stable codes, never messages or provider responses.
 
+## Background reconciliation
+
+`Workflow/Campaign/Reconciliation_Sweep` and `Campaign_Reconcile_Job` are the
+first job handlers. The sweep is a recurring job that queues one
+`reconcile_campaign` watch per scheduled, sending, or unknown campaign
+(`Domain/Campaign/Watched_Campaign_Source`), skipping a campaign whose watch
+stopped since it last changed. Each watch calls
+`Campaign_Reconciler::reconcile_in_background()`, the reconciler's only entry
+point without a user, so the system can reconcile but never deliver. It
+returns `Job_Outcome::again()` to look later on `Reconcile_Cadence`, which
+resets the job's attempts so a long-running watch never uses them up, and
+`failed()` with the reason when only an operator can resolve the campaign.
+`Reconcile_Watch` reads a campaign's watch state from its jobs for the
+campaign page and Status.
+
 ## Locks
 
 `Workflow/Lock/Lock_Manager` serializes work across requests and background

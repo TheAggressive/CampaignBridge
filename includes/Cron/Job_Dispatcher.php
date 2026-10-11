@@ -12,6 +12,7 @@ namespace CampaignBridge\Cron;
 use CampaignBridge\Repository\Job_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\Services\Job\Job_Factory;
+use CampaignBridge\Workflow\Campaign\Reconciliation_Sweep;
 use CampaignBridge\Workflow\Campaign\System_Clock;
 use CampaignBridge\Workflow\Job\Job_Time;
 
@@ -77,13 +78,15 @@ final class Job_Dispatcher {
 	/**
 	 * Run one batch of due jobs, then purge old succeeded jobs.
 	 *
-	 * @return array{claimed: int, succeeded: int, retried: int, failed: int, dead: int}|null Null when storage is not ready.
+	 * @return array{claimed: int, succeeded: int, retried: int, failed: int, dead: int, rescheduled: int}|null Null when storage is not ready.
 	 */
 	public static function run_batch(): ?array {
 		if ( ! Schema_Manager::is_current() ) {
 			return null;
 		}
 
+		// The sweep is itself a recurring job; queueing it again is a no-op while it is active.
+		Job_Factory::queue()->enqueue( Reconciliation_Sweep::TYPE, 'site', 'campaigns' );
 		$report = Job_Factory::runner()->run( self::BATCH );
 		( new Job_Repository() )->purge_succeeded( Job_Time::after( ( new System_Clock() )->now(), -self::KEEP_DAYS * DAY_IN_SECONDS ), self::PURGE_BATCH );
 

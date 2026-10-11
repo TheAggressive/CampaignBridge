@@ -1,4 +1,6 @@
 import {
+  until,
+  watchSummary,
   deliveryOutcome,
   earliestSchedule,
   scheduleTime,
@@ -75,5 +77,48 @@ describe('campaign delivery rules in the screen', () => {
     );
     expect(outcome).toMatchObject({ status: 'error', retry: true });
     expect(outcome.message).toContain('nothing was sent');
+  });
+
+  it('describes automatic checks while they watch and when they stop', () => {
+    const at = new Date('2030-01-01T10:00:00Z');
+    expect(until('2030-01-01T10:05:00Z', at)).toBe('in 5 minutes');
+    expect(until('2030-01-01T12:00:00Z', at)).toBe('in 2 hours');
+    expect(until('2030-01-01T09:00:00Z', at)).toBe('any moment now');
+
+    expect(
+      watchSummary(
+        {
+          state: 'watching',
+          next_check_at: '2030-01-01T10:05:00Z',
+          reason: null,
+          since: null,
+        },
+        at
+      )
+    ).toEqual({
+      status: 'info',
+      text: 'CampaignBridge checks Mailchimp automatically. Next check in 5 minutes.',
+    });
+
+    const stopped = watchSummary(
+      {
+        state: 'stopped',
+        next_check_at: null,
+        reason: 'missing',
+        since: '2030-01-01T09:00:00Z',
+      },
+      at
+    );
+    expect(stopped?.status).toBe('warning');
+    expect(stopped?.text).toMatch(
+      /^Automatic checks stopped\. Mailchimp no longer has this campaign/
+    );
+
+    expect(
+      watchSummary(
+        { state: 'idle', next_check_at: null, reason: null, since: null },
+        at
+      )
+    ).toBeNull();
   });
 });

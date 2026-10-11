@@ -85,15 +85,16 @@ final class Job_Runner {
 	 * Run up to `$limit` due jobs.
 	 *
 	 * @param int $limit Maximum number of records.
-	 * @return array{claimed: int, succeeded: int, retried: int, failed: int, dead: int}
+	 * @return array{claimed: int, succeeded: int, retried: int, failed: int, dead: int, rescheduled: int}
 	 */
 	public function run( int $limit ): array {
 		$report = array(
-			'claimed'   => 0,
-			'succeeded' => 0,
-			'retried'   => 0,
-			'failed'    => 0,
-			'dead'      => 0,
+			'claimed'     => 0,
+			'succeeded'   => 0,
+			'retried'     => 0,
+			'failed'      => 0,
+			'dead'        => 0,
+			'rescheduled' => 0,
 		);
 		$now    = $this->clock->now();
 		foreach ( $this->jobs->claim( $this->owner, $now, Job_Time::after( $now, self::LEASE_SECONDS ), $limit ) as $claim ) {
@@ -111,7 +112,7 @@ final class Job_Runner {
 	 * Run one claimed job and record its outcome.
 	 *
 	 * @param Job_Claim $claim The claimed job.
-	 * @return 'succeeded'|'retried'|'failed'|'dead'|null The recorded result, or null when the lease was lost.
+	 * @return 'succeeded'|'retried'|'failed'|'dead'|'rescheduled'|null The recorded result, or null when the lease was lost.
 	 */
 	private function run_one( Job_Claim $claim ): ?string {
 		$job     = $claim->job;
@@ -146,6 +147,11 @@ final class Job_Runner {
 
 		if ( Job_Outcome::SUCCEEDED === $outcome->kind ) {
 			return $this->jobs->succeed( $job->id(), $this->owner, $this->clock->now() ) ? 'succeeded' : null;
+		}
+		if ( Job_Outcome::AGAIN === $outcome->kind ) {
+			$now = $this->clock->now();
+
+			return $this->jobs->reschedule( $job->id(), $this->owner, Job_Time::after( $now, (int) $outcome->delay_seconds ), $now ) ? 'rescheduled' : null;
 		}
 		if ( Job_Outcome::FAILED === $outcome->kind ) {
 			return $this->end( $job, Job_State::FAILED, (string) $outcome->error );

@@ -78,6 +78,23 @@ if ( $screen ) {
 				</div>
 			<?php endif; ?>
 
+			<?php if ( 0 < (int) ( $campaignbridge_jobs['stopped_watches'] ?? 0 ) ) : ?>
+				<div class="notice notice-warning inline">
+					<p>
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %d: number of campaigns whose automatic checks stopped. */
+								_n( '%d campaign needs operator action: automatic checks could not settle it with Mailchimp. Open it for the next step.', '%d campaigns need operator action: automatic checks could not settle them with Mailchimp. Open each one for the next step.', (int) $campaignbridge_jobs['stopped_watches'], 'campaignbridge' ),
+								(int) $campaignbridge_jobs['stopped_watches']
+							)
+						);
+						?>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=campaignbridge-campaigns' ) ); ?>"><?php esc_html_e( 'Go to Campaigns', 'campaignbridge' ); ?></a>
+					</p>
+				</div>
+			<?php endif; ?>
+
 			<?php if ( 0 < (int) ( $campaignbridge_jobs['overdue'] ?? 0 ) || 0 < (int) ( $campaignbridge_jobs['expired_leases'] ?? 0 ) || false === ( $campaignbridge_jobs['scheduled'] ?? true ) ) : ?>
 				<div class="notice notice-warning inline">
 					<p><?php esc_html_e( 'Background jobs are not running on time. WP-Cron runs only when the site receives visits or a system cron calls wp-cron.php; if WP-Cron is disabled, set up a system cron that calls it every minute.', 'campaignbridge' ); ?></p>
