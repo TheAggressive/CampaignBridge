@@ -18,7 +18,8 @@ content before it reaches a provider.
 > and on-demand reconciliation of uncertain outcomes. Operators run that whole
 > lifecycle from WordPress admin: a first-run checklist, the Campaigns list,
 > review and approval, guarded delivery confirmations, and a campaign timeline
-> with reconciliation recovery. Background reconciliation and reporting remain
+> with reconciliation recovery. Scheduled, sending, and unconfirmed campaigns
+> are also reconciled automatically in the background. Reporting remains
 > roadmap work. See
 > [ROADMAP.md](ROADMAP.md) for the product contract and delivery plan.
 

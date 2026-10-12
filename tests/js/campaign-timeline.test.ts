@@ -99,4 +99,17 @@ describe('campaign timeline and recovery', () => {
     expect(since('2030-01-01T09:00:00Z', now)).toBe('3 hours ago');
     expect(since('2029-12-28T12:00:00Z', now)).toBe('4 days ago');
   });
+
+  it('marks a reconciliation that ran on its own', () => {
+    expect(
+      eventDetails({
+        id: 'audit-2',
+        action: 'campaign_reconcile',
+        result: 'success',
+        actor: { id: null, name: null },
+        context: { observed_state: 'sent', automatic: true },
+        created_at: '2030-01-01T00:00:00Z',
+      })
+    ).toEqual(['Provider reported: sent', 'Checked automatically']);
+  });
 });

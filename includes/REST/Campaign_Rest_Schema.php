@@ -378,6 +378,21 @@ final class Campaign_Rest_Schema {
 			array(
 				'campaign' => self::campaign(),
 				'remote'   => array_merge( self::remote(), array( 'type' => array( 'object', 'null' ) ) ),
+				'watch'    => array(
+					'description'          => __( 'Whether CampaignBridge checks the provider automatically: watching (next_check_at), stopped until the campaign changes (reason, since), or idle.', 'campaignbridge' ),
+					'type'                 => array( 'object', 'null' ),
+					'additionalProperties' => false,
+					'required'             => array( 'state', 'next_check_at', 'reason', 'since' ),
+					'properties'           => array(
+						'state'         => array(
+							'type' => 'string',
+							'enum' => array( 'watching', 'stopped', 'idle' ),
+						),
+						'next_check_at' => array( 'type' => array( 'string', 'null' ) ),
+						'reason'        => array( 'type' => array( 'string', 'null' ) ),
+						'since'         => array( 'type' => array( 'string', 'null' ) ),
+					),
+				),
 			)
 		);
 	}

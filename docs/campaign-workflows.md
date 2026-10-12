@@ -311,8 +311,22 @@ Following evidence added state-machine transitions: `unknown` →
 `scheduled`, `sending`, or `sent`; and `provider_draft` or `scheduled` →
 `sent` when the provider sent without `sending` being observed. A state
 change no CampaignBridge request explains is audited with
-`unexplained: true`. Scheduled background reconciliation and webhooks belong
-to M5 (#66).
+`unexplained: true`.
+
+Background reconciliation runs the same reconciler automatically, acting for
+no user (`reconcile_in_background()`; its audit events have no actor and carry
+`automatic: true`). A sweep, itself a recurring job, queues one watch per
+scheduled, sending, or unknown campaign. Each watch reads the provider on a
+cadence: a scheduled campaign two minutes after its send time; a sending one
+every five minutes while the send is fresh, backing off to hourly; an unknown
+outcome soon, then on the reconciler's own wait (the settle window, or the
+provider's `retry_after`). A busy or changed campaign is looked at again
+shortly; a transient provider error retries with backoff. A reason only an
+operator can resolve (`missing`, `untracked`, `inconclusive`,
+`contradiction`, `duplicate_drafts`) or a refused credential stops the watch,
+and the campaign needs operator action until it changes. Background
+reconciliation never sends, schedules, or retries a delivery. Webhooks belong
+to #172.
 
 ## Delivery policies
 

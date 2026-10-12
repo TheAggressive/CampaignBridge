@@ -83,6 +83,25 @@ interface Job_Source {
 	public function retry( string $id, string $owner, string $run_after, string $error, string $now ): bool;
 
 	/**
+	 * Return a held job that did its work to the queue for another look, with its attempts reset.
+	 *
+	 * @param string $id        Record ID.
+	 * @param string $owner     Lease or lock owner identity.
+	 * @param string $run_after Earliest UTC time the job may run.
+	 * @param string $now       Current UTC timestamp.
+	 */
+	public function reschedule( string $id, string $owner, string $run_after, string $now ): bool;
+
+	/**
+	 * The most recently updated job of one type for one target, in any state.
+	 *
+	 * @param string $type        Job type.
+	 * @param string $target_type Kind of record the job is about.
+	 * @param string $target_id   ID of the record the job is about.
+	 */
+	public function latest_for_target( string $type, string $target_type, string $target_id ): ?Job;
+
+	/**
 	 * End a held job as `failed` or `dead`, releasing its dedupe key.
 	 *
 	 * @param string $id    Record ID.

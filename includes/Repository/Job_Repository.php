@@ -150,6 +150,40 @@ final class Job_Repository implements Job_Source {
 	/**
 	 * {@inheritDoc}
 	 */
+	public function reschedule( string $id, string $owner, string $run_after, string $now ): bool {
+		return $this->transition(
+			$id,
+			$owner,
+			"state = 'queued', run_after = %s, attempts = 0, lease_owner = NULL, lease_expires_at = NULL, last_error = NULL, updated_at = %s",
+			array( Database_Values::to_database_time( $run_after ), Database_Values::to_database_time( $now ) )
+		);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public function latest_for_target( string $type, string $target_type, string $target_id ): ?Job {
+		if ( ! Schema_Manager::is_current() ) {
+			return null;
+		}
+		global $wpdb;
+		$table = Schema_Manager::table( 'jobs' );
+		$row   = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Indexed per-target lookup.
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE target_type = %s AND target_id = %s AND job_type = %s ORDER BY updated_at DESC, id DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Allowlisted table.
+				$target_type,
+				$target_id,
+				$type
+			),
+			ARRAY_A
+		);
+
+		return is_array( $row ) ? $this->hydrate( $row ) : null;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public function finish( string $id, string $owner, string $state, string $error, string $now ): bool {
 		if ( ! in_array( $state, array( Job_State::FAILED, Job_State::DEAD ), true ) ) {
 			return false;

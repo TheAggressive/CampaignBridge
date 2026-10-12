@@ -150,18 +150,43 @@ final class Campaign_Reconciler {
 	}
 
 	/**
-	 * The operation itself, run while the campaign lock is held.
+	 * Reconcile one campaign as an automatic background check.
 	 *
-	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
+	 * Acts for no user, so it skips the user-authority check; it is reachable
+	 * only from the reconciliation job, never from a request. It holds the
+	 * same campaign lock, reads the provider, and records what it reports,
+	 * exactly like an operator's reconcile, and never sends or schedules.
+	 *
 	 * @param string               $campaign_id Campaign ID.
 	 * @param array<string, mixed> $settings    Decrypted provider settings for this call only.
 	 */
-	private function reconcile_unlocked( Campaign_Actor $actor, string $campaign_id, array $settings ): Campaign_Reconcile_Result {
+	public function reconcile_in_background( string $campaign_id, array $settings ): Campaign_Reconcile_Result {
+		if ( null === $this->locks ) {
+			return $this->reconcile_unlocked( null, $campaign_id, $settings );
+		}
+
+		return $this->locks->campaign(
+			$campaign_id,
+			Delivery_Operation::RECONCILE,
+			fn (): Campaign_Reconcile_Result => $this->reconcile_unlocked( null, $campaign_id, $settings ),
+			fn ( Campaign_Workflow_Error $locked ): Campaign_Reconcile_Result => Campaign_Reconcile_Result::failure( $locked )
+		);
+	}
+
+	/**
+	 * The operation itself, run while the campaign lock is held.
+	 *
+	 * @param Campaign_Actor|null  $actor       Who is acting; null for an automatic background check.
+	 * @param string               $campaign_id Campaign ID.
+	 * @param array<string, mixed> $settings    Decrypted provider settings for this call only.
+	 */
+	private function reconcile_unlocked( ?Campaign_Actor $actor, string $campaign_id, array $settings ): Campaign_Reconcile_Result {
 		$campaign = $this->campaigns->get( $campaign_id );
 		if ( null === $campaign ) {
 			return $this->refuse( Campaign_Workflow_Error::NOT_FOUND, 'Campaign was not found.', $actor, $campaign_id );
 		}
-		if ( ! $actor->can_deliver( $campaign ) ) {
+		// A background check acts for no user: it only reads the provider and records what it reports.
+		if ( null !== $actor && ! $actor->can_deliver( $campaign ) ) {
 			return $this->refuse( Campaign_Workflow_Error::FORBIDDEN, 'Campaign operation is not allowed.', $actor, $campaign_id, $campaign, 'denied' );
 		}
 		if ( ! $this->capabilities->supports( Provider_Operation::RECONCILE ) || $this->drafts->slug() !== $campaign->provider() ) {
@@ -204,12 +229,12 @@ final class Campaign_Reconciler {
 	/**
 	 * Find the draft an unconfirmed create may have made, by its correlation title.
 	 *
-	 * @param Campaign_Actor       $actor    Who is acting, with their resolved campaign authority.
+	 * @param Campaign_Actor|null  $actor    Who is acting; null for an automatic background check.
 	 * @param Campaign             $campaign The campaign as read.
 	 * @param Delivery_Attempt     $attempt  The delivery attempt.
 	 * @param array<string, mixed> $settings Decrypted provider settings.
 	 */
-	private function recover_draft( Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, array $settings ): Campaign_Reconcile_Result {
+	private function recover_draft( ?Campaign_Actor $actor, Campaign $campaign, Delivery_Attempt $attempt, array $settings ): Campaign_Reconcile_Result {
 		$since = gmdate( 'Y-m-d\TH:i:s\Z', (int) strtotime( $attempt->created_at() ) - self::SEARCH_MARGIN_SECONDS );
 		$found = $this->drafts->find_drafts( $settings, Campaign_Draft_Content_Builder::title( $attempt->id() ), $since );
 		if ( $found instanceof Provider_Error ) {
@@ -265,13 +290,13 @@ final class Campaign_Reconciler {
 	/**
 	 * Move the campaign and its unresolved attempts to what the provider reports.
 	 *
-	 * @param Campaign_Actor               $actor      Who is acting, with their resolved campaign authority.
+	 * @param Campaign_Actor|null          $actor      Who is acting; null for an automatic background check.
 	 * @param Campaign                     $campaign   The campaign as read.
 	 * @param Remote_Campaign_Reference    $reference  The campaign's remote reference.
 	 * @param array<int, Delivery_Attempt> $unresolved Settled-eligible attempts.
 	 * @param array<string, mixed>         $settings   Decrypted provider settings.
 	 */
-	private function follow_provider( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, array $unresolved, array $settings ): Campaign_Reconcile_Result {
+	private function follow_provider( ?Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, array $unresolved, array $settings ): Campaign_Reconcile_Result {
 		$remote = $this->drafts->inspect_draft( $settings, $reference->remote_id() );
 		if ( $remote instanceof Provider_Error ) {
 			return Provider_Error_Category::NOT_FOUND === $remote->category()
@@ -405,7 +430,7 @@ final class Campaign_Reconciler {
 	 * The observation is stored with the campaign version claimed, so delivery
 	 * that requires a draft or scheduled observation stays blocked.
 	 *
-	 * @param Campaign_Actor               $actor      Who is acting, with their resolved campaign authority.
+	 * @param Campaign_Actor|null          $actor      Who is acting; null for an automatic background check.
 	 * @param Campaign                     $campaign   The campaign as read.
 	 * @param Remote_Campaign_Reference    $reference  The campaign's remote reference.
 	 * @param string                       $observed   State the provider reported.
@@ -414,7 +439,7 @@ final class Campaign_Reconciler {
 	 * @param Provider_Error|null          $error      Normalized provider error, when there is one.
 	 * @param string                       $reason     Why reconciliation could not settle the campaign.
 	 */
-	private function contradiction( Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, string $observed, string $message, array $unresolved, ?Provider_Error $error, string $reason ): Campaign_Reconcile_Result {
+	private function contradiction( ?Campaign_Actor $actor, Campaign $campaign, Remote_Campaign_Reference $reference, string $observed, string $message, array $unresolved, ?Provider_Error $error, string $reason ): Campaign_Reconcile_Result {
 		$observation = $this->observation( $reference, $observed, false );
 		$claimed     = $campaign->claim( $this->clock->now() );
 		$written     = $this->transaction->run(
@@ -492,7 +517,7 @@ final class Campaign_Reconciler {
 	 *
 	 * @param string                $code        Stable error code.
 	 * @param string                $message     Operator-safe message.
-	 * @param Campaign_Actor        $actor       Who is acting, with their resolved campaign authority.
+	 * @param Campaign_Actor|null   $actor       Who is acting; null for an automatic background check.
 	 * @param string                $campaign_id Campaign ID.
 	 * @param Campaign|null         $campaign    The campaign as read.
 	 * @param string                $result      Audit result: success, failure, denied, or unknown.
@@ -501,7 +526,7 @@ final class Campaign_Reconciler {
 	 * @param string|null           $reason      Why reconciliation could not settle the campaign.
 	 * @param int|null              $retry_after Seconds until reconciling again can settle it.
 	 */
-	private function refuse( string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null, ?string $reason = null, ?int $retry_after = null ): Campaign_Reconcile_Result {
+	private function refuse( string $code, string $message, ?Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null, ?string $reason = null, ?int $retry_after = null ): Campaign_Reconcile_Result {
 		try {
 			$this->audits->add(
 				$this->event(
@@ -553,22 +578,22 @@ final class Campaign_Reconciler {
 	/**
 	 * Build one reconciliation audit event.
 	 *
-	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
+	 * @param Campaign_Actor|null  $actor       Who is acting; null for an automatic background check.
 	 * @param string               $campaign_id Campaign ID.
 	 * @param string               $result      Audit result: success, failure, denied, or unknown.
 	 * @param array<string, mixed> $context     Safe audit context.
 	 */
-	private function event( Campaign_Actor $actor, string $campaign_id, string $result, array $context ): Audit_Event {
+	private function event( ?Campaign_Actor $actor, string $campaign_id, string $result, array $context ): Audit_Event {
 		return Audit_Event::from_array(
 			array(
 				'schema_version' => Audit_Event::SCHEMA_VERSION,
 				'id'             => $this->ids->generate( 'audit' ),
-				'actor_user_id'  => $actor->user_id(),
+				'actor_user_id'  => $actor?->user_id(),
 				'action'         => self::ACTION,
 				'target_type'    => 'campaign',
 				'target_id'      => $campaign_id,
 				'result'         => $result,
-				'context'        => Audit_Context::from_array( $context )->to_array(),
+				'context'        => Audit_Context::from_array( null === $actor ? $context + array( 'automatic' => true ) : $context )->to_array(),
 				'created_at'     => $this->clock->now(),
 			)
 		);

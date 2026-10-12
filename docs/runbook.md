@@ -268,12 +268,38 @@ release lower the stamped version with
 `wp option update campaignbridge_database_schema 6`. Queued jobs stay in the
 table and run again once the newer release is reinstalled.
 
+### Rolling back across database schema 9
+
+Schema 9 adds the `state_updated` index to `{prefix}campaignbridge_campaigns`
+and changes no data. After reinstalling a schema-8 release, run
+`wp option update campaignbridge_database_schema 8`.
+
 ### Rolling back across database schema 8
 
 Schema 8 adds the `{prefix}campaignbridge_locks` table and changes no existing
 data. After reinstalling a schema-7 release, run
 `wp option update campaignbridge_database_schema 7`. Locks are short-lived, so
 the table needs no cleanup.
+
+## "Automatic checks stopped"
+
+CampaignBridge reconciles scheduled, sending, and unconfirmed campaigns with
+Mailchimp on its own. When it finds something only an operator can resolve,
+it stops checking that campaign and says why on the campaign page, and Status
+counts the campaign as needing operator action:
+
+- **missing**: Mailchimp no longer has the campaign; check Mailchimp's campaign
+  list and reports for what was sent.
+- **untracked** or **inconclusive**: Mailchimp reports a state that does not
+  show whether the last request took effect; resolve it in Mailchimp.
+- **contradiction**: Mailchimp disagrees with what CampaignBridge recorded;
+  investigate before doing anything else.
+- **duplicate_drafts**: delete the extra drafts in Mailchimp, keeping one.
+- A provider error code such as `mailchimp_authentication_failed`: fix the
+  connection in Settings → Providers.
+
+Then reconcile from the campaign page. Automatic checks resume once the
+campaign changes.
 
 ## Mailchimp rate limits and outages
 

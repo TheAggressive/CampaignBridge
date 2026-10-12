@@ -120,7 +120,7 @@ class Status_Controller {
 	 * A job is overdue once it has waited five ticks past its run time.
 	 *
 	 * @param bool $schema Whether the schema is current.
-	 * @return array{counts: array<string, int>, overdue: int, expired_leases: int, oldest_overdue: string|null, scheduled: bool}
+	 * @return array{counts: array<string, int>, overdue: int, expired_leases: int, oldest_overdue: string|null, scheduled: bool, stopped_watches: int}
 	 */
 	private function job_health( bool $schema ): array {
 		$jobs    = new \CampaignBridge\Repository\Job_Repository();
@@ -134,9 +134,26 @@ class Status_Controller {
 			);
 
 		return array(
-			'counts'    => $schema ? $jobs->counts_by_state() : array(),
-			'scheduled' => false !== wp_next_scheduled( \CampaignBridge\Cron\Job_Dispatcher::HOOK ),
+			'counts'          => $schema ? $jobs->counts_by_state() : array(),
+			'scheduled'       => false !== wp_next_scheduled( \CampaignBridge\Cron\Job_Dispatcher::HOOK ),
+			'stopped_watches' => $schema ? $this->stopped_watches( $jobs ) : 0,
 		) + $stalled;
+	}
+
+	/**
+	 * Campaigns whose automatic checks stopped for a reason only an operator can resolve.
+	 *
+	 * @param \CampaignBridge\Repository\Job_Repository $jobs Job storage.
+	 */
+	private function stopped_watches( \CampaignBridge\Repository\Job_Repository $jobs ): int {
+		$stopped = 0;
+		foreach ( ( new \CampaignBridge\Repository\Campaign_Repository() )->watched( \CampaignBridge\Workflow\Campaign\Reconcile_Cadence::WATCHED, 200 ) as $campaign ) {
+			if ( \CampaignBridge\Workflow\Campaign\Reconcile_Watch::STOPPED === \CampaignBridge\Workflow\Campaign\Reconcile_Watch::of( $jobs, $campaign )->state ) {
+				++$stopped;
+			}
+		}
+
+		return $stopped;
 	}
 
 	/**

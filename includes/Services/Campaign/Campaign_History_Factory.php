@@ -11,6 +11,7 @@ namespace CampaignBridge\Services\Campaign;
 
 use CampaignBridge\Repository\Audit_Event_Repository;
 use CampaignBridge\Repository\Delivery_Attempt_Repository;
+use CampaignBridge\Repository\Job_Repository;
 use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Workflow\Campaign\Campaign_History;
 use CampaignBridge\Workflow\Campaign\Campaign_Workflow;
@@ -31,7 +32,8 @@ final class Campaign_History_Factory {
 			$workflow ?? Campaign_Workflow_Factory::create(),
 			new Audit_Event_Repository(),
 			new Delivery_Attempt_Repository(),
-			new Remote_Campaign_Reference_Repository()
+			new Remote_Campaign_Reference_Repository(),
+			new Job_Repository()
 		);
 	}
 }

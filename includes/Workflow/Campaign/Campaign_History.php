@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Workflow\Campaign;
 
+use CampaignBridge\Domain\Job\Job_Source;
+
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
 use CampaignBridge\Domain\Campaign\Delivery_Attempt_Source;
 use CampaignBridge\Domain\Campaign\Remote_Campaign_Reference_Source;
@@ -35,12 +37,14 @@ final class Campaign_History {
 	 * @param Audit_Event_Source               $audits   Audit events.
 	 * @param Delivery_Attempt_Source          $attempts Delivery attempts.
 	 * @param Remote_Campaign_Reference_Source $remotes  Provider references.
+	 * @param Job_Source|null                  $jobs     Background jobs, to report automatic checks; null reports none.
 	 */
 	public function __construct(
 		private readonly Campaign_Workflow $workflow,
 		private readonly Audit_Event_Source $audits,
 		private readonly Delivery_Attempt_Source $attempts,
-		private readonly Remote_Campaign_Reference_Source $remotes
+		private readonly Remote_Campaign_Reference_Source $remotes,
+		private readonly ?Job_Source $jobs = null
 	) {}
 
 	/**
@@ -58,7 +62,11 @@ final class Campaign_History {
 		}
 		$provider = $campaign->provider();
 
-		return Campaign_Remote_View::success( $campaign, null === $provider ? null : $this->remotes->get( $campaign_id, $provider ) );
+		return Campaign_Remote_View::success(
+			$campaign,
+			null === $provider ? null : $this->remotes->get( $campaign_id, $provider ),
+			null === $this->jobs ? null : Reconcile_Watch::of( $this->jobs, $campaign )
+		);
 	}
 
 	/**

@@ -20,6 +20,7 @@ final class Job_Outcome {
 	public const SUCCEEDED = 'succeeded';
 	public const RETRY     = 'retry';
 	public const FAILED    = 'failed';
+	public const AGAIN     = 'again';
 
 	/**
 	 * Build the job outcome.
@@ -49,6 +50,18 @@ final class Job_Outcome {
 	 */
 	public static function retry( string $error, ?int $delay_seconds = null ): self {
 		return new self( self::RETRY, Record_Validation::identifier( $error, 'Job error code' ), null === $delay_seconds ? null : max( 0, $delay_seconds ) );
+	}
+
+	/**
+	 * The job did its work this time and should look again later.
+	 *
+	 * Unlike a retry, nothing failed: the job returns to the queue with its
+	 * attempts reset, so a long-running watch never uses them up.
+	 *
+	 * @param int $delay_seconds Seconds until the next look.
+	 */
+	public static function again( int $delay_seconds ): self {
+		return new self( self::AGAIN, null, max( 0, $delay_seconds ) );
 	}
 
 	/**

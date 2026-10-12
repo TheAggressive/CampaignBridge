@@ -171,6 +171,9 @@ export function eventDetails(event: HistoryEvent): string[] {
       )
     );
   }
+  if (context.automatic === true) {
+    details.push(__('Checked automatically', 'campaignbridge'));
+  }
   if (context.unexplained === true) {
     details.push(
       __(

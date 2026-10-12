@@ -13,7 +13,7 @@ REST endpoints, jobs, and provider mutations remain outside this layer.
 
 | Table | Purpose | Identity and read indexes |
 |---|---|---|
-| `{prefix}campaignbridge_campaigns` | Current provider-neutral campaign record and optimistic version | Primary `id`; `owner_updated (owner_user_id, updated_at)` supports bounded owner listings |
+| `{prefix}campaignbridge_campaigns` | Current provider-neutral campaign record and optimistic version | Primary `id`; `owner_updated (owner_user_id, updated_at)` supports bounded owner listings; `state_updated (state, updated_at)` (schema 9) supports the background reconciliation sweep |
 | `{prefix}campaignbridge_campaign_snapshots` | Insert-only frozen M1 review input and its exact successful artifact | Primary `id`; unique `campaign_revision (campaign_id, revision)` prevents in-place refresh replacement and supports revision history |
 | `{prefix}campaignbridge_remote_campaigns` | Normalized local/provider/remote identity and observed state | Primary `(campaign_id, provider)` permits one mapping per local campaign/provider; unique `provider_remote (provider, remote_id)` supports reverse lookup without duplicates |
 | `{prefix}campaignbridge_delivery_attempts` | Keyed attempt identity and normalized result for provider mutations | Primary `id`; unique `campaign_idempotency (campaign_id, operation, idempotency_key)` prevents duplicate keyed attempts; `campaign_created (campaign_id, created_at)` supports bounded history |

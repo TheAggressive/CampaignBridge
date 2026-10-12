@@ -47,16 +47,18 @@ final class Job_Dispatcher_Test extends Test_Case {
 		self::assertFalse( wp_next_scheduled( Job_Dispatcher::HOOK ) );
 	}
 
-	public function test_a_batch_runs_through_the_production_runner(): void {
-		self::assertSame(
-			array(
-				'claimed'   => 0,
-				'succeeded' => 0,
-				'retried'   => 0,
-				'failed'    => 0,
-				'dead'      => 0,
-			),
-			Job_Dispatcher::run_batch()
-		);
+	public function test_a_batch_runs_the_reconciliation_sweep_through_the_production_runner(): void {
+		global $wpdb;
+		$wpdb->query( 'DELETE FROM ' . Schema_Manager::table( 'jobs' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Allowlisted test table.
+
+		$first = Job_Dispatcher::run_batch();
+		self::assertSame( 1, $first['claimed'] ?? null, 'The sweep is queued and run on the first tick.' );
+		self::assertSame( 1, $first['rescheduled'] ?? null, 'It looks again on its interval.' );
+
+		$sweep = ( new \CampaignBridge\Repository\Job_Repository() )->find_active( 'reconcile_sweep:site:campaigns' );
+		self::assertNotNull( $sweep );
+		self::assertSame( 'queued', $sweep->state() );
+
+		self::assertSame( 0, Job_Dispatcher::run_batch()['claimed'] ?? null, 'One sweep, not one per tick.' );
 	}
 }

@@ -13,6 +13,7 @@ namespace CampaignBridge\Repository;
 use CampaignBridge\Domain\Campaign\Campaign;
 use CampaignBridge\Domain\Campaign\Campaign_List_Filter;
 use CampaignBridge\Domain\Campaign\Campaign_State;
+use CampaignBridge\Domain\Campaign\Watched_Campaign_Source;
 use CampaignBridge\Domain\Campaign\Campaign_Source;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -20,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** Persists provider-neutral campaigns with optimistic concurrency. */
-final class Campaign_Repository implements Campaign_Source {
+final class Campaign_Repository implements Campaign_Source, Watched_Campaign_Source {
 	/**
 	 * {@inheritDoc}
 	 */
@@ -135,6 +136,28 @@ final class Campaign_Repository implements Campaign_Source {
 			$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- owner_filter() returns one value per placeholder in its clause.
 				"SELECT * FROM {$table} WHERE {$where} ORDER BY updated_at DESC, id ASC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table comes from the Schema_Manager allowlist; the clause holds only placeholders.
 				...array_merge( $values, array( $limit, $offset ) )
+			),
+			ARRAY_A
+		);
+
+		return $this->hydrate_many( is_array( $rows ) ? $rows : array() );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public function watched( array $states, int $limit ): array {
+		$states = array_values( array_filter( $states, array( Campaign_State::class, 'is_valid' ) ) );
+		if ( ! Schema_Manager::is_current() || array() === $states || 1 > $limit ) {
+			return array();
+		}
+		global $wpdb;
+		$table        = Schema_Manager::table( 'campaigns' );
+		$placeholders = implode( ', ', array_fill( 0, count( $states ), '%s' ) );
+		$rows         = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded read through the state index.
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE state IN ({$placeholders}) ORDER BY updated_at ASC, id ASC LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Allowlisted table; one placeholder per validated state.
+				...array_merge( $states, array( min( 500, $limit ) ) )
 			),
 			ARRAY_A
 		);
