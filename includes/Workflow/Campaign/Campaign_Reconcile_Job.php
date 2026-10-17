@@ -31,9 +31,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  * provider campaign is missing, in an untracked state, inconclusive, in
  * contradiction, or duplicated), the watch stops with that reason, and the
  * campaign needs operator action until it changes.
+ *
+ * A hinted handler runs the same reconciliation once, as soon as a provider
+ * webhook says the campaign changed, even before a scheduled send time: the
+ * provider may have sent it early. It never stops or replaces the watch; it
+ * only lets the watch find the campaign settled sooner.
  */
 final class Campaign_Reconcile_Job implements Job_Handler {
-	public const TYPE = 'reconcile_campaign';
+	public const TYPE      = 'reconcile_campaign';
+	public const HINT_TYPE = 'reconcile_campaign_hint';
 
 	private const NOT_CONNECTED_WAIT = 1800;
 	private const BUSY_WAIT          = 60;
@@ -45,6 +51,7 @@ final class Campaign_Reconcile_Job implements Job_Handler {
 	 * @param \Closure        $reconcilers The reconciler for a provider slug, or null when it has none.
 	 * @param \Closure        $settings    Decrypted settings for a provider slug, for one run only; empty when not connected.
 	 * @param Campaign_Clock  $clock       Source of the current time.
+	 * @param bool            $hinted      Whether this runs once on a provider hint instead of watching.
 	 * @phpstan-param \Closure(string): ?Campaign_Reconciler $reconcilers
 	 * @phpstan-param \Closure(string): array<string, mixed> $settings
 	 */
@@ -52,7 +59,8 @@ final class Campaign_Reconcile_Job implements Job_Handler {
 		private readonly Campaign_Source $campaigns,
 		private readonly \Closure $reconcilers,
 		private readonly \Closure $settings,
-		private readonly Campaign_Clock $clock
+		private readonly Campaign_Clock $clock,
+		private readonly bool $hinted = false
 	) {}
 
 	/**
@@ -68,7 +76,7 @@ final class Campaign_Reconcile_Job implements Job_Handler {
 	 * {@inheritDoc}
 	 */
 	public function type(): string {
-		return self::TYPE;
+		return $this->hinted ? self::HINT_TYPE : self::TYPE;
 	}
 
 	/**
@@ -90,7 +98,7 @@ final class Campaign_Reconcile_Job implements Job_Handler {
 		if ( null === $campaign || ! Reconcile_Cadence::is_watched( $campaign->state() ) ) {
 			return Job_Outcome::succeeded();
 		}
-		if ( ! Reconcile_Cadence::is_due( $campaign, $this->clock->now() ) ) {
+		if ( ! $this->hinted && ! Reconcile_Cadence::is_due( $campaign, $this->clock->now() ) ) {
 			// The send time is still ahead; there is nothing to read yet.
 			return Job_Outcome::again( Reconcile_Cadence::next_delay( $campaign, $this->clock->now() ) );
 		}
@@ -103,11 +111,14 @@ final class Campaign_Reconcile_Job implements Job_Handler {
 		$settings = ( $this->settings )( $provider );
 		if ( array() === $settings ) {
 			// Waiting for the provider connection; nothing can be read until it is back.
-			return Job_Outcome::again( self::NOT_CONNECTED_WAIT );
+			return $this->hinted ? Job_Outcome::succeeded() : Job_Outcome::again( self::NOT_CONNECTED_WAIT );
 		}
 
 		$result = $reconciler->reconcile_in_background( $campaign->id(), $settings );
 		unset( $settings );
+		if ( $this->hinted ) {
+			return $result->is_success() ? Job_Outcome::succeeded() : $this->unsettled_hint( $result );
+		}
 		if ( $result->is_success() ) {
 			$after = $this->campaigns->get( $campaign->id() );
 
@@ -126,6 +137,28 @@ final class Campaign_Reconcile_Job implements Job_Handler {
 	 * the campaign stays as it is, and the sweep starts a new watch.
 	 */
 	public function abandoned( Job $job ): void {}
+
+	/**
+	 * What to do after a hinted reconciliation that did not settle the campaign.
+	 *
+	 * Only a busy campaign or a passing provider failure is tried again;
+	 * everything else is left to the watch.
+	 *
+	 * @param Campaign_Reconcile_Result $result The reconciliation outcome.
+	 */
+	private function unsettled_hint( Campaign_Reconcile_Result $result ): Job_Outcome {
+		$error = $result->error();
+		$code  = $error?->code();
+		if ( null !== $error && ( Campaign_Workflow_Error::LOCKED === $code || Campaign_Workflow_Error::CONFLICT === $code ) ) {
+			return Job_Outcome::again( $error->retry_after() ?? self::BUSY_WAIT );
+		}
+		$provider = $result->provider_error();
+		if ( Campaign_Workflow_Error::PROVIDER_FAILED === $code && null !== $provider && $provider->is_retryable() ) {
+			return Job_Outcome::retry( $provider->code(), $provider->retry_after() );
+		}
+
+		return Job_Outcome::succeeded();
+	}
 
 	/**
 	 * What to do after a reconciliation that did not settle the campaign.

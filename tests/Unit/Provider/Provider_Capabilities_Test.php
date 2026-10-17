@@ -63,6 +63,7 @@ final class Provider_Capabilities_Test extends WP_UnitTestCase {
 				Provider_Operation::UNSCHEDULE,
 				Provider_Operation::SEND,
 				Provider_Operation::RECONCILE,
+				Provider_Operation::WEBHOOKS,
 			),
 			$capabilities->supported()
 		);

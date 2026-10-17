@@ -9,6 +9,7 @@
  */
 
 // Include the Form API.
+use CampaignBridge\Admin\Controllers\Provider_Webhook_Handler;
 use CampaignBridge\Admin\Core\Form;
 
 // Get current values.
@@ -28,8 +29,26 @@ $campaignbridge_audience_error      = $screen ? $screen->get( 'mailchimp_audienc
 $campaignbridge_is_mailchimp        = 'mailchimp' === $campaignbridge_provider;
 $campaignbridge_can_disconnect      = null !== $cb_conn && current_user_can( \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS );
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display-only flag set by the disconnect redirect.
-$campaignbridge_disconnected     = isset( $_GET['disconnected'] ) && 'mailchimp' === sanitize_key( wp_unslash( $_GET['disconnected'] ) );
-$campaignbridge_templates_url    = admin_url( 'edit.php?post_type=cb_templates' );
+$campaignbridge_disconnected  = isset( $_GET['disconnected'] ) && 'mailchimp' === sanitize_key( wp_unslash( $_GET['disconnected'] ) );
+$campaignbridge_templates_url = admin_url( 'edit.php?post_type=cb_templates' );
+$campaignbridge_webhooks      = null !== $cb_conn && current_user_can( \CampaignBridge\Core\Capabilities::MANAGE_CONNECTIONS ) ? \CampaignBridge\Services\Webhook\Webhook_Factory::registrar( 'mailchimp' ) : null;
+$campaignbridge_webhook_count = null === $campaignbridge_webhooks ? 0 : count( $campaignbridge_webhooks->subscriptions() );
+// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Display-only result flags set by the webhook action redirect.
+$campaignbridge_webhook_result = isset( $_GET['webhooks'] ) ? explode( ':', sanitize_text_field( wp_unslash( $_GET['webhooks'] ) ), 2 ) : array();
+$campaignbridge_webhook_error  = isset( $_GET['webhook_error'] ) ? sanitize_key( wp_unslash( $_GET['webhook_error'] ) ) : '';
+// phpcs:enable WordPress.Security.NonceVerification.Recommended
+$campaignbridge_webhook_outcome = $campaignbridge_webhook_result[1] ?? '';
+$campaignbridge_webhook_notice  = match ( $campaignbridge_webhook_outcome ) {
+	Provider_Webhook_Handler::DONE => match ( $campaignbridge_webhook_result[0] ) {
+		'disable' => __( 'Mailchimp webhooks were removed. Campaign status is still checked every few minutes.', 'campaignbridge' ),
+		'rotate'  => __( 'Mailchimp webhooks were replaced with new signing secrets.', 'campaignbridge' ),
+		default   => __( 'Mailchimp webhooks are on. Sent campaigns now update at the next background run, usually within a minute or two.', 'campaignbridge' ),
+	},
+	Provider_Webhook_Handler::NOT_CONNECTED => __( 'Connect Mailchimp before changing webhooks.', 'campaignbridge' ),
+	Provider_Webhook_Handler::PARTIAL => sprintf( /* translators: %s: reason */ __( 'Some audiences could not be changed. %s Try again to finish.', 'campaignbridge' ), Provider_Webhook_Handler::error_message( $campaignbridge_webhook_error ) ),
+	Provider_Webhook_Handler::FAILED => sprintf( /* translators: %s: reason */ __( 'Webhooks were not changed. %s', 'campaignbridge' ), Provider_Webhook_Handler::error_message( $campaignbridge_webhook_error ) ),
+	default => '',
+};
 $campaignbridge_audience_options = is_array( $campaignbridge_mailchimp_audiences ) ? $campaignbridge_mailchimp_audiences : array();
 if ( '' !== $campaignbridge_mailchimp_audience && ! isset( $campaignbridge_audience_options[ $campaignbridge_mailchimp_audience ] ) ) {
 	$campaignbridge_audience_options[ $campaignbridge_mailchimp_audience ] = __( 'Current audience (temporarily unavailable)', 'campaignbridge' );
@@ -122,6 +141,34 @@ $form = Form::make( 'providers' )
 			<section class="cb-admin-notice cb-admin-notice--error campaignbridge-providers__disconnect" aria-labelledby="campaignbridge-disconnect-title">
 				<div><span class="dashicons dashicons-dismiss"></span><span><strong id="campaignbridge-disconnect-title"><?php esc_html_e( 'Disconnect Mailchimp', 'campaignbridge' ); ?></strong><small><?php esc_html_e( 'Removes the stored API key from this site. Campaigns already scheduled in Mailchimp still send, and CampaignBridge cannot unschedule or reconcile them until you reconnect. To revoke the key itself, delete it in Mailchimp.', 'campaignbridge' ); ?></small></span></div>
 				<form method="post" data-confirm="<?php echo esc_attr__( 'Disconnect Mailchimp? The stored API key will be removed from this site.', 'campaignbridge' ); ?>"><?php wp_nonce_field( 'campaignbridge_disconnect_mailchimp' ); ?><button class="button button-destructive" type="submit" name="disconnect_provider" value="mailchimp"><span class="dashicons dashicons-dismiss"></span><?php esc_html_e( 'Disconnect', 'campaignbridge' ); ?></button></form>
+			</section>
+		<?php endif; ?>
+
+		<?php if ( null !== $campaignbridge_webhooks ) : ?>
+			<section class="cb-admin-card campaignbridge-providers__webhooks" aria-labelledby="campaignbridge-webhooks-title">
+				<header class="cb-admin-card__header"><span class="dashicons dashicons-update"></span><div><h2 id="campaignbridge-webhooks-title"><?php esc_html_e( 'Campaign webhooks', 'campaignbridge' ); ?></h2><p><?php esc_html_e( 'Let Mailchimp tell this site when a campaign is sent, so its status updates at the next background run, usually within a minute or two, instead of at the next scheduled check. Only campaign events are requested; subscriber events are never sent to this site.', 'campaignbridge' ); ?></p></div><span class="cb-admin-badge <?php echo $campaignbridge_webhook_count > 0 ? 'cb-admin-badge--success' : ''; ?>"><?php echo $campaignbridge_webhook_count > 0 ? esc_html__( 'On', 'campaignbridge' ) : esc_html__( 'Off', 'campaignbridge' ); ?></span></header>
+				<?php if ( '' !== $campaignbridge_webhook_notice ) : ?>
+					<div class="notice <?php echo Provider_Webhook_Handler::DONE === $campaignbridge_webhook_outcome ? 'notice-success' : 'notice-error'; ?> inline" role="<?php echo Provider_Webhook_Handler::DONE === $campaignbridge_webhook_outcome ? 'status' : 'alert'; ?>"><p><?php echo esc_html( $campaignbridge_webhook_notice ); ?></p></div>
+				<?php endif; ?>
+				<p>
+					<?php
+					echo esc_html(
+						$campaignbridge_webhook_count > 0
+							? sprintf( /* translators: %d: number of audiences */ _n( 'Webhooks are on for %d audience. Each delivery is checked against its signing secret.', 'Webhooks are on for %d audiences. Each delivery is checked against its signing secret.', $campaignbridge_webhook_count, 'campaignbridge' ), $campaignbridge_webhook_count )
+							: __( 'Webhooks are off. Campaign status is checked every few minutes. Turning webhooks on adds one webhook to each Mailchimp audience; this site must be reachable from the internet over HTTPS.', 'campaignbridge' )
+					);
+					?>
+				</p>
+				<p><label for="campaignbridge-webhook-url"><?php esc_html_e( 'Webhook address', 'campaignbridge' ); ?></label><br><input id="campaignbridge-webhook-url" class="large-text code" type="text" readonly value="<?php echo esc_attr( $campaignbridge_webhooks->url() ); ?>"></p>
+				<div class="campaignbridge-providers__webhook-actions">
+					<?php if ( 0 === $campaignbridge_webhook_count ) : ?>
+						<form method="post"><?php wp_nonce_field( 'campaignbridge_webhooks_mailchimp' ); ?><button class="button button-primary" type="submit" name="provider_webhooks" value="enable"><?php esc_html_e( 'Turn on webhooks', 'campaignbridge' ); ?></button></form>
+					<?php else : ?>
+						<form method="post"><?php wp_nonce_field( 'campaignbridge_webhooks_mailchimp' ); ?><button class="button" type="submit" name="provider_webhooks" value="enable"><?php esc_html_e( 'Add missing audiences', 'campaignbridge' ); ?></button></form>
+						<form method="post" data-confirm="<?php echo esc_attr__( 'Replace every Mailchimp webhook and its signing secret? Use this after the site address changes or if a secret may have leaked.', 'campaignbridge' ); ?>"><?php wp_nonce_field( 'campaignbridge_webhooks_mailchimp' ); ?><button class="button" type="submit" name="provider_webhooks" value="rotate"><?php esc_html_e( 'Rotate secrets', 'campaignbridge' ); ?></button></form>
+						<form method="post" data-confirm="<?php echo esc_attr__( 'Turn off Mailchimp webhooks? Campaign status will be checked every few minutes instead.', 'campaignbridge' ); ?>"><?php wp_nonce_field( 'campaignbridge_webhooks_mailchimp' ); ?><button class="button button-destructive" type="submit" name="provider_webhooks" value="disable"><?php esc_html_e( 'Turn off webhooks', 'campaignbridge' ); ?></button></form>
+					<?php endif; ?>
+				</div>
 			</section>
 		<?php endif; ?>
 

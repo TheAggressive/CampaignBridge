@@ -82,6 +82,12 @@ class Settings_Controller {
 			$this->handle_disconnect_provider( $disconnect );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in the handler method
+		$webhooks = isset( $_POST['provider_webhooks'] ) ? sanitize_key( wp_unslash( $_POST['provider_webhooks'] ) ) : '';
+		if ( '' !== $webhooks ) {
+			$this->handle_provider_webhooks( 'mailchimp', $webhooks );
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled in individual handler methods
 		$export_settings = isset( $_POST['export_settings'] ) ? sanitize_text_field( wp_unslash( $_POST['export_settings'] ) ) : '';
 		if ( ! empty( $export_settings ) ) {
@@ -394,6 +400,37 @@ class Settings_Controller {
 				),
 				\admin_url( 'admin.php' )
 			)
+		);
+		exit;
+	}
+
+	/**
+	 * Enable, rotate, or disable provider webhooks, then return to the providers tab.
+	 *
+	 * @param string $provider Provider slug.
+	 * @param string $action   Requested action.
+	 * @return void
+	 */
+	private function handle_provider_webhooks( string $provider, string $action ): void {
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'campaignbridge_webhooks_' . $provider ) ) {
+			wp_die( esc_html__( 'Security check failed', 'campaignbridge' ), '', array( 'response' => 403 ) );
+		}
+		$result = Provider_Webhook_Handler::handle( $provider, $action );
+		if ( null === $result ) {
+			wp_die( esc_html__( 'You are not allowed to change provider webhooks.', 'campaignbridge' ), '', array( 'response' => 403 ) );
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'          => 'campaignbridge-settings',
+					'tab'           => 'providers',
+					'webhooks'      => $action . ':' . $result['outcome'],
+					'webhook_error' => $result['error'],
+				),
+				\admin_url( 'admin.php' )
+			) . '#campaignbridge-webhooks-title'
 		);
 		exit;
 	}

@@ -20,9 +20,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   exact update of an unsent draft. Repeating one changes nothing that was
  *   not already intended, so a transient failure, a 5xx, or a 429 may be
  *   retried with backoff.
- * - Create once: draft creation. The request itself is never replayed; a new
- *   attempt goes through the campaign's idempotency key, which first looks
- *   for a draft an unconfirmed attempt may have made.
+ * - Create once: draft and webhook creation. The request itself is never
+ *   replayed; a new attempt first looks for what an unconfirmed attempt may
+ *   have made (the campaign's idempotency key finds a draft; the webhook URL
+ *   finds a webhook).
  * - Never: anything that reaches recipients or changes delivery — test,
  *   schedule, unschedule, send, cancel. Each is attempted exactly once; an
  *   ambiguous outcome makes the campaign `unknown` until reconciliation reads
@@ -39,6 +40,9 @@ final class Provider_Retry_Policy {
 	/** Reading a draft, or re-asserting its exact settings or content before delivery. */
 	public const DRAFT_UPDATE = 'draft_update';
 
+	/** Listing a webhook audience, or removing one webhook; removing one already gone changes nothing. */
+	public const WEBHOOK_LOOKUP = 'webhook_lookup';
+
 	private const CLASSES = array(
 		Provider_Operation::VERIFY_CONNECTION          => self::REPEATABLE,
 		Provider_Operation::DISCOVER_AUDIENCES         => self::REPEATABLE,
@@ -50,7 +54,9 @@ final class Provider_Retry_Policy {
 		Provider_Operation::RECONCILE                  => self::REPEATABLE,
 		Provider_Operation::REPORTS                    => self::REPEATABLE,
 		self::DRAFT_UPDATE                             => self::REPEATABLE,
+		self::WEBHOOK_LOOKUP                           => self::REPEATABLE,
 		Provider_Operation::CREATE_DRAFT               => self::CREATE_ONCE,
+		Provider_Operation::WEBHOOKS                   => self::CREATE_ONCE,
 		Provider_Operation::SEND_TEST                  => self::NEVER,
 		Provider_Operation::SCHEDULE                   => self::NEVER,
 		Provider_Operation::UNSCHEDULE                 => self::NEVER,
@@ -61,7 +67,7 @@ final class Provider_Retry_Policy {
 	/**
 	 * How a request for one operation may be repeated.
 	 *
-	 * @param string $operation A provider operation, or DRAFT_UPDATE.
+	 * @param string $operation A provider operation, DRAFT_UPDATE, or WEBHOOK_LOOKUP.
 	 * @return string REPEATABLE, CREATE_ONCE, or NEVER.
 	 */
 	public static function for( string $operation ): string {
@@ -71,7 +77,7 @@ final class Provider_Retry_Policy {
 	/**
 	 * Whether the HTTP layer may send the same request again after a failure.
 	 *
-	 * @param string $operation A provider operation, or DRAFT_UPDATE.
+	 * @param string $operation A provider operation, DRAFT_UPDATE, or WEBHOOK_LOOKUP.
 	 */
 	public static function may_replay( string $operation ): bool {
 		return self::REPEATABLE === self::for( $operation );
