@@ -136,6 +136,7 @@ final class Provider_Webhook_Security_Test extends Test_Case {
 	}
 
 	public function test_requests_are_rate_limited_per_client(): void {
+		self::start_in_one_rate_window();
 		$statuses = array();
 		for ( $i = 0; $i < 121; $i++ ) {
 			$statuses[] = rest_get_server()->dispatch( new WP_REST_Request( 'GET', Provider_Webhook_Test::ROUTE ) )->get_status();
