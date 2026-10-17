@@ -131,6 +131,7 @@ class Html_Provider extends Abstract_Provider {
 			'send'                       => false,
 			'reconcile'                  => false,
 			'reports'                    => false,
+			'webhooks'                   => false,
 		);
 	}
 }

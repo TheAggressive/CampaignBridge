@@ -38,6 +38,12 @@ final class Provider_Retry_Policy_Test extends WP_UnitTestCase {
 		self::assertFalse( Provider_Retry_Policy::may_replay( Provider_Operation::CREATE_DRAFT ) );
 	}
 
+	public function test_webhook_creation_is_created_once_and_lookups_are_repeatable(): void {
+		self::assertSame( Provider_Retry_Policy::CREATE_ONCE, Provider_Retry_Policy::for( Provider_Operation::WEBHOOKS ) );
+		self::assertFalse( Provider_Retry_Policy::may_replay( Provider_Operation::WEBHOOKS ), 'A replayed create could leave a webhook whose secret was never stored.' );
+		self::assertTrue( Provider_Retry_Policy::may_replay( Provider_Retry_Policy::WEBHOOK_LOOKUP ) );
+	}
+
 	public function test_reads_and_exact_updates_are_repeatable(): void {
 		foreach ( array( Provider_Operation::VERIFY_CONNECTION, Provider_Operation::DISCOVER_AUDIENCES, Provider_Operation::DISCOVER_MERGE_FIELDS, Provider_Operation::DISCOVER_SEGMENTS, Provider_Operation::RECONCILE, Provider_Operation::REPORTS, Provider_Retry_Policy::DRAFT_UPDATE ) as $operation ) {
 			self::assertTrue( Provider_Retry_Policy::may_replay( $operation ), $operation );

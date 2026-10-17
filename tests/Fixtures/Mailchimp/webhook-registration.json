@@ -1,0 +1,28 @@
+{
+  "source": "Recorded from a live Mailchimp account on 2026-10-17: one webhook created on an audience for campaign events only, pointed at a capture server, then deleted. Audience and webhook IDs are replaced with test placeholders, the URL with {{url}}, and the signing secret (43 characters, returned only in the create response) with {{signing_secret}}. Before answering the create request, Mailchimp checked the URL with the GET recorded under validation.",
+  "exchanges": [
+    {
+      "method": "POST",
+      "path": "/3.0/lists/abc123/webhooks",
+      "status": 200,
+      "body": "{\"id\":\"wh0042\",\"url\":\"{{url}}\",\"events\":{\"subscribe\":false,\"unsubscribe\":false,\"profile\":false,\"cleaned\":false,\"upemail\":false,\"campaign\":true,\"sms_subscribe\":false,\"sms_unsubscribe\":false,\"upsms\":false,\"sms_campaign\":false},\"sources\":{\"user\":true,\"admin\":true,\"api\":true},\"list_id\":\"abc123\",\"signing_enabled\":true,\"signing_secret\":\"{{signing_secret}}\"}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/3.0/lists/abc123/webhooks/wh0042",
+      "status": 204,
+      "body": ""
+    },
+    {
+      "method": "GET",
+      "path": "/3.0/lists/abc123/webhooks",
+      "status": 200,
+      "body": "{\"webhooks\":[],\"list_id\":\"abc123\",\"total_items\":0}"
+    }
+  ],
+  "validation": {
+    "method": "GET",
+    "user_agent": "MailChimp.com WebHook Validator (webhook-v1)",
+    "body": ""
+  }
+}
