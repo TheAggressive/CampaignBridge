@@ -1,0 +1,412 @@
+{
+  "source": "Recorded from a live Mailchimp account on 2026-10-17 for M6 normalized reporting (#67): aggregate report endpoints for one campaign sent on 2026-10-04 to a one-member audience (it soft-bounced), a report request for an unsent draft, one for a missing campaign, and the audience stats. Member-level endpoints were not called. Campaign, audience, and web IDs are test placeholders; the recipient domain is example.com; list names, subjects, and sender details are replaced with {{field}} placeholders; links are removed. Note delivery_status.status is \"delivered\" although the only recipient soft-bounced: it reports that the send finished, not inbox delivery.",
+  "exchanges": [
+    {
+      "name": "report",
+      "method": "GET",
+      "path": "/3.0/reports/mc0042?exclude_fields=_links",
+      "status": 200,
+      "body": {
+        "id": "mc0042",
+        "campaign_title": "CampaignBridge attempt-1",
+        "type": "regular",
+        "list_id": "abc123",
+        "list_is_active": true,
+        "list_name": "{{list_name}}",
+        "subject_line": "{{subject_line}}",
+        "preview_text": "",
+        "emails_sent": 1,
+        "abuse_reports": 0,
+        "unsubscribed": 0,
+        "send_time": "2026-10-04T06:06:21+00:00",
+        "bounces": {
+          "hard_bounces": 0,
+          "soft_bounces": 1,
+          "syntax_errors": 0
+        },
+        "forwards": {
+          "forwards_count": 0,
+          "forwards_opens": 0
+        },
+        "opens": {
+          "opens_total": 0,
+          "proxy_excluded_opens": 0,
+          "unique_opens": 0,
+          "proxy_excluded_unique_opens": 0,
+          "open_rate": 0,
+          "proxy_excluded_open_rate": 0,
+          "last_open": ""
+        },
+        "clicks": {
+          "clicks_total": 0,
+          "unique_clicks": 0,
+          "unique_subscriber_clicks": 0,
+          "click_rate": 0,
+          "last_click": ""
+        },
+        "facebook_likes": {
+          "recipient_likes": 0,
+          "unique_likes": 0,
+          "facebook_likes": 0
+        },
+        "list_stats": {
+          "sub_rate": 0,
+          "unsub_rate": 0,
+          "open_rate": 0,
+          "proxy_excluded_open_rate": 0,
+          "click_rate": 0
+        },
+        "timeseries": [
+          {
+            "timestamp": "2026-10-04T06:00:00+00:00",
+            "emails_sent": 1,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T07:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T08:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T09:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T10:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T11:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T12:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T13:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T14:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T15:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T16:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T17:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T18:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T19:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T20:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T21:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T22:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-04T23:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-05T00:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-05T01:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-05T02:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-05T03:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-05T04:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          },
+          {
+            "timestamp": "2026-10-05T05:00:00+00:00",
+            "emails_sent": 0,
+            "unique_opens": 0,
+            "proxy_excluded_unique_opens": 0,
+            "recipients_clicks": 0
+          }
+        ],
+        "ecommerce": {
+          "total_orders": 0,
+          "total_spent": 0,
+          "total_revenue": 0,
+          "currency_code": "USD"
+        },
+        "delivery_status": {
+          "enabled": true,
+          "can_cancel": false,
+          "status": "delivered",
+          "emails_sent": 1,
+          "emails_canceled": 0
+        }
+      }
+    },
+    {
+      "name": "click-details",
+      "method": "GET",
+      "path": "/3.0/reports/mc0042/click-details?exclude_fields=_links,urls_clicked._links",
+      "status": 200,
+      "body": {
+        "urls_clicked": [],
+        "campaign_id": "mc0042",
+        "total_items": 0
+      }
+    },
+    {
+      "name": "domain-performance",
+      "method": "GET",
+      "path": "/3.0/reports/mc0042/domain-performance?exclude_fields=_links",
+      "status": 200,
+      "body": {
+        "domains": [
+          {
+            "domain": "example.com",
+            "emails_sent": 1,
+            "bounces": 1,
+            "opens": 0,
+            "clicks": 0,
+            "unsubs": 0,
+            "delivered": 0,
+            "emails_pct": 1,
+            "bounces_pct": 1,
+            "opens_pct": 0,
+            "clicks_pct": 0,
+            "unsubs_pct": 0
+          }
+        ],
+        "total_sent": 1,
+        "campaign_id": "mc0042",
+        "total_items": 1
+      }
+    },
+    {
+      "name": "locations",
+      "method": "GET",
+      "path": "/3.0/reports/mc0042/locations?exclude_fields=_links",
+      "status": 200,
+      "body": {
+        "locations": [],
+        "campaign_id": "mc0042",
+        "total_items": 0
+      }
+    },
+    {
+      "name": "sub-reports",
+      "method": "GET",
+      "path": "/3.0/reports/mc0042/sub-reports?exclude_fields=_links",
+      "status": 200,
+      "body": {
+        "reports": [],
+        "campaign_id": "mc0042",
+        "total_items": 0
+      }
+    },
+    {
+      "name": "draft-report",
+      "method": "GET",
+      "path": "/3.0/reports/mc0043",
+      "status": 200,
+      "body": {
+        "id": "mc0043",
+        "campaign_title": "CampaignBridge attempt-1",
+        "type": "regular",
+        "list_id": "abc123",
+        "list_is_active": true,
+        "list_name": "{{list_name}}",
+        "subject_line": "{{subject_line}}",
+        "preview_text": "",
+        "emails_sent": 0,
+        "abuse_reports": 0,
+        "unsubscribed": 0,
+        "send_time": "",
+        "bounces": {
+          "hard_bounces": 0,
+          "soft_bounces": 0,
+          "syntax_errors": 0
+        },
+        "forwards": {
+          "forwards_count": 0,
+          "forwards_opens": 0
+        },
+        "opens": {
+          "opens_total": 0,
+          "proxy_excluded_opens": 0,
+          "unique_opens": 0,
+          "proxy_excluded_unique_opens": 0,
+          "open_rate": 0,
+          "proxy_excluded_open_rate": 0,
+          "last_open": ""
+        },
+        "clicks": {
+          "clicks_total": 0,
+          "unique_clicks": 0,
+          "unique_subscriber_clicks": 0,
+          "click_rate": 0,
+          "last_click": ""
+        },
+        "facebook_likes": {
+          "recipient_likes": 0,
+          "unique_likes": 0,
+          "facebook_likes": 0
+        },
+        "list_stats": {
+          "sub_rate": 0,
+          "unsub_rate": 0,
+          "open_rate": 0,
+          "proxy_excluded_open_rate": 0,
+          "click_rate": 0
+        },
+        "timeseries": [],
+        "ecommerce": {
+          "total_orders": 0,
+          "total_spent": 0,
+          "total_revenue": 0,
+          "currency_code": "USD"
+        },
+        "delivery_status": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "name": "missing-report",
+      "method": "GET",
+      "path": "/3.0/reports/0000000000",
+      "status": 404,
+      "body": {
+        "type": "https://mailchimp.com/developer/marketing/docs/errors/",
+        "title": "{{title}}",
+        "status": 404,
+        "detail": "The requested resource could not be found.",
+        "instance": "{{instance}}"
+      }
+    },
+    {
+      "name": "audience-stats",
+      "method": "GET",
+      "path": "/3.0/lists/abc123?fields=id,stats",
+      "status": 200,
+      "body": {
+        "id": "abc123",
+        "stats": {
+          "member_count": 1,
+          "unsubscribe_count": 0,
+          "cleaned_count": 0,
+          "member_count_since_send": 0,
+          "unsubscribe_count_since_send": 0,
+          "cleaned_count_since_send": 0,
+          "campaign_count": 4,
+          "campaign_last_sent": "",
+          "merge_field_count": 6,
+          "avg_sub_rate": 0,
+          "avg_unsub_rate": 0,
+          "target_sub_rate": 0,
+          "open_rate": 0,
+          "click_rate": 0,
+          "last_sub_date": "2026-10-03T10:24:41+00:00",
+          "last_unsub_date": ""
+        }
+      }
+    }
+  ]
+}
