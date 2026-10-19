@@ -77,8 +77,8 @@ final class Reconciliation_Sweep_Test extends Test_Case {
 				array(
 					'version'    => 2,
 					'updated_at' => '2026-10-18T12:00:01Z',
-				) 
-			) 
+				)
+			)
 		);
 		self::assertTrue( $campaigns->compare_and_swap( $changed, 1 ) );
 		self::assertSame( 1, $this->sweep()->sweep() );
