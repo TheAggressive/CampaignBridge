@@ -44,13 +44,14 @@ interface Job_Source {
 	/**
 	 * Claim up to `$limit` runnable jobs for one owner: expired leases first, then queued jobs that are due, oldest first. Each claim counts one attempt; an expired lease with no attempts left is claimed as exhausted without counting one, so its handler can be told it was abandoned.
 	 *
-	 * @param string $owner       Lease or lock owner identity.
-	 * @param string $now         Current UTC timestamp.
-	 * @param string $lease_until UTC time the lease expires.
-	 * @param int    $limit       Maximum number of records.
+	 * @param string             $owner       Lease or lock owner identity.
+	 * @param string             $now         Current UTC timestamp.
+	 * @param string             $lease_until UTC time the lease expires.
+	 * @param int                $limit       Maximum number of records.
+	 * @param array<int, string> $exclude_ids Jobs already run in this dispatch.
 	 * @return array<int, Job_Claim>
 	 */
-	public function claim( string $owner, string $now, string $lease_until, int $limit ): array;
+	public function claim( string $owner, string $now, string $lease_until, int $limit, array $exclude_ids = array() ): array;
 
 	/**
 	 * Extend a lease the owner still holds.

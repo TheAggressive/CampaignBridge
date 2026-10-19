@@ -10,8 +10,6 @@ declare(strict_types=1);
 namespace CampaignBridge\Workflow\Campaign;
 
 use CampaignBridge\Workflow\Lock\Lock_Manager;
-use CampaignBridge\Domain\Campaign\Audit_Context;
-use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
 use CampaignBridge\Domain\Campaign\Campaign;
 use CampaignBridge\Domain\Campaign\Campaign_Snapshot;
@@ -73,6 +71,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  *    blocked.
  */
 final class Campaign_Scheduler {
+	/**
+	 * Canonical audit event construction and delivery context.
+	 *
+	 * @var Campaign_Audit_Events
+	 */
+	private readonly Campaign_Audit_Events $audit_events;
+
 	/** Observed remote state of a scheduled campaign. */
 	public const OBSERVED_SCHEDULED = 'scheduled';
 
@@ -117,7 +122,9 @@ final class Campaign_Scheduler {
 		private readonly Provider_Discovery_Service $discovery,
 		private readonly Delivery_Policy_Source $policies,
 		private readonly ?Lock_Manager $locks = null
-	) {}
+	) {
+		$this->audit_events = new Campaign_Audit_Events( $audits, $ids, $clock );
+	}
 
 	/**
 	 * Schedule the campaign's remote draft to send to its audience.
@@ -556,7 +563,7 @@ final class Campaign_Scheduler {
 		try {
 			$current = $this->campaigns->get( $claimed->id() ) ?? $claimed;
 			$stored  = $this->attempts->get( $attempt->id() ) ?? $attempt;
-			$this->audit( $actor, $operation, $claimed, 'unknown', $this->context( $claimed, $current, $reference, $stored, $context, $error ) );
+			$this->audit( $actor, $operation, $claimed, 'unknown', $this->audit_events->delivery_context( $claimed, $current, $reference, $stored, $context, $error ) );
 		} catch ( \Throwable ) {
 			// What could be read is reported; a pending attempt still blocks further delivery.
 			unset( $context );
@@ -587,7 +594,7 @@ final class Campaign_Scheduler {
 			fn (): bool => $this->attempts->update_result( $succeeded )
 				&& $this->references->update_observation( $observation )
 				&& $this->campaigns->compare_and_swap( $after, $claimed->version() )
-				&& $this->audits->add( $this->event( $actor, $operation, $claimed->id(), 'success', $this->context( $claimed, $after, $reference, $succeeded, $context, null ) ) )
+				&& $this->audits->add( $this->audit_events->event( $actor, 'campaign_' . $operation, $claimed->id(), 'success', $this->audit_events->delivery_context( $claimed, $after, $reference, $succeeded, $context, null ) ) )
 		);
 		if ( $written ) {
 			return Campaign_Delivery_Result::success( $after, $observation, $succeeded, false );
@@ -595,7 +602,7 @@ final class Campaign_Scheduler {
 
 		// The provider accepted, but it could not be recorded; the pending attempt keeps further delivery blocked.
 		$current = $this->campaigns->get( $claimed->id() ) ?? $claimed;
-		$this->audit( $actor, $operation, $claimed, 'unknown', $this->context( $claimed, $claimed, $reference, $attempt, $context, null ) );
+		$this->audit( $actor, $operation, $claimed, 'unknown', $this->audit_events->delivery_context( $claimed, $claimed, $reference, $attempt, $context, null ) );
 
 		return Campaign_Delivery_Result::failure(
 			new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The provider accepted the %s request, but it could not be recorded. Reconcile before any further delivery request.', $operation ) ),
@@ -620,11 +627,11 @@ final class Campaign_Scheduler {
 		$failed = $this->settled( $attempt, Delivery_Attempt_Status::FAILED, null !== $error && $error->is_retryable() ? Retryability::RETRYABLE : Retryability::NOT_RETRYABLE );
 		if ( ! $this->attempts->update_result( $failed ) ) {
 			// The refusal could not be recorded: the pending attempt keeps further delivery blocked.
-			$this->audit( $actor, $operation, $claimed, 'unknown', $this->context( $claimed, $claimed, $reference, $attempt, $context, $error ) );
+			$this->audit( $actor, $operation, $claimed, 'unknown', $this->audit_events->delivery_context( $claimed, $claimed, $reference, $attempt, $context, $error ) );
 
 			return Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The %s outcome could not be recorded. Reconcile before any further delivery request.', $operation ) ), $claimed, $reference, $attempt, $error );
 		}
-		$this->audit( $actor, $operation, $claimed, 'failure', $this->context( $claimed, $claimed, $reference, $failed, $context, $error ) );
+		$this->audit( $actor, $operation, $claimed, 'failure', $this->audit_events->delivery_context( $claimed, $claimed, $reference, $failed, $context, $error ) );
 
 		return Campaign_Delivery_Result::failure( new Campaign_Workflow_Error( Campaign_Workflow_Error::PROVIDER_FAILED, sprintf( 'The provider refused the %s request. Nothing changed.', $operation ) ), $claimed, $reference, $failed, $error );
 	}
@@ -651,7 +658,7 @@ final class Campaign_Scheduler {
 			$this->attempts->update_result( $unknown );
 		}
 		$current = $written ? $after : ( $this->campaigns->get( $claimed->id() ) ?? $claimed );
-		$this->audit( $actor, $operation, $claimed, 'unknown', $this->context( $claimed, $current, $reference, $unknown, $context, $error ) );
+		$this->audit( $actor, $operation, $claimed, 'unknown', $this->audit_events->delivery_context( $claimed, $current, $reference, $unknown, $context, $error ) );
 
 		return Campaign_Delivery_Result::failure(
 			new Campaign_Workflow_Error( Campaign_Workflow_Error::RECONCILIATION_REQUIRED, sprintf( 'The provider did not confirm the %s request. The campaign may or may not send; it will not be retried automatically and must be reconciled.', $operation ) ),
@@ -679,9 +686,9 @@ final class Campaign_Scheduler {
 	private function refuse( string $operation, string $code, string $message, Campaign_Actor $actor, string $campaign_id, ?Campaign $campaign = null, string $result = 'failure', ?Delivery_Attempt $attempt = null, ?Provider_Error $error = null, array $context = array() ): Campaign_Delivery_Result {
 		try {
 			$this->audits->add(
-				$this->event(
+				$this->audit_events->event(
 					$actor,
-					$operation,
+					'campaign_' . $operation,
 					$campaign_id,
 					$result,
 					array_merge(
@@ -711,59 +718,7 @@ final class Campaign_Scheduler {
 	 * @param array<string, mixed> $context   Safe audit context.
 	 */
 	private function audit( Campaign_Actor $actor, string $operation, Campaign $campaign, string $result, array $context ): void {
-		$this->audits->add( $this->event( $actor, $operation, $campaign->id(), $result, $context ) );
-	}
-
-	/**
-	 * Identify the actor's operation, artifact, remote reference, and normalized result.
-	 *
-	 * @param Campaign                   $before    The campaign before the change.
-	 * @param Campaign                   $after     The campaign after the change.
-	 * @param Remote_Campaign_Reference  $reference The campaign's remote reference.
-	 * @param Delivery_Attempt           $attempt   The delivery attempt.
-	 * @param array<string, string|null> $extra     Operation-specific context.
-	 * @param Provider_Error|null        $error     Normalized provider error, when there is one.
-	 * @return array<string, mixed>
-	 */
-	private function context( Campaign $before, Campaign $after, Remote_Campaign_Reference $reference, Delivery_Attempt $attempt, array $extra, ?Provider_Error $error ): array {
-		return array_merge(
-			array(
-				'provider'       => $reference->provider(),
-				'remote_id'      => $reference->remote_id(),
-				'attempt_id'     => $attempt->id(),
-				'attempt_status' => $attempt->status(),
-				'from_state'     => $before->state(),
-				'to_state'       => $after->state(),
-				'error_category' => $error?->category(),
-				'error_code'     => $error?->code(),
-			),
-			$extra
-		);
-	}
-
-	/**
-	 * Build one delivery audit event.
-	 *
-	 * @param Campaign_Actor       $actor       Who is acting, with their resolved campaign authority.
-	 * @param string               $operation   Delivery operation.
-	 * @param string               $campaign_id Campaign ID.
-	 * @param string               $result      Audit result: success, failure, denied, or unknown.
-	 * @param array<string, mixed> $context     Safe audit context.
-	 */
-	private function event( Campaign_Actor $actor, string $operation, string $campaign_id, string $result, array $context ): Audit_Event {
-		return Audit_Event::from_array(
-			array(
-				'schema_version' => Audit_Event::SCHEMA_VERSION,
-				'id'             => $this->ids->generate( 'audit' ),
-				'actor_user_id'  => $actor->user_id(),
-				'action'         => 'campaign_' . $operation,
-				'target_type'    => 'campaign',
-				'target_id'      => $campaign_id,
-				'result'         => $result,
-				'context'        => Audit_Context::from_array( $context )->to_array(),
-				'created_at'     => $this->clock->now(),
-			)
-		);
+		$this->audits->add( $this->audit_events->event( $actor, 'campaign_' . $operation, $campaign->id(), $result, $context ) );
 	}
 
 	/**

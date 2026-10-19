@@ -19,7 +19,11 @@ Credential encryption and reveal endpoints are `campaignbridge_manage_connection
 ## Campaigns
 
 `includes/REST/Campaign_Routes.php` exposes the local, provider-neutral campaign
-lifecycle. It is a thin adapter over `Campaign_Workflow`
+lifecycle. It delegates route registration to `Campaign_Route_Registrar`, which
+binds its request callbacks, capability guards, and argument/response schemas.
+`Campaign_Rest_Schema` keeps the public schema API and response definitions;
+`Campaign_Request_Schema` owns its request argument definitions.
+The controller is a thin adapter over `Campaign_Workflow`
 ([`campaign-workflows.md`](campaign-workflows.md)). The workflow owns
 ownership and template authorization, state transitions, snapshots,
 concurrency, idempotency, and audit. The routes authenticate the request,
