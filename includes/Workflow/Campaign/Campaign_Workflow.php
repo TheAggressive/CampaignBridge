@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace CampaignBridge\Workflow\Campaign;
 
-use CampaignBridge\Domain\Campaign\Audit_Context;
-use CampaignBridge\Domain\Campaign\Audit_Event;
 use CampaignBridge\Domain\Campaign\Audit_Event_Source;
 use CampaignBridge\Domain\Campaign\Campaign_List_Filter;
 use CampaignBridge\Domain\Campaign\Campaign;
@@ -35,6 +33,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Campaign_Workflow {
 	/**
+	 * Canonical audit event construction and failure recording.
+	 *
+	 * @var Campaign_Audit_Events
+	 */
+	private readonly Campaign_Audit_Events $audit_events;
+
+	/**
 	 * Build the campaign workflow.
 	 *
 	 * @param Campaign_Source              $campaigns          Campaign storage.
@@ -55,7 +60,9 @@ final class Campaign_Workflow {
 		private readonly Campaign_Transaction $transaction,
 		private readonly Campaign_Id_Generator $ids,
 		private readonly Campaign_Clock $clock
-	) {}
+	) {
+		$this->audit_events = new Campaign_Audit_Events( $audits, $ids, $clock );
+	}
 
 	/**
 	 * Load one campaign through the same object-authorization boundary as mutations.
@@ -154,7 +161,7 @@ final class Campaign_Workflow {
 
 		$written = $this->transaction->run(
 			fn (): bool => $this->campaigns->add( $campaign )
-				&& $this->audits->add( $this->event( $actor, 'campaign_create', $campaign->id(), 'success', array( 'version' => 1 ) ) )
+				&& $this->audits->add( $this->audit_events->event( $actor, 'campaign_create', $campaign->id(), 'success', array( 'version' => 1 ) ) )
 		);
 		if ( ! $written ) {
 			return $this->failure( Campaign_Workflow_Error::PERSISTENCE_FAILED, 'Campaign creation could not be persisted.', $actor, 'campaign_create', $id );
@@ -268,7 +275,7 @@ final class Campaign_Workflow {
 		$input    = $capture->review_input();
 		$compiled = Compiler_Factory::create( $input->design() )->compile( $input->blocks(), $input->context() );
 		if ( ! $compiled->is_success() ) {
-			$this->audit_failure( $actor, 'campaign_snapshot', $campaign_id, Campaign_Workflow_Error::VALIDATION_FAILED, array( 'revision' => $revision ) );
+			$this->audit_events->failure( $actor, 'campaign_snapshot', $campaign_id, Campaign_Workflow_Error::VALIDATION_FAILED, array( 'revision' => $revision ) );
 			return Campaign_Workflow_Result::failure(
 				new Campaign_Workflow_Error( Campaign_Workflow_Error::VALIDATION_FAILED, 'Campaign validation failed; no snapshot was persisted.' ),
 				$loaded,
@@ -293,7 +300,7 @@ final class Campaign_Workflow {
 			fn (): bool => $this->snapshots->add( $snapshot )
 				&& $this->campaigns->compare_and_swap( $replacement, $expected_version )
 				&& $this->audits->add(
-					$this->event(
+					$this->audit_events->event(
 						$actor,
 						'campaign_snapshot',
 						$campaign_id,
@@ -483,7 +490,7 @@ final class Campaign_Workflow {
 		);
 		$written   = $this->transaction->run(
 			fn (): bool => $this->campaigns->add( $duplicate )
-				&& $this->audits->add( $this->event( $actor, 'campaign_duplicate', $duplicate->id(), 'success', array( 'source_campaign_id' => $campaign_id ) ) )
+				&& $this->audits->add( $this->audit_events->event( $actor, 'campaign_duplicate', $duplicate->id(), 'success', array( 'source_campaign_id' => $campaign_id ) ) )
 		);
 		if ( ! $written ) {
 			$prior = $this->campaigns->get( $duplicate_id );
@@ -521,7 +528,7 @@ final class Campaign_Workflow {
 		if (
 			$audit
 			&& ! $this->audits->add(
-				$this->event(
+				$this->audit_events->event(
 					$actor,
 					$action,
 					$campaign_id,
@@ -580,7 +587,6 @@ final class Campaign_Workflow {
 		return ( new Campaign_Snapshot_Verifier( $this->snapshots ) )->verify( $campaign );
 	}
 
-
 	/**
 	 * Store a campaign change and its audit event together, under the version claim.
 	 *
@@ -610,7 +616,7 @@ final class Campaign_Workflow {
 		);
 		$written = $this->transaction->run(
 			fn (): bool => $this->campaigns->compare_and_swap( $after, $expected_version )
-				&& $this->audits->add( $this->event( $actor, $action, $after->id(), 'success', $context ) )
+				&& $this->audits->add( $this->audit_events->event( $actor, $action, $after->id(), 'success', $context ) )
 		);
 		if ( ! $written ) {
 			return $this->write_failure( $actor, $action, $before, $expected_version );
@@ -734,59 +740,8 @@ final class Campaign_Workflow {
 		array $context = array(),
 		string $result = 'failure'
 	): Campaign_Workflow_Result {
-		$this->audit_failure( $actor, $action, $target_id, $code, $context, $result );
+		$this->audit_events->failure( $actor, $action, $target_id, $code, $context, $result );
 		return Campaign_Workflow_Result::failure( new Campaign_Workflow_Error( $code, $message ), $campaign );
-	}
-
-	/**
-	 * Append a failure audit event.
-	 *
-	 * @param Campaign_Actor       $actor     Who is acting, with their resolved campaign authority.
-	 * @param string               $action    Audit action name.
-	 * @param string               $target_id ID of the record the event is about.
-	 * @param string               $code      Stable error code.
-	 * @param array<string, mixed> $context   Safe audit context.
-	 * @param string               $result    Audit result: success, failure, denied, or unknown.
-	 */
-	private function audit_failure(
-		Campaign_Actor $actor,
-		string $action,
-		string $target_id,
-		string $code,
-		array $context = array(),
-		string $result = 'failure'
-	): void {
-		try {
-			$this->audits->add( $this->event( $actor, $action, $target_id, $result, array_merge( array( 'error_code' => $code ), $context ) ) );
-		} catch ( \InvalidArgumentException ) {
-			// Malformed external identifiers cannot become an unsafe audit record.
-			return;
-		}
-	}
-
-	/**
-	 * Build one workflow audit event.
-	 *
-	 * @param Campaign_Actor       $actor     Who is acting, with their resolved campaign authority.
-	 * @param string               $action    Audit action name.
-	 * @param string               $target_id ID of the record the event is about.
-	 * @param string               $result    Audit result: success, failure, denied, or unknown.
-	 * @param array<string, mixed> $context   Safe audit context.
-	 */
-	private function event( Campaign_Actor $actor, string $action, string $target_id, string $result, array $context ): Audit_Event {
-		return Audit_Event::from_array(
-			array(
-				'schema_version' => Audit_Event::SCHEMA_VERSION,
-				'id'             => $this->ids->generate( 'audit' ),
-				'actor_user_id'  => $actor->user_id(),
-				'action'         => $action,
-				'target_type'    => 'campaign',
-				'target_id'      => $target_id,
-				'result'         => $result,
-				'context'        => Audit_Context::from_array( $context )->to_array(),
-				'created_at'     => $this->clock->now(),
-			)
-		);
 	}
 
 	/**

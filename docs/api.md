@@ -1,6 +1,6 @@
 # CampaignBridge REST API
 
-The API namespace is `campaignbridge/v1`. Routes are registered in `includes/REST/Routes.php`, `includes/REST/Brand_Kit_Routes.php`, `includes/REST/Preview_Routes.php`, `includes/REST/Campaign_Routes.php`, `includes/REST/Onboarding_Routes.php`, and `includes/REST/Provider_Discovery_Routes.php`.
+The API namespace is `campaignbridge/v1`. Routes are registered in `includes/REST/Routes.php`, `includes/REST/Brand_Kit_Routes.php`, `includes/REST/Preview_Routes.php`, `includes/REST/Campaign_Routes.php`, `includes/REST/Onboarding_Routes.php`, `includes/REST/Provider_Discovery_Routes.php`, and `includes/REST/Provider_Webhook_Routes.php`.
 
 Email templates use the core `/wp/v2/cb_templates` routes and their `/revisions` and `/autosaves` sub-routes for create, save, publish, autosave, revision listing, revision fetching, and duplication; CampaignBridge adds no parallel template persistence endpoints. Revision restore fetches one core revision and applies its editable fields as unsaved core-data edits; the operator must explicitly save to change the canonical template. The `cb_templates` post type maps its post capabilities, including create and publish, to `campaignbridge_edit_templates`, and every registered template meta key's REST `auth_callback` requires the same capability; generic `edit_posts` does not grant template access. The editor pages revision history through the core revisions collection using `X-WP-Total` and `X-WP-TotalPages`, excluding the template's autosave IDs in the request. Duplication creates a new draft through the core create route with the saved title, content, and only the meta keys returned by `Post_Type_Email_Template::get_duplicable_meta_keys()`. If a core create fails after inserting the template, the inserted template is deleted, so a failed create leaves nothing behind.
 
@@ -19,7 +19,11 @@ Credential encryption and reveal endpoints are `campaignbridge_manage_connection
 ## Campaigns
 
 `includes/REST/Campaign_Routes.php` exposes the local, provider-neutral campaign
-lifecycle. It is a thin adapter over `Campaign_Workflow`
+lifecycle. It delegates route registration to `Campaign_Route_Registrar`, which
+binds its request callbacks, capability guards, and argument/response schemas.
+`Campaign_Rest_Schema` keeps the public schema API and response definitions;
+`Campaign_Request_Schema` owns its request argument definitions.
+The controller is a thin adapter over `Campaign_Workflow`
 ([`campaign-workflows.md`](campaign-workflows.md)). The workflow owns
 ownership and template authorization, state transitions, snapshots,
 concurrency, idempotency, and audit. The routes authenticate the request,
@@ -641,8 +645,10 @@ request that already succeeded and are not unexplained.
 }
 ```
 
-Reconciliation is on demand only. Scheduled background checks, provider
-webhooks, and crash recovery belong to M5 (#66).
+Operators can reconcile on demand. Background watches reconcile scheduled,
+sending, and unknown campaigns on a cadence, and a signed provider webhook
+(see [Provider webhooks](#provider-webhooks)) queues one extra reconciliation
+right away.
 
 ### History and delivery attempts
 
@@ -825,6 +831,42 @@ failure is returned as a WordPress error with `data.category` and
 
 Raw provider error bodies, member records, and credentials never appear in
 responses.
+
+## Provider webhooks
+
+`includes/REST/Provider_Webhook_Routes.php` registers
+`/campaignbridge/v1/webhooks/{provider}`; `mailchimp` is the only provider.
+The route is public because providers cannot log in. Its
+`permission_callback` admits every request to the callback, which
+authenticates each delivery by its signature before reading anything from
+it.
+
+- `GET` answers `200` with no body. Mailchimp checks the URL this way before
+  it creates a webhook.
+- `POST` takes Mailchimp's form-encoded delivery and its
+  `X-Mailchimp-Signature: t={unix seconds},v1={hex}` header. The signature
+  must be HMAC-SHA256 of `{t}.{raw body}` with the signing secret of one of
+  this site's webhooks, and `t` must be at most 300 seconds old (or 60
+  seconds ahead).
+
+| Status | Code | When |
+|---|---|---|
+| `200` | — (`{"received": true}`) | Accepted, a duplicate, or ignored; the three are indistinguishable |
+| `400` | `campaignbridge_webhook_malformed` | Signed, but not a delivery CampaignBridge can read |
+| `401` | `campaignbridge_webhook_refused` | Missing, wrong, or stale signature, or no webhook is enabled |
+| `413` | `campaignbridge_webhook_too_large` | Body over 64 KB |
+| `429` | `campaignbridge_webhook_limited` | Over 120 requests per client address per minute |
+| `503` | `campaignbridge_webhook_unavailable` | Receipts or jobs could not be stored; the provider retries |
+
+Every refusal has the same message and never says which check failed. A
+delivery never changes a campaign. A `campaign` event naming a scheduled,
+sending, or unknown campaign queues one `reconcile_campaign_hint` job, which
+reads the campaign from Mailchimp and records what it reports. Other events
+and other campaigns are ignored. Nothing from a delivery is stored or logged
+except a one-way key that recognizes a replay until the signature goes stale.
+
+Webhooks are turned on, rotated, and turned off from **Settings → Providers**
+by a user with `campaignbridge_manage_connections`; see the runbook.
 
 ## Contract source
 

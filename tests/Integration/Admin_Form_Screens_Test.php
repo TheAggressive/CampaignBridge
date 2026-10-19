@@ -142,6 +142,63 @@ class Admin_Form_Screens_Test extends Test_Case {
 		}
 	}
 
+	public function test_a_connection_manager_can_turn_on_webhooks_and_sees_their_state(): void {
+		$this->store_mailchimp_key();
+
+		$off = $this->render_screen( 'providers' );
+		$this->assertStringContainsString( 'id="campaignbridge-webhooks-title"', $off );
+		$this->assertStringContainsString( 'name="provider_webhooks" value="enable"', $off );
+		$this->assertStringNotContainsString( 'value="rotate"', $off, 'There is nothing to rotate yet.' );
+		$this->assertMatchesRegularExpression( '#<label for="campaignbridge-webhook-url">.+?</label>.*?<input id="campaignbridge-webhook-url"[^>]+readonly#s', $off, 'The webhook address has a label.' );
+		$this->assertStringContainsString( esc_attr( \CampaignBridge\Services\Webhook\Webhook_Factory::url( 'mailchimp' ) ), $off );
+
+		\CampaignBridge\Tests\Integration\Provider_Webhook_Test::store_secret( 'whsec-screen-0123456789abcdefghijklmnopq' );
+		$on = $this->render_screen( 'providers' );
+		$this->assertMatchesRegularExpression( '/data-confirm="[^"]+"><input[^>]+_wpnonce[^>]+>.*?value="rotate"/s', $on, 'Rotating asks for confirmation.' );
+		$this->assertMatchesRegularExpression( '/data-confirm="[^"]+"><input[^>]+_wpnonce[^>]+>.*?value="disable"/s', $on, 'Turning off asks for confirmation.' );
+		$this->assertStringNotContainsString( 'whsec-', $on, 'The signing secret never reaches the page.' );
+		$this->assertStringNotContainsString( 'cbenc:', $on );
+		( new \CampaignBridge\Repository\Webhook_Subscription_Repository() )->remove( 'mailchimp', 'abc123' );
+	}
+
+	public function test_a_failed_webhook_action_is_announced_with_a_plain_reason(): void {
+		$this->store_mailchimp_key();
+		$_GET = array(
+			'webhooks'      => 'enable:failed',
+			'webhook_error' => 'mailchimp_webhook_url_rejected',
+		);
+
+		$html = $this->render_screen( 'providers' );
+		$_GET = array();
+
+		$this->assertMatchesRegularExpression( '/class="notice notice-error inline" role="alert"><p>Webhooks were not changed\. Mailchimp could not reach this site&#039;s webhook address\./', $html );
+	}
+
+	public function test_webhooks_are_hidden_from_people_who_cannot_manage_connections(): void {
+		$this->store_mailchimp_key();
+		$manager = self::factory()->user->create( array( 'role' => 'editor' ) );
+		get_userdata( $manager )->add_cap( \CampaignBridge\Core\Capabilities::MANAGE );
+		wp_set_current_user( $manager );
+
+		$this->assertStringNotContainsString( 'name="provider_webhooks"', $this->render_screen( 'providers' ) );
+	}
+
+	public function test_a_webhook_request_without_a_valid_nonce_is_refused(): void {
+		$this->store_mailchimp_key();
+		$_POST      = array(
+			'provider_webhooks' => 'disable',
+			'_wpnonce'          => wp_create_nonce( 'campaignbridge_disconnect_mailchimp' ),
+		);
+		$controller = ( new \ReflectionClass( \CampaignBridge\Admin\Controllers\Settings_Controller::class ) )->newInstanceWithoutConstructor();
+
+		try {
+			$controller->handle_request();
+			$this->fail( 'A request without the webhook nonce must be refused.' );
+		} catch ( \WPDieException ) {
+			$this->assertNotNull( ( new \CampaignBridge\Repository\Provider_Connection_Repository() )->get( 'mailchimp' ) );
+		}
+	}
+
 	private function store_mailchimp_key(): void {
 		( new \CampaignBridge\Repository\Provider_Connection_Repository() )->save( \CampaignBridge\Domain\Campaign\Provider_Connection::create( 'mailchimp', Encryption::encrypt( str_repeat( 'd', 32 ) . '-us1' ), '' ) );
 		update_option( 'campaignbridge_provider', 'mailchimp' );

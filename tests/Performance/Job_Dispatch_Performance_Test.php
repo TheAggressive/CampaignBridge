@@ -38,8 +38,8 @@ final class Job_Dispatch_Performance_Test extends Test_Case {
 
 		$queries = $this->queries_for_tick();
 
-		// The sweep check and claim selects, then per job one claim, one read, and one transition.
-		self::assertLessThanOrEqual( 6 + 3 * Job_Dispatcher::BATCH, $queries );
+		// The sweep check and purge, then per job three candidate selects, one claim, one read, and one transition.
+		self::assertLessThanOrEqual( 6 + 6 * Job_Dispatcher::BATCH, $queries );
 	}
 
 	private function queries_for_tick(): int {

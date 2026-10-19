@@ -166,6 +166,32 @@ final class Campaign_Repository implements Campaign_Source, Watched_Campaign_Sou
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	public function needing_watch( array $states, string $job_type, int $limit ): array {
+		$states = array_values( array_filter( $states, array( Campaign_State::class, 'is_valid' ) ) );
+		if ( ! Schema_Manager::is_current() || array() === $states || 1 > $limit ) {
+			return array();
+		}
+		global $wpdb;
+		$campaigns    = Schema_Manager::table( 'campaigns' );
+		$jobs         = Schema_Manager::table( 'jobs' );
+		$placeholders = implode( ', ', array_fill( 0, count( $states ), '%s' ) );
+		// Prefer an active watch; otherwise inspect the latest finished watch.
+		$sql  = 'SELECT c.* FROM %i c WHERE c.state IN (' . $placeholders . ") AND COALESCE((
+			SELECT CASE WHEN j.dedupe_key IS NOT NULL OR (j.state IN ('failed', 'dead') AND j.updated_at >= c.updated_at) THEN 0 ELSE 1 END
+			FROM %i j WHERE j.target_type = 'campaign' AND j.target_id = c.id AND j.job_type = %s
+			ORDER BY (j.dedupe_key IS NOT NULL) DESC, j.updated_at DESC, j.id DESC LIMIT 1
+		), 1) = 1 ORDER BY c.updated_at ASC, c.id ASC LIMIT %d";
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded watch candidates; existing watches are excluded before LIMIT.
+			$wpdb->prepare( $sql, ...array_merge( array( $campaigns ), $states, array( $jobs, $job_type, min( 500, $limit ) ) ) ), // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL above contains only fixed syntax and generated placeholders; all identifiers and values are prepared.
+			ARRAY_A
+		);
+
+		return $this->hydrate_many( is_array( $rows ) ? $rows : array() );
+	}
+
+	/**
 	 * Number of campaigns in each lifecycle state, across all owners.
 	 *
 	 * For site health reporting only; it reveals counts, never campaigns.

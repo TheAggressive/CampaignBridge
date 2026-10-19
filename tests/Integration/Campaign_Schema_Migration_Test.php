@@ -300,6 +300,7 @@ final class Campaign_Schema_Migration_Test extends Test_Case {
 			'audit_events'       => array( 'PRIMARY', 'target_created', 'sequence_number' ),
 			'jobs'               => array( 'PRIMARY', 'dedupe_key', 'state_run', 'state_lease', 'target' ),
 			'locks'              => array( 'PRIMARY', 'expires_at' ),
+			'webhook_receipts'   => array( 'PRIMARY', 'expires_at' ),
 		);
 
 		foreach ( $expected as $suffix => $indexes ) {

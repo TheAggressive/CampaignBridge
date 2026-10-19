@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Owns restartable, forward-safe database migrations for campaign storage and request counters. */
 final class Schema_Manager {
-	public const SCHEMA_VERSION = 9;
+	public const SCHEMA_VERSION = 10;
 	public const OPTION         = 'database_schema';
 
 	/**
@@ -37,6 +37,7 @@ final class Schema_Manager {
 		'rate_limits',
 		'jobs',
 		'locks',
+		'webhook_receipts',
 	);
 
 	/** Run an upgrade only when the installed schema is older. */
@@ -284,6 +285,12 @@ final class Schema_Manager {
 				acquired_at datetime NOT NULL,
 				expires_at datetime NOT NULL,
 				PRIMARY KEY  (lock_name),
+				KEY expires_at (expires_at)
+			) {$collate};",
+			'CREATE TABLE ' . self::table( 'webhook_receipts' ) . " (
+				receipt_key char(64) NOT NULL,
+				expires_at bigint unsigned NOT NULL,
+				PRIMARY KEY  (receipt_key),
 				KEY expires_at (expires_at)
 			) {$collate};",
 		);

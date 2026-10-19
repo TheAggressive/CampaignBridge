@@ -15,7 +15,8 @@ deliver.
 | Schedule and unschedule | Shipped, guarded |
 | Immediate send | Shipped, guarded like scheduling; accepted sends become `sending`, ambiguous ones `unknown` |
 | Cancel | Not supported: Mailchimp's in-flight cancel needs Mailchimp Pro and cannot recall delivered mail |
-| Remote-state reconciliation and ambiguous-outcome recovery | Shipped, on demand and read-only toward the provider; background checks and webhooks are M5 (#66) |
+| Remote-state reconciliation and ambiguous-outcome recovery | Shipped, on demand and in the background, read-only toward the provider |
+| Mailchimp campaign webhooks | Shipped, opt-in; signed deliveries only bring reconciliation forward |
 
 ## Trust boundaries
 
@@ -143,13 +144,21 @@ email preview iframe, and campaign and discovery REST responses send
   Mailchimp's in-flight cancel, so the protections that matter are before
   the send: confirmed audience, separation of duties when enabled, the
   remote draft guard, and the version claim.
-- Reconciliation runs only when an operator asks for it. An `unknown`
-  outcome blocks delivery until someone reconciles; nothing checks
-  automatically. A test send's outcome cannot be reconciled from campaign
-  state, so an unconfirmed test stays `unknown` (it does not block). Durable
-  scheduled reconciliation, provider webhooks, and crash recovery are M5
-  (#66). Until then, high-volume or multi-operator sending is not considered
-  production-ready.
+- An `unknown` outcome blocks delivery until reconciliation settles it, on
+  demand or in the background. A test send's outcome cannot be reconciled
+  from campaign state, so an unconfirmed test stays `unknown` (it does not
+  block). Crash-recovery tooling and the M5 exit gate are still open (#66).
+- The webhook route is public. A delivery is admitted only with a fresh
+  Mailchimp HMAC-SHA256 signature made with one of this site's stored
+  signing secrets; refusals are identical whichever check failed. An
+  authentic delivery is only a hint: it queues a read-only reconciliation
+  and never changes a campaign, so a forged, replayed, or reordered event
+  can at most cause an extra provider read. Replays inside the five-minute
+  window are recognized by a one-way receipt; older ones fail the
+  signature. Only `campaign` events are requested, so subscriber personal
+  data is never sent to the site, and no delivery body is stored or logged.
+  Signing secrets are encrypted at rest, shown by Mailchimp only once, and
+  replaced by rotating. Requests are rate-limited per client address.
 - Mailchimp's `send_time` is trusted as the scheduled delivery time when
   reconciling a scheduled campaign. This is verified only against recorded
   responses until the M3 sandbox run.
