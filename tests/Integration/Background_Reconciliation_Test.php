@@ -17,19 +17,26 @@ use CampaignBridge\Domain\Provider\Discovery_Batch;
 use CampaignBridge\Domain\Provider\Discovery_Kind;
 use CampaignBridge\Domain\Provider\Discovery_Result;
 use CampaignBridge\Post_Types\Post_Type_Email_Template;
+use CampaignBridge\Providers\Mailchimp_Draft_Gateway;
 use CampaignBridge\Providers\Mailchimp_Discovery;
+use CampaignBridge\Providers\Mailchimp_Provider;
 use CampaignBridge\Repository\Audit_Event_Repository;
 use CampaignBridge\Repository\Campaign_Repository;
+use CampaignBridge\Repository\Database_Transaction;
+use CampaignBridge\Repository\Delivery_Attempt_Repository;
 use CampaignBridge\Repository\Job_Repository;
 use CampaignBridge\Repository\Provider_Connection_Repository;
 use CampaignBridge\Repository\Provider_Discovery_Repository;
+use CampaignBridge\Repository\Remote_Campaign_Reference_Repository;
 use CampaignBridge\Repository\Schema_Manager;
 use CampaignBridge\REST\Routes;
-use CampaignBridge\Services\Campaign\Campaign_Reconciler_Factory;
+use CampaignBridge\Services\Lock\Lock_Factory;
 use CampaignBridge\Services\Provider\Provider_Discovery_Factory;
 use CampaignBridge\Tests\Helpers\Test_Case;
 use CampaignBridge\Workflow\Campaign\Campaign_Clock;
 use CampaignBridge\Workflow\Campaign\Campaign_Reconcile_Job;
+use CampaignBridge\Workflow\Campaign\Campaign_Reconciler;
+use CampaignBridge\Workflow\Campaign\Random_Id_Generator;
 use CampaignBridge\Workflow\Campaign\Reconcile_Watch;
 use CampaignBridge\Workflow\Campaign\Reconciliation_Sweep;
 use CampaignBridge\Workflow\Job\Job_Queue;
@@ -130,7 +137,7 @@ final class Background_Reconciliation_Test extends Test_Case {
 		$jobs         = new Job_Repository();
 		$handler      = new Campaign_Reconcile_Job(
 			new Campaign_Repository(),
-			static fn ( string $provider ) => Campaign_Reconciler_Factory::create( $provider ),
+			fn ( string $provider ) => $this->reconciler( $provider ),
 			static fn ( string $provider ): array => Provider_Discovery_Factory::settings( $provider ),
 			$this->clock
 		);
@@ -196,8 +203,6 @@ final class Background_Reconciliation_Test extends Test_Case {
 		self::assertGreaterThan( $this->clock->now(), $watch->next_check_at );
 
 		// Once the attempt is older than the settle window, the draft proves the send never happened.
-		global $wpdb;
-		$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema_Manager::table( 'delivery_attempts' ) . ' SET created_at = %s, updated_at = %s WHERE campaign_id = %s', gmdate( 'Y-m-d H:i:s', time() - 900 ), gmdate( 'Y-m-d H:i:s', time() - 900 ), $campaign['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Allowlisted test table.
 		$this->clock->now += 900;
 		$this->runner->run( 10 );
 
@@ -264,6 +269,26 @@ final class Background_Reconciliation_Test extends Test_Case {
 		$job = ( new Job_Repository() )->find_active( Campaign_Reconcile_Job::dedupe_key( $campaign['id'] ) );
 		self::assertSame( Job_State::QUEUED, $job?->state() );
 		self::assertSame( 0, $job?->attempts(), 'Waiting for a lock uses no attempt.' );
+	}
+
+	private function reconciler( string $provider ): ?Campaign_Reconciler {
+		if ( 'mailchimp' !== $provider ) {
+			return null;
+		}
+
+		// Use one clock for campaign updates and job completion, even across a real second boundary.
+		return new Campaign_Reconciler(
+			new Campaign_Repository(),
+			new Remote_Campaign_Reference_Repository(),
+			new Delivery_Attempt_Repository(),
+			new Audit_Event_Repository(),
+			new Database_Transaction(),
+			new Random_Id_Generator(),
+			$this->clock,
+			new Mailchimp_Draft_Gateway(),
+			( new Mailchimp_Provider() )->capabilities(),
+			Lock_Factory::manager()
+		);
 	}
 
 	private function reads(): int {
@@ -338,6 +363,10 @@ final class Background_Reconciliation_Test extends Test_Case {
 			$request->set_param( $key, $value );
 		}
 
-		return rest_get_server()->dispatch( $request );
+		$response = rest_get_server()->dispatch( $request );
+		// REST writes use real time; background work starts at that instant or later.
+		$this->clock->now = max( $this->clock->now, time() );
+
+		return $response;
 	}
 }
