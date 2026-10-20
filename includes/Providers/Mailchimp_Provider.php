@@ -63,6 +63,7 @@ class Mailchimp_Provider extends Abstract_Provider {
 		'cancel'                     => false,
 		'reconcile'                  => true,
 		'reports'                    => false,
+		'webhooks'                   => true,
 	);
 
 	/**

@@ -24,10 +24,17 @@ provider-neutral application operations, state/concurrency rules, authorization
 inputs, and transaction assumptions are documented in
 [`campaign-workflows.md`](campaign-workflows.md). The campaign REST adapter
 (`includes/REST/Campaign_Routes.php`, see [`api.md`](api.md)) calls only that
-workflow layer. The repository boundary check rejects campaign REST files that
+workflow layer. `Campaign_Route_Registrar` owns its route declarations, binding
+the controller's callbacks to their permission checks and argument/response
+schemas. The repository boundary check rejects campaign REST files that
 import repositories or providers. Future Abilities, CLI, and UI adapters must
 call the same workflow layer rather than repositories or REST controller
 internals.
+
+`Campaign_Audit_Events` builds canonical audit records and delivery context for
+the local workflow and scheduler. It also records safe failure events; callers
+retain ownership of state transitions and transactions, including atomic writes
+of success events.
 
 ## Background jobs
 
@@ -48,6 +55,10 @@ runs and the job ends `dead`, so an irreversible effect is never repeated.
 Payloads are small scalar maps and refuse credential-like keys; stored errors
 are stable codes, never messages or provider responses.
 
+The runner claims one job immediately before executing it, so jobs waiting
+behind a slow handler keep their full lease when they start. Each job runs at
+most once per dispatch, including immediate retries and recurring jobs.
+
 ## Background reconciliation
 
 `Workflow/Campaign/Reconciliation_Sweep` and `Campaign_Reconcile_Job` are the
@@ -62,6 +73,24 @@ resets the job's attempts so a long-running watch never uses them up, and
 `failed()` with the reason when only an operator can resolve the campaign.
 `Reconcile_Watch` reads a campaign's watch state from its jobs for the
 campaign page and Status.
+
+The sweep excludes active watches and unchanged campaigns with stopped watches
+before limiting its candidate batch. Existing watches therefore cannot prevent
+newer campaigns from receiving their own watches.
+
+## Provider webhooks
+
+Webhooks only make reconciliation prompter; polling stays the source of
+correctness. `Workflow/Webhook/Webhook_Intake` checks a delivery against the
+provider's `Provider_Webhook_Receiver` (for Mailchimp, the signature and its
+five-minute freshness), records a one-way receipt through
+`Webhook_Receipt_Source` so a replay inside that window is a no-op, and, for
+a watched campaign, queues a `reconcile_campaign_hint` job: a
+`Campaign_Reconcile_Job` that reconciles once, even before a scheduled send
+time, and leaves the regular watch in place. `Webhook_Registrar` keeps one
+signed webhook per provider audience through `Provider_Webhook_Gateway`. It
+is an operator action of its own and never part of a campaign workflow.
+Signing secrets are stored encrypted in `Webhook_Subscription_Source`.
 
 ## Locks
 
@@ -96,7 +125,9 @@ longer requested wait is not held open; it travels on the normalized
 `Provider_Error` as `retry_after`, for the caller or a background job to honour.
 Draft creation is attempted once; a new attempt goes through the campaign's
 idempotency key, which first looks for a draft an unconfirmed attempt may have
-created. Test, schedule, unschedule, send, and cancel are attempted exactly
+created. Webhook creation is attempted once the same way: before creating, the
+registrar removes any webhook already pointing at this site, whose secret was
+never stored. Test, schedule, unschedule, send, and cancel are attempted exactly
 once: a refusal is reported, and an ambiguous outcome makes the campaign
 `unknown` until reconciliation reads what the provider did. Operations the
 policy does not list are never repeated.

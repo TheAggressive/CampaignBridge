@@ -114,6 +114,7 @@ class Mailchimp_Provider_Test extends WP_UnitTestCase {
 		self::assertTrue( $capabilities['reconcile'] );
 		self::assertFalse( $capabilities['cancel'], 'Mailchimp in-flight cancel is not used.' );
 		self::assertFalse( $capabilities['reports'] );
+		self::assertTrue( $capabilities['webhooks'] );
 	}
 
 	/**

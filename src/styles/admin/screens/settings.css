@@ -776,6 +776,28 @@
     min-width: 0;
   }
 
+  &__webhooks {
+    > p,
+    > .notice,
+    > .campaignbridge-providers__webhook-actions {
+      margin: 0 17px 14px;
+    }
+
+    > p > label {
+      font-weight: 600;
+    }
+  }
+
+  &__webhook-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    form {
+      margin: 0;
+    }
+  }
+
   &__configuration {
     overflow: hidden;
 

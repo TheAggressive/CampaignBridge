@@ -48,6 +48,33 @@ It requires `campaignbridge_manage_connections`.
   still sends, and CampaignBridge cannot unschedule or reconcile it until a
   key for the same account is saved again. Unschedule anything that should
   not send first.
+- Campaign webhooks are removed from Mailchimp first, while the key still
+  works. Any that could not be removed are refused from then on; delete them
+  in Mailchimp (**Audience → Settings → Webhooks**).
+
+## Campaign webhooks
+
+**Settings → Providers → Campaign webhooks** lets Mailchimp tell the site
+when a campaign is sent, so its status updates at the next background run
+(usually within a minute or two) instead of at the next scheduled check. It
+requires `campaignbridge_manage_connections`.
+
+- **Turn on webhooks** adds one webhook for campaign events to each Mailchimp
+  audience. Mailchimp checks the address first, so the site must be
+  reachable from the internet over HTTPS; a local or firewalled site fails
+  with "Mailchimp could not reach this site's webhook address". A site behind
+  a proxy whose public address differs from its REST URL can supply it with
+  the `campaignbridge_webhook_url` filter.
+- **Add missing audiences** covers audiences created since, and finishes an
+  action that stopped part way.
+- **Rotate secrets** replaces every webhook and signing secret. Use it after
+  the site address changes or if a secret may have leaked.
+- **Turn off webhooks** removes them. Campaign status is still checked in the
+  background either way.
+
+Deliveries refused with `401` usually mean the webhook in Mailchimp is not
+one this site created, or the site's clock is more than a few minutes off.
+Rotate to replace the webhooks.
 
 ## Encryption key configuration
 
@@ -267,6 +294,13 @@ data. A release built for schema 6 never reads it, so after reinstalling that
 release lower the stamped version with
 `wp option update campaignbridge_database_schema 6`. Queued jobs stay in the
 table and run again once the newer release is reinstalled.
+
+### Rolling back across database schema 10
+
+Schema 10 adds the `{prefix}campaignbridge_webhook_receipts` table and changes
+no existing data. Turn webhooks off first, then after reinstalling a schema-9
+release run `wp option update campaignbridge_database_schema 9`. The table
+holds only short-lived receipts and needs no cleanup.
 
 ### Rolling back across database schema 9
 

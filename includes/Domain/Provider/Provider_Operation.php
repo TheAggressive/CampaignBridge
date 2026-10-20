@@ -36,6 +36,7 @@ final class Provider_Operation {
 	public const CANCEL                     = 'cancel';
 	public const RECONCILE                  = 'reconcile';
 	public const REPORTS                    = 'reports';
+	public const WEBHOOKS                   = 'webhooks';
 
 	/**
 	 * All operations in stable display order.
@@ -59,6 +60,7 @@ final class Provider_Operation {
 			self::CANCEL,
 			self::RECONCILE,
 			self::REPORTS,
+			self::WEBHOOKS,
 		);
 	}
 

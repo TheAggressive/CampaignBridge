@@ -454,6 +454,7 @@ final class Campaign_Routes_Test extends Test_Case {
 	 * @param array<string, mixed> $params Valid request fields.
 	 */
 	public function test_expensive_routes_are_rate_limited_per_authenticated_user( string $suffix, array $params ): void {
+		self::start_in_one_rate_window( 15 );
 		for ( $i = 0; $i < 10; ++$i ) {
 			self::assertNotSame( 429, $this->request( 'POST', self::COLLECTION . $suffix, $params )->get_status() );
 		}

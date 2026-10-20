@@ -325,8 +325,14 @@ shortly; a transient provider error retries with backoff. A reason only an
 operator can resolve (`missing`, `untracked`, `inconclusive`,
 `contradiction`, `duplicate_drafts`) or a refused credential stops the watch,
 and the campaign needs operator action until it changes. Background
-reconciliation never sends, schedules, or retries a delivery. Webhooks belong
-to #172.
+reconciliation never sends, schedules, or retries a delivery.
+
+A signed provider webhook naming a watched campaign queues one extra
+reconciliation of it right away (`reconcile_campaign_hint`), even before a
+scheduled send time, because the provider may have sent it early. The
+webhook body itself changes nothing: the campaign moves only on what the
+provider reports when it is read. Repeated hints for one campaign collapse
+into one queued run, and the regular watch continues either way.
 
 ## Delivery policies
 

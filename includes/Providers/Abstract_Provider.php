@@ -91,6 +91,7 @@ abstract class Abstract_Provider implements Provider_Interface {
 			'send'                       => false,
 			'reconcile'                  => false,
 			'reports'                    => false,
+			'webhooks'                   => false,
 		);
 		$this->api_key_pattern   = '/^[a-zA-Z0-9_-]{20,}$/'; // Generic pattern by default.
 	}

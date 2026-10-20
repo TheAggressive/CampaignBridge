@@ -23,4 +23,17 @@ interface Watched_Campaign_Source {
 	 * @return array<int, Campaign>
 	 */
 	public function watched( array $states, int $limit ): array;
+
+	/**
+	 * Campaigns needing a watch, least recently updated first.
+	 *
+	 * Exclude active watches and campaigns whose latest watch failed or died
+	 * since the campaign last changed, before applying the limit.
+	 *
+	 * @param array<int, string> $states   Campaign lifecycle states.
+	 * @param string             $job_type Reconciliation job type.
+	 * @param int                $limit    Maximum number of records.
+	 * @return array<int, Campaign>
+	 */
+	public function needing_watch( array $states, string $job_type, int $limit ): array;
 }
