@@ -24,6 +24,11 @@ WordPress native block editor
 This does not make every Core block supported. Only the Core blocks named in the
 authoring contract below are email input; everything else fails closed.
 
+`Core_Block_Normalizer` reads supported Core serialization. Its
+`Core_Block_Bindings` collaborator validates post and Brand Kit binding metadata
+against the contract and applies canonical binding attributes after the block
+is normalized. Neither class resolves live content or renders Core frontend HTML.
+
 The phrase "block store" can be confused with a WordPress data store. In this
 repository, use **email block library** for the inserter/catalog and **email
 block grammar** for the serialized document format.

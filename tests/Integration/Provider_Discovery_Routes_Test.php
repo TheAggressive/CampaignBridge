@@ -197,6 +197,7 @@ final class Provider_Discovery_Routes_Test extends Test_Case {
 	}
 
 	public function test_refresh_is_rate_limited_per_user(): void {
+		self::start_in_one_rate_window();
 		for ( $i = 0; $i < 10; ++$i ) {
 			self::assertSame( 200, $this->request( 'POST', '/discovery/audiences/refresh' )->get_status() );
 		}

@@ -96,8 +96,16 @@ final class Job_Runner {
 			'dead'        => 0,
 			'rescheduled' => 0,
 		);
-		$now    = $this->clock->now();
-		foreach ( $this->jobs->claim( $this->owner, $now, Job_Time::after( $now, self::LEASE_SECONDS ), $limit ) as $claim ) {
+		$seen   = array();
+		while ( $report['claimed'] < $limit ) {
+			// Claim only when ready to execute: waiting behind another job must not consume a lease.
+			$now    = $this->clock->now();
+			$claims = $this->jobs->claim( $this->owner, $now, Job_Time::after( $now, self::LEASE_SECONDS ), 1, $seen );
+			if ( array() === $claims ) {
+				break;
+			}
+			$claim  = $claims[0];
+			$seen[] = $claim->job->id();
 			++$report['claimed'];
 			$result = $this->run_one( $claim );
 			if ( null !== $result ) {

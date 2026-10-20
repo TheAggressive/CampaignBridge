@@ -138,6 +138,7 @@ class Routes extends Abstract_Rest_Controller {
 		( new Onboarding_Routes() )->register();
 
 		self::$provider_discovery_routes->register();
+		( new Provider_Webhook_Routes() )->register();
 	}
 
 	/**

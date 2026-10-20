@@ -39,6 +39,9 @@ final class Scripted_Job_Handler implements Job_Handler {
 	/** @var array<int, Job_Outcome|\Throwable> */
 	public array $script = array();
 
+	/** @var \Closure(Job, Job_Lease): void|null */
+	public ?\Closure $on_handle = null;
+
 	public function __construct( private readonly bool $safe ) {}
 
 	public function type(): string {
@@ -51,6 +54,9 @@ final class Scripted_Job_Handler implements Job_Handler {
 
 	public function handle( Job $job, Job_Lease $lease ): Job_Outcome {
 		++$this->handled;
+		if ( null !== $this->on_handle ) {
+			( $this->on_handle )( $job, $lease );
+		}
 		$next = array_shift( $this->script ) ?? Job_Outcome::succeeded();
 		if ( $next instanceof \Throwable ) {
 			throw $next;
@@ -142,6 +148,45 @@ final class Job_Queue_Test extends Test_Case {
 
 		$this->clock->now += 30;
 		self::assertSame( array(), $this->claim( 'worker-b' ) );
+	}
+
+	public function test_waiting_jobs_are_not_leased_behind_a_slow_handler(): void {
+		$this->queue_job();
+		( new Job_Queue( $this->jobs, $this->clock ) )->enqueue( 'scripted', 'campaign', 'campaign-two' );
+		$first  = new Scripted_Job_Handler( true );
+		$second = new Scripted_Job_Handler( false );
+		$first->on_handle = function ( Job $job ) use ( $second ): void {
+			$this->clock->now += Job_Runner::LEASE_SECONDS - 10;
+			self::assertTrue( $this->jobs->heartbeat( $job->id(), 'worker-test', Job_Time::after( $this->clock->now(), Job_Runner::LEASE_SECONDS ), $this->clock->now() ) );
+			$this->clock->now += 20;
+			$report = ( new Job_Runner( $this->jobs, array( $second ), $this->clock, 'worker-b' ) )->run( 1 );
+			self::assertSame( 1, $report['succeeded'], 'The waiting job has never started and must remain safe to claim.' );
+		};
+
+		$report = $this->runner( $first )->run( 2 );
+
+		self::assertSame( 1, $first->handled, 'The first worker must not execute a stale claim after worker B finishes it.' );
+		self::assertSame( 1, $second->handled );
+		self::assertSame( 0, $second->abandoned );
+		self::assertSame( 1, $report['claimed'] );
+		self::assertSame( 1, $report['succeeded'] );
+	}
+
+	public function test_immediate_retries_and_recurring_jobs_run_once_per_dispatch(): void {
+		$retry = $this->queue_job();
+		$again = ( new Job_Queue( $this->jobs, $this->clock ) )->enqueue( 'scripted', 'campaign', 'campaign-two' );
+		$handler = new Scripted_Job_Handler( true );
+		$handler->script = array( Job_Outcome::retry( 'provider_busy', 0 ), Job_Outcome::again( 0 ) );
+
+		$report = $this->runner( $handler )->run( 10 );
+
+		self::assertSame( 2, $report['claimed'] );
+		self::assertSame( 1, $report['retried'] );
+		self::assertSame( 1, $report['rescheduled'] );
+		self::assertSame( 2, $handler->handled );
+		self::assertSame( Job_State::QUEUED, $this->jobs->get( $retry->id() )?->state() );
+		self::assertSame( Job_State::QUEUED, $this->jobs->get( (string) $again?->id() )?->state() );
+		self::assertSame( 2, $this->runner( $handler )->run( 10 )['succeeded'], 'Both jobs are available to the next dispatch.' );
 	}
 
 	public function test_success_releases_the_job(): void {

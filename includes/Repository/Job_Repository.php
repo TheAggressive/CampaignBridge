@@ -79,7 +79,7 @@ final class Job_Repository implements Job_Source {
 	/**
 	 * {@inheritDoc}
 	 */
-	public function claim( string $owner, string $now, string $lease_until, int $limit ): array {
+	public function claim( string $owner, string $now, string $lease_until, int $limit, array $exclude_ids = array() ): array {
 		if ( ! Schema_Manager::is_current() || $limit < 1 ) {
 			return array();
 		}
@@ -89,20 +89,20 @@ final class Job_Repository implements Job_Source {
 
 		// A worker stopped while holding these: take them over first.
 		$expired = "state = 'claimed' AND lease_expires_at < %s AND attempts < max_attempts";
-		foreach ( $this->candidates( $expired, $now_db, 'lease_expires_at', $limit ) as $id ) {
+		foreach ( $this->candidates( $expired, $now_db, 'lease_expires_at', $limit, $exclude_ids ) as $id ) {
 			if ( $this->take( $id, $expired, $now_db, $owner, $lease_db, true ) ) {
 				$claims[] = $this->claimed( $id, true, false );
 			}
 		}
 		// Stopped on their last attempt: claimed only so the runner can end them.
 		$exhausted = "state = 'claimed' AND lease_expires_at < %s AND attempts >= max_attempts";
-		foreach ( $this->candidates( $exhausted, $now_db, 'lease_expires_at', $limit - count( $claims ) ) as $id ) {
+		foreach ( $this->candidates( $exhausted, $now_db, 'lease_expires_at', $limit - count( $claims ), $exclude_ids ) as $id ) {
 			if ( $this->take( $id, $exhausted, $now_db, $owner, $lease_db, false ) ) {
 				$claims[] = $this->claimed( $id, true, true );
 			}
 		}
 		$due = "state = 'queued' AND run_after <= %s AND attempts < max_attempts";
-		foreach ( $this->candidates( $due, $now_db, 'run_after', $limit - count( $claims ) ) as $id ) {
+		foreach ( $this->candidates( $due, $now_db, 'run_after', $limit - count( $claims ), $exclude_ids ) as $id ) {
 			if ( $this->take( $id, $due, $now_db, $owner, $lease_db, true ) ) {
 				$claims[] = $this->claimed( $id, false, false );
 			}
@@ -287,20 +287,23 @@ final class Job_Repository implements Job_Source {
 	/**
 	 * IDs matching a predicate, in order, at most `$limit`.
 	 *
-	 * @param string $predicate SQL predicate with one placeholder for the current time.
-	 * @param string $now_db    Current time in database form.
-	 * @param string $order     Order column.
-	 * @param int    $limit     Maximum number of records.
+	 * @param string             $predicate SQL predicate with one placeholder for the current time.
+	 * @param string             $now_db    Current time in database form.
+	 * @param string             $order     Order column.
+	 * @param int                $limit     Maximum number of records.
+	 * @param array<int, string> $exclude_ids Jobs already run in this dispatch.
 	 * @return array<int, string>
 	 */
-	private function candidates( string $predicate, string $now_db, string $order, int $limit ): array {
+	private function candidates( string $predicate, string $now_db, string $order, int $limit, array $exclude_ids ): array {
 		if ( $limit < 1 ) {
 			return array();
 		}
 		global $wpdb;
-		$table = Schema_Manager::table( 'jobs' );
-		$ids   = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded indexed claim candidates.
-			$wpdb->prepare( "SELECT id FROM {$table} WHERE {$predicate} ORDER BY {$order}, id LIMIT %d", $now_db, $limit ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Allowlisted table; predicates and order columns are class constants, and each predicate holds one %s for $now_db.
+		$table        = Schema_Manager::table( 'jobs' );
+		$placeholders = implode( ', ', array_fill( 0, count( $exclude_ids ), '%s' ) );
+		$exclude      = array() === $exclude_ids ? '' : " AND id NOT IN ({$placeholders})";
+		$ids          = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded indexed claim candidates.
+			$wpdb->prepare( "SELECT id FROM {$table} WHERE {$predicate}{$exclude} ORDER BY {$order}, id LIMIT %d", ...array_merge( array( $now_db ), $exclude_ids, array( $limit ) ) ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Allowlisted table and order; one placeholder per excluded ID and one for the predicate's time.
 		);
 
 		return array_map( 'strval', is_array( $ids ) ? $ids : array() );

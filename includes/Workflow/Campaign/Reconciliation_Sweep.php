@@ -58,7 +58,7 @@ final class Reconciliation_Sweep implements Job_Handler {
 	public function sweep(): int {
 		$queued = 0;
 		$now    = $this->clock->now();
-		foreach ( $this->campaigns->watched( Reconcile_Cadence::WATCHED, self::BATCH ) as $campaign ) {
+		foreach ( $this->campaigns->needing_watch( Reconcile_Cadence::WATCHED, Campaign_Reconcile_Job::TYPE, self::BATCH ) as $campaign ) {
 			if ( null !== $this->jobs->find_active( Campaign_Reconcile_Job::dedupe_key( $campaign->id() ) ) ) {
 				continue;
 			}

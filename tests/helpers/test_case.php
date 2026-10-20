@@ -238,6 +238,22 @@ abstract class Test_Case extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Wait out the end of a fixed rate-limit window when it is close.
+	 *
+	 * Request limits count per fixed window, so a burst that straddles a
+	 * window boundary starts counting again part way and is never refused.
+	 *
+	 * @param int $headroom Seconds the burst needs to stay in one window.
+	 * @param int $window   Window length in seconds.
+	 */
+	protected static function start_in_one_rate_window( int $headroom = 5, int $window = 60 ): void {
+		$left = $window - ( time() % $window );
+		if ( $left < $headroom ) {
+			sleep( $left );
+		}
+	}
+
+	/**
 	 * Get reflection method for testing private/protected methods.
 	 *
 	 * @param object|string $class_or_object Class name or object instance.

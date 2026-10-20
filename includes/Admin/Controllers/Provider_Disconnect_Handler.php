@@ -11,11 +11,14 @@ use CampaignBridge\Core\Capabilities;
 use CampaignBridge\Core\Error_Handler;
 use CampaignBridge\Core\Storage;
 use CampaignBridge\Repository\Provider_Connection_Repository;
+use CampaignBridge\Services\Webhook\Webhook_Factory;
 
 /**
  * Removes a stored provider connection from this site.
  *
- * Only the encrypted API key and its connection details are deleted. The key
+ * The provider's webhooks for this site are removed first, while the key
+ * still works, and their secrets are forgotten either way. Otherwise only
+ * the encrypted API key and its connection details are deleted. The key
  * stays valid in the provider until it is revoked there, and campaigns the
  * provider already holds are untouched: a scheduled campaign still sends,
  * and CampaignBridge cannot unschedule or reconcile it until a key is saved
@@ -39,6 +42,12 @@ final class Provider_Disconnect_Handler {
 
 		$repository = new Provider_Connection_Repository();
 		$existed    = null !== $repository->get( $provider );
+		$webhooks   = Webhook_Factory::registrar( $provider );
+		if ( null !== $webhooks && array() !== $webhooks->subscriptions() ) {
+			// Take the webhooks down while the key still works; any left behind are refused from now on.
+			$webhooks->disable();
+			$webhooks->forget();
+		}
 		if ( ! $repository->delete( $provider ) ) { // phpcs:ignore CampaignBridge.Standard.Sniffs.Database.DatabaseOperation.InvalidWpdbUsage -- Repository method, not $wpdb.
 			return false;
 		}
