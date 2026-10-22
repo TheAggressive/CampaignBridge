@@ -33,6 +33,15 @@ deliver.
 - Database → application: credentials use authenticated, versioned
   ciphertext. Values that are not envelopes are refused, never decrypted as
   plaintext.
+- Shell → CampaignBridge: every WP-CLI command requires a named WordPress user
+  with the normal operation capability; shell/root access does not replace it.
+  Job recovery accepts only registered retry-safe handlers, cannot overwrite a
+  claimed job or an active dedupe key, and commits with an actor audit event.
+  Reconciliation retains campaign object authorization and existing locks.
+  Diagnostic output uses an explicit aggregate allowlist and makes no provider
+  requests; whole job/connection records and unexpected exception messages are
+  never printed. `CLI_Commands_Test` exercises the real dispatcher, capability
+  refusals, unsafe retry refusal, races, audit rollback, and redaction.
 - Host configuration → application: an external encryption key in
   `wp-config.php` is trusted. A defined but malformed key fails closed.
 - Reverse proxy → WordPress: forwarded address headers are untrusted unless a

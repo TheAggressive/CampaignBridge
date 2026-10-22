@@ -58,6 +58,9 @@ content before it reaches a provider.
 - An HTML export provider boundary.
 - Capability-protected REST routes used by the editor and admin screens.
 - Encrypted storage for provider credentials.
+- WP-CLI job inspection and safe recovery, read-only connection checks,
+  campaign reconciliation, and redacted diagnostics as a named authorized user
+  (see [docs/runbook.md](docs/runbook.md#wp-cli-recovery-and-diagnostics)).
 - Opt-in delivery policies: separation of duties between approval and
   delivery, and an allowlist of test-recipient domains.
 
@@ -65,7 +68,7 @@ CampaignBridge can create one Mailchimp draft from an approved campaign, send
 tests of that draft to up to five named addresses, schedule, unschedule, or
 send it now, and reconcile an outcome Mailchimp did not confirm, from the
 campaign's page in WordPress admin or through its REST API. It does not cancel
-an in-flight send, reconcile in the background, or report on provider
+an in-flight send or report on provider
 campaigns. A campaign whose outcome reconciliation cannot settle must be
 resolved in Mailchimp (see [docs/runbook.md](docs/runbook.md)).
 

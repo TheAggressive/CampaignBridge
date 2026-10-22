@@ -29,6 +29,60 @@ whose worker stopped is taken over automatically after its two-minute lease;
 work that is not safe to repeat is never run again and is handed to
 reconciliation instead.
 
+## WP-CLI recovery and diagnostics
+
+Every command requires a named WordPress user through `--user=<login-or-id>`;
+running the shell as root does not grant CampaignBridge authority. On the local
+Studio site, prefix these commands with `studio` and use `--path=../../..`
+from the plugin directory.
+
+```bash
+wp campaignbridge diagnostics --user=operator
+wp campaignbridge jobs list --state=failed --limit=50 --offset=0 --user=operator
+wp campaignbridge jobs show job-id --user=operator
+wp campaignbridge jobs retry job-id --user=operator
+wp campaignbridge jobs cancel job-id --yes --user=operator
+wp campaignbridge connection check --provider=mailchimp --user=operator
+wp campaignbridge campaign reconcile campaign-id --user=operator
+```
+
+Commands print JSON on success and exit nonzero on refusal or failure.
+Job inspection/recovery and diagnostics require `campaignbridge_manage`;
+connection checks require `campaignbridge_manage_connections`; reconciliation
+requires `campaignbridge_send_campaigns` and the workflow's normal campaign
+ownership or management authority. Schema upgrades remain an explicit admin
+operation; diagnostics can report schema drift, while recovery refuses it.
+
+Job lists are ordered by creation time and ID, newest first, with a maximum of
+100 rows per page. Inspection includes validated local campaign IDs, while
+omitting payloads, arbitrary target values, dedupe keys, and lease-owner identities.
+Diagnostics reads aggregate stored status only and
+makes no provider request. It includes versions, schema status, the next cron
+tick, job counts/overdue work, campaign state counts, and stored connection
+verification flags. It excludes credentials, account details, subscriber data,
+and raw provider responses. A connection check makes a read-only Mailchimp ping
+and audits the result without changing the stored credential or verification
+cache.
+
+Retry accepts only failed or dead jobs whose currently registered handler
+declares retry safety. It resets attempts and queues the same job for the next
+cron tick; it never executes a handler immediately. Unknown handlers, unsafe
+handlers, and an existing active job for the same work are refused. Retry never
+repeats an ambiguous send. Use campaign reconciliation to resolve delivery
+uncertainty through provider evidence.
+
+Cancellation requires `--yes` and accepts only queued jobs. It stores `failed`
+with reason `cancelled_by_operator` and releases the dedupe key. It does not
+cancel a campaign or a provider delivery. A claimed job, even with an expired
+lease, remains under the worker's crash-recovery rules. Cancelling a campaign's
+watch stops automatic checks until the campaign changes or the job is explicitly
+retried; cron recreates the site-wide sweep if it has been cancelled.
+
+Retry and cancellation use conditional updates so a worker claim wins over a
+stale operator request, and commit with `job_retry`/`job_cancel` audit events
+attributed to the named user. Failed audit persistence rolls back the recovery.
+Campaign reconciliation uses the same workflow, locks, and audit trail as REST.
+
 ## Provider authentication failures
 
 1. Confirm the configured API key has the expected Mailchimp data-center suffix.

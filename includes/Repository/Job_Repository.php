@@ -12,7 +12,7 @@ namespace CampaignBridge\Repository;
 
 use CampaignBridge\Domain\Job\Job;
 use CampaignBridge\Domain\Job\Job_Claim;
-use CampaignBridge\Domain\Job\Job_Source;
+use CampaignBridge\Domain\Job\Job_Operations_Source;
 use CampaignBridge\Domain\Job\Job_State;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -28,7 +28,79 @@ if ( ! defined( 'ABSPATH' ) ) {
  * exactly one. A dedupe key is held only while a job is active, so the same
  * work cannot be queued twice but can be queued again once it has finished.
  */
-final class Job_Repository implements Job_Source {
+final class Job_Repository implements Job_Operations_Source {
+	/**
+	 * {@inheritDoc}
+	 */
+	public function listing( ?string $state, int $limit, int $offset ): array {
+		if ( ! Schema_Manager::is_current() || $limit < 1 || $limit > 100 || $offset < 0 || ( null !== $state && ! in_array( $state, Job_State::all(), true ) ) ) {
+			return array();
+		}
+		global $wpdb;
+		$table  = Schema_Manager::table( 'jobs' );
+		$where  = null === $state ? '' : ' WHERE state = %s';
+		$values = null === $state ? array( $table, $limit, $offset ) : array( $table, $state, $limit, $offset );
+		$rows   = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded operator read must reflect live job state.
+			$wpdb->prepare( 'SELECT * FROM %i' . $where . ' ORDER BY created_at DESC, id DESC LIMIT %d OFFSET %d', ...$values ), // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Prepared values include the optional state and pagination.
+			ARRAY_A
+		);
+
+		return array_values( array_filter( array_map( fn ( array $row ): ?Job => $this->hydrate( $row ), is_array( $rows ) ? $rows : array() ) ) );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public function requeue( Job $expected, string $now ): bool {
+		if ( ! in_array( $expected->state(), array( Job_State::FAILED, Job_State::DEAD ), true ) ) {
+			return false;
+		}
+
+		return $this->operator_update(
+			$expected,
+			"state = 'queued', attempts = 0, run_after = %s, dedupe_key = %s, last_error = NULL",
+			array( Database_Values::to_database_time( $now ), $expected->type() . ':' . $expected->target_type() . ':' . $expected->target_id() ),
+			$now
+		);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public function cancel_queued( Job $expected, string $now ): bool {
+		if ( Job_State::QUEUED !== $expected->state() ) {
+			return false;
+		}
+
+		return $this->operator_update( $expected, "state = 'failed', last_error = 'cancelled_by_operator', dedupe_key = NULL", array(), $now );
+	}
+
+	/**
+	 * Apply recovery only while the observed row is unchanged and unclaimed.
+	 *
+	 * @param Job                $expected Observed record.
+	 * @param string             $set Fixed assignment SQL.
+	 * @param array<int, string> $values Prepared assignment values.
+	 * @param string             $now Current UTC timestamp.
+	 */
+	private function operator_update( Job $expected, string $set, array $values, string $now ): bool {
+		if ( ! Schema_Manager::is_current() ) {
+			return false;
+		}
+		global $wpdb;
+		$suppressed = $wpdb->suppress_errors();
+		try {
+			return 1 === $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic conditional recovery at the repository boundary.
+				$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Assignment and predicate parameters are combined below.
+					'UPDATE %i SET ' . $set . ', updated_at = %s WHERE id = %s AND state = %s AND attempts = %d AND updated_at = %s AND lease_owner IS NULL', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Fixed assignment SQL; all values are prepared.
+					...array_merge( array( Schema_Manager::table( 'jobs' ) ), $values, array( Database_Values::to_database_time( max( $now, $expected->updated_at() ) ), $expected->id(), $expected->state(), $expected->attempts(), Database_Values::to_database_time( $expected->updated_at() ) ) )
+				)
+			);
+		} finally {
+			$wpdb->suppress_errors( $suppressed );
+		}
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
