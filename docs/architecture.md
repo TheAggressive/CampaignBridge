@@ -107,6 +107,29 @@ release a lock, so a process that ran past its expiry cannot free a lock
 someone else now holds. The workflows accept the manager as an optional
 constructor dependency; production factories always supply it.
 
+## Operator command adapter
+
+`CLI/Commands` registers the `campaignbridge` command tree during explicit
+plugin initialization when WP-CLI is active. Registration constructs only
+command adapters; storage and providers are resolved on invocation. Every
+command requires a named WordPress user with the same capabilities as the
+corresponding admin/REST operation.
+
+`Workflow/Job/Job_Recovery` uses `Domain/Job/Job_Operations_Source` for bounded
+inspection and conditional recovery. Failed/dead jobs are requeued only for
+registered retry-safe handlers; queued cancellation records a permanent failure
+reason. Claimed jobs cannot be changed. Recovery and its actor audit event
+commit through the existing transaction boundary. The active dedupe index
+prevents recovery from creating duplicate work.
+
+`Services/Operations/Operations_Factory` composes those workflows, the canonical
+campaign reconciler, the read-only provider connection check, and an explicit
+allowlist of aggregate diagnostic values. CLI output never serializes whole
+jobs or connection records. Application-authored refusals are distinguished from
+unexpected exceptions so provider exception details cannot reach the terminal.
+The official WP-CLI package is a development dependency for static analysis and
+real dispatcher integration tests; the distributable uses the host's WP-CLI.
+
 ## Composition root
 
 `campaignbridge.php` validates the runtime and hands off to `CampaignBridge\Plugin`. `Plugin` owns initialization order. Service registration must not cause behavior; hooks and migrations begin only during explicit initialization.

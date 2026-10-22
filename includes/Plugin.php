@@ -37,6 +37,7 @@ class Plugin {
 		\add_action( 'admin_init', array( Schema_Manager::class, 'maybe_migrate' ), 4 );
 
 		Job_Dispatcher::register();
+		\CampaignBridge\CLI\Commands::register();
 
 		RestRoutes::init();
 		\add_action( 'rest_api_init', array( RestRoutes::class, 'register' ) );
